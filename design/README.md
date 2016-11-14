@@ -80,7 +80,9 @@ I don't think I need to add a lot of data here, it's wildly known and we have pl
 
 ## OMG! what can we do?
 
-Run to the hills!
+I think we need to attack all these problems as a whole by isolating and abstracting Git access, first from the worker hosts, then from the application, and then specializing this access layer to provide a fast implementation of the git protocol that does not depends so much in filesystem speed by leveraging memory use for the critical bits.
+
+
 
 ## TL;DR:
 
