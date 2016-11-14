@@ -74,6 +74,13 @@ These events have 2 possible reads
 
 ![Hot spot architectural design](design/img/02-high-stress-single-point.png)
 
+### GitLab.com git access is slow
+
+I don't think I need to add a lot of data here, it's wildly known and we have plenty data. I'll skip it for now.
+
+## OMG! what can we do?
+
+Run to the hills!
 
 ## TL;DR:
 
@@ -81,7 +88,7 @@ I think we need to make a fundamental architectural change to how we access git.
 
 It has proven multiple times that it's easy to take GitLab.com by performing an "attack" by calling git commands on the same repo or blob, generating hotspots which neither CephFS or NFS can survive.
 
-Additionally we have observed that our P99 access time to just create a Rugged object, which is loading and processing the git objects from disk, spikes up to 20 seconds, making it basically unusuable. We also saw that just walking through the branches of gitlab-ce requires 2.4 wall seconds. This is clearly unnacceptable.
+Additionally we have observed that our P99 access time to just create a Rugged object, which is loading and processing the git objects from disk, spikes over 30 seconds, making it basically unusuable. We also saw that just walking through the branches of gitlab-ce requires 2.4 wall seconds. This is clearly unnacceptable.
 
 My idea is not revolutionary. I just think that scaling is specializing, so we need to specialize our git access layer, creating a daemon which initially will only offer removing the git command execution from the workers, then it will focus on building a cache for repo's refs to offer them through an API so we can consume this from the application. Then including hot blob objects to evict CDN type attacks, and finally implementing git upload-pack protocol itself to allow us serving fetches from memory without touching the filesystem at all.
 
