@@ -25,7 +25,7 @@ Out current storage and git access implementation is as follows
 
 ![current status](design/img/01-current-storage-architecture.png)
 
-One of the main issues we face from production is that this "everyone can do whatever it wants" approach introduces a lot of stress into the filesystem, with the worse sample being taking GitLab.com down, some samples are:
+One of the main issues we face from production is that this "everyone can do whatever it wants" approach introduces a lot of stress into the filesystem, with the worse result being taking GitLab.com down.
 
 ### GitLab.com down when NFS goes down
 
