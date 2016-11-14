@@ -82,6 +82,21 @@ I don't think I need to add a lot of data here, it's wildly known and we have pl
 
 I think we need to attack all these problems as a whole by isolating and abstracting Git access, first from the worker hosts, then from the application, and then specializing this access layer to provide a fast implementation of the git protocol that does not depends so much in filesystem speed by leveraging memory use for the critical bits.
 
+> It sounds scary and I don't know what to do or how to deal with it!
+
+Let's start with the basics, we need to separate the urgent (availability) from the important (performance)
+
+### Stage one: bulkheads for availability
+
+The first step will be to just remove all the git processes from the workers into a specific fleet of git workers, it's good enough to have just a couple of those as the downside of being attacked will be that these hosts will be under heavy load, not so the workers.
+
+This design will allow the application to fail gracefully when we are being under heavy stress and will allow us to start specializing this git access layer, even including throttling, rate limiting per repo, and monitoring of git usage (something we still don't have) from the minute 0.
+
+The way we will move the process would be by providing a simple client that will simply forward the git command that is being sent either through SSH or HTTPS to a daemon that will be listening on these workers. This daemon will simply spawn a thread (or go routine) where it will execute this git command sending stdin/out to the original client, acting as a transparent proxy for the git access.
+
+The goal here is simply to remove the git execution from the workers, and to build the ground work to keep moving forward.
+
+![Bulkheads architecture](design/img/03-low-stress-single-point.png)
 
 
 ## TL;DR:
