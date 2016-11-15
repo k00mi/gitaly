@@ -101,7 +101,7 @@ The goal here is to remove the git execution from the workers, and to build the 
 
 ![Bulkheads architecture](design/img/03-low-stress-single-point.png)
 
-This design will allow us to start walking in the direction of removing git access from the application, but let's keep moving too how it would look like.
+This design will allow us to start walking in the direction of removing git access from the application, but let's keep moving to see how it would look like.
 
 ### Stage two: specialization for performance
 
