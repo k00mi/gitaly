@@ -178,12 +178,49 @@ For brevity I rather not do it here, but just to throw some food for thought: we
 
 Since we got this far, I would like to take this opportunity to start talking a bit on how do I envision this in the long run.
 
-Up to this point we probably removed a lot of the pain points of performance in the application by keeping those pesky refs in memory, but that is not all there is. If we want to keep scaling and keep getting more and more load we need to understand how our clients behave, we need to be smarter and we need to be one step ahead of them.
+Up to this point we probably removed a lot of the pain points of performance in the application by keeping those pesky refs in memory, but that is not all there is. If we want to keep scaling and keep getting more and more load we need to understand how our clients behave. We need to be smarter and we need to be one step ahead of them.
 
-Just basing myself in anecdotal evidence.
+Disclaimer: I'm just basing myself in anecdotal evidence here.
 
+What we do as developers is fetching and pushing, we only clone once, but then we fetch a lot of times (CI aside). Based on this self observed behavior I think we should start investing in improving the fetch time by reusing our freshly created git refs cache.
+
+Given that we have all the refs in memory we could implement the git-upload-pack negotiation protocol in the daemon. This way we would start the conversation with a git client and offer the refs from memory, then have the conversation with the client to find out what is he requiring to finally build the package and upload it.
+
+Optimizations I can think of that will improve the performance are:
+
+* The refs are served from memory, no need to reach the filesystem for negotiating.
+* We could keep the commits that are negotiated in a separated LRU Pages map so we keep the newly created commits that all the clients will need close and don't need to pull them from filesystem.
+* We could even keep a sample of the last generated package, calculate the hash of the wanted refs and if it matches serve it directly from this specific cache removing the processing time required to build the package and compress it.
+
+If this works, we could start thinking about implementing more part of the protocol, but I would like to keep it simple for a while. So I would start thinking about:
+
+
+### Future ideas
+
+Once we have the daemon part handled, and we removed all the load from the workers for git processing  we could start getting fancy doing more things to handle load correctly
+
+#### Content aware load balancing
+
+At this stage we could start considering (if it even makes any sense) to add load balancing in front of the git access daemons to start generating groups of caching daemons. This way we could be keeping some daemons warm for a set of projects, and then hand off the rest of the repos to a different set of daemons.
+
+With this we could start doing really neat things and optimize usage by segmenting the cache based on the content of the request.
+
+#### Auto Scaling in Kubernetes
+
+Once we have daemons that can come and go, are ephemeral, and provide an API upstream to access resources we could easily add spawn them as kubernetes pods. These pods would need to have filesystem access (CephFS and NFS can be mounted in a pod like any other filesystem).
+
+The interesting part of doing this is that we could easily auto scale up and down as load increases and decreases. Since these daemons can vanish at any time we could just set it to always keep 3 pods available, but scale them up as they are needed. Since the application load is only related to http requests we could detach web auto scaling from git auto scaling and let them roam free.
+
+This in conjunction with [what we are doing for GEO](https://gitlab.com/gitlab-org/gitlab-ee/issues/846) (removing our direct filesystem access for the rest of the file types to use an S3 protocol) could open the door to create pods that are web serving only, along with other pods that are sidekiq only, etc, etc. With this we will simplify the application design allowing to scale different parts of the application independently while keeping the ability to run all the pieces in one single host, as many of our customers will keep doing.
+
+
+### Final architecture
+
+So, all in all, a simple way of describing how our git access would look like, and what parts of the application could be scaled according to the needs would look like this.
 
 ![Final architecture](design/img/07-git-access-layer-final-architecture.png)
+
+Finally, worth noting that in the case we discover that we need to get a specialized use for our filesystem because standard (or distributed) filesystems just don't cut it, we could start working on the git access layer to build a specific solution that solves whatever the problem we see, without affecting the application at all, simply because git _the protocol_ is stable and will not require us to change the API. The complexity will be extracted and isolated into [one tiny piece that knows how to do exactly one thing](https://en.wikipedia.org/wiki/Single_responsibility_principle)
 
 
 ## TL;DR:
