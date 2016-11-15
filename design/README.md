@@ -6,7 +6,7 @@ _if you are lazy, there is a TL;DR section at the end_
 
 In this document I will try to explain what are our main challenges in scaling GitLab from the Git perspective. It is well known already that our [git access is slow,](https://gitlab.com/gitlab-com/infrastructure/issues/351) and no general purpose solution has been good enough to provide a solid experience. We've also seen than even when using CephFS we can create filesystem hot spots, which implies that pushing the problem to the filesystem layer is not enough, not even with bare metal hardware.
 
-This can be contrasted, among other samples, simply with a look at Rugged::Repository.new performance data, where we can see that our P99 spikes up to 30 wall seconds, while the CPU time keeps in the realm of the 15 milliseconds. Pointing at filesystem access as the culprit.
+This can be contrasted, among other samples, with a look at `Rugged::Repository.new` performance data, where we can see that our P99 spikes up to 30 wall seconds, while the CPU time keeps in the realm of the 15 milliseconds. Pointing at filesystem access as the culprit.
 
 ![rugged.new timings](design/img/rugged-new-timings.png)
 
@@ -21,7 +21,7 @@ Out current storage and git access implementation is as follows
 * Each worker can take either HTTP or SSH git access.
   * HTTP git access will be handled by workhorse, shelling out to perform the command that was required by the user.
   * SSH git access is handled by ssh itself, with a standard git executable. We only wire authorization in front of it with gitlab-shell.
-* Each worker can create Rugged objects or shell out either from unicorn or from sidekiq at it's own discretion.
+* Each worker can create `Rugged::Repository` objects or shell out either from unicorn or from sidekiq at it's own discretion.
 
 ![current status](design/img/01-current-storage-architecture.png)
 
@@ -56,8 +56,6 @@ We have seen this multiple times, the pattern is as follows:
 
 ##### Event 2
 
-Not necessarily related to git-cat-file-blob, but git was found with a smoking gun.
-
 In this sample you can see how an increase in git upload-pack process count impacts initially workers load to finally make a deep dent in GitLab.com connections.
 
 ![Workers under heavy load](design/img/git-high-load-workers-load.png)
@@ -79,7 +77,25 @@ These events have 2 possible reads
 
 ### GitLab.com git access is slow
 
-I don't think I need to add a lot of data here, it's wildly known and we have plenty data. I'll skip it for now.
+A simple test that I just executed shows a difference in timings when listing the remote refs in two different projects, just because of the size of them we can see how much git access is impacted by refs.
+
+```
+$ time git ls-remote | wc -l
+From git@gitlab.com:pcarranza/git-access-daemon.git
+2
+git ls-remote  0.04s user 0.01s system 2% cpu 2.471 total
+```
+
+and
+
+```
+$ time git ls-remote | wc -l
+From git@gitlab.com:gitlab-org/gitlab-ce.git
+27794
+git ls-remote  0.14s user 0.11s system 1% cpu 12.846 total
+```
+
+Still, both samples are bad, with one going up to 2.4 seconds for returning 2 refs, and the other spiking up to 13 seconds. This is a slow git access.
 
 ## OMG! What can we do?
 
@@ -119,7 +135,7 @@ So, I propose that we use this caching layer to load the refs into a memory hash
 * Serve branches, tags and last commits through an HTTP API that can be consumed by the workers.
 * Start caching specifically requested blobs in memory for quick access (to improve the cat-file blob case even further)
 * Start caching diffs to improve diff access times.
-* Remove all Rugged::Repository and shell outs from the application by using this API.
+* Remove all `Rugged::Repository` and shell outs from the application by using this API.
 * Remove git mount points from the application and mount them in this caching layer instead to completely isolate workers from git storage failures.
 
 ![High level architecture](design/img/04-git-access-layer-high-level-architecture.png)
@@ -232,7 +248,7 @@ I think we need to make a fundamental architectural change to how we access git.
 
 It has proven multiple times that it's easy to take GitLab.com by performing an "attack" by calling git commands on the same repo or blob, generating hotspots which neither CephFS or NFS can survive.
 
-Additionally we have observed that our P99 access time to just create a Rugged object, which is loading and processing the git objects from disk, spikes over 30 seconds, making it basically unusable. We also saw that just walking through the branches of gitlab-ce requires 2.4 wall seconds. This is clearly unacceptable.
+Additionally we have observed that our P99 access time to just create a `Rugged::Repository` object, which is loading and processing the git objects from disk, spikes over 30 seconds, making it basically unusable. We also saw that just walking through the branches of gitlab-ce requires 2.4 wall seconds. This is clearly unacceptable.
 
 My idea is not revolutionary. I just think that scaling is specializing, so we need to specialize our git access layer, creating a daemon which initially will only offer removing the git command execution from the workers, then it will focus on building a cache for repo's refs to offer them through an API so we can consume this from the application. Then including hot blob objects to evict CDN type attacks, and finally implementing git upload-pack protocol itself to allow us serving fetches from memory without touching the filesystem at all.
 
