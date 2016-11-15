@@ -31,9 +31,10 @@ One of the main issues we face from production is that this "everyone can do wha
 
 In this issue we concluded that since we have access to Rugged objects or shelling out, when the filesystem goes down, the whole site goes down. We just don't have a concept of degraded mode at all.
 
+* https://gitlab.com/gitlab-com/operations/issues/199
+
 ### GitLab.com goes down when it is used as a CDN
 
-* https://gitlab.com/gitlab-com/operations/issues/199
 * https://gitlab.com/gitlab-com/infrastructure/issues/506
 
 We have seen this multiple times, the pattern is as follows:
