@@ -121,15 +121,35 @@ So, I propose that we use this caching layer to load the refs into a memory hash
 
 ![High level architecture](design/img/04-git-access-layer-high-level-architecture.png)
 
-> But that sounds like a risky business, how are we going to invalidate the cache? how are we going to control memory usage? how are going to not make it a single point of failure?
+> But that sounds like a risky business, how are we going to invalidate the cache? how are we going to control memory usage?
 
 Glad you ask!
 
 #### Keeping Memory Down
 
+Let's keep it boring and use an LRU Pages. In a way this will enable having a way of garbage collecting refs and blobs that are simply not being requested by clients.
+
+The way it works is that we keep a linked list of hashmaps. From most to least recent. Every X time (any event) we evict the last page from memory deallocating all the keys and values that are there and we add a new _page_ (which is a hashmap) at the beginning of the list
+
+The way we promote elements from one page to the other is by client request: when a client requests a value we look for it in the first page, then the second, etc. Until we find it, when we do we promote it to the first list keeping these values in memory.
+
+This way, keys that are not being requested will naturally go down the line and will be evicted, pages that are required will be living the initial pages all the time.
+
+This way we will have a O(n) search time (being N the number of pages, which could be 2, so it would end up being constant time) for a given key.
+
+When a page is not found anywhere we will pull it from disk into the first page, starting the cycle again.
+
 ![Pulling Data](design/img/05-git-access-layer-pulling-data.png)
 
+This extreme simplicity will allow us to play with the right approach for keeping memory down, some ideas:
 
+* We could have different strategies for eviction, hearbeat based, memory threshold, number of keys in the first page, whatever we can think of.
+* We could even enforce keeping certain projects always in memory, keeping the cache warm for specific high usage projects.
+
+
+> Ok, but how are we going to not make it a single point of failure?
+
+Thanks for asking! I was just going to explain that :)
 
 #### Ephemeral nature
 
