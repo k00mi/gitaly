@@ -125,14 +125,36 @@ So, I propose that we use this caching layer to load the refs into a memory hash
 
 Glad you ask!
 
-####
-
-
+#### Keeping Memory Down
 
 ![Pulling Data](design/img/05-git-access-layer-pulling-data.png)
 
 
+
+#### Ephemeral nature
+
+This git access layer has to be ephemeral, it is pointless to depend on a cache that you can't evict. For this reason I don't think that we should ever depend on a specific instance of this layer ever.
+
+The way I see it is that we should be able to scale up and down these daemons as we need, so they should not depend on each other, but they should talk.
+
+Cache invalidation should happen whenever we pipe a write command (a git push), when this happens the following events should roll out
+
+* The client starts a push
+* The git access daemon gets the call and passes it through to the storage layer
+* On write finish
+  * The git access daemon evicts it's own cache for the pushed repo
+  * The daemon then published in a Redis pub/sub topic the name of the repo
+  * All the other daemons, which are subscribed to the topic from the beginning get the message and evict their own cache
+* The git access daemon finishes the write and returns the answer to the git client.
+
 ![Pushing Data](design/img/06-git-access-layer-pushing-data.png)
+
+Of course there are details to fully flesh out. Particularly failure modes for when a write fails or when the daemon crashes while performing this write.
+
+For brevity I rather not do it here, but just to throw some food for thought: we could be really agressive to evict caches when we get a write by pushing a delayed queue into Redis and keeping it from happening with a hearbeat until we finish the write, worse case scenario we would be evicting a cache that is actually valid and it would be reloaded on a client request.
+
+
+
 
 ![Final architecture](design/img/07-git-access-layer-final-architecture.png)
 
