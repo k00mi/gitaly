@@ -98,6 +98,43 @@ The goal here is simply to remove the git execution from the workers, and to bui
 
 ![Bulkheads architecture](design/img/03-low-stress-single-point.png)
 
+This design will allow us to start walking in the direction of removing git access from the application, but let's keep moving too how it would look like.
+
+### Stage two: specialization for performance
+
+Once we have availability taken care of we will need to start working on the performance side. As I commented previously the main performance hog we are seeing comes from filesystem access as a whole, so that's what we should take care of.
+
+When a Rugged::Repository object is created what happens is that all the refs are loaded in memory so this object can reply to things like _is this a valid repo?_ and _give me the branches names_. For performance reasons these refs could be packed all in one file or they could be spread through multiple files.
+
+Each option has its own benefits and drawbacks. A single file is not nicely managed neither by NFS or CephFS and can create locks contention given enough concurrent access. Multiple files on the other hand translate in multiple file accesses which increases pressure in the filesystem itself, just by opening, reading an closing a lot of tiny files.
+
+I think we need to remove this pressure point as a whole and pull it out of the filesystem completely. It happens that our read to write ration is massive: we read way, way, way more times than we write. A project like gitlab-ce that is under heavy development could have something like a couple of hundred writes, but it will tens of thousands reads per day.
+
+So, I propose that we use this caching layer to load the refs into a memory hashmap. This makes sense because git behaves as a hashmap itself: refs are both keys (branches, tags, the HEAD) and values (the SHA of the git object). Just by caching this in memory we could do the following:
+
+* Serve the refs list from this API, removing calls for 'advertise refs' from git client
+* Serve the branches and the tags with the commit ids through and HTTP API that can be consumed by the workers
+* Start caching also specifically requested blobs in memory for quick access (to improve the cat-file blob case even further)
+* Remove all Rugged::Repository and shell outs from the application by using this API.
+* Remove git mountpoints from the application and mount them in this caching layer instead to completely isolate workers from git storage failures.
+
+![High level architecture](design/img/04-git-access-layer-high-level-architecture.png)
+
+> But that sounds like a risky business, how are we going to invalidate the cache? how are we going to control memory usage? how are going to not make it a single point of failure?
+
+Glad you ask!
+
+####
+
+
+
+![Pulling Data](design/img/05-git-access-layer-pulling-data.png)
+
+
+![Pushing Data](design/img/06-git-access-layer-pushing-data.png)
+
+![Final architecture](design/img/07-git-access-layer-final-architecture.png)
+
 
 ## TL;DR:
 
