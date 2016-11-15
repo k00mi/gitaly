@@ -112,9 +112,10 @@ I think we need to remove this pressure point as a whole and pull it out of the 
 
 So, I propose that we use this caching layer to load the refs into a memory hashmap. This makes sense because git behaves as a hashmap itself: refs are both keys (branches, tags, the HEAD) and values (the SHA of the git object). Just by caching this in memory we could do the following:
 
-* Serve the refs list from this API, removing calls for 'advertise refs' from git client
-* Serve the branches and the tags with the commit ids through and HTTP API that can be consumed by the workers
-* Start caching also specifically requested blobs in memory for quick access (to improve the cat-file blob case even further)
+* Serve the refs list from this cache, preventing calls for 'advertise refs' from git clients to hit the filesystem at all.
+* Serve branches, tags and last commits through an HTTP API that can be consumed by the workers.
+* Start caching specifically requested blobs in memory for quick access (to improve the cat-file blob case even further)
+* Start caching diffs to improve diff access times.
 * Remove all Rugged::Repository and shell outs from the application by using this API.
 * Remove git mountpoints from the application and mount them in this caching layer instead to completely isolate workers from git storage failures.
 
