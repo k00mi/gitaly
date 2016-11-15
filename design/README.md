@@ -1,4 +1,4 @@
-# Git Access Layer Daemon
+# Git Access Daemon
 
 _if you are lazy, there is a TL;DR section at the end_
 
