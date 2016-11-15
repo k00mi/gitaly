@@ -56,7 +56,9 @@ We have seen this multiple times, the pattern is as follows:
 
 ##### Event 2
 
-Not necessarily related to git-cat-file-blob, but git was found with a smoking gun
+Not necessarily related to git-cat-file-blob, but git was found with a smoking gun.
+
+In this sample you can see how an increase in git upload-pack process count impacts initially workers load to finally make a deep dent in GitLab.com connections.
 
 ![Workers under heavy load](design/img/git-high-load-workers-load.png)
 
