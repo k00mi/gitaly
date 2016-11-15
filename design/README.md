@@ -4,7 +4,7 @@ _if you are lazy, there is a TL;DR section at the end_
 
 ## Introduction
 
-In this document I will try to explain what are our main challenges in scaling GitLab from the Git perspective. It is well known already that our [git access is slow,](https://gitlab.com/gitlab-com/infrastructure/issues/351) and no general purporse solution has been good enough to provide a solid experience. We've also seen than even when using CephFS we can create filesystem hot spots, which implies that pushing the problem to the filesystem layer is not enough, not even with bare metal hardware.
+In this document I will try to explain what are our main challenges in scaling GitLab from the Git perspective. It is well known already that our [git access is slow,](https://gitlab.com/gitlab-com/infrastructure/issues/351) and no general purpose solution has been good enough to provide a solid experience. We've also seen than even when using CephFS we can create filesystem hot spots, which implies that pushing the problem to the filesystem layer is not enough, not even with bare metal hardware.
 
 This can be contrasted, among other samples, simply with a look at Rugged::Repository.new performance data, where we can see that our P99 spikes up to 30 wall seconds, while the CPU time keeps in the realm of the 15 milliseconds. Pointing at filesystem access as the culprit.
 
@@ -41,7 +41,7 @@ We have seen this multiple times, the pattern is as follows:
 1. Someone distributes a git committed file at GitLab.com and offers access through the API
 1. This file is requested by multiple people at roughly the same time (Hackers News effect - AKA slashdot effect)
 1. We see increased load in the workers
-1. Concidently we see high IO wait
+1. Coincidently we see high IO wait
 1. We detect hundreds of `git cat-file blob` processes running on the affected workers.
 1. GitLab.com is effectively down.
 
@@ -55,7 +55,7 @@ We have seen this multiple times, the pattern is as follows:
 
 ##### Event 2
 
-Not necesarily related to git-cat-file-blob, but git was found with a smoking gun
+Not necessarily related to git-cat-file-blob, but git was found with a smoking gun
 
 ![Workers under heavy load](design/img/git-high-load-workers-load.png)
 
@@ -78,7 +78,7 @@ These events have 2 possible reads
 
 I don't think I need to add a lot of data here, it's wildly known and we have plenty data. I'll skip it for now.
 
-## OMG! what can we do?
+## OMG! What can we do?
 
 I think we need to attack all these problems as a whole by isolating and abstracting Git access, first from the worker hosts, then from the application, and then specializing this access layer to provide a fast implementation of the git protocol that does not depends so much in filesystem speed by leveraging memory use for the critical bits.
 
@@ -117,11 +117,11 @@ So, I propose that we use this caching layer to load the refs into a memory hash
 * Start caching specifically requested blobs in memory for quick access (to improve the cat-file blob case even further)
 * Start caching diffs to improve diff access times.
 * Remove all Rugged::Repository and shell outs from the application by using this API.
-* Remove git mountpoints from the application and mount them in this caching layer instead to completely isolate workers from git storage failures.
+* Remove git mount points from the application and mount them in this caching layer instead to completely isolate workers from git storage failures.
 
 ![High level architecture](design/img/04-git-access-layer-high-level-architecture.png)
 
-> But that sounds like a risky business, how are we going to invalidate the cache? how are we going to control memory usage?
+> But that sounds like a risky business, how are we going to invalidate the cache? How are we going to control memory usage?
 
 Glad you ask!
 
@@ -143,7 +143,7 @@ When a page is not found anywhere we will pull it from disk into the first page,
 
 This extreme simplicity will allow us to play with the right approach for keeping memory down, some ideas:
 
-* We could have different strategies for eviction, hearbeat based, memory threshold, number of keys in the first page, whatever we can think of.
+* We could have different strategies for eviction, heartbeat based, memory threshold, number of keys in the first page, whatever we can think of.
 * We could even enforce keeping certain projects always in memory, keeping the cache warm for specific high usage projects.
 
 
@@ -171,9 +171,16 @@ Cache invalidation should happen whenever we pipe a write command (a git push), 
 
 Of course there are details to fully flesh out. Particularly failure modes for when a write fails or when the daemon crashes while performing this write.
 
-For brevity I rather not do it here, but just to throw some food for thought: we could be really agressive to evict caches when we get a write by pushing a delayed queue into Redis and keeping it from happening with a hearbeat until we finish the write, worse case scenario we would be evicting a cache that is actually valid and it would be reloaded on a client request.
+For brevity I rather not do it here, but just to throw some food for thought: we could be really aggressive to evict caches when we get a write by pushing a delayed queue into Redis and keeping it from happening with a heartbeat until we finish the write, worse case scenario we would be evicting a cache that is actually valid and it would be reloaded on a client request.
 
 
+### Stage three: let's start talking protocols
+
+Since we got this far, I would like to take this opportunity to start talking a bit on how do I envision this in the long run.
+
+Up to this point we probably removed a lot of the pain points of performance in the application by keeping those pesky refs in memory, but that is not all there is. If we want to keep scaling and keep getting more and more load we need to understand how our clients behave, we need to be smarter and we need to be one step ahead of them.
+
+Just basing myself in anecdotal evidence.
 
 
 ![Final architecture](design/img/07-git-access-layer-final-architecture.png)
@@ -185,7 +192,8 @@ I think we need to make a fundamental architectural change to how we access git.
 
 It has proven multiple times that it's easy to take GitLab.com by performing an "attack" by calling git commands on the same repo or blob, generating hotspots which neither CephFS or NFS can survive.
 
-Additionally we have observed that our P99 access time to just create a Rugged object, which is loading and processing the git objects from disk, spikes over 30 seconds, making it basically unusuable. We also saw that just walking through the branches of gitlab-ce requires 2.4 wall seconds. This is clearly unnacceptable.
+Additionally we have observed that our P99 access time to just create a Rugged object, which is loading and processing the git objects from disk, spikes over 30 seconds, making it basically unusable. We also saw that just walking through the branches of gitlab-ce requires 2.4 wall seconds. This is clearly unacceptable.
 
 My idea is not revolutionary. I just think that scaling is specializing, so we need to specialize our git access layer, creating a daemon which initially will only offer removing the git command execution from the workers, then it will focus on building a cache for repo's refs to offer them through an API so we can consume this from the application. Then including hot blob objects to evict CDN type attacks, and finally implementing git upload-pack protocol itself to allow us serving fetches from memory without touching the filesystem at all.
 
+Now go and take a look at the images, they explain it all.
