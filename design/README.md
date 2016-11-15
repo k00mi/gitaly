@@ -107,11 +107,11 @@ This design will allow us to start walking in the direction of removing git acce
 
 Once we have availability taken care of we will need to start working on the performance side. As I commented previously the main performance hog we are seeing comes from filesystem access as a whole, so that's what we should take care of.
 
-When a Rugged::Repository object is created what happens is that all the refs are loaded in memory so this object can reply to things like _is this a valid repo?_ and _give me the branches names_. For performance reasons these refs could be packed all in one file or they could be spread through multiple files.
+When a `Rugged::Repository` object is created what happens is that all the refs are loaded in memory so this repository object can reply to things like _is this a valid repository?_ or _give me the branch names_. For performance reasons these refs could be packed all in one file or they could be spread through multiple files.
 
-Each option has its own benefits and drawbacks. A single file is not nicely managed neither by NFS or CephFS and can create locks contention given enough concurrent access. Multiple files on the other hand translate in multiple file accesses which increases pressure in the filesystem itself, just by opening, reading an closing a lot of tiny files.
+Each option has its own benefits and drawbacks. A single file is not nicely managed neither by NFS or CephFS and can create locks contention given enough concurrent access. Multiple files on the other hand translate in multiple file accesses which increases pressure in the filesystem itself, just by opening, reading an closing a lot of tiny files and keeping those file descriptors alive.
 
-I think we need to remove this pressure point as a whole and pull it out of the filesystem completely. It happens that our read to write ration is massive: we read way, way, way more times than we write. A project like gitlab-ce that is under heavy development could have something like a couple of hundred writes, but it will tens of thousands reads per day.
+I think we need to remove this pressure point as a whole pulling it out of the filesystem completely. It happens that our read to write ration is massive: we read way, way, way more times than we write. A project like gitlab-ce that is under heavy development could have something like a couple of hundred writes per day, but it will have tens of thousands reads during that time.
 
 So, I propose that we use this caching layer to load the refs into a memory hashmap. This makes sense because git behaves as a hashmap itself: refs are both keys (branches, tags, the HEAD) and values (the SHA of the git object). Just by caching this in memory we could do the following:
 
@@ -198,7 +198,7 @@ Optimizations I can think of that will improve the performance are:
 If this works, we could start thinking about implementing more part of the protocol, but I would like to keep it simple for a while. So I would start thinking about:
 
 
-### Future ideas
+### Future ideas: balance capacities
 
 Once we have the daemon part handled, and we removed all the load from the workers for git processing  we could start getting fancy doing more things to handle load correctly
 
