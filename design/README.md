@@ -187,7 +187,7 @@ Disclaimer: I'm just basing myself in anecdotal evidence here.
 
 What we do as developers is fetching and pushing, we only clone once, but then we fetch a lot of times (CI aside). Based on this self observed behavior I think we should start investing in improving the fetch time by reusing our freshly created git refs cache.
 
-Given that we have all the refs in memory we could implement the git-upload-pack negotiation protocol in the daemon. This way we would start the conversation with a git client and offer the refs from memory, then have the conversation with the client to find out what is he requiring to finally build the package and upload it.
+Given that we have all the refs in memory we could implement the [git-upload-pack smart negotiation protocol](https://git-scm.com/book/en/v2/Git-Internals-Transfer-Protocols) in the daemon. This way we would start the conversation with a git client and offer the refs from memory, then have the conversation with the client to find out what is he requiring to finally build the package and upload it.
 
 Optimizations I can think of that will improve the performance are:
 
@@ -195,7 +195,7 @@ Optimizations I can think of that will improve the performance are:
 * We could keep the commits that are negotiated in a separated LRU Pages map so we keep the newly created commits that all the clients will need close and don't need to pull them from filesystem.
 * We could even keep a sample of the last generated package, calculate the hash of the wanted refs and if it matches serve it directly from this specific cache removing the processing time required to build the package and compress it.
 
-If this works, we could start thinking about implementing more part of the protocol, but I would like to keep it simple for a while. So I would start thinking about:
+If this works, we could start thinking about implementing a larger slice of the git protocol to improve performance also for pushes, but I would like to keep it simple for a while. So I would start thinking about:
 
 
 ### Future ideas: balance capacities
