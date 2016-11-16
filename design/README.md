@@ -226,7 +226,7 @@ With this we could start doing really neat things and optimize usage by segmenti
 
 #### Auto Scaling in Kubernetes
 
-Once we have daemons that can come and go, are ephemeral, and provide an API upstream to access resources we could easily add spawn them as kubernetes pods. These pods would need to have filesystem access (CephFS and NFS can be mounted in a pod like any other filesystem).
+Once we have daemons that can come and go, are ephemeral, and provide an API upstream to access resources we could easily spawn them as kubernetes pods. These pods would need to have filesystem access (CephFS and NFS can be mounted in a pod like any other filesystem).
 
 The interesting part of doing this is that we could easily auto scale up and down as load increases and decreases. Since these daemons can vanish at any time we could just set it to always keep 3 pods available, but scale them up as they are needed. Since the application load is only related to http requests we could detach web auto scaling from git auto scaling and let them roam free.
 
