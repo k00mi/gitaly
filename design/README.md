@@ -172,18 +172,18 @@ Thanks for asking! I was just going to explain that :)
 
 #### Ephemeral nature
 
-This git access layer has to be ephemeral, it is pointless to depend on a cache that you can't evict. For this reason I don't think that we should ever depend on a specific instance of this layer ever.
+This git access layer has to be ephemeral, it is pointless to depend on a cache that you can't evict. For this reason I think that we shouldn't ever depend on a specific instance of this layer, ever.
 
-The way I see it is that we should be able to scale up and down these daemons as we need, so they should not depend on each other, but they should talk.
+The way I see it is that we should be able to scale up and down these daemons as we need, so they should not depend on each other, but they should talk between them.
 
-Cache invalidation should happen whenever we pipe a write command (a git push), when this happens the following events should roll out
+Cache invalidation should happen whenever we pipe a write command (a git push). When this happens the following events should roll out:
 
 * The client starts a push
 * The git access daemon gets the call and passes it through to the storage layer
 * On write finish
   * The git access daemon evicts it's own cache for the pushed repo
-  * The daemon then published in a Redis pub/sub topic the name of the repo
-  * All the other daemons, which are subscribed to the topic from the beginning get the message and evict their own cache
+  * The daemon then publishes in a Redis pub/sub topic the name of the repo
+  * All the other daemons, which are subscribed to the topic from the beginning, get the message and evict their own cache
 * The git access daemon finishes the write and returns the answer to the git client.
 
 ![Pushing Data](design/img/06-git-access-layer-pushing-data.png)
