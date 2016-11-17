@@ -22,7 +22,7 @@ To remove shared filesystems, NFS or CephFS or whatever else, we need to take th
 
 With this configuration the workers would have a network endpoint they talk to, which would make them independent and will allow us to use floating ips to point to hosts that will be taking the calls when they are enabled as master, otherwise they would just reject the calls completely.
 
-![How shards could just keep growing](design/what-if/we-remove-shared-filesystems.md)
+![How shards could just keep growing](design/what-if/we-remove-shared-filesystems.png)
 
 ## What would we win with this?
 
