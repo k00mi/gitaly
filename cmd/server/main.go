@@ -1,7 +1,7 @@
 package main
 
 import (
-	"gitlab.com/pcarranza/git-access-daemon/server"
+	"gitlab.com/gitlab-org/git-access-daemon/server"
 )
 
 func main() {
