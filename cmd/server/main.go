@@ -5,5 +5,5 @@ import (
 )
 
 func main() {
-	server.Listen("tcp", "0.0.0.0:6666")
+	server.NewService().Serve("0.0.0.0:6666")
 }
