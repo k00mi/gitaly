@@ -25,5 +25,6 @@ func TestServerStandingUp(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	conn.Close()
 	fmt.Println("Received from server:", string(buffer))
 }

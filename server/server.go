@@ -2,6 +2,7 @@ package server
 
 import (
 	"bufio"
+	"io"
 	"log"
 	"net"
 	"sync"
@@ -78,6 +79,10 @@ func (s *Service) serve(conn *net.TCPConn) {
 		reader := bufio.NewReader(conn)
 		buffer, err := reader.ReadBytes('\n')
 		if err != nil {
+			if err == io.EOF {
+				log.Println("Client", conn.RemoteAddr(), "closed the connection")
+				return
+			}
 			if opError, ok := err.(*net.OpError); ok && opError.Timeout() {
 				continue
 			}
