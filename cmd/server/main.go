@@ -5,5 +5,5 @@ import (
 )
 
 func main() {
-	server.NewService().Serve("0.0.0.0:6666")
+	server.NewService().Serve("0.0.0.0:6666", server.CommandExecutorCallback)
 }
