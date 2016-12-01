@@ -38,6 +38,8 @@ func runCommand(name string, args ...string) (bytes.Buffer, error) {
 	var stdoutBuf bytes.Buffer
 	var stderrBuf bytes.Buffer
 
+	log.Println("Executing command:", name, "with args", args)
+
 	cmd := makeCommand(name, args...)
 	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf
