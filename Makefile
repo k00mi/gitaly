@@ -1,7 +1,7 @@
 all: test build
 
-build: 
+build:
 	go build -o git-daemon-server cmd/server/main.go
 
 test:
-	cd server ; go test ; cd ..
+	cd server && go test

@@ -12,7 +12,7 @@ func TestServerStandingUp(t *testing.T) {
 	service := NewService()
 	address := "127.0.0.1:6666"
 
-	go service.Serve(address)
+	go service.Serve(address, func(input []byte) []byte { return input })
 	defer service.Stop()
 
 	// Give service a little time to start listening for connections

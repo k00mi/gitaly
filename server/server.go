@@ -14,6 +14,8 @@ type Service struct {
 	waitGroup *sync.WaitGroup
 }
 
+type Callback func([]byte) []byte
+
 func NewService() *Service {
 	service := &Service{
 		ch:        make(chan bool),
@@ -23,7 +25,7 @@ func NewService() *Service {
 	return service
 }
 
-func (s *Service) Serve(address string) {
+func (s *Service) Serve(address string, cb Callback) {
 	listener, err := newListener(address)
 	if err != nil {
 		log.Fatalln(err)
@@ -48,7 +50,7 @@ func (s *Service) Serve(address string) {
 		}
 		log.Println("Client connected from ", conn.RemoteAddr())
 		s.waitGroup.Add(1)
-		go s.serve(conn)
+		go s.serve(conn, cb)
 	}
 }
 
@@ -65,9 +67,10 @@ func (s *Service) Stop() {
 	s.waitGroup.Wait()
 }
 
-func (s *Service) serve(conn *net.TCPConn) {
+func (s *Service) serve(conn *net.TCPConn, cb Callback) {
 	defer conn.Close()
 	defer s.waitGroup.Done()
+
 	for {
 		select {
 		case <-s.ch:
@@ -75,7 +78,9 @@ func (s *Service) serve(conn *net.TCPConn) {
 			return
 		default:
 		}
+
 		conn.SetDeadline(time.Now().Add(1e9))
+
 		reader := bufio.NewReader(conn)
 		buffer, err := reader.ReadBytes('\n')
 		if err != nil {
@@ -88,7 +93,9 @@ func (s *Service) serve(conn *net.TCPConn) {
 			}
 			log.Println(err)
 		}
-		if _, err := conn.Write(buffer); nil != err {
+
+		ret := cb(buffer)
+		if _, err := conn.Write(ret); nil != err {
 			log.Println(err)
 			return
 		}
