@@ -8,18 +8,18 @@ import (
 	"syscall"
 )
 
-type cmdRequest struct {
+type CmdRequest struct {
 	Cmd []string `json:"cmd"`
 }
 
-type cmdResponse struct {
+type CmdResponse struct {
 	Status     string `json:"status"`
 	Message    string `json:"message"`
 	ExitStatus int    `json:"exit_status"`
 }
 
 func CommandExecutorCallback(input []byte) []byte {
-	req := cmdRequest{}
+	req := CmdRequest{}
 
 	err := json.Unmarshal(input, &req)
 	if err != nil {
@@ -86,7 +86,7 @@ func successResponse(message string) []byte {
 }
 
 func makeResponse(status string, message string, exit_status int) []byte {
-	res := cmdResponse{status, message, exit_status}
+	res := CmdResponse{status, message, exit_status}
 	tempBuf, err := json.Marshal(res)
 
 	if err != nil {
