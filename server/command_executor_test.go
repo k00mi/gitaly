@@ -3,8 +3,8 @@ package server
 import (
 	"bufio"
 	"bytes"
-	"os"
 	"net"
+	"os"
 	"testing"
 	"time"
 )
@@ -27,6 +27,10 @@ func TestRunningCommandSuccessfully(t *testing.T) {
 	if !bytes.Contains(res, []byte(`{"status":"success","message":"total`)) {
 		t.Fatalf("Expected a successful response, got this response: %s", res)
 	}
+
+	if !bytes.Contains(res, []byte(`"exit_status":0`)) {
+		t.Fatalf("Expected response to contain exit status of 0, found none in: %s", res)
+	}
 }
 
 func TestRunningCommandUnsuccessfully(t *testing.T) {
@@ -35,12 +39,16 @@ func TestRunningCommandUnsuccessfully(t *testing.T) {
 	if !bytes.Contains(res, []byte(`{"status":"error","message":"ls: cannot access`)) {
 		t.Fatalf("Expected a failure response, got this response: %s", res)
 	}
+
+	if !bytes.Contains(res, []byte(`"exit_status":2`)) {
+		t.Fatalf("Expected response to contain exit status of 2, found none in: %s", res)
+	}
 }
 
 func TestMalformedCommand(t *testing.T) {
 	res := responseForCommand(`{"cmd":["ls", "/file-that-does-not-exist"}`, t)
 
-	if !bytes.Equal(res, []byte(`{"status":"error","message":"Error parsing JSON request"}`)) {
+	if !bytes.Equal(res, []byte(`{"status":"error","message":"Error parsing JSON request","exit_status":255}`)) {
 		t.Fatalf("Expected a failure response, got this response: %s", res)
 	}
 }

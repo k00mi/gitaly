@@ -13,8 +13,9 @@ type cmdRequest struct {
 }
 
 type cmdResponse struct {
-	Status string `json:"status"`
-	Message string `json:"message"`
+	Status     string `json:"status"`
+	Message    string `json:"message"`
+	ExitStatus int    `json:"exit_status"`
 }
 
 func CommandExecutorCallback(input []byte) []byte {
@@ -22,13 +23,16 @@ func CommandExecutorCallback(input []byte) []byte {
 
 	err := json.Unmarshal(input, &req)
 	if err != nil {
-		return errorResponse("Error parsing JSON request")
+		return errorResponse("Error parsing JSON request", 255)
 	}
 
 	output, err := runCommand(req.Cmd[0], req.Cmd[1:]...)
 
 	if err != nil {
-		return errorResponse(string(output.Bytes()))
+		return errorResponse(
+			string(output.Bytes()),
+			extractExitStatusFromError(err.(*exec.ExitError)),
+		)
 	}
 
 	return successResponse(string(output.Bytes()))
@@ -62,16 +66,27 @@ func makeCommand(name string, args ...string) *exec.Cmd {
 	return cmd
 }
 
-func errorResponse(message string) []byte {
-	return makeResponse("error", message)
+func extractExitStatusFromError(err *exec.ExitError) int {
+	processState := err.ProcessState
+	status := processState.Sys().(syscall.WaitStatus)
+
+	if status.Exited() {
+		return status.ExitStatus()
+	}
+
+	return 255
+}
+
+func errorResponse(message string, exit_status int) []byte {
+	return makeResponse("error", message, exit_status)
 }
 
 func successResponse(message string) []byte {
-	return makeResponse("success", message)
+	return makeResponse("success", message, 0)
 }
 
-func makeResponse(status string, message string) []byte {
-	res          := cmdResponse{status, message}
+func makeResponse(status string, message string, exit_status int) []byte {
+	res := cmdResponse{status, message, exit_status}
 	tempBuf, err := json.Marshal(res)
 
 	if err != nil {
