@@ -1,13 +1,17 @@
 PKG=gitlab.com/gitlab-org/git-access-daemon
-BUILD_DIR = $(shell pwd)
+BUILD_DIR=$(shell pwd)
+CLIENT_BIN=git-daemon-client
+SERVER_BIN=git-daemon-server
 
 export GOPATH=${BUILD_DIR}/_build
+
+.PHONY: ${BUILD_DIR}/_build
 
 all: test build
 
 build:
-	go build -o git-daemon-server cmd/server/main.go
-	go build -o git-daemon-client cmd/client/main.go
+	go build -o ${SERVER_BIN} cmd/server/main.go
+	go build -o ${CLIENT_BIN} cmd/client/main.go
 
 ${BUILD_DIR}/_build:
 	mkdir -p $@/src/${PKG}
@@ -21,3 +25,5 @@ test: ${BUILD_DIR}/_build
 clean:
 	rm -rf ${BUILD_DIR}/_build
 	rm -rf client/testdata
+	[ -f ${CLIENT_BIN} ] && rm ${CLIENT_BIN}
+	[ -f ${SERVER_BIN} ] && rm ${SERVER_BIN}
