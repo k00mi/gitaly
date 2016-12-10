@@ -15,8 +15,8 @@ ${BUILD_DIR}/_build:
 	touch $@
 
 test: ${BUILD_DIR}/_build
-	cd ${BUILD_DIR}/_build/src/${PKG}/server && go test
-	cd ${BUILD_DIR}/_build/src/${PKG}/client && go test
+	cd ${BUILD_DIR}/_build/src/${PKG}/server && go test -v
+	cd ${BUILD_DIR}/_build/src/${PKG}/client && go test -v
 
 clean:
 	rm -rf ${BUILD_DIR}/_build
