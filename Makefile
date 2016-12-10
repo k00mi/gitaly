@@ -1,7 +1,7 @@
 PKG=gitlab.com/gitlab-org/git-access-daemon
 BUILD_DIR = $(shell pwd)
 
-export GOPATH:=$(GOPATH):${BUILD_DIR}/_build
+export GOPATH=${BUILD_DIR}/_build
 
 all: test build
 
