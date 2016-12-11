@@ -3,8 +3,10 @@ package server
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"net"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -22,38 +24,64 @@ func TestMain(m *testing.M) {
 }
 
 func TestRunningCommandSuccessfully(t *testing.T) {
-	res := responseForCommand(`{"cmd":["ls", "-hal"]}`, t)
+	res := responseFromCommand(`{"cmd":["ls", "-hal"]}`, t)
 
-	if !bytes.Contains(res, []byte(`{"status":"success","message":"total`)) {
-		t.Fatalf("Expected a successful response, got this response: %s", res)
+	if res.ExitStatus != 0 {
+		t.Error("Expected exit status of 0, found %v", res.ExitStatus)
 	}
 
-	if !bytes.Contains(res, []byte(`"exit_status":0`)) {
-		t.Fatalf("Expected response to contain exit status of 0, found none in: %s", res)
+	if res.Status != "success" { // We should have these statuses as constants in the package
+		t.Error("Expected status of success, found %v", res.Status)
 	}
 }
 
 func TestRunningCommandUnsuccessfully(t *testing.T) {
-	res := responseForCommand(`{"cmd":["ls", "/file-that-does-not-exist"]}`, t)
+	res := responseFromCommand(`{"cmd":["ls", "/file-that-does-not-exist"]}`, t)
 
-	if !bytes.Contains(res, []byte(`{"status":"error","message":"ls: cannot access`)) {
-		t.Fatalf("Expected a failure response, got this response: %s", res)
+	if res.ExitStatus == 0 {
+		t.Error("Expected a failure exit status, got 0")
 	}
 
-	if !bytes.Contains(res, []byte(`"exit_status":2`)) {
-		t.Fatalf("Expected response to contain exit status of 2, found none in: %s", res)
+	if res.Status != "error" {
+		t.Error("Expected error status, got %v", res.Status)
+	}
+
+	if !(strings.Contains(res.Message, "cannot access") ||
+		strings.Contains(res.Message, "No such file or directory")) {
+		t.Error("Expected ls error message, got %v", res.Message)
 	}
 }
 
 func TestMalformedCommand(t *testing.T) {
-	res := responseForCommand(`{"cmd":["ls", "/file-that-does-not-exist"}`, t)
+	res := responseFromCommand(`{"cmd":["ls", "/file-that-does-not-exist"}`, t)
 
-	if !bytes.Equal(res, []byte(`{"status":"error","message":"Error parsing JSON request","exit_status":255}`)) {
-		t.Fatalf("Expected a failure response, got this response: %s", res)
+	if res.Status != "error" {
+		t.Error("Expected error status, got %s", res.Status)
+	}
+
+	if res.Message != "Error parsing JSON request" {
+		t.Error("Expected parsing json error message, got %s", res.Message)
+	}
+
+	if res.ExitStatus != 255 {
+		t.Error("Expected exit status 255, got %v", res.ExitStatus)
 	}
 }
 
-func responseForCommand(cmd string, t *testing.T) []byte {
+// These 2 functions could be interesting to reuse in the client
+// For this to happen we should remove the testing dependency and
+// then move them to an accessible place.
+func responseFromCommand(cmd string, t *testing.T) CmdResponse {
+	var response CmdResponse
+	buffer := bytesFromCommand(cmd, t)
+	err := json.Unmarshal(buffer, &response)
+	if err != nil {
+		t.Error(err)
+	}
+	return response
+}
+
+func bytesFromCommand(cmd string, t *testing.T) []byte {
 	conn, err := net.Dial("tcp", serviceAddress)
 	if err != nil {
 		t.Fatal(err)
