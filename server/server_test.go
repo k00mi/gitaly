@@ -1,35 +1,42 @@
 package server
 
 import (
-	"bufio"
 	"fmt"
 	"net"
 	"testing"
 	"time"
+
+	"gitlab.com/gitlab-org/git-access-daemon/messaging"
 )
 
 func TestServerStandingUp(t *testing.T) {
-	service := NewService()
+	server := NewServer()
 	address := "127.0.0.1:6666"
 
-	go service.Serve(address, func(input []byte) []byte { return input })
-	defer service.Stop()
+	go server.Serve(address, func(chans *commChans) {
+		a := (<-chans.inChan)
+		chans.outChan <- a
+	})
+	defer server.Stop()
 
-	// Give service a little time to start listening for connections
+	// Give server a little time to start listening for connections
 	time.Sleep(10 * time.Millisecond)
 
 	conn, err := net.Dial("tcp", address)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := conn.Write([]byte("hola hola!\n")); err != nil {
+	messagesConn := messaging.NewMessagesConn(conn)
+
+	if _, err := messagesConn.Write([]byte("hola hola!")); err != nil {
 		t.Error(err)
 	}
-	reader := bufio.NewReader(conn)
-	buffer, err := reader.ReadBytes('\n')
+
+	buffer, err := messagesConn.Read()
 	if err != nil {
 		t.Error(err)
 	}
-	conn.Close()
+	messagesConn.Close()
+
 	fmt.Println("Received from server:", string(buffer))
 }

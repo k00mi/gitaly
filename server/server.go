@@ -1,31 +1,30 @@
 package server
 
 import (
-	"bufio"
 	"io"
 	"log"
 	"net"
 	"sync"
 	"time"
+
+	"gitlab.com/gitlab-org/git-access-daemon/messaging"
 )
 
-type Service struct {
+type Server struct {
 	ch        chan bool
 	waitGroup *sync.WaitGroup
 }
 
-type Callback func([]byte) []byte
-
-func NewService() *Service {
-	service := &Service{
+func NewServer() *Server {
+	server := &Server{
 		ch:        make(chan bool),
 		waitGroup: &sync.WaitGroup{},
 	}
-	service.waitGroup.Add(1)
-	return service
+	server.waitGroup.Add(1)
+	return server
 }
 
-func (s *Service) Serve(address string, cb Callback) {
+func (s *Server) Serve(address string, service Service) {
 	listener, err := newListener(address)
 	if err != nil {
 		log.Fatalln(err)
@@ -50,7 +49,10 @@ func (s *Service) Serve(address string, cb Callback) {
 		}
 		log.Println("Client connected from ", conn.RemoteAddr())
 		s.waitGroup.Add(1)
-		go s.serve(conn, cb)
+
+		chans := newCommChans()
+		go service(chans)
+		go s.serve(conn, chans)
 	}
 }
 
@@ -62,14 +64,30 @@ func newListener(address string) (*net.TCPListener, error) {
 	return net.ListenTCP("tcp", tcpAddress)
 }
 
-func (s *Service) Stop() {
+func (s *Server) Stop() {
 	close(s.ch)
 	s.waitGroup.Wait()
 }
 
-func (s *Service) serve(conn *net.TCPConn, cb Callback) {
+func (s *Server) serve(conn *net.TCPConn, chans *commChans) {
 	defer conn.Close()
 	defer s.waitGroup.Done()
+
+	messagesConn := messaging.NewMessagesConn(conn)
+
+	go func() {
+		for {
+			ret, ok := <-chans.outChan
+			if !ok {
+				return
+			}
+
+			if _, err := messagesConn.Write(ret); nil != err {
+				log.Println(err)
+				return
+			}
+		}
+	}()
 
 	for {
 		select {
@@ -81,8 +99,7 @@ func (s *Service) serve(conn *net.TCPConn, cb Callback) {
 
 		conn.SetDeadline(time.Now().Add(1e9))
 
-		reader := bufio.NewReader(conn)
-		buffer, err := reader.ReadBytes('\n')
+		buffer, err := messagesConn.Read()
 		if err != nil {
 			if err == io.EOF {
 				log.Println("Client", conn.RemoteAddr(), "closed the connection")
@@ -94,10 +111,8 @@ func (s *Service) serve(conn *net.TCPConn, cb Callback) {
 			log.Println(err)
 		}
 
-		ret := cb(buffer)
-		if _, err := conn.Write(ret); nil != err {
-			log.Println(err)
-			return
-		}
+		chans.inChan <- buffer
 	}
+
+	chans.Close()
 }

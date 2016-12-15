@@ -1,20 +1,23 @@
 package client
 
 import (
+	"bytes"
 	"log"
 	"os"
 	"os/exec"
 	"path"
-	"strings"
 	"testing"
 	"time"
 
-	"gitlab.com/gitlab-org/git-access-daemon/server"
+	serv "gitlab.com/gitlab-org/git-access-daemon/server"
 )
 
-const serviceAddress = "127.0.0.1:6667"
+const serverAddress = "127.0.0.1:6667"
 const testRepo = "group/test.git"
 const testRepoRoot = "testdata/data"
+
+var origStdout = os.Stdout
+var origStderr = os.Stderr
 
 func TestMain(m *testing.M) {
 	source := "https://gitlab.com/gitlab-org/gitlab-test.git"
@@ -28,20 +31,21 @@ func TestMain(m *testing.M) {
 			os.Exit(-1)
 		}
 	}
-	service := server.NewService()
+	server := serv.NewServer()
 
-	go service.Serve(serviceAddress, server.CommandExecutorCallback)
-	defer service.Stop()
+	go server.Serve(serverAddress, serv.CommandExecutor)
+	defer server.Stop()
 
 	time.Sleep(10 * time.Millisecond)
 	os.Exit(m.Run())
 }
 
 func TestRunningGitCommandSuccessfully(t *testing.T) {
-	client := NewClient(serviceAddress)
+	client := NewClient(serverAddress)
 	defer client.Close()
 
-	res := client.Request([]string{
+	stdout, _ := redirectOutputStreams()
+	exitStatus := client.Run([]string{
 		"git",
 		"--git-dir",
 		path.Join(testRepoRoot, testRepo),
@@ -49,23 +53,27 @@ func TestRunningGitCommandSuccessfully(t *testing.T) {
 		"--count",
 		"b83d6e391c",
 	})
+	restoreOutputStreams()
 
-	exit_status := 0
-	if res.ExitStatus != exit_status {
-		t.Fatalf("Expected response exit status to equal %d, got %d", exit_status, res.ExitStatus)
+	expectedExitStatus := 0
+	if exitStatus != expectedExitStatus {
+		t.Fatalf("Expected response exit status to equal %d, got %d", expectedExitStatus, exitStatus)
 	}
 
-	msg := "37\n"
-	if res.Message != msg {
-		t.Fatalf("Expected response stdout to be \"%s\", got \"%s\"", msg, res.Message)
+	expectedStdout := []byte("37\n")
+	gotStdout := make([]byte, len(expectedStdout))
+	stdout.Read(gotStdout)
+	if !bytes.Equal(gotStdout, expectedStdout) {
+		t.Fatalf("Expected response stdout to be \"%s\", got \"%s\"", expectedStdout, gotStdout)
 	}
 }
 
 func TestRunningGitCommandUnsuccessfully(t *testing.T) {
-	client := NewClient(serviceAddress)
+	client := NewClient(serverAddress)
 	defer client.Close()
 
-	res := client.Request([]string{
+	_, stderr := redirectOutputStreams()
+	exitStatus := client.Run([]string{
 		"git",
 		"--git-dir",
 		path.Join(testRepoRoot, testRepo),
@@ -73,14 +81,32 @@ func TestRunningGitCommandUnsuccessfully(t *testing.T) {
 		"--count",
 		"babecafe",
 	})
+	restoreOutputStreams()
 
-	exit_status := 128
-	if res.ExitStatus != exit_status {
-		t.Fatalf("Expected response exit status to equal %d, got %d", exit_status, res.ExitStatus)
+	expectedExitStatus := 128
+	if exitStatus != expectedExitStatus {
+		t.Fatalf("Expected response exit status to equal %d, got %d", expectedExitStatus, exitStatus)
 	}
 
-	msg := "fatal: ambiguous argument 'babecafe': unknown revision or path not in the working tree."
-	if !strings.Contains(res.Message, msg) {
-		t.Fatalf("Expected stderr to contain \"%s\", found none in \"%s\"", msg, res.Message)
+	expectedStderr := []byte("fatal: ambiguous argument 'babecafe': unknown revision or path not in the working tree.")
+	gotStderr := make([]byte, len(expectedStderr))
+	stderr.Read(gotStderr)
+	if !bytes.Contains(gotStderr, expectedStderr) {
+		t.Fatalf("Expected stderr to contain \"%s\", found none in \"%s\"", expectedStderr, gotStderr)
 	}
+}
+
+func redirectOutputStreams() (*os.File, *os.File) {
+	stdoutReader, stdoutWriter, _ := os.Pipe()
+	stderrReader, stderrWriter, _ := os.Pipe()
+
+	os.Stdout = stdoutWriter
+	os.Stderr = stderrWriter
+
+	return stdoutReader, stderrReader
+}
+
+func restoreOutputStreams() {
+	os.Stdout = origStdout
+	os.Stderr = origStderr
 }

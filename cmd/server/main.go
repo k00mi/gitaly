@@ -5,20 +5,20 @@ import (
 	"os/signal"
 	"syscall"
 
-	"gitlab.com/gitlab-org/git-access-daemon/server"
+	serv "gitlab.com/gitlab-org/git-access-daemon/server"
 )
 
 func main() {
 	ch := make(chan os.Signal)
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 
-	service := server.NewService()
+	server := serv.NewServer()
 	go func() {
-		service.Serve("0.0.0.0:6666", server.CommandExecutorCallback)
+		server.Serve("0.0.0.0:6666", serv.CommandExecutor)
 	}()
 
 	select {
 	case <-ch:
-		service.Stop()
+		server.Stop()
 	}
 }

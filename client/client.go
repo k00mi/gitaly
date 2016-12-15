@@ -2,65 +2,90 @@ package client
 
 import (
 	"bufio"
-	"encoding/json"
+	"bytes"
+	"io"
 	"log"
 	"net"
+	"os"
 
-	"gitlab.com/gitlab-org/git-access-daemon/server"
+	"gitlab.com/gitlab-org/git-access-daemon/messaging"
 )
 
 type Client struct {
-	conn net.Conn
+	messagesConn *messaging.MessagesConn
 }
 
-func NewClient(serviceAddress string) *Client {
-	conn, err := net.Dial("tcp", serviceAddress)
+func NewClient(serverAddress string) *Client {
+	conn, err := net.Dial("tcp", serverAddress)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	return &Client{conn}
+	messagesConn := messaging.NewMessagesConn(conn)
+	return &Client{messagesConn}
 }
 
-func (client *Client) Request(cmd []string) server.CmdResponse {
-	_, err := client.conn.Write(append(makeRequest(cmd), "\n"...))
+func (client *Client) Run(cmd []string) int {
+	rawMsg := messaging.NewCommandMessage(os.Environ(), cmd[0], cmd[1:]...)
+
+	_, err := client.messagesConn.Write(rawMsg)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	reader := bufio.NewReader(client.conn)
-	buffer, err := reader.ReadBytes('\n')
-	if err != nil {
-		log.Fatalln(err)
+	go streamStdinToServer(client)
+
+	for {
+		rawMsg, err := client.messagesConn.Read()
+
+		if err != nil {
+			break
+		}
+
+		msg, err := messaging.ParseMessage(rawMsg)
+		if err != nil {
+			break
+		}
+
+		switch msg.Type {
+		case "stdout":
+			os.Stdout.Write(msg.GetOutput().Output)
+		case "stderr":
+			os.Stderr.Write(msg.GetOutput().Output)
+		case "exit":
+			return int(msg.GetExit().ExitStatus)
+		}
 	}
 
-	return parseResponse(buffer)
+	return 255
 }
 
 func (client *Client) Close() {
-	client.conn.Close()
+	client.messagesConn.Close()
 }
 
-func makeRequest(cmd []string) []byte {
-	req := server.CmdRequest{
-		Cmd: cmd,
+func streamStdinToServer(client *Client) {
+	finished := false
+	reader := bufio.NewReader(os.Stdin)
+
+	for {
+		buffer := make([]byte, bytes.MinRead)
+
+		n, err := reader.Read(buffer)
+
+		if err == io.EOF {
+			finished = true
+		}
+
+		if n < bytes.MinRead {
+			buffer = buffer[:n]
+		}
+
+		rawMsg := messaging.NewInputMessage(buffer)
+		client.messagesConn.Write(rawMsg)
+
+		if finished {
+			return
+		}
 	}
-
-	buf, err := json.Marshal(&req)
-	if err != nil {
-		log.Fatalln("Failed marshalling a JSON request")
-	}
-
-	return buf
-}
-
-func parseResponse(rawResponse []byte) server.CmdResponse {
-	res := server.CmdResponse{}
-
-	err := json.Unmarshal(rawResponse, &res)
-	if err != nil {
-		log.Fatalln("Failed parsing response")
-	}
-
-	return res
 }
