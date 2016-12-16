@@ -1,4 +1,5 @@
 client/testdata/data
 _build
+vendor/*/
 git-daemon-client
 git-daemon-server

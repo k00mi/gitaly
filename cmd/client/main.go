@@ -11,13 +11,7 @@ func main() {
 	defer client.Close()
 
 	os.Args[0] = "git"
-	res := client.Request(os.Args)
 
-	if res.ExitStatus == 0 {
-		os.Stdout.Write([]byte(res.Message))
-	} else {
-		os.Stderr.Write([]byte(res.Message))
-	}
-
-	os.Exit(res.ExitStatus)
+	exitStatus := client.Run(os.Args)
+	os.Exit(exitStatus)
 }
