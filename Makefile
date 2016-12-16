@@ -4,21 +4,26 @@ CLIENT_BIN=git-daemon-client
 SERVER_BIN=git-daemon-server
 
 export GOPATH=${BUILD_DIR}/_build
+export PATH:=${GOPATH}/bin:$(PATH)
 
 .PHONY: ${BUILD_DIR}/_build
 
 all: test build
-
-build:
-	go build -o ${SERVER_BIN} cmd/server/main.go
-	go build -o ${CLIENT_BIN} cmd/client/main.go
 
 ${BUILD_DIR}/_build:
 	mkdir -p $@/src/${PKG}
 	tar -cf - --exclude _build --exclude .git . | (cd $@/src/${PKG} && tar -xf -)
 	touch $@
 
-test: ${BUILD_DIR}/_build
+deps: ${BUILD_DIR}/_build
+	(which govendor) || go get -u github.com/kardianos/govendor
+	cd ${BUILD_DIR}/_build/src/${PKG} && govendor fetch +out
+
+build: deps
+	go build -o ${SERVER_BIN} cmd/server/main.go
+	go build -o ${CLIENT_BIN} cmd/client/main.go
+
+test: ${BUILD_DIR}/_build deps
 	cd ${BUILD_DIR}/_build/src/${PKG}/server && go test -v
 	cd ${BUILD_DIR}/_build/src/${PKG}/client && go test -v
 
