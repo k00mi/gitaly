@@ -86,6 +86,8 @@ func (s *Server) serve(conn *net.TCPConn, chans *commChans) {
 				log.Println(err)
 				return
 			}
+
+			conn.SetDeadline(time.Now().Add(1e9))
 		}
 	}()
 
