@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"syscall"
 
+	"gitlab.com/gitlab-org/gitaly/helper"
 	"gitlab.com/gitlab-org/gitaly/messaging"
 )
 
@@ -15,6 +16,7 @@ func CommandExecutor(chans *commChans) {
 	if !ok {
 		return
 	}
+	helper.LogMessage(rawMsg)
 
 	msg, err := messaging.ParseMessage(rawMsg)
 	if err != nil {
@@ -32,6 +34,7 @@ func runCommand(chans *commChans, commandMsg *messaging.Command) {
 	args := commandMsg.Args
 
 	log.Println("Executing command:", name, "with args", args)
+	helper.LogCommand(args)
 
 	stdinReader, stdinWriter := io.Pipe()
 	stdoutReader, stdoutWriter := io.Pipe()
@@ -54,7 +57,9 @@ func runCommand(chans *commChans, commandMsg *messaging.Command) {
 
 	if err != nil {
 		exitStatus := int32(extractExitStatusFromError(err.(*exec.ExitError)))
-		chans.outChan <- messaging.NewExitMessage(exitStatus)
+		rawResponse := messaging.NewExitMessage(exitStatus)
+		helper.LogResponse(rawResponse)
+		chans.outChan <- rawResponse
 		return
 	}
 

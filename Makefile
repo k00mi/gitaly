@@ -20,12 +20,13 @@ deps: ${BUILD_DIR}/_build
 	cd ${BUILD_DIR}/_build/src/${PKG} && govendor fetch +out
 
 build: deps
-	go build -o ${SERVER_BIN} cmd/server/main.go
-	go build -o ${CLIENT_BIN} cmd/client/main.go
+	cd ${BUILD_DIR}/_build/src/${PKG} && go build -o ${SERVER_BIN} cmd/server/main.go
+	cd ${BUILD_DIR}/_build/src/${PKG} && go build -o ${CLIENT_BIN} cmd/client/main.go
 
 test: ${BUILD_DIR}/_build deps
 	cd ${BUILD_DIR}/_build/src/${PKG}/server && go test -v
 	cd ${BUILD_DIR}/_build/src/${PKG}/client && go test -v
+	cd ${BUILD_DIR}/_build/src/${PKG}/helper && go test -v
 
 clean:
 	rm -rf ${BUILD_DIR}/_build

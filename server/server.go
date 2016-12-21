@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"gitlab.com/gitlab-org/gitaly/helper"
 	"gitlab.com/gitlab-org/gitaly/messaging"
 )
 
@@ -47,6 +48,7 @@ func (s *Server) Serve(address string, service Service) {
 			}
 			log.Println(err)
 		}
+		helper.LogConnection(conn)
 		log.Println("Client connected from ", conn.RemoteAddr())
 		s.waitGroup.Add(1)
 
