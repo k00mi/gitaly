@@ -2,6 +2,7 @@ package helper
 
 import (
 	"net"
+	"regexp"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -28,12 +29,29 @@ var (
 		},
 		[]string{"source"},
 	)
+	commandCount = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "daemon_command_count",
+			Help: "Count of executed commands, partitioned by subcommand.",
+		},
+		[]string{"subcommand"},
+	)
 )
 
 func init() {
 	prometheus.MustRegister(connectionsTotal)
 	prometheus.MustRegister(requestsBytes)
 	prometheus.MustRegister(responseBytes)
+	prometheus.MustRegister(commandCount)
+}
+
+func ExtractSubcommand(args []string) string {
+	for _, subCmd := range args {
+		if matches, _ := regexp.MatchString("^[^-][a-z\\-]*$", subCmd); matches {
+			return subCmd
+		}
+	}
+	return ""
 }
 
 func LogConnection(conn net.Conn) {
@@ -57,4 +75,8 @@ func LogResponse(msg []byte) {
 	bytes := float64(len(msg))
 
 	responseBytes.WithLabelValues("gitaly").Add(bytes)
+}
+
+func LogCommand(args []string) {
+	commandCount.WithLabelValues(ExtractSubcommand(args)).Inc()
 }

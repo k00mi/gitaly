@@ -34,6 +34,7 @@ func runCommand(chans *commChans, commandMsg *messaging.Command) {
 	args := commandMsg.Args
 
 	log.Println("Executing command:", name, "with args", args)
+	helper.LogCommand(args)
 
 	stdinReader, stdinWriter := io.Pipe()
 	stdoutReader, stdoutWriter := io.Pipe()
