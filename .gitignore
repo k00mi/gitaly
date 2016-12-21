@@ -1,5 +1,4 @@
 client/testdata/data
 _build
-vendor/*/
 gitaly-client
 gitaly-server
