@@ -25,17 +25,17 @@ To see where it fits in please look at [GitLab's architecture](https://docs.gitl
 
 ## Name
 
-Gitaly is a tribute to git and the town of [Aly][https://en.wikipedia.org/wiki/Aly]. Where the town of
+Gitaly is a tribute to git and the town of [Aly](https://en.wikipedia.org/wiki/Aly). Where the town of
 Aly has zero inhabitants most of the year we would like to reduce the number of
 disk operations to zero for most actions. It doesn't hurt that it sounds like
-Italy, the capital of which is [the destination of all roads][https://en.wikipedia.org/wiki/All_roads_lead_to_Rome]. All git actions in
+Italy, the capital of which is [the destination of all roads](https://en.wikipedia.org/wiki/All_roads_lead_to_Rome). All git actions in
 GitLab end up in Gitaly.
 
 ## Reason
 
-For GitLab.com the [git access is slow,](https://gitlab.com/gitlab-com/infrastructure/issues/351).
+For GitLab.com the [git access is slow](https://gitlab.com/gitlab-com/infrastructure/issues/351).
 
-When looking at `Rugged::Repository.new` performance datawe can see that our P99 spikes up to 30 wall seconds, while the CPU time keeps in the realm of the 15 milliseconds. Pointing at filesystem access as the culprit.
+When looking at `Rugged::Repository.new` performance data we can see that our P99 spikes up to 30 wall seconds, while the CPU time keeps in the realm of the 15 milliseconds. Pointing at filesystem access as the culprit.
 
 ![rugged.new timings](design/img/rugged-new-timings.png)
 
@@ -47,8 +47,8 @@ Gitaly will make our situation better in a few steps:
 
 1. One central place to monitor operations
 1. Performance improvements doing less and caching more
-1. Move the git operations from the app to the file/git server with git rtc (routing git access over JSON HTTP calls)
-1. Use Git ketch to allow active-active (push to a local server), and distributed read operations (read from a secundary).
+1. Move the git operations from the app to the file/git server with git rpc (routing git access over JSON HTTP calls)
+1. Use Git ketch to allow active-active (push to a local server), and distributed read operations (read from a secondary).
 
 ## Decisions
 
@@ -57,19 +57,19 @@ All design decision should be added here.
 1. Why are we considering to use Git Ketch? It is open source, uses the git protocol itself, is made by experts in distributed systems (Google), and is as simple as we can think of. We have to accept that we'll have to run the JVM on the Git servers.
 1. We'll keep using the existing sharding functionality in GitLab to be able to add new servers. Currently we can use it to have multiple file/git servers. Later we will need multiple Git Ketch clusters.
 1. We need to get rid of NFS mounting at some point because one broken NFS server causes all the application servers to fail to the point where you can't even ssh in.
-1. We want to move the git executable ask close to the disk as possible to reduce latency, hence the need for git rpc to talk between the app server and git.
+1. We want to move the git executable as close to the disk as possible to reduce latency, hence the need for git rpc to talk between the app server and git.
 1. [Cached metadata is stored in Redis LRU](https://gitlab.com/gitlab-org/gitaly/issues/2#note_20157141)
-1. Cached payloads are stored in files since Redis can't store large objects https://gitlab.com/gitlab-org/gitaly/issues/14
-1. Why not use GitLab Git? So workhorse and ssh access can use the same system.
-1. Why not make this a library for most users instead of a daemon/server? If it is a library it is hard to do in memory caching.
+1. [Cached payloads are stored in files](https://gitlab.com/gitlab-org/gitaly/issues/14) since Redis can't store large objects
+1. Why not use GitLab Git? So workhorse and ssh access can use the same system. We need this to manage cache invalidation.
+1. Why not make this a library for most users instead of a daemon/server? If it is a library it is hard to do in memory caching, and we will still need to keep the NFS shares mounted in the application hosts.
 1. Can we focus on instrumenting first before building Gitaly? Prometheus doesn't work with Unicorn.
 1. How do we ship this quickly without affecting users? Behind a feature flag like we did with workhorse. We can update it independently in production.
 1. How much memory will this use? Guess 50MB, we will save memory in the rails app, guess more in sidekiq (GBs but not sure), but initially more because more libraries are still loaded everywhere.
 1. What will we use for git rpc? JSON over HTTP initially to keep it simple. If measurements show out it isn't fast enough we can switch to a binary protocol. But binary protocols slow down iteration and debugging.
-1. What packaging tool do we use? Govendor because we like it more https://gitlab.com/gitlab-org/gitaly/issues/15
+1. What packaging tool do we use? [Govendor because we like it more](https://gitlab.com/gitlab-org/gitaly/issues/15)
 1. How will the networking work? A unix socket for git operations and TCP for monitoring. This prevents having to build out authentication at this early stage. https://gitlab.com/gitlab-org/gitaly/issues/16
 1. We'll include the /vendor directory in source control https://gitlab.com/gitlab-org/gitaly/issues/18
-1. Use gitaly-client or HTTP/websocket clients? gitlab-shell copies the SSH stream, both ways, to gitaly over a websocket, let’s use HTTP. https://gitlab.com/gitlab-org/gitaly/issues/5#note_20294280
+1. Use gitaly-client or HTTP/websocket clients? gitlab-shell copies the SSH stream, both ways, to gitaly over a websocket, workhorse just forwards the request to Gitaly, let’s use HTTP. https://gitlab.com/gitlab-org/gitaly/issues/5#note_20294280
 
 ## Iterate
 
