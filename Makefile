@@ -25,4 +25,4 @@ test: ${BUILD_DIR}/_build
 clean:
 	rm -rf ${BUILD_DIR}/_build
 	rm -rf client/testdata
-	rm -f ${CMDS}
+	rm -f $(foreach cmd,${CMDS},./${cmd})
