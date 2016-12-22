@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -9,11 +10,10 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-
-	serv "gitlab.com/gitlab-org/gitaly/server"
 )
 
 type Config struct {
+	SocketPath           string `split_words:"true"`
 	PrometheusListenAddr string `split_words:"true"`
 }
 
@@ -27,8 +27,23 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if config.SocketPath == "" {
+		log.Fatal("GITALY_SOCKET_PATH environment variable is not set")
+	}
+
+	if err := os.Remove(config.SocketPath); err != nil && !os.IsNotExist(err) {
+		log.Fatal(err)
+	}
+
+	listener, err := net.Listen("unix", config.SocketPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Listening on socket", config.SocketPath)
+
 	go func() {
-		server.Serve("0.0.0.0:6666", serv.CommandExecutor)
+		// TODO: Add a handler
+		http.Serve(listener, nil)
 	}()
 
 	if config.PrometheusListenAddr != "" {
@@ -41,6 +56,7 @@ func main() {
 
 	select {
 	case <-ch:
-		server.Stop()
+		log.Println("Received shutdown message")
+		listener.Close()
 	}
 }
