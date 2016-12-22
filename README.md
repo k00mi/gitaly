@@ -3,22 +3,25 @@
 - [What](#what)
 - [Name](#name)
 - [Reason](#reason)
+- [Decisions](#decisions)
+- [Iterate](#iterate)
+- [Plan](#plan)
 
 ## What
 
-Gitaly is a daemon handles all the calls made by GitLab.
+Gitaly is a daemon handles all the git calls made by GitLab.
 
 To see where it fits in please look at [GitLab's architecture](https://docs.gitlab.com/ce/development/architecture.html#system-layout) TODO Pablo to update that.
 
 ## References
 
-- http://githubengineering.com/how-we-made-diff-pages-3x-faster/
-- https://developer.atlassian.com/blog/2016/12/bitbucket-adaptive-throttling/
-- https://developer.atlassian.com/blog/2016/12/bitbucket-caches/
-- http://githubengineering.com/introducing-dgit/
-- http://githubengineering.com/building-resilience-in-spokes/
-- https://dev.eclipse.org/mhonarc/lists/jgit-dev/msg03073.html
-- https://gitlab.com/gitlab-org/gitaly/issues/2
+- [GitHub diff pages](http://githubengineering.com/how-we-made-diff-pages-3x-faster/)
+- [Bitbucket adaptive throttling](https://developer.atlassian.com/blog/2016/12/bitbucket-adaptive-throttling/)
+- [Bitbucket caches](https://developer.atlassian.com/blog/2016/12/bitbucket-caches/)
+- [GitHub Dgit (later Spokes)](http://githubengineering.com/introducing-dgit/)
+- [GitHub Spokes (former Dgit)](http://githubengineering.com/building-resilience-in-spokes/)
+- [Git Ketch](https://dev.eclipse.org/mhonarc/lists/jgit-dev/msg03073.html)
+- [Lots of thinking in issue 2](https://gitlab.com/gitlab-org/gitaly/issues/2)
 
 ## Name
 
@@ -40,10 +43,21 @@ Our P99 access time to just create a Rugged::Repository object, which is loading
 
 We considered to move to metal to fix our problems with higher performaning hardware. But our users are using GitLab in the cloud so it should work great there. And this way the increased performance will benefit every GitLab user.
 
+Gitaly will make our situation better in a few steps:
+
+1. One central place to monitor operations
+1. Performance improvements doing less and caching more
+1. Move the git operations from the app to the file/git server with git rtc (routing git access over JSON HTTP calls)
+1. Use Git ketch to allow active-active (push to a local server), and distributed read operations (read from a secundary).
+
 ## Decisions
 
 All design decision should be added here.
 
+1. Why are we considering to use Git Ketch? It is open source, uses the git protocol itself, is made by experts in distributed systems (Google), and is as simple as we can think of. We have to accept that we'll have to run the JVM on the Git servers.
+1. We'll keep using the existing sharding functionality in GitLab to be able to add new servers. Currently we can use it to have multiple file/git servers. Later we will need multiple Git Ketch clusters.
+1. We need to get rid of NFS mounting at some point because one broken NFS server causes all the application servers to fail to the point where you can't even ssh in.
+1. We want to move the git executable ask close to the disk as possible to reduce latency, hence the need for git rpc to talk between the app server and git.
 1. [Cached metadata is stored in Redis LRU](https://gitlab.com/gitlab-org/gitaly/issues/2#note_20157141)
 1. Cached payloads are stored in files since Redis can't store large objects https://gitlab.com/gitlab-org/gitaly/issues/14
 1. Why not use GitLab Git? So workhorse and ssh access can use the same system.
@@ -56,7 +70,6 @@ All design decision should be added here.
 1. How will the networking work? A unix socket for git operations and TCP for monitoring. This prevents having to build out authentication at this early stage. https://gitlab.com/gitlab-org/gitaly/issues/16
 1. We'll include the /vendor directory in source control https://gitlab.com/gitlab-org/gitaly/issues/18
 1. Use gitaly-client or HTTP/websocket clients? gitlab-shell copies the SSH stream, both ways, to gitaly over a websocket, let’s use HTTP. https://gitlab.com/gitlab-org/gitaly/issues/5#note_20294280
-
 
 ## Iterate
 
@@ -97,5 +110,4 @@ Some examples of a specific set of functions:
 1. No longer mount the NFS shares (possible because of Git RPC)
 1. Remove gitlab git from Gitlab Rails
 1. Move to active-active with Git Ketch, with this we can read from any node, greatly reducing the number of IOPS on the leader.
-1. Move to the most performant and cost effective cloud (easier because of active-active replication)
-Consider local storage, for example AWS has 24 x 2,000 GB (48 TB), this move is possible because with active active we can replicate across availability zones.
+1. Move to the most performant and cost effective cloud (easier because of active-active replication). Consider local storage, for example AWS has 24 x 2,000 GB (48 TB), this move is possible because with active active we can replicate across availability zones.
