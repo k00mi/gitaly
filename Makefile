@@ -15,10 +15,6 @@ ${BUILD_DIR}/_build:
 	tar -cf - --exclude _build --exclude .git . | (cd $@/src/${PKG} && tar -xf -)
 	touch $@
 
-deps: ${BUILD_DIR}/_build
-	(which govendor) || go get -u github.com/kardianos/govendor
-	cd ${PKG_BUILD_DIR} && govendor fetch +out
-
 build:	${BUILD_DIR}/_build $(shell find . -name '*.go' -not -path './vendor/*')
 	cd ${PKG_BUILD_DIR} && $(foreach cmd,${CMDS},go build ./cmd/${cmd} && ) true
 	mv $(foreach cmd,${CMDS},${PKG_BUILD_DIR}/${cmd}) ${BUILD_DIR}/
