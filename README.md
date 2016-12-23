@@ -11,7 +11,7 @@
 
 Gitaly is a daemon handles all the git calls made by GitLab.
 
-To see where it fits in please look at [GitLab's architecture](https://docs.gitlab.com/ce/development/architecture.html#system-layout) TODO Pablo to update that.
+To see where it fits in please look at [GitLab's architecture](https://docs.gitlab.com/ce/development/architecture.html#system-layout)
 
 ## References
 
