@@ -1,35 +1,28 @@
 PKG=gitlab.com/gitlab-org/gitaly
 BUILD_DIR=$(shell pwd)
-CLIENT_BIN=gitaly-client
-SERVER_BIN=gitaly-server
+PKG_BUILD_DIR:=${BUILD_DIR}/_build/src/${PKG}
+CMDS:=$(shell cd cmd && ls)
 
 export GOPATH=${BUILD_DIR}/_build
 export PATH:=${GOPATH}/bin:$(PATH)
 
 .PHONY: ${BUILD_DIR}/_build
 
-all: test build
+all: build
 
 ${BUILD_DIR}/_build:
 	mkdir -p $@/src/${PKG}
 	tar -cf - --exclude _build --exclude .git . | (cd $@/src/${PKG} && tar -xf -)
 	touch $@
 
-deps: ${BUILD_DIR}/_build
-	(which govendor) || go get -u github.com/kardianos/govendor
-	cd ${BUILD_DIR}/_build/src/${PKG} && govendor fetch +out
+build:	${BUILD_DIR}/_build $(shell find . -name '*.go' -not -path './vendor/*')
+	cd ${PKG_BUILD_DIR} && $(foreach cmd,${CMDS},go build ./cmd/${cmd} && ) true
+	mv $(foreach cmd,${CMDS},${PKG_BUILD_DIR}/${cmd}) ${BUILD_DIR}/
 
-build: deps
-	cd ${BUILD_DIR}/_build/src/${PKG} && go build -o ${SERVER_BIN} cmd/server/main.go
-	cd ${BUILD_DIR}/_build/src/${PKG} && go build -o ${CLIENT_BIN} cmd/client/main.go
-
-test: ${BUILD_DIR}/_build deps
-	cd ${BUILD_DIR}/_build/src/${PKG}/server && go test -v
-	cd ${BUILD_DIR}/_build/src/${PKG}/client && go test -v
-	cd ${BUILD_DIR}/_build/src/${PKG}/helper && go test -v
+test: ${BUILD_DIR}/_build
+	cd ${PKG_BUILD_DIR} && go test ./...
 
 clean:
 	rm -rf ${BUILD_DIR}/_build
 	rm -rf client/testdata
-	[ -f ${CLIENT_BIN} ] && rm ${CLIENT_BIN}
-	[ -f ${SERVER_BIN} ] && rm ${SERVER_BIN}
+	rm -f $(foreach cmd,${CMDS},./${cmd})

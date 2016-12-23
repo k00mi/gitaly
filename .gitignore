@@ -1,4 +1,4 @@
-client/testdata/data
-_build
-gitaly-client
-gitaly-server
+/client/testdata/data
+/_build
+/gitaly
+/gitaly-client
