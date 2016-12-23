@@ -72,6 +72,7 @@ All design decision should be added here.
 1. How will the networking work? A unix socket for git operations and TCP for monitoring. This prevents having to build out authentication at this early stage. https://gitlab.com/gitlab-org/gitaly/issues/16
 1. We'll include the /vendor directory in source control https://gitlab.com/gitlab-org/gitaly/issues/18
 1. Use gitaly-client or HTTP/websocket clients? gitlab-shell copies the SSH stream, both ways, to gitaly over a websocket, workhorse just forwards the request to Gitaly, let’s use HTTP. https://gitlab.com/gitlab-org/gitaly/issues/5#note_20294280
+1. Use environment variables for setting configurations (see #20).
 
 ## Iterate
 
