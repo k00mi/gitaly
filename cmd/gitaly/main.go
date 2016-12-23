@@ -5,8 +5,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -18,9 +16,6 @@ type Config struct {
 }
 
 func main() {
-	ch := make(chan os.Signal)
-	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
-
 	config := Config{}
 	err := envconfig.Process("gitaly", &config)
 	if err != nil {
@@ -41,9 +36,10 @@ func main() {
 	}
 	log.Println("Listening on socket", config.SocketPath)
 
+	serverError := make(chan error, 2)
 	go func() {
 		// TODO: Add a handler
-		http.Serve(listener, nil)
+		serverError <- http.Serve(listener, nil)
 	}()
 
 	if config.PrometheusListenAddr != "" {
@@ -54,9 +50,5 @@ func main() {
 		}()
 	}
 
-	select {
-	case <-ch:
-		log.Println("Received shutdown message")
-		listener.Close()
-	}
+	log.Fatal(<-serverError)
 }
