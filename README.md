@@ -22,6 +22,8 @@ To see where it fits in please look at [GitLab's architecture](https://docs.gitl
 - [GitHub Spokes (former Dgit)](http://githubengineering.com/building-resilience-in-spokes/)
 - [Git Ketch](https://dev.eclipse.org/mhonarc/lists/jgit-dev/msg03073.html)
 - [Lots of thinking in issue 2](https://gitlab.com/gitlab-org/gitaly/issues/2)
+- [Git Pack Protocol Reference](https://github.com/git/git/blob/master/Documentation/technical/pack-protocol.txt)
+- [Git Transfer Protocol internals](https://git-scm.com/book/en/v2/Git-Internals-Transfer-Protocols)
 
 ## Name
 
