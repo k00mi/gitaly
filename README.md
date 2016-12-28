@@ -65,7 +65,15 @@ All design decision should be added here.
 1. [Cached metadata is stored in Redis LRU](https://gitlab.com/gitlab-org/gitaly/issues/2#note_20157141)
 1. [Cached payloads are stored in files](https://gitlab.com/gitlab-org/gitaly/issues/14) since Redis can't store large objects
 1. Why not use GitLab Git? So workhorse and ssh access can use the same system. We need this to manage cache invalidation.
-1. Why not make this a library for most users instead of a daemon/server? If it is a library it is hard to do in memory caching, and we will still need to keep the NFS shares mounted in the application hosts.
+1. Why not make this a library for most users instead of a daemon/server?
+    * Centralization: We need this new layer to be accessed and to share resources from multiple sources. A library is not fit for this end.
+    * A library would have to be used in one of our current components, none of which seems ideal to take on this task:
+        * gitlab-shell: return to the gitolite model? No.
+        * Gitlab-workhorse: is now a proxy for Rails; would then become simultaneous proxy and backend service. Sounds confusing.
+        * Unicorn: cannot handle slow requests
+        * Sidekiq: can handle slow jobs but not requests
+        * Combination workhorse+unicorn+sidekiq+gitlab-shell: this is hard to get right and slow to build even when you are an expert
+    * With a library we will still need to keep the NFS shares mounted in the application hosts. That puts a hard stop to scale our storage because we need to keep multiplying the NFS mounts in all the workers.
 1. Can we focus on instrumenting first before building Gitaly? Prometheus doesn't work with Unicorn.
 1. How do we ship this quickly without affecting users? Behind a feature flag like we did with workhorse. We can update it independently in production.
 1. How much memory will this use? Guess 50MB, we will save memory in the rails app, guess more in sidekiq (GBs but not sure), but initially more because more libraries are still loaded everywhere.
