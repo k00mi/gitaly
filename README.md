@@ -75,7 +75,7 @@ All design decision should be added here.
 1. We'll include the /vendor directory in source control https://gitlab.com/gitlab-org/gitaly/issues/18
 1. Use gitaly-client or HTTP/websocket clients? gitlab-shell copies the SSH stream, both ways, to gitaly over a websocket, workhorse just forwards the request to Gitaly, let’s use HTTP. https://gitlab.com/gitlab-org/gitaly/issues/5#note_20294280
 1. We will use [E3 from BitBucket to measure performance closely in isolation](https://gitlab.com/gitlab-org/gitaly/issues/34).
-
+1. Use environment variables for setting configurations (see #20).
 
 ## Iterate
 
