@@ -98,15 +98,8 @@ Some examples of a specific set of functions:
 
 We use our issues board for keeping our work in progress up to date in a single place. Please refer to it to see the current status of the project.
 
-1. pre [Move gitlab_git into GitLab so we don’t support 2 external things for working with git?](https://gitlab.com/gitlab-org/gitlab-ce/issues/24374)
-1. pre [Prometheus client](https://gitlab.com/gitlab-org/gitaly/issues/11)
-1. [0.0.1](https://gitlab.com/gitlab-org/gitaly/milestones/2)
-  1. [We have a unix socket to which we can talk HTTP and we have prometheus HTTP endpoint](https://gitlab.com/gitlab-org/gitaly/issues/21)
-  1. [We will be calculating the refs and storing them in a local folder. This file gets deleted when we invalidate the cache, and gets generated whenever someone requests the refs.](https://gitlab.com/gitlab-org/gitaly/issues/17)
-  1. [Start serving Refs cached from workhorse](https://gitlab.com/gitlab-org/gitaly/issues/33)
-  1. [Add feature flag in gitlab-shell and workhorse to use Gitaly](https://gitlab.com/gitlab-org/gitaly/issues/25).
-  1. [Add initial Monitoring: Cache hit, cache invalidation, cache miss (counters), bytes served](https://gitlab.com/gitlab-org/gitaly/issues/32)
-  1. [Integrate Gitaly into GDK for ease of development](https://gitlab.com/gitlab-org/gitaly/issues/9)
+1. [Move gitlab_git into GitLab so we don’t support 2 external things for working with git?](https://gitlab.com/gitlab-org/gitlab-ce/issues/24374)
+1. [Milestone 0.0.1](https://gitlab.com/gitlab-org/gitaly/milestones/2)
 1. [Move more functions in accordance with the iterate process, starting with the ones with have the highest impact.](https://gitlab.com/gitlab-org/gitaly/issues/13)
 1. [Move to Git RPC, we should already have Gitaly calls everywhere but move from a local socket to non-local one.](https://gitlab.com/gitlab-org/gitaly/issues/30)
 1. [Move Gitaly where the file servers that become git servers, halving the amount of IOPS, reducing latency greatly, and allowing workers to keep serving requests.](https://gitlab.com/gitlab-org/gitaly/issues/26)
