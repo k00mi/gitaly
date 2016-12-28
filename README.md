@@ -96,20 +96,21 @@ Some examples of a specific set of functions:
 
 ## Plan
 
-1. pre Move gitlab_git into GitLab so we don’t support 2 external things for working with git? https://gitlab.com/gitlab-org/gitlab-ce/issues/24374 Douwe will finish WIP
-1. pre Scaffolding daemon that starts up? Already have it. But in a branch. Please merge it. => Ahmad
-1. pre  Prometheus client => Alejandro
-1. pre Caching between Runner and Rails => Kim finishing this unrelated work first
-1. pre Jacob will have opinions and try to add it to GDK => there is work done by Alejandro about building this into GDK
-1. 0.0.1 We have a unix socket to which we can talk HTTP and we have prometheus HTTP endpoint - baseline. (Ahmad) Jacob to help out.
-1. 0.0.1 Refs cached which we can serve from workhorse (includes cache invalidation on post-received, wiring from workhorse) gitlab-shell has a config option to point to gitaly and we do an extra post receive hook. (Jacob) https://gitlab.com/gitlab-org/gitaly/issues/17
-1. 0.0.1 We will be calculating the refs and storing them in a local folder. This file gets deleted when we invalidate the cache, and gets generated whenever someone requests the refs. - Alejandro to own this? (Jacob to review)
-1. 0.0.1 A feature flag in gitlab-shell and workhorse for this call. We send the gitaly path in a request per request basis, following the shards feature - we enable this flag as an env var in rails (so we don’t have to support it for good) (Ahmad) (Jacob to review)
-1. 0.0.1 Monitoring - Cache hit, cache invalidation, cache miss (counters), bytes served.
-1. post Move more functions in accordance with the iterate process, starting with the ones with have the highest impact.
-1. Move to Git RPC, we should already have Gitaly calls everywhere but move from a local socket to non-local one.
-1. Move Gitaly where the file servers that become git servers, halving the amount of IOPS, reducing latency greatly, and allowing workers to keep serving requests.
-1. No longer mount the NFS shares (possible because of Git RPC)
-1. Remove gitlab git from Gitlab Rails
-1. Move to active-active with Git Ketch, with this we can read from any node, greatly reducing the number of IOPS on the leader.
-1. Move to the most performant and cost effective cloud (easier because of active-active replication). Consider local storage, for example AWS has 24 x 2,000 GB (48 TB), this move is possible because with active active we can replicate across availability zones.
+We use our issues board for keeping our work in progress up to date in a single place. Please refer to it to see the current status of the project.
+
+1. pre [Move gitlab_git into GitLab so we don’t support 2 external things for working with git?](https://gitlab.com/gitlab-org/gitlab-ce/issues/24374)
+1. pre [Prometheus client](https://gitlab.com/gitlab-org/gitaly/issues/11)
+1. [0.0.1](https://gitlab.com/gitlab-org/gitaly/milestones/2)
+  1. [We have a unix socket to which we can talk HTTP and we have prometheus HTTP endpoint](https://gitlab.com/gitlab-org/gitaly/issues/21)
+  1. [We will be calculating the refs and storing them in a local folder. This file gets deleted when we invalidate the cache, and gets generated whenever someone requests the refs.](https://gitlab.com/gitlab-org/gitaly/issues/17)
+  1. [Start serving Refs cached from workhorse](https://gitlab.com/gitlab-org/gitaly/issues/33)
+  1. [Add feature flag in gitlab-shell and workhorse to use Gitaly](https://gitlab.com/gitlab-org/gitaly/issues/25).
+  1. [Add initial Monitoring: Cache hit, cache invalidation, cache miss (counters), bytes served](https://gitlab.com/gitlab-org/gitaly/issues/32)
+  1. [Integrate Gitaly into GDK for ease of development](https://gitlab.com/gitlab-org/gitaly/issues/9)
+1. [Move more functions in accordance with the iterate process, starting with the ones with have the highest impact.](https://gitlab.com/gitlab-org/gitaly/issues/13)
+1. [Move to Git RPC, we should already have Gitaly calls everywhere but move from a local socket to non-local one.](https://gitlab.com/gitlab-org/gitaly/issues/30)
+1. [Move Gitaly where the file servers that become git servers, halving the amount of IOPS, reducing latency greatly, and allowing workers to keep serving requests.](https://gitlab.com/gitlab-org/gitaly/issues/26)
+1. [No longer mount the NFS shares](https://gitlab.com/gitlab-org/gitaly/issues/27)
+1. [Remove gitlab git from Gitlab Rails](https://gitlab.com/gitlab-org/gitaly/issues/31)
+1. [Move to active-active with Git Ketch, with this we can read from any node, greatly reducing the number of IOPS on the leader.](https://gitlab.com/gitlab-org/gitlab-ee/issues/1381)
+1. [Move to the most performant and cost effective cloud](https://gitlab.com/gitlab-com/infrastructure/issues/934)
