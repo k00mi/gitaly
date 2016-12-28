@@ -98,7 +98,7 @@ Some examples of a specific set of functions:
 
 We use our issues board for keeping our work in progress up to date in a single place. Please refer to it to see the current status of the project.
 
-1. [Move gitlab_git into GitLab so we don’t support 2 external things for working with git?](https://gitlab.com/gitlab-org/gitlab-ce/issues/24374)
+1. [Absorb gitlab_git](https://gitlab.com/gitlab-org/gitlab-ce/issues/24374)
 1. [Milestone 0.0.1](https://gitlab.com/gitlab-org/gitaly/milestones/2)
 1. [Move more functions in accordance with the iterate process, starting with the ones with have the highest impact.](https://gitlab.com/gitlab-org/gitaly/issues/13)
 1. [Move to Git RPC, we should already have Gitaly calls everywhere but move from a local socket to non-local one.](https://gitlab.com/gitlab-org/gitaly/issues/30)
