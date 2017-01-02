@@ -87,11 +87,11 @@ All design decision should be added here.
 
 ## Iterate
 
-Instead of moving everything to Gitaly and only than optimize performance we'll iterate so we quickly have results
+Instead of moving everything to Gitaly and only then optimize performance we'll iterate so we quickly have results
 
 The iteration process is as follows for every month:
 
-1. Move a specific set of functions from Rails to Gitaly without modification (needs to happen before release, there is a switch to use either Rails or Gitaly)
+1. Move a specific set of functions from Rails to Gitaly without performance optimizations (needs to happen before release, there is a switch to use either Rails or Gitaly)
 1. Measure their original performance
 1. Try to improve the performance by reducing reads and/or caching
 1. Measure the effect and if warrented try again
