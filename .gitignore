@@ -2,3 +2,6 @@
 /_build
 /gitaly
 /gitaly-client
+/*.deb
+/_package/bin
+/_package/.bundle/

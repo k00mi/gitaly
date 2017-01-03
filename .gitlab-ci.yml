@@ -4,3 +4,16 @@ test:
   script:
     - make
     - make test
+
+package:
+  script:
+    - apt-get update -qq
+    - apt-get install -qq -y rubygems ruby2.1 bundler
+    - GOOS=linux GOARCH=amd64 make clean package
+    - dpkg -e *.deb
+    - cat DEBIAN/control
+    - cat DEBIAN/md5sums
+    - rm -rf DEBIAN
+  artifacts:
+    paths:
+      - ./*.deb

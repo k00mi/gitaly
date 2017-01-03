@@ -1,0 +1,37 @@
+#!/usr/bin/env ruby
+
+NAME = 'gitaly'
+VERSION = IO.popen(%w[git describe]) { |io| io.read }.chomp.split('v', 2)[1]
+ARCHITECTURE = 'amd64'
+PREFIX = '/usr/local'
+VENDOR = 'GitLab Inc.'
+MAINTAINER = VENDOR
+LICENSE = 'MIT'
+URL = 'https://gitlab.com/gitlab-org/gitaly'
+
+PACKAGE_DIR = File.dirname(__FILE__)
+
+def main(args)
+  run!(%w[bundle install --quiet --binstubs], PACKAGE_DIR)
+  fpm = %W[
+    #{PACKAGE_DIR}/bin/fpm -t deb -m #{MAINTAINER} --vendor #{VENDOR} --license #{LICENSE}
+    --url #{URL} -s dir -n #{NAME} -v #{VERSION} -a #{ARCHITECTURE}
+  ]
+  fpm += args.map { |arg| "#{arg}=#{PREFIX}/bin/" }
+  fpm << "NOTICE=usr/share/doc/#{NAME}/"
+  run!(fpm, '.')
+end
+
+def run!(cmd, dir)
+  if ! system(*cmd, chdir: dir)
+    abort "command failed: #{cmd.join(' ')}"
+  end
+end
+
+abort "VERSION cannot be empty" if VERSION.empty?
+
+if ARGV.empty?
+  abort "Usage: #{$0} EXECUTABLE [EXECUTABLE...]"
+end
+
+main(ARGV)
