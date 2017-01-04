@@ -8,6 +8,8 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"gitlab.com/gitlab-org/gitaly/router"
 )
 
 type Config struct {
@@ -38,8 +40,7 @@ func main() {
 
 	serverError := make(chan error, 2)
 	go func() {
-		// TODO: Add a handler
-		serverError <- http.Serve(listener, nil)
+		serverError <- http.Serve(listener, router.NewRouter())
 	}()
 
 	if config.PrometheusListenAddr != "" {
