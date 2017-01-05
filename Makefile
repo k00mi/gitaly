@@ -15,18 +15,20 @@ ${BUILD_DIR}/_build:
 	tar -cf - --exclude _build --exclude .git . | (cd $@/src/${PKG} && tar -xf -)
 	touch $@
 
-build:	${BUILD_DIR}/_build $(shell find . -name '*.go' -not -path './vendor/*')
+build:	clean-build ${BUILD_DIR}/_build $(shell find . -name '*.go' -not -path './vendor/*')
 	cd ${PKG_BUILD_DIR} && $(foreach cmd,${CMDS},go build ./cmd/${cmd} && ) true
 	mv $(foreach cmd,${CMDS},${PKG_BUILD_DIR}/${cmd}) ${BUILD_DIR}/
 
-test: ${BUILD_DIR}/_build fmt
+test: clean-build ${BUILD_DIR}/_build fmt
 	cd ${PKG_BUILD_DIR} && go test ./...
 
 .PHONY:	fmt
 fmt:
 	_support/gofmt-all -n | awk '{ print } END { if (NR > 0) { print "Please run _support/gofmt-all -f"; exit 1 } }'
 
-clean:
-	rm -rf ${BUILD_DIR}/_build
+clean:	clean-build
 	rm -rf client/testdata
 	rm -f $(foreach cmd,${CMDS},./${cmd})
+
+clean-build:
+	rm -rf ${BUILD_DIR}/_build
