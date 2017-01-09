@@ -80,7 +80,7 @@ All design decision should be added here.
 1. Can we focus on instrumenting first before building Gitaly? Prometheus doesn't work with Unicorn.
 1. How do we ship this quickly without affecting users? Behind a feature flag like we did with workhorse. We can update it independently in production.
 1. How much memory will this use? Guess 50MB, we will save memory in the rails app, guess more in sidekiq (GBs but not sure), but initially more because more libraries are still loaded everywhere.
-1. What will we use for git rpc? JSON over HTTP initially to keep it simple. If measurements show out it isn't fast enough we can switch to a binary protocol. But binary protocols slow down iteration and debugging.
+1. What will we use for git rpc? JSON over HTTP initially to keep it simple. If measurements show out it isn't fast enough we can switch to a binary protocol. But binary protocols slow down iteration and debugging. If we use something it will be [GRPC](http://www.grpc.io/).
 1. What packaging tool do we use? [Govendor because we like it more](https://gitlab.com/gitlab-org/gitaly/issues/15)
 1. How will the networking work? A unix socket for git operations and TCP for monitoring. This prevents having to build out authentication at this early stage. https://gitlab.com/gitlab-org/gitaly/issues/16
 1. We'll include the /vendor directory in source control https://gitlab.com/gitlab-org/gitaly/issues/18
