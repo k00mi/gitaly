@@ -1,4 +1,4 @@
-package handler
+package router
 
 import (
 	"net/http"
@@ -14,7 +14,7 @@ func TestGetHome(t *testing.T) {
 		t.Fatal("Creating 'GET /' request failed!")
 	}
 
-	http.HandlerFunc(Home).ServeHTTP(recorder, req)
+	NewRouter().ServeHTTP(recorder, req)
 
 	if recorder.Code != http.StatusOK {
 		t.Fatal("Server error: Returned ", recorder.Code, " instead of ", http.StatusOK)
