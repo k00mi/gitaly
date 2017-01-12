@@ -1,0 +1,45 @@
+The following components are included in this product:
+
+Perks for Go
+github.com/beorn7/perks/quantile
+https://github.com/beorn7/perks
+Copyright 2013 Blake Mizerany
+See https://github.com/beorn7/perks/blob/master/LICENSE for license details
+
+Protocol Buffers
+github.com/golang/protobuf/proto
+https://github.com/golang/protobuf
+Copyright 2010 The Go Authors
+See https://github.com/golang/protobuf/blob/master/LICENSE for license details
+
+Gorilla web toolkit
+github.com/gorilla/mux
+github.com/gorilla/handlers
+github.com/gorilla/context
+http://www.gorillatoolkit.org/
+Copyright 2012 Rodrigo Moraes
+See https://github.com/gorilla/mux/blob/master/LICENSE for license details
+
+envconfig
+github.com/kelseyhightower/envconfig
+https://github.com/kelseyhightower/envconfig
+Copyright 2013 Kelsey Hightower
+See https://github.com/kelseyhightower/envconfig/blob/master/LICENSE for license details
+
+golang_protobuf_extensions
+github.com/matttproud/golang_protobuf_extensions/pbutil
+https://github.com/matttproud/golang_protobuf_extensions
+Copyright 2012 Matt T. Proud (matt.proud@gmail.com)
+Licensed under the Apache License
+
+Prometheus instrumentation library for Go applications
+github.com/prometheus/client_golang/prometheus
+github.com/prometheus/client_golang/prometheus/promhttp
+github.com/prometheus/client_model/go
+github.com/prometheus/common/expfmt
+github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
+github.com/prometheus/common/model
+github.com/prometheus/procfs
+https://github.com/prometheus/client_golang/
+Copyright 2012-2015 The Prometheus Authors
+Licensed under the Apache License
