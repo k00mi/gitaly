@@ -6,14 +6,13 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-
-	"gitlab.com/gitlab-org/gitaly/handler"
 )
 
 func NewRouter() http.Handler {
 	r := mux.NewRouter()
 
-	r.HandleFunc("/", handler.Home)
+	r.HandleFunc("/", Home)
+	r.HandleFunc("/projects/{id:[0-9]+}/git-http/info-refs/{service:(upload|receive)-pack}", GetInfoRefs)
 
 	return handlers.LoggingHandler(os.Stdout, r)
 }
