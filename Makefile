@@ -26,6 +26,9 @@ test: clean-build ${BUILD_DIR}/_build fmt
 fmt:
 	_support/gofmt-all -n | awk '{ print } END { if (NR > 0) { print "Please run _support/gofmt-all -f"; exit 1 } }'
 
+package:	build
+	./_package/package ${CMDS}
+
 clean:	clean-build
 	rm -rf client/testdata
 	rm -f $(foreach cmd,${CMDS},./${cmd})
