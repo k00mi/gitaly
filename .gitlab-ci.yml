@@ -19,6 +19,7 @@ package:
     - apt-get update -qq
     - apt-get install -qq -y rubygems bundler
     - GOOS=linux GOARCH=amd64 make clean package
+    - ls -l # Want to see permissions as they went into the .deb
     - dpkg -e *.deb
     - cat DEBIAN/control
     - cat DEBIAN/md5sums
