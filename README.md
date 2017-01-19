@@ -55,7 +55,7 @@ Gitaly will make our situation better in a few steps:
 1. One central place to monitor operations
 1. Performance improvements doing less and caching more
 1. Move the git operations from the app to the file/git server with git rpc (routing git access over JSON HTTP calls)
-1. Use Git ketch to allow active-active (push to a local server), and distributed read operations (read from a secondary).
+1. Use Git ketch to allow active-active (push to a local server), and distributed read operations (read from a secondary). This is far in the future, we might also use a distributed key value store instead. See the [active-active issue](https://gitlab.com/gitlab-org/gitlab-ee/issues/1381). Until we are active active we can just use persistent storage on the cloud to shard, this eliminates the need for redundancy.
 
 ## Decisions
 
