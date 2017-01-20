@@ -80,14 +80,14 @@ All design decision should be added here.
 1. Can we focus on instrumenting first before building Gitaly? Prometheus doesn't work with Unicorn.
 1. How do we ship this quickly without affecting users? Behind a feature flag like we did with workhorse. We can update it independently in production.
 1. How much memory will this use? Guess 50MB, we will save memory in the rails app, guess more in sidekiq (GBs but not sure), but initially more because more libraries are still loaded everywhere.
-1. What will we use for git rpc? JSON over HTTP initially to keep it simple. If measurements show out it isn't fast enough we can switch to a binary protocol. But binary protocols slow down iteration and debugging. If we use something it will be [GRPC](http://www.grpc.io/).
 1. What packaging tool do we use? [Govendor because we like it more](https://gitlab.com/gitlab-org/gitaly/issues/15)
 1. How will the networking work? A unix socket for git operations and TCP for monitoring. This prevents having to build out authentication at this early stage. https://gitlab.com/gitlab-org/gitaly/issues/16
 1. We'll include the /vendor directory in source control https://gitlab.com/gitlab-org/gitaly/issues/18
-1. Use gitaly-client or HTTP/websocket clients? gitlab-shell copies the SSH stream, both ways, to gitaly over a websocket, workhorse just forwards the request to Gitaly, let’s use HTTP. https://gitlab.com/gitlab-org/gitaly/issues/5#note_20294280
 1. We will use [E3 from BitBucket to measure performance closely in isolation](https://gitlab.com/gitlab-org/gitaly/issues/34).
 1. Use environment variables for setting configurations (see #20).
 1. GitLab already has [logic so that the application servers know which file/git server contains what repository](https://docs.gitlab.com/ee/administration/repository_storages.html), this eliminates the need for a router.
+1. Use [gRPC](http://www.grpc.io/) instead of HTTP+JSON. Not so much for performance reasons (Protobuf is faster than JSON) but because gRPC is an RPC framework. With HTTP+JSON we have to invent our own framework; with gRPC we get a set of conventions to work with. This will allow us to move faster once we have learned how to use gRPC.
+1. All protocol definitions and auto-generated gRPC client code will be in the gitaly repo. We can include the client code from the rest of the application as a Ruby gem / Go package / client executable as needed. This will make cross-repo versioning easier.
 
 ## Iterate
 
