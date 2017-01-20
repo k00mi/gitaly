@@ -1,0 +1,17 @@
+#!/usr/bin/env ruby
+require_relative 'run.rb'
+
+ENV['PATH'] = [
+  File.join(ENV['GOPATH'], 'bin'),
+  File.join(Dir.pwd, '_support/protoc/bin'),
+  File.join(Dir.pwd, '_support/bin'),
+  ENV['PATH'],
+].join(':')
+
+def main
+  run!(%w[protoc -I protos/ protos/gitaly.proto --go_out=plugins=grpc:protos/go])
+  ruby_lib = 'protos/ruby/lib/gitaly'
+  run!(%W[grpc_tools_ruby_protoc -I protos --ruby_out=#{ruby_lib} --grpc_out=#{ruby_lib} protos/gitaly.proto])
+end
+
+main
