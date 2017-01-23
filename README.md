@@ -7,10 +7,9 @@
 - [Iterate](#iterate)
 - [Plan](#plan)
 
-
 ## What
 
-Gitaly is a `git-rpc` service for handling all the git calls made by GitLab.
+Gitaly is a Git RPC service for handling all the git calls made by GitLab.
 
 To see where it fits in please look at [GitLab's architecture](https://docs.gitlab.com/ce/development/architecture.html#system-layout)
 
