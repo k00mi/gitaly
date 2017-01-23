@@ -29,7 +29,7 @@ This will be achieved by focusing on two areas (in this order):
 
 To maintain the focus of the project, the following subjects are out-of-scope for the moment:
 
-1. Replication and high availability in general, including multi-master and active-active.
+1. Replication and high availability (including multi-master and active-active).
 
 ## References
 
