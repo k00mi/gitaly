@@ -12,7 +12,13 @@
 
 Gitaly is a `git-rpc` service for handling all the git calls made by GitLab.
 
-### Project Goals 
+
+To see where it fits in please look at [GitLab's architecture](https://docs.gitlab.com/ce/development/architecture.html#system-layout)
+
+Gitaly is still under development. We expect it to become a standard
+component of GitLab in Q1 2017 and to reach full scope in Q3 2017.
+
+### Project Goals
 
 Make the git data storage tier of large GitLab instances, and *GitLab.com in particular*, fast
 
@@ -23,26 +29,15 @@ This will be achieved by focusing on two areas:
 
 ### Characteristics
 
-1. **A High-Level Abstraction**: Gitaly aims to provide a high-level abstraction, rather than a low-level (`blob`- and `ref-` store) abstraction. As a general guideline, no route from the GitLab Ruby monolith should need more than one Gitaly rpc call. 
+1. **A High-Level Abstraction**: Gitaly aims to provide a high-level abstraction, rather than a low-level (`blob`- and `ref-` store) abstraction. As a general guideline, no route from the GitLab Ruby monolith should need more than one Gitaly rpc call.
 
 > An example of a complicated thing we look up a lot: last commit that changed a file. This is shown in the tree browser for each file we need to walk the git history starting from the displayed commit down to the first commit that has a different entry for that file and this is repeated for each file in the directory being displayed
-
-
 
 #### Scope
 
 To maintain the focus of the project, the following subjects are out-of-scope for the moment:
 
 1. Multi-master and active-active replication
-
-
-———————
-
-
-To see where it fits in please look at [GitLab's architecture](https://docs.gitlab.com/ce/development/architecture.html#system-layout)
-
-Gitaly is still under development. We expect it to become a standard
-component of GitLab in Q1 2017 and to reach full scope in Q3 2017.
 
 ## References
 
