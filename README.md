@@ -23,7 +23,7 @@ Make the git data storage tier of large GitLab instances, and *GitLab.com in par
 This will be achieved by focusing on two areas (in this order):
 
   1. Allow efficient caching
-  2. Resilient horizontal scaling of GitLab's Git data tier.
+  2. Resilient horizontal scaling of GitLab's Git data tier
 
 #### Scope
 
@@ -143,3 +143,10 @@ We use our issues board for keeping our work in progress up to date in a single 
 1. [Remove gitlab git from Gitlab Rails](https://gitlab.com/gitlab-org/gitaly/issues/31)
 1. [Move to active-active with Git Ketch, with this we can read from any node, greatly reducing the number of IOPS on the leader.](https://gitlab.com/gitlab-org/gitlab-ee/issues/1381)
 1. [Move to the most performant and cost effective cloud](https://gitlab.com/gitlab-com/infrastructure/issues/934)
+
+
+## Design
+
+High-level architecture overview:
+
+![Gitaly Architecture](/design/img/gitaly-architecture.png)
