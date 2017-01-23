@@ -25,15 +25,6 @@ This will be achieved by focusing on two areas (in this order):
   1. Allow efficient caching
   2. Efficient horizontal scaling of GitLab's git data tier without relying on NFS.
 
-### Characteristics
-
-1. **A High-Level Abstraction**: Gitaly aims to provide a high-level abstraction, rather than a low-level (`blob`- and `ref-` store) abstraction. As a general guideline, no route from the GitLab Ruby monolith should need more than one Gitaly rpc call.
-> An example of a complicated thing we look up a lot: last commit that changed a file. This is shown in the tree browser for each file we need to walk the git history starting from the displayed commit down to the first commit that has a different entry for that file and this is repeated for each file in the directory being displayed
-
-2. **Git Execution Cache**: We would also like to cache git executions (as a `git clone --depth=1` or even `git fetch`) that end up being pure git transfer protocol.
-> This makes sense because when a CI execution gets spawned we will have multiple clones happening with the same result as they are going for a specific branch/commit. These operations are expensive and can be easily cached.
-
-
 #### Scope
 
 To maintain the focus of the project, the following subjects are out-of-scope for the moment:
@@ -112,7 +103,9 @@ All design decision should be added here.
 1. GitLab already has [logic so that the application servers know which file/git server contains what repository](https://docs.gitlab.com/ee/administration/repository_storages.html), this eliminates the need for a router.
 1. Use [gRPC](http://www.grpc.io/) instead of HTTP+JSON. Not so much for performance reasons (Protobuf is faster than JSON) but because gRPC is an RPC framework. With HTTP+JSON we have to invent our own framework; with gRPC we get a set of conventions to work with. This will allow us to move faster once we have learned how to use gRPC.
 1. All protocol definitions and auto-generated gRPC client code will be in the gitaly repo. We can include the client code from the rest of the application as a Ruby gem / Go package / client executable as needed. This will make cross-repo versioning easier.
-1. Gitaly will expose high-level Git operations, not  low-level Git object/ref storage lookups. Many interesting Git operations involve an unbounded number of Git object lookups. For example, the number of Git object lookups needed to generate a diff depends on the number of changed files and how deep those files are in the repository directory structure. It is not feasible to make each of those Git object lookups a remote procedure call.
+1. Gitaly will expose high-level Git operations, not low-level Git object/ref storage lookups. Many interesting Git operations involve an unbounded number of Git object lookups. For example, the number of Git object lookups needed to generate a diff depends on the number of changed files and how deep those files are in the repository directory structure. It is not feasible to make each of those Git object lookups a remote procedure call.
+1. We would also like to cache git executions (as a `git clone --depth=1` or even `git fetch`) that end up being pure git transfer protocol.
+> This makes sense because when a CI execution gets spawned we will have multiple clones happening with the same result as they are going for a specific branch/commit. These operations are expensive and can be easily cached.
 
 ## Iterate
 
