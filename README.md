@@ -23,7 +23,7 @@ Make the git data storage tier of large GitLab instances, and *GitLab.com in par
 This will be achieved by focusing on two areas (in this order):
 
   1. Allow efficient caching
-  2. Efficient horizontal scaling of GitLab's git data tier without relying on NFS.
+  2. Resilient horizontal scaling of GitLab's Git data tier.
 
 #### Scope
 
