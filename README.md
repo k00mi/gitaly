@@ -132,10 +132,10 @@ Based on the  [daily overview dashboard](http://performance.gitlab.net/dashboard
 |**Controller**|**Migration**|**Optim 1**|**Optim 2**|
 |--------------|-------------|------------------|------------------|
 | `Projects::GitHttpController#info_refs.json` | #36 | | |
-| `Projects::CommitController#show` | | | |
-| `Projects::MergeRequestsController#ci_status.json` | | | |
-| `Projects::MergeRequestsController#ci_environments_status.json` | | | |
-| `Projects::TreeController#show` | | | |
+| `Projects::CommitController#show` | #64 | | |
+| `Projects::MergeRequestsController#ci_status.json` | #66 | | |
+| `Projects::MergeRequestsController#ci_environments_status.json` | #66 | | |
+| `Projects::TreeController#show` | #65 | | |
 | `RootController#index` | | | |
 | `Projects::RawController#show` | | | |
 | `Projects::BlobController#show` | | | |
