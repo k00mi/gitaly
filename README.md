@@ -127,6 +127,33 @@ Some examples of a specific set of functions:
 - Checking if a blob is binary, text, svg, etc
 - Blob cache seems complicated https://gitlab.com/gitlab-org/gitaly/issues/14
 
+Based on the  [daily overview dashboard](http://performance.gitlab.net/dashboard/db/daily-overview?panelId=14&fullscreen), we should tackle the routes in `gitlab-rails` in the following order:
+
+|**Controller**|**Migration**|**Optim 1**|**Optim 2**|
+|--------------|-------------|------------------|------------------|
+| `Projects::GitHttpController#info_refs.json` | #36 | | |
+| `Projects::CommitController#show` | | | |
+| `Projects::MergeRequestsController#ci_status.json` | | | |
+| `Projects::MergeRequestsController#ci_environments_status.json` | | | |
+| `Projects::TreeController#show` | | | |
+| `RootController#index` | | | |
+| `Projects::RawController#show` | | | |
+| `Projects::BlobController#show` | | | |
+| `ProjectsController#show` | | | |
+| `Projects::BranchesController#index` | | | |
+| `Projects::RefsController#logs_tree` | | | |
+| `GroupsController#show` | | | |
+| `Projects::MergeRequestsController#show` | | | |
+| `Dashboard::ProjectsController#index` | | | |
+| `Explore::ProjectsController#trending` | | | |
+| `Projects::MergeRequestsController#new` | | | |
+| `Projects::MergeRequestsController#create` | | | |
+| `Projects::BuildsController#show` | | | |
+| `Explore::ProjectsController#index` | | | |
+| `Projects::GitHttpController#git_upload_pack.json` | | | |
+
+
+
 ## Plan
 
 We use our issues board for keeping our work in progress up to date in a single place. Please refer to it to see the current status of the project.
