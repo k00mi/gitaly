@@ -1,0 +1,20 @@
+#!/bin/sh
+set -e
+
+# The tempfile must not look like 'NOTICE' too much, or 'govendor license' will pick it up
+tmp=tmp-N-O-T-I-C-E
+target=NOTICE
+
+rm -f $target
+
+cat > $tmp <<EOF
+The following components are included in Gitaly:
+
+EOF
+
+if ! govendor license >> $tmp ; then
+  echo "govendor license failed"
+  exit 1
+fi
+
+mv $tmp $target
