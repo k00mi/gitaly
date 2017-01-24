@@ -6,10 +6,13 @@ import (
 	"net/http"
 	"os"
 
+	"gitlab.com/gitlab-org/gitaly/internal/service"
+
 	"github.com/kelseyhightower/envconfig"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"gitlab.com/gitlab-org/gitaly/internal/router"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 type Config struct {
@@ -38,9 +41,13 @@ func main() {
 	}
 	log.Println("Listening on socket", config.SocketPath)
 
+	server := grpc.NewServer()
+	service.RegisterAll(server)
+	reflection.Register(server)
+
 	serverError := make(chan error, 2)
 	go func() {
-		serverError <- http.Serve(listener, router.NewRouter())
+		serverError <- server.Serve(listener)
 	}()
 
 	if config.PrometheusListenAddr != "" {
