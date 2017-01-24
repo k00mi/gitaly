@@ -9,12 +9,27 @@
 
 ## What
 
-Gitaly is a daemon handles all the git calls made by GitLab.
+Gitaly is a Git RPC service for handling all the git calls made by GitLab.
 
 To see where it fits in please look at [GitLab's architecture](https://docs.gitlab.com/ce/development/architecture.html#system-layout)
 
 Gitaly is still under development. We expect it to become a standard
 component of GitLab in Q1 2017 and to reach full scope in Q3 2017.
+
+### Project Goals
+
+Make the git data storage tier of large GitLab instances, and *GitLab.com in particular*, fast.
+
+This will be achieved by focusing on two areas (in this order):
+
+  1. Allow efficient caching
+  2. Resilient horizontal scaling of GitLab's Git data tier
+
+#### Scope
+
+To maintain the focus of the project, the following subjects are out-of-scope for the moment:
+
+1. Replication and high availability (including multi-master and active-active).
 
 ## References
 
@@ -88,7 +103,7 @@ All design decision should be added here.
 1. GitLab already has [logic so that the application servers know which file/git server contains what repository](https://docs.gitlab.com/ee/administration/repository_storages.html), this eliminates the need for a router.
 1. Use [gRPC](http://www.grpc.io/) instead of HTTP+JSON. Not so much for performance reasons (Protobuf is faster than JSON) but because gRPC is an RPC framework. With HTTP+JSON we have to invent our own framework; with gRPC we get a set of conventions to work with. This will allow us to move faster once we have learned how to use gRPC.
 1. All protocol definitions and auto-generated gRPC client code will be in the gitaly repo. We can include the client code from the rest of the application as a Ruby gem / Go package / client executable as needed. This will make cross-repo versioning easier.
-1. Gitaly will expose high-level Git operations, not  low-level Git object/ref storage lookups. Many interesting Git operations involve an unbounded number of Git object lookups. For example, the number of Git object lookups needed to generate a diff depends on the number of changed files and how deep those files are in the repository directory structure. It is not feasible to make each of those Git object lookups a remote procedure call.
+1. Gitaly will expose high-level Git operations, not low-level Git object/ref storage lookups. Many interesting Git operations involve an unbounded number of Git object lookups. For example, the number of Git object lookups needed to generate a diff depends on the number of changed files and how deep those files are in the repository directory structure. It is not feasible to make each of those Git object lookups a remote procedure call.
 
 ## Iterate
 
@@ -126,3 +141,12 @@ We use our issues board for keeping our work in progress up to date in a single 
 1. [Remove gitlab git from Gitlab Rails](https://gitlab.com/gitlab-org/gitaly/issues/31)
 1. [Move to active-active with Git Ketch, with this we can read from any node, greatly reducing the number of IOPS on the leader.](https://gitlab.com/gitlab-org/gitlab-ee/issues/1381)
 1. [Move to the most performant and cost effective cloud](https://gitlab.com/gitlab-com/infrastructure/issues/934)
+
+
+## Design
+
+High-level architecture overview:
+
+![Gitaly Architecture](https://docs.google.com/drawings/d/14-5NHGvsOVaAJZl2w7pIli8iDUqed2eIbvXdff5jneo/pub?w=2096&h=1536)
+
+[Edit this diagram directly in Google Drawings](https://docs.google.com/drawings/d/14-5NHGvsOVaAJZl2w7pIli8iDUqed2eIbvXdff5jneo/edit)
