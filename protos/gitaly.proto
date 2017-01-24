@@ -3,7 +3,7 @@ syntax = "proto3";
 package gitaly;
 
 // The Git 'smart HTTP' protocol
-service SmartHttp {
+service SmartHTTP {
   // The response body for GET /info/refs?service=git-upload-pack
   rpc InfoRefsUploadPack(InfoRefsRequest) returns (stream InfoRefsResponse) {}
 

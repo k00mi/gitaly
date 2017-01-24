@@ -5,7 +5,7 @@ require 'grpc'
 require 'gitaly_pb'
 
 module Gitaly
-  module SmartHttp
+  module SmartHTTP
     # The Git 'smart HTTP' protocol
     class Service
 
@@ -13,7 +13,7 @@ module Gitaly
 
       self.marshal_class_method = :encode
       self.unmarshal_class_method = :decode
-      self.service_name = 'gitaly.SmartHttp'
+      self.service_name = 'gitaly.SmartHTTP'
 
       # The response body for GET /info/refs?service=git-upload-pack
       rpc :InfoRefsUploadPack, InfoRefsRequest, stream(InfoRefsResponse)
