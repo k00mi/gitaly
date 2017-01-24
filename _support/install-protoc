@@ -1,0 +1,49 @@
+#!/usr/bin/env ruby
+require 'fileutils'
+require 'digest'
+
+require_relative 'run.rb'
+
+PROTOC_DOWNLOAD = {
+  'osx' => {
+    'url' => 'https://github.com/google/protobuf/releases/download/v3.1.0/protoc-3.1.0-osx-x86_64.zip',
+    'sha256' => '2cea7b1acb86671362f7aa554a21b907d18de70b15ad1f68e72ad2b50502920e',
+  },
+}
+PROTOC_DIR = '_support/protoc'
+
+def main
+  if !osx?
+    abort "Platform #{RUBY_PLATFORM} is not yet supported by #{$0}"
+  end
+
+  # protoc Protobuf compiler
+  fetch_protoc(PROTOC_DOWNLOAD['osx'])
+  FileUtils.rm_rf(PROTOC_DIR)
+  FileUtils.mkdir_p(PROTOC_DIR)
+  run!(%W[unzip #{File.expand_path(File.basename(PROTOC_DOWNLOAD['osx']['url']))}], PROTOC_DIR)
+
+  # Go-specific libraries
+  %w[proto protoc-gen-go].each do |pkg|
+    run!(%W[go get -u github.com/golang/protobuf/#{pkg}])
+  end
+
+  run!(%w[bundle install --binstubs], '_support')
+end
+
+def osx?
+  /darwin/ =~ RUBY_PLATFORM
+end
+
+def fetch_protoc(source)
+  return if sha_match?(File.basename(source['url']), source['sha256'])
+
+  run!(%W[curl -LO #{source['url']}])
+end
+
+def sha_match?(file, sha)
+  File.exist?(file) && Digest::SHA256.file(file).hexdigest == sha
+end
+
+main
+puts 'done'

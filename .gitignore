@@ -5,3 +5,7 @@
 /*.deb
 /_package/bin
 /_package/.bundle/
+/_support/protoc
+/_support/bin
+/_support/.bundle
+/*.zip
