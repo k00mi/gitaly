@@ -147,4 +147,6 @@ We use our issues board for keeping our work in progress up to date in a single 
 
 High-level architecture overview:
 
-![Gitaly Architecture](/design/img/gitaly-architecture.png)
+![Gitaly Architecture](https://docs.google.com/drawings/d/14-5NHGvsOVaAJZl2w7pIli8iDUqed2eIbvXdff5jneo/pub?w=960&h=720)
+
+[Edit this document directly in Google Drawings](https://docs.google.com/drawings/d/14-5NHGvsOVaAJZl2w7pIli8iDUqed2eIbvXdff5jneo/edit)
