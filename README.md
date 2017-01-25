@@ -130,7 +130,7 @@ Some examples of a specific set of functions:
 Based on the  [daily overview dashboard](http://performance.gitlab.net/dashboard/db/daily-overview?panelId=14&fullscreen), we should tackle the routes in `gitlab-rails` in the following order:
 
 |**Controller**|**Analysis**|**Migration**|**Optim 1**|**Optim 2**|
-|--------------|-------------|------------------|------------------|
+|--------------|-------------|------------|-----------|-----------|
 | SmartHTTP Workhorse Interceptors | #36 | | | |
 | `Projects::CommitController#show` | #64 | | | |
 | `Projects::MergeRequestsController#ci_status.json` | #66 | | | |
