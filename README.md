@@ -129,29 +129,30 @@ Some examples of a specific set of functions:
 
 Based on the  [daily overview dashboard](http://performance.gitlab.net/dashboard/db/daily-overview?panelId=14&fullscreen), we should tackle the routes in `gitlab-rails` in the following order:
 
-|**Controller**|**Migration**|**Optim 1**|**Optim 2**|
+|**Controller**|**Analysis**|**Migration**|**Optim 1**|**Optim 2**|
 |--------------|-------------|------------------|------------------|
-| `Projects::GitHttpController#info_refs.json` | #36 | | |
-| `Projects::CommitController#show` | #64 | | |
-| `Projects::MergeRequestsController#ci_status.json` | #66 | | |
-| `Projects::MergeRequestsController#ci_environments_status.json` | #66 | | |
-| `Projects::TreeController#show` | #65 | | |
-| `RootController#index` | | | |
-| `Projects::RawController#show` | | | |
-| `Projects::BlobController#show` | | | |
-| `ProjectsController#show` | | | |
-| `Projects::BranchesController#index` | | | |
-| `Projects::RefsController#logs_tree` | | | |
-| `GroupsController#show` | | | |
-| `Projects::MergeRequestsController#show` | | | |
-| `Dashboard::ProjectsController#index` | | | |
-| `Explore::ProjectsController#trending` | | | |
-| `Projects::MergeRequestsController#new` | | | |
-| `Projects::MergeRequestsController#create` | | | |
-| `Projects::BuildsController#show` | | | |
-| `Explore::ProjectsController#index` | | | |
-| `Projects::GitHttpController#git_upload_pack.json` | | | |
+| SmartHTTP Workhorse Interceptors | #36 | | | |
+| `Projects::CommitController#show` | #64 | | | |
+| `Projects::MergeRequestsController#ci_status.json` | #66 | | | |
+| `Projects::MergeRequestsController#ci_environments_status.json` | #66 | | | |
+| `Projects::TreeController#show` | #65 | | | |
+| `RootController#index` | | | | |
+| `Projects::RawController#show` | | | | |
+| `Projects::BlobController#show` | | | | |
+| `ProjectsController#show` | | | | |
+| `Projects::BranchesController#index` | | | | |
+| `Projects::RefsController#logs_tree` | | | | |
+| `GroupsController#show` | | | | |
+| `Projects::MergeRequestsController#show` | | | | |
+| `Dashboard::ProjectsController#index` | | | | |
+| `Explore::ProjectsController#trending` | | | | |
+| `Projects::MergeRequestsController#new` | | | | |
+| `Projects::MergeRequestsController#create` | | | | |
+| `Projects::BuildsController#show` | | | | |
+| `Explore::ProjectsController#index` | | | | |
+| `Projects::GitHttpController#git_upload_pack.json` | | | | |
 
+(More to follow!)
 
 
 ## Plan
