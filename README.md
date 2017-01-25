@@ -59,7 +59,7 @@ For GitLab.com the [git access is slow](https://gitlab.com/gitlab-com/infrastruc
 
 When looking at `Rugged::Repository.new` performance data we can see that our P99 spikes up to 30 wall seconds, while the CPU time keeps in the realm of the 15 milliseconds. Pointing at filesystem access as the culprit.
 
-![rugged.new timings](design/img/rugged-new-timings.png)
+![rugged.new timings](doc/img/rugged-new-timings.png)
 
 Our P99 access time to just create a Rugged::Repository object, which is loading and processing the git objects from disk, spikes over 30 seconds, making it basically unusable. We also saw that just walking through the branches of gitlab-ce requires 2.4 wall seconds.
 
