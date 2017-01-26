@@ -27,7 +27,7 @@ fmt:
 	_support/gofmt-all -n | awk '{ print } END { if (NR > 0) { print "Please run _support/gofmt-all -f"; exit 1 } }'
 
 package:	build
-	./_package/package ${CMDS}
+	./_support/package/package ${CMDS}
 
 clean:	clean-build
 	rm -rf client/testdata

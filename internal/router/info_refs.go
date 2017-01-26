@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"syscall"
 
-	"gitlab.com/gitlab-org/gitaly/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 
 	"github.com/gorilla/mux"
 )

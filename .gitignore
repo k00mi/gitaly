@@ -1,10 +1,8 @@
-/client/testdata/data
 /_build
 /gitaly
-/gitaly-client
 /*.deb
-/_package/bin
-/_package/.bundle/
+/_support/package/bin
+/_support/package/.bundle/
 /_support/protoc
 /_support/bin
 /_support/.bundle
