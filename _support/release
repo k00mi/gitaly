@@ -23,7 +23,8 @@ def main(version)
   $stdout.flush
   abort unless $stdin.gets.chomp == 'Yes'
   %w[
-    https://gitlab.com/gitlab-org/gitaly.git https://dev.gitlab.org/gitlab/gitaly.git
+    https://gitlab.com/gitlab-org/gitaly.git
+    https://dev.gitlab.org/gitlab/gitaly.git
   ].each do |remote|
     run!(%W[git push #{remote} HEAD #{tag_name}])
   end
