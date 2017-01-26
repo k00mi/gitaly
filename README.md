@@ -108,9 +108,11 @@ All design decision should be added here.
 
 ## Iterate
 
+[More on the Gitaly Process here](docs/PROCESS.md)
+
 Instead of moving everything to Gitaly and only then optimize performance we'll iterate so we quickly have results
 
-The iteration process is as follows for every month:
+The iteration process is as follows:
 
 1. Move a specific set of functions from Rails to Gitaly without performance optimizations (needs to happen before release, there is a switch to use either Rails or Gitaly)
 1. Measure their original performance
