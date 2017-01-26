@@ -1,5 +1,6 @@
 # coding: utf-8
-lib = File.expand_path('../lib', __FILE__)
+prefix = 'protos/ruby'
+lib = File.expand_path(File.join('..', prefix, 'lib'), __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'gitaly/version'
 
@@ -14,9 +15,7 @@ Gem::Specification.new do |spec|
   spec.homepage      = "https://gitlab.com/gitlab-org/gitaly"
   spec.license       = "MIT"
 
-  spec.files         = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)/}) }
-  spec.bindir        = "exe"
-  spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
+  spec.files         = `git ls-files -z #{prefix}`.split("\x0").reject { |f| f.match(%r{^#{prefix}/(test|spec|features)/}) }
   spec.require_paths = ["lib"]
 
   spec.add_dependency "google-protobuf", "~> 3.1"
