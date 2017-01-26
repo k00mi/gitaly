@@ -38,11 +38,3 @@ Like other GitLab projects, Gitaly uses the [GitLab Workflow](https://docs.gitla
 
 * Merge requests will target the master branch.
 * If the merge request is an optimisation of the previous stable branch, i.e. the branch currently running on GitLab.com, the MR will be cherry picked across to the stable branch and deployed to Gitlab.com from there.
-
-*Aside* (Andrew Newdigate): As agreed in the status call on 25 Jan, we'll stick with this model for now as it's what everyone understands, however I think that in the long term, targeting the Patch/Optimisation merge requests against the `*-stable` branches and back-merging to master is a better strategy. Why?
-
-* The code is developed and tested against the stable environment rather than bleeding edge. This means that there will be less surprises (read: less downtime) when it's rolled into production intra-release.
-* By contrast, the current strategy will inherently test the patch against stable less. By merging into master and then cherry picking, authors can introduce bugs on the cherry pick which will only be discovered once the code is in production.
-* When a time-critical production issue occurs, the hot-fix process involves targeting master and then cherry picking the change to stable. This will take more time (read: *more downtime*) than patching the stable branch directly and using the back merge strategy afterwards.
-
-As discussed, lets stick to the current process for now but review in a future retrospective.
