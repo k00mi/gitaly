@@ -26,7 +26,7 @@ The diagram explains most of the process.
 
 #### Integrating with the GitLab Release Cycle
 
-The GitLab release cycle culminates in a  monthly release on the 22nd of each month. The cut for this release currently happens on the 7th of the month. Since Gitaly will be using a shorter, two week fixed cycle, some planning will be needed to ensure that we have a new stable release ready for the cut-off date. This will happen at the iteration kick-off.
+The GitLab release cycle culminates in a monthly release on the 22nd of each month. The cut for this release currently happens on the 7th of the month. Since Gitaly will be using a shorter, two week fixed cycle, some planning will be needed to ensure that we have a new stable release ready for the cut-off date. This will happen at the iteration kick-off.
 
 ## Branching Model
 
