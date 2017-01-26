@@ -1,7 +1,13 @@
 # Gitaly release process
 
-Releases are marked by annotated Git tags. They must be of the form
-`vX.Y.Z`.
+Releases are marked by annotated Git tags. To create a new release
+run:
+
+```
+_support/release x.y.z
+```
+
+Where x.y.z is a semver-compliant version number.
 
 ## Experimental builds
 
