@@ -9,7 +9,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"gitlab.com/gitlab-org/gitaly/router"
+	"gitlab.com/gitlab-org/gitaly/internal/router"
 )
 
 type Config struct {
