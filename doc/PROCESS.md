@@ -1,8 +1,8 @@
 ## Gitaly Team Process
 
-Gitaly is a fairly unique service in GitLab in that is has no dependencies on `gitlab-rails`, the monolithic persistence store (`pg`) or other components.
+Gitaly is a fairly unique service in GitLab in that is has no dependencies on [gitlab-rails](https://gitlab.com/gitlab-org/gitlab-ce) or its SQL database.
 
-This means that we can iterate faster than the monolith, adding improvements (particularly optimisations) at a faster rate than the main application.
+This means that we can iterate faster than the gitlab-rails project, adding improvements (particularly optimisations) at a faster rate.
 
 ### Gitaly Releases
 
