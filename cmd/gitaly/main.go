@@ -8,6 +8,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly/internal/service"
 
+	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -41,9 +42,16 @@ func main() {
 	}
 	log.Println("Listening on socket", config.SocketPath)
 
-	server := grpc.NewServer()
+	server := grpc.NewServer(
+		grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
+		grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
+	)
+
 	service.RegisterAll(server)
 	reflection.Register(server)
+
+	// After all your registrations, make sure all of the Prometheus metrics are initialized.
+	grpc_prometheus.Register(server)
 
 	serverError := make(chan error, 2)
 	go func() {
@@ -51,6 +59,7 @@ func main() {
 	}()
 
 	if config.PrometheusListenAddr != "" {
+		log.Print("Starting prometheus listener ", config.PrometheusListenAddr)
 		promMux := http.NewServeMux()
 		promMux.Handle("/metrics", promhttp.Handler())
 		go func() {
