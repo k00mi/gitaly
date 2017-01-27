@@ -57,7 +57,9 @@ unless ARGV.count == 1
   abort
 end
 
-unless File.exist?('.gitaly-root-directory')
+directory_current_file = File.expand_path('..', __FILE__)
+git_root_current_file = capture!(%w[git rev-parse --show-toplevel], directory_current_file).chomp
+unless git_root_current_file == Dir.pwd
   error "#{$0}: this script must be run from the root of the Gitaly repository"
   abort
 end
