@@ -108,9 +108,11 @@ All design decision should be added here.
 
 ## Iterate
 
+[More on the Gitaly Process here](docs/PROCESS.md)
+
 Instead of moving everything to Gitaly and only then optimize performance we'll iterate so we quickly have results
 
-The iteration process is as follows for every month:
+The iteration process is as follows:
 
 1. Move a specific set of functions from Rails to Gitaly without performance optimizations (needs to happen before release, there is a switch to use either Rails or Gitaly)
 1. Measure their original performance
@@ -127,6 +129,34 @@ Some examples of a specific set of functions:
 - Getting statistics (branch count, tag count, etc), ideally without loading all kinds of Git references (which currently happens)
 - Checking if a blob is binary, text, svg, etc
 - Blob cache seems complicated https://gitlab.com/gitlab-org/gitaly/issues/14
+
+Based on the  [daily overview dashboard](http://performance.gitlab.net/dashboard/db/daily-overview?panelId=14&fullscreen), we should tackle the routes in `gitlab-rails` in the following order:
+
+|**Controller**|**Analysis**|**Migration**|**Optim 1**|**Optim 2**|
+|--------------|-------------|------------|-----------|-----------|
+| SmartHTTP Workhorse Interceptors | #36 | | | |
+| `Projects::CommitController#show` | #64 | | | |
+| `Projects::MergeRequestsController#ci_status.json` | #66 | | | |
+| `Projects::MergeRequestsController#ci_environments_status.json` | #66 | | | |
+| `Projects::TreeController#show` | #65 | | | |
+| `RootController#index` | | | | |
+| `Projects::RawController#show` | | | | |
+| `Projects::BlobController#show` | | | | |
+| `ProjectsController#show` | | | | |
+| `Projects::BranchesController#index` | | | | |
+| `Projects::RefsController#logs_tree` | | | | |
+| `GroupsController#show` | | | | |
+| `Projects::MergeRequestsController#show` | | | | |
+| `Dashboard::ProjectsController#index` | | | | |
+| `Explore::ProjectsController#trending` | | | | |
+| `Projects::MergeRequestsController#new` | | | | |
+| `Projects::MergeRequestsController#create` | | | | |
+| `Projects::BuildsController#show` | | | | |
+| `Explore::ProjectsController#index` | | | | |
+| `Projects::GitHttpController#git_upload_pack.json` | | | | |
+
+(More to follow!)
+
 
 ## Plan
 
