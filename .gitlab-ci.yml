@@ -11,6 +11,13 @@ test:
     - make
     - make test
 
+protos:
+  stage: test
+  script:
+    - apt-get update -qq
+    - apt-get install -qq -y rubygems bundler unzip
+    - _support/check-grpc-proto-clients
+
 package:
   stage: package
   only: 
