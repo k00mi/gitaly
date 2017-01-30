@@ -132,6 +132,16 @@ Some examples of a specific set of functions:
 
 Based on the  [daily overview dashboard](http://performance.gitlab.net/dashboard/db/daily-overview?panelId=14&fullscreen), we should tackle the routes in `gitlab-rails` in the following order:
 
+
+### Order of Migration
+
+Using data from the [daily overview dashboard](http://performance.gitlab.net/dashboard/db/daily-overview?panelId=14&fullscreen),
+we've prioritised the order in which we'll work through the `gitlab-rails` controllers
+in descending order of **95% Cumulative Time** (that is `(number of calls) * (95% call time)`).
+
+A [Google Spreadsheet](https://docs.google.com/spreadsheets/d/1MVjsbLIjBVryMxO0UhBWebrwXuqpbCz18ZtrThcSFFU/edit) is available
+with these calculations.
+
 |**Controller**|**Analysis**|**Migration**|**Optim 1**|**Optim 2**|
 |--------------|-------------|------------|-----------|-----------|
 | SmartHTTP Workhorse Interceptors | #36 | | | |
