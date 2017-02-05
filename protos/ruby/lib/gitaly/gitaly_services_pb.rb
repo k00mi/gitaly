@@ -23,4 +23,18 @@ module Gitaly
 
     Stub = Service.rpc_stub_class
   end
+  module Notifications
+    class Service
+
+      include GRPC::GenericService
+
+      self.marshal_class_method = :encode
+      self.unmarshal_class_method = :decode
+      self.service_name = 'gitaly.Notifications'
+
+      rpc :PostReceive, PostReceiveRequest, PostReceiveResponse
+    end
+
+    Stub = Service.rpc_stub_class
+  end
 end
