@@ -12,9 +12,13 @@ service SmartHTTP {
 }
 
 message InfoRefsRequest {
-  string repo_path = 1;
+  Repository repository = 1;
 }
 
 message InfoRefsResponse {
   bytes data = 1;
+}
+
+message Repository {
+  string path = 1;
 }
