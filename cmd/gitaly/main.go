@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+// Config specifies the gitaly server configuration
 type Config struct {
 	SocketPath           string `split_words:"true"`
 	PrometheusListenAddr string `split_words:"true"`

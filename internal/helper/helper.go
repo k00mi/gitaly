@@ -5,6 +5,8 @@ import (
 	"syscall"
 )
 
+// CleanUpProcessGroup will send a SIGTERM signal to the process group
+// belonging to the `cmd` process
 func CleanUpProcessGroup(cmd *exec.Cmd) {
 	if cmd == nil {
 		return
