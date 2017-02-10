@@ -46,6 +46,19 @@ func TestSuccessfulPostReceive(t *testing.T) {
 	}
 }
 
+func TestEmptyPostReceiveRequest(t *testing.T) {
+	server := runNotificationsServer(t)
+	defer server.Stop()
+
+	client := newNotificationsClient(t)
+	rpcRequest := &pb.PostReceiveRequest{}
+
+	_, err := client.PostReceive(context.Background(), rpcRequest)
+	if err.Error() != "rpc error: code = 2 desc = Bad Request (empty repository)" {
+		t.Fatal(err)
+	}
+}
+
 func runNotificationsServer(t *testing.T) *grpc.Server {
 	server := grpc.NewServer()
 	listener, err := net.Listen("unix", serverSocketPath)
