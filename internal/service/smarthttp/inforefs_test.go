@@ -92,6 +92,43 @@ func TestSuccessfulInfoRefsReceivePack(t *testing.T) {
 	})
 }
 
+func TestFailureRepoNotFoundInfoRefsReceivePack(t *testing.T) {
+	server := runSmartHTTPServer(t)
+	defer server.Stop()
+
+	client := newSmartHTTPClient(t)
+	repo := &pb.Repository{Path: path.Join(testRepoRoot, "another_repo")}
+	rpcRequest := &pb.InfoRefsRequest{Repository: repo}
+
+	c, err := client.InfoRefsReceivePack(context.Background(), rpcRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = readFullInfoRefsResponseWithErr(t, pbhelper.InfoRefsClientWriterTo{c})
+	if !strings.Contains(err.Error(), "testdata/data/another_repo]: exit status 128") {
+		t.Fatal(err)
+	}
+}
+
+func TestFailureRepoNotSetInfoRefsReceivePack(t *testing.T) {
+	server := runSmartHTTPServer(t)
+	defer server.Stop()
+
+	client := newSmartHTTPClient(t)
+	rpcRequest := &pb.InfoRefsRequest{}
+
+	c, err := client.InfoRefsReceivePack(context.Background(), rpcRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = readFullInfoRefsResponseWithErr(t, pbhelper.InfoRefsClientWriterTo{c})
+	if err.Error() != "rpc error: code = 3 desc = GetInfoRefs: repo argument is missing" {
+		t.Fatal(err)
+	}
+}
+
 func runSmartHTTPServer(t *testing.T) *grpc.Server {
 	server := grpc.NewServer()
 	listener, err := net.Listen("unix", serverSocketPath)
@@ -147,4 +184,11 @@ func readFullInfoRefsResponse(t *testing.T, c pbhelper.InfoRefsClientWriterTo) *
 		t.Fatal(err)
 	}
 	return buffer
+}
+
+func readFullInfoRefsResponseWithErr(t *testing.T, c pbhelper.InfoRefsClientWriterTo) (*bytes.Buffer, error) {
+	buffer := &bytes.Buffer{}
+	_, err := c.WriteTo(buffer)
+
+	return buffer, err
 }
