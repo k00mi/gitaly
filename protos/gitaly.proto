@@ -11,6 +11,10 @@ service SmartHTTP {
   rpc InfoRefsReceivePack(InfoRefsRequest) returns (stream InfoRefsResponse) {}
 }
 
+service Notifications {
+  rpc PostReceive(PostReceiveRequest) returns (PostReceiveResponse) {}
+}
+
 message InfoRefsRequest {
   Repository repository = 1;
 }
@@ -22,3 +26,9 @@ message InfoRefsResponse {
 message Repository {
   string path = 1;
 }
+
+message PostReceiveRequest {
+  Repository repository = 1;
+}
+
+message PostReceiveResponse {}
