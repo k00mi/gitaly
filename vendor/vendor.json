@@ -81,6 +81,18 @@
 			"revisionTime": "2016-12-06T22:21:41Z"
 		},
 		{
+			"checksumSHA1": "lZr4WdZwi2U+4BnB64v/SabpbaU=",
+			"path": "gitlab.com/gitlab-org/gitaly-proto/go",
+			"revision": "b695615152e7ec0244390fa39311732469b39193",
+			"revisionTime": "2017-02-14T13:51:06Z"
+		},
+		{
+			"checksumSHA1": "2E36lBoyaVky2EJP1E5ub6Rg+uI=",
+			"path": "gitlab.com/gitlab-org/gitaly-proto/go/helper",
+			"revision": "413e021740a0056cafc0d3c730dc648611580fa2",
+			"revisionTime": "2017-02-13T17:19:22Z"
+		},
+		{
 			"checksumSHA1": "9jjO5GjLa0XF/nfWihF02RoH4qc=",
 			"path": "golang.org/x/net/context",
 			"revision": "f2499483f923065a842d38eb4c7f1927e6fc6e6d",

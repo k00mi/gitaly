@@ -4,7 +4,7 @@ import (
 	"errors"
 	"log"
 
-	pb "gitlab.com/gitlab-org/gitaly/protos/go"
+	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"golang.org/x/net/context"
 )
 
