@@ -69,3 +69,8 @@ gRPC provides an implementation framework based on these Protobuf concepts.
     the `Stub.new(nil, credentials, channel_override: the_channel)`
     invocation pattern instead of
     `Stub.new('some://address', credentials)` in Ruby Gitaly clients.
+1.  Gitaly uses
+    [grpc.Errorf](https://godoc.org/google.golang.org/grpc#Errorf) to
+    return meaningful
+    [errors](https://godoc.org/google.golang.org/grpc/codes#Code) to its
+    clients.
