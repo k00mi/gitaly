@@ -11,17 +11,18 @@ func main() {
 		fmt.Println("Usage: go run go-get-if-missing.go EXECUTABLE GO_PACKAGE")
 		os.Exit(1)
 	}
-	if err := goGetIfMissing(os.Args[1],os.Args[2]); err != nil {
-		fmt.Printf("error: %v", err)
+	if err := goGetIfMissing(os.Args[1], os.Args[2]); err != nil {
+		fmt.Printf("error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
 func goGetIfMissing(executable string, goPackage string) error {
-	if _, err := exec.LookPath(executable); err != nil {
-		cmd := exec.Command("go", "get", "-u", goPackage)
-		fmt.Println(cmd.Args)
-		return cmd.Run()
+	if _, err := exec.LookPath(executable); err == nil {
+		return nil
 	}
-	return nil
+
+	cmd := exec.Command("go", "get", "-u", goPackage)
+	fmt.Println(cmd.Args)
+	return cmd.Run()
 }

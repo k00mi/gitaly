@@ -1,0 +1,5 @@
+The following components are included in Gitaly:
+
+{{range $index, $t := .}}{{if ne $index 0}}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+{{end}}{{.Filename}} - {{.Path}}
+{{.Text}}{{end}}
