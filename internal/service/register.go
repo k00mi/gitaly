@@ -8,6 +8,8 @@ import (
 	"google.golang.org/grpc"
 )
 
+// RegisterAll will register all the known grpc services with
+// the specified grpc service instance
 func RegisterAll(grpcServer *grpc.Server) {
 	pb.RegisterNotificationsServer(grpcServer, notifications.NewServer())
 	pb.RegisterSmartHTTPServer(grpcServer, smarthttp.NewServer())

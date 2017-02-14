@@ -6,10 +6,10 @@ CMDS:=$(shell cd cmd && ls)
 export GOPATH=${BUILD_DIR}/_build
 export PATH:=${GOPATH}/bin:$(PATH)
 
-.PHONY: ${BUILD_DIR}/_build
-
+.PHONY: all
 all: build
 
+.PHONY: ${BUILD_DIR}/_build
 ${BUILD_DIR}/_build:
 	mkdir -p $@/src/${PKG}
 	tar -cf - --exclude _build --exclude .git . | (cd $@/src/${PKG} && tar -xf -)
@@ -19,17 +19,21 @@ build:	clean-build ${BUILD_DIR}/_build $(shell find . -name '*.go' -not -path '.
 	cd ${PKG_BUILD_DIR} && $(foreach cmd,${CMDS},go build ./cmd/${cmd} && ) true
 	mv $(foreach cmd,${CMDS},${PKG_BUILD_DIR}/${cmd}) ${BUILD_DIR}/
 
-test: clean-build ${BUILD_DIR}/_build fmt govendor-status
-	cd ${PKG_BUILD_DIR} && go test ./...
+verify: lint check-formatting govendor-status
 
-govendor-status:	${BUILD_DIR}/_build
+check-formatting:
+	@if [ -n "$$(_support/gofmt-all -n)" ]; then echo please run \"make format\"; exit 1; fi
+
+govendor-status: ${BUILD_DIR}/_build
 	cd ${PKG_BUILD_DIR} && go run _support/govendor-status.go
 
-.PHONY:	fmt
-fmt:
-	_support/gofmt-all -n | awk '{ print } END { if (NR > 0) { print "Please run _support/gofmt-all -f"; exit 1 } }'
+test: clean-build ${BUILD_DIR}/_build verify
+	cd ${PKG_BUILD_DIR} && go test ./...
 
-package:	build
+lint: install-developer-tools
+	@./_support/lint
+
+package: build
 	./_support/package/package ${CMDS}
 
 clean:	clean-build
@@ -38,3 +42,11 @@ clean:	clean-build
 
 clean-build:
 	rm -rf ${BUILD_DIR}/_build
+
+.PHONY: format
+format:
+	@_support/gofmt-all -f
+
+.PHONY: install-developer-tools
+install-developer-tools:
+	@if ! which golint > /dev/null; then go get -u github.com/golang/lint/golint; fi

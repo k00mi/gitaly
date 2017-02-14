@@ -1,7 +1,10 @@
 package notifications
 
+import pb "gitlab.com/gitlab-org/gitaly-proto/go"
+
 type server struct{}
 
-func NewServer() *server {
+// NewServer creates a new instance of a grpc NotificationsServer
+func NewServer() pb.NotificationsServer {
 	return &server{}
 }

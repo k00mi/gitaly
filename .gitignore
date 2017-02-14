@@ -3,3 +3,7 @@
 /*.deb
 /_support/package/bin
 /_support/bin
+/_support/.bundle
+/*.zip
+/*.gem
+internal/service/smarthttp/testdata

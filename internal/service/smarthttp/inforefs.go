@@ -77,7 +77,7 @@ func handleInfoRefs(service string, repo *pb.Repository, w io.Writer) error {
 	return nil
 }
 
-func gitCommand(glId string, name string, args ...string) *exec.Cmd {
+func gitCommand(glID string, name string, args ...string) *exec.Cmd {
 	cmd := exec.Command(name, args...)
 	// Start the command in its own process group (nice for signalling)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
@@ -86,7 +86,7 @@ func gitCommand(glId string, name string, args ...string) *exec.Cmd {
 		fmt.Sprintf("HOME=%s", os.Getenv("HOME")),
 		fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
 		fmt.Sprintf("LD_LIBRARY_PATH=%s", os.Getenv("LD_LIBRARY_PATH")),
-		fmt.Sprintf("GL_ID=%s", glId),
+		fmt.Sprintf("GL_ID=%s", glID),
 		fmt.Sprintf("GL_PROTOCOL=http"),
 	}
 	// If we don't do something with cmd.Stderr, Git errors will be lost
