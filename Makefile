@@ -25,7 +25,8 @@ check-formatting:
 	@if [ -n "$$(_support/gofmt-all -n)" ]; then echo please run \"make format\"; exit 1; fi
 
 govendor-status: ${BUILD_DIR}/_build
-	cd ${PKG_BUILD_DIR} && go run _support/govendor-status.go
+	go run _support/go-get-if-missing.go govendor github.com/kardianos/govendor
+	cd ${PKG_BUILD_DIR} && govendor status
 
 test: clean-build ${BUILD_DIR}/_build verify
 	cd ${PKG_BUILD_DIR} && go test ./...
@@ -49,4 +50,4 @@ format:
 
 .PHONY: install-developer-tools
 install-developer-tools:
-	@if ! which golint > /dev/null; then go get -u github.com/golang/lint/golint; fi
+	go run _support/go-get-if-missing.go golint github.com/golang/lint/golint
