@@ -19,8 +19,11 @@ build:	clean-build ${BUILD_DIR}/_build $(shell find . -name '*.go' -not -path '.
 	cd ${PKG_BUILD_DIR} && $(foreach cmd,${CMDS},go build ./cmd/${cmd} && ) true
 	mv $(foreach cmd,${CMDS},${PKG_BUILD_DIR}/${cmd}) ${BUILD_DIR}/
 
-test: clean-build ${BUILD_DIR}/_build fmt
+test: clean-build ${BUILD_DIR}/_build fmt govendor-status
 	cd ${PKG_BUILD_DIR} && go test ./...
+
+govendor-status:	${BUILD_DIR}/_build
+	cd ${PKG_BUILD_DIR} && go run _support/govendor-status.go
 
 .PHONY:	fmt
 fmt:
