@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"gitlab.com/gitlab-org/gitaly/internal/service"
+	"gitlab.com/gitlab-org/gitaly/internal/service/middleware/panichandler"
 
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/kelseyhightower/envconfig"
@@ -45,8 +46,14 @@ func main() {
 	log.Println("Listening on socket", config.SocketPath)
 
 	server := grpc.NewServer(
-		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(grpc_prometheus.StreamServerInterceptor)),
-		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(grpc_prometheus.UnaryServerInterceptor)),
+		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+			panichandler.StreamPanicHandler,         // Panic Handler first: handle panics gracefully
+			grpc_prometheus.StreamServerInterceptor, // Prometheus Metrics next: measure RPC times
+		)),
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			panichandler.UnaryPanicHandler,         // Panic Handler first: handle panics gracefully
+			grpc_prometheus.UnaryServerInterceptor, // Prometheus Metrics next: measure RPC times
+		)),
 	)
 
 	service.RegisterAll(server)
