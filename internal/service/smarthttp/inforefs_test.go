@@ -2,6 +2,7 @@ package smarthttp
 
 import (
 	"bytes"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -105,8 +106,7 @@ func TestFailureRepoNotFoundInfoRefsReceivePack(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = readFullInfoRefsResponseWithErr(t, pbhelper.InfoRefsClientWriterTo{c})
-	if !strings.Contains(err.Error(), "testdata/data/another_repo]: exit status 128") {
+	if err := drainInfoRefs(c); !strings.Contains(err.Error(), "testdata/data/another_repo]: exit status 128") {
 		t.Fatal(err)
 	}
 }
@@ -123,8 +123,7 @@ func TestFailureRepoNotSetInfoRefsReceivePack(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = readFullInfoRefsResponseWithErr(t, pbhelper.InfoRefsClientWriterTo{c})
-	if err.Error() != "rpc error: code = 3 desc = GetInfoRefs: repo argument is missing" {
+	if err := drainInfoRefs(c); err.Error() != "rpc error: code = 3 desc = GetInfoRefs: repo argument is missing" {
 		t.Fatal(err)
 	}
 }
@@ -186,9 +185,7 @@ func readFullInfoRefsResponse(t *testing.T, c pbhelper.InfoRefsClientWriterTo) *
 	return buffer
 }
 
-func readFullInfoRefsResponseWithErr(t *testing.T, c pbhelper.InfoRefsClientWriterTo) (*bytes.Buffer, error) {
-	buffer := &bytes.Buffer{}
-	_, err := c.WriteTo(buffer)
-
-	return buffer, err
+func drainInfoRefs(c pbhelper.InfoRefsClient) error {
+	_, err := (&pbhelper.InfoRefsClientWriterTo{c}).WriteTo(ioutil.Discard)
+	return err
 }
