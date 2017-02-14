@@ -10,6 +10,9 @@ import (
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 )
 
 type infoRefsResponseWriter struct {
@@ -37,6 +40,9 @@ func (s *server) InfoRefsReceivePack(in *pb.InfoRefsRequest, stream pb.SmartHTTP
 }
 
 func handleInfoRefs(service string, repo *pb.Repository, w io.Writer) error {
+	if repo == nil {
+		return grpc.Errorf(codes.InvalidArgument, "GetInfoRefs: repo argument is missing")
+	}
 	cmd := gitCommand("", "git", service, "--stateless-rpc", "--advertise-refs", repo.Path)
 
 	log.Printf("handleInfoRefs: service=%q RepoPath=%q", service, repo.Path)
