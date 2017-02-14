@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	pb "gitlab.com/gitlab-org/gitaly/protos/go"
-	pbhelper "gitlab.com/gitlab-org/gitaly/protos/go/helper"
+	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	pbhelper "gitlab.com/gitlab-org/gitaly-proto/go/helper"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"

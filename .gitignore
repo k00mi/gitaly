@@ -2,9 +2,4 @@
 /gitaly
 /*.deb
 /_support/package/bin
-/_support/package/.bundle/
-/_support/protoc
 /_support/bin
-/_support/.bundle
-/*.zip
-/*.gem

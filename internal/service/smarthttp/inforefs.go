@@ -8,8 +8,8 @@ import (
 	"os/exec"
 	"syscall"
 
+	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
-	pb "gitlab.com/gitlab-org/gitaly/protos/go"
 )
 
 type infoRefsResponseWriter struct {

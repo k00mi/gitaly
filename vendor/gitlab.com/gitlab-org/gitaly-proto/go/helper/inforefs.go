@@ -3,7 +3,7 @@ package helper
 import (
 	"io"
 
-	pb "gitlab.com/gitlab-org/gitaly/protos/go"
+	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
 
 type InfoRefsClient interface {
