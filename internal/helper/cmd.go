@@ -40,3 +40,18 @@ func CleanUpProcessGroup(cmd *exec.Cmd) {
 	// reap our child process
 	cmd.Wait()
 }
+
+// ExitStatus will return the exit-code from an error
+func ExitStatus(err error) (int, bool) {
+	exitError, ok := err.(*exec.ExitError)
+	if !ok {
+		return 0, false
+	}
+
+	waitStatus, ok := exitError.Sys().(syscall.WaitStatus)
+	if !ok {
+		return 0, false
+	}
+
+	return waitStatus.ExitStatus(), true
+}
