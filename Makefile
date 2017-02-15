@@ -19,7 +19,7 @@ build:	clean-build ${BUILD_DIR}/_build $(shell find . -name '*.go' -not -path '.
 	cd ${PKG_BUILD_DIR} && $(foreach cmd,${CMDS},go build ./cmd/${cmd} && ) true
 	mv $(foreach cmd,${CMDS},${PKG_BUILD_DIR}/${cmd}) ${BUILD_DIR}/
 
-verify: lint check-formatting govendor-status
+verify: lint check-formatting govendor-status notice-up-to-date
 
 check-formatting: install-developer-tools
 	go run _support/gofmt-all.go -n
@@ -39,6 +39,10 @@ package: build
 notice:	${BUILD_DIR}/_build install-developer-tools
 	rm -f ${PKG_BUILD_DIR}/NOTICE # Avoid NOTICE-in-NOTICE
 	cd ${PKG_BUILD_DIR} && govendor license -template _support/notice.template -o ${BUILD_DIR}/NOTICE
+
+notice-up-to-date:	notice
+	git ls-files --error-unmatch NOTICE # NOTICE is a tracked file
+	git diff --exit-code # there are no changed files
 
 clean:	clean-build
 	rm -rf client/testdata
