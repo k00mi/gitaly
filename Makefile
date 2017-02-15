@@ -21,20 +21,24 @@ build:	clean-build ${BUILD_DIR}/_build $(shell find . -name '*.go' -not -path '.
 
 verify: lint check-formatting govendor-status
 
-check-formatting:
-	@if [ -n "$$(_support/gofmt-all -n)" ]; then echo please run \"make format\"; exit 1; fi
+check-formatting: install-developer-tools
+	go run _support/gofmt-all.go -n
 
-govendor-status: ${BUILD_DIR}/_build
-	cd ${PKG_BUILD_DIR} && go run _support/govendor-status.go
+govendor-status: ${BUILD_DIR}/_build install-developer-tools
+	cd ${PKG_BUILD_DIR} && govendor status
 
 test: clean-build ${BUILD_DIR}/_build verify
 	cd ${PKG_BUILD_DIR} && go test ./...
 
 lint: install-developer-tools
-	@./_support/lint
+	go run _support/lint.go
 
 package: build
 	./_support/package/package ${CMDS}
+
+notice:	${BUILD_DIR}/_build install-developer-tools
+	rm -f ${PKG_BUILD_DIR}/NOTICE # Avoid NOTICE-in-NOTICE
+	cd ${PKG_BUILD_DIR} && govendor license -template _support/notice.template -o ${BUILD_DIR}/NOTICE
 
 clean:	clean-build
 	rm -rf client/testdata
@@ -45,8 +49,9 @@ clean-build:
 
 .PHONY: format
 format:
-	@_support/gofmt-all -f
+	@go run _support/gofmt-all.go -f
 
 .PHONY: install-developer-tools
 install-developer-tools:
-	@if ! which golint > /dev/null; then go get -u github.com/golang/lint/golint; fi
+	@go run _support/go-get-if-missing.go govendor github.com/kardianos/govendor
+	@go run _support/go-get-if-missing.go golint github.com/golang/lint/golint
