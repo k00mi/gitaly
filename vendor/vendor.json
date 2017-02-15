@@ -39,6 +39,12 @@
 			"revisionTime": "2016-04-24T11:30:07Z"
 		},
 		{
+			"checksumSHA1": "5h8cJQQ8Vs/Rrk0yZNB9JLhJkaE=",
+			"path": "github.com/mwitkow/go-grpc-middleware",
+			"revision": "3e23ca7fd796e946de34f19c1a30742057a244b3",
+			"revisionTime": "2016-12-19T10:04:13Z"
+		},
+		{
 			"checksumSHA1": "/j0HRFJPThv7HEkZZ/gurf+5fQI=",
 			"path": "github.com/prometheus/client_golang/prometheus",
 			"revision": "575f371f7862609249a1be4c9145f429fe065e32",
