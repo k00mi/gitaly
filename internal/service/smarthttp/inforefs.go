@@ -49,29 +49,29 @@ func handleInfoRefs(service string, repo *pb.Repository, w io.Writer) error {
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("GetInfoRefs: stdout: %v", err)
+		return grpc.Errorf(codes.Internal, "GetInfoRefs: stdout: %v", err)
 	}
 	defer stdout.Close()
 
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("GetInfoRefs: start %v: %v", cmd.Args, err)
+		return grpc.Errorf(codes.Internal, "GetInfoRefs: start %v: %v", cmd.Args, err)
 	}
 	defer helper.CleanUpProcessGroup(cmd) // Ensure brute force subprocess clean-up
 
 	if err := pktLine(w, fmt.Sprintf("# service=git-%s\n", service)); err != nil {
-		return fmt.Errorf("GetInfoRefs: pktLine: %v", err)
+		return grpc.Errorf(codes.Internal, "GetInfoRefs: pktLine: %v", err)
 	}
 
 	if err := pktFlush(w); err != nil {
-		return fmt.Errorf("GetInfoRefs: pktFlush: %v", err)
+		return grpc.Errorf(codes.Internal, "GetInfoRefs: pktFlush: %v", err)
 	}
 
 	if _, err := io.Copy(w, stdout); err != nil {
-		return fmt.Errorf("GetInfoRefs: copy output of %v: %v", cmd.Args, err)
+		return grpc.Errorf(codes.Internal, "GetInfoRefs: copy output of %v: %v", cmd.Args, err)
 	}
 
 	if err := cmd.Wait(); err != nil {
-		return fmt.Errorf("GetInfoRefs: wait for %v: %v", cmd.Args, err)
+		return grpc.Errorf(codes.Internal, "GetInfoRefs: wait for %v: %v", cmd.Args, err)
 	}
 
 	return nil

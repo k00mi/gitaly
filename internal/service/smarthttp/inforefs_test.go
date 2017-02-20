@@ -17,6 +17,7 @@ import (
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -106,9 +107,8 @@ func TestFailureRepoNotFoundInfoRefsReceivePack(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := drainInfoRefs(c); !strings.Contains(err.Error(), "testdata/data/another_repo]: exit status 128") {
-		t.Fatal(err)
-	}
+	err = drainInfoRefs(c)
+	mustGrpcError(t, err, codes.Internal, "testdata/data/another_repo]: exit status 128")
 }
 
 func TestFailureRepoNotSetInfoRefsReceivePack(t *testing.T) {
@@ -123,9 +123,8 @@ func TestFailureRepoNotSetInfoRefsReceivePack(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := drainInfoRefs(c); err.Error() != "rpc error: code = 3 desc = GetInfoRefs: repo argument is missing" {
-		t.Fatal(err)
-	}
+	err = drainInfoRefs(c)
+	mustGrpcError(t, err, codes.InvalidArgument, "rpc error: code = 3 desc = GetInfoRefs: repo argument is missing")
 }
 
 func runSmartHTTPServer(t *testing.T) *grpc.Server {
@@ -188,4 +187,20 @@ func readFullInfoRefsResponse(t *testing.T, c pbhelper.InfoRefsClientWriterTo) *
 func drainInfoRefs(c pbhelper.InfoRefsClient) error {
 	_, err := (&pbhelper.InfoRefsClientWriterTo{c}).WriteTo(ioutil.Discard)
 	return err
+}
+
+// TODO: this might prove generally useful, move it if we need to
+func mustGrpcError(t *testing.T, err error, expectedCode codes.Code, containsText string) {
+	if err == nil {
+		t.Fatal("Expected an error, got nil")
+	}
+
+	// Check that the code matches
+	if code := grpc.Code(err); code != expectedCode {
+		t.Fatalf("Expected an error with code %v, got %v. The error was %v", expectedCode, code, err)
+	}
+
+	if containsText != "" && !strings.Contains(err.Error(), containsText) {
+		t.Fatal(err)
+	}
 }
