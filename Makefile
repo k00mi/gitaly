@@ -1,5 +1,6 @@
 PKG=gitlab.com/gitlab-org/gitaly
 BUILD_DIR=$(shell pwd)
+BIN_BUILD_DIR=${BUILD_DIR}/_build/bin
 PKG_BUILD_DIR:=${BUILD_DIR}/_build/src/${PKG}
 CMDS:=$(shell cd cmd && ls)
 
@@ -16,8 +17,9 @@ ${BUILD_DIR}/_build:
 	touch $@
 
 build:	clean-build ${BUILD_DIR}/_build $(shell find . -name '*.go' -not -path './vendor/*')
-	cd ${PKG_BUILD_DIR} && $(foreach cmd,${CMDS},go build ./cmd/${cmd} && ) true
-	mv $(foreach cmd,${CMDS},${PKG_BUILD_DIR}/${cmd}) ${BUILD_DIR}/
+	rm -f -- "${BIN_BUILD_DIR}/*"
+	go install ${PKG}/cmd/...
+	cp ${BIN_BUILD_DIR}/* ${BUILD_DIR}/
 
 verify: lint check-formatting govendor-status notice-up-to-date
 
@@ -28,7 +30,7 @@ govendor-status: ${BUILD_DIR}/_build install-developer-tools
 	cd ${PKG_BUILD_DIR} && govendor status
 
 test: clean-build ${BUILD_DIR}/_build verify
-	cd ${PKG_BUILD_DIR} && go test ./...
+	go test ${PKG}/...
 
 lint: install-developer-tools
 	go run _support/lint.go
