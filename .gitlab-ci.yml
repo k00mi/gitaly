@@ -9,6 +9,7 @@ test:
   stage: test
   script:
     - make
+    - make notice-up-to-date
     - make test
 
 package:
