@@ -19,7 +19,7 @@ build:	clean-build ${BUILD_DIR}/_build $(shell find . -name '*.go' -not -path '.
 	cd ${PKG_BUILD_DIR} && $(foreach cmd,${CMDS},go build ./cmd/${cmd} && ) true
 	mv $(foreach cmd,${CMDS},${PKG_BUILD_DIR}/${cmd}) ${BUILD_DIR}/
 
-verify: lint check-formatting govendor-status notice-up-to-date
+verify: lint check-formatting govendor-status
 
 check-formatting: install-developer-tools
 	go run _support/gofmt-all.go -n
