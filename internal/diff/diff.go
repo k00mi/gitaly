@@ -85,9 +85,9 @@ func (parser *Parser) Parse() bool {
 			parser.currentDiff.RawChunks = append(parser.currentDiff.RawChunks, nil)
 
 			parser.err = consumeChunkLine(parser.reader, parser.currentDiff)
-		} else if helper.ByteSliceHasAnyPrefix(line, []string{"---", "+++"}) {
+		} else if helper.ByteSliceHasAnyPrefix(line, "---", "+++") {
 			parser.err = parseHeader(parser.reader, parser.currentDiff)
-		} else if helper.ByteSliceHasAnyPrefix(line, []string{"-", "+", " "}) {
+		} else if helper.ByteSliceHasAnyPrefix(line, "-", "+", " ", "\\") {
 			parser.err = consumeChunkLine(parser.reader, parser.currentDiff)
 		} else {
 			parser.err = parseHeader(parser.reader, parser.currentDiff)

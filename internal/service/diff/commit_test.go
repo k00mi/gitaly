@@ -26,7 +26,7 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 
 	client := newDiffClient(t)
 	repo := &pb.Repository{Path: path.Join(testRepoRoot, testRepo)}
-	rightCommit := "d42783470dc29fde2cf459eb3199ee1d7e3f3a72"
+	rightCommit := "372ab6950519549b14d220271ee2322caa44d4eb"
 	leftCommit := rightCommit + "~" // Parent of rightCommit
 	rpcRequest := &pb.CommitDiffRequest{Repository: repo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
 
@@ -108,6 +108,18 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 				Binary:   false,
 			},
 			ChunksCombined: testhelper.MustReadFile(t, "testdata/named-file-with-mods-chunks.txt"),
+		},
+		{
+			Diff: diff.Diff{
+				FromID:   "0000000000000000000000000000000000000000",
+				ToID:     "b464dff7a75ccc92fbd920fd9ae66a84b9d2bf94",
+				OldMode:  0,
+				NewMode:  0100644,
+				FromPath: []byte("/dev/null"),
+				ToPath:   []byte("gitaly/no-newline-at-the-end"),
+				Binary:   false,
+			},
+			ChunksCombined: testhelper.MustReadFile(t, "testdata/no-newline-at-the-end-chunks.txt"),
 		},
 		{
 			Diff: diff.Diff{
