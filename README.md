@@ -6,6 +6,7 @@
 - [Decisions](#decisions)
 - [Iterate](#iterate)
 - [Plan](#plan)
+- [Presentations](#presentations)
 
 ## What
 
@@ -194,3 +195,7 @@ High-level architecture overview:
 ![Gitaly Architecture](https://docs.google.com/drawings/d/14-5NHGvsOVaAJZl2w7pIli8iDUqed2eIbvXdff5jneo/pub?w=2096&h=1536)
 
 [Edit this diagram directly in Google Drawings](https://docs.google.com/drawings/d/14-5NHGvsOVaAJZl2w7pIli8iDUqed2eIbvXdff5jneo/edit)
+
+## Presentations
+
+- [Git Paris meetup, 2017-02-22](https://docs.google.com/presentation/d/19OZUalFMIDM8WujXrrIyCuVb_oVeaUzpb-UdGThOvAo/edit?usp=sharing) a high-level overview of what our plans are and where we are.
