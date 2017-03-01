@@ -1,0 +1,4 @@
+@@ -1 +1,2 @@
+-This file will have its mode changed, with some modifications
++Here are the modifications:
++This file had its mode changed, with some modifications.
