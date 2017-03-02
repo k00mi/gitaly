@@ -7,6 +7,8 @@ import (
 	"io"
 	"regexp"
 	"strconv"
+
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
 // Diff represents a single parsed diff entry
@@ -83,9 +85,9 @@ func (parser *Parser) Parse() bool {
 			parser.currentDiff.RawChunks = append(parser.currentDiff.RawChunks, nil)
 
 			parser.err = consumeChunkLine(parser.reader, parser.currentDiff)
-		} else if bytes.HasPrefix(line, []byte("---")) || bytes.HasPrefix(line, []byte("+++")) {
+		} else if helper.ByteSliceHasAnyPrefix(line, "---", "+++") {
 			parser.err = parseHeader(parser.reader, parser.currentDiff)
-		} else if bytes.HasPrefix(line, []byte("-")) || bytes.HasPrefix(line, []byte("+")) || bytes.HasPrefix(line, []byte(" ")) {
+		} else if helper.ByteSliceHasAnyPrefix(line, "-", "+", " ", "\\") {
 			parser.err = consumeChunkLine(parser.reader, parser.currentDiff)
 		} else {
 			parser.err = parseHeader(parser.reader, parser.currentDiff)
