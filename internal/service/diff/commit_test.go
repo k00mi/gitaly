@@ -273,6 +273,27 @@ func TestFailedCommitDiffRequestWithEmptyCommit(t *testing.T) {
 	}
 }
 
+func TestFailedCommitDiffRequestWithNonExistentCommit(t *testing.T) {
+	server := runDiffServer(t)
+	defer server.Stop()
+
+	client := newDiffClient(t)
+	repo := &pb.Repository{Path: path.Join(testRepoRoot, testRepo)}
+	nonExistentCommitID := "deadfacedeadfacedeadfacedeadfacedeadface"
+	leftCommit := nonExistentCommitID + "~" // Parent of rightCommit
+	rpcRequest := &pb.CommitDiffRequest{Repository: repo, RightCommitId: nonExistentCommitID, LeftCommitId: leftCommit}
+
+	c, err := client.CommitDiff(context.Background(), rpcRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedError := "Command failed to complete successfully"
+	if err := drainCommitDiffResponse(c); !strings.Contains(err.Error(), expectedError) {
+		t.Errorf("Expected error to be %q, got %q", expectedError, err.Error())
+	}
+}
+
 func runDiffServer(t *testing.T) *grpc.Server {
 	server := grpc.NewServer()
 	listener, err := net.Listen("unix", serverSocketPath)
