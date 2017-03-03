@@ -30,7 +30,7 @@ check-formatting: install-developer-tools
 govendor-status: ${BUILD_DIR}/_build install-developer-tools
 	cd ${PKG_BUILD_DIR} && govendor status
 
-test: clean-build ${BUILD_DIR}/_build verify
+test: clean-build ${BUILD_DIR}/_build
 	go test ${PKG}/...
 
 lint: install-developer-tools
