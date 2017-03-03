@@ -4,6 +4,7 @@ import (
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/service/diff"
 	"gitlab.com/gitlab-org/gitaly/internal/service/notifications"
+	"gitlab.com/gitlab-org/gitaly/internal/service/ref"
 	"gitlab.com/gitlab-org/gitaly/internal/service/smarthttp"
 
 	"google.golang.org/grpc"
@@ -13,6 +14,7 @@ import (
 // the specified grpc service instance
 func RegisterAll(grpcServer *grpc.Server) {
 	pb.RegisterNotificationsServer(grpcServer, notifications.NewServer())
+	pb.RegisterRefServer(grpcServer, ref.NewServer())
 	pb.RegisterSmartHTTPServer(grpcServer, smarthttp.NewServer())
 	pb.RegisterDiffServer(grpcServer, diff.NewServer())
 }
