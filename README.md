@@ -45,6 +45,14 @@ To maintain the focus of the project, the following subjects are out-of-scope fo
 - [Git Transfer Protocol internals](https://git-scm.com/book/en/v2/Git-Internals-Transfer-Protocols)
 - [E3 Elastic Experiment Executor](https://bitbucket.org/atlassian/elastic-experiment-executor)
 
+## Installation
+
+Gitaly requires Go 1.5 or newer. To install into `/usr/local/bin`,
+run:
+
+```
+make install
+```
 
 ## Name
 

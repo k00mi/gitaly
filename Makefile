@@ -1,3 +1,4 @@
+PREFIX=/usr/local
 PKG=gitlab.com/gitlab-org/gitaly
 BUILD_DIR=$(shell pwd)
 BIN_BUILD_DIR=${BUILD_DIR}/_build/bin
@@ -21,6 +22,10 @@ build:	clean-build ${BUILD_DIR}/_build $(shell find . -name '*.go' -not -path '.
 	rm -f -- "${BIN_BUILD_DIR}/*"
 	go install ${PKG}/cmd/...
 	cp ${BIN_BUILD_DIR}/* ${BUILD_DIR}/
+
+install: build
+	mkdir -p $(DESTDIR)${PREFIX}/bin/
+	cd ${BIN_BUILD_DIR} && install ${CMDS} ${DESTDIR}${PREFIX}/bin/
 
 verify: lint check-formatting govendor-status
 
