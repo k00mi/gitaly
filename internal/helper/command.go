@@ -20,8 +20,8 @@ func (c *Command) Kill() {
 	CleanUpProcessGroup(c.Cmd)
 }
 
-// GitCommand creates a git Command with the given args
-func GitCommand(args ...string) (*Command, error) {
+// GitCommandReader creates a git Command with the given args
+func GitCommandReader(args ...string) (*Command, error) {
 	return NewCommand(exec.Command("git", args...))
 }
 

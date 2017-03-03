@@ -45,7 +45,7 @@ func findRefs(writer refNamesWriter, repo *pb.Repository, pattern string) error 
 
 	log.Printf("FindRefs: RepoPath=%q Pattern=%q", repoPath, pattern)
 
-	cmd, err := helper.GitCommand("--git-dir", repoPath, "for-each-ref", pattern, "--format=%(refname)")
+	cmd, err := helper.GitCommandReader("--git-dir", repoPath, "for-each-ref", pattern, "--format=%(refname)")
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func (s *server) FindAllTagNames(in *pb.FindAllTagNamesRequest, stream pb.Ref_Fi
 func _findBranchNames(repoPath string) ([][]byte, error) {
 	var names [][]byte
 
-	cmd, err := helper.GitCommand("--git-dir", repoPath, "for-each-ref", "refs/heads", "--format=%(refname)")
+	cmd, err := helper.GitCommandReader("--git-dir", repoPath, "for-each-ref", "refs/heads", "--format=%(refname)")
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func _findBranchNames(repoPath string) ([][]byte, error) {
 func _headReference(repoPath string) ([]byte, error) {
 	var headRef []byte
 
-	cmd, err := helper.GitCommand("--git-dir", repoPath, "rev-parse", "--symbolic-full-name", "HEAD")
+	cmd, err := helper.GitCommandReader("--git-dir", repoPath, "rev-parse", "--symbolic-full-name", "HEAD")
 	if err != nil {
 		return nil, err
 	}
