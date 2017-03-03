@@ -5,6 +5,7 @@ PKG_BUILD_DIR:=${BUILD_DIR}/_build/src/${PKG}
 CMDS:=$(shell cd cmd && ls)
 
 export GOPATH=${BUILD_DIR}/_build
+export GO15VENDOREXPERIMENT=1
 export PATH:=${GOPATH}/bin:$(PATH)
 
 .PHONY: all
@@ -29,7 +30,7 @@ check-formatting: install-developer-tools
 govendor-status: ${BUILD_DIR}/_build install-developer-tools
 	cd ${PKG_BUILD_DIR} && govendor status
 
-test: clean-build ${BUILD_DIR}/_build verify
+test: clean-build ${BUILD_DIR}/_build
 	go test ${PKG}/...
 
 lint: install-developer-tools

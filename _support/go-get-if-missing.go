@@ -23,6 +23,7 @@ func goGetIfMissing(executable string, goPackage string) error {
 	}
 
 	cmd := exec.Command("go", "get", "-u", goPackage)
+	cmd.Stderr = os.Stderr
 	fmt.Println(cmd.Args)
 	return cmd.Run()
 }
