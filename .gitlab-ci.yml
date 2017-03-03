@@ -5,12 +5,33 @@ stages:
   - package
   - publish
 
-test:
+.test_template: &test_definition
   stage: test
   script:
+    - go version
     - make
-    - make notice-up-to-date
     - make test
+
+test:go1.5:
+  <<: *test_definition
+  image: golang:1.5
+
+test:go1.6:
+  <<: *test_definition
+  image: golang:1.6
+
+test:go1.7:
+  <<: *test_definition
+  image: golang:1.7
+
+test:go1.8:
+  <<: *test_definition
+  image: golang:1.8
+
+notice:
+  stage: test
+  script:
+    - make notice-up-to-date
 
 package:
   stage: package

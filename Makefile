@@ -5,6 +5,7 @@ PKG_BUILD_DIR:=${BUILD_DIR}/_build/src/${PKG}
 CMDS:=$(shell cd cmd && ls)
 
 export GOPATH=${BUILD_DIR}/_build
+export GO15VENDOREXPERIMENT=1
 export PATH:=${GOPATH}/bin:$(PATH)
 
 .PHONY: all
