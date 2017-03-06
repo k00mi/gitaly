@@ -65,10 +65,11 @@ func (parser *Parser) Parse() bool {
 				return false
 			}
 
-			if len(line) < 10 {
+			if len(line) > 0 && len(line) < 10 {
 				consumeChunkLine(parser.reader, parser.currentDiff)
-				return true
 			}
+
+			return true
 		} else if err != nil {
 			parser.err = fmt.Errorf("ParseDiffOutput: Unexpected error while peeking: %v", err)
 			return false
