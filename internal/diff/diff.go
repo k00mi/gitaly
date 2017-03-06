@@ -32,9 +32,9 @@ type Parser struct {
 }
 
 var (
-	diffHeaderRegexp       = regexp.MustCompile(`(?m)^diff --git a/(.*?) b/(.*?)$`)
+	diffHeaderRegexp       = regexp.MustCompile(`(?m)^diff --git "?a/(.*?)"? "?b/(.*?)"?$`)
 	indexHeaderRegexp      = regexp.MustCompile(`(?m)^index ([[:xdigit:]]{40})..([[:xdigit:]]{40})(?:\s([[:digit:]]+))?$`)
-	renameCopyHeaderRegexp = regexp.MustCompile(`(?m)^(copy|rename) (from|to) (.*?)$`)
+	renameCopyHeaderRegexp = regexp.MustCompile(`(?m)^(copy|rename) (from|to) "?(.*?)"?$`)
 	modeHeaderRegexp       = regexp.MustCompile(`(?m)^(old|new|(?:deleted|new) file) mode (\d+)$`)
 )
 
@@ -124,8 +124,8 @@ func parseHeader(reader *bufio.Reader, diff *Diff) error {
 	}
 
 	if matches := diffHeaderRegexp.FindSubmatch(line); len(matches) > 0 { // diff --git a/Makefile b/Makefile
-		diff.FromPath = matches[1]
-		diff.ToPath = matches[1]
+		diff.FromPath = unescapeOctalBytes(matches[1])
+		diff.ToPath = unescapeOctalBytes(matches[1])
 	}
 
 	if matches := indexHeaderRegexp.FindStringSubmatch(string(line)); len(matches) > 0 { // index a8b75d25da09b92b9f8b02151b001217ec24e0ea..3ecb2f9d50ed85f781569431df9f110bff6cb607 100644
@@ -145,9 +145,9 @@ func parseHeader(reader *bufio.Reader, diff *Diff) error {
 	if matches := renameCopyHeaderRegexp.FindSubmatch(line); len(matches) > 0 { // rename from cmd/gitaly-client/main.go
 		switch string(matches[2]) {
 		case "from":
-			diff.FromPath = matches[3]
+			diff.FromPath = unescapeOctalBytes(matches[3])
 		case "to":
-			diff.ToPath = matches[3]
+			diff.ToPath = unescapeOctalBytes(matches[3])
 		}
 	}
 
@@ -198,4 +198,24 @@ func consumeLine(reader *bufio.Reader) error {
 	}
 
 	return nil
+}
+
+func unescapeOctalBytes(s []byte) []byte {
+	var unescaped []byte
+
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\\' && i+3 < len(s) && helper.IsNumber(s[i+1:i+4]) {
+			octalByte, err := strconv.ParseUint(string(s[i+1:i+4]), 8, 8)
+			if err == nil {
+				unescaped = append(unescaped, byte(octalByte))
+
+				i += 3
+				continue
+			}
+		}
+
+		unescaped = append(unescaped, s[i])
+	}
+
+	return unescaped
 }
