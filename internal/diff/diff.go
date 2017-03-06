@@ -34,7 +34,6 @@ type Parser struct {
 var (
 	diffHeaderRegexp       = regexp.MustCompile(`(?m)^diff --git a/(.*?) b/(.*?)$`)
 	indexHeaderRegexp      = regexp.MustCompile(`(?m)^index ([[:xdigit:]]{40})..([[:xdigit:]]{40})(?:\s([[:digit:]]+))?$`)
-	pathHeaderRegexp       = regexp.MustCompile(`(?m)^([-+]){3} (?:[ab]/)?(.*?)$`)
 	renameCopyHeaderRegexp = regexp.MustCompile(`(?m)^(copy|rename) (from|to) (.*?)$`)
 	modeHeaderRegexp       = regexp.MustCompile(`(?m)^(old|new|(?:deleted|new) file) mode (\d+)$`)
 )
@@ -91,7 +90,7 @@ func (parser *Parser) Parse() bool {
 
 			parser.err = consumeChunkLine(parser.reader, parser.currentDiff)
 		} else if helper.ByteSliceHasAnyPrefix(line, "---", "+++") {
-			parser.err = parseHeader(parser.reader, parser.currentDiff)
+			parser.err = consumeLine(parser.reader)
 		} else if helper.ByteSliceHasAnyPrefix(line, "-", "+", " ", "\\") {
 			parser.err = consumeChunkLine(parser.reader, parser.currentDiff)
 		} else {
@@ -143,15 +142,6 @@ func parseHeader(reader *bufio.Reader, diff *Diff) error {
 		}
 	}
 
-	if matches := pathHeaderRegexp.FindSubmatch(line); len(matches) > 0 { // --- a/Makefile or +++ b/Makefile
-		switch matches[1][0] {
-		case '-':
-			diff.FromPath = matches[2]
-		case '+':
-			diff.ToPath = matches[2]
-		}
-	}
-
 	if matches := renameCopyHeaderRegexp.FindSubmatch(line); len(matches) > 0 { // rename from cmd/gitaly-client/main.go
 		switch string(matches[2]) {
 		case "from":
@@ -197,6 +187,15 @@ func consumeBinaryNotice(reader *bufio.Reader, diff *Diff) error {
 	}
 
 	diff.Binary = true
+
+	return nil
+}
+
+func consumeLine(reader *bufio.Reader) error {
+	_, err := reader.ReadBytes('\n')
+	if err != nil && err != io.EOF {
+		return fmt.Errorf("ParseDiffOutput: Unexpected error while reading binary notice: %v", err)
+	}
 
 	return nil
 }
