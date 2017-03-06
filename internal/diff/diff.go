@@ -61,7 +61,11 @@ func (parser *Parser) Parse() bool {
 		if err == io.EOF {
 			parser.finished = true
 
-			if len(line) < 10 && parser.currentDiff != nil {
+			if parser.currentDiff == nil { // Probably NewDiffParser was passed an empty src (e.g. git diff failed)
+				return false
+			}
+
+			if len(line) < 10 {
 				consumeChunkLine(parser.reader, parser.currentDiff)
 				return true
 			}
