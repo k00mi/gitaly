@@ -14,3 +14,13 @@ func ByteSliceHasAnyPrefix(s []byte, prefixes ...string) bool {
 
 	return false
 }
+
+// IsNumber tests whether the byte slice s contains only digits or not
+func IsNumber(s []byte) bool {
+	for i := range s {
+		if !bytes.Contains([]byte("1234567890"), s[i:i+1]) {
+			return false
+		}
+	}
+	return true
+}

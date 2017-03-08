@@ -26,8 +26,8 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 
 	client := newDiffClient(t)
 	repo := &pb.Repository{Path: path.Join(testRepoRoot, testRepo)}
-	rightCommit := "372ab6950519549b14d220271ee2322caa44d4eb"
-	leftCommit := rightCommit + "~" // Parent of rightCommit
+	rightCommit := "57290e673a4c87f51294f5216672cbc58d485d25"
+	leftCommit := rightCommit + "~~" // Second ancestor of rightCommit
 	rpcRequest := &pb.CommitDiffRequest{Repository: repo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
 
 	c, err := client.CommitDiff(context.Background(), rpcRequest)
@@ -46,7 +46,7 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 				OldMode:  0100644,
 				NewMode:  0,
 				FromPath: []byte("gitaly/deleted-file"),
-				ToPath:   []byte("/dev/null"),
+				ToPath:   []byte("gitaly/deleted-file"),
 				Binary:   false,
 			},
 			ChunksCombined: testhelper.MustReadFile(t, "testdata/deleted-file-chunks.txt"),
@@ -104,7 +104,7 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 				OldMode:  0100644,
 				NewMode:  0,
 				FromPath: []byte("gitaly/named-file-with-mods"),
-				ToPath:   []byte("/dev/null"),
+				ToPath:   []byte("gitaly/named-file-with-mods"),
 				Binary:   false,
 			},
 			ChunksCombined: testhelper.MustReadFile(t, "testdata/named-file-with-mods-chunks.txt"),
@@ -115,7 +115,7 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 				ToID:     "b464dff7a75ccc92fbd920fd9ae66a84b9d2bf94",
 				OldMode:  0,
 				NewMode:  0100644,
-				FromPath: []byte("/dev/null"),
+				FromPath: []byte("gitaly/no-newline-at-the-end"),
 				ToPath:   []byte("gitaly/no-newline-at-the-end"),
 				Binary:   false,
 			},
@@ -138,11 +138,22 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 				ToID:     "3856c00e9450a51a62096327167fc43d3be62eef",
 				OldMode:  0,
 				NewMode:  0100644,
-				FromPath: []byte("/dev/null"),
+				FromPath: []byte("gitaly/renamed-file-with-mods"),
 				ToPath:   []byte("gitaly/renamed-file-with-mods"),
 				Binary:   false,
 			},
 			ChunksCombined: testhelper.MustReadFile(t, "testdata/renamed-file-with-mods-chunks.txt"),
+		},
+		{
+			Diff: diff.Diff{
+				FromID:   "0000000000000000000000000000000000000000",
+				ToID:     "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+				OldMode:  0,
+				NewMode:  0100755,
+				FromPath: []byte("gitaly/テスト.txt"),
+				ToPath:   []byte("gitaly/テスト.txt"),
+				Binary:   false,
+			},
 		},
 	}
 
