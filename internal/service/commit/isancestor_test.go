@@ -4,10 +4,11 @@ import (
 	"log"
 	"net"
 	"os"
-	"os/exec"
 	"path"
 	"testing"
 	"time"
+
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	"golang.org/x/net/context"
 
@@ -18,27 +19,15 @@ import (
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
 
-const (
-	scratchDir   = "testdata/scratch"
-	testRepoRoot = "testdata/data"
-	testRepo     = "group/test.git"
+const scratchDir = "testdata/scratch"
+
+var (
+	serverSocketPath = path.Join(scratchDir, "gitaly.sock")
+	testRepoPath     = ""
 )
 
-var serverSocketPath = path.Join(scratchDir, "gitaly.sock")
-
 func TestMain(m *testing.M) {
-	source := "https://gitlab.com/gitlab-org/gitlab-test.git"
-	clonePath := path.Join(testRepoRoot, testRepo)
-	if _, err := os.Stat(clonePath); err != nil {
-		testCmd := exec.Command("git", "clone", "--bare", source, clonePath)
-		testCmd.Stdout = os.Stdout
-		testCmd.Stderr = os.Stderr
-
-		if err := testCmd.Run(); err != nil {
-			log.Printf("Test setup: failed to run %v", testCmd)
-			os.Exit(-1)
-		}
-	}
+	testRepoPath = testhelper.GitlabTestRepoPath()
 
 	if err := os.MkdirAll(scratchDir, 0755); err != nil {
 		log.Fatal(err)
@@ -58,7 +47,7 @@ func TestMain(m *testing.M) {
 
 func TestCommitIsAncestorFailure(t *testing.T) {
 	client := newCommitClient(t)
-	repo := &pb.Repository{Path: path.Join(testRepoRoot, testRepo)}
+	repo := &pb.Repository{Path: testRepoPath}
 
 	queries := []struct {
 		Request   *pb.CommitIsAncestorRequest
@@ -94,7 +83,7 @@ func TestCommitIsAncestorFailure(t *testing.T) {
 		},
 		{
 			Request: &pb.CommitIsAncestorRequest{
-				Repository: &pb.Repository{Path: path.Join(testRepoRoot, testRepo, "2")},
+				Repository: &pb.Repository{Path: "fake-path"},
 				AncestorId: "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 				ChildId:    "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab",
 			},
@@ -114,7 +103,7 @@ func TestCommitIsAncestorFailure(t *testing.T) {
 
 func TestCommitIsAncestorSuccess(t *testing.T) {
 	client := newCommitClient(t)
-	repo := &pb.Repository{Path: path.Join(testRepoRoot, testRepo)}
+	repo := &pb.Repository{Path: testRepoPath}
 
 	queries := []struct {
 		Request  *pb.CommitIsAncestorRequest

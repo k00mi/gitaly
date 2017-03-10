@@ -6,11 +6,12 @@ import (
 	"log"
 	"net"
 	"os"
-	"os/exec"
 	"path"
 	"strings"
 	"testing"
 	"time"
+
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	pbhelper "gitlab.com/gitlab-org/gitaly-proto/go/helper"
@@ -21,27 +22,15 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-const (
-	scratchDir   = "testdata/scratch"
-	testRepoRoot = "testdata/data"
-	testRepo     = "group/test.git"
+const scratchDir = "testdata/scratch"
+
+var (
+	serverSocketPath = path.Join(scratchDir, "gitaly.sock")
+	testRepoPath     = ""
 )
 
-var serverSocketPath = path.Join(scratchDir, "gitaly.sock")
-
 func TestMain(m *testing.M) {
-	source := "https://gitlab.com/gitlab-org/gitlab-test.git"
-	clonePath := path.Join(testRepoRoot, testRepo)
-	if _, err := os.Stat(clonePath); err != nil {
-		testCmd := exec.Command("git", "clone", "--bare", source, clonePath)
-		testCmd.Stdout = os.Stdout
-		testCmd.Stderr = os.Stderr
-
-		if err := testCmd.Run(); err != nil {
-			log.Printf("Test setup: failed to run %v", testCmd)
-			os.Exit(-1)
-		}
-	}
+	testRepoPath = testhelper.GitlabTestRepoPath()
 
 	if err := os.MkdirAll(scratchDir, 0755); err != nil {
 		log.Fatal(err)
@@ -57,7 +46,7 @@ func TestSuccessfulInfoRefsUploadPack(t *testing.T) {
 	defer server.Stop()
 
 	client := newSmartHTTPClient(t)
-	repo := &pb.Repository{Path: path.Join(testRepoRoot, testRepo)}
+	repo := &pb.Repository{Path: testRepoPath}
 	rpcRequest := &pb.InfoRefsRequest{Repository: repo}
 
 	c, err := client.InfoRefsUploadPack(context.Background(), rpcRequest)
@@ -78,7 +67,7 @@ func TestSuccessfulInfoRefsReceivePack(t *testing.T) {
 	defer server.Stop()
 
 	client := newSmartHTTPClient(t)
-	repo := &pb.Repository{Path: path.Join(testRepoRoot, testRepo)}
+	repo := &pb.Repository{Path: testRepoPath}
 	rpcRequest := &pb.InfoRefsRequest{Repository: repo}
 
 	c, err := client.InfoRefsReceivePack(context.Background(), rpcRequest)
@@ -99,7 +88,7 @@ func TestFailureRepoNotFoundInfoRefsReceivePack(t *testing.T) {
 	defer server.Stop()
 
 	client := newSmartHTTPClient(t)
-	repo := &pb.Repository{Path: path.Join(testRepoRoot, "another_repo")}
+	repo := &pb.Repository{Path: "testdata/data/another_repo"}
 	rpcRequest := &pb.InfoRefsRequest{Repository: repo}
 
 	c, err := client.InfoRefsReceivePack(context.Background(), rpcRequest)
