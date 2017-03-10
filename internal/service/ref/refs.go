@@ -171,8 +171,3 @@ func (s *server) FindDefaultBranchName(ctx context.Context, in *pb.FindDefaultBr
 
 	return &pb.FindDefaultBranchNameResponse{Name: defaultBranchName}, nil
 }
-
-// FindRefName returns the first refname of a Repository
-func (s *server) FindRefName(ctx context.Context, in *pb.FindRefNameRequest) (*pb.FindRefNameResponse, error) {
-	return nil, nil
-}

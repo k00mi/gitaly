@@ -2,6 +2,7 @@ package service
 
 import (
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly/internal/service/commit"
 	"gitlab.com/gitlab-org/gitaly/internal/service/diff"
 	"gitlab.com/gitlab-org/gitaly/internal/service/notifications"
 	"gitlab.com/gitlab-org/gitaly/internal/service/ref"
@@ -17,4 +18,5 @@ func RegisterAll(grpcServer *grpc.Server) {
 	pb.RegisterRefServer(grpcServer, ref.NewServer())
 	pb.RegisterSmartHTTPServer(grpcServer, smarthttp.NewServer())
 	pb.RegisterDiffServer(grpcServer, diff.NewServer())
+	pb.RegisterCommitServer(grpcServer, commit.NewServer())
 }
