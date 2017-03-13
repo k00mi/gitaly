@@ -161,11 +161,11 @@ with these calculations.
 | `Projects::TreeController#show` | #65 | #82 | #84 | #85 | | |
 | Git HTTP: `POST /{upload,receive}-pack` | #92 | gitlab-org/gitaly-proto!4 | #122 | #125 | | |
 | Git SSH: handle gitlab-shell sessions | #91 | gitlab-org/gitaly-proto!5 | #123 | #124 | | |
+| `Projects::BranchesController#index` | #127 | #128 | | | | |
 | `RootController#index` | | | | | | |
 | `Projects::RawController#show` | | | | | | |
 | `Projects::BlobController#show` | | | | | | |
 | `ProjectsController#show` | | | | | | |
-| `Projects::BranchesController#index` | | | | | | |
 | `Projects::RefsController#logs_tree` | | | | | | |
 | `GroupsController#show` | | | | | | |
 | `Projects::MergeRequestsController#show` | | | | | | |
