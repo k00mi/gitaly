@@ -146,7 +146,7 @@ Based on the  [daily overview dashboard](http://performance.gitlab.net/dashboard
 
 ### Order of Migration
 
-Using data from the [daily overview dashboard](http://performance.gitlab.net/dashboard/db/daily-overview?panelId=14&fullscreen),
+Using [data based on the](#generating-prioritization-data) [daily overview dashboard](http://performance.gitlab.net/dashboard/db/daily-overview?panelId=14&fullscreen),
 we've prioritised the order in which we'll work through the `gitlab-rails` controllers
 in descending order of **95% Cumulative Time** (that is `(number of calls) * (95% call time)`).
 
@@ -159,13 +159,13 @@ with these calculations.
 | `Projects::CommitController#show` | #64 | #80 | #88 | #89| | |
 | `Projects::MergeRequestsController#ci_status.json` / `Projects::MergeRequestsController#ci_environments_status.json` | #66 | #81 | #86 | #87 | | |
 | `Projects::TreeController#show` | #65 | #82 | #84 | #85 | | |
-| Git HTTP: `POST /{upload,receive}-pack` | #92 |  | | | | |
-| Git SSH: handle gitlab-shell sessions | #91 |  | | | | |
+| Git HTTP: `POST /{upload,receive}-pack` | #92 | gitlab-org/gitaly-proto!4 | #122 | #125 | | |
+| Git SSH: handle gitlab-shell sessions | #91 | gitlab-org/gitaly-proto!5 | #123 | #124 | | |
+| `Projects::BranchesController#index` | #127 | #128 | | | | |
 | `RootController#index` | | | | | | |
 | `Projects::RawController#show` | | | | | | |
 | `Projects::BlobController#show` | | | | | | |
 | `ProjectsController#show` | | | | | | |
-| `Projects::BranchesController#index` | | | | | | |
 | `Projects::RefsController#logs_tree` | | | | | | |
 | `GroupsController#show` | | | | | | |
 | `Projects::MergeRequestsController#show` | | | | | | |
@@ -179,6 +179,24 @@ with these calculations.
 
 (More to follow!)
 
+### Generating the Priorization Data
+
+Use this script to generate a CSV of the 95 percentile accumulated for a 7 day period.
+
+This data will change over time, so it's important to reprioritize from time-to-time.
+
+```shell
+influx \
+  -host performance.gitlab.net \
+  -username gitlab \
+  -password $GITLAB_INFLUXDB_PASSWORD \
+  -database gitlab \
+  -execute "SELECT sum(count) as Amount, mean(duration_mean) AS Mean, mean(duration_95th) AS p95, sum(count) * mean(duration_95th) as Accum FROM downsampled.rails_git_timings_per_action_per_day WHERE time > now() - 7d GROUP BY action" \
+  -format csv | \
+  grep -v 'name,tags,'| \
+  cut -d, -f2,3,4,5,6,7| \
+  sed 's/action=//' > data.csv
+```
 
 ## Plan
 
