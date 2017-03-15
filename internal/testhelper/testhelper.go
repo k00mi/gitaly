@@ -1,9 +1,11 @@
 package testhelper
 
 import (
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path"
 	"runtime"
 	"strings"
@@ -58,4 +60,20 @@ func AssertGrpcError(t *testing.T, err error, expectedCode codes.Code, containsT
 	if containsText != "" && !strings.Contains(err.Error(), containsText) {
 		t.Fatal(err)
 	}
+}
+
+// MustRunCommand runs a command with an optional standard input and returns the standard output, or fails.
+func MustRunCommand(t *testing.T, stdin io.Reader, name string, args ...string) []byte {
+	cmd := exec.Command(name, args...)
+	if stdin != nil {
+		cmd.Stdin = stdin
+	}
+
+	output, err := cmd.Output()
+	if err != nil {
+		t.Log(name, args)
+		t.Fatal(err)
+	}
+
+	return output
 }
