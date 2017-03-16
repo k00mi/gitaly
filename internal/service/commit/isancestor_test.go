@@ -139,6 +139,42 @@ func TestCommitIsAncestorSuccess(t *testing.T) {
 			Response: false,
 			ErrMsg:   "Expected commit to not be ancestor",
 		},
+		{
+			Request: &pb.CommitIsAncestorRequest{
+				Repository: repo,
+				AncestorId: "master",
+				ChildId:    "gitaly-stuff",
+			},
+			Response: true,
+			ErrMsg:   "Expected branch `master` to be ancestor of `gitaly-stuff`",
+		},
+		{
+			Request: &pb.CommitIsAncestorRequest{
+				Repository: repo,
+				AncestorId: "gitaly-stuff",
+				ChildId:    "master",
+			},
+			Response: false,
+			ErrMsg:   "Expected branch `gitaly-stuff` not to be ancestor of `master`",
+		},
+		{
+			Request: &pb.CommitIsAncestorRequest{
+				Repository: repo,
+				AncestorId: "refs/tags/v1.0.0",
+				ChildId:    "refs/tags/v1.1.0",
+			},
+			Response: true,
+			ErrMsg:   "Expected tag `v1.0.0` to be ancestor of `v1.1.0`",
+		},
+		{
+			Request: &pb.CommitIsAncestorRequest{
+				Repository: repo,
+				AncestorId: "refs/tags/v1.1.0",
+				ChildId:    "refs/tags/v1.0.0",
+			},
+			Response: false,
+			ErrMsg:   "Expected branch `v1.1.0` not to be ancestor of `v1.0.0`",
+		},
 	}
 
 	for _, v := range queries {
