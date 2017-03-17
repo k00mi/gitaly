@@ -120,7 +120,7 @@ All design decision should be added here.
 
 ## Iterate
 
-[More on the Gitaly Process here](docs/PROCESS.md)
+[More on the Gitaly Process here](doc/PROCESS.md)
 
 Instead of moving everything to Gitaly and only then optimize performance we'll iterate so we quickly have results
 
