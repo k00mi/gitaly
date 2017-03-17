@@ -71,7 +71,7 @@ When looking at `Rugged::Repository.new` performance data we can see that our P9
 
 ![rugged.new timings](doc/img/rugged-new-timings.png)
 
-Our P99 access time to just create a Rugged::Repository object, which is loading and processing the git objects from disk, spikes over 30 seconds, making it basically unusable. We also saw that just walking through the branches of gitlab-ce requires 2.4 wall seconds.
+Our P99 access time to just create a `Rugged::Repository` object, which is loading and processing the git objects from disk, spikes over 30 seconds, making it basically unusable. We also saw that just walking through the branches of gitlab-ce requires 2.4 wall seconds.
 
 We considered to move to metal to fix our problems with higher performaning hardware. But our users are using GitLab in the cloud so it should work great there. And this way the increased performance will benefit every GitLab user.
 
@@ -107,14 +107,14 @@ All design decision should be added here.
 1. How much memory will this use? Guess 50MB, we will save memory in the rails app, guess more in sidekiq (GBs but not sure), but initially more because more libraries are still loaded everywhere.
 1. What packaging tool do we use? [Govendor because we like it more](https://gitlab.com/gitlab-org/gitaly/issues/15)
 1. How will the networking work? A unix socket for git operations and TCP for monitoring. This prevents having to build out authentication at this early stage. https://gitlab.com/gitlab-org/gitaly/issues/16
-1. We'll include the /vendor directory in source control https://gitlab.com/gitlab-org/gitaly/issues/18
+1. We'll include the `/vendor` directory in source control https://gitlab.com/gitlab-org/gitaly/issues/18
 1. We will use [E3 from BitBucket to measure performance closely in isolation](https://gitlab.com/gitlab-org/gitaly/issues/34).
 1. Use environment variables for setting configurations (see #20).
 1. GitLab already has [logic so that the application servers know which file/git server contains what repository](https://docs.gitlab.com/ee/administration/repository_storages.html), this eliminates the need for a router.
 1. Use [gRPC](http://www.grpc.io/) instead of HTTP+JSON. Not so much for performance reasons (Protobuf is faster than JSON) but because gRPC is an RPC framework. With HTTP+JSON we have to invent our own framework; with gRPC we get a set of conventions to work with. This will allow us to move faster once we have learned how to use gRPC.
 1. All protocol definitions and auto-generated gRPC client code will be in the gitaly repo. We can include the client code from the rest of the application as a Ruby gem / Go package / client executable as needed. This will make cross-repo versioning easier.
 1. Gitaly will expose high-level Git operations, not low-level Git object/ref storage lookups. Many interesting Git operations involve an unbounded number of Git object lookups. For example, the number of Git object lookups needed to generate a diff depends on the number of changed files and how deep those files are in the repository directory structure. It is not feasible to make each of those Git object lookups a remote procedure call.
-1. By default all Go packages in the Gitaly repository use the /internal directory, unless we explicitly want to export something. The only exception is the /cmd directory for executables.
+1. By default all Go packages in the Gitaly repository use the `/internal` directory, unless we explicitly want to export something. The only exception is the `/cmd` directory for executables.
 1. GitLab requests should use as few Gitaly gRPC calls as possible. This means it is OK to move GitLab application logic into Gitaly when it saves us gRPC round trips.
 1. Defining new gRPC calls is cheap. It is better to define a new 'high level' gRPC call and save gRPC round trips than to chain / combine 'low level' gRPC calls.
 
