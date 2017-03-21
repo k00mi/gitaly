@@ -6,7 +6,33 @@
 
 Use `%v` when wrapping errors with context.
 
-    return fmt.Errorf("foo context: %v", err)
+    fmt.Errorf("foo context: %v", err)
+
+### Keep errors short
+
+It is customary in Go to pass errors up the call stack and decorate
+them. To be a good neighbor to the rest of the call stack we should keep
+our errors short.
+
+    // Good
+    fmt.Errorf("peek diff line: %v", err)
+
+    // Too long
+    fmt.Errorf("ParseDiffOutput: Unexpected error while peeking: %v", err)
+
+### Use lower case in errors
+
+Use lower case in errors; it is OK to preserve upper case in names.
+
+### Errors should stick to the facts
+
+It is tempting to write errors that explain the problem that occurred.
+This can be appropriate in some end-user facing situations, but it is
+never appropriate for internal error messages. When your
+interpretation is wrong it puts the reader on the wrong track.
+
+Stick to the facts. Often it is enough to just describe in a few words
+what we were trying to do.
 
 ### Use %q when interpolating strings
 
