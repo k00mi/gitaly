@@ -25,7 +25,7 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 	defer server.Stop()
 
 	client := newDiffClient(t)
-	repo := &pb.Repository{Path: path.Join(testRepoRoot, testRepo)}
+	repo := &pb.Repository{Path: testRepoPath}
 	rightCommit := "57290e673a4c87f51294f5216672cbc58d485d25"
 	leftCommit := rightCommit + "~~" // Second ancestor of rightCommit
 	rpcRequest := &pb.CommitDiffRequest{Repository: repo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
@@ -254,7 +254,7 @@ func TestFailedCommitDiffRequestWithEmptyCommit(t *testing.T) {
 	defer server.Stop()
 
 	client := newDiffClient(t)
-	repo := &pb.Repository{Path: path.Join(testRepoRoot, testRepo)}
+	repo := &pb.Repository{Path: testRepoPath}
 	rightCommit := ""
 	leftCommit := rightCommit + "~" // Parent of rightCommit
 	rpcRequest := &pb.CommitDiffRequest{Repository: repo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
@@ -289,7 +289,7 @@ func TestFailedCommitDiffRequestWithNonExistentCommit(t *testing.T) {
 	defer server.Stop()
 
 	client := newDiffClient(t)
-	repo := &pb.Repository{Path: path.Join(testRepoRoot, testRepo)}
+	repo := &pb.Repository{Path: testRepoPath}
 	nonExistentCommitID := "deadfacedeadfacedeadfacedeadfacedeadface"
 	leftCommit := nonExistentCommitID + "~" // Parent of rightCommit
 	rpcRequest := &pb.CommitDiffRequest{Repository: repo, RightCommitId: nonExistentCommitID, LeftCommitId: leftCommit}

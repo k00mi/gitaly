@@ -3,30 +3,17 @@ package diff
 import (
 	"log"
 	"os"
-	"os/exec"
-	"path"
 	"testing"
+
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
-const (
-	scratchDir   = "testdata/scratch"
-	testRepoRoot = "testdata/data"
-	testRepo     = "test.git"
-)
+const scratchDir = "testdata/scratch"
+
+var testRepoPath = ""
 
 func TestMain(m *testing.M) {
-	source := "https://gitlab.com/gitlab-org/gitlab-test.git"
-	clonePath := path.Join(testRepoRoot, testRepo)
-	if _, err := os.Stat(clonePath); err != nil {
-		testCmd := exec.Command("git", "clone", "--bare", source, clonePath)
-		testCmd.Stdout = os.Stdout
-		testCmd.Stderr = os.Stderr
-
-		if err := testCmd.Run(); err != nil {
-			log.Printf("Test setup: failed to run %v", testCmd)
-			os.Exit(-1)
-		}
-	}
+	testRepoPath = testhelper.GitlabTestRepoPath()
 
 	if err := os.MkdirAll(scratchDir, 0755); err != nil {
 		log.Fatal(err)

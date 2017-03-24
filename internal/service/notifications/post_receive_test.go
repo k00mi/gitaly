@@ -8,21 +8,24 @@ import (
 	"testing"
 	"time"
 
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
+
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
-const (
-	scratchDir   = "testdata/scratch"
-	testRepoRoot = "testdata/data"
-	testRepo     = "group/test.git"
+const scratchDir = "testdata/scratch"
+
+var (
+	serverSocketPath = path.Join(scratchDir, "gitaly.sock")
+	testRepoPath     = ""
 )
 
-var serverSocketPath = path.Join(scratchDir, "gitaly.sock")
-
 func TestMain(m *testing.M) {
+	testRepoPath = testhelper.GitlabTestRepoPath()
+
 	if err := os.MkdirAll(scratchDir, 0755); err != nil {
 		log.Fatal(err)
 	}
@@ -37,7 +40,7 @@ func TestSuccessfulPostReceive(t *testing.T) {
 	defer server.Stop()
 
 	client := newNotificationsClient(t)
-	repo := &pb.Repository{Path: path.Join(testRepoRoot, testRepo)}
+	repo := &pb.Repository{Path: testRepoPath}
 	rpcRequest := &pb.PostReceiveRequest{Repository: repo}
 
 	_, err := client.PostReceive(context.Background(), rpcRequest)

@@ -4,10 +4,11 @@ import (
 	"log"
 	"net"
 	"os"
-	"os/exec"
 	"path"
 	"testing"
 	"time"
+
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -15,27 +16,15 @@ import (
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
 
-const (
-	scratchDir   = "testdata/scratch"
-	testRepoRoot = "testdata/data"
-	testRepo     = "group/test.git"
+const scratchDir = "testdata/scratch"
+
+var (
+	serverSocketPath = path.Join(scratchDir, "gitaly.sock")
+	testRepoPath     = ""
 )
 
-var serverSocketPath = path.Join(scratchDir, "gitaly.sock")
-
 func TestMain(m *testing.M) {
-	source := "https://gitlab.com/gitlab-org/gitlab-test.git"
-	clonePath := path.Join(testRepoRoot, testRepo)
-	if _, err := os.Stat(clonePath); err != nil {
-		testCmd := exec.Command("git", "clone", "--bare", source, clonePath)
-		testCmd.Stdout = os.Stdout
-		testCmd.Stderr = os.Stderr
-
-		if err := testCmd.Run(); err != nil {
-			log.Printf("Test setup: failed to run %v", testCmd)
-			os.Exit(-1)
-		}
-	}
+	testRepoPath = testhelper.GitlabTestRepoPath()
 
 	if err := os.MkdirAll(scratchDir, 0755); err != nil {
 		log.Fatal(err)

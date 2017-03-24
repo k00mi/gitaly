@@ -1,7 +1,6 @@
 package ref
 
 import (
-	"path"
 	"testing"
 
 	"google.golang.org/grpc"
@@ -17,7 +16,7 @@ func TestFindRefNameSuccess(t *testing.T) {
 	defer server.Stop()
 
 	client := newRefClient(t)
-	repo := &pb.Repository{Path: path.Join(testRepoRoot, testRepo)}
+	repo := &pb.Repository{Path: testRepoPath}
 	rpcRequest := &pb.FindRefNameRequest{
 		Repository: repo,
 		CommitId:   "0b4bc9a49b562e85de7cc9e834518ea6828729b9",
@@ -41,7 +40,7 @@ func TestFindRefNameEmptyCommit(t *testing.T) {
 	defer server.Stop()
 
 	client := newRefClient(t)
-	repo := &pb.Repository{Path: path.Join(testRepoRoot, testRepo)}
+	repo := &pb.Repository{Path: testRepoPath}
 	rpcRequest := &pb.FindRefNameRequest{
 		Repository: repo,
 		CommitId:   "",
@@ -93,7 +92,7 @@ func TestFindRefNameInvalidPrefix(t *testing.T) {
 	defer server.Stop()
 
 	client := newRefClient(t)
-	repo := &pb.Repository{Path: path.Join(testRepoRoot, testRepo)}
+	repo := &pb.Repository{Path: testRepoPath}
 	rpcRequest := &pb.FindRefNameRequest{
 		Repository: repo,
 		CommitId:   "0b4bc9a49b562e85de7cc9e834518ea6828729b9",
@@ -114,7 +113,7 @@ func TestFindRefNameInvalidObject(t *testing.T) {
 	defer server.Stop()
 
 	client := newRefClient(t)
-	repo := &pb.Repository{Path: path.Join(testRepoRoot, testRepo)}
+	repo := &pb.Repository{Path: testRepoPath}
 	rpcRequest := &pb.FindRefNameRequest{
 		Repository: repo,
 		CommitId:   "dead1234dead1234dead1234dead1234dead1234",

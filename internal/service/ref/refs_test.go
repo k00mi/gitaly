@@ -3,7 +3,6 @@ package ref
 import (
 	"bytes"
 	"io"
-	"path"
 	"testing"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
@@ -26,7 +25,7 @@ func TestSuccessfulFindAllBranchNames(t *testing.T) {
 	defer server.Stop()
 
 	client := newRefClient(t)
-	repo := &pb.Repository{Path: path.Join(testRepoRoot, testRepo)}
+	repo := &pb.Repository{Path: testRepoPath}
 	rpcRequest := &pb.FindAllBranchNamesRequest{Repository: repo}
 
 	c, err := client.FindAllBranchNames(context.Background(), rpcRequest)
@@ -80,7 +79,7 @@ func TestSuccessfulFindAllTagNames(t *testing.T) {
 	defer server.Stop()
 
 	client := newRefClient(t)
-	repo := &pb.Repository{Path: path.Join(testRepoRoot, testRepo)}
+	repo := &pb.Repository{Path: testRepoPath}
 	rpcRequest := &pb.FindAllTagNamesRequest{Repository: repo}
 
 	c, err := client.FindAllTagNames(context.Background(), rpcRequest)
@@ -130,7 +129,7 @@ func TestEmptyFindAllTagNamesRequest(t *testing.T) {
 }
 
 func TestHeadReference(t *testing.T) {
-	headRef, err := headReference(path.Join(testRepoRoot, testRepo))
+	headRef, err := headReference(testRepoPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +210,7 @@ func TestSuccessfulFindDefaultBranchName(t *testing.T) {
 	defer server.Stop()
 
 	client := newRefClient(t)
-	repo := &pb.Repository{Path: path.Join(testRepoRoot, testRepo)}
+	repo := &pb.Repository{Path: testRepoPath}
 	rpcRequest := &pb.FindDefaultBranchNameRequest{Repository: repo}
 
 	r, err := client.FindDefaultBranchName(context.Background(), rpcRequest)

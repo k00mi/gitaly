@@ -4,6 +4,7 @@ BUILD_DIR=$(shell pwd)
 BIN_BUILD_DIR=${BUILD_DIR}/_build/bin
 PKG_BUILD_DIR:=${BUILD_DIR}/_build/src/${PKG}
 CMDS:=$(shell cd cmd && ls)
+TEST_REPO=internal/testhelper/testdata/data/gitlab-test.git
 
 export GOPATH=${BUILD_DIR}/_build
 export GO15VENDOREXPERIMENT=1
@@ -35,7 +36,10 @@ check-formatting: install-developer-tools
 govendor-status: ${BUILD_DIR}/_build install-developer-tools
 	cd ${PKG_BUILD_DIR} && govendor status
 
-test: clean-build ${BUILD_DIR}/_build
+${TEST_REPO}:
+	git clone --bare https://gitlab.com/gitlab-org/gitlab-test.git $@
+
+test: clean-build ${TEST_REPO} ${BUILD_DIR}/_build
 	go test ${PKG}/...
 
 lint: install-developer-tools
