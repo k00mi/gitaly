@@ -6,19 +6,27 @@ require_relative 'run.rb'
 def main(version)
   run!(%w[make notice-up-to-date])
   run!(%w[make test])
+
   puts 'Testing for changed files'
   run!(%w[git diff --quiet --exit-code])
+
   puts 'Testing for staged changes'
   run!(%w[git diff --quiet --cached --exit-code])
+
   write_version_file(version)
   version_msg = "Version #{version}"
   run!(%W[git commit -m #{version_msg}])
+
   tag_name = "v#{version}"
   run!(%W[git tag -a -m #{version_msg} #{tag_name}])
-  run!(%W[git show --pretty #{tag_name}])
+
+  show_output = capture!(%W[git show --pretty #{tag_name}])
+  puts show_output
+
   puts "Proceed to publish version #{version}? Enter 'Yes' to continue; Ctrl-C to abort"
   $stdout.flush
   abort unless $stdin.gets.chomp == 'Yes'
+
   %w[
     https://gitlab.com/gitlab-org/gitaly.git
     https://dev.gitlab.org/gitlab/gitaly.git
