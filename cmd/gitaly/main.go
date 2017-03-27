@@ -24,7 +24,11 @@ type Config struct {
 	PrometheusListenAddr string `split_words:"true"`
 }
 
+var version string
+
 func main() {
+	log.Println("Starting Gitaly", version)
+
 	config := Config{}
 	err := envconfig.Process("gitaly", &config)
 	if err != nil {
