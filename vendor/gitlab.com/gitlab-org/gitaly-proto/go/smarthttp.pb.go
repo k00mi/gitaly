@@ -25,7 +25,7 @@ type InfoRefsRequest struct {
 func (m *InfoRefsRequest) Reset()                    { *m = InfoRefsRequest{} }
 func (m *InfoRefsRequest) String() string            { return proto.CompactTextString(m) }
 func (*InfoRefsRequest) ProtoMessage()               {}
-func (*InfoRefsRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{0} }
+func (*InfoRefsRequest) Descriptor() ([]byte, []int) { return fileDescriptor5, []int{0} }
 
 func (m *InfoRefsRequest) GetRepository() *Repository {
 	if m != nil {
@@ -41,9 +41,105 @@ type InfoRefsResponse struct {
 func (m *InfoRefsResponse) Reset()                    { *m = InfoRefsResponse{} }
 func (m *InfoRefsResponse) String() string            { return proto.CompactTextString(m) }
 func (*InfoRefsResponse) ProtoMessage()               {}
-func (*InfoRefsResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{1} }
+func (*InfoRefsResponse) Descriptor() ([]byte, []int) { return fileDescriptor5, []int{1} }
 
 func (m *InfoRefsResponse) GetData() []byte {
+	if m != nil {
+		return m.Data
+	}
+	return nil
+}
+
+type PostUploadPackRequest struct {
+	// repository should only be present in the first message of the stream
+	Repository *Repository `protobuf:"bytes,1,opt,name=repository" json:"repository,omitempty"`
+	// Raw data to be copied to stdin of 'git upload-pack'
+	Data []byte `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+}
+
+func (m *PostUploadPackRequest) Reset()                    { *m = PostUploadPackRequest{} }
+func (m *PostUploadPackRequest) String() string            { return proto.CompactTextString(m) }
+func (*PostUploadPackRequest) ProtoMessage()               {}
+func (*PostUploadPackRequest) Descriptor() ([]byte, []int) { return fileDescriptor5, []int{2} }
+
+func (m *PostUploadPackRequest) GetRepository() *Repository {
+	if m != nil {
+		return m.Repository
+	}
+	return nil
+}
+
+func (m *PostUploadPackRequest) GetData() []byte {
+	if m != nil {
+		return m.Data
+	}
+	return nil
+}
+
+type PostUploadPackResponse struct {
+	// Raw data from stdout of 'git upload-pack'
+	Data []byte `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+}
+
+func (m *PostUploadPackResponse) Reset()                    { *m = PostUploadPackResponse{} }
+func (m *PostUploadPackResponse) String() string            { return proto.CompactTextString(m) }
+func (*PostUploadPackResponse) ProtoMessage()               {}
+func (*PostUploadPackResponse) Descriptor() ([]byte, []int) { return fileDescriptor5, []int{3} }
+
+func (m *PostUploadPackResponse) GetData() []byte {
+	if m != nil {
+		return m.Data
+	}
+	return nil
+}
+
+type PostReceivePackRequest struct {
+	// repository should only be present in the first message of the stream
+	Repository *Repository `protobuf:"bytes,1,opt,name=repository" json:"repository,omitempty"`
+	// Raw data to be copied to stdin of 'git receive-pack'
+	Data []byte `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	// gl_id becomes env variable GL_ID, used by the Git {pre,post}-receive
+	// hooks. Should only be present in the first message of the stream.
+	GlId string `protobuf:"bytes,3,opt,name=gl_id,json=glId" json:"gl_id,omitempty"`
+}
+
+func (m *PostReceivePackRequest) Reset()                    { *m = PostReceivePackRequest{} }
+func (m *PostReceivePackRequest) String() string            { return proto.CompactTextString(m) }
+func (*PostReceivePackRequest) ProtoMessage()               {}
+func (*PostReceivePackRequest) Descriptor() ([]byte, []int) { return fileDescriptor5, []int{4} }
+
+func (m *PostReceivePackRequest) GetRepository() *Repository {
+	if m != nil {
+		return m.Repository
+	}
+	return nil
+}
+
+func (m *PostReceivePackRequest) GetData() []byte {
+	if m != nil {
+		return m.Data
+	}
+	return nil
+}
+
+func (m *PostReceivePackRequest) GetGlId() string {
+	if m != nil {
+		return m.GlId
+	}
+	return ""
+}
+
+type PostReceivePackResponse struct {
+	// Raw data from stdout of 'git receive-pack'
+	Data []byte `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+}
+
+func (m *PostReceivePackResponse) Reset()                    { *m = PostReceivePackResponse{} }
+func (m *PostReceivePackResponse) String() string            { return proto.CompactTextString(m) }
+func (*PostReceivePackResponse) ProtoMessage()               {}
+func (*PostReceivePackResponse) Descriptor() ([]byte, []int) { return fileDescriptor5, []int{5} }
+
+func (m *PostReceivePackResponse) GetData() []byte {
 	if m != nil {
 		return m.Data
 	}
@@ -53,6 +149,10 @@ func (m *InfoRefsResponse) GetData() []byte {
 func init() {
 	proto.RegisterType((*InfoRefsRequest)(nil), "gitaly.InfoRefsRequest")
 	proto.RegisterType((*InfoRefsResponse)(nil), "gitaly.InfoRefsResponse")
+	proto.RegisterType((*PostUploadPackRequest)(nil), "gitaly.PostUploadPackRequest")
+	proto.RegisterType((*PostUploadPackResponse)(nil), "gitaly.PostUploadPackResponse")
+	proto.RegisterType((*PostReceivePackRequest)(nil), "gitaly.PostReceivePackRequest")
+	proto.RegisterType((*PostReceivePackResponse)(nil), "gitaly.PostReceivePackResponse")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -70,6 +170,10 @@ type SmartHTTPClient interface {
 	InfoRefsUploadPack(ctx context.Context, in *InfoRefsRequest, opts ...grpc.CallOption) (SmartHTTP_InfoRefsUploadPackClient, error)
 	// The response body for GET /info/refs?service=git-receive-pack
 	InfoRefsReceivePack(ctx context.Context, in *InfoRefsRequest, opts ...grpc.CallOption) (SmartHTTP_InfoRefsReceivePackClient, error)
+	// Request and response body for POST /upload-pack
+	PostUploadPack(ctx context.Context, opts ...grpc.CallOption) (SmartHTTP_PostUploadPackClient, error)
+	// Request and response body for POST /receive-pack
+	PostReceivePack(ctx context.Context, opts ...grpc.CallOption) (SmartHTTP_PostReceivePackClient, error)
 }
 
 type smartHTTPClient struct {
@@ -144,6 +248,68 @@ func (x *smartHTTPInfoRefsReceivePackClient) Recv() (*InfoRefsResponse, error) {
 	return m, nil
 }
 
+func (c *smartHTTPClient) PostUploadPack(ctx context.Context, opts ...grpc.CallOption) (SmartHTTP_PostUploadPackClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_SmartHTTP_serviceDesc.Streams[2], c.cc, "/gitaly.SmartHTTP/PostUploadPack", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &smartHTTPPostUploadPackClient{stream}
+	return x, nil
+}
+
+type SmartHTTP_PostUploadPackClient interface {
+	Send(*PostUploadPackRequest) error
+	Recv() (*PostUploadPackResponse, error)
+	grpc.ClientStream
+}
+
+type smartHTTPPostUploadPackClient struct {
+	grpc.ClientStream
+}
+
+func (x *smartHTTPPostUploadPackClient) Send(m *PostUploadPackRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *smartHTTPPostUploadPackClient) Recv() (*PostUploadPackResponse, error) {
+	m := new(PostUploadPackResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *smartHTTPClient) PostReceivePack(ctx context.Context, opts ...grpc.CallOption) (SmartHTTP_PostReceivePackClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_SmartHTTP_serviceDesc.Streams[3], c.cc, "/gitaly.SmartHTTP/PostReceivePack", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &smartHTTPPostReceivePackClient{stream}
+	return x, nil
+}
+
+type SmartHTTP_PostReceivePackClient interface {
+	Send(*PostReceivePackRequest) error
+	Recv() (*PostReceivePackResponse, error)
+	grpc.ClientStream
+}
+
+type smartHTTPPostReceivePackClient struct {
+	grpc.ClientStream
+}
+
+func (x *smartHTTPPostReceivePackClient) Send(m *PostReceivePackRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *smartHTTPPostReceivePackClient) Recv() (*PostReceivePackResponse, error) {
+	m := new(PostReceivePackResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // Server API for SmartHTTP service
 
 type SmartHTTPServer interface {
@@ -151,6 +317,10 @@ type SmartHTTPServer interface {
 	InfoRefsUploadPack(*InfoRefsRequest, SmartHTTP_InfoRefsUploadPackServer) error
 	// The response body for GET /info/refs?service=git-receive-pack
 	InfoRefsReceivePack(*InfoRefsRequest, SmartHTTP_InfoRefsReceivePackServer) error
+	// Request and response body for POST /upload-pack
+	PostUploadPack(SmartHTTP_PostUploadPackServer) error
+	// Request and response body for POST /receive-pack
+	PostReceivePack(SmartHTTP_PostReceivePackServer) error
 }
 
 func RegisterSmartHTTPServer(s *grpc.Server, srv SmartHTTPServer) {
@@ -199,6 +369,58 @@ func (x *smartHTTPInfoRefsReceivePackServer) Send(m *InfoRefsResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _SmartHTTP_PostUploadPack_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(SmartHTTPServer).PostUploadPack(&smartHTTPPostUploadPackServer{stream})
+}
+
+type SmartHTTP_PostUploadPackServer interface {
+	Send(*PostUploadPackResponse) error
+	Recv() (*PostUploadPackRequest, error)
+	grpc.ServerStream
+}
+
+type smartHTTPPostUploadPackServer struct {
+	grpc.ServerStream
+}
+
+func (x *smartHTTPPostUploadPackServer) Send(m *PostUploadPackResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *smartHTTPPostUploadPackServer) Recv() (*PostUploadPackRequest, error) {
+	m := new(PostUploadPackRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _SmartHTTP_PostReceivePack_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(SmartHTTPServer).PostReceivePack(&smartHTTPPostReceivePackServer{stream})
+}
+
+type SmartHTTP_PostReceivePackServer interface {
+	Send(*PostReceivePackResponse) error
+	Recv() (*PostReceivePackRequest, error)
+	grpc.ServerStream
+}
+
+type smartHTTPPostReceivePackServer struct {
+	grpc.ServerStream
+}
+
+func (x *smartHTTPPostReceivePackServer) Send(m *PostReceivePackResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *smartHTTPPostReceivePackServer) Recv() (*PostReceivePackRequest, error) {
+	m := new(PostReceivePackRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 var _SmartHTTP_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "gitaly.SmartHTTP",
 	HandlerType: (*SmartHTTPServer)(nil),
@@ -214,25 +436,43 @@ var _SmartHTTP_serviceDesc = grpc.ServiceDesc{
 			Handler:       _SmartHTTP_InfoRefsReceivePack_Handler,
 			ServerStreams: true,
 		},
+		{
+			StreamName:    "PostUploadPack",
+			Handler:       _SmartHTTP_PostUploadPack_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "PostReceivePack",
+			Handler:       _SmartHTTP_PostReceivePack_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
 	},
 	Metadata: "smarthttp.proto",
 }
 
-func init() { proto.RegisterFile("smarthttp.proto", fileDescriptor2) }
+func init() { proto.RegisterFile("smarthttp.proto", fileDescriptor5) }
 
-var fileDescriptor2 = []byte{
-	// 200 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xe2, 0xe2, 0x2f, 0xce, 0x4d, 0x2c,
-	0x2a, 0xc9, 0x28, 0x29, 0x29, 0xd0, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x4b, 0xcf, 0x2c,
-	0x49, 0xcc, 0xa9, 0x94, 0xe2, 0x29, 0xce, 0x48, 0x2c, 0x4a, 0x4d, 0x81, 0x88, 0x2a, 0xb9, 0x72,
-	0xf1, 0x7b, 0xe6, 0xa5, 0xe5, 0x07, 0xa5, 0xa6, 0x15, 0x07, 0xa5, 0x16, 0x96, 0xa6, 0x16, 0x97,
-	0x08, 0x19, 0x71, 0x71, 0x15, 0xa5, 0x16, 0xe4, 0x17, 0x67, 0x96, 0xe4, 0x17, 0x55, 0x4a, 0x30,
-	0x2a, 0x30, 0x6a, 0x70, 0x1b, 0x09, 0xe9, 0x41, 0x74, 0xeb, 0x05, 0xc1, 0x65, 0x82, 0x90, 0x54,
-	0x29, 0xa9, 0x71, 0x09, 0x20, 0x8c, 0x29, 0x2e, 0xc8, 0xcf, 0x2b, 0x4e, 0x15, 0x12, 0xe2, 0x62,
-	0x49, 0x49, 0x2c, 0x49, 0x04, 0x9b, 0xc0, 0x13, 0x04, 0x66, 0x1b, 0x2d, 0x63, 0xe4, 0xe2, 0x0c,
-	0x06, 0x39, 0xcc, 0x23, 0x24, 0x24, 0x40, 0xc8, 0x9b, 0x4b, 0x08, 0xa6, 0x2b, 0xb4, 0x20, 0x27,
-	0x3f, 0x31, 0x25, 0x20, 0x31, 0x39, 0x5b, 0x48, 0x1c, 0x66, 0x17, 0x9a, 0xc3, 0xa4, 0x24, 0x30,
-	0x25, 0x20, 0x56, 0x29, 0x31, 0x18, 0x30, 0x0a, 0xf9, 0x70, 0x09, 0x23, 0xc4, 0x93, 0x53, 0x33,
-	0xcb, 0x52, 0x29, 0x30, 0x2d, 0x89, 0x0d, 0x1c, 0x3c, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff,
-	0xfd, 0x13, 0x70, 0x6d, 0x47, 0x01, 0x00, 0x00,
+var fileDescriptor5 = []byte{
+	// 304 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x53, 0x4d, 0x4b, 0xc3, 0x40,
+	0x14, 0x74, 0x6b, 0x2d, 0xf4, 0x59, 0xac, 0xbc, 0xa2, 0x0d, 0x01, 0xb5, 0xe4, 0x20, 0x39, 0x68,
+	0x28, 0xf1, 0x37, 0x08, 0x16, 0x3d, 0x84, 0xb5, 0x05, 0x6f, 0x65, 0x6d, 0xb6, 0x69, 0x30, 0x76,
+	0xe3, 0xee, 0x56, 0xe8, 0x2f, 0xf5, 0xef, 0x88, 0x09, 0xf9, 0x68, 0x62, 0x3c, 0x28, 0xde, 0xc2,
+	0x9b, 0xf7, 0x66, 0x26, 0x33, 0x2c, 0xf4, 0xd5, 0x2b, 0x93, 0x7a, 0xa5, 0x75, 0xec, 0xc4, 0x52,
+	0x68, 0x81, 0x9d, 0x20, 0xd4, 0x2c, 0xda, 0x9a, 0x3d, 0xb5, 0x62, 0x92, 0xfb, 0xe9, 0xd4, 0xba,
+	0x85, 0xfe, 0x64, 0xbd, 0x14, 0x94, 0x2f, 0x15, 0xe5, 0x6f, 0x1b, 0xae, 0x34, 0xba, 0x00, 0x92,
+	0xc7, 0x42, 0x85, 0x5a, 0xc8, 0xad, 0x41, 0x46, 0xc4, 0x3e, 0x74, 0xd1, 0x49, 0xaf, 0x1d, 0x9a,
+	0x23, 0xb4, 0xb4, 0x65, 0x5d, 0xc2, 0x71, 0x41, 0xa3, 0x62, 0xb1, 0x56, 0x1c, 0x11, 0xda, 0x3e,
+	0xd3, 0x2c, 0x61, 0xe8, 0xd1, 0xe4, 0xdb, 0x9a, 0xc3, 0x89, 0x27, 0x94, 0x9e, 0xc5, 0x91, 0x60,
+	0xbe, 0xc7, 0x16, 0x2f, 0x7f, 0x10, 0xcd, 0x05, 0x5a, 0x25, 0x81, 0x2b, 0x38, 0xad, 0x0a, 0xfc,
+	0x60, 0x67, 0x93, 0x6e, 0x53, 0xbe, 0xe0, 0xe1, 0x3b, 0xff, 0x07, 0x3f, 0x38, 0x80, 0x83, 0x20,
+	0x9a, 0x87, 0xbe, 0xb1, 0x3f, 0x22, 0x76, 0x97, 0xb6, 0x83, 0x68, 0xe2, 0x5b, 0xd7, 0x30, 0xac,
+	0xc9, 0x36, 0xbb, 0x74, 0x3f, 0x5a, 0xd0, 0x7d, 0xfc, 0x6a, 0xf3, 0x6e, 0x3a, 0xf5, 0xf0, 0x1e,
+	0x30, 0x8b, 0xba, 0xf8, 0x4b, 0x1c, 0x66, 0xde, 0x2a, 0x6d, 0x9a, 0x46, 0x1d, 0x48, 0xa5, 0xac,
+	0xbd, 0x31, 0xc1, 0x07, 0x18, 0x14, 0xf3, 0xdc, 0xcd, 0x6f, 0xd9, 0x66, 0x70, 0xb4, 0x1b, 0x3e,
+	0x9e, 0x65, 0xfb, 0xdf, 0xb6, 0x6e, 0x9e, 0x37, 0xc1, 0x19, 0xa9, 0x4d, 0xc6, 0x04, 0x9f, 0xa0,
+	0x5f, 0x89, 0x0b, 0x77, 0x0e, 0xeb, 0xf5, 0x99, 0x17, 0x8d, 0x78, 0x99, 0xf9, 0xb9, 0x93, 0x3c,
+	0x82, 0x9b, 0xcf, 0x00, 0x00, 0x00, 0xff, 0xff, 0x16, 0x3e, 0x9b, 0xd1, 0x2d, 0x03, 0x00, 0x00,
 }

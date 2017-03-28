@@ -21,6 +21,12 @@
 			"revisionTime": "2016-11-17T03:31:26Z"
 		},
 		{
+			"checksumSHA1": "sfoot+dHmmOgWZS6GJ5X79ClZM0=",
+			"path": "github.com/golang/protobuf/ptypes/timestamp",
+			"revision": "c9c7427a2a70d2eb3bafa0ab2dc163e45f143317",
+			"revisionTime": "2017-03-07T00:15:33Z"
+		},
+		{
 			"checksumSHA1": "OJPSJ4GBgH/XOFtYu2VM1g7rtjk=",
 			"path": "github.com/grpc-ecosystem/go-grpc-prometheus",
 			"revision": "6b7015e65d366bf3f19b2b2a000a831940f0f7e0",
@@ -87,12 +93,12 @@
 			"revisionTime": "2016-12-06T22:21:41Z"
 		},
 		{
-			"checksumSHA1": "HWuFvDMQ5zp554X4QpVjBUgW5wk=",
+			"checksumSHA1": "WbJzVmr2WXE78NFZceYpv9a3dsg=",
 			"path": "gitlab.com/gitlab-org/gitaly-proto/go",
-			"revision": "84b3ffd032eea7af8df96fb9d7bdc100dac2c569",
-			"revisionTime": "2017-02-27T16:43:55Z",
-			"version": "v0.3.0",
-			"versionExact": "v0.3.0"
+			"revision": "607fd598bc02ecc750d905ea8ba233673ff0a86b",
+			"revisionTime": "2017-03-28T10:04:06Z",
+			"version": "v0.4.0",
+			"versionExact": "v0.4.0"
 		},
 		{
 			"checksumSHA1": "2E36lBoyaVky2EJP1E5ub6Rg+uI=",

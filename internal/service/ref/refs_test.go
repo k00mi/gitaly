@@ -5,6 +5,7 @@ import (
 	"io"
 	"testing"
 
+	"github.com/golang/protobuf/ptypes/timestamp"
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -44,7 +45,6 @@ func TestSuccessfulFindAllBranchNames(t *testing.T) {
 		}
 		names = append(names, r.GetNames()...)
 	}
-
 	for _, branch := range []string{"master", "100%branch", "improve/awesome", "'test'"} {
 		if !containsRef(names, "refs/heads/"+branch) {
 			t.Fatalf("Expected to find branch %q in all branch names", branch)
@@ -234,5 +234,222 @@ func TestEmptyFindDefaultBranchNameRequest(t *testing.T) {
 
 	if grpc.Code(err) != codes.InvalidArgument {
 		t.Fatal(err)
+	}
+}
+
+func localBranches() []*pb.FindLocalBranchResponse {
+	return []*pb.FindLocalBranchResponse{
+		{
+			Name:          []byte("refs/heads/master"),
+			CommitId:      "b83d6e391c22777fca1ed3012fce84f633d7fed0",
+			CommitSubject: []byte("Merge branch 'branch-merged' into 'master'\r \r adds bar folder and branch-test text file to check Repository merged_to_root_ref method\r \r \r \r See merge request !12"),
+			CommitAuthor: &pb.FindLocalBranchCommitAuthor{
+				Name:  []byte("Job van der Voort"),
+				Email: []byte("<job@gitlab.com>"),
+				Date:  &timestamp.Timestamp{Seconds: 1474987066},
+			},
+			CommitCommitter: &pb.FindLocalBranchCommitAuthor{
+				Name:  []byte("Job van der Voort"),
+				Email: []byte("<job@gitlab.com>"),
+				Date:  &timestamp.Timestamp{Seconds: 1474987066},
+			},
+		},
+		{
+			Name:          []byte("refs/heads/100%branch"),
+			CommitId:      "1b12f15a11fc6e62177bef08f47bc7b5ce50b141",
+			CommitSubject: []byte("Merge branch 'add-directory-with-space' into 'master'\r \r Add a directory containing a space in its name\r \r needed for verifying the fix of `https://gitlab.com/gitlab-com/support-forum/issues/952` \r \r See merge request !11"),
+			CommitAuthor: &pb.FindLocalBranchCommitAuthor{
+				Name:  []byte("Stan Hu"),
+				Email: []byte("<stanhu@gmail.com>"),
+				Date:  &timestamp.Timestamp{Seconds: 1471558878},
+			},
+			CommitCommitter: &pb.FindLocalBranchCommitAuthor{
+				Name:  []byte("Stan Hu"),
+				Email: []byte("<stanhu@gmail.com>"),
+				Date:  &timestamp.Timestamp{Seconds: 1471558878},
+			},
+		},
+		{
+			Name:          []byte("refs/heads/improve/awesome"),
+			CommitId:      "5937ac0a7beb003549fc5fd26fc247adbce4a52e",
+			CommitSubject: []byte("Add submodule from gitlab.com"),
+			CommitAuthor: &pb.FindLocalBranchCommitAuthor{
+				Name:  []byte("Dmitriy Zaporozhets"),
+				Email: []byte("<dmitriy.zaporozhets@gmail.com>"),
+				Date:  &timestamp.Timestamp{Seconds: 1393491698},
+			},
+			CommitCommitter: &pb.FindLocalBranchCommitAuthor{
+				Name:  []byte("Dmitriy Zaporozhets"),
+				Email: []byte("<dmitriy.zaporozhets@gmail.com>"),
+				Date:  &timestamp.Timestamp{Seconds: 1393491698},
+			},
+		},
+		{
+			Name:          []byte("refs/heads/'test'"),
+			CommitId:      "e56497bb5f03a90a51293fc6d516788730953899",
+			CommitSubject: []byte("Merge branch 'tree_helper_spec' into 'master'"),
+			CommitAuthor: &pb.FindLocalBranchCommitAuthor{
+				Name:  []byte("Sytse Sijbrandij"),
+				Email: []byte("<sytse@gitlab.com>"),
+				Date:  &timestamp.Timestamp{Seconds: 1420925009},
+			},
+			CommitCommitter: &pb.FindLocalBranchCommitAuthor{
+				Name:  []byte("Sytse Sijbrandij"),
+				Email: []byte("<sytse@gitlab.com>"),
+				Date:  &timestamp.Timestamp{Seconds: 1420925009},
+			},
+		},
+	}
+}
+
+func authorsEqual(a *pb.FindLocalBranchCommitAuthor, b *pb.FindLocalBranchCommitAuthor) bool {
+	return bytes.Equal(a.Name, b.Name) &&
+		bytes.Equal(a.Email, b.Email) &&
+		a.Date.Seconds == b.Date.Seconds
+}
+
+func branchesEqual(a *pb.FindLocalBranchResponse, b *pb.FindLocalBranchResponse) bool {
+	return a.CommitId == b.CommitId &&
+		bytes.Equal(a.CommitSubject, b.CommitSubject) &&
+		authorsEqual(a.CommitAuthor, b.CommitAuthor) &&
+		authorsEqual(a.CommitCommitter, b.CommitCommitter)
+}
+
+func validateContainsBranch(t *testing.T, branches []*pb.FindLocalBranchResponse, branch *pb.FindLocalBranchResponse) {
+	for _, b := range branches {
+		if bytes.Equal(branch.Name, b.Name) {
+			if !branchesEqual(branch, b) {
+				t.Fatalf("Expected branch\n%v\ngot\n%v", branch, b)
+			}
+			return // Found the branch and it maches. Success!
+		}
+	}
+	t.Fatalf("Expected to find branch %q in local branches", branch.Name)
+}
+
+func TestSuccessfulFindLocalBranches(t *testing.T) {
+	server := runRefServer(t)
+	defer server.Stop()
+
+	client := newRefClient(t)
+	repo := &pb.Repository{Path: path.Join(testRepoRoot, testRepo)}
+	rpcRequest := &pb.FindLocalBranchesRequest{Repository: repo}
+
+	c, err := client.FindLocalBranches(context.Background(), rpcRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var branches []*pb.FindLocalBranchResponse
+	for {
+		r, err := c.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		branches = append(branches, r.GetBranches()...)
+	}
+
+	for _, branch := range localBranches() {
+		validateContainsBranch(t, branches, branch)
+	}
+}
+
+// Test that `s` contains the elements in `relativeOrder` in that order
+// (relative to each other)
+func isOrderedSubset(subset, set []string) bool {
+	subsetIndex := 0 // The string we are currently looking for from `subset`
+	for _, element := range set {
+		if element != subset[subsetIndex] {
+			continue
+		}
+
+		subsetIndex++
+
+		if subsetIndex == len(subset) { // We found all elements in that order
+			return true
+		}
+	}
+	return false
+}
+
+func TestFindLocalBranchesSort(t *testing.T) {
+	testCases := []struct {
+		desc          string
+		relativeOrder []string
+		sortBy        pb.FindLocalBranchesRequest_SortBy
+	}{
+		{
+			desc:          "In ascending order by name",
+			relativeOrder: []string{"refs/heads/'test'", "refs/heads/100%branch", "refs/heads/improve/awesome", "refs/heads/master"},
+			sortBy:        pb.FindLocalBranchesRequest_NAME,
+		},
+		{
+			desc:          "In ascending order by commiter date",
+			relativeOrder: []string{"refs/heads/improve/awesome", "refs/heads/'test'", "refs/heads/100%branch", "refs/heads/master"},
+			sortBy:        pb.FindLocalBranchesRequest_UPDATED_ASC,
+		},
+		{
+			desc:          "In descending order by commiter date",
+			relativeOrder: []string{"refs/heads/master", "refs/heads/100%branch", "refs/heads/'test'", "refs/heads/improve/awesome"},
+			sortBy:        pb.FindLocalBranchesRequest_UPDATED_DESC,
+		},
+	}
+
+	server := runRefServer(t)
+	defer server.Stop()
+
+	client := newRefClient(t)
+	repo := &pb.Repository{Path: path.Join(testRepoRoot, testRepo)}
+
+	for _, testCase := range testCases {
+		rpcRequest := &pb.FindLocalBranchesRequest{Repository: repo, SortBy: testCase.sortBy}
+
+		c, err := client.FindLocalBranches(context.Background(), rpcRequest)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var branches []string
+		for {
+			r, err := c.Recv()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, branch := range r.GetBranches() {
+				branches = append(branches, string(branch.Name))
+			}
+		}
+
+		if !isOrderedSubset(testCase.relativeOrder, branches) {
+			t.Fatalf("%s: Expected branches to have relative order %v; got them as %v", testCase.desc, testCase.relativeOrder, branches)
+		}
+	}
+}
+
+func TestEmptyFindLocalBranchesRequest(t *testing.T) {
+	server := runRefServer(t)
+	defer server.Stop()
+
+	client := newRefClient(t)
+	rpcRequest := &pb.FindLocalBranchesRequest{}
+
+	c, err := client.FindLocalBranches(context.Background(), rpcRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var recvError error
+	for recvError == nil {
+		_, recvError = c.Recv()
+	}
+
+	if grpc.Code(recvError) != codes.InvalidArgument {
+		t.Fatal(recvError)
 	}
 }
