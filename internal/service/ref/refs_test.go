@@ -332,7 +332,7 @@ func TestSuccessfulFindLocalBranches(t *testing.T) {
 	defer server.Stop()
 
 	client := newRefClient(t)
-	repo := &pb.Repository{Path: path.Join(testRepoRoot, testRepo)}
+	repo := &pb.Repository{Path: testRepoPath}
 	rpcRequest := &pb.FindLocalBranchesRequest{Repository: repo}
 
 	c, err := client.FindLocalBranches(context.Background(), rpcRequest)
@@ -402,7 +402,7 @@ func TestFindLocalBranchesSort(t *testing.T) {
 	defer server.Stop()
 
 	client := newRefClient(t)
-	repo := &pb.Repository{Path: path.Join(testRepoRoot, testRepo)}
+	repo := &pb.Repository{Path: testRepoPath}
 
 	for _, testCase := range testCases {
 		rpcRequest := &pb.FindLocalBranchesRequest{Repository: repo, SortBy: testCase.sortBy}
