@@ -1,6 +1,7 @@
 package commit
 
 import (
+	"fmt"
 	"log"
 
 	"google.golang.org/grpc"
@@ -13,10 +14,10 @@ import (
 )
 
 func (s *server) CommitIsAncestor(ctx context.Context, in *pb.CommitIsAncestorRequest) (*pb.CommitIsAncestorResponse, error) {
-	repo := in.GetRepository()
-	if repo == nil || repo.GetPath() == "" {
-		message := "Bad Request (empty repository)"
-		log.Printf("CommitIsAncestor: %q", message)
+	repoPath, err := helper.GetRepoPath(in.GetRepository())
+	if err != nil {
+		message := fmt.Sprintf("CommitIsAncestor: %v", err)
+		log.Print(message)
 		return nil, grpc.Errorf(codes.InvalidArgument, message)
 	}
 	if in.AncestorId == "" {
@@ -30,7 +31,7 @@ func (s *server) CommitIsAncestor(ctx context.Context, in *pb.CommitIsAncestorRe
 		return nil, grpc.Errorf(codes.InvalidArgument, message)
 	}
 
-	ret, err := commitIsAncestorName(repo.Path, in.AncestorId, in.ChildId)
+	ret, err := commitIsAncestorName(repoPath, in.AncestorId, in.ChildId)
 	return &pb.CommitIsAncestorResponse{Value: ret}, err
 }
 

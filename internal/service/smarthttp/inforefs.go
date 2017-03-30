@@ -37,12 +37,14 @@ func (s *server) InfoRefsReceivePack(in *pb.InfoRefsRequest, stream pb.SmartHTTP
 }
 
 func handleInfoRefs(service string, repo *pb.Repository, w io.Writer) error {
-	if repo == nil {
-		return grpc.Errorf(codes.InvalidArgument, "GetInfoRefs: repo argument is missing")
+	repoPath, err := helper.GetRepoPath(repo)
+	if err != nil {
+		return grpc.Errorf(codes.InvalidArgument, "GetInfoRefs: %v", err)
 	}
-	cmd := helper.GitCommand("git", service, "--stateless-rpc", "--advertise-refs", repo.Path)
 
-	log.Printf("handleInfoRefs: service=%q RepoPath=%q", service, repo.Path)
+	cmd := helper.GitCommand("git", service, "--stateless-rpc", "--advertise-refs", repoPath)
+
+	log.Printf("handleInfoRefs: service=%q RepoPath=%q", service, repoPath)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

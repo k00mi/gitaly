@@ -6,7 +6,11 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"strings"
 	"testing"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 )
 
 const testRepo = "testdata/data/gitlab-test.git"
@@ -37,4 +41,21 @@ func GitlabTestRepoPath() string {
 	}
 
 	return clonePath
+}
+
+// AssertGrpcError asserts the passed err is of the same code as expectedCode. Optionally, it can
+// assert the error contains the text of containsText if the latter is not an empty string.
+func AssertGrpcError(t *testing.T, err error, expectedCode codes.Code, containsText string) {
+	if err == nil {
+		t.Fatal("Expected an error, got nil")
+	}
+
+	// Check that the code matches
+	if code := grpc.Code(err); code != expectedCode {
+		t.Fatalf("Expected an error with code %v, got %v. The error was %v", expectedCode, code, err)
+	}
+
+	if containsText != "" && !strings.Contains(err.Error(), containsText) {
+		t.Fatal(err)
+	}
 }
