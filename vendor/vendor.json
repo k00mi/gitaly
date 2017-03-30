@@ -103,10 +103,10 @@
 		{
 			"checksumSHA1": "2E36lBoyaVky2EJP1E5ub6Rg+uI=",
 			"path": "gitlab.com/gitlab-org/gitaly-proto/go/helper",
-			"revision": "84b3ffd032eea7af8df96fb9d7bdc100dac2c569",
-			"revisionTime": "2017-02-27T16:43:55Z",
-			"version": "v0.3.0",
-			"versionExact": "v0.3.0"
+			"revision": "607fd598bc02ecc750d905ea8ba233673ff0a86b",
+			"revisionTime": "2017-03-28T10:04:06Z",
+			"version": "v0.4.0",
+			"versionExact": "v0.4.0"
 		},
 		{
 			"checksumSHA1": "9jjO5GjLa0XF/nfWihF02RoH4qc=",
