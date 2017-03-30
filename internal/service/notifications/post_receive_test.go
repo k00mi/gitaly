@@ -13,6 +13,7 @@ import (
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -57,9 +58,7 @@ func TestEmptyPostReceiveRequest(t *testing.T) {
 	rpcRequest := &pb.PostReceiveRequest{}
 
 	_, err := client.PostReceive(context.Background(), rpcRequest)
-	if err.Error() != "rpc error: code = 2 desc = Bad Request (empty repository)" {
-		t.Fatal(err)
-	}
+	testhelper.AssertGrpcError(t, err, codes.InvalidArgument, "")
 }
 
 func runNotificationsServer(t *testing.T) *grpc.Server {

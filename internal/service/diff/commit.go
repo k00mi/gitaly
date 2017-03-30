@@ -16,7 +16,10 @@ func (s *server) CommitDiff(in *pb.CommitDiffRequest, stream pb.Diff_CommitDiffS
 		return err
 	}
 
-	repoPath := in.Repository.GetPath()
+	repoPath, err := helper.GetRepoPath(in.Repository)
+	if err != nil {
+		return grpc.Errorf(codes.InvalidArgument, "CommitDiff: %v", err)
+	}
 	leftSha := in.LeftCommitId
 	rightSha := in.RightCommitId
 
@@ -68,9 +71,6 @@ func (s *server) CommitDiff(in *pb.CommitDiffRequest, stream pb.Diff_CommitDiffS
 }
 
 func validateRequest(in *pb.CommitDiffRequest) error {
-	if in.Repository == nil || in.Repository.GetPath() == "" {
-		return grpc.Errorf(codes.InvalidArgument, "CommitDiff: Repository is empty")
-	}
 	if in.LeftCommitId == "" {
 		return grpc.Errorf(codes.InvalidArgument, "CommitDiff: LeftCommitId is empty")
 	}

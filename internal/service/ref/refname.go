@@ -18,10 +18,10 @@ import (
 //  If there is more than one such ref there is no guarantee which one is
 //  returned or that the same one is returned on each call.
 func (s *server) FindRefName(ctx context.Context, in *pb.FindRefNameRequest) (*pb.FindRefNameResponse, error) {
-	repo := in.GetRepository()
-	if repo == nil || repo.GetPath() == "" {
-		message := "Bad Request (empty repository)"
-		log.Printf("FindRefName: %q", message)
+	repoPath, err := helper.GetRepoPath(in.Repository)
+	if err != nil {
+		message := fmt.Sprintf("FindRefName: %v", err)
+		log.Print(message)
 		return nil, grpc.Errorf(codes.InvalidArgument, message)
 	}
 	if in.CommitId == "" {
@@ -30,7 +30,7 @@ func (s *server) FindRefName(ctx context.Context, in *pb.FindRefNameRequest) (*p
 		return nil, grpc.Errorf(codes.InvalidArgument, message)
 	}
 
-	ref, err := findRefName(repo.Path, in.CommitId, string(in.Prefix))
+	ref, err := findRefName(repoPath, in.CommitId, string(in.Prefix))
 	if err != nil {
 		return nil, grpc.Errorf(codes.Internal, err.Error())
 	}

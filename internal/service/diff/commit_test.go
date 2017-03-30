@@ -15,6 +15,7 @@ import (
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -230,11 +231,8 @@ func TestFailedCommitDiffRequestWithEmptyRepository(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedError := "Repository is empty"
-
-	if err := drainCommitDiffResponse(c); !strings.Contains(err.Error(), expectedError) {
-		t.Errorf("Expected error to be %q, got %q", expectedError, err.Error())
-	}
+	err = drainCommitDiffResponse(c)
+	testhelper.AssertGrpcError(t, err, codes.InvalidArgument, "")
 
 	// Case: Repository is nil
 	rpcRequest = &pb.CommitDiffRequest{Repository: nil, RightCommitId: rightCommit, LeftCommitId: leftCommit}
@@ -244,9 +242,8 @@ func TestFailedCommitDiffRequestWithEmptyRepository(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := drainCommitDiffResponse(c); !strings.Contains(err.Error(), expectedError) {
-		t.Errorf("Expected error to be %q, got %q", expectedError, err.Error())
-	}
+	err = drainCommitDiffResponse(c)
+	testhelper.AssertGrpcError(t, err, codes.InvalidArgument, "")
 }
 
 func TestFailedCommitDiffRequestWithEmptyCommit(t *testing.T) {

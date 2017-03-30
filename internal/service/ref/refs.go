@@ -36,13 +36,12 @@ func handleGitCommand(w refsWriter, r io.Reader) error {
 }
 
 func findRefs(writer refsWriter, repo *pb.Repository, pattern string, args ...string) error {
-	if repo == nil {
-		message := "Bad Request (empty repository)"
-		log.Printf("FindRefs: %q", message)
+	repoPath, err := helper.GetRepoPath(repo)
+	if err != nil {
+		message := fmt.Sprintf("FindRefs: %v", err)
+		log.Print(message)
 		return grpc.Errorf(codes.InvalidArgument, message)
 	}
-
-	repoPath := repo.Path
 
 	log.Printf("FindRefs: RepoPath=%q Pattern=%q", repoPath, pattern)
 
@@ -165,13 +164,12 @@ func defaultBranchName(repoPath string) ([]byte, error) {
 
 // FindDefaultBranchName returns the default branch name for the given repository
 func (s *server) FindDefaultBranchName(ctx context.Context, in *pb.FindDefaultBranchNameRequest) (*pb.FindDefaultBranchNameResponse, error) {
-	if in.Repository == nil {
-		message := "Bad Request (empty repository)"
-		log.Printf("FindDefaultBranchName: %q", message)
+	repoPath, err := helper.GetRepoPath(in.GetRepository())
+	if err != nil {
+		message := fmt.Sprintf("FindDefaultBranchName: %v", err)
+		log.Print(message)
 		return nil, grpc.Errorf(codes.InvalidArgument, message)
 	}
-
-	repoPath := in.Repository.Path
 
 	log.Printf("FindDefaultBranchName: RepoPath=%q", repoPath)
 
