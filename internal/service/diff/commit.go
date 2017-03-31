@@ -29,12 +29,12 @@ func (s *server) CommitDiff(in *pb.CommitDiffRequest, stream pb.Diff_CommitDiffS
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return grpc.Errorf(codes.Unavailable, "CommitDiff: Failed obtaining command stdout pipe")
+		return grpc.Errorf(codes.Unavailable, "CommitDiff: cmd stdout: %v", err)
 	}
 	defer stdout.Close()
 
 	if err := cmd.Start(); err != nil {
-		return grpc.Errorf(codes.Unavailable, "CommitDiff: Failed starting command")
+		return grpc.Errorf(codes.Unavailable, "CommitDiff: cmd start: %v", err)
 	}
 	defer helper.CleanUpProcessGroup(cmd) // Ensure brute force subprocess clean-up
 
@@ -54,17 +54,17 @@ func (s *server) CommitDiff(in *pb.CommitDiffRequest, stream pb.Diff_CommitDiffS
 		})
 
 		if err != nil {
-			return grpc.Errorf(codes.Unavailable, "CommitDiff: Failed sending diff")
+			return grpc.Errorf(codes.Unavailable, "CommitDiff: send: %v", err)
 		}
 	}
 
 	if err := diffParser.Err(); err != nil {
 		log.Printf("CommitDiff: Parsing diff in repo %q between %q and %q failed: %v", repoPath, leftSha, rightSha, err)
-		return grpc.Errorf(codes.Internal, "CommitDiff: Parsing diff output failed")
+		return grpc.Errorf(codes.Internal, "CommitDiff: parse failure: %v", err)
 	}
 
 	if err := cmd.Wait(); err != nil {
-		return grpc.Errorf(codes.Unavailable, "CommitDiff: Command failed to complete successfully")
+		return grpc.Errorf(codes.Unavailable, "CommitDiff: cmd wait for %v: %v", cmd.Args, err)
 	}
 
 	return nil
@@ -72,10 +72,10 @@ func (s *server) CommitDiff(in *pb.CommitDiffRequest, stream pb.Diff_CommitDiffS
 
 func validateRequest(in *pb.CommitDiffRequest) error {
 	if in.LeftCommitId == "" {
-		return grpc.Errorf(codes.InvalidArgument, "CommitDiff: LeftCommitId is empty")
+		return grpc.Errorf(codes.InvalidArgument, "CommitDiff: empty LeftCommitId")
 	}
 	if in.RightCommitId == "" {
-		return grpc.Errorf(codes.InvalidArgument, "CommitDiff: RightCommitId is empty")
+		return grpc.Errorf(codes.InvalidArgument, "CommitDiff: empty RightCommitId")
 	}
 
 	return nil
