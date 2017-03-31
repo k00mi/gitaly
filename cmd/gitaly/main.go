@@ -21,6 +21,7 @@ import (
 // Config specifies the gitaly server configuration
 type Config struct {
 	SocketPath           string `split_words:"true"`
+	ListenAddr           string `split_words:"true"`
 	PrometheusListenAddr string `split_words:"true"`
 }
 
@@ -35,19 +36,29 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if config.SocketPath == "" {
-		log.Fatal("GITALY_SOCKET_PATH environment variable is not set")
+	if config.SocketPath == "" && config.ListenAddr == "" {
+		log.Fatal("Must set $GITALY_SOCKET_PATH or $GITALY_LISTEN_ADDR")
 	}
 
-	if err := os.Remove(config.SocketPath); err != nil && !os.IsNotExist(err) {
-		log.Fatal(err)
+	var listeners []net.Listener
+
+	if socketPath := config.SocketPath; socketPath != "" {
+		l, err := createUnixListener(socketPath)
+		if err != nil {
+			log.Fatalf("configure unix listener: %v", err)
+		}
+		log.Printf("listening on unix socket %q", socketPath)
+		listeners = append(listeners, l)
 	}
 
-	listener, err := net.Listen("unix", config.SocketPath)
-	if err != nil {
-		log.Fatal(err)
+	if addr := config.ListenAddr; addr != "" {
+		l, err := net.Listen("tcp", addr)
+		if err != nil {
+			log.Fatalf("configure tcp listener: %v", err)
+		}
+		log.Printf("listening at tcp address %q", addr)
+		listeners = append(listeners, l)
 	}
-	log.Println("Listening on socket", config.SocketPath)
 
 	server := grpc.NewServer(
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
@@ -66,10 +77,14 @@ func main() {
 	// After all your registrations, make sure all of the Prometheus metrics are initialized.
 	grpc_prometheus.Register(server)
 
-	serverError := make(chan error, 2)
-	go func() {
-		serverError <- server.Serve(listener)
-	}()
+	serverError := make(chan error, len(listeners))
+	for _, listener := range listeners {
+		// Must pass the listener as a function argument because there is a race
+		// between 'go' and 'for'.
+		go func(l net.Listener) {
+			serverError <- server.Serve(l)
+		}(listener)
+	}
 
 	if config.PrometheusListenAddr != "" {
 		log.Print("Starting prometheus listener ", config.PrometheusListenAddr)
@@ -81,4 +96,12 @@ func main() {
 	}
 
 	log.Fatal(<-serverError)
+}
+
+func createUnixListener(socketPath string) (net.Listener, error) {
+	if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+
+	return net.Listen("unix", socketPath)
 }
