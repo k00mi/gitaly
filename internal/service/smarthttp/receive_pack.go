@@ -45,12 +45,12 @@ func (s *server) PostReceivePack(stream pb.SmartHTTP_PostReceivePackServer) erro
 	cmd.Stdout = stdout
 
 	if err := cmd.Start(); err != nil {
-		return grpc.Errorf(codes.Unavailable, "PostReceivePack: Failed starting command")
+		return grpc.Errorf(codes.Unavailable, "PostReceivePack: cmd start: %v", err)
 	}
 	defer helper.CleanUpProcessGroup(cmd) // Ensure brute force subprocess clean-up
 
 	if err := cmd.Wait(); err != nil {
-		return grpc.Errorf(codes.Unavailable, "PostReceivePack: Command failed to complete successfully")
+		return grpc.Errorf(codes.Unavailable, "PostReceivePack: cmd wait for %v: %v", cmd.Args, err)
 	}
 
 	return nil
@@ -58,10 +58,10 @@ func (s *server) PostReceivePack(stream pb.SmartHTTP_PostReceivePackServer) erro
 
 func validateReceivePackRequest(req *pb.PostReceivePackRequest) error {
 	if req.GlId == "" {
-		return grpc.Errorf(codes.InvalidArgument, "PostReceivePack: GlId is empty")
+		return grpc.Errorf(codes.InvalidArgument, "PostReceivePack: empty GlId")
 	}
 	if req.Data != nil {
-		return grpc.Errorf(codes.InvalidArgument, "PostReceivePack: Data is not supposed to be sent in the first request")
+		return grpc.Errorf(codes.InvalidArgument, "PostReceivePack: non-empty Data")
 	}
 
 	return nil
