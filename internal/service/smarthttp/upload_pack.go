@@ -42,12 +42,12 @@ func (s *server) PostUploadPack(stream pb.SmartHTTP_PostUploadPackServer) error 
 	cmd.Stdout = stdout
 
 	if err := cmd.Start(); err != nil {
-		return grpc.Errorf(codes.Unavailable, "PostUploadPack: Failed starting command")
+		return grpc.Errorf(codes.Unavailable, "PostUploadPack: cmd start: %v", err)
 	}
 	defer helper.CleanUpProcessGroup(cmd) // Ensure brute force subprocess clean-up
 
 	if err := cmd.Wait(); err != nil {
-		return grpc.Errorf(codes.Unavailable, "PostUploadPack: Command failed to complete successfully")
+		return grpc.Errorf(codes.Unavailable, "PostUploadPack: cmd wait for %v: %v", cmd.Args, err)
 	}
 
 	return nil
@@ -55,7 +55,7 @@ func (s *server) PostUploadPack(stream pb.SmartHTTP_PostUploadPackServer) error 
 
 func validateUploadPackRequest(req *pb.PostUploadPackRequest) error {
 	if req.Data != nil {
-		return grpc.Errorf(codes.InvalidArgument, "PostUploadPack: Data is not supposed to be sent in the first request")
+		return grpc.Errorf(codes.InvalidArgument, "PostUploadPack: non-empty Data")
 	}
 
 	return nil

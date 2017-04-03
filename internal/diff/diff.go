@@ -70,7 +70,7 @@ func (parser *Parser) Parse() bool {
 
 			return true
 		} else if err != nil {
-			parser.err = fmt.Errorf("ParseDiffOutput: Unexpected error while peeking: %v", err)
+			parser.err = fmt.Errorf("peek diff line: %v", err)
 			return false
 		}
 
@@ -120,7 +120,7 @@ func (parser *Parser) Err() error {
 func parseHeader(reader *bufio.Reader, diff *Diff) error {
 	line, err := reader.ReadBytes('\n')
 	if err != nil && err != io.EOF {
-		return fmt.Errorf("ParseDiffOutput: Unexpected error while reading diff header line: %v", err)
+		return fmt.Errorf("read diff header line: %v", err)
 	}
 
 	if matches := diffHeaderRegexp.FindSubmatch(line); len(matches) > 0 { // diff --git a/Makefile b/Makefile
@@ -134,7 +134,7 @@ func parseHeader(reader *bufio.Reader, diff *Diff) error {
 		if matches[3] != "" { // mode does not exist for deleted/new files on this line
 			mode, err := strconv.ParseInt(matches[3], 8, 0)
 			if err != nil {
-				return fmt.Errorf("ParseDiffOutput: Index header: Failed parsing mode as int: %v", err)
+				return fmt.Errorf("index header: %v", err)
 			}
 
 			diff.OldMode = int32(mode)
@@ -154,7 +154,7 @@ func parseHeader(reader *bufio.Reader, diff *Diff) error {
 	if matches := modeHeaderRegexp.FindStringSubmatch(string(line)); len(matches) > 0 { // deleted file mode 100644
 		mode, err := strconv.ParseInt(matches[2], 8, 0)
 		if err != nil {
-			return fmt.Errorf("ParseDiffOutput: Mode header: Failed parsing mode as int: %v", err)
+			return fmt.Errorf("mode header: %v", err)
 		}
 
 		switch matches[1] {
@@ -171,7 +171,7 @@ func parseHeader(reader *bufio.Reader, diff *Diff) error {
 func consumeChunkLine(reader *bufio.Reader, diff *Diff) error {
 	line, err := reader.ReadBytes('\n')
 	if err != nil && err != io.EOF {
-		return fmt.Errorf("ParseDiffOutput: Unexpected error while reading a chunk line: %v", err)
+		return fmt.Errorf("read chunk line: %v", err)
 	}
 
 	chunkIndex := len(diff.RawChunks) - 1
@@ -183,7 +183,7 @@ func consumeChunkLine(reader *bufio.Reader, diff *Diff) error {
 func consumeBinaryNotice(reader *bufio.Reader, diff *Diff) error {
 	_, err := reader.ReadBytes('\n')
 	if err != nil && err != io.EOF {
-		return fmt.Errorf("ParseDiffOutput: Unexpected error while reading binary notice: %v", err)
+		return fmt.Errorf("read binary notice: %v", err)
 	}
 
 	diff.Binary = true
@@ -194,7 +194,7 @@ func consumeBinaryNotice(reader *bufio.Reader, diff *Diff) error {
 func consumeLine(reader *bufio.Reader) error {
 	_, err := reader.ReadBytes('\n')
 	if err != nil && err != io.EOF {
-		return fmt.Errorf("ParseDiffOutput: Unexpected error while reading binary notice: %v", err)
+		return fmt.Errorf("read line: %v", err)
 	}
 
 	return nil

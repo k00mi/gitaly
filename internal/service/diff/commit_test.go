@@ -5,7 +5,6 @@ import (
 	"io"
 	"net"
 	"path"
-	"strings"
 	"testing"
 	"time"
 
@@ -261,10 +260,8 @@ func TestFailedCommitDiffRequestWithEmptyCommit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedError := "RightCommitId is empty"
-	if err := drainCommitDiffResponse(c); !strings.Contains(err.Error(), expectedError) {
-		t.Errorf("Expected error to be %q, got %q", expectedError, err.Error())
-	}
+	err = drainCommitDiffResponse(c)
+	testhelper.AssertGrpcError(t, err, codes.InvalidArgument, "")
 
 	rightCommit = "d42783470dc29fde2cf459eb3199ee1d7e3f3a72"
 	leftCommit = ""
@@ -275,10 +272,8 @@ func TestFailedCommitDiffRequestWithEmptyCommit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedError = "LeftCommitId is empty"
-	if err := drainCommitDiffResponse(c); !strings.Contains(err.Error(), expectedError) {
-		t.Errorf("Expected error to be %q, got %q", expectedError, err.Error())
-	}
+	err = drainCommitDiffResponse(c)
+	testhelper.AssertGrpcError(t, err, codes.InvalidArgument, "")
 }
 
 func TestFailedCommitDiffRequestWithNonExistentCommit(t *testing.T) {
@@ -296,10 +291,8 @@ func TestFailedCommitDiffRequestWithNonExistentCommit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedError := "Command failed to complete successfully"
-	if err := drainCommitDiffResponse(c); !strings.Contains(err.Error(), expectedError) {
-		t.Errorf("Expected error to be %q, got %q", expectedError, err.Error())
-	}
+	err = drainCommitDiffResponse(c)
+	testhelper.AssertGrpcError(t, err, codes.Unavailable, "")
 }
 
 func runDiffServer(t *testing.T) *grpc.Server {
