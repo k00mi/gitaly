@@ -214,66 +214,32 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 	}
 }
 
-func TestFailedCommitDiffRequestWithEmptyRepository(t *testing.T) {
+func TestFailedCommitDiffRequestDueToValidationError(t *testing.T) {
 	server := runDiffServer(t)
 	defer server.Stop()
 
 	client := newDiffClient(t)
-	repo := &pb.Repository{Path: ""}
 	rightCommit := "d42783470dc29fde2cf459eb3199ee1d7e3f3a72"
 	leftCommit := rightCommit + "~" // Parent of rightCommit
-	// Case: Repository.Path is empty
-	rpcRequest := &pb.CommitDiffRequest{Repository: repo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
 
-	c, err := client.CommitDiff(context.Background(), rpcRequest)
-	if err != nil {
-		t.Fatal(err)
+	rpcRequests := []pb.CommitDiffRequest{
+		{Repository: &pb.Repository{Path: ""}, RightCommitId: rightCommit, LeftCommitId: leftCommit},   // Repository.Path is empty
+		{Repository: nil, RightCommitId: rightCommit, LeftCommitId: leftCommit},                        // Repository is nil
+		{Repository: &pb.Repository{Path: testRepoPath}, RightCommitId: "", LeftCommitId: leftCommit},  // RightCommitId is empty
+		{Repository: &pb.Repository{Path: testRepoPath}, RightCommitId: rightCommit, LeftCommitId: ""}, // LeftCommitId is empty
 	}
 
-	err = drainCommitDiffResponse(c)
-	testhelper.AssertGrpcError(t, err, codes.InvalidArgument, "")
+	for _, rpcRequest := range rpcRequests {
+		t.Logf("test case: %v", rpcRequest)
 
-	// Case: Repository is nil
-	rpcRequest = &pb.CommitDiffRequest{Repository: nil, RightCommitId: rightCommit, LeftCommitId: leftCommit}
+		c, err := client.CommitDiff(context.Background(), &rpcRequest)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	c, err = client.CommitDiff(context.Background(), rpcRequest)
-	if err != nil {
-		t.Fatal(err)
+		err = drainCommitDiffResponse(c)
+		testhelper.AssertGrpcError(t, err, codes.InvalidArgument, "")
 	}
-
-	err = drainCommitDiffResponse(c)
-	testhelper.AssertGrpcError(t, err, codes.InvalidArgument, "")
-}
-
-func TestFailedCommitDiffRequestWithEmptyCommit(t *testing.T) {
-	server := runDiffServer(t)
-	defer server.Stop()
-
-	client := newDiffClient(t)
-	repo := &pb.Repository{Path: testRepoPath}
-	rightCommit := ""
-	leftCommit := rightCommit + "~" // Parent of rightCommit
-	rpcRequest := &pb.CommitDiffRequest{Repository: repo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
-
-	c, err := client.CommitDiff(context.Background(), rpcRequest)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = drainCommitDiffResponse(c)
-	testhelper.AssertGrpcError(t, err, codes.InvalidArgument, "")
-
-	rightCommit = "d42783470dc29fde2cf459eb3199ee1d7e3f3a72"
-	leftCommit = ""
-	rpcRequest = &pb.CommitDiffRequest{Repository: repo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
-
-	c, err = client.CommitDiff(context.Background(), rpcRequest)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = drainCommitDiffResponse(c)
-	testhelper.AssertGrpcError(t, err, codes.InvalidArgument, "")
 }
 
 func TestFailedCommitDiffRequestWithNonExistentCommit(t *testing.T) {
