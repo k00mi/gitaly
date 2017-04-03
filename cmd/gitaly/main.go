@@ -1,16 +1,17 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"os"
 
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/service"
 	"gitlab.com/gitlab-org/gitaly/internal/service/middleware/panichandler"
 
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/kelseyhightower/envconfig"
 	"github.com/mwitkow/go-grpc-middleware"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -18,31 +19,49 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-// Config specifies the gitaly server configuration
-type Config struct {
-	SocketPath           string `split_words:"true"`
-	ListenAddr           string `split_words:"true"`
-	PrometheusListenAddr string `split_words:"true"`
+var version string
+
+func loadConfig() {
+	switch {
+	case len(os.Args) >= 2:
+		cfgFile, err := os.Open(os.Args[1])
+		if err != nil {
+			log.Printf("warning: can not open file for reading: %q: %v", os.Args[1], err)
+			break
+		}
+		defer cfgFile.Close()
+		if err = config.Load(cfgFile); err != nil {
+			log.Printf("warning: can not load configuration: %q: %v", os.Args[1], err)
+		}
+
+	default:
+		log.Printf("warning: no configuration file given")
+		if err := config.Load(nil); err != nil {
+			log.Printf("warning: can not load configuration: %v", err)
+		}
+	}
 }
 
-var version string
+func validateConfig() error {
+	if config.Config.SocketPath == "" && config.Config.ListenAddr == "" {
+		return fmt.Errorf("Must set $GITALY_SOCKET_PATH or $GITALY_LISTEN_ADDR")
+	}
+
+	return nil
+}
 
 func main() {
 	log.Println("Starting Gitaly", version)
 
-	config := Config{}
-	err := envconfig.Process("gitaly", &config)
-	if err != nil {
-		log.Fatal(err)
-	}
+	loadConfig()
 
-	if config.SocketPath == "" && config.ListenAddr == "" {
-		log.Fatal("Must set $GITALY_SOCKET_PATH or $GITALY_LISTEN_ADDR")
+	if err := validateConfig(); err != nil {
+		log.Fatal(err)
 	}
 
 	var listeners []net.Listener
 
-	if socketPath := config.SocketPath; socketPath != "" {
+	if socketPath := config.Config.SocketPath; socketPath != "" {
 		l, err := createUnixListener(socketPath)
 		if err != nil {
 			log.Fatalf("configure unix listener: %v", err)
@@ -51,7 +70,7 @@ func main() {
 		listeners = append(listeners, l)
 	}
 
-	if addr := config.ListenAddr; addr != "" {
+	if addr := config.Config.ListenAddr; addr != "" {
 		l, err := net.Listen("tcp", addr)
 		if err != nil {
 			log.Fatalf("configure tcp listener: %v", err)
@@ -86,12 +105,12 @@ func main() {
 		}(listener)
 	}
 
-	if config.PrometheusListenAddr != "" {
-		log.Print("Starting prometheus listener ", config.PrometheusListenAddr)
+	if config.Config.PrometheusListenAddr != "" {
+		log.Print("Starting prometheus listener ", config.Config.PrometheusListenAddr)
 		promMux := http.NewServeMux()
 		promMux.Handle("/metrics", promhttp.Handler())
 		go func() {
-			http.ListenAndServe(config.PrometheusListenAddr, promMux)
+			http.ListenAndServe(config.Config.PrometheusListenAddr, promMux)
 		}()
 	}
 
