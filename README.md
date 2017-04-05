@@ -149,6 +149,12 @@ Some examples of a specific set of functions:
 
 Based on the  [daily overview dashboard](http://performance.gitlab.net/dashboard/db/daily-overview?panelId=14&fullscreen), we should tackle the routes in `gitlab-rails` in the following order:
 
+### GitLab CE changelog
+
+We only create GitLab CE changelog entries for two types of merge request:
+
+- adding a feature flag for one or more Gitaly RPC's (meaning the RPC becomes available for trials)
+- removing a feature flag for one or more Gitaly RPC's (meaning everybody is using a given RPC from that point on)
 
 ### Order of Migration
 
