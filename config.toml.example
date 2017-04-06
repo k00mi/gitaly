@@ -1,6 +1,6 @@
 # Example Gitaly configuration file
 
-listen_path = "/home/git/gitlab/tmp/sockets/private/gitaly.socket"
+socket_path = "/home/git/gitlab/tmp/sockets/private/gitaly.socket"
 
 # # Optional: listen on a TCP socket. This is insecure (no authentication)
 # listen_addr = "localhost:9999"
