@@ -84,7 +84,6 @@ func TestLoadPrometheus(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, ":9236", Config.PrometheusListenAddr)
-	assert.Equal(t, 0, len(Config.Storages), "Expected zero (0) storage")
 }
 
 func TestLoadSocketPath(t *testing.T) {
@@ -94,7 +93,6 @@ func TestLoadSocketPath(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, "/tmp/gitaly.sock", Config.SocketPath)
-	assert.Equal(t, 0, len(Config.Storages), "Expected zero (0) storage")
 }
 
 func TestLoadListenAddr(t *testing.T) {
@@ -104,7 +102,6 @@ func TestLoadListenAddr(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, ":8080", Config.ListenAddr)
-	assert.Equal(t, 0, len(Config.Storages), "Expected zero (0) storage")
 }
 
 func tempEnv(key, value string) func() {
