@@ -1,0 +1,22 @@
+# Example Gitaly configuration file
+
+listen_path = "/home/git/gitlab/tmp/sockets/private/gitaly.socket"
+
+# # Optional: listen on a TCP socket. This is insecure (no authentication)
+# listen_addr = "localhost:9999"
+#
+
+# # Optional: export metrics via Prometheus
+# prometheus_listen_addr = "localhost:9236"
+#
+
+[[storage]]
+name = "default"
+path = "/home/git/repositories"
+
+# # You can optionally configure more storages for this Gitaly instance to serve up
+#
+# [[storage]]
+# name = "other_storage"
+# path = "/mnt/other_storage/repositories"
+#

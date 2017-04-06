@@ -5,3 +5,4 @@
 /_support/bin
 /internal/service/smarthttp/testdata
 /internal/testhelper/testdata
+/config.toml
