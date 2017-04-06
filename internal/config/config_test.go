@@ -26,10 +26,7 @@ func TestLoadBrokenConfig(t *testing.T) {
 	err := Load(tmpFile)
 	assert.Error(t, err)
 
-	assert.Empty(t, Config.PrometheusListenAddr)
-	assert.Empty(t, Config.SocketPath)
-	assert.Empty(t, Config.ListenAddr)
-	assert.Empty(t, Config.Storages)
+	assert.Equal(t, config{}, Config)
 }
 
 func TestLoadEmptyConfig(t *testing.T) {
@@ -38,10 +35,7 @@ func TestLoadEmptyConfig(t *testing.T) {
 	err := Load(tmpFile)
 	assert.NoError(t, err)
 
-	assert.Empty(t, Config.PrometheusListenAddr)
-	assert.Empty(t, Config.SocketPath)
-	assert.Empty(t, Config.ListenAddr)
-	assert.Empty(t, Config.Storages)
+	assert.Equal(t, config{}, Config)
 }
 
 func TestLoadStorage(t *testing.T) {
@@ -52,12 +46,12 @@ path = "/tmp"`)
 	err := Load(tmpFile)
 	assert.NoError(t, err)
 
-	assert.Empty(t, Config.PrometheusListenAddr)
-	assert.Empty(t, Config.SocketPath)
-	assert.Empty(t, Config.ListenAddr)
 	if assert.Equal(t, 1, len(Config.Storages), "Expected one (1) storage") {
-		assert.Equal(t, "/tmp", Config.Storages[0].Path)
-		assert.Equal(t, "default", Config.Storages[0].Name)
+		assert.Equal(t, config{
+			Storages: []Storage{
+				{Name: "default", Path: "/tmp"},
+			},
+		}, Config)
 	}
 }
 
@@ -73,15 +67,13 @@ path="/tmp/repos2"`)
 	err := Load(tmpFile)
 	assert.NoError(t, err)
 
-	assert.Empty(t, Config.PrometheusListenAddr)
-	assert.Empty(t, Config.SocketPath)
-	assert.Empty(t, Config.ListenAddr)
-	if assert.Equal(t, 2, len(Config.Storages), "Expected three storages") {
-		assert.Equal(t, "/tmp/repos1", Config.Storages[0].Path)
-		assert.Equal(t, "default", Config.Storages[0].Name)
-
-		assert.Equal(t, "/tmp/repos2", Config.Storages[1].Path)
-		assert.Equal(t, "other", Config.Storages[1].Name)
+	if assert.Equal(t, 2, len(Config.Storages), "Expected one (1) storage") {
+		assert.Equal(t, config{
+			Storages: []Storage{
+				{Name: "default", Path: "/tmp/repos1"},
+				{Name: "other", Path: "/tmp/repos2"},
+			},
+		}, Config)
 	}
 }
 
@@ -92,8 +84,6 @@ func TestLoadPrometheus(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, ":9236", Config.PrometheusListenAddr)
-	assert.Empty(t, Config.ListenAddr)
-	assert.Empty(t, Config.SocketPath)
 	assert.Equal(t, 0, len(Config.Storages), "Expected zero (0) storage")
 }
 
@@ -103,8 +93,6 @@ func TestLoadSocketPath(t *testing.T) {
 	err := Load(tmpFile)
 	assert.NoError(t, err)
 
-	assert.Empty(t, Config.PrometheusListenAddr)
-	assert.Empty(t, Config.ListenAddr)
 	assert.Equal(t, "/tmp/gitaly.sock", Config.SocketPath)
 	assert.Equal(t, 0, len(Config.Storages), "Expected zero (0) storage")
 }
@@ -115,8 +103,6 @@ func TestLoadListenAddr(t *testing.T) {
 	err := Load(tmpFile)
 	assert.NoError(t, err)
 
-	assert.Empty(t, Config.PrometheusListenAddr)
-	assert.Empty(t, Config.SocketPath)
 	assert.Equal(t, ":8080", Config.ListenAddr)
 	assert.Equal(t, 0, len(Config.Storages), "Expected zero (0) storage")
 }
