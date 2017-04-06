@@ -60,6 +60,10 @@ run:
 make install
 ```
 
+## Configuration
+
+See [configuration documentation](doc/configuration)
+
 ## Name
 
 Gitaly is a tribute to git and the town of [Aly](https://en.wikipedia.org/wiki/Aly). Where the town of
