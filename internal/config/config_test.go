@@ -201,3 +201,33 @@ func TestValidateStorages(t *testing.T) {
 		assert.Nil(t, err)
 	}
 }
+
+func TestStoragePath(t *testing.T) {
+	defer func(oldStorages []Storage) {
+		Config.Storages = oldStorages
+	}(Config.Storages)
+
+	Config.Storages = []Storage{
+		{Name: "default", Path: "/home/git/repositories1"},
+		{Name: "other", Path: "/home/git/repositories2"},
+		{Name: "third", Path: "/home/git/repositories3"},
+	}
+
+	testCases := []struct {
+		in, out string
+		ok      bool
+	}{
+		{in: "default", out: "/home/git/repositories1", ok: true},
+		{in: "third", out: "/home/git/repositories3", ok: true},
+		{in: "", ok: false},
+		{in: "foobar", ok: false},
+	}
+
+	for _, tc := range testCases {
+		out, ok := StoragePath(tc.in)
+		if !assert.Equal(t, ok, tc.ok) {
+			continue
+		}
+		assert.Equal(t, out, tc.out)
+	}
+}

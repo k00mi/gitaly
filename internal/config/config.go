@@ -59,3 +59,12 @@ func ValidateStorages() error {
 
 	return nil
 }
+
+func StoragePath(name string) (string, bool) {
+	for _, storage := range Config.Storages {
+		if storage.Name == name {
+			return storage.Path, true
+		}
+	}
+	return "", false
+}
