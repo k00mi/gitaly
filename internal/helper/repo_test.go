@@ -3,31 +3,101 @@ package helper
 import (
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly/internal/config"
+
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestGetRepoPathWithNilRepo(t *testing.T) {
-	if _, err := GetRepoPath(nil); err == nil {
-		t.Errorf("Expected an error, got nil")
-	}
-}
+func TestGetRepoPath(t *testing.T) {
+	defer func(oldStorages []config.Storage) {
+		config.Config.Storages = oldStorages
+	}(config.Config.Storages)
 
-func TestGetRepoPathWithEmptyPath(t *testing.T) {
-	repo := &pb.Repository{Path: ""}
-	if _, err := GetRepoPath(repo); err == nil {
-		t.Errorf("Expected an error, got nil")
+	exampleStorages := []config.Storage{
+		{Name: "default", Path: "/home/git/repositories1"},
+		{Name: "other", Path: "/home/git/repositories2"},
+		{Name: "third", Path: "/home/git/repositories3"},
 	}
-}
 
-func TestGetRepoPathWithValidRepo(t *testing.T) {
-	expectedPath := "/path/to/repo"
-	repo := &pb.Repository{Path: expectedPath}
-
-	path, err := GetRepoPath(repo)
-	if err != nil {
-		t.Errorf("Expected a nil error, got %v", err)
+	testCases := []struct {
+		desc     string
+		storages []config.Storage
+		repo     *pb.Repository
+		path     string
+		notFound bool
+	}{
+		{
+			desc:     "storages configured but only repo.Path is provided",
+			storages: exampleStorages,
+			repo:     &pb.Repository{Path: "/foo/bar.git"},
+			path:     "/foo/bar.git",
+		},
+		{
+			desc:     "storages configured, storage name not known, repo.Path provided",
+			storages: exampleStorages,
+			repo:     &pb.Repository{Path: "/foo/bar.git", StorageName: "does not exist", RelativePath: "foobar.git"},
+			path:     "/foo/bar.git",
+		},
+		{
+			desc: "no storages configured, repo.Path provided",
+			repo: &pb.Repository{Path: "/foo/bar.git", StorageName: "does not exist", RelativePath: "foobar.git"},
+			path: "/foo/bar.git",
+		},
+		{
+			desc:     "storages configured, no repo.Path",
+			storages: exampleStorages,
+			repo:     &pb.Repository{StorageName: "default", RelativePath: "bazqux.git"},
+			path:     "/home/git/repositories1/bazqux.git",
+		},
+		{
+			desc:     "storage configured, storage name match, repo.Path provided",
+			storages: exampleStorages,
+			repo:     &pb.Repository{Path: "/foo/bar.git", StorageName: "default", RelativePath: "bazqux.git"},
+			path:     "/home/git/repositories1/bazqux.git",
+		},
+		{
+			desc: "no storage config, repo.Path provided",
+			repo: &pb.Repository{Path: "/foo/bar.git", StorageName: "default", RelativePath: "bazqux.git"},
+			path: "/foo/bar.git",
+		},
+		{
+			desc:     "no storage config, storage name provided, no repo.Path",
+			repo:     &pb.Repository{StorageName: "does not exist", RelativePath: "foobar.git"},
+			notFound: true,
+		},
+		{
+			desc:     "no storage config, nil repo",
+			notFound: true,
+		},
+		{
+			desc:     "storage config provided, empty repo",
+			storages: exampleStorages,
+			repo:     &pb.Repository{},
+			notFound: true,
+		},
+		{
+			desc:     "no storage config, empty repo",
+			repo:     &pb.Repository{},
+			notFound: true,
+		},
 	}
-	if path != expectedPath {
-		t.Errorf("Expected path to be %q, got %q", expectedPath, path)
+
+	for _, tc := range testCases {
+		config.Config.Storages = tc.storages
+		path, err := GetRepoPath(tc.repo)
+
+		if tc.notFound {
+			assert.Error(t, err, tc.desc)
+			continue
+		}
+
+		if err != nil {
+			assert.NoError(t, err, tc.desc)
+			continue
+		}
+
+		assert.Equal(t, tc.path, path, tc.desc)
 	}
 }

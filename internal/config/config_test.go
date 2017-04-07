@@ -166,12 +166,6 @@ func TestValidateStorages(t *testing.T) {
 			storages: []Storage{
 				{Name: "default", Path: "/home/git/repositories"},
 				{Name: "other", Path: "/home/git/repositories"},
-			},
-		},
-		{
-			storages: []Storage{
-				{Name: "default", Path: "/home/git/repositories"},
-				{Name: "other", Path: "/home/git/repositories"},
 				{Name: "third", Path: "/home/git/repositories"},
 			},
 		},
@@ -207,11 +201,11 @@ func TestValidateStorages(t *testing.T) {
 		Config.Storages = tc.storages
 		err := ValidateStorages()
 		if tc.invalid {
-			assert.NotNil(t, err)
+			assert.Error(t, err, "%+v", tc.storages)
 			continue
 		}
 
-		assert.Nil(t, err)
+		assert.NoError(t, err, "%+v", tc.storages)
 	}
 }
 
@@ -238,9 +232,9 @@ func TestStoragePath(t *testing.T) {
 
 	for _, tc := range testCases {
 		out, ok := StoragePath(tc.in)
-		if !assert.Equal(t, ok, tc.ok) {
+		if !assert.Equal(t, tc.ok, ok, "%+v", tc) {
 			continue
 		}
-		assert.Equal(t, out, tc.out)
+		assert.Equal(t, tc.out, out, "%+v", tc)
 	}
 }
