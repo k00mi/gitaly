@@ -1,7 +1,6 @@
 package commit
 
 import (
-	"fmt"
 	"log"
 
 	"google.golang.org/grpc"
@@ -16,9 +15,7 @@ import (
 func (s *server) CommitIsAncestor(ctx context.Context, in *pb.CommitIsAncestorRequest) (*pb.CommitIsAncestorResponse, error) {
 	repoPath, err := helper.GetRepoPath(in.GetRepository())
 	if err != nil {
-		message := fmt.Sprintf("CommitIsAncestor: %v", err)
-		log.Print(message)
-		return nil, grpc.Errorf(codes.InvalidArgument, message)
+		return nil, err
 	}
 	if in.AncestorId == "" {
 		message := "Bad Request (empty ancestor sha)"

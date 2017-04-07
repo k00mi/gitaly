@@ -15,7 +15,8 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-const testRepo = "testdata/data/gitlab-test.git"
+// TestRelativePath is the path inside its storage of the gitlab-test repo
+const TestRelativePath = "gitlab-test.git"
 
 // MustReadFile returns the content of a file or fails at once.
 func MustReadFile(t *testing.T, filename string) []byte {
@@ -27,17 +28,21 @@ func MustReadFile(t *testing.T, filename string) []byte {
 	return content
 }
 
+// GitlabTestStoragePath returns the storage path to the gitlab-test repo.
+func GitlabTestStoragePath() string {
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		log.Fatal("Could not get caller info")
+	}
+	return path.Join(path.Dir(currentFile), "testdata/data")
+}
+
 // GitlabTestRepoPath returns the path to gitlab-test repo.
 // Tests should be calling this function instead of cloning the repo themselves.
 // Tests that involve modifications to the repo should copy/clone the repo
 // via the path returned from this function.
 func GitlabTestRepoPath() string {
-	_, currentFile, _, ok := runtime.Caller(0)
-	if !ok {
-		log.Fatal("Could not get caller info")
-	}
-
-	clonePath := path.Join(path.Dir(currentFile), testRepo)
+	clonePath := path.Join(GitlabTestStoragePath(), TestRelativePath)
 	if _, err := os.Stat(path.Join(clonePath, "objects")); err != nil {
 		log.Fatal("Test repo not found, did you run `make test`?")
 	}
