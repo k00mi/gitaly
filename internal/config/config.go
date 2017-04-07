@@ -46,3 +46,16 @@ func Load(file io.Reader) error {
 
 	return fileErr
 }
+
+func ValidateStorages() error {
+	seenNames := make(map[string]bool)
+	for _, st := range Config.Storages {
+		name := st.Name
+		if seenNames[name] {
+			return fmt.Errorf("config: storage %q is defined more than once", name)
+		}
+		seenNames[name] = true
+	}
+
+	return nil
+}

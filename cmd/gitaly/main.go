@@ -47,7 +47,7 @@ func validateConfig() error {
 		return fmt.Errorf("Must set $GITALY_SOCKET_PATH or $GITALY_LISTEN_ADDR")
 	}
 
-	return nil
+	return config.ValidateStorages()
 }
 
 func main() {

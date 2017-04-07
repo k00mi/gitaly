@@ -147,3 +147,57 @@ func TestLoadOnlyEnvironment(t *testing.T) {
 	assert.Equal(t, "/tmp/gitaly2.sock", Config.SocketPath)
 	assert.Equal(t, ":8081", Config.ListenAddr)
 }
+
+func TestValidateStorages(t *testing.T) {
+	defer func(oldStorages []Storage) {
+		Config.Storages = oldStorages
+	}(Config.Storages)
+
+	testCases := []struct {
+		storages []Storage
+		invalid  bool
+	}{
+		{
+			storages: []Storage{
+				{Name: "default", Path: "/home/git/repositories"},
+			},
+		},
+		{
+			storages: []Storage{
+				{Name: "default", Path: "/home/git/repositories"},
+				{Name: "other", Path: "/home/git/repositories"},
+			},
+		},
+		{
+			storages: []Storage{
+				{Name: "default", Path: "/home/git/repositories"},
+				{Name: "other", Path: "/home/git/repositories"},
+				{Name: "third", Path: "/home/git/repositories"},
+			},
+		},
+		{
+			storages: []Storage{
+				{Name: "default", Path: "/home/git/repositories"},
+				{Name: "default", Path: "/home/git/repositories"},
+			},
+			invalid: true,
+		},
+		{
+			storages: []Storage{
+				{Name: "default", Path: "/home/git/repositories1"},
+				{Name: "default", Path: "/home/git/repositories2"},
+			},
+			invalid: true,
+		}}
+
+	for _, tc := range testCases {
+		Config.Storages = tc.storages
+		err := ValidateStorages()
+		if tc.invalid {
+			assert.NotNil(t, err)
+			continue
+		}
+
+		assert.Nil(t, err)
+	}
+}
