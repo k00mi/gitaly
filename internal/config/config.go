@@ -47,6 +47,7 @@ func Load(file io.Reader) error {
 	return fileErr
 }
 
+// ValidateStorages checks for pathological values in Config.Storages
 func ValidateStorages() error {
 	seenNames := make(map[string]bool)
 	for _, st := range Config.Storages {
@@ -68,9 +69,11 @@ func ValidateStorages() error {
 	return nil
 }
 
-func StoragePath(name string) (string, bool) {
+// StoragePath looks up the base path for storageName. The second boolean
+// return value indicates if anything was found.
+func StoragePath(storageName string) (string, bool) {
 	for _, storage := range Config.Storages {
-		if storage.Name == name {
+		if storage.Name == storageName {
 			return storage.Path, true
 		}
 	}
