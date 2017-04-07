@@ -188,7 +188,20 @@ func TestValidateStorages(t *testing.T) {
 				{Name: "default", Path: "/home/git/repositories2"},
 			},
 			invalid: true,
-		}}
+		},
+		{
+			storages: []Storage{
+				{Name: "", Path: "/home/git/repositories1"},
+			},
+			invalid: true,
+		},
+		{
+			storages: []Storage{
+				{Name: "default", Path: ""},
+			},
+			invalid: true,
+		},
+	}
 
 	for _, tc := range testCases {
 		Config.Storages = tc.storages

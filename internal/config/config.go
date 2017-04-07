@@ -50,6 +50,14 @@ func Load(file io.Reader) error {
 func ValidateStorages() error {
 	seenNames := make(map[string]bool)
 	for _, st := range Config.Storages {
+		if st.Name == "" {
+			return fmt.Errorf("config: empty storage name in %v", st)
+		}
+
+		if st.Path == "" {
+			return fmt.Errorf("config: empty storage path in %v", st)
+		}
+
 		name := st.Name
 		if seenNames[name] {
 			return fmt.Errorf("config: storage %q is defined more than once", name)
