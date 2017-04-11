@@ -131,11 +131,11 @@ func TestCommitIsAncestorSuccess(t *testing.T) {
 		{
 			Request: &pb.CommitIsAncestorRequest{
 				Repository: repo,
-				AncestorId: "master",
+				AncestorId: "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 				ChildId:    "gitaly-stuff",
 			},
 			Response: true,
-			ErrMsg:   "Expected branch `master` to be ancestor of `gitaly-stuff`",
+			ErrMsg:   "Expected `b83d6e391c22777fca1ed3012fce84f633d7fed0` to be ancestor of `gitaly-stuff`",
 		},
 		{
 			Request: &pb.CommitIsAncestorRequest{

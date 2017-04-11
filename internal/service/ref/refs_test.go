@@ -240,21 +240,6 @@ func TestEmptyFindDefaultBranchNameRequest(t *testing.T) {
 func localBranches() []*pb.FindLocalBranchResponse {
 	return []*pb.FindLocalBranchResponse{
 		{
-			Name:          []byte("refs/heads/master"),
-			CommitId:      "b83d6e391c22777fca1ed3012fce84f633d7fed0",
-			CommitSubject: []byte("Merge branch 'branch-merged' into 'master'\r \r adds bar folder and branch-test text file to check Repository merged_to_root_ref method\r \r \r \r See merge request !12"),
-			CommitAuthor: &pb.FindLocalBranchCommitAuthor{
-				Name:  []byte("Job van der Voort"),
-				Email: []byte("<job@gitlab.com>"),
-				Date:  &timestamp.Timestamp{Seconds: 1474987066},
-			},
-			CommitCommitter: &pb.FindLocalBranchCommitAuthor{
-				Name:  []byte("Job van der Voort"),
-				Email: []byte("<job@gitlab.com>"),
-				Date:  &timestamp.Timestamp{Seconds: 1474987066},
-			},
-		},
-		{
 			Name:          []byte("refs/heads/100%branch"),
 			CommitId:      "1b12f15a11fc6e62177bef08f47bc7b5ce50b141",
 			CommitSubject: []byte("Merge branch 'add-directory-with-space' into 'master'\r \r Add a directory containing a space in its name\r \r needed for verifying the fix of `https://gitlab.com/gitlab-com/support-forum/issues/952` \r \r See merge request !11"),
