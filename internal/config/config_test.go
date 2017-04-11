@@ -147,3 +147,94 @@ func TestLoadOnlyEnvironment(t *testing.T) {
 	assert.Equal(t, "/tmp/gitaly2.sock", Config.SocketPath)
 	assert.Equal(t, ":8081", Config.ListenAddr)
 }
+
+func TestValidateStorages(t *testing.T) {
+	defer func(oldStorages []Storage) {
+		Config.Storages = oldStorages
+	}(Config.Storages)
+
+	testCases := []struct {
+		storages []Storage
+		invalid  bool
+	}{
+		{
+			storages: []Storage{
+				{Name: "default", Path: "/home/git/repositories"},
+			},
+		},
+		{
+			storages: []Storage{
+				{Name: "default", Path: "/home/git/repositories"},
+				{Name: "other", Path: "/home/git/repositories"},
+				{Name: "third", Path: "/home/git/repositories"},
+			},
+		},
+		{
+			storages: []Storage{
+				{Name: "default", Path: "/home/git/repositories"},
+				{Name: "default", Path: "/home/git/repositories"},
+			},
+			invalid: true,
+		},
+		{
+			storages: []Storage{
+				{Name: "default", Path: "/home/git/repositories1"},
+				{Name: "default", Path: "/home/git/repositories2"},
+			},
+			invalid: true,
+		},
+		{
+			storages: []Storage{
+				{Name: "", Path: "/home/git/repositories1"},
+			},
+			invalid: true,
+		},
+		{
+			storages: []Storage{
+				{Name: "default", Path: ""},
+			},
+			invalid: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		Config.Storages = tc.storages
+		err := ValidateStorages()
+		if tc.invalid {
+			assert.Error(t, err, "%+v", tc.storages)
+			continue
+		}
+
+		assert.NoError(t, err, "%+v", tc.storages)
+	}
+}
+
+func TestStoragePath(t *testing.T) {
+	defer func(oldStorages []Storage) {
+		Config.Storages = oldStorages
+	}(Config.Storages)
+
+	Config.Storages = []Storage{
+		{Name: "default", Path: "/home/git/repositories1"},
+		{Name: "other", Path: "/home/git/repositories2"},
+		{Name: "third", Path: "/home/git/repositories3"},
+	}
+
+	testCases := []struct {
+		in, out string
+		ok      bool
+	}{
+		{in: "default", out: "/home/git/repositories1", ok: true},
+		{in: "third", out: "/home/git/repositories3", ok: true},
+		{in: "", ok: false},
+		{in: "foobar", ok: false},
+	}
+
+	for _, tc := range testCases {
+		out, ok := StoragePath(tc.in)
+		if !assert.Equal(t, tc.ok, ok, "%+v", tc) {
+			continue
+		}
+		assert.Equal(t, tc.out, out, "%+v", tc)
+	}
+}

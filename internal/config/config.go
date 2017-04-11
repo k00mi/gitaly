@@ -46,3 +46,36 @@ func Load(file io.Reader) error {
 
 	return fileErr
 }
+
+// ValidateStorages checks for pathological values in Config.Storages
+func ValidateStorages() error {
+	seenNames := make(map[string]bool)
+	for _, st := range Config.Storages {
+		if st.Name == "" {
+			return fmt.Errorf("config: empty storage name in %v", st)
+		}
+
+		if st.Path == "" {
+			return fmt.Errorf("config: empty storage path in %v", st)
+		}
+
+		name := st.Name
+		if seenNames[name] {
+			return fmt.Errorf("config: storage %q is defined more than once", name)
+		}
+		seenNames[name] = true
+	}
+
+	return nil
+}
+
+// StoragePath looks up the base path for storageName. The second boolean
+// return value indicates if anything was found.
+func StoragePath(storageName string) (string, bool) {
+	for _, storage := range Config.Storages {
+		if storage.Name == storageName {
+			return storage.Path, true
+		}
+	}
+	return "", false
+}
