@@ -1,11 +1,10 @@
 # Gitaly release process
 
-Releases are marked by annotated Git tags. To create a new release
-run:
-
-```
-_support/release x.y.z
-```
+- Pick a release number (x.y.z)
+- Create a CHANGELOG.md entry for x.y.z (use a merge request)
+- Check out the master branch on your local machine
+- Verify that the CHANGELOG for x.y.z is there
+- run `_support/release x.y.z`
 
 Where x.y.z is a semver-compliant version number.
 
