@@ -12,9 +12,10 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-// GetRepoPath returns the full path of the repository referenced by an RPC
-// Repository message. The errors returned are gRPC errors with relevant
-// error codes, and need no further decoration.
+// GetRepoPath returns the full path of the repository referenced by an
+// RPC Repository message. The errors returned are gRPC errors with
+// relevant error codes and should be passed back to gRPC without further
+// decoration.
 func GetRepoPath(repo *pb.Repository) (string, error) {
 	var repoPath string
 
