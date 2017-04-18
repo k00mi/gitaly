@@ -20,9 +20,7 @@ import (
 func (s *server) FindRefName(ctx context.Context, in *pb.FindRefNameRequest) (*pb.FindRefNameResponse, error) {
 	repoPath, err := helper.GetRepoPath(in.Repository)
 	if err != nil {
-		message := fmt.Sprintf("FindRefName: %v", err)
-		log.Print(message)
-		return nil, grpc.Errorf(codes.InvalidArgument, message)
+		return nil, err
 	}
 	if in.CommitId == "" {
 		message := "Bad Request (empty commit sha)"

@@ -34,7 +34,7 @@ func (s *server) PostReceivePack(stream pb.SmartHTTP_PostReceivePackServer) erro
 	glID := req.GlId
 	repoPath, err := helper.GetRepoPath(req.Repository)
 	if err != nil {
-		return grpc.Errorf(codes.InvalidArgument, "PostReceivePack: %v", err)
+		return err
 	}
 
 	log.Printf("PostReceivePack: RepoPath=%q GlID=%q", repoPath, glID)

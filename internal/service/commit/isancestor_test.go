@@ -87,7 +87,7 @@ func TestCommitIsAncestorFailure(t *testing.T) {
 				AncestorId: "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 				ChildId:    "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab",
 			},
-			ErrorCode: codes.Internal,
+			ErrorCode: codes.NotFound,
 			ErrMsg:    "Expected to throw internal got: %s",
 		},
 	}

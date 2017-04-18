@@ -74,6 +74,29 @@ func TestEmptyFindAllBranchNamesRequest(t *testing.T) {
 	}
 }
 
+func TestInvalidRepoFindAllBranchNamesRequest(t *testing.T) {
+	server := runRefServer(t)
+	defer server.Stop()
+
+	client := newRefClient(t)
+	repo := &pb.Repository{Path: "/made/up/path"}
+	rpcRequest := &pb.FindAllBranchNamesRequest{Repository: repo}
+
+	c, err := client.FindAllBranchNames(context.Background(), rpcRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var recvError error
+	for recvError == nil {
+		_, recvError = c.Recv()
+	}
+
+	if grpc.Code(recvError) != codes.NotFound {
+		t.Fatal(recvError)
+	}
+}
+
 func TestSuccessfulFindAllTagNames(t *testing.T) {
 	server := runRefServer(t)
 	defer server.Stop()
@@ -124,6 +147,29 @@ func TestEmptyFindAllTagNamesRequest(t *testing.T) {
 	}
 
 	if grpc.Code(recvError) != codes.InvalidArgument {
+		t.Fatal(recvError)
+	}
+}
+
+func TestInvalidRepoFindAllTagNamesRequest(t *testing.T) {
+	server := runRefServer(t)
+	defer server.Stop()
+
+	client := newRefClient(t)
+	repo := &pb.Repository{Path: "/made/up/path"}
+	rpcRequest := &pb.FindAllTagNamesRequest{Repository: repo}
+
+	c, err := client.FindAllTagNames(context.Background(), rpcRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var recvError error
+	for recvError == nil {
+		_, recvError = c.Recv()
+	}
+
+	if grpc.Code(recvError) != codes.NotFound {
 		t.Fatal(recvError)
 	}
 }
@@ -233,6 +279,21 @@ func TestEmptyFindDefaultBranchNameRequest(t *testing.T) {
 	_, err := client.FindDefaultBranchName(context.Background(), rpcRequest)
 
 	if grpc.Code(err) != codes.InvalidArgument {
+		t.Fatal(err)
+	}
+}
+
+func TestInvalidRepoFindDefaultBranchNameRequest(t *testing.T) {
+	server := runRefServer(t)
+	defer server.Stop()
+
+	client := newRefClient(t)
+	repo := &pb.Repository{Path: "/made/up/path"}
+	rpcRequest := &pb.FindDefaultBranchNameRequest{Repository: repo}
+
+	_, err := client.FindDefaultBranchName(context.Background(), rpcRequest)
+
+	if grpc.Code(err) != codes.NotFound {
 		t.Fatal(err)
 	}
 }

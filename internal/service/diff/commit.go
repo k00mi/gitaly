@@ -18,7 +18,7 @@ func (s *server) CommitDiff(in *pb.CommitDiffRequest, stream pb.Diff_CommitDiffS
 
 	repoPath, err := helper.GetRepoPath(in.Repository)
 	if err != nil {
-		return grpc.Errorf(codes.InvalidArgument, "CommitDiff: %v", err)
+		return err
 	}
 	leftSha := in.LeftCommitId
 	rightSha := in.RightCommitId

@@ -71,7 +71,7 @@ func TestFailureRepoNotFoundInfoRefsReceivePack(t *testing.T) {
 	}
 
 	err = drainInfoRefs(c)
-	testhelper.AssertGrpcError(t, err, codes.Internal, "testdata/data/another_repo]: exit status 128")
+	testhelper.AssertGrpcError(t, err, codes.NotFound, "not a git repository")
 }
 
 func TestFailureRepoNotSetInfoRefsReceivePack(t *testing.T) {

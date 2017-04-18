@@ -39,7 +39,7 @@ func (s *server) InfoRefsReceivePack(in *pb.InfoRefsRequest, stream pb.SmartHTTP
 func handleInfoRefs(service string, repo *pb.Repository, w io.Writer) error {
 	repoPath, err := helper.GetRepoPath(repo)
 	if err != nil {
-		return grpc.Errorf(codes.InvalidArgument, "GetInfoRefs: %v", err)
+		return err
 	}
 
 	cmd := helper.GitCommand("git", service, "--stateless-rpc", "--advertise-refs", repoPath)

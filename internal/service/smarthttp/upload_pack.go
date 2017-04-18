@@ -32,7 +32,7 @@ func (s *server) PostUploadPack(stream pb.SmartHTTP_PostUploadPackServer) error 
 	stdout := uploadPackWriter{stream}
 	repoPath, err := helper.GetRepoPath(req.Repository)
 	if err != nil {
-		return grpc.Errorf(codes.InvalidArgument, "PostUploadPack: %v", err)
+		return err
 	}
 
 	log.Printf("PostUploadPack: RepoPath=%q", repoPath)
