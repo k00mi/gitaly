@@ -1,7 +1,6 @@
 package ref
 
 import (
-	"fmt"
 	"log"
 	"strings"
 
