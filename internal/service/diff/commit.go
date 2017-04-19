@@ -25,7 +25,19 @@ func (s *server) CommitDiff(in *pb.CommitDiffRequest, stream pb.Diff_CommitDiffS
 
 	log.Printf("CommitDiff: RepoPath=%q LeftCommitId=%q RightCommitId=%q", repoPath, leftSha, rightSha)
 
-	cmd, err := helper.GitCommandReader("--git-dir", repoPath, "diff", "--full-index", "--find-renames", leftSha, rightSha)
+	cmdArgs := []string{
+		"--git-dir", repoPath,
+		"diff",
+		"--patch",
+		"--raw",
+		"--abbrev=40",
+		"--full-index",
+		"--find-renames",
+		leftSha,
+		rightSha,
+	}
+
+	cmd, err := helper.GitCommandReader(cmdArgs...)
 	if err != nil {
 		return grpc.Errorf(codes.Internal, "CommitDiff: cmd: %v", err)
 	}

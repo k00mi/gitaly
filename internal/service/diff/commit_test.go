@@ -76,8 +76,8 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 		},
 		{
 			Diff: diff.Diff{
-				FromID:   "",
-				ToID:     "",
+				FromID:   "ead5a0eee1391308803cfebd8a2a8530495645eb",
+				ToID:     "ead5a0eee1391308803cfebd8a2a8530495645eb",
 				OldMode:  0100644,
 				NewMode:  0100755,
 				FromPath: []byte("gitaly/mode-file"),
@@ -123,10 +123,10 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 		},
 		{
 			Diff: diff.Diff{
-				FromID:   "",
-				ToID:     "",
-				OldMode:  0,
-				NewMode:  0,
+				FromID:   "4e76e90b3c7e52390de9311a23c0a77575aed8a8",
+				ToID:     "4e76e90b3c7e52390de9311a23c0a77575aed8a8",
+				OldMode:  0100644,
+				NewMode:  0100644,
 				FromPath: []byte("gitaly/named-file"),
 				ToPath:   []byte("gitaly/renamed-file"),
 				Binary:   false,
