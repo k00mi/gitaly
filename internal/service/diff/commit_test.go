@@ -20,6 +20,11 @@ import (
 
 var serverSocketPath = path.Join(scratchDir, "gitaly.sock")
 
+type expectedDiff struct {
+	diff.Diff
+	ChunksCombined []byte
+}
+
 func TestSuccessfulCommitDiffRequest(t *testing.T) {
 	server := runDiffServer(t)
 	defer server.Stop()
@@ -35,10 +40,7 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedDiffs := []struct {
-		diff.Diff
-		ChunksCombined []byte
-	}{
+	expectedDiffs := []expectedDiff{
 		{
 			Diff: diff.Diff{
 				FromID:   "faaf198af3a36dbf41961466703cc1d47c61d051",
@@ -169,61 +171,60 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 		},
 	}
 
-	i := 0
-	for {
-		fetchedDiff, err := c.Recv()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			t.Fatal(err)
-		}
+	assertExactReceivedDiffs(t, c, expectedDiffs)
+}
 
-		if i >= len(expectedDiffs) {
-			t.Errorf("Unexpected diff #%d received: %v", i, fetchedDiff)
-			break
-		}
+func TestSuccessfulCommitDiffRequestWithPaths(t *testing.T) {
+	server := runDiffServer(t)
+	defer server.Stop()
 
-		expectedDiff := expectedDiffs[i]
-
-		if expectedDiff.FromID != fetchedDiff.FromId {
-			t.Errorf("Expected diff #%d FromID to equal = %q, got %q", i, expectedDiff.FromID, fetchedDiff.FromId)
-		}
-
-		if expectedDiff.ToID != fetchedDiff.ToId {
-			t.Errorf("Expected diff #%d ToID to equal = %q, got %q", i, expectedDiff.ToID, fetchedDiff.ToId)
-		}
-
-		if expectedDiff.OldMode != fetchedDiff.OldMode {
-			t.Errorf("Expected diff #%d OldMode to equal = %o, got %o", i, expectedDiff.OldMode, fetchedDiff.OldMode)
-		}
-
-		if expectedDiff.NewMode != fetchedDiff.NewMode {
-			t.Errorf("Expected diff #%d NewMode to equal = %o, got %o", i, expectedDiff.NewMode, fetchedDiff.NewMode)
-		}
-
-		if !bytes.Equal(expectedDiff.FromPath, fetchedDiff.FromPath) {
-			t.Errorf("Expected diff #%d FromPath to equal = %s, got %s", i, expectedDiff.FromPath, fetchedDiff.FromPath)
-		}
-
-		if !bytes.Equal(expectedDiff.ToPath, fetchedDiff.ToPath) {
-			t.Errorf("Expected diff #%d ToPath to equal = %s, got %s", i, expectedDiff.ToPath, fetchedDiff.ToPath)
-		}
-
-		if expectedDiff.Binary != fetchedDiff.Binary {
-			t.Errorf("Expected diff #%d Binary to be %t, got %t", i, expectedDiff.Binary, fetchedDiff.Binary)
-		}
-
-		fetchedChunksCombined := bytes.Join(fetchedDiff.RawChunks, nil)
-		if !bytes.Equal(expectedDiff.ChunksCombined, fetchedChunksCombined) {
-			t.Errorf("Expected diff #%d Chunks to be %v, got %v", i, expectedDiff.ChunksCombined, fetchedChunksCombined)
-		}
-
-		i++
+	client := newDiffClient(t)
+	repo := &pb.Repository{Path: testRepoPath}
+	rightCommit := "41ae11ba5d091d73d5de671f6fa7d1a4539e979e"
+	leftCommit := rightCommit + "~~~" // Third ancestor of rightCommit
+	rpcRequest := &pb.CommitDiffRequest{
+		Repository:    repo,
+		RightCommitId: rightCommit,
+		LeftCommitId:  leftCommit,
+		Paths: [][]byte{
+			[]byte("gitaly/named-file-with-mods"),
+			[]byte("gitaly/mode-file-with-mods"),
+		},
 	}
 
-	if len(expectedDiffs) != i {
-		t.Errorf("Expected number of diffs to be %d, got %d", len(expectedDiffs), i)
+	c, err := client.CommitDiff(context.Background(), rpcRequest)
+	if err != nil {
+		t.Fatal(err)
 	}
+
+	expectedDiffs := []expectedDiff{
+		{
+			Diff: diff.Diff{
+				FromID:   "357406f3075a57708d0163752905cc1576fceacc",
+				ToID:     "8e5177d718c561d36efde08bad36b43687ee6bf0",
+				OldMode:  0100644,
+				NewMode:  0100755,
+				FromPath: []byte("gitaly/mode-file-with-mods"),
+				ToPath:   []byte("gitaly/mode-file-with-mods"),
+				Binary:   false,
+			},
+			ChunksCombined: testhelper.MustReadFile(t, "testdata/mode-file-with-mods-chunks.txt"),
+		},
+		{
+			Diff: diff.Diff{
+				FromID:   "43d24af4e22580f36b1ca52647c1aff75a766a33",
+				ToID:     "0000000000000000000000000000000000000000",
+				OldMode:  0100644,
+				NewMode:  0,
+				FromPath: []byte("gitaly/named-file-with-mods"),
+				ToPath:   []byte("gitaly/named-file-with-mods"),
+				Binary:   false,
+			},
+			ChunksCombined: testhelper.MustReadFile(t, "testdata/named-file-with-mods-chunks.txt"),
+		},
+	}
+
+	assertExactReceivedDiffs(t, c, expectedDiffs)
 }
 
 func TestFailedCommitDiffRequestDueToValidationError(t *testing.T) {
@@ -312,4 +313,62 @@ func drainCommitDiffResponse(c pb.Diff_CommitDiffClient) error {
 	}
 
 	return nil
+}
+
+func assertExactReceivedDiffs(t *testing.T, client pb.Diff_CommitDiffClient, expectedDiffs []expectedDiff) {
+	i := 0
+	for {
+		fetchedDiff, err := client.Recv()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			t.Fatal(err)
+		}
+
+		if i >= len(expectedDiffs) {
+			t.Errorf("Unexpected diff #%d received: %v", i, fetchedDiff)
+			break
+		}
+
+		expectedDiff := expectedDiffs[i]
+
+		if expectedDiff.FromID != fetchedDiff.FromId {
+			t.Errorf("Expected diff #%d FromID to equal = %q, got %q", i, expectedDiff.FromID, fetchedDiff.FromId)
+		}
+
+		if expectedDiff.ToID != fetchedDiff.ToId {
+			t.Errorf("Expected diff #%d ToID to equal = %q, got %q", i, expectedDiff.ToID, fetchedDiff.ToId)
+		}
+
+		if expectedDiff.OldMode != fetchedDiff.OldMode {
+			t.Errorf("Expected diff #%d OldMode to equal = %o, got %o", i, expectedDiff.OldMode, fetchedDiff.OldMode)
+		}
+
+		if expectedDiff.NewMode != fetchedDiff.NewMode {
+			t.Errorf("Expected diff #%d NewMode to equal = %o, got %o", i, expectedDiff.NewMode, fetchedDiff.NewMode)
+		}
+
+		if !bytes.Equal(expectedDiff.FromPath, fetchedDiff.FromPath) {
+			t.Errorf("Expected diff #%d FromPath to equal = %s, got %s", i, expectedDiff.FromPath, fetchedDiff.FromPath)
+		}
+
+		if !bytes.Equal(expectedDiff.ToPath, fetchedDiff.ToPath) {
+			t.Errorf("Expected diff #%d ToPath to equal = %s, got %s", i, expectedDiff.ToPath, fetchedDiff.ToPath)
+		}
+
+		if expectedDiff.Binary != fetchedDiff.Binary {
+			t.Errorf("Expected diff #%d Binary to be %t, got %t", i, expectedDiff.Binary, fetchedDiff.Binary)
+		}
+
+		fetchedChunksCombined := bytes.Join(fetchedDiff.RawChunks, nil)
+		if !bytes.Equal(expectedDiff.ChunksCombined, fetchedChunksCombined) {
+			t.Errorf("Expected diff #%d Chunks to be %q, got %q", i, expectedDiff.ChunksCombined, fetchedChunksCombined)
+		}
+
+		i++
+	}
+
+	if len(expectedDiffs) != i {
+		t.Errorf("Expected number of diffs to be %d, got %d", len(expectedDiffs), i)
+	}
 }
