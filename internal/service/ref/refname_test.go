@@ -120,8 +120,8 @@ func TestFindRefNameInvalidObject(t *testing.T) {
 	}
 
 	c, err := client.FindRefName(context.Background(), rpcRequest)
-	if grpc.Code(err) != codes.Internal {
-		t.Fatalf("Expected FindRefName to throw an error")
+	if err != nil {
+		t.Fatalf("Expected FindRefName to not throw an error")
 	}
 
 	if len(c.GetName()) > 0 {

@@ -46,7 +46,9 @@ func findRefName(path, commitID, prefix string) (string, error) {
 
 	line := string(output)
 	if err != nil {
-		return "", fmt.Errorf("findRefName: stdout: %q", line)
+		// We're suppressing the error since invalid commits isn't an error
+		//  according to Rails
+		return "", nil
 	}
 
 	// Trailing spaces are not allowed per the documentation
