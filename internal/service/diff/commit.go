@@ -22,8 +22,9 @@ func (s *server) CommitDiff(in *pb.CommitDiffRequest, stream pb.Diff_CommitDiffS
 	}
 	leftSha := in.LeftCommitId
 	rightSha := in.RightCommitId
+	ignoreWhitespaceChange := in.GetIgnoreWhitespaceChange()
 
-	log.Printf("CommitDiff: RepoPath=%q LeftCommitId=%q RightCommitId=%q", repoPath, leftSha, rightSha)
+	log.Printf("CommitDiff: RepoPath=%q LeftCommitId=%q RightCommitId=%q IgnoreWhitespaceChange=%t", repoPath, leftSha, rightSha, ignoreWhitespaceChange)
 
 	cmdArgs := []string{
 		"--git-dir", repoPath,
@@ -33,9 +34,11 @@ func (s *server) CommitDiff(in *pb.CommitDiffRequest, stream pb.Diff_CommitDiffS
 		"--abbrev=40",
 		"--full-index",
 		"--find-renames",
-		leftSha,
-		rightSha,
 	}
+	if ignoreWhitespaceChange {
+		cmdArgs = append(cmdArgs, "--ignore-space-change")
+	}
+	cmdArgs = append(cmdArgs, leftSha, rightSha)
 
 	cmd, err := helper.GitCommandReader(cmdArgs...)
 	if err != nil {

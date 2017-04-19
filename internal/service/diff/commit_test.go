@@ -26,9 +26,9 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 
 	client := newDiffClient(t)
 	repo := &pb.Repository{Path: testRepoPath}
-	rightCommit := "57290e673a4c87f51294f5216672cbc58d485d25"
-	leftCommit := rightCommit + "~~" // Second ancestor of rightCommit
-	rpcRequest := &pb.CommitDiffRequest{Repository: repo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
+	rightCommit := "41ae11ba5d091d73d5de671f6fa7d1a4539e979e"
+	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
+	rpcRequest := &pb.CommitDiffRequest{Repository: repo, RightCommitId: rightCommit, LeftCommitId: leftCommit, IgnoreWhitespaceChange: false}
 
 	c, err := client.CommitDiff(context.Background(), rpcRequest)
 	if err != nil {
@@ -39,6 +39,18 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 		diff.Diff
 		ChunksCombined []byte
 	}{
+		{
+			Diff: diff.Diff{
+				FromID:   "faaf198af3a36dbf41961466703cc1d47c61d051",
+				ToID:     "877cee6ab11f9094e1bcdb7f1fd9c0001b572185",
+				OldMode:  0100644,
+				NewMode:  0100644,
+				FromPath: []byte("README.md"),
+				ToPath:   []byte("README.md"),
+				Binary:   false,
+			},
+			ChunksCombined: testhelper.MustReadFile(t, "testdata/readme-md-chunks.txt"),
+		},
 		{
 			Diff: diff.Diff{
 				FromID:   "bdea48ee65c869eb0b86b1283069d76cce0a7254",
