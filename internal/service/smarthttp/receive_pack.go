@@ -3,6 +3,7 @@ package smarthttp
 import (
 	"fmt"
 	"log"
+	"os/exec"
 
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 
@@ -31,23 +32,21 @@ func (s *server) PostReceivePack(stream pb.SmartHTTP_PostReceivePackServer) erro
 	streamBytesReader := receivePackBytesReader{stream}
 	stdin := &streamReader{br: streamBytesReader}
 	stdout := receivePackWriter{stream}
-	glID := req.GlId
+	glIDEnv := fmt.Sprintf("GL_ID=%s", req.GlId)
 	repoPath, err := helper.GetRepoPath(req.Repository)
 	if err != nil {
 		return err
 	}
 
-	log.Printf("PostReceivePack: RepoPath=%q GlID=%q", repoPath, glID)
+	log.Printf("PostReceivePack: RepoPath=%q GlID=%q", repoPath, req.GlId)
 
-	cmd := helper.GitCommand("git", "receive-pack", "--stateless-rpc", repoPath)
-	cmd.Env = append(cmd.Env, fmt.Sprintf("GL_ID=%s", glID))
-	cmd.Stdin = stdin
-	cmd.Stdout = stdout
+	osCommand := exec.Command("git", "receive-pack", "--stateless-rpc", repoPath)
+	cmd, err := helper.NewCommand(osCommand, stdin, stdout, glIDEnv)
 
-	if err := cmd.Start(); err != nil {
-		return grpc.Errorf(codes.Unavailable, "PostReceivePack: cmd start: %v", err)
+	if err != nil {
+		return grpc.Errorf(codes.Unavailable, "PostReceivePack: cmd: %v", err)
 	}
-	defer helper.CleanUpProcessGroup(cmd) // Ensure brute force subprocess clean-up
+	defer cmd.Kill()
 
 	if err := cmd.Wait(); err != nil {
 		return grpc.Errorf(codes.Unavailable, "PostReceivePack: cmd wait for %v: %v", cmd.Args, err)

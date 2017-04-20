@@ -1,7 +1,9 @@
 package commit
 
 import (
+	"io/ioutil"
 	"log"
+	"os/exec"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -34,11 +36,16 @@ func (s *server) CommitIsAncestor(ctx context.Context, in *pb.CommitIsAncestorRe
 
 // Assumes that `path`, `ancestorID` and `childID` are populated :trollface:
 func commitIsAncestorName(path, ancestorID, childID string) (bool, error) {
-	cmd := helper.GitCommand("git", "--git-dir", path, "merge-base", "--is-ancestor", ancestorID, childID)
+	osCommand := exec.Command("git", "--git-dir", path, "merge-base", "--is-ancestor", ancestorID, childID)
+	cmd, err := helper.NewCommand(osCommand, nil, ioutil.Discard)
+	if err != nil {
+		return false, grpc.Errorf(codes.Internal, err.Error())
+	}
+	defer cmd.Kill()
 
 	log.Printf("commitIsAncestor: RepoPath=%q ancestorSha=%s childSha=%s", path, ancestorID, childID)
 
-	if err := cmd.Run(); err != nil {
+	if err := cmd.Wait(); err != nil {
 		if code, ok := helper.ExitStatus(err); ok && code == 1 {
 			// This is not really an error, this is `git` saying "This is not an ancestor"
 			return false, nil

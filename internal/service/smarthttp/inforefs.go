@@ -42,20 +42,13 @@ func handleInfoRefs(service string, repo *pb.Repository, w io.Writer) error {
 		return err
 	}
 
-	cmd := helper.GitCommand("git", service, "--stateless-rpc", "--advertise-refs", repoPath)
+	cmd, err := helper.GitCommandReader(service, "--stateless-rpc", "--advertise-refs", repoPath)
+	if err != nil {
+		return grpc.Errorf(codes.Internal, "GetInfoRefs: cmd: %v", err)
+	}
+	defer cmd.Kill()
 
 	log.Printf("handleInfoRefs: service=%q RepoPath=%q", service, repoPath)
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return grpc.Errorf(codes.Internal, "GetInfoRefs: stdout: %v", err)
-	}
-	defer stdout.Close()
-
-	if err := cmd.Start(); err != nil {
-		return grpc.Errorf(codes.Internal, "GetInfoRefs: start %v: %v", cmd.Args, err)
-	}
-	defer helper.CleanUpProcessGroup(cmd) // Ensure brute force subprocess clean-up
 
 	if err := pktLine(w, fmt.Sprintf("# service=git-%s\n", service)); err != nil {
 		return grpc.Errorf(codes.Internal, "GetInfoRefs: pktLine: %v", err)
@@ -65,7 +58,7 @@ func handleInfoRefs(service string, repo *pb.Repository, w io.Writer) error {
 		return grpc.Errorf(codes.Internal, "GetInfoRefs: pktFlush: %v", err)
 	}
 
-	if _, err := io.Copy(w, stdout); err != nil {
+	if _, err := io.Copy(w, cmd); err != nil {
 		return grpc.Errorf(codes.Internal, "GetInfoRefs: copy output of %v: %v", cmd.Args, err)
 	}
 

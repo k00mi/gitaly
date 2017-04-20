@@ -1,6 +1,7 @@
 package ref
 
 import (
+	"bufio"
 	"log"
 	"strings"
 
@@ -37,14 +38,22 @@ func (s *server) FindRefName(ctx context.Context, in *pb.FindRefNameRequest) (*p
 
 // We assume `path` and `commitID` and `prefix` are non-empty
 func findRefName(path, commitID, prefix string) (string, error) {
-	cmd := helper.GitCommand("git", "--git-dir", path, "for-each-ref", "--format=%(refname)", "--count=1", prefix, "--contains", commitID)
+	cmd, err := helper.GitCommandReader("--git-dir", path, "for-each-ref", "--format=%(refname)", "--count=1", prefix, "--contains", commitID)
+	if err != nil {
+		return "", err
+	}
+	defer cmd.Kill()
 
 	log.Printf("findRefName: RepoPath=%q commitSha=%s prefix=%s", path, commitID, prefix)
 
-	output, err := cmd.Output()
+	scanner := bufio.NewScanner(cmd)
+	scanner.Scan()
+	if err := scanner.Err(); err != nil {
+		return "", err
+	}
+	refName := scanner.Text()
 
-	line := string(output)
-	if err != nil {
+	if err := cmd.Wait(); err != nil {
 		// We're suppressing the error since invalid commits isn't an error
 		//  according to Rails
 		return "", nil
@@ -52,7 +61,5 @@ func findRefName(path, commitID, prefix string) (string, error) {
 
 	// Trailing spaces are not allowed per the documentation
 	//  https://www.kernel.org/pub/software/scm/git/docs/git-check-ref-format.html
-	refName := strings.TrimSpace(line) // Remove new-line
-
-	return refName, nil
+	return strings.TrimSpace(refName), nil
 }
