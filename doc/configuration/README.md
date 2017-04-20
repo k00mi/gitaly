@@ -42,7 +42,9 @@ name = "my_shard"
 
 ### Storage
 
-GitLab repositories are grouped into 'storages'. These are directories containing bare repositories managed by GitLab, with logical names.
+GitLab repositories are grouped into 'storages'. These are directories
+(e.g. `/home/git/repositories`) containing bare repositories managed
+by GitLab , with names (e.g. `default`).
 
 These names and paths are also defined in the `gitlab.yml`
 configuration file of gitlab-ce (or gitlab-ee). When you run Gitaly on
