@@ -126,7 +126,16 @@ func TestCommitIsAncestorSuccess(t *testing.T) {
 				ChildId:    "38008cb17ce1466d8fec2dfa6f6ab8dcfe5cf49e",
 			},
 			Response: false,
-			ErrMsg:   "Expected commit to not be ancestor",
+			ErrMsg:   "Expected commit not to be ancestor",
+		},
+		{
+			Request: &pb.CommitIsAncestorRequest{
+				Repository: repo,
+				AncestorId: "1234123412341234123412341234123412341234",
+				ChildId:    "b83d6e391c22777fca1ed3012fce84f633d7fed0",
+			},
+			Response: false,
+			ErrMsg:   "Expected invalid commit to not be ancestor",
 		},
 		{
 			Request: &pb.CommitIsAncestorRequest{

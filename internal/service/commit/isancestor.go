@@ -45,13 +45,5 @@ func commitIsAncestorName(path, ancestorID, childID string) (bool, error) {
 
 	log.Printf("commitIsAncestor: RepoPath=%q ancestorSha=%s childSha=%s", path, ancestorID, childID)
 
-	if err := cmd.Wait(); err != nil {
-		if code, ok := helper.ExitStatus(err); ok && code == 1 {
-			// This is not really an error, this is `git` saying "This is not an ancestor"
-			return false, nil
-		}
-		return false, grpc.Errorf(codes.Internal, err.Error())
-	}
-
-	return true, nil
+	return cmd.Wait() == nil, nil
 }
