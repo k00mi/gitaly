@@ -25,20 +25,13 @@ func (s *server) CommitDiff(in *pb.CommitDiffRequest, stream pb.Diff_CommitDiffS
 
 	log.Printf("CommitDiff: RepoPath=%q LeftCommitId=%q RightCommitId=%q", repoPath, leftSha, rightSha)
 
-	cmd := helper.GitCommand("git", "--git-dir", repoPath, "diff", "--full-index", "--find-renames", leftSha, rightSha)
-
-	stdout, err := cmd.StdoutPipe()
+	cmd, err := helper.GitCommandReader("--git-dir", repoPath, "diff", "--full-index", "--find-renames", leftSha, rightSha)
 	if err != nil {
-		return grpc.Errorf(codes.Unavailable, "CommitDiff: cmd stdout: %v", err)
+		return grpc.Errorf(codes.Internal, "CommitDiff: cmd: %v", err)
 	}
-	defer stdout.Close()
+	defer cmd.Kill()
 
-	if err := cmd.Start(); err != nil {
-		return grpc.Errorf(codes.Unavailable, "CommitDiff: cmd start: %v", err)
-	}
-	defer helper.CleanUpProcessGroup(cmd) // Ensure brute force subprocess clean-up
-
-	diffParser := diff.NewDiffParser(stdout)
+	diffParser := diff.NewDiffParser(cmd)
 
 	for diffParser.Parse() {
 		diff := diffParser.Diff()

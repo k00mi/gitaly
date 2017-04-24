@@ -2,6 +2,7 @@ package smarthttp
 
 import (
 	"log"
+	"os/exec"
 
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 
@@ -37,14 +38,13 @@ func (s *server) PostUploadPack(stream pb.SmartHTTP_PostUploadPackServer) error 
 
 	log.Printf("PostUploadPack: RepoPath=%q", repoPath)
 
-	cmd := helper.GitCommand("git", "upload-pack", "--stateless-rpc", repoPath)
-	cmd.Stdin = stdin
-	cmd.Stdout = stdout
+	osCommand := exec.Command("git", "upload-pack", "--stateless-rpc", repoPath)
+	cmd, err := helper.NewCommand(osCommand, stdin, stdout)
 
-	if err := cmd.Start(); err != nil {
-		return grpc.Errorf(codes.Unavailable, "PostUploadPack: cmd start: %v", err)
+	if err != nil {
+		return grpc.Errorf(codes.Unavailable, "PostUploadPack: cmd: %v", err)
 	}
-	defer helper.CleanUpProcessGroup(cmd) // Ensure brute force subprocess clean-up
+	defer cmd.Kill()
 
 	if err := cmd.Wait(); err != nil {
 		return grpc.Errorf(codes.Unavailable, "PostUploadPack: cmd wait for %v: %v", cmd.Args, err)
