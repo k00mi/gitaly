@@ -190,7 +190,7 @@ func (parser *Parser) findNextPatchFromPath() error {
 	}
 
 	if matches := diffHeaderRegexp.FindSubmatch(line); len(matches) > 0 {
-		parser.nextPatchFromPath = unescapeOctalBytes(matches[1])
+		parser.nextPatchFromPath = unescape(matches[1])
 		return nil
 	}
 
@@ -219,9 +219,9 @@ func parseRawLine(line []byte, diff *Diff) error {
 	diff.FromID = string(matches[3])
 	diff.ToID = string(matches[4])
 
-	diff.FromPath = unescapeOctalBytes(helper.UnquoteBytes(matches[6]))
+	diff.FromPath = unescape(helper.UnquoteBytes(matches[6]))
 	if matches[5][0] == 'C' || matches[5][0] == 'R' {
-		diff.ToPath = unescapeOctalBytes(helper.UnquoteBytes(matches[7]))
+		diff.ToPath = unescape(helper.UnquoteBytes(matches[7]))
 	} else {
 		diff.ToPath = diff.FromPath
 	}
@@ -261,16 +261,45 @@ func consumeLine(reader *bufio.Reader) error {
 	return nil
 }
 
-func unescapeOctalBytes(s []byte) []byte {
+// unescape unescapes the escape codes used by 'git diff'
+func unescape(s []byte) []byte {
 	var unescaped []byte
 
 	for i := 0; i < len(s); i++ {
-		if s[i] == '\\' && i+3 < len(s) && helper.IsNumber(s[i+1:i+4]) {
-			octalByte, err := strconv.ParseUint(string(s[i+1:i+4]), 8, 8)
-			if err == nil {
-				unescaped = append(unescaped, byte(octalByte))
+		if s[i] == '\\' {
+			if i+3 < len(s) && helper.IsNumber(s[i+1:i+4]) {
+				octalByte, err := strconv.ParseUint(string(s[i+1:i+4]), 8, 8)
+				if err == nil {
+					unescaped = append(unescaped, byte(octalByte))
 
-				i += 3
+					i += 3
+					continue
+				}
+			}
+
+			if i+1 < len(s) {
+				var unescapedByte byte
+
+				switch s[i+1] {
+				case '"', '\\', '/', '\'':
+					unescapedByte = s[i+1]
+				case 'b':
+					unescapedByte = '\b'
+				case 'f':
+					unescapedByte = '\f'
+				case 'n':
+					unescapedByte = '\n'
+				case 'r':
+					unescapedByte = '\r'
+				case 't':
+					unescapedByte = '\t'
+				default:
+					unescaped = append(unescaped, '\\')
+					unescapedByte = s[i+1]
+				}
+
+				unescaped = append(unescaped, unescapedByte)
+				i++
 				continue
 			}
 		}

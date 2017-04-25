@@ -31,7 +31,7 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 
 	client := newDiffClient(t)
 	repo := &pb.Repository{Path: testRepoPath}
-	rightCommit := "41ae11ba5d091d73d5de671f6fa7d1a4539e979e"
+	rightCommit := "742518b2be68fc750bb4c357c0df821a88113286"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
 	rpcRequest := &pb.CommitDiffRequest{Repository: repo, RightCommitId: rightCommit, LeftCommitId: leftCommit, IgnoreWhitespaceChange: false}
 
@@ -157,6 +157,18 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 				Binary:   false,
 			},
 			ChunksCombined: testhelper.MustReadFile(t, "testdata/renamed-file-with-mods-chunks.txt"),
+		},
+		{
+			Diff: diff.Diff{
+				FromID:   "0000000000000000000000000000000000000000",
+				ToID:     "a135e3e0d4af177a902ca57dcc4c7fc6f30858b1",
+				OldMode:  0,
+				NewMode:  0100644,
+				FromPath: []byte("gitaly/tab\tnewline\n file"),
+				ToPath:   []byte("gitaly/tab\tnewline\n file"),
+				Binary:   false,
+			},
+			ChunksCombined: testhelper.MustReadFile(t, "testdata/tab-newline-file-chunks.txt"),
 		},
 		{
 			Diff: diff.Diff{
