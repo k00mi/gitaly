@@ -182,6 +182,7 @@ with these calculations.
 | `Projects::GraphsController#charts` (shelved for now) | #158 |  | | | | |
 | `Projects::MergeRequestsController#new` | #159 | | | | | |
 | `Projects::RawController#show` | #160 | #195 | | | | |
+| Workhorse `sendblob` | #194 |  | | | | |
 
 (More to follow!)
 
