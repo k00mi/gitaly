@@ -192,13 +192,16 @@ func TestSuccessfulCommitDiffRequestWithPaths(t *testing.T) {
 
 	client := newDiffClient(t)
 	repo := &pb.Repository{Path: testRepoPath}
-	rightCommit := "41ae11ba5d091d73d5de671f6fa7d1a4539e979e"
-	leftCommit := rightCommit + "~~~" // Third ancestor of rightCommit
+	rightCommit := "e4003da16c1c2c3fc4567700121b17bf8e591c6c"
+	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
 	rpcRequest := &pb.CommitDiffRequest{
-		Repository:    repo,
-		RightCommitId: rightCommit,
-		LeftCommitId:  leftCommit,
+		Repository:             repo,
+		RightCommitId:          rightCommit,
+		LeftCommitId:           leftCommit,
+		IgnoreWhitespaceChange: false,
 		Paths: [][]byte{
+			[]byte("CONTRIBUTING.md"),
+			[]byte("README.md"),
 			[]byte("gitaly/named-file-with-mods"),
 			[]byte("gitaly/mode-file-with-mods"),
 		},
@@ -210,6 +213,120 @@ func TestSuccessfulCommitDiffRequestWithPaths(t *testing.T) {
 	}
 
 	expectedDiffs := []expectedDiff{
+		{
+			Diff: diff.Diff{
+				FromID:   "c1788657b95998a2f177a4f86d68a60f2a80117f",
+				ToID:     "b87f61fe2d7b2e208b340a1f3cafea916bd27f75",
+				OldMode:  0100644,
+				NewMode:  0100644,
+				FromPath: []byte("CONTRIBUTING.md"),
+				ToPath:   []byte("CONTRIBUTING.md"),
+				Binary:   false,
+			},
+			ChunksCombined: testhelper.MustReadFile(t, "testdata/contributing-md-chunks.txt"),
+		},
+		{
+			Diff: diff.Diff{
+				FromID:   "faaf198af3a36dbf41961466703cc1d47c61d051",
+				ToID:     "877cee6ab11f9094e1bcdb7f1fd9c0001b572185",
+				OldMode:  0100644,
+				NewMode:  0100644,
+				FromPath: []byte("README.md"),
+				ToPath:   []byte("README.md"),
+				Binary:   false,
+			},
+			ChunksCombined: testhelper.MustReadFile(t, "testdata/readme-md-chunks.txt"),
+		},
+		{
+			Diff: diff.Diff{
+				FromID:   "357406f3075a57708d0163752905cc1576fceacc",
+				ToID:     "8e5177d718c561d36efde08bad36b43687ee6bf0",
+				OldMode:  0100644,
+				NewMode:  0100755,
+				FromPath: []byte("gitaly/mode-file-with-mods"),
+				ToPath:   []byte("gitaly/mode-file-with-mods"),
+				Binary:   false,
+			},
+			ChunksCombined: testhelper.MustReadFile(t, "testdata/mode-file-with-mods-chunks.txt"),
+		},
+		{
+			Diff: diff.Diff{
+				FromID:   "43d24af4e22580f36b1ca52647c1aff75a766a33",
+				ToID:     "0000000000000000000000000000000000000000",
+				OldMode:  0100644,
+				NewMode:  0,
+				FromPath: []byte("gitaly/named-file-with-mods"),
+				ToPath:   []byte("gitaly/named-file-with-mods"),
+				Binary:   false,
+			},
+			ChunksCombined: testhelper.MustReadFile(t, "testdata/named-file-with-mods-chunks.txt"),
+		},
+	}
+
+	assertExactReceivedDiffs(t, c, expectedDiffs)
+}
+
+func TestSuccessfulCommitDiffRequestWithIgnoreWhitespaceChange(t *testing.T) {
+	server := runDiffServer(t)
+	defer server.Stop()
+
+	client := newDiffClient(t)
+	repo := &pb.Repository{Path: testRepoPath}
+	rightCommit := "e4003da16c1c2c3fc4567700121b17bf8e591c6c"
+	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
+	rpcRequest := &pb.CommitDiffRequest{
+		Repository:             repo,
+		RightCommitId:          rightCommit,
+		LeftCommitId:           leftCommit,
+		IgnoreWhitespaceChange: true,
+		Paths: [][]byte{
+			[]byte("CONTRIBUTING.md"),
+			[]byte("MAINTENANCE.md"),
+			[]byte("README.md"),
+			[]byte("gitaly/named-file-with-mods"),
+			[]byte("gitaly/mode-file-with-mods"),
+		},
+	}
+
+	c, err := client.CommitDiff(context.Background(), rpcRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedDiffs := []expectedDiff{
+		{
+			Diff: diff.Diff{
+				FromID:   "c1788657b95998a2f177a4f86d68a60f2a80117f",
+				ToID:     "b87f61fe2d7b2e208b340a1f3cafea916bd27f75",
+				OldMode:  0100644,
+				NewMode:  0100644,
+				FromPath: []byte("CONTRIBUTING.md"),
+				ToPath:   []byte("CONTRIBUTING.md"),
+				Binary:   false,
+			},
+		},
+		{
+			Diff: diff.Diff{
+				FromID:   "95d9f0a5e7bb054e9dd3975589b8dfc689e20e88",
+				ToID:     "5d9c7c0470bf368d61d9b6cd076300dc9d061f14",
+				OldMode:  0100644,
+				NewMode:  0100644,
+				FromPath: []byte("MAINTENANCE.md"),
+				ToPath:   []byte("MAINTENANCE.md"),
+				Binary:   false,
+			},
+		},
+		{
+			Diff: diff.Diff{
+				FromID:   "faaf198af3a36dbf41961466703cc1d47c61d051",
+				ToID:     "877cee6ab11f9094e1bcdb7f1fd9c0001b572185",
+				OldMode:  0100644,
+				NewMode:  0100644,
+				FromPath: []byte("README.md"),
+				ToPath:   []byte("README.md"),
+				Binary:   false,
+			},
+		},
 		{
 			Diff: diff.Diff{
 				FromID:   "357406f3075a57708d0163752905cc1576fceacc",
