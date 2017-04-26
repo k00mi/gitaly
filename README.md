@@ -181,7 +181,7 @@ with these calculations.
 | `ProjectsController#show` | #157 | -- | -- | gitlab-org/gitlab-ce!10780 | | |
 | `Projects::GraphsController#charts` (shelved for now) | #158 |  | | | | |
 | `Projects::MergeRequestsController#new` | #159 | | | | | |
-| `Projects::RawController#show` | #160 | | | | | |
+| `Projects::RawController#show` | #160 | #195 | | | | |
 
 (More to follow!)
 
