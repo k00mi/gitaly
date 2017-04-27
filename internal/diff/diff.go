@@ -187,6 +187,8 @@ func (parser *Parser) findNextPatchFromPath() error {
 	if err != nil && err != io.EOF {
 		parser.err = fmt.Errorf("read diff header line: %v", err)
 		return parser.err
+	} else if err == io.EOF {
+		return nil
 	}
 
 	if matches := diffHeaderRegexp.FindSubmatch(line); len(matches) > 0 {

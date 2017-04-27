@@ -274,26 +274,18 @@ func TestSuccessfulCommitDiffRequestWithIgnoreWhitespaceChange(t *testing.T) {
 	repo := &pb.Repository{Path: testRepoPath}
 	rightCommit := "e4003da16c1c2c3fc4567700121b17bf8e591c6c"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
-	rpcRequest := &pb.CommitDiffRequest{
-		Repository:             repo,
-		RightCommitId:          rightCommit,
-		LeftCommitId:           leftCommit,
-		IgnoreWhitespaceChange: true,
-		Paths: [][]byte{
-			[]byte("CONTRIBUTING.md"),
-			[]byte("MAINTENANCE.md"),
-			[]byte("README.md"),
-			[]byte("gitaly/named-file-with-mods"),
-			[]byte("gitaly/mode-file-with-mods"),
-		},
+
+	whitespacePaths := [][]byte{
+		[]byte("CONTRIBUTING.md"),
+		[]byte("MAINTENANCE.md"),
+		[]byte("README.md"),
+	}
+	normalPaths := [][]byte{
+		[]byte("gitaly/named-file-with-mods"),
+		[]byte("gitaly/mode-file-with-mods"),
 	}
 
-	c, err := client.CommitDiff(context.Background(), rpcRequest)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	expectedDiffs := []expectedDiff{
+	expectedWhitespaceDiffs := []expectedDiff{
 		{
 			Diff: diff.Diff{
 				FromID:   "c1788657b95998a2f177a4f86d68a60f2a80117f",
@@ -327,6 +319,8 @@ func TestSuccessfulCommitDiffRequestWithIgnoreWhitespaceChange(t *testing.T) {
 				Binary:   false,
 			},
 		},
+	}
+	expectedNormalDiffs := []expectedDiff{
 		{
 			Diff: diff.Diff{
 				FromID:   "357406f3075a57708d0163752905cc1576fceacc",
@@ -353,7 +347,36 @@ func TestSuccessfulCommitDiffRequestWithIgnoreWhitespaceChange(t *testing.T) {
 		},
 	}
 
-	assertExactReceivedDiffs(t, c, expectedDiffs)
+	pathsAndDiffs := []struct {
+		paths [][]byte
+		diffs []expectedDiff
+	}{
+		{
+			paths: whitespacePaths,
+			diffs: expectedWhitespaceDiffs,
+		},
+		{
+			paths: append(whitespacePaths, normalPaths...),
+			diffs: append(expectedWhitespaceDiffs, expectedNormalDiffs...),
+		},
+	}
+
+	for _, entry := range pathsAndDiffs {
+		rpcRequest := &pb.CommitDiffRequest{
+			Repository:             repo,
+			RightCommitId:          rightCommit,
+			LeftCommitId:           leftCommit,
+			IgnoreWhitespaceChange: true,
+			Paths: entry.paths,
+		}
+
+		c, err := client.CommitDiff(context.Background(), rpcRequest)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		assertExactReceivedDiffs(t, c, entry.diffs)
+	}
 }
 
 func TestFailedCommitDiffRequestDueToValidationError(t *testing.T) {
