@@ -20,25 +20,39 @@ import (
 
 var serverSocketPath = path.Join(scratchDir, "gitaly.sock")
 
+type expectedDiff struct {
+	diff.Diff
+	ChunksCombined []byte
+}
+
 func TestSuccessfulCommitDiffRequest(t *testing.T) {
 	server := runDiffServer(t)
 	defer server.Stop()
 
 	client := newDiffClient(t)
 	repo := &pb.Repository{Path: testRepoPath}
-	rightCommit := "57290e673a4c87f51294f5216672cbc58d485d25"
-	leftCommit := rightCommit + "~~" // Second ancestor of rightCommit
-	rpcRequest := &pb.CommitDiffRequest{Repository: repo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
+	rightCommit := "742518b2be68fc750bb4c357c0df821a88113286"
+	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
+	rpcRequest := &pb.CommitDiffRequest{Repository: repo, RightCommitId: rightCommit, LeftCommitId: leftCommit, IgnoreWhitespaceChange: false}
 
 	c, err := client.CommitDiff(context.Background(), rpcRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	expectedDiffs := []struct {
-		diff.Diff
-		ChunksCombined []byte
-	}{
+	expectedDiffs := []expectedDiff{
+		{
+			Diff: diff.Diff{
+				FromID:   "faaf198af3a36dbf41961466703cc1d47c61d051",
+				ToID:     "877cee6ab11f9094e1bcdb7f1fd9c0001b572185",
+				OldMode:  0100644,
+				NewMode:  0100644,
+				FromPath: []byte("README.md"),
+				ToPath:   []byte("README.md"),
+				Binary:   false,
+			},
+			ChunksCombined: testhelper.MustReadFile(t, "testdata/readme-md-chunks.txt"),
+		},
 		{
 			Diff: diff.Diff{
 				FromID:   "bdea48ee65c869eb0b86b1283069d76cce0a7254",
@@ -76,8 +90,8 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 		},
 		{
 			Diff: diff.Diff{
-				FromID:   "",
-				ToID:     "",
+				FromID:   "ead5a0eee1391308803cfebd8a2a8530495645eb",
+				ToID:     "ead5a0eee1391308803cfebd8a2a8530495645eb",
 				OldMode:  0100644,
 				NewMode:  0100755,
 				FromPath: []byte("gitaly/mode-file"),
@@ -123,10 +137,10 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 		},
 		{
 			Diff: diff.Diff{
-				FromID:   "",
-				ToID:     "",
-				OldMode:  0,
-				NewMode:  0,
+				FromID:   "4e76e90b3c7e52390de9311a23c0a77575aed8a8",
+				ToID:     "4e76e90b3c7e52390de9311a23c0a77575aed8a8",
+				OldMode:  0100644,
+				NewMode:  0100644,
 				FromPath: []byte("gitaly/named-file"),
 				ToPath:   []byte("gitaly/renamed-file"),
 				Binary:   false,
@@ -147,6 +161,18 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 		{
 			Diff: diff.Diff{
 				FromID:   "0000000000000000000000000000000000000000",
+				ToID:     "a135e3e0d4af177a902ca57dcc4c7fc6f30858b1",
+				OldMode:  0,
+				NewMode:  0100644,
+				FromPath: []byte("gitaly/tab\tnewline\n file"),
+				ToPath:   []byte("gitaly/tab\tnewline\n file"),
+				Binary:   false,
+			},
+			ChunksCombined: testhelper.MustReadFile(t, "testdata/tab-newline-file-chunks.txt"),
+		},
+		{
+			Diff: diff.Diff{
+				FromID:   "0000000000000000000000000000000000000000",
 				ToID:     "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
 				OldMode:  0,
 				NewMode:  0100755,
@@ -157,60 +183,199 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 		},
 	}
 
-	i := 0
-	for {
-		fetchedDiff, err := c.Recv()
-		if err == io.EOF {
-			break
-		} else if err != nil {
+	assertExactReceivedDiffs(t, c, expectedDiffs)
+}
+
+func TestSuccessfulCommitDiffRequestWithPaths(t *testing.T) {
+	server := runDiffServer(t)
+	defer server.Stop()
+
+	client := newDiffClient(t)
+	repo := &pb.Repository{Path: testRepoPath}
+	rightCommit := "e4003da16c1c2c3fc4567700121b17bf8e591c6c"
+	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
+	rpcRequest := &pb.CommitDiffRequest{
+		Repository:             repo,
+		RightCommitId:          rightCommit,
+		LeftCommitId:           leftCommit,
+		IgnoreWhitespaceChange: false,
+		Paths: [][]byte{
+			[]byte("CONTRIBUTING.md"),
+			[]byte("README.md"),
+			[]byte("gitaly/named-file-with-mods"),
+			[]byte("gitaly/mode-file-with-mods"),
+		},
+	}
+
+	c, err := client.CommitDiff(context.Background(), rpcRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedDiffs := []expectedDiff{
+		{
+			Diff: diff.Diff{
+				FromID:   "c1788657b95998a2f177a4f86d68a60f2a80117f",
+				ToID:     "b87f61fe2d7b2e208b340a1f3cafea916bd27f75",
+				OldMode:  0100644,
+				NewMode:  0100644,
+				FromPath: []byte("CONTRIBUTING.md"),
+				ToPath:   []byte("CONTRIBUTING.md"),
+				Binary:   false,
+			},
+			ChunksCombined: testhelper.MustReadFile(t, "testdata/contributing-md-chunks.txt"),
+		},
+		{
+			Diff: diff.Diff{
+				FromID:   "faaf198af3a36dbf41961466703cc1d47c61d051",
+				ToID:     "877cee6ab11f9094e1bcdb7f1fd9c0001b572185",
+				OldMode:  0100644,
+				NewMode:  0100644,
+				FromPath: []byte("README.md"),
+				ToPath:   []byte("README.md"),
+				Binary:   false,
+			},
+			ChunksCombined: testhelper.MustReadFile(t, "testdata/readme-md-chunks.txt"),
+		},
+		{
+			Diff: diff.Diff{
+				FromID:   "357406f3075a57708d0163752905cc1576fceacc",
+				ToID:     "8e5177d718c561d36efde08bad36b43687ee6bf0",
+				OldMode:  0100644,
+				NewMode:  0100755,
+				FromPath: []byte("gitaly/mode-file-with-mods"),
+				ToPath:   []byte("gitaly/mode-file-with-mods"),
+				Binary:   false,
+			},
+			ChunksCombined: testhelper.MustReadFile(t, "testdata/mode-file-with-mods-chunks.txt"),
+		},
+		{
+			Diff: diff.Diff{
+				FromID:   "43d24af4e22580f36b1ca52647c1aff75a766a33",
+				ToID:     "0000000000000000000000000000000000000000",
+				OldMode:  0100644,
+				NewMode:  0,
+				FromPath: []byte("gitaly/named-file-with-mods"),
+				ToPath:   []byte("gitaly/named-file-with-mods"),
+				Binary:   false,
+			},
+			ChunksCombined: testhelper.MustReadFile(t, "testdata/named-file-with-mods-chunks.txt"),
+		},
+	}
+
+	assertExactReceivedDiffs(t, c, expectedDiffs)
+}
+
+func TestSuccessfulCommitDiffRequestWithIgnoreWhitespaceChange(t *testing.T) {
+	server := runDiffServer(t)
+	defer server.Stop()
+
+	client := newDiffClient(t)
+	repo := &pb.Repository{Path: testRepoPath}
+	rightCommit := "e4003da16c1c2c3fc4567700121b17bf8e591c6c"
+	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
+
+	whitespacePaths := [][]byte{
+		[]byte("CONTRIBUTING.md"),
+		[]byte("MAINTENANCE.md"),
+		[]byte("README.md"),
+	}
+	normalPaths := [][]byte{
+		[]byte("gitaly/named-file-with-mods"),
+		[]byte("gitaly/mode-file-with-mods"),
+	}
+
+	expectedWhitespaceDiffs := []expectedDiff{
+		{
+			Diff: diff.Diff{
+				FromID:   "c1788657b95998a2f177a4f86d68a60f2a80117f",
+				ToID:     "b87f61fe2d7b2e208b340a1f3cafea916bd27f75",
+				OldMode:  0100644,
+				NewMode:  0100644,
+				FromPath: []byte("CONTRIBUTING.md"),
+				ToPath:   []byte("CONTRIBUTING.md"),
+				Binary:   false,
+			},
+		},
+		{
+			Diff: diff.Diff{
+				FromID:   "95d9f0a5e7bb054e9dd3975589b8dfc689e20e88",
+				ToID:     "5d9c7c0470bf368d61d9b6cd076300dc9d061f14",
+				OldMode:  0100644,
+				NewMode:  0100644,
+				FromPath: []byte("MAINTENANCE.md"),
+				ToPath:   []byte("MAINTENANCE.md"),
+				Binary:   false,
+			},
+		},
+		{
+			Diff: diff.Diff{
+				FromID:   "faaf198af3a36dbf41961466703cc1d47c61d051",
+				ToID:     "877cee6ab11f9094e1bcdb7f1fd9c0001b572185",
+				OldMode:  0100644,
+				NewMode:  0100644,
+				FromPath: []byte("README.md"),
+				ToPath:   []byte("README.md"),
+				Binary:   false,
+			},
+		},
+	}
+	expectedNormalDiffs := []expectedDiff{
+		{
+			Diff: diff.Diff{
+				FromID:   "357406f3075a57708d0163752905cc1576fceacc",
+				ToID:     "8e5177d718c561d36efde08bad36b43687ee6bf0",
+				OldMode:  0100644,
+				NewMode:  0100755,
+				FromPath: []byte("gitaly/mode-file-with-mods"),
+				ToPath:   []byte("gitaly/mode-file-with-mods"),
+				Binary:   false,
+			},
+			ChunksCombined: testhelper.MustReadFile(t, "testdata/mode-file-with-mods-chunks.txt"),
+		},
+		{
+			Diff: diff.Diff{
+				FromID:   "43d24af4e22580f36b1ca52647c1aff75a766a33",
+				ToID:     "0000000000000000000000000000000000000000",
+				OldMode:  0100644,
+				NewMode:  0,
+				FromPath: []byte("gitaly/named-file-with-mods"),
+				ToPath:   []byte("gitaly/named-file-with-mods"),
+				Binary:   false,
+			},
+			ChunksCombined: testhelper.MustReadFile(t, "testdata/named-file-with-mods-chunks.txt"),
+		},
+	}
+
+	pathsAndDiffs := []struct {
+		paths [][]byte
+		diffs []expectedDiff
+	}{
+		{
+			paths: whitespacePaths,
+			diffs: expectedWhitespaceDiffs,
+		},
+		{
+			paths: append(whitespacePaths, normalPaths...),
+			diffs: append(expectedWhitespaceDiffs, expectedNormalDiffs...),
+		},
+	}
+
+	for _, entry := range pathsAndDiffs {
+		rpcRequest := &pb.CommitDiffRequest{
+			Repository:             repo,
+			RightCommitId:          rightCommit,
+			LeftCommitId:           leftCommit,
+			IgnoreWhitespaceChange: true,
+			Paths: entry.paths,
+		}
+
+		c, err := client.CommitDiff(context.Background(), rpcRequest)
+		if err != nil {
 			t.Fatal(err)
 		}
 
-		if i >= len(expectedDiffs) {
-			t.Errorf("Unexpected diff #%d received: %v", i, fetchedDiff)
-			break
-		}
-
-		expectedDiff := expectedDiffs[i]
-
-		if expectedDiff.FromID != fetchedDiff.FromId {
-			t.Errorf("Expected diff #%d FromID to equal = %q, got %q", i, expectedDiff.FromID, fetchedDiff.FromId)
-		}
-
-		if expectedDiff.ToID != fetchedDiff.ToId {
-			t.Errorf("Expected diff #%d ToID to equal = %q, got %q", i, expectedDiff.ToID, fetchedDiff.ToId)
-		}
-
-		if expectedDiff.OldMode != fetchedDiff.OldMode {
-			t.Errorf("Expected diff #%d OldMode to equal = %o, got %o", i, expectedDiff.OldMode, fetchedDiff.OldMode)
-		}
-
-		if expectedDiff.NewMode != fetchedDiff.NewMode {
-			t.Errorf("Expected diff #%d NewMode to equal = %o, got %o", i, expectedDiff.NewMode, fetchedDiff.NewMode)
-		}
-
-		if !bytes.Equal(expectedDiff.FromPath, fetchedDiff.FromPath) {
-			t.Errorf("Expected diff #%d FromPath to equal = %s, got %s", i, expectedDiff.FromPath, fetchedDiff.FromPath)
-		}
-
-		if !bytes.Equal(expectedDiff.ToPath, fetchedDiff.ToPath) {
-			t.Errorf("Expected diff #%d ToPath to equal = %s, got %s", i, expectedDiff.ToPath, fetchedDiff.ToPath)
-		}
-
-		if expectedDiff.Binary != fetchedDiff.Binary {
-			t.Errorf("Expected diff #%d Binary to be %t, got %t", i, expectedDiff.Binary, fetchedDiff.Binary)
-		}
-
-		fetchedChunksCombined := bytes.Join(fetchedDiff.RawChunks, nil)
-		if !bytes.Equal(expectedDiff.ChunksCombined, fetchedChunksCombined) {
-			t.Errorf("Expected diff #%d Chunks to be %v, got %v", i, expectedDiff.ChunksCombined, fetchedChunksCombined)
-		}
-
-		i++
-	}
-
-	if len(expectedDiffs) != i {
-		t.Errorf("Expected number of diffs to be %d, got %d", len(expectedDiffs), i)
+		assertExactReceivedDiffs(t, c, entry.diffs)
 	}
 }
 
@@ -300,4 +465,62 @@ func drainCommitDiffResponse(c pb.Diff_CommitDiffClient) error {
 	}
 
 	return nil
+}
+
+func assertExactReceivedDiffs(t *testing.T, client pb.Diff_CommitDiffClient, expectedDiffs []expectedDiff) {
+	i := 0
+	for {
+		fetchedDiff, err := client.Recv()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			t.Fatal(err)
+		}
+
+		if i >= len(expectedDiffs) {
+			t.Errorf("Unexpected diff #%d received: %v", i, fetchedDiff)
+			break
+		}
+
+		expectedDiff := expectedDiffs[i]
+
+		if expectedDiff.FromID != fetchedDiff.FromId {
+			t.Errorf("Expected diff #%d FromID to equal = %q, got %q", i, expectedDiff.FromID, fetchedDiff.FromId)
+		}
+
+		if expectedDiff.ToID != fetchedDiff.ToId {
+			t.Errorf("Expected diff #%d ToID to equal = %q, got %q", i, expectedDiff.ToID, fetchedDiff.ToId)
+		}
+
+		if expectedDiff.OldMode != fetchedDiff.OldMode {
+			t.Errorf("Expected diff #%d OldMode to equal = %o, got %o", i, expectedDiff.OldMode, fetchedDiff.OldMode)
+		}
+
+		if expectedDiff.NewMode != fetchedDiff.NewMode {
+			t.Errorf("Expected diff #%d NewMode to equal = %o, got %o", i, expectedDiff.NewMode, fetchedDiff.NewMode)
+		}
+
+		if !bytes.Equal(expectedDiff.FromPath, fetchedDiff.FromPath) {
+			t.Errorf("Expected diff #%d FromPath to equal = %s, got %s", i, expectedDiff.FromPath, fetchedDiff.FromPath)
+		}
+
+		if !bytes.Equal(expectedDiff.ToPath, fetchedDiff.ToPath) {
+			t.Errorf("Expected diff #%d ToPath to equal = %s, got %s", i, expectedDiff.ToPath, fetchedDiff.ToPath)
+		}
+
+		if expectedDiff.Binary != fetchedDiff.Binary {
+			t.Errorf("Expected diff #%d Binary to be %t, got %t", i, expectedDiff.Binary, fetchedDiff.Binary)
+		}
+
+		fetchedChunksCombined := bytes.Join(fetchedDiff.RawChunks, nil)
+		if !bytes.Equal(expectedDiff.ChunksCombined, fetchedChunksCombined) {
+			t.Errorf("Expected diff #%d Chunks to be %q, got %q", i, expectedDiff.ChunksCombined, fetchedChunksCombined)
+		}
+
+		i++
+	}
+
+	if len(expectedDiffs) != i {
+		t.Errorf("Expected number of diffs to be %d, got %d", len(expectedDiffs), i)
+	}
 }

@@ -22,10 +22,39 @@ func (s *server) CommitDiff(in *pb.CommitDiffRequest, stream pb.Diff_CommitDiffS
 	}
 	leftSha := in.LeftCommitId
 	rightSha := in.RightCommitId
+	ignoreWhitespaceChange := in.GetIgnoreWhitespaceChange()
+	paths := in.GetPaths()
 
-	log.Printf("CommitDiff: RepoPath=%q LeftCommitId=%q RightCommitId=%q", repoPath, leftSha, rightSha)
+	log.Printf(
+		"CommitDiff: RepoPath=%q LeftCommitId=%q RightCommitId=%q IgnoreWhitespaceChange=%t Paths=%s",
+		repoPath,
+		leftSha,
+		rightSha,
+		ignoreWhitespaceChange,
+		paths,
+	)
 
-	cmd, err := helper.GitCommandReader("--git-dir", repoPath, "diff", "--full-index", "--find-renames", leftSha, rightSha)
+	cmdArgs := []string{
+		"--git-dir", repoPath,
+		"diff",
+		"--patch",
+		"--raw",
+		"--abbrev=40",
+		"--full-index",
+		"--find-renames",
+	}
+	if ignoreWhitespaceChange {
+		cmdArgs = append(cmdArgs, "--ignore-space-change")
+	}
+	cmdArgs = append(cmdArgs, leftSha, rightSha)
+	if len(paths) > 0 {
+		cmdArgs = append(cmdArgs, "--")
+		for _, path := range paths {
+			cmdArgs = append(cmdArgs, string(path))
+		}
+	}
+
+	cmd, err := helper.GitCommandReader(cmdArgs...)
 	if err != nil {
 		return grpc.Errorf(codes.Internal, "CommitDiff: cmd: %v", err)
 	}
