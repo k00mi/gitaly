@@ -4,6 +4,8 @@ UNRELEASED
 
 - CommitDiff: Parse a typechange diff correctly
   https://gitlab.com/gitlab-org/gitaly/merge_requests/136
+- CommitDiff: Implement CommitDelta RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/139
 
 v0.9.0
 
