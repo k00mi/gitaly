@@ -1,5 +1,12 @@
 # Gitaly changelog
 
+v0.9.0
+
+- Add support ignoring whitespace diffs in CommitDiff
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/126
+- Add support for path filtering in CommitDiff
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/126
+
 v0.8.0
 
 - Don't error on invalid ref in CommitIsAncestor
