@@ -266,6 +266,55 @@ func TestSuccessfulCommitDiffRequestWithPaths(t *testing.T) {
 	assertExactReceivedDiffs(t, c, expectedDiffs)
 }
 
+func TestSuccessfulCommitDiffRequestWithTypeChangeDiff(t *testing.T) {
+	server := runDiffServer(t)
+	defer server.Stop()
+
+	client := newDiffClient(t)
+	repo := &pb.Repository{Path: testRepoPath}
+	rightCommit := "184a47d38677e2e439964859b877ae9bc424ab11"
+	leftCommit := "80d56eb72ba5d77fd8af857eced17a7d0640cb82"
+	rpcRequest := &pb.CommitDiffRequest{
+		Repository:    repo,
+		RightCommitId: rightCommit,
+		LeftCommitId:  leftCommit,
+	}
+
+	c, err := client.CommitDiff(context.Background(), rpcRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedDiffs := []expectedDiff{
+		{
+			Diff: diff.Diff{
+				FromID:   "349cd0f6b1aba8538861d95783cbce6d49d747f8",
+				ToID:     "0000000000000000000000000000000000000000",
+				OldMode:  0120000,
+				NewMode:  0,
+				FromPath: []byte("gitaly/symlink-to-be-regular"),
+				ToPath:   []byte("gitaly/symlink-to-be-regular"),
+				Binary:   false,
+			},
+			ChunksCombined: testhelper.MustReadFile(t, "testdata/symlink-to-be-regular-deleted-chunks.txt"),
+		},
+		{
+			Diff: diff.Diff{
+				FromID:   "0000000000000000000000000000000000000000",
+				ToID:     "f9e5cc857610185e6feeb494a26bf27551a4f02b",
+				OldMode:  0,
+				NewMode:  0100644,
+				FromPath: []byte("gitaly/symlink-to-be-regular"),
+				ToPath:   []byte("gitaly/symlink-to-be-regular"),
+				Binary:   false,
+			},
+			ChunksCombined: testhelper.MustReadFile(t, "testdata/symlink-to-be-regular-added-chunks.txt"),
+		},
+	}
+
+	assertExactReceivedDiffs(t, c, expectedDiffs)
+}
+
 func TestSuccessfulCommitDiffRequestWithIgnoreWhitespaceChange(t *testing.T) {
 	server := runDiffServer(t)
 	defer server.Stop()
