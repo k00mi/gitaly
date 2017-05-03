@@ -11,6 +11,8 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
+const blankID = "0000000000000000000000000000000000000000"
+
 // Diff represents a single parsed diff entry
 type Diff struct {
 	FromID    string
@@ -20,6 +22,7 @@ type Diff struct {
 	FromPath  []byte
 	ToPath    []byte
 	Binary    bool
+	Status    byte
 	RawChunks [][]byte
 }
 
@@ -172,6 +175,9 @@ func (parser *Parser) initializeCurrentDiff() error {
 		parser.err = err
 		return err
 	}
+	if parser.currentDiff.Status == 'T' {
+		parser.handleTypeChangeDiff()
+	}
 
 	return nil
 }
@@ -200,6 +206,25 @@ func (parser *Parser) findNextPatchFromPath() error {
 	return parser.err
 }
 
+func (parser *Parser) handleTypeChangeDiff() {
+	// GitLab wants to display the type change in the current diff as a removal followed by an addition.
+	// To make this happen we add a new raw line, which will become the addition on the next iteration of the parser.
+	// We change the current diff in-place so that it becomes a deletion.
+	newRawLine := fmt.Sprintf(
+		":%o %o %s %s A\t%s\n",
+		0,
+		parser.currentDiff.NewMode,
+		blankID,
+		parser.currentDiff.ToID,
+		parser.currentDiff.FromPath,
+	)
+
+	parser.currentDiff.NewMode = 0
+	parser.currentDiff.ToID = blankID
+
+	parser.rawLines = append([][]byte{[]byte(newRawLine)}, parser.rawLines...)
+}
+
 func parseRawLine(line []byte, diff *Diff) error {
 	matches := rawLineRegexp.FindSubmatch(line)
 	if len(matches) == 0 {
@@ -220,9 +245,10 @@ func parseRawLine(line []byte, diff *Diff) error {
 
 	diff.FromID = string(matches[3])
 	diff.ToID = string(matches[4])
+	diff.Status = matches[5][0]
 
 	diff.FromPath = unescape(helper.UnquoteBytes(matches[6]))
-	if matches[5][0] == 'C' || matches[5][0] == 'R' {
+	if diff.Status == 'C' || diff.Status == 'R' {
 		diff.ToPath = unescape(helper.UnquoteBytes(matches[7]))
 	} else {
 		diff.ToPath = diff.FromPath
