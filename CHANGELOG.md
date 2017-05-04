@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- CommitDiff: Parse a typechange diff correctly
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/136
+
 v0.9.0
 
 - Add support ignoring whitespace diffs in CommitDiff
