@@ -64,6 +64,10 @@ make install
 
 See [configuration documentation](doc/configuration)
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Name
 
 Gitaly is a tribute to git and the town of [Aly](https://en.wikipedia.org/wiki/Aly). Where the town of
