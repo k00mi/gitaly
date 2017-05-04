@@ -20,6 +20,7 @@ def main(version)
   tag_name = "v#{version}"
   run!(%W[git tag -a -m #{version_msg} #{tag_name}])
 
+  # We use 'capture!' to prevent 'git show' from invoking 'less'.
   show_output = capture!(%W[git show --pretty #{tag_name}])
   puts show_output
 
