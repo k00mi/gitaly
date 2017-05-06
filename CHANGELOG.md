@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.10.0
 
 - CommitDiff: Parse a typechange diff correctly
   https://gitlab.com/gitlab-org/gitaly/merge_requests/136
