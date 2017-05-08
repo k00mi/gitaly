@@ -173,7 +173,7 @@ in descending order of **99% Cumulative Time** (that is `(number of calls) * (99
 A [Google Spreadsheet](https://docs.google.com/spreadsheets/d/1MVjsbLIjBVryMxO0UhBWebrwXuqpbCz18ZtrThcSFFU/edit) is available
 with these calculations.
 
-|**Controller**|**Analysis**|**RPCS**|**Server Impl**|**Client Impl**|**Optim 1**|**Optim 2**|
+|**Controller**|**~"Migration Analysis"**|**~"RPC Design"**|**~"Server Implementation"**|**~"Client Implementation"**|**Optim 1**|**Optim 2**|
 |--------------|------------|--------|---------------|---------------|-----------|-----------|
 | SmartHTTP Workhorse Interceptors | #36 | - | | | | |
 | `Projects::CommitController#show` | #64 | #80 | #88 | #89| | |
