@@ -173,20 +173,20 @@ in descending order of **99% Cumulative Time** (that is `(number of calls) * (99
 A [Google Spreadsheet](https://docs.google.com/spreadsheets/d/1MVjsbLIjBVryMxO0UhBWebrwXuqpbCz18ZtrThcSFFU/edit) is available
 with these calculations.
 
-|**Controller**|**~"Migration Analysis"**|**~"RPC Design"**|**~"Server Implementation"**|**~"Client Implementation"**|**Optim 1**|**Optim 2**|
+|**Controller**|**~"Migration Analysis"**|**~"RPC Design"**|**~"Server Implementation"**|**~"Client Implementation"**|**~"Acceptance Testing"**|**Optim 1**|**Optim 2**|
 |--------------|------------|--------|---------------|---------------|-----------|-----------|
-| SmartHTTP Workhorse Interceptors | #36 | - | | | | |
-| `Projects::CommitController#show` | #64 | #80 | #88 | #89| | |
-| `Projects::MergeRequestsController#ci_status.json` / `Projects::MergeRequestsController#ci_environments_status.json` | #66 | #81 | #86 | #87 | | |
-| `Projects::TreeController#show` | #65 | #82 | #84 | #85 | | |
-| Git HTTP: `POST /{upload,receive}-pack` | #92 | gitlab-org/gitaly-proto!4 | #122 | #125 | | |
-| Git SSH: handle gitlab-shell sessions | #91 | gitlab-org/gitaly-proto!5 | #123 | #124 | | |
-| `Projects::BranchesController#index` | #127 | #128 | | | | |
-| `ProjectsController#show` | #157 | -- | -- | gitlab-org/gitlab-ce!10780 | | |
-| `Projects::GraphsController#charts` (shelved for now) | #158 |  | | | | |
-| `Projects::MergeRequestsController#new` | #159 | | | | | |
-| `Projects::RawController#show` | #160 | #195 | | | | |
-| Workhorse `sendblob` | #194 |  | | | | |
+| SmartHTTP Workhorse Interceptors | #36 | - | | | | | |
+| `Projects::CommitController#show` | #64 | #80 | #88 | #89| | | |
+| `Projects::MergeRequestsController#ci_status.json` / `Projects::MergeRequestsController#ci_environments_status.json` | #66 | #81 | #86 | #87 | | | |
+| `Projects::TreeController#show` | #65 | #82 | #84 | #85 | | | |  
+| Git HTTP: `POST /{upload,receive}-pack` | #92 | gitlab-org/gitaly-proto!4 | #122 | #125 | | | |
+| Git SSH: handle gitlab-shell sessions | #91 | gitlab-org/gitaly-proto!5 | #123 | #124 | | | |
+| `Projects::BranchesController#index` | #127 | #128 | | | | | |
+| `ProjectsController#show` | #157 | -- | -- | gitlab-org/gitlab-ce!10780 | | | |
+| `Projects::GraphsController#charts` (shelved for now) | #158 |  | | | | | |
+| `Projects::MergeRequestsController#new` | #159 | | | | | | |
+| `Projects::RawController#show` | #160 | #195 | | | | | |
+| Workhorse `sendblob` | #194 |  | | | | | |
 
 (More to follow!)
 
