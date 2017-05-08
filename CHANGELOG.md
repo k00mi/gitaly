@@ -6,6 +6,8 @@ v0.10.0
   https://gitlab.com/gitlab-org/gitaly/merge_requests/136
 - CommitDiff: Implement CommitDelta RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/139
+- Set GL_REPOSITORY env variable if it's set on ReceivePack request
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/137
 
 v0.9.0
 
@@ -29,4 +31,3 @@ v0.7.0
   resolving repository paths.
   https://gitlab.com/gitlab-org/gitaly/merge_requests/119
 - Add CHANGELOG.md
-
