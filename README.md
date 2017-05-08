@@ -174,7 +174,7 @@ A [Google Spreadsheet](https://docs.google.com/spreadsheets/d/1MVjsbLIjBVryMxO0U
 with these calculations.
 
 |**Controller**|**~"Migration Analysis"**|**~"RPC Design"**|**~"Server Implementation"**|**~"Client Implementation"**|**~"Acceptance Testing"**|**Optim 1**|**Optim 2**|
-|--------------|------------|--------|---------------|---------------|-----------|-----------|
+|--------------|-------------------------|-----------------|----------------------------|----------------------------|-------------------------|-----------|-----------|
 | SmartHTTP Workhorse Interceptors | #36 | - | | | | | |
 | `Projects::CommitController#show` | #64 | #80 | #88 | #89| | | |
 | `Projects::MergeRequestsController#ci_status.json` / `Projects::MergeRequestsController#ci_environments_status.json` | #66 | #81 | #86 | #87 | | | |
