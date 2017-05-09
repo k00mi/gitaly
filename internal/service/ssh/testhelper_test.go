@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"google.golang.org/grpc"
@@ -17,22 +15,18 @@ import (
 )
 
 const (
-	scratchDir   = "testdata/scratch"
-	testRepoRoot = "testdata/data"
-	pktFlushStr  = "0000"
+	scratchDir = "testdata/scratch"
 )
 
 var (
 	serverSocketPath = path.Join(scratchDir, "gitaly.sock")
-	testRepoPath     = ""
 )
 
 func TestMain(m *testing.M) {
-	testRepoPath = testhelper.GitlabTestRepoPath()
-
 	if err := os.MkdirAll(scratchDir, 0755); err != nil {
 		log.Fatal(err)
 	}
+	defer os.RemoveAll(scratchDir)
 
 	os.Exit(func() int {
 		return m.Run()
