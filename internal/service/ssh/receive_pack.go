@@ -50,15 +50,13 @@ func (s *server) SSHReceivePack(stream pb.SSH_SSHReceivePackServer) error {
 
 	log.Printf("PostReceivePack: RepoPath=%q GlID=%q", repoPath, req.GlId)
 
-	osCommand := exec.Command("git", "receive-pack", repoPath)
-	cmd, err := helper.NewCommand(osCommand, stdin, stdout, env...)
+	osCommand := exec.Command("git-receive-pack", repoPath)
+	cmd, err := helper.NewCommand(osCommand, stdin, stdout, stderr, env...)
 
 	if err != nil {
 		return grpc.Errorf(codes.Unavailable, "PostReceivePack: cmd: %v", err)
 	}
 	defer cmd.Kill()
-
-	cmd.Stderr = stderr
 
 	if err := cmd.Wait(); err != nil {
 		if status, ok := helper.ExitStatus(err); ok {

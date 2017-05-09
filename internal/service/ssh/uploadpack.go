@@ -44,14 +44,12 @@ func (s *server) SSHUploadPack(stream pb.SSH_SSHUploadPackServer) error {
 	log.Printf("PostUploadPack: RepoPath=%q", repoPath)
 
 	osCommand := exec.Command("git", "upload-pack", repoPath)
-	cmd, err := helper.NewCommand(osCommand, stdin, stdout)
+	cmd, err := helper.NewCommand(osCommand, stdin, stdout, stderr)
 
 	if err != nil {
 		return grpc.Errorf(codes.Unavailable, "PostUploadPack: cmd: %v", err)
 	}
 	defer cmd.Kill()
-
-	cmd.Stderr = stderr
 
 	if err := cmd.Wait(); err != nil {
 		if status, ok := helper.ExitStatus(err); ok {
