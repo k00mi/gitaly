@@ -45,13 +45,13 @@ func (s *server) SSHReceivePack(stream pb.SSH_SSHReceivePackServer) error {
 		return err
 	}
 
-	log.Printf("PostReceivePack: RepoPath=%q GlID=%q GlRepository=%q", repoPath, req.GlId, req.GlRepository)
+	log.Printf("SSHReceivePack: RepoPath=%q GlID=%q GlRepository=%q", repoPath, req.GlId, req.GlRepository)
 
 	osCommand := exec.Command("git-receive-pack", repoPath)
 	cmd, err := helper.NewCommand(osCommand, stdin, stdout, stderr, env...)
 
 	if err != nil {
-		return grpc.Errorf(codes.Unavailable, "PostReceivePack: cmd: %v", err)
+		return grpc.Errorf(codes.Unavailable, "SSHReceivePack: cmd: %v", err)
 	}
 	defer cmd.Kill()
 
@@ -59,7 +59,7 @@ func (s *server) SSHReceivePack(stream pb.SSH_SSHReceivePackServer) error {
 		if status, ok := helper.ExitStatus(err); ok {
 			helper.DecorateError(codes.Internal, stream.Send(&pb.SSHReceivePackResponse{ExitStatus: &pb.ExitStatus{Value: int32(status)}}))
 		}
-		return grpc.Errorf(codes.Unavailable, "PostReceivePack: cmd wait for %v: %v", cmd.Args, err)
+		return grpc.Errorf(codes.Unavailable, "SSHReceivePack: cmd wait for %v: %v", cmd.Args, err)
 	}
 
 	return nil
@@ -67,10 +67,10 @@ func (s *server) SSHReceivePack(stream pb.SSH_SSHReceivePackServer) error {
 
 func validateFirstReceivePackRequest(req *pb.SSHReceivePackRequest) error {
 	if req.GlId == "" {
-		return grpc.Errorf(codes.InvalidArgument, "PostReceivePack: empty GlId")
+		return grpc.Errorf(codes.InvalidArgument, "SSHReceivePack: empty GlId")
 	}
 	if req.Stdin != nil {
-		return grpc.Errorf(codes.InvalidArgument, "PostReceivePack: non-empty data")
+		return grpc.Errorf(codes.InvalidArgument, "SSHReceivePack: non-empty data")
 	}
 
 	return nil

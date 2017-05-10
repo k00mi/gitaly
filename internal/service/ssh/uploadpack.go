@@ -35,13 +35,13 @@ func (s *server) SSHUploadPack(stream pb.SSH_SSHUploadPackServer) error {
 		return err
 	}
 
-	log.Printf("PostUploadPack: RepoPath=%q", repoPath)
+	log.Printf("SSHUploadPack: RepoPath=%q", repoPath)
 
 	osCommand := exec.Command("git-upload-pack", repoPath)
 	cmd, err := helper.NewCommand(osCommand, stdin, stdout, stderr)
 
 	if err != nil {
-		return grpc.Errorf(codes.Unavailable, "PostUploadPack: cmd: %v", err)
+		return grpc.Errorf(codes.Unavailable, "SSHUploadPack: cmd: %v", err)
 	}
 	defer cmd.Kill()
 
@@ -49,7 +49,7 @@ func (s *server) SSHUploadPack(stream pb.SSH_SSHUploadPackServer) error {
 		if status, ok := helper.ExitStatus(err); ok {
 			helper.DecorateError(codes.Internal, stream.Send(&pb.SSHUploadPackResponse{ExitStatus: &pb.ExitStatus{Value: int32(status)}}))
 		}
-		return grpc.Errorf(codes.Unavailable, "PostUploadPack: cmd wait for %v: %v", cmd.Args, err)
+		return grpc.Errorf(codes.Unavailable, "SSHUploadPack: cmd wait for %v: %v", cmd.Args, err)
 	}
 
 	return nil
@@ -57,7 +57,7 @@ func (s *server) SSHUploadPack(stream pb.SSH_SSHUploadPackServer) error {
 
 func validateFirstUploadPackRequest(req *pb.SSHUploadPackRequest) error {
 	if req.Stdin != nil {
-		return grpc.Errorf(codes.InvalidArgument, "PostUploadPack: non-empty stdin")
+		return grpc.Errorf(codes.InvalidArgument, "SSHUploadPack: non-empty stdin")
 	}
 
 	return nil
