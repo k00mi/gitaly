@@ -47,7 +47,7 @@ func (s *server) SSHUploadPack(stream pb.SSH_SSHUploadPackServer) error {
 
 	if err := cmd.Wait(); err != nil {
 		if status, ok := helper.ExitStatus(err); ok {
-			return stream.Send(&pb.SSHUploadPackResponse{ExitStatus: &pb.ExitStatus{Value: int32(status)}})
+			helper.DecorateError(codes.Internal, stream.Send(&pb.SSHUploadPackResponse{ExitStatus: &pb.ExitStatus{Value: int32(status)}}))
 		}
 		return grpc.Errorf(codes.Unavailable, "PostUploadPack: cmd wait for %v: %v", cmd.Args, err)
 	}

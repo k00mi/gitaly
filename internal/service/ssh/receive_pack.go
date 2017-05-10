@@ -57,7 +57,7 @@ func (s *server) SSHReceivePack(stream pb.SSH_SSHReceivePackServer) error {
 
 	if err := cmd.Wait(); err != nil {
 		if status, ok := helper.ExitStatus(err); ok {
-			return stream.Send(&pb.SSHReceivePackResponse{ExitStatus: &pb.ExitStatus{Value: int32(status)}})
+			helper.DecorateError(codes.Internal, stream.Send(&pb.SSHReceivePackResponse{ExitStatus: &pb.ExitStatus{Value: int32(status)}}))
 		}
 		return grpc.Errorf(codes.Unavailable, "PostReceivePack: cmd wait for %v: %v", cmd.Args, err)
 	}
