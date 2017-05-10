@@ -9,6 +9,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/service"
+	"gitlab.com/gitlab-org/gitaly/internal/service/middleware/loghandler"
 	"gitlab.com/gitlab-org/gitaly/internal/service/middleware/panichandler"
 
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -83,10 +84,12 @@ func main() {
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
 			panichandler.StreamPanicHandler,         // Panic Handler first: handle panics gracefully
 			grpc_prometheus.StreamServerInterceptor, // Prometheus Metrics next: measure RPC times
+			loghandler.StreamLogHandler,
 		)),
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			panichandler.UnaryPanicHandler,         // Panic Handler first: handle panics gracefully
 			grpc_prometheus.UnaryServerInterceptor, // Prometheus Metrics next: measure RPC times
+			loghandler.UnaryLogHandler,
 		)),
 	)
 

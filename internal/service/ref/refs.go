@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"strings"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
@@ -39,7 +38,7 @@ func findRefs(writer refsWriter, repo *pb.Repository, pattern string, args ...st
 		return err
 	}
 
-	log.Printf("FindRefs: RepoPath=%q Pattern=%q", repoPath, pattern)
+	helper.Debugf("FindRefs: RepoPath=%q Pattern=%q", repoPath, pattern)
 
 	baseArgs := []string{"--git-dir", repoPath, "for-each-ref", pattern}
 
@@ -165,7 +164,7 @@ func (s *server) FindDefaultBranchName(ctx context.Context, in *pb.FindDefaultBr
 		return nil, err
 	}
 
-	log.Printf("FindDefaultBranchName: RepoPath=%q", repoPath)
+	helper.Debugf("FindDefaultBranchName: RepoPath=%q", repoPath)
 
 	defaultBranchName, err := defaultBranchName(repoPath)
 	if err != nil {

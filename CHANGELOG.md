@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Hide chatty logs behind GITALY_DEBUG=1. Log access times.
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/149
+
 v0.10.0
 
 - CommitDiff: Parse a typechange diff correctly

@@ -2,7 +2,6 @@ package commit
 
 import (
 	"io/ioutil"
-	"log"
 	"os/exec"
 
 	"google.golang.org/grpc"
@@ -20,14 +19,10 @@ func (s *server) CommitIsAncestor(ctx context.Context, in *pb.CommitIsAncestorRe
 		return nil, err
 	}
 	if in.AncestorId == "" {
-		message := "Bad Request (empty ancestor sha)"
-		log.Printf("CommitIsAncestor: %q", message)
-		return nil, grpc.Errorf(codes.InvalidArgument, message)
+		return nil, grpc.Errorf(codes.InvalidArgument, "Bad Request (empty ancestor sha)")
 	}
 	if in.ChildId == "" {
-		message := "Bad Request (empty child sha)"
-		log.Printf("CommitIsAncestor: %q", message)
-		return nil, grpc.Errorf(codes.InvalidArgument, message)
+		return nil, grpc.Errorf(codes.InvalidArgument, "Bad Request (empty child sha)")
 	}
 
 	ret, err := commitIsAncestorName(repoPath, in.AncestorId, in.ChildId)
@@ -43,7 +38,6 @@ func commitIsAncestorName(path, ancestorID, childID string) (bool, error) {
 	}
 	defer cmd.Kill()
 
-	log.Printf("commitIsAncestor: RepoPath=%q ancestorSha=%s childSha=%s", path, ancestorID, childID)
-
+	helper.Debugf("commitIsAncestor: RepoPath=%q ancestorSha=%s childSha=%s", path, ancestorID, childID)
 	return cmd.Wait() == nil, nil
 }

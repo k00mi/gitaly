@@ -2,7 +2,6 @@ package diff
 
 import (
 	"fmt"
-	"log"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/diff"
@@ -31,7 +30,7 @@ func (s *server) CommitDiff(in *pb.CommitDiffRequest, stream pb.Diff_CommitDiffS
 	ignoreWhitespaceChange := in.GetIgnoreWhitespaceChange()
 	paths := in.GetPaths()
 
-	log.Printf(
+	helper.Debugf(
 		"CommitDiff: RepoPath=%q LeftCommitId=%q RightCommitId=%q IgnoreWhitespaceChange=%t Paths=%s",
 		repoPath,
 		leftSha,
@@ -95,7 +94,7 @@ func (s *server) CommitDelta(in *pb.CommitDeltaRequest, stream pb.Diff_CommitDel
 	rightSha := in.RightCommitId
 	paths := in.GetPaths()
 
-	log.Printf(
+	helper.Debugf(
 		"CommitDelta: RepoPath=%q LeftCommitId=%q RightCommitId=%q Paths=%s",
 		repoPath,
 		leftSha,
@@ -194,7 +193,6 @@ func eachDiff(rpc string, cmdArgs []string, callback func(*diff.Diff) error) err
 	}
 
 	if err := diffParser.Err(); err != nil {
-		log.Printf("%s: Failed parsing diff for args %s: %v", rpc, cmd.Args)
 		return grpc.Errorf(codes.Internal, "%s: parse failure: %v", rpc, err)
 	}
 
