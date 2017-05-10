@@ -2,7 +2,6 @@ package ssh
 
 import (
 	"fmt"
-	"log"
 	"os/exec"
 
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -45,7 +44,7 @@ func (s *server) SSHReceivePack(stream pb.SSH_SSHReceivePackServer) error {
 		return err
 	}
 
-	log.Printf("SSHReceivePack: RepoPath=%q GlID=%q GlRepository=%q", repoPath, req.GlId, req.GlRepository)
+	helper.Debugf("SSHReceivePack: RepoPath=%q GlID=%q GlRepository=%q", repoPath, req.GlId, req.GlRepository)
 
 	osCommand := exec.Command("git-receive-pack", repoPath)
 	cmd, err := helper.NewCommand(osCommand, stdin, stdout, stderr, env...)

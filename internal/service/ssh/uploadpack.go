@@ -1,7 +1,6 @@
 package ssh
 
 import (
-	"log"
 	"os/exec"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
@@ -35,7 +34,7 @@ func (s *server) SSHUploadPack(stream pb.SSH_SSHUploadPackServer) error {
 		return err
 	}
 
-	log.Printf("SSHUploadPack: RepoPath=%q", repoPath)
+	helper.Debugf("SSHUploadPack: RepoPath=%q", repoPath)
 
 	osCommand := exec.Command("git-upload-pack", repoPath)
 	cmd, err := helper.NewCommand(osCommand, stdin, stdout, stderr)
