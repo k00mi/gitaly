@@ -7,6 +7,9 @@ import (
 	"io"
 	"strings"
 
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"golang.org/x/net/context"
@@ -168,7 +171,7 @@ func (s *server) FindDefaultBranchName(ctx context.Context, in *pb.FindDefaultBr
 
 	defaultBranchName, err := defaultBranchName(repoPath)
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, err.Error())
 	}
 
 	return &pb.FindDefaultBranchNameResponse{Name: defaultBranchName}, nil
