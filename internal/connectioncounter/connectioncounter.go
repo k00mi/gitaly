@@ -20,6 +20,9 @@ func init() {
 	prometheus.MustRegister(connTotal)
 }
 
+// New returns a listener which increments a prometheus counter on each
+// accepted connection. Use cType to specify the connection type, this is
+// a prometheus label.
 func New(cType string, l net.Listener) net.Listener {
 	return &countingListener{
 		cType:    cType,
