@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"gitlab.com/gitlab-org/gitaly/internal/config"
+	"gitlab.com/gitlab-org/gitaly/internal/connectioncounter"
 	"gitlab.com/gitlab-org/gitaly/internal/service"
 	"gitlab.com/gitlab-org/gitaly/internal/service/middleware/loghandler"
 	"gitlab.com/gitlab-org/gitaly/internal/service/middleware/panichandler"
@@ -77,7 +78,7 @@ func main() {
 			log.Fatalf("configure tcp listener: %v", err)
 		}
 		log.Printf("listening at tcp address %q", addr)
-		listeners = append(listeners, l)
+		listeners = append(listeners, connectioncounter.New("tcp", l))
 	}
 
 	server := grpc.NewServer(
@@ -124,6 +125,6 @@ func createUnixListener(socketPath string) (net.Listener, error) {
 	if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
-
-	return net.Listen("unix", socketPath)
+	l, err := net.Listen("unix", socketPath)
+	return connectioncounter.New("unix", l), err
 }

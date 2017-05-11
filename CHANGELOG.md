@@ -6,6 +6,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/148
 - Hide chatty logs behind GITALY_DEBUG=1. Log access times.
   https://gitlab.com/gitlab-org/gitaly/merge_requests/149
+- Count accepted gRPC connections
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/151
 
 v0.10.0
 
