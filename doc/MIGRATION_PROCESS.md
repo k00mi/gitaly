@@ -117,7 +117,7 @@ As the maintainer of Gitaly, Jacob to review:
 * The alerts are in-place
 * The runbooks are good
 
-Once Jacob has approved, the feature flag will be enabled on dev.gitlab.com, staging and GitLab.com, but the feature flag will be disabled by default. On-premise installations can enable the feature if they wish, but it will be disabled by default.
+Once Jacob has approved, the feature flag will be enabled on dev.gitlab.org, staging and GitLab.com, but the feature flag will be disabled by default. On-premise installations can enable the feature if they wish, but it will be disabled by default.
 
 For a feature toggle `GITALY_EXAMPLE_FEATURE`, the toggle would be enabled by setting the environment variable:  
 
