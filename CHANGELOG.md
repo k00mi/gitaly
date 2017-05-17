@@ -8,6 +8,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/149
 - Count accepted gRPC connections
   https://gitlab.com/gitlab-org/gitaly/merge_requests/151
+- Disallow directory traversal in repository paths for security
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/152
 
 v0.10.0
 
