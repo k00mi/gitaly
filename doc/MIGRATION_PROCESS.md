@@ -85,9 +85,9 @@ A feature is tested in dev, staging and gitlab.com. If the results are satisfact
 The following procedure should be used for testing:
 
 1. Update the relevant [chef roles](https://dev.gitlab.org/cookbooks/chef-repo) to enable the feature flag(s) under `default_attributes -> omnibus-gitlab -> gitlab_rb -> gitlab-rails -> env`:
-  - For dev: roles/dev-gitlab-org.json
-  - For staging: roles/gitlab-staging-base.json
-  - For producion: roles/gitlab-cluster-base.json
+  - For dev: `roles/dev-gitlab-org.json`
+  - For staging: `roles/gitlab-staging-base.json`
+  - For production: `roles/gitlab-base-fe.json` and `roles/gitlab-base-be-sidekiq.json`
 1. Create a new row in the Gitaly dashboard to monitor the feature in the [`gitaly-dashboards`](https://gitlab.com/gitlab-org/gitaly-dashboards) repo.
   - Merge the chef-repo MRs
   - Make sure new role file is on chef server `bundle exec knife role from file [role-path]`
