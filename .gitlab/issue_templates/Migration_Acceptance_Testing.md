@@ -7,7 +7,7 @@ Feature Toggle Environment Variable: `XXXXXXXXXXXXXXX`
 
 --------------------------------------------------------------------------------
 
-- [ ] [Chef recipes](https://dev.gitlab.org/cookbooks/chef-repo) to enable/disable this feature (link to MR)
+- [ ] [Chef attribute changes](https://dev.gitlab.org/cookbooks/chef-repo) to enable/disable this feature (link to MR)
 - [ ] [Grafana dashboard](https://gitlab.com/gitlab-org/gitaly-dashboards) for monitoring (link to MR)
 - [ ] Environments
     - [ ] `dev.gitlab.org`
