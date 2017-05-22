@@ -10,6 +10,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/151
 - Disallow directory traversal in repository paths for security
   https://gitlab.com/gitlab-org/gitaly/merge_requests/152
+- FindDefaultBranchName: Handle repos with non-existing HEAD
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/164
 
 v0.10.0
 

@@ -115,6 +115,12 @@ func _headReference(repoPath string) ([]byte, error) {
 	headRef = scanner.Bytes()
 
 	if err := cmd.Wait(); err != nil {
+		// If the ref pointed at by HEAD doesn't exist, the rev-parse fails
+		// returning the string `"HEAD"`, so we return `nil` without error.
+		if bytes.Equal(headRef, []byte("HEAD")) {
+			return nil, nil
+		}
+
 		return nil, err
 	}
 
@@ -143,9 +149,10 @@ func defaultBranchName(repoPath string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	for _, branch := range branches {
-		// Return HEAD if it corresponds to a branch
-		if bytes.Equal(headRef, branch) {
+		// Return HEAD if it exists and corresponds to a branch
+		if headRef != nil && bytes.Equal(headRef, branch) {
 			return headRef, nil
 		}
 		if bytes.Equal(branch, master) {
