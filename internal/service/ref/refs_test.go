@@ -3,6 +3,7 @@ package ref
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"testing"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -181,6 +182,23 @@ func TestHeadReference(t *testing.T) {
 	}
 	if string(headRef) != "refs/heads/master" {
 		t.Fatal("Expected HEAD reference to be 'ref/heads/master', got '", string(headRef), "'")
+	}
+}
+
+func TestHeadReferenceWithNonExistingHead(t *testing.T) {
+	// Write bad HEAD
+	ioutil.WriteFile(testRepoPath+"/HEAD", []byte("ref: refs/heads/nonexisting"), 0644)
+	defer func() {
+		// Restore HEAD
+		ioutil.WriteFile(testRepoPath+"/HEAD", []byte("ref: refs/heads/master"), 0644)
+	}()
+
+	headRef, err := headReference(testRepoPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if headRef != nil {
+		t.Fatal("Expected HEAD reference to be nil, got '", string(headRef), "'")
 	}
 }
 
