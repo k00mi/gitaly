@@ -12,6 +12,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/152
 - FindDefaultBranchName: Handle repos with non-existing HEAD
   https://gitlab.com/gitlab-org/gitaly/merge_requests/164
+- Add support for structured logging via logrus
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/163
 
 v0.10.0
 
