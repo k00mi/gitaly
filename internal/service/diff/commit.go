@@ -59,19 +59,43 @@ func (s *server) CommitDiff(in *pb.CommitDiffRequest, stream pb.Diff_CommitDiffS
 	}
 
 	err = eachDiff("CommitDiff", cmdArgs, func(diff *diff.Diff) error {
-		err := stream.Send(&pb.CommitDiffResponse{
-			FromPath:  diff.FromPath,
-			ToPath:    diff.ToPath,
-			FromId:    diff.FromID,
-			ToId:      diff.ToID,
-			OldMode:   diff.OldMode,
-			NewMode:   diff.NewMode,
-			Binary:    diff.Binary,
-			RawChunks: diff.RawChunks,
-		})
+		response := &pb.CommitDiffResponse{
+			FromPath: diff.FromPath,
+			ToPath:   diff.ToPath,
+			FromId:   diff.FromID,
+			ToId:     diff.ToID,
+			OldMode:  diff.OldMode,
+			NewMode:  diff.NewMode,
+			Binary:   diff.Binary,
+		}
 
-		if err != nil {
-			return grpc.Errorf(codes.Unavailable, "CommitDiff: send: %v", err)
+		if len(diff.Patch) <= s.MsgSizeThreshold {
+			response.RawPatchData = diff.Patch
+			response.EndOfPatch = true
+
+			if err := stream.Send(response); err != nil {
+				return grpc.Errorf(codes.Unavailable, "CommitDiff: send: %v", err)
+			}
+		} else {
+			patch := diff.Patch
+
+			for len(patch) > 0 {
+				if len(patch) > s.MsgSizeThreshold {
+					response.RawPatchData = patch[:s.MsgSizeThreshold]
+					patch = patch[s.MsgSizeThreshold:]
+				} else {
+					response.RawPatchData = patch
+					response.EndOfPatch = true
+					patch = nil
+				}
+
+				if err := stream.Send(response); err != nil {
+					return grpc.Errorf(codes.Unavailable, "CommitDiff: send: %v", err)
+				}
+
+				// Use a new response so we don't send other fields (FromPath, ...) over and over
+				response = &pb.CommitDiffResponse{}
+			}
 		}
 
 		return nil

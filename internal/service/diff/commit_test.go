@@ -20,11 +20,6 @@ import (
 
 var serverSocketPath = path.Join(scratchDir, "gitaly.sock")
 
-type expectedDiff struct {
-	diff.Diff
-	ChunksCombined []byte
-}
-
 func TestSuccessfulCommitDiffRequest(t *testing.T) {
 	server := runDiffServer(t)
 	defer server.Stop()
@@ -40,146 +35,122 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedDiffs := []expectedDiff{
+	expectedDiffs := []diff.Diff{
 		{
-			Diff: diff.Diff{
-				FromID:   "faaf198af3a36dbf41961466703cc1d47c61d051",
-				ToID:     "877cee6ab11f9094e1bcdb7f1fd9c0001b572185",
-				OldMode:  0100644,
-				NewMode:  0100644,
-				FromPath: []byte("README.md"),
-				ToPath:   []byte("README.md"),
-				Binary:   false,
-			},
-			ChunksCombined: testhelper.MustReadFile(t, "testdata/readme-md-chunks.txt"),
+			FromID:   "faaf198af3a36dbf41961466703cc1d47c61d051",
+			ToID:     "877cee6ab11f9094e1bcdb7f1fd9c0001b572185",
+			OldMode:  0100644,
+			NewMode:  0100644,
+			FromPath: []byte("README.md"),
+			ToPath:   []byte("README.md"),
+			Binary:   false,
+			Patch:    testhelper.MustReadFile(t, "testdata/readme-md-chunks.txt"),
 		},
 		{
-			Diff: diff.Diff{
-				FromID:   "bdea48ee65c869eb0b86b1283069d76cce0a7254",
-				ToID:     "0000000000000000000000000000000000000000",
-				OldMode:  0100644,
-				NewMode:  0,
-				FromPath: []byte("gitaly/deleted-file"),
-				ToPath:   []byte("gitaly/deleted-file"),
-				Binary:   false,
-			},
-			ChunksCombined: testhelper.MustReadFile(t, "testdata/deleted-file-chunks.txt"),
+			FromID:   "bdea48ee65c869eb0b86b1283069d76cce0a7254",
+			ToID:     "0000000000000000000000000000000000000000",
+			OldMode:  0100644,
+			NewMode:  0,
+			FromPath: []byte("gitaly/deleted-file"),
+			ToPath:   []byte("gitaly/deleted-file"),
+			Binary:   false,
+			Patch:    testhelper.MustReadFile(t, "testdata/deleted-file-chunks.txt"),
 		},
 		{
-			Diff: diff.Diff{
-				FromID:   "aa408b4556e594f7974390ad6b86210617fbda6e",
-				ToID:     "1c69c4d2a65ad05c24ac3b6780b5748b97ffd3aa",
-				OldMode:  0100644,
-				NewMode:  0100644,
-				FromPath: []byte("gitaly/file-with-multiple-chunks"),
-				ToPath:   []byte("gitaly/file-with-multiple-chunks"),
-				Binary:   false,
-			},
-			ChunksCombined: testhelper.MustReadFile(t, "testdata/file-with-multiple-chunks-chunks.txt"),
+			FromID:   "aa408b4556e594f7974390ad6b86210617fbda6e",
+			ToID:     "1c69c4d2a65ad05c24ac3b6780b5748b97ffd3aa",
+			OldMode:  0100644,
+			NewMode:  0100644,
+			FromPath: []byte("gitaly/file-with-multiple-chunks"),
+			ToPath:   []byte("gitaly/file-with-multiple-chunks"),
+			Binary:   false,
+			Patch:    testhelper.MustReadFile(t, "testdata/file-with-multiple-chunks-chunks.txt"),
 		},
 		{
-			Diff: diff.Diff{
-				FromID:   "0000000000000000000000000000000000000000",
-				ToID:     "bc2ef601a538d69ef99d5bdafa605e63f902e8e4",
-				OldMode:  0,
-				NewMode:  0100644,
-				FromPath: []byte("gitaly/logo-white.png"),
-				ToPath:   []byte("gitaly/logo-white.png"),
-				Binary:   true,
-			},
+			FromID:   "0000000000000000000000000000000000000000",
+			ToID:     "bc2ef601a538d69ef99d5bdafa605e63f902e8e4",
+			OldMode:  0,
+			NewMode:  0100644,
+			FromPath: []byte("gitaly/logo-white.png"),
+			ToPath:   []byte("gitaly/logo-white.png"),
+			Binary:   true,
 		},
 		{
-			Diff: diff.Diff{
-				FromID:   "ead5a0eee1391308803cfebd8a2a8530495645eb",
-				ToID:     "ead5a0eee1391308803cfebd8a2a8530495645eb",
-				OldMode:  0100644,
-				NewMode:  0100755,
-				FromPath: []byte("gitaly/mode-file"),
-				ToPath:   []byte("gitaly/mode-file"),
-				Binary:   false,
-			},
+			FromID:   "ead5a0eee1391308803cfebd8a2a8530495645eb",
+			ToID:     "ead5a0eee1391308803cfebd8a2a8530495645eb",
+			OldMode:  0100644,
+			NewMode:  0100755,
+			FromPath: []byte("gitaly/mode-file"),
+			ToPath:   []byte("gitaly/mode-file"),
+			Binary:   false,
 		},
 		{
-			Diff: diff.Diff{
-				FromID:   "357406f3075a57708d0163752905cc1576fceacc",
-				ToID:     "8e5177d718c561d36efde08bad36b43687ee6bf0",
-				OldMode:  0100644,
-				NewMode:  0100755,
-				FromPath: []byte("gitaly/mode-file-with-mods"),
-				ToPath:   []byte("gitaly/mode-file-with-mods"),
-				Binary:   false,
-			},
-			ChunksCombined: testhelper.MustReadFile(t, "testdata/mode-file-with-mods-chunks.txt"),
+			FromID:   "357406f3075a57708d0163752905cc1576fceacc",
+			ToID:     "8e5177d718c561d36efde08bad36b43687ee6bf0",
+			OldMode:  0100644,
+			NewMode:  0100755,
+			FromPath: []byte("gitaly/mode-file-with-mods"),
+			ToPath:   []byte("gitaly/mode-file-with-mods"),
+			Binary:   false,
+			Patch:    testhelper.MustReadFile(t, "testdata/mode-file-with-mods-chunks.txt"),
 		},
 		{
-			Diff: diff.Diff{
-				FromID:   "43d24af4e22580f36b1ca52647c1aff75a766a33",
-				ToID:     "0000000000000000000000000000000000000000",
-				OldMode:  0100644,
-				NewMode:  0,
-				FromPath: []byte("gitaly/named-file-with-mods"),
-				ToPath:   []byte("gitaly/named-file-with-mods"),
-				Binary:   false,
-			},
-			ChunksCombined: testhelper.MustReadFile(t, "testdata/named-file-with-mods-chunks.txt"),
+			FromID:   "43d24af4e22580f36b1ca52647c1aff75a766a33",
+			ToID:     "0000000000000000000000000000000000000000",
+			OldMode:  0100644,
+			NewMode:  0,
+			FromPath: []byte("gitaly/named-file-with-mods"),
+			ToPath:   []byte("gitaly/named-file-with-mods"),
+			Binary:   false,
+			Patch:    testhelper.MustReadFile(t, "testdata/named-file-with-mods-chunks.txt"),
 		},
 		{
-			Diff: diff.Diff{
-				FromID:   "0000000000000000000000000000000000000000",
-				ToID:     "b464dff7a75ccc92fbd920fd9ae66a84b9d2bf94",
-				OldMode:  0,
-				NewMode:  0100644,
-				FromPath: []byte("gitaly/no-newline-at-the-end"),
-				ToPath:   []byte("gitaly/no-newline-at-the-end"),
-				Binary:   false,
-			},
-			ChunksCombined: testhelper.MustReadFile(t, "testdata/no-newline-at-the-end-chunks.txt"),
+			FromID:   "0000000000000000000000000000000000000000",
+			ToID:     "b464dff7a75ccc92fbd920fd9ae66a84b9d2bf94",
+			OldMode:  0,
+			NewMode:  0100644,
+			FromPath: []byte("gitaly/no-newline-at-the-end"),
+			ToPath:   []byte("gitaly/no-newline-at-the-end"),
+			Binary:   false,
+			Patch:    testhelper.MustReadFile(t, "testdata/no-newline-at-the-end-chunks.txt"),
 		},
 		{
-			Diff: diff.Diff{
-				FromID:   "4e76e90b3c7e52390de9311a23c0a77575aed8a8",
-				ToID:     "4e76e90b3c7e52390de9311a23c0a77575aed8a8",
-				OldMode:  0100644,
-				NewMode:  0100644,
-				FromPath: []byte("gitaly/named-file"),
-				ToPath:   []byte("gitaly/renamed-file"),
-				Binary:   false,
-			},
+			FromID:   "4e76e90b3c7e52390de9311a23c0a77575aed8a8",
+			ToID:     "4e76e90b3c7e52390de9311a23c0a77575aed8a8",
+			OldMode:  0100644,
+			NewMode:  0100644,
+			FromPath: []byte("gitaly/named-file"),
+			ToPath:   []byte("gitaly/renamed-file"),
+			Binary:   false,
 		},
 		{
-			Diff: diff.Diff{
-				FromID:   "0000000000000000000000000000000000000000",
-				ToID:     "3856c00e9450a51a62096327167fc43d3be62eef",
-				OldMode:  0,
-				NewMode:  0100644,
-				FromPath: []byte("gitaly/renamed-file-with-mods"),
-				ToPath:   []byte("gitaly/renamed-file-with-mods"),
-				Binary:   false,
-			},
-			ChunksCombined: testhelper.MustReadFile(t, "testdata/renamed-file-with-mods-chunks.txt"),
+			FromID:   "0000000000000000000000000000000000000000",
+			ToID:     "3856c00e9450a51a62096327167fc43d3be62eef",
+			OldMode:  0,
+			NewMode:  0100644,
+			FromPath: []byte("gitaly/renamed-file-with-mods"),
+			ToPath:   []byte("gitaly/renamed-file-with-mods"),
+			Binary:   false,
+			Patch:    testhelper.MustReadFile(t, "testdata/renamed-file-with-mods-chunks.txt"),
 		},
 		{
-			Diff: diff.Diff{
-				FromID:   "0000000000000000000000000000000000000000",
-				ToID:     "a135e3e0d4af177a902ca57dcc4c7fc6f30858b1",
-				OldMode:  0,
-				NewMode:  0100644,
-				FromPath: []byte("gitaly/tab\tnewline\n file"),
-				ToPath:   []byte("gitaly/tab\tnewline\n file"),
-				Binary:   false,
-			},
-			ChunksCombined: testhelper.MustReadFile(t, "testdata/tab-newline-file-chunks.txt"),
+			FromID:   "0000000000000000000000000000000000000000",
+			ToID:     "a135e3e0d4af177a902ca57dcc4c7fc6f30858b1",
+			OldMode:  0,
+			NewMode:  0100644,
+			FromPath: []byte("gitaly/tab\tnewline\n file"),
+			ToPath:   []byte("gitaly/tab\tnewline\n file"),
+			Binary:   false,
+			Patch:    testhelper.MustReadFile(t, "testdata/tab-newline-file-chunks.txt"),
 		},
 		{
-			Diff: diff.Diff{
-				FromID:   "0000000000000000000000000000000000000000",
-				ToID:     "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
-				OldMode:  0,
-				NewMode:  0100755,
-				FromPath: []byte("gitaly/テスト.txt"),
-				ToPath:   []byte("gitaly/テスト.txt"),
-				Binary:   false,
-			},
+			FromID:   "0000000000000000000000000000000000000000",
+			ToID:     "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+			OldMode:  0,
+			NewMode:  0100755,
+			FromPath: []byte("gitaly/テスト.txt"),
+			ToPath:   []byte("gitaly/テスト.txt"),
+			Binary:   false,
 		},
 	}
 
@@ -212,54 +183,46 @@ func TestSuccessfulCommitDiffRequestWithPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedDiffs := []expectedDiff{
+	expectedDiffs := []diff.Diff{
 		{
-			Diff: diff.Diff{
-				FromID:   "c1788657b95998a2f177a4f86d68a60f2a80117f",
-				ToID:     "b87f61fe2d7b2e208b340a1f3cafea916bd27f75",
-				OldMode:  0100644,
-				NewMode:  0100644,
-				FromPath: []byte("CONTRIBUTING.md"),
-				ToPath:   []byte("CONTRIBUTING.md"),
-				Binary:   false,
-			},
-			ChunksCombined: testhelper.MustReadFile(t, "testdata/contributing-md-chunks.txt"),
+			FromID:   "c1788657b95998a2f177a4f86d68a60f2a80117f",
+			ToID:     "b87f61fe2d7b2e208b340a1f3cafea916bd27f75",
+			OldMode:  0100644,
+			NewMode:  0100644,
+			FromPath: []byte("CONTRIBUTING.md"),
+			ToPath:   []byte("CONTRIBUTING.md"),
+			Binary:   false,
+			Patch:    testhelper.MustReadFile(t, "testdata/contributing-md-chunks.txt"),
 		},
 		{
-			Diff: diff.Diff{
-				FromID:   "faaf198af3a36dbf41961466703cc1d47c61d051",
-				ToID:     "877cee6ab11f9094e1bcdb7f1fd9c0001b572185",
-				OldMode:  0100644,
-				NewMode:  0100644,
-				FromPath: []byte("README.md"),
-				ToPath:   []byte("README.md"),
-				Binary:   false,
-			},
-			ChunksCombined: testhelper.MustReadFile(t, "testdata/readme-md-chunks.txt"),
+			FromID:   "faaf198af3a36dbf41961466703cc1d47c61d051",
+			ToID:     "877cee6ab11f9094e1bcdb7f1fd9c0001b572185",
+			OldMode:  0100644,
+			NewMode:  0100644,
+			FromPath: []byte("README.md"),
+			ToPath:   []byte("README.md"),
+			Binary:   false,
+			Patch:    testhelper.MustReadFile(t, "testdata/readme-md-chunks.txt"),
 		},
 		{
-			Diff: diff.Diff{
-				FromID:   "357406f3075a57708d0163752905cc1576fceacc",
-				ToID:     "8e5177d718c561d36efde08bad36b43687ee6bf0",
-				OldMode:  0100644,
-				NewMode:  0100755,
-				FromPath: []byte("gitaly/mode-file-with-mods"),
-				ToPath:   []byte("gitaly/mode-file-with-mods"),
-				Binary:   false,
-			},
-			ChunksCombined: testhelper.MustReadFile(t, "testdata/mode-file-with-mods-chunks.txt"),
+			FromID:   "357406f3075a57708d0163752905cc1576fceacc",
+			ToID:     "8e5177d718c561d36efde08bad36b43687ee6bf0",
+			OldMode:  0100644,
+			NewMode:  0100755,
+			FromPath: []byte("gitaly/mode-file-with-mods"),
+			ToPath:   []byte("gitaly/mode-file-with-mods"),
+			Binary:   false,
+			Patch:    testhelper.MustReadFile(t, "testdata/mode-file-with-mods-chunks.txt"),
 		},
 		{
-			Diff: diff.Diff{
-				FromID:   "43d24af4e22580f36b1ca52647c1aff75a766a33",
-				ToID:     "0000000000000000000000000000000000000000",
-				OldMode:  0100644,
-				NewMode:  0,
-				FromPath: []byte("gitaly/named-file-with-mods"),
-				ToPath:   []byte("gitaly/named-file-with-mods"),
-				Binary:   false,
-			},
-			ChunksCombined: testhelper.MustReadFile(t, "testdata/named-file-with-mods-chunks.txt"),
+			FromID:   "43d24af4e22580f36b1ca52647c1aff75a766a33",
+			ToID:     "0000000000000000000000000000000000000000",
+			OldMode:  0100644,
+			NewMode:  0,
+			FromPath: []byte("gitaly/named-file-with-mods"),
+			ToPath:   []byte("gitaly/named-file-with-mods"),
+			Binary:   false,
+			Patch:    testhelper.MustReadFile(t, "testdata/named-file-with-mods-chunks.txt"),
 		},
 	}
 
@@ -285,30 +248,26 @@ func TestSuccessfulCommitDiffRequestWithTypeChangeDiff(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedDiffs := []expectedDiff{
+	expectedDiffs := []diff.Diff{
 		{
-			Diff: diff.Diff{
-				FromID:   "349cd0f6b1aba8538861d95783cbce6d49d747f8",
-				ToID:     "0000000000000000000000000000000000000000",
-				OldMode:  0120000,
-				NewMode:  0,
-				FromPath: []byte("gitaly/symlink-to-be-regular"),
-				ToPath:   []byte("gitaly/symlink-to-be-regular"),
-				Binary:   false,
-			},
-			ChunksCombined: testhelper.MustReadFile(t, "testdata/symlink-to-be-regular-deleted-chunks.txt"),
+			FromID:   "349cd0f6b1aba8538861d95783cbce6d49d747f8",
+			ToID:     "0000000000000000000000000000000000000000",
+			OldMode:  0120000,
+			NewMode:  0,
+			FromPath: []byte("gitaly/symlink-to-be-regular"),
+			ToPath:   []byte("gitaly/symlink-to-be-regular"),
+			Binary:   false,
+			Patch:    testhelper.MustReadFile(t, "testdata/symlink-to-be-regular-deleted-chunks.txt"),
 		},
 		{
-			Diff: diff.Diff{
-				FromID:   "0000000000000000000000000000000000000000",
-				ToID:     "f9e5cc857610185e6feeb494a26bf27551a4f02b",
-				OldMode:  0,
-				NewMode:  0100644,
-				FromPath: []byte("gitaly/symlink-to-be-regular"),
-				ToPath:   []byte("gitaly/symlink-to-be-regular"),
-				Binary:   false,
-			},
-			ChunksCombined: testhelper.MustReadFile(t, "testdata/symlink-to-be-regular-added-chunks.txt"),
+			FromID:   "0000000000000000000000000000000000000000",
+			ToID:     "f9e5cc857610185e6feeb494a26bf27551a4f02b",
+			OldMode:  0,
+			NewMode:  0100644,
+			FromPath: []byte("gitaly/symlink-to-be-regular"),
+			ToPath:   []byte("gitaly/symlink-to-be-regular"),
+			Binary:   false,
+			Patch:    testhelper.MustReadFile(t, "testdata/symlink-to-be-regular-added-chunks.txt"),
 		},
 	}
 
@@ -334,71 +293,61 @@ func TestSuccessfulCommitDiffRequestWithIgnoreWhitespaceChange(t *testing.T) {
 		[]byte("gitaly/mode-file-with-mods"),
 	}
 
-	expectedWhitespaceDiffs := []expectedDiff{
+	expectedWhitespaceDiffs := []diff.Diff{
 		{
-			Diff: diff.Diff{
-				FromID:   "c1788657b95998a2f177a4f86d68a60f2a80117f",
-				ToID:     "b87f61fe2d7b2e208b340a1f3cafea916bd27f75",
-				OldMode:  0100644,
-				NewMode:  0100644,
-				FromPath: []byte("CONTRIBUTING.md"),
-				ToPath:   []byte("CONTRIBUTING.md"),
-				Binary:   false,
-			},
+			FromID:   "c1788657b95998a2f177a4f86d68a60f2a80117f",
+			ToID:     "b87f61fe2d7b2e208b340a1f3cafea916bd27f75",
+			OldMode:  0100644,
+			NewMode:  0100644,
+			FromPath: []byte("CONTRIBUTING.md"),
+			ToPath:   []byte("CONTRIBUTING.md"),
+			Binary:   false,
 		},
 		{
-			Diff: diff.Diff{
-				FromID:   "95d9f0a5e7bb054e9dd3975589b8dfc689e20e88",
-				ToID:     "5d9c7c0470bf368d61d9b6cd076300dc9d061f14",
-				OldMode:  0100644,
-				NewMode:  0100644,
-				FromPath: []byte("MAINTENANCE.md"),
-				ToPath:   []byte("MAINTENANCE.md"),
-				Binary:   false,
-			},
+			FromID:   "95d9f0a5e7bb054e9dd3975589b8dfc689e20e88",
+			ToID:     "5d9c7c0470bf368d61d9b6cd076300dc9d061f14",
+			OldMode:  0100644,
+			NewMode:  0100644,
+			FromPath: []byte("MAINTENANCE.md"),
+			ToPath:   []byte("MAINTENANCE.md"),
+			Binary:   false,
 		},
 		{
-			Diff: diff.Diff{
-				FromID:   "faaf198af3a36dbf41961466703cc1d47c61d051",
-				ToID:     "877cee6ab11f9094e1bcdb7f1fd9c0001b572185",
-				OldMode:  0100644,
-				NewMode:  0100644,
-				FromPath: []byte("README.md"),
-				ToPath:   []byte("README.md"),
-				Binary:   false,
-			},
+			FromID:   "faaf198af3a36dbf41961466703cc1d47c61d051",
+			ToID:     "877cee6ab11f9094e1bcdb7f1fd9c0001b572185",
+			OldMode:  0100644,
+			NewMode:  0100644,
+			FromPath: []byte("README.md"),
+			ToPath:   []byte("README.md"),
+			Binary:   false,
 		},
 	}
-	expectedNormalDiffs := []expectedDiff{
+	expectedNormalDiffs := []diff.Diff{
 		{
-			Diff: diff.Diff{
-				FromID:   "357406f3075a57708d0163752905cc1576fceacc",
-				ToID:     "8e5177d718c561d36efde08bad36b43687ee6bf0",
-				OldMode:  0100644,
-				NewMode:  0100755,
-				FromPath: []byte("gitaly/mode-file-with-mods"),
-				ToPath:   []byte("gitaly/mode-file-with-mods"),
-				Binary:   false,
-			},
-			ChunksCombined: testhelper.MustReadFile(t, "testdata/mode-file-with-mods-chunks.txt"),
+			FromID:   "357406f3075a57708d0163752905cc1576fceacc",
+			ToID:     "8e5177d718c561d36efde08bad36b43687ee6bf0",
+			OldMode:  0100644,
+			NewMode:  0100755,
+			FromPath: []byte("gitaly/mode-file-with-mods"),
+			ToPath:   []byte("gitaly/mode-file-with-mods"),
+			Binary:   false,
+			Patch:    testhelper.MustReadFile(t, "testdata/mode-file-with-mods-chunks.txt"),
 		},
 		{
-			Diff: diff.Diff{
-				FromID:   "43d24af4e22580f36b1ca52647c1aff75a766a33",
-				ToID:     "0000000000000000000000000000000000000000",
-				OldMode:  0100644,
-				NewMode:  0,
-				FromPath: []byte("gitaly/named-file-with-mods"),
-				ToPath:   []byte("gitaly/named-file-with-mods"),
-				Binary:   false,
-			},
-			ChunksCombined: testhelper.MustReadFile(t, "testdata/named-file-with-mods-chunks.txt"),
+			FromID:   "43d24af4e22580f36b1ca52647c1aff75a766a33",
+			ToID:     "0000000000000000000000000000000000000000",
+			OldMode:  0100644,
+			NewMode:  0,
+			FromPath: []byte("gitaly/named-file-with-mods"),
+			ToPath:   []byte("gitaly/named-file-with-mods"),
+			Binary:   false,
+			Patch:    testhelper.MustReadFile(t, "testdata/named-file-with-mods-chunks.txt"),
 		},
 	}
 
 	pathsAndDiffs := []struct {
 		paths [][]byte
-		diffs []expectedDiff
+		diffs []diff.Diff
 	}{
 		{
 			paths: whitespacePaths,
@@ -754,8 +703,10 @@ func drainCommitDeltaResponse(c pb.Diff_CommitDeltaClient) error {
 	return nil
 }
 
-func assertExactReceivedDiffs(t *testing.T, client pb.Diff_CommitDiffClient, expectedDiffs []expectedDiff) {
-	i := 0
+func getDiffsFromCommitDiffClient(t *testing.T, client pb.Diff_CommitDiffClient) []*diff.Diff {
+	var diffs []*diff.Diff
+	var currentDiff *diff.Diff
+
 	for {
 		fetchedDiff, err := client.Recv()
 		if err == io.EOF {
@@ -764,6 +715,37 @@ func assertExactReceivedDiffs(t *testing.T, client pb.Diff_CommitDiffClient, exp
 			t.Fatal(err)
 		}
 
+		if currentDiff == nil {
+			currentDiff = &diff.Diff{
+				FromID:   fetchedDiff.FromId,
+				ToID:     fetchedDiff.ToId,
+				OldMode:  fetchedDiff.OldMode,
+				NewMode:  fetchedDiff.NewMode,
+				FromPath: fetchedDiff.FromPath,
+				ToPath:   fetchedDiff.ToPath,
+				Binary:   fetchedDiff.Binary,
+				Patch:    fetchedDiff.RawPatchData,
+			}
+		} else {
+			currentDiff.Patch = append(currentDiff.Patch, fetchedDiff.RawPatchData...)
+		}
+
+		if fetchedDiff.EndOfPatch {
+			diffs = append(diffs, currentDiff)
+			currentDiff = nil
+		}
+	}
+
+	return diffs
+}
+
+func assertExactReceivedDiffs(t *testing.T, client pb.Diff_CommitDiffClient, expectedDiffs []diff.Diff) {
+	fetchedDiffs := getDiffsFromCommitDiffClient(t, client)
+
+	var i int
+	var fetchedDiff *diff.Diff
+
+	for i, fetchedDiff = range fetchedDiffs {
 		if i >= len(expectedDiffs) {
 			t.Errorf("Unexpected diff #%d received: %v", i, fetchedDiff)
 			break
@@ -771,12 +753,12 @@ func assertExactReceivedDiffs(t *testing.T, client pb.Diff_CommitDiffClient, exp
 
 		expectedDiff := expectedDiffs[i]
 
-		if expectedDiff.FromID != fetchedDiff.FromId {
-			t.Errorf("Expected diff #%d FromID to equal = %q, got %q", i, expectedDiff.FromID, fetchedDiff.FromId)
+		if expectedDiff.FromID != fetchedDiff.FromID {
+			t.Errorf("Expected diff #%d FromID to equal = %q, got %q", i, expectedDiff.FromID, fetchedDiff.FromID)
 		}
 
-		if expectedDiff.ToID != fetchedDiff.ToId {
-			t.Errorf("Expected diff #%d ToID to equal = %q, got %q", i, expectedDiff.ToID, fetchedDiff.ToId)
+		if expectedDiff.ToID != fetchedDiff.ToID {
+			t.Errorf("Expected diff #%d ToID to equal = %q, got %q", i, expectedDiff.ToID, fetchedDiff.ToID)
 		}
 
 		if expectedDiff.OldMode != fetchedDiff.OldMode {
@@ -799,16 +781,13 @@ func assertExactReceivedDiffs(t *testing.T, client pb.Diff_CommitDiffClient, exp
 			t.Errorf("Expected diff #%d Binary to be %t, got %t", i, expectedDiff.Binary, fetchedDiff.Binary)
 		}
 
-		fetchedChunksCombined := bytes.Join(fetchedDiff.RawChunks, nil)
-		if !bytes.Equal(expectedDiff.ChunksCombined, fetchedChunksCombined) {
-			t.Errorf("Expected diff #%d Chunks to be %q, got %q", i, expectedDiff.ChunksCombined, fetchedChunksCombined)
+		if !bytes.Equal(expectedDiff.Patch, fetchedDiff.Patch) {
+			t.Errorf("Expected diff #%d Chunks to be %q, got %q", i, expectedDiff.Patch, fetchedDiff.Patch)
 		}
-
-		i++
 	}
 
-	if len(expectedDiffs) != i {
-		t.Errorf("Expected number of diffs to be %d, got %d", len(expectedDiffs), i)
+	if len(expectedDiffs) != i+1 {
+		t.Errorf("Expected number of diffs to be %d, got %d", len(expectedDiffs), i+1)
 	}
 }
 
