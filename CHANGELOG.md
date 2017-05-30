@@ -14,6 +14,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/164
 - Add support for structured logging via logrus
   https://gitlab.com/gitlab-org/gitaly/merge_requests/163
+- Set GL_PROTOCOL during SmartHTTP.PostReceivePack
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/169
 
 v0.10.0
 
