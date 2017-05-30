@@ -69,6 +69,7 @@ func main() {
 	}
 
 	config.ConfigureLogging()
+	config.ConfigureSentry(version)
 
 	var listeners []net.Listener
 

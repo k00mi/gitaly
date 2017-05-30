@@ -31,7 +31,8 @@ type Storage struct {
 
 // Logging contains the logging configuration for Gitaly
 type Logging struct {
-	Format string
+	Format    string
+	SentryDSN string `toml:"sentry_dsn" envconfig:"sentry_dsn"`
 }
 
 // Load initializes the Config variable from file and the environment.

@@ -24,3 +24,6 @@ path = "/home/git/repositories"
 # # You can optionally configure Gitaly to output JSON-formatted log messages to stdout
 # [logging]
 # format = "json"
+# #
+# # Additionally exceptions can be reported to Sentry
+$ sentry_dsn = "https://<key>:<secret>@sentry.io/<project>"
