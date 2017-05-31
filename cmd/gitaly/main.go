@@ -16,6 +16,7 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/mwitkow/go-grpc-middleware"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"google.golang.org/grpc"
@@ -59,8 +60,22 @@ func validateConfig() error {
 	return config.ValidateStorages()
 }
 
+// registerServerVersionPromGauge registers a label with the current server version
+// making it easy to see what versions of Gitaly are running across a cluster
+func registerServerVersionPromGauge() {
+	gitlabBuildInfoGauge := prometheus.NewGauge(prometheus.GaugeOpts{
+		Name:        "gitlab_build_info",
+		Help:        "Current build info for this GitLab Service",
+		ConstLabels: prometheus.Labels{"version": version},
+	})
+
+	prometheus.MustRegister(gitlabBuildInfoGauge)
+	gitlabBuildInfoGauge.Set(1)
+}
+
 func main() {
 	log.WithField("version", version).Info("Starting Gitaly")
+	registerServerVersionPromGauge()
 
 	loadConfig()
 
