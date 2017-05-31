@@ -18,6 +18,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/168
 - Set GL_PROTOCOL during SmartHTTP.PostReceivePack
   https://gitlab.com/gitlab-org/gitaly/merge_requests/169
+- Add support for Sentry exception reporting
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/171
 
 v0.10.0
 
