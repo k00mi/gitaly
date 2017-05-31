@@ -41,42 +41,20 @@ func durationInSecondsRoundedToMilliseconds(d time.Duration) float64 {
 func logGrpcError(ctx context.Context, method string, err error) {
 	grpcErrorCode := grpc.Code(err)
 
-	loggerWithFields := log.WithFields(log.Fields{
+	if grpcErrorCode == codes.OK {
+		return
+	}
+
+	raven.CaptureError(err, map[string]string{
+		"grpcMethod": method,
+		"code":       grpcErrorCode.String(),
+	}, nil)
+
+	log.WithFields(log.Fields{
 		"method": method,
 		"code":   grpcErrorCode.String(),
 		"error":  err,
-	})
-
-	switch grpcErrorCode {
-
-	// This probably won't happen
-	case codes.OK:
-		return
-
-	// Things we consider to be warnings: ie problems with the client
-	// these should not be logged in sentry
-	case codes.Canceled:
-	case codes.InvalidArgument:
-	case codes.NotFound:
-	case codes.AlreadyExists:
-	case codes.PermissionDenied:
-	case codes.Unauthenticated:
-	case codes.FailedPrecondition:
-	case codes.OutOfRange:
-		loggerWithFields.Warn("grpc error response")
-
-	// Everything else we consider to be problems with the server
-	// log these as Errors and also log them to sentry
-	default:
-		raven.CaptureError(err, map[string]string{
-			"grpcMethod": method,
-			"code":       grpcErrorCode.String(),
-		}, nil)
-
-		loggerWithFields.Error("grpc error response")
-
-	}
-
+	}).Error("grpc error response")
 }
 
 func logRequest(ctx context.Context, method string, start time.Time, err error) {
