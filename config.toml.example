@@ -26,4 +26,4 @@ path = "/home/git/repositories"
 # format = "json"
 # #
 # # Additionally exceptions can be reported to Sentry
-$ sentry_dsn = "https://<key>:<secret>@sentry.io/<project>"
+# sentry_dsn = "https://<key>:<secret>@sentry.io/<project>"
