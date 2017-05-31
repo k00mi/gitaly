@@ -9,13 +9,16 @@ import (
 var _ grpc.UnaryServerInterceptor = UnaryPanicHandler
 var _ grpc.StreamServerInterceptor = StreamPanicHandler
 
+// PanicHandler is a handler that will be called on a grpc panic
+type PanicHandler func(methodName string, error interface{})
+
 func toPanicError(grpcMethodName string, r interface{}) error {
 	return grpc.Errorf(codes.Internal, "panic: %v", r)
 }
 
 // UnaryPanicHandler handles request-response panics
 func UnaryPanicHandler(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-	defer handleCrash(ctx, info.FullMethod, func(ctx context.Context, grpcMethodName string, r interface{}) {
+	defer handleCrash(info.FullMethod, func(grpcMethodName string, r interface{}) {
 		err = toPanicError(grpcMethodName, r)
 	})
 
@@ -24,27 +27,27 @@ func UnaryPanicHandler(ctx context.Context, req interface{}, info *grpc.UnarySer
 
 // StreamPanicHandler handles stream panics
 func StreamPanicHandler(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
-	defer handleCrash(stream.Context(), info.FullMethod, func(ctx context.Context, grpcMethodName string, r interface{}) {
+	defer handleCrash(info.FullMethod, func(grpcMethodName string, r interface{}) {
 		err = toPanicError(grpcMethodName, r)
 	})
 
 	return handler(srv, stream)
 }
 
-var additionalHandlers []func(context.Context, string, interface{})
+var additionalHandlers []PanicHandler
 
 // InstallPanicHandler installs additional crash handles for dealing with a panic
-func InstallPanicHandler(handler func(context.Context, string, interface{})) {
+func InstallPanicHandler(handler PanicHandler) {
 	additionalHandlers = append(additionalHandlers, handler)
 }
 
-func handleCrash(ctx context.Context, grpcMethodName string, handler func(context.Context, string, interface{})) {
+func handleCrash(grpcMethodName string, handler PanicHandler) {
 	if r := recover(); r != nil {
-		handler(ctx, grpcMethodName, r)
+		handler(grpcMethodName, r)
 
 		if additionalHandlers != nil {
 			for _, fn := range additionalHandlers {
-				fn(ctx, grpcMethodName, r)
+				fn(grpcMethodName, r)
 			}
 		}
 	}

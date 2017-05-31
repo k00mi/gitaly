@@ -4,7 +4,6 @@ import (
 	"github.com/getsentry/raven-go"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/service/middleware/panichandler"
-	"golang.org/x/net/context"
 )
 
 // ConfigureSentry configures the sentry DSN
@@ -13,7 +12,7 @@ func ConfigureSentry(version string) {
 		log.Debug("Using sentry logging")
 		raven.SetDSN(Config.Logging.SentryDSN)
 
-		panichandler.InstallPanicHandler(func(ctx context.Context, grpcMethod string, _err interface{}) {
+		panichandler.InstallPanicHandler(func(grpcMethod string, _err interface{}) {
 			if err, ok := _err.(error); ok {
 				raven.CaptureError(err, map[string]string{
 					"grpcMethod": grpcMethod,
