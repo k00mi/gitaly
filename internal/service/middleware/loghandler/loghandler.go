@@ -17,7 +17,7 @@ import (
 func UnaryLogHandler(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	start := time.Now()
 	resp, err := handler(ctx, req)
-	logRequest(ctx, info.FullMethod, start, err)
+	logRequest(info.FullMethod, start, err)
 	return resp, err
 }
 
@@ -25,7 +25,7 @@ func UnaryLogHandler(ctx context.Context, req interface{}, info *grpc.UnaryServe
 func StreamLogHandler(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 	start := time.Now()
 	err := handler(srv, stream)
-	logRequest(stream.Context(), info.FullMethod, start, err)
+	logRequest(info.FullMethod, start, err)
 	return err
 }
 
@@ -38,7 +38,7 @@ func durationInSecondsRoundedToMilliseconds(d time.Duration) float64 {
 	return roundPositive(d.Seconds()*1e6) / 1e6
 }
 
-func logGrpcError(ctx context.Context, method string, err error) {
+func logGrpcError(method string, err error) {
 	grpcErrorCode := grpc.Code(err)
 
 	if grpcErrorCode == codes.OK {
@@ -57,7 +57,7 @@ func logGrpcError(ctx context.Context, method string, err error) {
 	}).Error("grpc error response")
 }
 
-func logRequest(ctx context.Context, method string, start time.Time, err error) {
+func logRequest(method string, start time.Time, err error) {
 	duration := durationInSecondsRoundedToMilliseconds(time.Since(start))
 	fields := log.Fields{
 		"method":   method,
@@ -69,7 +69,7 @@ func logRequest(ctx context.Context, method string, start time.Time, err error) 
 		fields["error"] = err
 		fields["code"] = grpcErrorCode.String()
 
-		logGrpcError(ctx, method, err)
+		logGrpcError(method, err)
 	}
 
 	log.WithFields(fields).Info("access")
