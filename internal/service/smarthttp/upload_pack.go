@@ -9,9 +9,24 @@ import (
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	pbhelper "gitlab.com/gitlab-org/gitaly-proto/go/helper"
+
+	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 )
+
+var (
+	deepenCount = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "gitaly_smarthttp_deepen_count",
+			Help: "Number of git-upload-pack requests processed that contained a 'deepen' message",
+		},
+	)
+)
+
+func init() {
+	prometheus.MustRegister(deepenCount)
+}
 
 func (s *server) PostUploadPack(stream pb.SmartHTTP_PostUploadPackServer) error {
 	req, err := stream.Recv() // First request contains Repository only
@@ -60,6 +75,7 @@ func (s *server) PostUploadPack(stream pb.SmartHTTP_PostUploadPackServer) error 
 			// We have seen a 'deepen' message in the request. It is expected that
 			// git-upload-pack has a non-zero exit status: don't treat this as an
 			// error.
+			deepenCount.Inc()
 			return nil
 		}
 		return grpc.Errorf(codes.Unavailable, "PostUploadPack: cmd wait for %v: %v", cmd.Args, err)
