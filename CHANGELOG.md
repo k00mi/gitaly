@@ -18,6 +18,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/168
 - Set GL_PROTOCOL during SmartHTTP.PostReceivePack
   https://gitlab.com/gitlab-org/gitaly/merge_requests/169
+- Handle server side errors from shallow clone
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/173
 
 v0.10.0
 
