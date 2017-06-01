@@ -5,19 +5,26 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"strconv"
 )
 
 func scanDeepen(body io.Reader) bool {
+	result := false
+
 	scanner := bufio.NewScanner(body)
 	scanner.Split(pktLineSplitter)
 	for scanner.Scan() {
 		if bytes.HasPrefix(scanner.Bytes(), []byte("deepen")) && scanner.Err() == nil {
-			return true
+			result = true
+			break
 		}
 	}
 
-	return false
+	// Because we are connected to another consumer via an io.Pipe and
+	// io.TeeReader we must consume all data.
+	io.Copy(ioutil.Discard, body)
+	return result
 }
 
 func pktLineSplitter(data []byte, atEOF bool) (advance int, token []byte, err error) {
