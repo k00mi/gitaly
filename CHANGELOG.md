@@ -22,6 +22,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/173
 - Ensure that grpc server log messages are sent to logrus
   https://gitlab.com/gitlab-org/gitaly/merge_requests/174
+- Add support for GRPC Latency Histograms in Prometheus
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/172
 - Add support for Sentry exception reporting
   https://gitlab.com/gitlab-org/gitaly/merge_requests/171
 

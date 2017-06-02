@@ -87,6 +87,7 @@ func main() {
 	config.ConfigureLogging()
 	grpclog.SetLogger(log.StandardLogger())
 	config.ConfigureSentry(version)
+	config.ConfigurePrometheus()
 
 	var listeners []net.Listener
 
@@ -125,7 +126,6 @@ func main() {
 	service.RegisterAll(server)
 	reflection.Register(server)
 
-	// After all your registrations, make sure all of the Prometheus metrics are initialized.
 	grpc_prometheus.Register(server)
 
 	serverError := make(chan error, len(listeners))

@@ -16,11 +16,12 @@ var (
 )
 
 type config struct {
-	SocketPath           string    `toml:"socket_path" split_words:"true"`
-	ListenAddr           string    `toml:"listen_addr" split_words:"true"`
-	PrometheusListenAddr string    `toml:"prometheus_listen_addr" split_words:"true"`
-	Storages             []Storage `toml:"storage" envconfig:"storage"`
-	Logging              Logging   `toml:"logging" envconfig:"logging"`
+	SocketPath           string     `toml:"socket_path" split_words:"true"`
+	ListenAddr           string     `toml:"listen_addr" split_words:"true"`
+	PrometheusListenAddr string     `toml:"prometheus_listen_addr" split_words:"true"`
+	Storages             []Storage  `toml:"storage" envconfig:"storage"`
+	Logging              Logging    `toml:"logging" envconfig:"logging"`
+	Prometheus           Prometheus `toml:"prometheus"`
 }
 
 // Storage contains a single storage-shard
@@ -33,6 +34,11 @@ type Storage struct {
 type Logging struct {
 	Format    string
 	SentryDSN string `toml:"sentry_dsn"`
+}
+
+// Prometheus contains additional configuration data for prometheus
+type Prometheus struct {
+	GRPCLatencyBuckets []float64 `toml:"grpc_latency_buckets"`
 }
 
 // Load initializes the Config variable from file and the environment.
