@@ -113,13 +113,13 @@ func main() {
 	server := grpc.NewServer(
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
 			loghandler.StreamLogHandler,
-			panichandler.StreamPanicHandler,         // Panic Handler first: handle panics gracefully
-			grpc_prometheus.StreamServerInterceptor, // Prometheus Metrics next: measure RPC times
+			grpc_prometheus.StreamServerInterceptor,
+			panichandler.StreamPanicHandler, // Panic handler should remain last
 		)),
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			loghandler.UnaryLogHandler,
-			panichandler.UnaryPanicHandler,         // Panic Handler first: handle panics gracefully
-			grpc_prometheus.UnaryServerInterceptor, // Prometheus Metrics next: measure RPC times
+			panichandler.UnaryPanicHandler,
+			grpc_prometheus.UnaryServerInterceptor, // Panic handler should remain last
 		)),
 	)
 
