@@ -70,29 +70,20 @@ func TestSuccessfulUploadPackRequest(t *testing.T) {
 
 	require.NoError(t, stream.Send(rpcRequest))
 
-	data := make([]byte, 16)
-	for {
-		n, err := requestBuffer.Read(data)
-		if err == io.EOF {
-			break
-		}
-		require.NoError(t, err)
-
-		rpcRequest = &pb.PostUploadPackRequest{Data: data[:n]}
-		require.NoError(t, stream.Send(rpcRequest))
-	}
+	sw := pbhelper.NewSendWriter(func(p []byte) error {
+		return stream.Send(&pb.PostUploadPackRequest{Data: p})
+	})
+	_, err = io.Copy(sw, requestBuffer)
+	require.NoError(t, err)
 	stream.CloseSend()
 
 	responseBuffer := &bytes.Buffer{}
-	for {
-		rpcResponse, err := stream.Recv()
-		if err == io.EOF {
-			break
-		}
-		require.NoError(t, err)
-
-		responseBuffer.Write(rpcResponse.GetData())
-	}
+	rr := pbhelper.NewReceiveReader(func() ([]byte, error) {
+		resp, err := stream.Recv()
+		return resp.GetData(), err
+	})
+	_, err = io.Copy(responseBuffer, rr)
+	require.NoError(t, err)
 
 	// There's no git command we can pass it this response and do the work for us (extracting pack file, ...),
 	// so we have to do it ourselves.

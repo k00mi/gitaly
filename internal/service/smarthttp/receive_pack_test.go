@@ -12,6 +12,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	pbhelper "gitlab.com/gitlab-org/gitaly-proto/go/helper"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
@@ -73,30 +74,22 @@ func TestSuccessfulReceivePackRequest(t *testing.T) {
 
 	require.NoError(t, stream.Send(rpcRequest))
 
-	data := make([]byte, 16)
-	for {
-		n, err := requestBuffer.Read(data)
-		if err == io.EOF {
-			break
-		}
-		require.NoError(t, err)
+	sw := pbhelper.NewSendWriter(func(p []byte) error {
+		return stream.Send(&pb.PostReceivePackRequest{Data: p})
+	})
+	_, err = io.Copy(sw, requestBuffer)
+	require.NoError(t, err)
 
-		rpcRequest = &pb.PostReceivePackRequest{Data: data[:n]}
-		require.NoError(t, stream.Send(rpcRequest))
-	}
 	stream.CloseSend()
 
 	// Verify everything is going as planned
 	responseBuffer := bytes.Buffer{}
-	for {
-		rpcResponse, err := stream.Recv()
-		if err == io.EOF {
-			break
-		}
-		require.NoError(t, err)
-
-		responseBuffer.Write(rpcResponse.GetData())
-	}
+	rr := pbhelper.NewReceiveReader(func() ([]byte, error) {
+		resp, err := stream.Recv()
+		return resp.GetData(), err
+	})
+	_, err = io.Copy(&responseBuffer, rr)
+	require.NoError(t, err)
 
 	expectedResponse := "0030\x01000eunpack ok\n0019ok refs/heads/master\n00000000"
 	require.Equal(t, expectedResponse, responseBuffer.String(), "Expected response to be %q, got %q", expectedResponse, responseBuffer.String())
