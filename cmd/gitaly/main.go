@@ -118,8 +118,8 @@ func main() {
 		)),
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			loghandler.UnaryLogHandler,
-			panichandler.UnaryPanicHandler,
-			grpc_prometheus.UnaryServerInterceptor, // Panic handler should remain last
+			grpc_prometheus.UnaryServerInterceptor,
+			panichandler.UnaryPanicHandler, // Panic handler should remain last
 		)),
 	)
 
