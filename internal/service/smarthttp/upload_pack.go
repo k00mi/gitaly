@@ -61,7 +61,7 @@ func (s *server) PostUploadPack(stream pb.SmartHTTPService_PostUploadPackServer)
 		"RepoPath": repoPath,
 	}).Debug("PostUploadPack")
 
-	osCommand := exec.Command("git", "upload-pack", "--stateless-rpc", repoPath)
+	osCommand := exec.Command(helper.GitPath(), "upload-pack", "--stateless-rpc", repoPath)
 	cmd, err := helper.NewCommand(osCommand, stdin, stdout, nil)
 
 	if err != nil {

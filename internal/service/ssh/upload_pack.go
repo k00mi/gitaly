@@ -39,7 +39,7 @@ func (s *server) SSHUploadPack(stream pb.SSHService_SSHUploadPackServer) error {
 		"RepoPath": repoPath,
 	}).Debug("SSHUploadPack")
 
-	osCommand := exec.Command("git-upload-pack", repoPath)
+	osCommand := exec.Command(helper.GitPath(), "upload-pack", repoPath)
 	cmd, err := helper.NewCommand(osCommand, stdin, stdout, stderr)
 
 	if err != nil {

@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"io"
+	"os/exec"
 
 	log "github.com/Sirupsen/logrus"
 
@@ -19,10 +20,16 @@ type config struct {
 	SocketPath           string     `toml:"socket_path" split_words:"true"`
 	ListenAddr           string     `toml:"listen_addr" split_words:"true"`
 	PrometheusListenAddr string     `toml:"prometheus_listen_addr" split_words:"true"`
+	Git                  Git        `toml:"git" envconfig:"git"`
 	Storages             []Storage  `toml:"storage" envconfig:"storage"`
 	Logging              Logging    `toml:"logging" envconfig:"logging"`
 	Prometheus           Prometheus `toml:"prometheus"`
 	Auth                 Auth       `toml:"auth"`
+}
+
+// Git contains the settings for the Git executable
+type Git struct {
+	BinPath string `toml:"bin_path"`
 }
 
 // Storage contains a single storage-shard
@@ -64,7 +71,7 @@ func Load(file io.Reader) error {
 
 // Validate checks the current Config for sanity.
 func Validate() error {
-	for _, err := range []error{validateStorages(), validateToken()} {
+	for _, err := range []error{validateStorages(), validateToken(), SetGitPath()} {
 		if err != nil {
 			return err
 		}
@@ -89,6 +96,27 @@ func validateStorages() error {
 		}
 		seenNames[name] = true
 	}
+
+	return nil
+}
+
+// SetGitPath populates the variable GitPath with the path to the `git`
+// executable. It warns if no path was specified in the configuration.
+func SetGitPath() error {
+	if Config.Git.BinPath != "" {
+		return nil
+	}
+
+	resolvedPath, err := exec.LookPath("git")
+	if err != nil {
+		return err
+	}
+
+	log.WithFields(log.Fields{
+		"resolvedPath": resolvedPath,
+	}).Warn("git path not configured. Using default path resolution")
+
+	Config.Git.BinPath = resolvedPath
 
 	return nil
 }

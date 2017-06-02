@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Add config to specify a git binary path
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/177
+
 v0.17.0
 
 - Rename auth 'unenforced' to 'transitioning'

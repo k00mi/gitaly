@@ -6,12 +6,30 @@ import (
 	"os"
 	"os/exec"
 	"syscall"
+
+	"gitlab.com/gitlab-org/gitaly/internal/config"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 // Command encapsulates operations with commands creates with NewCommand
 type Command struct {
 	io.Reader
 	*exec.Cmd
+}
+
+// GitPath returns the path to the `git` binary. See `SetGitPath` for details
+// on how this is set
+func GitPath() string {
+	if config.Config.Git.BinPath == "" {
+		// This shouldn't happen outside of testing, SetGitPath should be called by
+		// main.go to ensure correctness of the configuration on start-up.
+		if err := config.SetGitPath(); err != nil {
+			log.Fatal(err) // Bail out.
+		}
+	}
+
+	return config.Config.Git.BinPath
 }
 
 // Kill cleans the subprocess group of the command. Callers should defer a call
@@ -22,7 +40,7 @@ func (c *Command) Kill() {
 
 // GitCommandReader creates a git Command with the given args
 func GitCommandReader(args ...string) (*Command, error) {
-	return NewCommand(exec.Command("git", args...), nil, nil, nil)
+	return NewCommand(exec.Command(GitPath(), args...), nil, nil, nil)
 }
 
 // NewCommand creates a Command from an exec.Cmd
