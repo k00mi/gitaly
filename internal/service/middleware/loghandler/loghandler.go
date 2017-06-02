@@ -49,12 +49,6 @@ func logGrpcError(method string, err error) {
 		"grpcMethod": method,
 		"code":       grpcErrorCode.String(),
 	}, nil)
-
-	log.WithFields(log.Fields{
-		"method": method,
-		"code":   grpcErrorCode.String(),
-		"error":  err,
-	}).Error("grpc error response")
 }
 
 func logRequest(method string, start time.Time, err error) {
