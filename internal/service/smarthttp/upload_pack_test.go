@@ -66,40 +66,30 @@ func TestSuccessfulUploadPackRequest(t *testing.T) {
 	repo := &pb.Repository{Path: path.Join(remoteRepoPath, ".git")}
 	rpcRequest := &pb.PostUploadPackRequest{Repository: repo}
 	stream, err := client.PostUploadPack(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if err := stream.Send(rpcRequest); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, stream.Send(rpcRequest))
 
 	data := make([]byte, 16)
 	for {
 		n, err := requestBuffer.Read(data)
 		if err == io.EOF {
 			break
-		} else if err != nil {
-			t.Fatal(err)
 		}
+		require.NoError(t, err)
 
 		rpcRequest = &pb.PostUploadPackRequest{Data: data[:n]}
-		if err := stream.Send(rpcRequest); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, stream.Send(rpcRequest))
 	}
 	stream.CloseSend()
 
 	responseBuffer := &bytes.Buffer{}
 	for {
 		rpcResponse, err := stream.Recv()
-		if err != nil {
-			if err == io.EOF {
-				break
-			} else {
-				t.Fatal(err)
-			}
+		if err == io.EOF {
+			break
 		}
+		require.NoError(t, err)
 
 		responseBuffer.Write(rpcResponse.GetData())
 	}
@@ -107,10 +97,7 @@ func TestSuccessfulUploadPackRequest(t *testing.T) {
 	// There's no git command we can pass it this response and do the work for us (extracting pack file, ...),
 	// so we have to do it ourselves.
 	pack, version, entries := extractPackDataFromResponse(t, responseBuffer)
-	if pack == nil {
-		t.Errorf("Expected to find a pack file in response, found none")
-		return
-	}
+	require.NotNil(t, pack, "Expected to find a pack file in response, found none")
 
 	testhelper.MustRunCommand(t, bytes.NewReader(pack), "git", "-C", localRepoPath, "unpack-objects", fmt.Sprintf("--pack_header=%d,%d", version, entries))
 
@@ -163,13 +150,9 @@ func TestFailedUploadPackRequestDueToValidationError(t *testing.T) {
 	for _, rpcRequest := range rpcRequests {
 		t.Logf("test case: %v", rpcRequest)
 		stream, err := client.PostUploadPack(context.Background())
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
-		if err := stream.Send(&rpcRequest); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, stream.Send(&rpcRequest))
 		stream.CloseSend()
 
 		err = drainPostUploadPackResponse(stream)
@@ -205,15 +188,11 @@ func extractPackDataFromResponse(t *testing.T, buf *bytes.Buffer) ([]byte, int, 
 		}
 
 		pktLen, err := strconv.ParseUint(string(pktLenStr), 16, 16)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		restPktLen := int(pktLen) - 4
 		pkt := buf.Next(restPktLen)
-		if len(pkt) != restPktLen {
-			t.Fatalf("Incomplete packet read")
-		}
+		require.Equal(t, restPktLen, len(pkt), "Incomplete packet read")
 
 		// The first byte of the packet is the band designator. We only care about data in band 1.
 		if pkt[0] == 1 {
@@ -226,9 +205,7 @@ func extractPackDataFromResponse(t *testing.T, buf *bytes.Buffer) ([]byte, int, 
 	// 4 bytes for header version
 	// 4 bytes for header entries
 	// The rest is the pack file
-	if string(pack[:4]) != "PACK" {
-		t.Fatalf("Invalid packet signature")
-	}
+	require.Equal(t, "PACK", string(pack[:4]), "Invalid packet signature")
 	version := int(binary.BigEndian.Uint32(pack[4:8]))
 	entries := int(binary.BigEndian.Uint32(pack[8:12]))
 	pack = pack[12:]

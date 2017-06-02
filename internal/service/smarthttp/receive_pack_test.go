@@ -13,6 +13,7 @@ import (
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
+	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 )
@@ -68,27 +69,20 @@ func TestSuccessfulReceivePackRequest(t *testing.T) {
 	repo := &pb.Repository{Path: remoteRepoPath}
 	rpcRequest := &pb.PostReceivePackRequest{Repository: repo, GlId: "user-123", GlRepository: "project-123"}
 	stream, err := client.PostReceivePack(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if err := stream.Send(rpcRequest); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, stream.Send(rpcRequest))
 
 	data := make([]byte, 16)
 	for {
 		n, err := requestBuffer.Read(data)
 		if err == io.EOF {
 			break
-		} else if err != nil {
-			t.Fatal(err)
 		}
+		require.NoError(t, err)
 
 		rpcRequest = &pb.PostReceivePackRequest{Data: data[:n]}
-		if err := stream.Send(rpcRequest); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, stream.Send(rpcRequest))
 	}
 	stream.CloseSend()
 
@@ -96,21 +90,16 @@ func TestSuccessfulReceivePackRequest(t *testing.T) {
 	responseBuffer := bytes.Buffer{}
 	for {
 		rpcResponse, err := stream.Recv()
-		if err != nil {
-			if err == io.EOF {
-				break
-			} else {
-				t.Fatal(err)
-			}
+		if err == io.EOF {
+			break
 		}
+		require.NoError(t, err)
 
 		responseBuffer.Write(rpcResponse.GetData())
 	}
 
 	expectedResponse := "0030\x01000eunpack ok\n0019ok refs/heads/master\n00000000"
-	if responseBuffer.String() != expectedResponse {
-		t.Errorf("Expected response to be %q, got %q", expectedResponse, responseBuffer.String())
-	}
+	require.Equal(t, expectedResponse, responseBuffer.String(), "Expected response to be %q, got %q", expectedResponse, responseBuffer.String())
 
 	// The fact that this command succeeds means that we got the commit correctly, no further checks should be needed.
 	testhelper.MustRunCommand(t, nil, "git", "-C", remoteRepoPath, "show", string(newHead))
@@ -132,13 +121,9 @@ func TestFailedReceivePackRequestDueToValidationError(t *testing.T) {
 	for _, rpcRequest := range rpcRequests {
 		t.Logf("test case: %v", rpcRequest)
 		stream, err := client.PostReceivePack(context.Background())
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
-		if err := stream.Send(&rpcRequest); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, stream.Send(&rpcRequest))
 		stream.CloseSend()
 
 		err = drainPostReceivePackResponse(stream)
