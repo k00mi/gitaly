@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Added integration test for SSH, and a client package
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/178/
+
 v0.13.0
 
 - Added usage and version flags to the command line interface
