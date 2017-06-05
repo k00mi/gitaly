@@ -27,12 +27,16 @@ func TestSuccessfulUploadPackRequest(t *testing.T) {
 	server := runSmartHTTPServer(t)
 	defer server.Stop()
 
-	localRepoPath := path.Join(testRepoRoot, "gitlab-test-local")
-	remoteRepoPath := path.Join(testRepoRoot, "gitlab-test-remote")
+	storagePath := testhelper.GitlabTestStoragePath()
+	remoteRepoRelativePath := "gitlab-test-remote"
+	localRepoRelativePath := "gitlab-test-local"
+	testRepoPath := path.Join(storagePath, testRepo.RelativePath)
+	remoteRepoPath := path.Join(storagePath, remoteRepoRelativePath)
+	localRepoPath := path.Join(storagePath, localRepoRelativePath)
 	// Make a non-bare clone of the test repo to act as a remote one
-	testhelper.MustRunCommand(t, nil, "git", "clone", testhelper.GitlabTestRepoPath(), remoteRepoPath)
+	testhelper.MustRunCommand(t, nil, "git", "clone", testRepoPath, remoteRepoPath)
 	// Make a bare clone of the test repo to act as a local one and to leave the original repo intact for other tests
-	testhelper.MustRunCommand(t, nil, "git", "clone", "--bare", testhelper.GitlabTestRepoPath(), localRepoPath)
+	testhelper.MustRunCommand(t, nil, "git", "clone", "--bare", testRepoPath, localRepoPath)
 	defer os.RemoveAll(localRepoPath)
 	defer os.RemoveAll(remoteRepoPath)
 
@@ -63,7 +67,7 @@ func TestSuccessfulUploadPackRequest(t *testing.T) {
 	fmt.Fprintf(requestBuffer, "%04x%s%s", len(havePkt)+4, havePkt, pktFlushStr)
 
 	client := newSmartHTTPClient(t)
-	repo := &pb.Repository{Path: path.Join(remoteRepoPath, ".git")}
+	repo := &pb.Repository{StorageName: "default", RelativePath: path.Join(remoteRepoRelativePath, ".git")}
 	rpcRequest := &pb.PostUploadPackRequest{Repository: repo}
 	stream, err := client.PostUploadPack(context.Background())
 	require.NoError(t, err)
@@ -107,8 +111,7 @@ func TestSuccessfulUploadPackDeepenRequest(t *testing.T) {
 	stream, err := client.PostUploadPack(context.Background())
 	require.NoError(t, err)
 
-	repo := &pb.Repository{Path: testhelper.GitlabTestRepoPath()}
-	require.NoError(t, stream.Send(&pb.PostUploadPackRequest{Repository: repo}))
+	require.NoError(t, stream.Send(&pb.PostUploadPackRequest{Repository: testRepo}))
 
 	requestBody := `00a4want e63f41fe459e62e1228fcef60d7189127aeba95a multi_ack_detailed no-done side-band-64k thin-pack include-tag ofs-delta deepen-since deepen-not agent=git/2.12.2
 000cdeepen 10000`
@@ -133,9 +136,9 @@ func TestFailedUploadPackRequestDueToValidationError(t *testing.T) {
 	client := newSmartHTTPClient(t)
 
 	rpcRequests := []pb.PostUploadPackRequest{
-		{Repository: &pb.Repository{Path: ""}}, // Repository.Path is empty
-		{Repository: nil},                      // Repository is nil
-		{Repository: &pb.Repository{Path: "/path/to/repo"}, Data: []byte("Fail")}, // Data exists on first request
+		{Repository: &pb.Repository{StorageName: "fake", RelativePath: "path"}}, // Repository doesn't exist
+		{Repository: nil}, // Repository is nil
+		{Repository: &pb.Repository{StorageName: "default", RelativePath: "path/to/repo"}, Data: []byte("Fail")}, // Data exists on first request
 	}
 
 	for _, rpcRequest := range rpcRequests {

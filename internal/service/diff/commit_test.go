@@ -25,10 +25,9 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 	defer server.Stop()
 
 	client := newDiffClient(t)
-	repo := &pb.Repository{Path: testRepoPath}
 	rightCommit := "742518b2be68fc750bb4c357c0df821a88113286"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
-	rpcRequest := &pb.CommitDiffRequest{Repository: repo, RightCommitId: rightCommit, LeftCommitId: leftCommit, IgnoreWhitespaceChange: false}
+	rpcRequest := &pb.CommitDiffRequest{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: leftCommit, IgnoreWhitespaceChange: false}
 
 	c, err := client.CommitDiff(context.Background(), rpcRequest)
 	if err != nil {
@@ -162,11 +161,10 @@ func TestSuccessfulCommitDiffRequestWithPaths(t *testing.T) {
 	defer server.Stop()
 
 	client := newDiffClient(t)
-	repo := &pb.Repository{Path: testRepoPath}
 	rightCommit := "e4003da16c1c2c3fc4567700121b17bf8e591c6c"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
 	rpcRequest := &pb.CommitDiffRequest{
-		Repository:             repo,
+		Repository:             testRepo,
 		RightCommitId:          rightCommit,
 		LeftCommitId:           leftCommit,
 		IgnoreWhitespaceChange: false,
@@ -234,11 +232,10 @@ func TestSuccessfulCommitDiffRequestWithTypeChangeDiff(t *testing.T) {
 	defer server.Stop()
 
 	client := newDiffClient(t)
-	repo := &pb.Repository{Path: testRepoPath}
 	rightCommit := "184a47d38677e2e439964859b877ae9bc424ab11"
 	leftCommit := "80d56eb72ba5d77fd8af857eced17a7d0640cb82"
 	rpcRequest := &pb.CommitDiffRequest{
-		Repository:    repo,
+		Repository:    testRepo,
 		RightCommitId: rightCommit,
 		LeftCommitId:  leftCommit,
 	}
@@ -279,7 +276,6 @@ func TestSuccessfulCommitDiffRequestWithIgnoreWhitespaceChange(t *testing.T) {
 	defer server.Stop()
 
 	client := newDiffClient(t)
-	repo := &pb.Repository{Path: testRepoPath}
 	rightCommit := "e4003da16c1c2c3fc4567700121b17bf8e591c6c"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
 
@@ -361,7 +357,7 @@ func TestSuccessfulCommitDiffRequestWithIgnoreWhitespaceChange(t *testing.T) {
 
 	for _, entry := range pathsAndDiffs {
 		rpcRequest := &pb.CommitDiffRequest{
-			Repository:             repo,
+			Repository:             testRepo,
 			RightCommitId:          rightCommit,
 			LeftCommitId:           leftCommit,
 			IgnoreWhitespaceChange: true,
@@ -386,10 +382,10 @@ func TestFailedCommitDiffRequestDueToValidationError(t *testing.T) {
 	leftCommit := rightCommit + "~" // Parent of rightCommit
 
 	rpcRequests := []pb.CommitDiffRequest{
-		{Repository: &pb.Repository{Path: ""}, RightCommitId: rightCommit, LeftCommitId: leftCommit},   // Repository.Path is empty
-		{Repository: nil, RightCommitId: rightCommit, LeftCommitId: leftCommit},                        // Repository is nil
-		{Repository: &pb.Repository{Path: testRepoPath}, RightCommitId: "", LeftCommitId: leftCommit},  // RightCommitId is empty
-		{Repository: &pb.Repository{Path: testRepoPath}, RightCommitId: rightCommit, LeftCommitId: ""}, // LeftCommitId is empty
+		{Repository: &pb.Repository{StorageName: "fake", RelativePath: "path"}, RightCommitId: rightCommit, LeftCommitId: leftCommit}, // Repository doesn't exist
+		{Repository: nil, RightCommitId: rightCommit, LeftCommitId: leftCommit},                                                       // Repository is nil
+		{Repository: testRepo, RightCommitId: "", LeftCommitId: leftCommit},                                                           // RightCommitId is empty
+		{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: ""},                                                          // LeftCommitId is empty
 	}
 
 	for _, rpcRequest := range rpcRequests {
@@ -410,10 +406,9 @@ func TestFailedCommitDiffRequestWithNonExistentCommit(t *testing.T) {
 	defer server.Stop()
 
 	client := newDiffClient(t)
-	repo := &pb.Repository{Path: testRepoPath}
 	nonExistentCommitID := "deadfacedeadfacedeadfacedeadfacedeadface"
 	leftCommit := nonExistentCommitID + "~" // Parent of rightCommit
-	rpcRequest := &pb.CommitDiffRequest{Repository: repo, RightCommitId: nonExistentCommitID, LeftCommitId: leftCommit}
+	rpcRequest := &pb.CommitDiffRequest{Repository: testRepo, RightCommitId: nonExistentCommitID, LeftCommitId: leftCommit}
 
 	c, err := client.CommitDiff(context.Background(), rpcRequest)
 	if err != nil {
@@ -429,10 +424,9 @@ func TestSuccessfulCommitDeltaRequest(t *testing.T) {
 	defer server.Stop()
 
 	client := newDiffClient(t)
-	repo := &pb.Repository{Path: testRepoPath}
 	rightCommit := "742518b2be68fc750bb4c357c0df821a88113286"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
-	rpcRequest := &pb.CommitDeltaRequest{Repository: repo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
+	rpcRequest := &pb.CommitDeltaRequest{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
 
 	c, err := client.CommitDelta(context.Background(), rpcRequest)
 	if err != nil {
@@ -546,11 +540,10 @@ func TestSuccessfulCommitDeltaRequestWithPaths(t *testing.T) {
 	defer server.Stop()
 
 	client := newDiffClient(t)
-	repo := &pb.Repository{Path: testRepoPath}
 	rightCommit := "e4003da16c1c2c3fc4567700121b17bf8e591c6c"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
 	rpcRequest := &pb.CommitDeltaRequest{
-		Repository:    repo,
+		Repository:    testRepo,
 		RightCommitId: rightCommit,
 		LeftCommitId:  leftCommit,
 		Paths: [][]byte{
@@ -613,10 +606,10 @@ func TestFailedCommitDeltaRequestDueToValidationError(t *testing.T) {
 	leftCommit := rightCommit + "~" // Parent of rightCommit
 
 	rpcRequests := []pb.CommitDeltaRequest{
-		{Repository: &pb.Repository{Path: ""}, RightCommitId: rightCommit, LeftCommitId: leftCommit},   // Repository.Path is empty
-		{Repository: nil, RightCommitId: rightCommit, LeftCommitId: leftCommit},                        // Repository is nil
-		{Repository: &pb.Repository{Path: testRepoPath}, RightCommitId: "", LeftCommitId: leftCommit},  // RightCommitId is empty
-		{Repository: &pb.Repository{Path: testRepoPath}, RightCommitId: rightCommit, LeftCommitId: ""}, // LeftCommitId is empty
+		{Repository: &pb.Repository{StorageName: "fake", RelativePath: "path"}, RightCommitId: rightCommit, LeftCommitId: leftCommit}, // Repository doesn't exist
+		{Repository: nil, RightCommitId: rightCommit, LeftCommitId: leftCommit},                                                       // Repository is nil
+		{Repository: testRepo, RightCommitId: "", LeftCommitId: leftCommit},                                                           // RightCommitId is empty
+		{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: ""},                                                          // LeftCommitId is empty
 	}
 
 	for _, rpcRequest := range rpcRequests {
@@ -637,10 +630,9 @@ func TestFailedCommitDeltaRequestWithNonExistentCommit(t *testing.T) {
 	defer server.Stop()
 
 	client := newDiffClient(t)
-	repo := &pb.Repository{Path: testRepoPath}
 	nonExistentCommitID := "deadfacedeadfacedeadfacedeadfacedeadface"
 	leftCommit := nonExistentCommitID + "~" // Parent of rightCommit
-	rpcRequest := &pb.CommitDeltaRequest{Repository: repo, RightCommitId: nonExistentCommitID, LeftCommitId: leftCommit}
+	rpcRequest := &pb.CommitDeltaRequest{Repository: testRepo, RightCommitId: nonExistentCommitID, LeftCommitId: leftCommit}
 
 	c, err := client.CommitDelta(context.Background(), rpcRequest)
 	if err != nil {

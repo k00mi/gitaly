@@ -20,8 +20,7 @@ func TestSuccessfulInfoRefsUploadPack(t *testing.T) {
 	defer server.Stop()
 
 	client := newSmartHTTPClient(t)
-	repo := &pb.Repository{Path: testRepoPath}
-	rpcRequest := &pb.InfoRefsRequest{Repository: repo}
+	rpcRequest := &pb.InfoRefsRequest{Repository: testRepo}
 
 	c, err := client.InfoRefsUploadPack(context.Background(), rpcRequest)
 	if err != nil {
@@ -41,8 +40,7 @@ func TestSuccessfulInfoRefsReceivePack(t *testing.T) {
 	defer server.Stop()
 
 	client := newSmartHTTPClient(t)
-	repo := &pb.Repository{Path: testRepoPath}
-	rpcRequest := &pb.InfoRefsRequest{Repository: repo}
+	rpcRequest := &pb.InfoRefsRequest{Repository: testRepo}
 
 	c, err := client.InfoRefsReceivePack(context.Background(), rpcRequest)
 	if err != nil {
@@ -62,7 +60,7 @@ func TestFailureRepoNotFoundInfoRefsReceivePack(t *testing.T) {
 	defer server.Stop()
 
 	client := newSmartHTTPClient(t)
-	repo := &pb.Repository{Path: "testdata/data/another_repo"}
+	repo := &pb.Repository{StorageName: "default", RelativePath: "testdata/data/another_repo"}
 	rpcRequest := &pb.InfoRefsRequest{Repository: repo}
 
 	c, err := client.InfoRefsReceivePack(context.Background(), rpcRequest)

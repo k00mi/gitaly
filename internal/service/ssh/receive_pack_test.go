@@ -18,10 +18,10 @@ func TestFailedReceivePackRequestDueToValidationError(t *testing.T) {
 	client := newSSHClient(t)
 
 	rpcRequests := []pb.SSHReceivePackRequest{
-		{Repository: &pb.Repository{Path: ""}, GlId: "user-123"},                                     // Repository.Path is empty
-		{Repository: nil, GlId: "user-123"},                                                          // Repository is nil
-		{Repository: &pb.Repository{Path: "/path/to/repo"}, GlId: ""},                                // Empty GlId
-		{Repository: &pb.Repository{Path: "/path/to/repo"}, GlId: "user-123", Stdin: []byte("Fail")}, // Data exists on first request
+		{Repository: &pb.Repository{StorageName: "default", RelativePath: ""}, GlId: "user-123"},                                    // Repository.RelativePath is empty
+		{Repository: nil, GlId: "user-123"},                                                                                         // Repository is nil
+		{Repository: &pb.Repository{StorageName: "default", RelativePath: "path/to/repo"}, GlId: ""},                                // Empty GlId
+		{Repository: &pb.Repository{StorageName: "default", RelativePath: "path/to/repo"}, GlId: "user-123", Stdin: []byte("Fail")}, // Data exists on first request
 	}
 
 	for _, rpcRequest := range rpcRequests {

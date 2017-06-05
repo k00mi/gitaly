@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Stop using deprecated field `path` in Repository messages
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/179
+
 v0.11.2
 
 Skipping 0.11.1 intentionally, we messed up the tag.

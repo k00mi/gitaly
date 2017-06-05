@@ -12,6 +12,9 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
+	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 )
@@ -38,17 +41,34 @@ func GitlabTestStoragePath() string {
 	return path.Join(path.Dir(currentFile), "testdata/data")
 }
 
-// GitlabTestRepoPath returns the path to gitlab-test repo.
-// Tests should be calling this function instead of cloning the repo themselves.
-// Tests that involve modifications to the repo should copy/clone the repo
-// via the path returned from this function.
-func GitlabTestRepoPath() string {
-	clonePath := path.Join(GitlabTestStoragePath(), TestRelativePath)
-	if _, err := os.Stat(path.Join(clonePath, "objects")); err != nil {
-		log.Fatal("Test repo not found, did you run `make test`?")
+func configureTestStorage() {
+	config.Config.Storages = []config.Storage{
+		{Name: "default", Path: GitlabTestStoragePath()},
+	}
+}
+
+func testRepoValid(repo *pb.Repository) bool {
+	storagePath, _ := config.StoragePath(repo.GetStorageName())
+	if _, err := os.Stat(path.Join(storagePath, repo.RelativePath, "objects")); err != nil {
+		return false
 	}
 
-	return clonePath
+	return true
+}
+
+// TestRepository returns the `Repository` object for the gitlab-test repo.
+// Tests should be calling this function instead of cloning the repo themselves.
+// Tests that involve modifications to the repo should copy/clone the repo
+// via the `Repository` returned from this function.
+func TestRepository() *pb.Repository {
+	configureTestStorage()
+	repo := &pb.Repository{StorageName: "default", RelativePath: TestRelativePath}
+
+	if !testRepoValid(repo) {
+		log.Fatalf("Test repo not found, did you run `make test`?")
+	}
+
+	return repo
 }
 
 // AssertGrpcError asserts the passed err is of the same code as expectedCode. Optionally, it can

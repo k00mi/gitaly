@@ -17,13 +17,17 @@ func TestGetRepoPath(t *testing.T) {
 		config.Config.Storages = oldStorages
 	}(config.Config.Storages)
 
+	testRepo := testhelper.TestRepository()
+	repoPath, err := GetRepoPath(testRepo)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	exampleStorages := []config.Storage{
 		{Name: "default", Path: testhelper.GitlabTestStoragePath()},
 		{Name: "other", Path: "/home/git/repositories2"},
 		{Name: "third", Path: "/home/git/repositories3"},
 	}
-
-	repoPath := testhelper.GitlabTestRepoPath()
 
 	testCases := []struct {
 		desc     string
@@ -33,41 +37,13 @@ func TestGetRepoPath(t *testing.T) {
 		err      codes.Code
 	}{
 		{
-			desc:     "storages configured but only repo.Path is provided",
-			storages: exampleStorages,
-			repo:     &pb.Repository{Path: repoPath},
-			path:     repoPath,
-		},
-		{
-			desc:     "storages configured, storage name not known, repo.Path provided",
-			storages: exampleStorages,
-			repo:     &pb.Repository{Path: repoPath, StorageName: "does not exist", RelativePath: "foobar.git"},
-			path:     repoPath,
-		},
-		{
-			desc: "no storages configured, repo.Path provided",
-			repo: &pb.Repository{Path: repoPath, StorageName: "does not exist", RelativePath: testhelper.TestRelativePath},
-			path: repoPath,
-		},
-		{
-			desc:     "storages configured, no repo.Path",
+			desc:     "storages configured",
 			storages: exampleStorages,
 			repo:     &pb.Repository{StorageName: "default", RelativePath: testhelper.TestRelativePath},
 			path:     repoPath,
 		},
 		{
-			desc:     "storage configured, storage name match, repo.Path provided",
-			storages: exampleStorages,
-			repo:     &pb.Repository{Path: "/foo/bar.git", StorageName: "default", RelativePath: testhelper.TestRelativePath},
-			path:     repoPath,
-		},
-		{
-			desc: "no storage config, repo.Path provided",
-			repo: &pb.Repository{Path: repoPath, StorageName: "default", RelativePath: "bazqux.git"},
-			path: repoPath,
-		},
-		{
-			desc: "no storage config, storage name provided, no repo.Path",
+			desc: "no storage config, storage name provided",
 			repo: &pb.Repository{StorageName: "does not exist", RelativePath: testhelper.TestRelativePath},
 			err:  codes.InvalidArgument,
 		},
@@ -87,14 +63,16 @@ func TestGetRepoPath(t *testing.T) {
 			err:  codes.InvalidArgument,
 		},
 		{
-			desc: "empty string repo",
-			repo: &pb.Repository{Path: ""},
-			err:  codes.InvalidArgument,
+			desc:     "non existing repo",
+			storages: exampleStorages,
+			repo:     &pb.Repository{StorageName: "default", RelativePath: "made/up/path.git"},
+			err:      codes.NotFound,
 		},
 		{
-			desc: "non existing repo",
-			repo: &pb.Repository{Path: "/made/up/path.git"},
-			err:  codes.NotFound,
+			desc:     "non existing storage",
+			storages: exampleStorages,
+			repo:     &pb.Repository{StorageName: "does not exists", RelativePath: testhelper.TestRelativePath},
+			err:      codes.InvalidArgument,
 		},
 		{
 			desc:     "relative path with directory traversal",

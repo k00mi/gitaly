@@ -23,12 +23,16 @@ func TestSuccessfulReceivePackRequest(t *testing.T) {
 	server := runSmartHTTPServer(t)
 	defer server.Stop()
 
-	remoteRepoPath := path.Join(testRepoRoot, "gitlab-test-remote")
-	localRepoPath := path.Join(testRepoRoot, "gitlab-test-local")
+	storagePath := testhelper.GitlabTestStoragePath()
+	remoteRepoRelativePath := "gitlab-test-remote"
+	localRepoRelativePath := "gitlab-test-local"
+	testRepoPath := path.Join(storagePath, testRepo.RelativePath)
+	remoteRepoPath := path.Join(storagePath, remoteRepoRelativePath)
+	localRepoPath := path.Join(storagePath, localRepoRelativePath)
 	// Make a non-bare clone of the test repo to act as a local one
-	testhelper.MustRunCommand(t, nil, "git", "clone", testhelper.GitlabTestRepoPath(), localRepoPath)
+	testhelper.MustRunCommand(t, nil, "git", "clone", testRepoPath, localRepoPath)
 	// Make a bare clone of the test repo to act as a remote one and to leave the original repo intact for other tests
-	testhelper.MustRunCommand(t, nil, "git", "clone", "--bare", testhelper.GitlabTestRepoPath(), remoteRepoPath)
+	testhelper.MustRunCommand(t, nil, "git", "clone", "--bare", testRepoPath, remoteRepoPath)
 	defer os.RemoveAll(remoteRepoPath)
 	defer os.RemoveAll(localRepoPath)
 
@@ -67,7 +71,7 @@ func TestSuccessfulReceivePackRequest(t *testing.T) {
 	requestBuffer.Write(pack)
 
 	client := newSmartHTTPClient(t)
-	repo := &pb.Repository{Path: remoteRepoPath}
+	repo := &pb.Repository{StorageName: "default", RelativePath: remoteRepoRelativePath}
 	rpcRequest := &pb.PostReceivePackRequest{Repository: repo, GlId: "user-123", GlRepository: "project-123"}
 	stream, err := client.PostReceivePack(context.Background())
 	require.NoError(t, err)
@@ -105,10 +109,10 @@ func TestFailedReceivePackRequestDueToValidationError(t *testing.T) {
 	client := newSmartHTTPClient(t)
 
 	rpcRequests := []pb.PostReceivePackRequest{
-		{Repository: &pb.Repository{Path: ""}, GlId: "user-123"},                                    // Repository.Path is empty
-		{Repository: nil, GlId: "user-123"},                                                         // Repository is nil
-		{Repository: &pb.Repository{Path: "/path/to/repo"}, GlId: ""},                               // Empty GlId
-		{Repository: &pb.Repository{Path: "/path/to/repo"}, GlId: "user-123", Data: []byte("Fail")}, // Data exists on first request
+		{Repository: &pb.Repository{StorageName: "fake", RelativePath: "path"}, GlId: "user-123"},                                  // Repository doesn't exist
+		{Repository: nil, GlId: "user-123"},                                                                                        // Repository is nil
+		{Repository: &pb.Repository{StorageName: "default", RelativePath: "path/to/repo"}, GlId: ""},                               // Empty GlId
+		{Repository: &pb.Repository{StorageName: "default", RelativePath: "path/to/repo"}, GlId: "user-123", Data: []byte("Fail")}, // Data exists on first request
 	}
 
 	for _, rpcRequest := range rpcRequests {

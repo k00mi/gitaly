@@ -22,11 +22,11 @@ const scratchDir = "testdata/scratch"
 
 var (
 	serverSocketPath = path.Join(scratchDir, "gitaly.sock")
-	testRepoPath     = ""
+	testRepo         *pb.Repository
 )
 
 func TestMain(m *testing.M) {
-	testRepoPath = testhelper.GitlabTestRepoPath()
+	testRepo = testhelper.TestRepository()
 
 	if err := os.MkdirAll(scratchDir, 0755); err != nil {
 		log.WithError(err).Fatal("mkdirall failed")
@@ -42,8 +42,7 @@ func TestSuccessfulPostReceive(t *testing.T) {
 	defer server.Stop()
 
 	client := newNotificationsClient(t)
-	repo := &pb.Repository{Path: testRepoPath}
-	rpcRequest := &pb.PostReceiveRequest{Repository: repo}
+	rpcRequest := &pb.PostReceiveRequest{Repository: testRepo}
 
 	_, err := client.PostReceive(context.Background(), rpcRequest)
 	if err != nil {

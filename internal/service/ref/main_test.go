@@ -9,6 +9,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	"google.golang.org/grpc"
@@ -21,13 +22,20 @@ const scratchDir = "testdata/scratch"
 
 var (
 	serverSocketPath = path.Join(scratchDir, "gitaly.sock")
-	testRepoPath     = ""
+	testRepo         *pb.Repository
+	testRepoPath     string
 )
 
 func TestMain(m *testing.M) {
-	testRepoPath = testhelper.GitlabTestRepoPath()
+	var err error
 
-	if err := os.MkdirAll(scratchDir, 0755); err != nil {
+	testRepo = testhelper.TestRepository()
+	testRepoPath, err = helper.GetRepoPath(testRepo)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err = os.MkdirAll(scratchDir, 0755); err != nil {
 		log.Fatal(err)
 	}
 
