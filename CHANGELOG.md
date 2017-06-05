@@ -26,6 +26,7 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/172
 - CommitDiff: Send chunks of patches over messages
   https://gitlab.com/gitlab-org/gitaly/merge_requests/170
+- Upgrade gRPC and its dependencies
 
 v0.10.0
 
