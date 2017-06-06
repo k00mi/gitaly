@@ -1,4 +1,3 @@
-
 # ![Gitaly](https://gitlab.com/gitlab-org/gitaly/uploads/509123ed56bd51247996038c858db006/gitaly-wordmark-small.png)
 
 [![build status](https://gitlab.com/gitlab-org/gitaly/badges/master/build.svg)](https://gitlab.com/gitlab-org/gitaly/commits/master) [![Gem Version](https://badge.fury.io/rb/gitaly.svg)](https://badge.fury.io/rb/gitaly) 
@@ -67,7 +66,7 @@ If you're interested in seeing how well Gitaly is performing on GitLab.com, we h
 
 ## Installation
 
-Gitaly requires Go 1.5 or newer. To install into `/usr/local/bin`,
+Gitaly requires Go 1.8 or newer. To install into `/usr/local/bin`,
 run:
 
 ```
