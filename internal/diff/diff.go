@@ -15,15 +15,15 @@ const blankID = "0000000000000000000000000000000000000000"
 
 // Diff represents a single parsed diff entry
 type Diff struct {
-	FromID    string
-	ToID      string
-	OldMode   int32
-	NewMode   int32
-	FromPath  []byte
-	ToPath    []byte
-	Binary    bool
-	Status    byte
-	RawChunks [][]byte
+	FromID   string
+	ToID     string
+	OldMode  int32
+	NewMode  int32
+	FromPath []byte
+	ToPath   []byte
+	Binary   bool
+	Status   byte
+	Patch    []byte
 }
 
 // Parser holds necessary state for parsing a diff stream
@@ -101,8 +101,6 @@ func (parser *Parser) Parse() bool {
 		} else if bytes.HasPrefix(line, []byte("Binary")) {
 			parser.err = consumeBinaryNotice(parser.patchReader, parser.currentDiff)
 		} else if bytes.HasPrefix(line, []byte("@@")) {
-			parser.currentDiff.RawChunks = append(parser.currentDiff.RawChunks, nil)
-
 			parser.err = consumeChunkLine(parser.patchReader, parser.currentDiff)
 		} else if helper.ByteSliceHasAnyPrefix(line, "---", "+++") {
 			parser.err = consumeLine(parser.patchReader)
@@ -263,8 +261,7 @@ func consumeChunkLine(reader *bufio.Reader, diff *Diff) error {
 		return fmt.Errorf("read chunk line: %v", err)
 	}
 
-	chunkIndex := len(diff.RawChunks) - 1
-	diff.RawChunks[chunkIndex] = append(diff.RawChunks[chunkIndex], line...)
+	diff.Patch = append(diff.Patch, line...)
 
 	return nil
 }

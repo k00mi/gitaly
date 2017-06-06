@@ -26,6 +26,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/172
 - Add support for Sentry exception reporting
   https://gitlab.com/gitlab-org/gitaly/merge_requests/171
+- CommitDiff: Send chunks of patches over messages
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/170
 
 v0.10.0
 
