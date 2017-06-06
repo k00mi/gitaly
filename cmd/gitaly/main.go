@@ -86,6 +86,7 @@ func main() {
 
 	config.ConfigureLogging()
 	grpclog.SetLogger(log.StandardLogger())
+	config.ConfigureSentry(version)
 	config.ConfigurePrometheus()
 
 	var listeners []net.Listener
@@ -111,14 +112,14 @@ func main() {
 
 	server := grpc.NewServer(
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
-			panichandler.StreamPanicHandler,         // Panic Handler first: handle panics gracefully
-			grpc_prometheus.StreamServerInterceptor, // Prometheus Metrics next: measure RPC times
 			loghandler.StreamLogHandler,
+			grpc_prometheus.StreamServerInterceptor,
+			panichandler.StreamPanicHandler, // Panic handler should remain last
 		)),
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
-			panichandler.UnaryPanicHandler,         // Panic Handler first: handle panics gracefully
-			grpc_prometheus.UnaryServerInterceptor, // Prometheus Metrics next: measure RPC times
 			loghandler.UnaryLogHandler,
+			grpc_prometheus.UnaryServerInterceptor,
+			panichandler.UnaryPanicHandler, // Panic handler should remain last
 		)),
 	)
 

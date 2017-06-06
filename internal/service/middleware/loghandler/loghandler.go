@@ -3,12 +3,14 @@ package loghandler
 import (
 	"time"
 
+	raven "github.com/getsentry/raven-go"
 	log "github.com/sirupsen/logrus"
 
 	"math"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 )
 
 // UnaryLogHandler handles access times and errors for unary RPC's
@@ -36,6 +38,19 @@ func durationInSecondsRoundedToMilliseconds(d time.Duration) float64 {
 	return roundPositive(d.Seconds()*1e6) / 1e6
 }
 
+func logGrpcError(method string, err error) {
+	grpcErrorCode := grpc.Code(err)
+
+	if grpcErrorCode == codes.OK {
+		return
+	}
+
+	raven.CaptureError(err, map[string]string{
+		"grpcMethod": method,
+		"code":       grpcErrorCode.String(),
+	}, nil)
+}
+
 func logRequest(method string, start time.Time, err error) {
 	duration := durationInSecondsRoundedToMilliseconds(time.Since(start))
 	fields := log.Fields{
@@ -44,7 +59,11 @@ func logRequest(method string, start time.Time, err error) {
 	}
 
 	if err != nil {
+		grpcErrorCode := grpc.Code(err)
 		fields["error"] = err
+		fields["code"] = grpcErrorCode.String()
+
+		logGrpcError(method, err)
 	}
 
 	log.WithFields(fields).Info("access")
