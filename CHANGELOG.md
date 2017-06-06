@@ -24,6 +24,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/174
 - Add support for GRPC Latency Histograms in Prometheus
   https://gitlab.com/gitlab-org/gitaly/merge_requests/172
+- CommitDiff: Send chunks of patches over messages
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/170
 
 v0.10.0
 
