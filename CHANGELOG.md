@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.11.0
 
 - FindDefaultBranchName: decorate error
   https://gitlab.com/gitlab-org/gitaly/merge_requests/148
