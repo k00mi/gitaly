@@ -1,7 +1,7 @@
 package panichandler
 
 import (
-	log "github.com/sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"

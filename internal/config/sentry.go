@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/getsentry/raven-go"
-	log "github.com/sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/service/middleware/panichandler"
 )
 

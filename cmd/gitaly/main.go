@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	log "github.com/sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/connectioncounter"
@@ -14,13 +14,14 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/service/middleware/loghandler"
 	"gitlab.com/gitlab-org/gitaly/internal/service/middleware/panichandler"
 
+	"github.com/grpc-ecosystem/go-grpc-middleware"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
+	"github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/mwitkow/go-grpc-middleware"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -74,6 +75,35 @@ func registerServerVersionPromGauge() {
 	gitlabBuildInfoGauge.Set(1)
 }
 
+func newGRPCServer() *grpc.Server {
+	logrusEntry := log.NewEntry(log.StandardLogger())
+	grpc_logrus.ReplaceGrpcLogger(logrusEntry)
+
+	server := grpc.NewServer(
+		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+			grpc_ctxtags.StreamServerInterceptor(),
+			grpc_prometheus.StreamServerInterceptor,
+			grpc_logrus.StreamServerInterceptor(logrusEntry),
+			loghandler.StreamLogHandler,
+			panichandler.StreamPanicHandler, // Panic handler should remain last
+		)),
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			grpc_ctxtags.UnaryServerInterceptor(),
+			grpc_prometheus.UnaryServerInterceptor,
+			grpc_logrus.UnaryServerInterceptor(logrusEntry),
+			loghandler.UnaryLogHandler,
+			panichandler.UnaryPanicHandler, // Panic handler should remain last
+		)),
+	)
+
+	service.RegisterAll(server)
+	reflection.Register(server)
+
+	grpc_prometheus.Register(server)
+
+	return server
+}
+
 func main() {
 	log.WithField("version", version).Info("Starting Gitaly")
 	registerServerVersionPromGauge()
@@ -85,7 +115,6 @@ func main() {
 	}
 
 	config.ConfigureLogging()
-	grpclog.SetLogger(log.StandardLogger())
 	config.ConfigureSentry(version)
 	config.ConfigurePrometheus()
 
@@ -110,23 +139,7 @@ func main() {
 		listeners = append(listeners, connectioncounter.New("tcp", l))
 	}
 
-	server := grpc.NewServer(
-		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
-			loghandler.StreamLogHandler,
-			grpc_prometheus.StreamServerInterceptor,
-			panichandler.StreamPanicHandler, // Panic handler should remain last
-		)),
-		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
-			loghandler.UnaryLogHandler,
-			grpc_prometheus.UnaryServerInterceptor,
-			panichandler.UnaryPanicHandler, // Panic handler should remain last
-		)),
-	)
-
-	service.RegisterAll(server)
-	reflection.Register(server)
-
-	grpc_prometheus.Register(server)
+	server := newGRPCServer()
 
 	serverError := make(chan error, len(listeners))
 	for _, listener := range listeners {

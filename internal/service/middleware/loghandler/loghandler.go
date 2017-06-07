@@ -4,9 +4,6 @@ import (
 	"time"
 
 	raven "github.com/getsentry/raven-go"
-	log "github.com/sirupsen/logrus"
-
-	"math"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -29,16 +26,11 @@ func StreamLogHandler(srv interface{}, stream grpc.ServerStream, info *grpc.Stre
 	return err
 }
 
-func roundPositive(value float64) float64 {
-	return math.Floor(value + 0.5)
-}
+func logRequest(method string, start time.Time, err error) {
+	if err == nil {
+		return
+	}
 
-// durationInSecondsRoundedToMilliseconds returns a duration, in seconds with a maximum resolution of a microsecond
-func durationInSecondsRoundedToMilliseconds(d time.Duration) float64 {
-	return roundPositive(d.Seconds()*1e6) / 1e6
-}
-
-func logGrpcError(method string, err error) {
 	grpcErrorCode := grpc.Code(err)
 
 	if grpcErrorCode == codes.OK {
@@ -49,22 +41,5 @@ func logGrpcError(method string, err error) {
 		"grpcMethod": method,
 		"code":       grpcErrorCode.String(),
 	}, nil)
-}
 
-func logRequest(method string, start time.Time, err error) {
-	duration := durationInSecondsRoundedToMilliseconds(time.Since(start))
-	fields := log.Fields{
-		"method":   method,
-		"duration": duration,
-	}
-
-	if err != nil {
-		grpcErrorCode := grpc.Code(err)
-		fields["error"] = err
-		fields["code"] = grpcErrorCode.String()
-
-		logGrpcError(method, err)
-	}
-
-	log.WithFields(fields).Info("access")
 }

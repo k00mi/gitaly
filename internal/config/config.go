@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	log "github.com/sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/BurntSushi/toml"
 	"github.com/kelseyhightower/envconfig"

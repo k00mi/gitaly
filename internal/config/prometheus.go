@@ -3,7 +3,7 @@ package config
 import (
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prometheus/client_golang/prometheus"
-	log "github.com/sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 )
 
 // ConfigurePrometheus uses the global configuration to configure prometheus

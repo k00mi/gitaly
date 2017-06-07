@@ -3,7 +3,7 @@ package notifications
 import (
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 
-	log "github.com/sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"golang.org/x/net/context"
 )
