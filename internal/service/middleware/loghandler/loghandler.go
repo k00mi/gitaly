@@ -3,8 +3,8 @@ package loghandler
 import (
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	raven "github.com/getsentry/raven-go"
-	log "github.com/sirupsen/logrus"
 
 	"math"
 
