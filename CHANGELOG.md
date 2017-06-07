@@ -4,6 +4,8 @@ UNRELEASED
 
 - Stop using deprecated field `path` in Repository messages
   https://gitlab.com/gitlab-org/gitaly/merge_requests/179
+- Implement TreeEntry RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/187
 
 v0.11.2
 
