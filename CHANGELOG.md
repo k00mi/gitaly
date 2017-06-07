@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.11.0
 
 - FindDefaultBranchName: decorate error
   https://gitlab.com/gitlab-org/gitaly/merge_requests/148
@@ -29,6 +29,7 @@ UNRELEASED
 - CommitDiff: Send chunks of patches over messages
   https://gitlab.com/gitlab-org/gitaly/merge_requests/170
 - Upgrade gRPC and its dependencies
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/180
 
 v0.10.0
 
