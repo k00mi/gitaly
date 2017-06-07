@@ -10,9 +10,10 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/connectioncounter"
+	"gitlab.com/gitlab-org/gitaly/internal/helper/fieldextractors"
 	"gitlab.com/gitlab-org/gitaly/internal/service"
-	"gitlab.com/gitlab-org/gitaly/internal/service/middleware/loghandler"
 	"gitlab.com/gitlab-org/gitaly/internal/service/middleware/panichandler"
+	"gitlab.com/gitlab-org/gitaly/internal/service/middleware/sentryhandler"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
@@ -79,19 +80,23 @@ func newGRPCServer() *grpc.Server {
 	logrusEntry := log.NewEntry(log.StandardLogger())
 	grpc_logrus.ReplaceGrpcLogger(logrusEntry)
 
+	ctxTagOpts := []grpc_ctxtags.Option{
+		grpc_ctxtags.WithFieldExtractor(fieldextractors.RepositoryFieldExtractor),
+	}
+
 	server := grpc.NewServer(
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
-			grpc_ctxtags.StreamServerInterceptor(),
+			grpc_ctxtags.StreamServerInterceptor(ctxTagOpts...),
 			grpc_prometheus.StreamServerInterceptor,
 			grpc_logrus.StreamServerInterceptor(logrusEntry),
-			loghandler.StreamLogHandler,
+			sentryhandler.StreamLogHandler,
 			panichandler.StreamPanicHandler, // Panic handler should remain last
 		)),
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
-			grpc_ctxtags.UnaryServerInterceptor(),
+			grpc_ctxtags.UnaryServerInterceptor(ctxTagOpts...),
 			grpc_prometheus.UnaryServerInterceptor,
 			grpc_logrus.UnaryServerInterceptor(logrusEntry),
-			loghandler.UnaryLogHandler,
+			sentryhandler.UnaryLogHandler,
 			panichandler.UnaryPanicHandler, // Panic handler should remain last
 		)),
 	)
