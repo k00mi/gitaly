@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	log "github.com/sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	pbhelper "gitlab.com/gitlab-org/gitaly-proto/go/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"

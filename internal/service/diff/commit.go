@@ -3,7 +3,7 @@ package diff
 import (
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/diff"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"

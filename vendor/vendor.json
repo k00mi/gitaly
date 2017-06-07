@@ -9,6 +9,14 @@
 			"revisionTime": "2017-03-28T06:15:53Z"
 		},
 		{
+			"checksumSHA1": "Ksl4kXr4ty0HwjrLRLZOrNz05Bw=",
+			"path": "github.com/Sirupsen/logrus",
+			"revision": "ba1b36c82c5e05c4f912a88eab0dcd91a171688f",
+			"revisionTime": "2017-03-14T19:23:53Z",
+			"version": "v0.11.5",
+			"versionExact": "v0.11.5"
+		},
+		{
 			"checksumSHA1": "spyv5/YFBjYyZLZa1U2LBfDR8PM=",
 			"path": "github.com/beorn7/perks/quantile",
 			"revision": "4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9",
@@ -127,14 +135,6 @@
 			"path": "github.com/prometheus/procfs",
 			"revision": "fcdb11ccb4389efb1b210b7ffb623ab71c5fdd60",
 			"revisionTime": "2016-12-06T22:21:41Z"
-		},
-		{
-			"checksumSHA1": "Wma1ByOP+f4o3I2q1WIuMSuEoCI=",
-			"path": "github.com/sirupsen/logrus",
-			"revision": "ba1b36c82c5e05c4f912a88eab0dcd91a171688f",
-			"revisionTime": "2017-03-14T19:23:53Z",
-			"version": "v0.11.5",
-			"versionExact": "v0.11.5"
 		},
 		{
 			"checksumSHA1": "JXUVA1jky8ZX8w09p2t5KLs97Nc=",

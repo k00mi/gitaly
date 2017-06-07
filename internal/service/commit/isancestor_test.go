@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
