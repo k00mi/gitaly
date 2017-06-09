@@ -17,7 +17,11 @@ import (
 func UnaryLogHandler(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	start := time.Now()
 	resp, err := handler(ctx, req)
-	logRequest(ctx, info.FullMethod, start, err)
+
+	if err != nil {
+		logGrpcErrorToSentry(ctx, info.FullMethod, start, err)
+	}
+
 	return resp, err
 }
 
@@ -25,7 +29,11 @@ func UnaryLogHandler(ctx context.Context, req interface{}, info *grpc.UnaryServe
 func StreamLogHandler(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 	start := time.Now()
 	err := handler(srv, stream)
-	logRequest(stream.Context(), info.FullMethod, start, err)
+
+	if err != nil {
+		logGrpcErrorToSentry(stream.Context(), info.FullMethod, start, err)
+	}
+
 	return err
 }
 
@@ -37,11 +45,7 @@ func stringMap(incoming map[string]interface{}) map[string]string {
 	return result
 }
 
-func logRequest(ctx context.Context, method string, start time.Time, err error) {
-	if err == nil {
-		return
-	}
-
+func logGrpcErrorToSentry(ctx context.Context, method string, start time.Time, err error) {
 	grpcErrorCode := grpc.Code(err)
 
 	if grpcErrorCode == codes.OK {
