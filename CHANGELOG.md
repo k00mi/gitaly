@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.11.2
 
 Skipping 0.11.1 intentionally, we messed up the tag.
 
