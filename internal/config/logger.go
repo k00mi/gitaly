@@ -30,14 +30,9 @@ func configureLoggingFormat() {
 	}
 }
 
-// IsDebugLoggingEnabled returns true is debug logging is disabled
-func IsDebugLoggingEnabled() bool {
-	return debugLoggingEnabled
-}
-
 // ConfigureLogging uses the global conf and environmental vars to configure the logged
 func ConfigureLogging() {
-	if IsDebugLoggingEnabled() {
+	if debugLoggingEnabled {
 		log.SetLevel(log.DebugLevel)
 	} else {
 		log.SetLevel(log.InfoLevel)
