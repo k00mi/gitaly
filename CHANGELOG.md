@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.11.1
 
 - Add context to structured logging messages
   https://gitlab.com/gitlab-org/gitaly/merge_requests/184
