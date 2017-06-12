@@ -4,6 +4,8 @@ UNRELEASED
 
 - Add context to structured logging messages
   https://gitlab.com/gitlab-org/gitaly/merge_requests/184
+- Fix incorrect dependency in Makefile
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/189
 
 v0.11.0
 
