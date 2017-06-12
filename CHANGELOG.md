@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Add context to structured logging messages
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/184
+
 v0.11.0
 
 - FindDefaultBranchName: decorate error
