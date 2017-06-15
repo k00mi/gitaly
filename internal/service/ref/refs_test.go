@@ -27,8 +27,7 @@ func TestSuccessfulFindAllBranchNames(t *testing.T) {
 	defer server.Stop()
 
 	client := newRefClient(t)
-	repo := &pb.Repository{Path: testRepoPath}
-	rpcRequest := &pb.FindAllBranchNamesRequest{Repository: repo}
+	rpcRequest := &pb.FindAllBranchNamesRequest{Repository: testRepo}
 
 	c, err := client.FindAllBranchNames(context.Background(), rpcRequest)
 	if err != nil {
@@ -80,7 +79,7 @@ func TestInvalidRepoFindAllBranchNamesRequest(t *testing.T) {
 	defer server.Stop()
 
 	client := newRefClient(t)
-	repo := &pb.Repository{Path: "/made/up/path"}
+	repo := &pb.Repository{StorageName: "default", RelativePath: "made/up/path"}
 	rpcRequest := &pb.FindAllBranchNamesRequest{Repository: repo}
 
 	c, err := client.FindAllBranchNames(context.Background(), rpcRequest)
@@ -103,8 +102,7 @@ func TestSuccessfulFindAllTagNames(t *testing.T) {
 	defer server.Stop()
 
 	client := newRefClient(t)
-	repo := &pb.Repository{Path: testRepoPath}
-	rpcRequest := &pb.FindAllTagNamesRequest{Repository: repo}
+	rpcRequest := &pb.FindAllTagNamesRequest{Repository: testRepo}
 
 	c, err := client.FindAllTagNames(context.Background(), rpcRequest)
 	if err != nil {
@@ -157,7 +155,7 @@ func TestInvalidRepoFindAllTagNamesRequest(t *testing.T) {
 	defer server.Stop()
 
 	client := newRefClient(t)
-	repo := &pb.Repository{Path: "/made/up/path"}
+	repo := &pb.Repository{StorageName: "default", RelativePath: "made/up/path"}
 	rpcRequest := &pb.FindAllTagNamesRequest{Repository: repo}
 
 	c, err := client.FindAllTagNames(context.Background(), rpcRequest)
@@ -274,8 +272,7 @@ func TestSuccessfulFindDefaultBranchName(t *testing.T) {
 	defer server.Stop()
 
 	client := newRefClient(t)
-	repo := &pb.Repository{Path: testRepoPath}
-	rpcRequest := &pb.FindDefaultBranchNameRequest{Repository: repo}
+	rpcRequest := &pb.FindDefaultBranchNameRequest{Repository: testRepo}
 
 	r, err := client.FindDefaultBranchName(context.Background(), rpcRequest)
 	if err != nil {
@@ -306,7 +303,7 @@ func TestInvalidRepoFindDefaultBranchNameRequest(t *testing.T) {
 	defer server.Stop()
 
 	client := newRefClient(t)
-	repo := &pb.Repository{Path: "/made/up/path"}
+	repo := &pb.Repository{StorageName: "default", RelativePath: "/made/up/path"}
 	rpcRequest := &pb.FindDefaultBranchNameRequest{Repository: repo}
 
 	_, err := client.FindDefaultBranchName(context.Background(), rpcRequest)
@@ -396,8 +393,7 @@ func TestSuccessfulFindLocalBranches(t *testing.T) {
 	defer server.Stop()
 
 	client := newRefClient(t)
-	repo := &pb.Repository{Path: testRepoPath}
-	rpcRequest := &pb.FindLocalBranchesRequest{Repository: repo}
+	rpcRequest := &pb.FindLocalBranchesRequest{Repository: testRepo}
 
 	c, err := client.FindLocalBranches(context.Background(), rpcRequest)
 	if err != nil {
@@ -466,10 +462,9 @@ func TestFindLocalBranchesSort(t *testing.T) {
 	defer server.Stop()
 
 	client := newRefClient(t)
-	repo := &pb.Repository{Path: testRepoPath}
 
 	for _, testCase := range testCases {
-		rpcRequest := &pb.FindLocalBranchesRequest{Repository: repo, SortBy: testCase.sortBy}
+		rpcRequest := &pb.FindLocalBranchesRequest{Repository: testRepo, SortBy: testCase.sortBy}
 
 		c, err := client.FindLocalBranches(context.Background(), rpcRequest)
 		if err != nil {

@@ -18,9 +18,9 @@ func TestFailedUploadPackRequestDueToValidationError(t *testing.T) {
 	client := newSSHClient(t)
 
 	rpcRequests := []pb.SSHUploadPackRequest{
-		{Repository: &pb.Repository{Path: ""}}, // Repository.Path is empty
-		{Repository: nil},                      // Repository is nil
-		{Repository: &pb.Repository{Path: "/path/to/repo"}, Stdin: []byte("Fail")}, // Data exists on first request
+		{Repository: &pb.Repository{StorageName: "default", RelativePath: ""}}, // Repository.RelativePath is empty
+		{Repository: nil}, // Repository is nil
+		{Repository: &pb.Repository{StorageName: "default", RelativePath: "path/to/repo"}, Stdin: []byte("Fail")}, // Data exists on first request
 	}
 
 	for _, rpcRequest := range rpcRequests {

@@ -24,11 +24,11 @@ const scratchDir = "testdata/scratch"
 
 var (
 	serverSocketPath = path.Join(scratchDir, "gitaly.sock")
-	testRepoPath     = ""
+	testRepo         *pb.Repository
 )
 
 func TestMain(m *testing.M) {
-	testRepoPath = testhelper.GitlabTestRepoPath()
+	testRepo = testhelper.TestRepository()
 
 	if err := os.MkdirAll(scratchDir, 0755); err != nil {
 		log.WithError(err).Fatal("mkdirall failed")
@@ -48,7 +48,6 @@ func TestMain(m *testing.M) {
 
 func TestCommitIsAncestorFailure(t *testing.T) {
 	client := newCommitClient(t)
-	repo := &pb.Repository{Path: testRepoPath}
 
 	queries := []struct {
 		Request   *pb.CommitIsAncestorRequest
@@ -66,7 +65,7 @@ func TestCommitIsAncestorFailure(t *testing.T) {
 		},
 		{
 			Request: &pb.CommitIsAncestorRequest{
-				Repository: repo,
+				Repository: testRepo,
 				AncestorId: "",
 				ChildId:    "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab",
 			},
@@ -75,7 +74,7 @@ func TestCommitIsAncestorFailure(t *testing.T) {
 		},
 		{
 			Request: &pb.CommitIsAncestorRequest{
-				Repository: repo,
+				Repository: testRepo,
 				AncestorId: "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 				ChildId:    "",
 			},
@@ -84,7 +83,7 @@ func TestCommitIsAncestorFailure(t *testing.T) {
 		},
 		{
 			Request: &pb.CommitIsAncestorRequest{
-				Repository: &pb.Repository{Path: "fake-path"},
+				Repository: &pb.Repository{StorageName: "default", RelativePath: "fake-path"},
 				AncestorId: "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 				ChildId:    "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab",
 			},
@@ -104,7 +103,6 @@ func TestCommitIsAncestorFailure(t *testing.T) {
 
 func TestCommitIsAncestorSuccess(t *testing.T) {
 	client := newCommitClient(t)
-	repo := &pb.Repository{Path: testRepoPath}
 
 	queries := []struct {
 		Request  *pb.CommitIsAncestorRequest
@@ -113,7 +111,7 @@ func TestCommitIsAncestorSuccess(t *testing.T) {
 	}{
 		{
 			Request: &pb.CommitIsAncestorRequest{
-				Repository: repo,
+				Repository: testRepo,
 				AncestorId: "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab",
 				ChildId:    "372ab6950519549b14d220271ee2322caa44d4eb",
 			},
@@ -122,7 +120,7 @@ func TestCommitIsAncestorSuccess(t *testing.T) {
 		},
 		{
 			Request: &pb.CommitIsAncestorRequest{
-				Repository: repo,
+				Repository: testRepo,
 				AncestorId: "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 				ChildId:    "38008cb17ce1466d8fec2dfa6f6ab8dcfe5cf49e",
 			},
@@ -131,7 +129,7 @@ func TestCommitIsAncestorSuccess(t *testing.T) {
 		},
 		{
 			Request: &pb.CommitIsAncestorRequest{
-				Repository: repo,
+				Repository: testRepo,
 				AncestorId: "1234123412341234123412341234123412341234",
 				ChildId:    "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 			},
@@ -140,7 +138,7 @@ func TestCommitIsAncestorSuccess(t *testing.T) {
 		},
 		{
 			Request: &pb.CommitIsAncestorRequest{
-				Repository: repo,
+				Repository: testRepo,
 				AncestorId: "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 				ChildId:    "gitaly-stuff",
 			},
@@ -149,7 +147,7 @@ func TestCommitIsAncestorSuccess(t *testing.T) {
 		},
 		{
 			Request: &pb.CommitIsAncestorRequest{
-				Repository: repo,
+				Repository: testRepo,
 				AncestorId: "gitaly-stuff",
 				ChildId:    "master",
 			},
@@ -158,7 +156,7 @@ func TestCommitIsAncestorSuccess(t *testing.T) {
 		},
 		{
 			Request: &pb.CommitIsAncestorRequest{
-				Repository: repo,
+				Repository: testRepo,
 				AncestorId: "refs/tags/v1.0.0",
 				ChildId:    "refs/tags/v1.1.0",
 			},
@@ -167,7 +165,7 @@ func TestCommitIsAncestorSuccess(t *testing.T) {
 		},
 		{
 			Request: &pb.CommitIsAncestorRequest{
-				Repository: repo,
+				Repository: testRepo,
 				AncestorId: "refs/tags/v1.1.0",
 				ChildId:    "refs/tags/v1.0.0",
 			},

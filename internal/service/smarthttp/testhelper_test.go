@@ -25,11 +25,11 @@ const (
 
 var (
 	serverSocketPath = path.Join(scratchDir, "gitaly.sock")
-	testRepoPath     = ""
+	testRepo         *pb.Repository
 )
 
 func TestMain(m *testing.M) {
-	testRepoPath = testhelper.GitlabTestRepoPath()
+	testRepo = testhelper.TestRepository()
 
 	if err := os.MkdirAll(scratchDir, 0755); err != nil {
 		log.Fatal(err)
