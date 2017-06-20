@@ -23,6 +23,10 @@ socket_path = "/path/to/gitaly.sock"
 listen_addr = ":8081"
 prometheus_listen_addr = ":9236"
 
+[auth]
+# unenforced = false
+# token = "abc123def456......."
+
 [[storage]]
 path = "/path/to/storage/repositories"
 name = "my_shard"
@@ -39,6 +43,37 @@ name = "my_shard"
 |listen_addr|string|see notes|TCP address for Gitaly to listen on (See #GITALY_LISTEN_ADDR). Required unless socket_path is set|
 |prometheus_listen_addr|string|no|TCP listen address for Prometheus metrics. If not set, no Prometheus listener is started|
 |storage|array|yes|An array of storage shards|
+
+### Authentication
+
+Gitaly can be configured to reject requests that do not contain a
+specific bearer token in their headers. This is a security measure to
+be used when serving requests over TCP.
+
+Authentication is disabled when the token setting in config.toml is absent or the empty string.
+
+```toml
+[auth]
+# Non-empty token: this enables authentication.
+token = "the secret token"
+```
+
+It is possible to temporarily disable authentication with the 'unenforced'
+setting. This allows you to monitor (see below) if all clients are
+authenticating correctly without causing a service outage for clients
+that are not configured correctly yet.
+
+> **Warning:** Remember to disable 'unenforced' when you are done
+changing your token settings.
+
+```toml
+[auth]
+token = "the secret token"
+unenforced = true
+```
+
+All authentication attempts are counted in Prometheus under
+the `gitaly_authentications` metric.
 
 ### Storage
 
