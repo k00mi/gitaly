@@ -199,7 +199,7 @@ func TestValidateStorages(t *testing.T) {
 
 	for _, tc := range testCases {
 		Config.Storages = tc.storages
-		err := ValidateStorages()
+		err := validateStorages()
 		if tc.invalid {
 			assert.Error(t, err, "%+v", tc.storages)
 			continue
