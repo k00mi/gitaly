@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Added usage and version flags to the command line interface
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/193
 - Optional token authentication
   https://gitlab.com/gitlab-org/gitaly/merge_requests/191
 
