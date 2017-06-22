@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.13.0
 
 - Added usage and version flags to the command line interface
   https://gitlab.com/gitlab-org/gitaly/merge_requests/193
