@@ -316,70 +316,76 @@ func TestInvalidRepoFindDefaultBranchNameRequest(t *testing.T) {
 func localBranches() []*pb.FindLocalBranchResponse {
 	return []*pb.FindLocalBranchResponse{
 		{
-			Name:          []byte("refs/heads/100%branch"),
-			CommitId:      "1b12f15a11fc6e62177bef08f47bc7b5ce50b141",
-			CommitSubject: []byte("Merge branch 'add-directory-with-space' into 'master'\r \r Add a directory containing a space in its name\r \r needed for verifying the fix of `https://gitlab.com/gitlab-com/support-forum/issues/952` \r \r See merge request !11"),
-			CommitAuthor: &pb.FindLocalBranchCommitAuthor{
-				Name:  []byte("Stan Hu"),
-				Email: []byte("<stanhu@gmail.com>"),
-				Date:  &timestamp.Timestamp{Seconds: 1471558878},
-			},
-			CommitCommitter: &pb.FindLocalBranchCommitAuthor{
-				Name:  []byte("Stan Hu"),
-				Email: []byte("<stanhu@gmail.com>"),
-				Date:  &timestamp.Timestamp{Seconds: 1471558878},
-			},
-		},
-		{
-			Name:          []byte("refs/heads/improve/awesome"),
-			CommitId:      "5937ac0a7beb003549fc5fd26fc247adbce4a52e",
-			CommitSubject: []byte("Add submodule from gitlab.com"),
-			CommitAuthor: &pb.FindLocalBranchCommitAuthor{
-				Name:  []byte("Dmitriy Zaporozhets"),
-				Email: []byte("<dmitriy.zaporozhets@gmail.com>"),
-				Date:  &timestamp.Timestamp{Seconds: 1393491698},
-			},
-			CommitCommitter: &pb.FindLocalBranchCommitAuthor{
-				Name:  []byte("Dmitriy Zaporozhets"),
-				Email: []byte("<dmitriy.zaporozhets@gmail.com>"),
-				Date:  &timestamp.Timestamp{Seconds: 1393491698},
+			Name: []byte("refs/heads/100%branch"),
+			Target: &pb.GitCommit{
+				Id:      "1b12f15a11fc6e62177bef08f47bc7b5ce50b141",
+				Subject: []byte("Merge branch 'add-directory-with-space' into 'master'\r \r Add a directory containing a space in its name\r \r needed for verifying the fix of `https://gitlab.com/gitlab-com/support-forum/issues/952` \r \r See merge request !11"),
+				Author: &pb.CommitAuthor{
+					Name:  []byte("Stan Hu"),
+					Email: []byte("<stanhu@gmail.com>"),
+					Date:  &timestamp.Timestamp{Seconds: 1471558878},
+				},
+				Committer: &pb.CommitAuthor{
+					Name:  []byte("Stan Hu"),
+					Email: []byte("<stanhu@gmail.com>"),
+					Date:  &timestamp.Timestamp{Seconds: 1471558878},
+				},
 			},
 		},
 		{
-			Name:          []byte("refs/heads/'test'"),
-			CommitId:      "e56497bb5f03a90a51293fc6d516788730953899",
-			CommitSubject: []byte("Merge branch 'tree_helper_spec' into 'master'"),
-			CommitAuthor: &pb.FindLocalBranchCommitAuthor{
-				Name:  []byte("Sytse Sijbrandij"),
-				Email: []byte("<sytse@gitlab.com>"),
-				Date:  &timestamp.Timestamp{Seconds: 1420925009},
+			Name: []byte("refs/heads/improve/awesome"),
+			Target: &pb.GitCommit{
+				Id:      "5937ac0a7beb003549fc5fd26fc247adbce4a52e",
+				Subject: []byte("Add submodule from gitlab.com"),
+				Author: &pb.CommitAuthor{
+					Name:  []byte("Dmitriy Zaporozhets"),
+					Email: []byte("<dmitriy.zaporozhets@gmail.com>"),
+					Date:  &timestamp.Timestamp{Seconds: 1393491698},
+				},
+				Committer: &pb.CommitAuthor{
+					Name:  []byte("Dmitriy Zaporozhets"),
+					Email: []byte("<dmitriy.zaporozhets@gmail.com>"),
+					Date:  &timestamp.Timestamp{Seconds: 1393491698},
+				},
 			},
-			CommitCommitter: &pb.FindLocalBranchCommitAuthor{
-				Name:  []byte("Sytse Sijbrandij"),
-				Email: []byte("<sytse@gitlab.com>"),
-				Date:  &timestamp.Timestamp{Seconds: 1420925009},
+		},
+		{
+			Name: []byte("refs/heads/'test'"),
+			Target: &pb.GitCommit{
+				Id:      "e56497bb5f03a90a51293fc6d516788730953899",
+				Subject: []byte("Merge branch 'tree_helper_spec' into 'master'"),
+				Author: &pb.CommitAuthor{
+					Name:  []byte("Sytse Sijbrandij"),
+					Email: []byte("<sytse@gitlab.com>"),
+					Date:  &timestamp.Timestamp{Seconds: 1420925009},
+				},
+				Committer: &pb.CommitAuthor{
+					Name:  []byte("Sytse Sijbrandij"),
+					Email: []byte("<sytse@gitlab.com>"),
+					Date:  &timestamp.Timestamp{Seconds: 1420925009},
+				},
 			},
 		},
 	}
 }
 
-func authorsEqual(a *pb.FindLocalBranchCommitAuthor, b *pb.FindLocalBranchCommitAuthor) bool {
+func authorsEqual(a *pb.CommitAuthor, b *pb.CommitAuthor) bool {
 	return bytes.Equal(a.Name, b.Name) &&
 		bytes.Equal(a.Email, b.Email) &&
 		a.Date.Seconds == b.Date.Seconds
 }
 
-func branchesEqual(a *pb.FindLocalBranchResponse, b *pb.FindLocalBranchResponse) bool {
-	return a.CommitId == b.CommitId &&
-		bytes.Equal(a.CommitSubject, b.CommitSubject) &&
-		authorsEqual(a.CommitAuthor, b.CommitAuthor) &&
-		authorsEqual(a.CommitCommitter, b.CommitCommitter)
+func commitsEqual(a *pb.GitCommit, b *pb.GitCommit) bool {
+	return a.Id == b.Id &&
+		bytes.Equal(a.Subject, b.Subject) &&
+		authorsEqual(a.Author, b.Author) &&
+		authorsEqual(a.Committer, b.Committer)
 }
 
 func validateContainsBranch(t *testing.T, branches []*pb.FindLocalBranchResponse, branch *pb.FindLocalBranchResponse) {
 	for _, b := range branches {
 		if bytes.Equal(branch.Name, b.Name) {
-			if !branchesEqual(branch, b) {
+			if !commitsEqual(branch.Target, b.Target) {
 				t.Fatalf("Expected branch\n%v\ngot\n%v", branch, b)
 			}
 			return // Found the branch and it maches. Success!

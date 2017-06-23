@@ -8,3 +8,8 @@ type server struct{}
 func NewServer() pb.CommitServiceServer {
 	return &server{}
 }
+
+func (s *server) CommitsBetween(in *pb.CommitsBetweenRequest, stream pb.CommitService_CommitsBetweenServer) error {
+	// TODO: Implement
+	return nil
+}

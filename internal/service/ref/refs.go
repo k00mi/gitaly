@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -12,6 +11,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"golang.org/x/net/context"
 )
@@ -23,20 +23,7 @@ var (
 	headReference   = _headReference
 )
 
-func handleGitCommand(w refsWriter, r io.Reader) error {
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		if err := w.AddRef(scanner.Bytes()); err != nil {
-			return err
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-	return w.Flush()
-}
-
-func findRefs(writer refsWriter, repo *pb.Repository, pattern string, args ...string) error {
+func findRefs(writer git.RefsWriter, repo *pb.Repository, pattern string, args ...string) error {
 	repoPath, err := helper.GetRepoPath(repo)
 	if err != nil {
 		return err
@@ -61,7 +48,7 @@ func findRefs(writer refsWriter, repo *pb.Repository, pattern string, args ...st
 	}
 	defer cmd.Kill()
 
-	if err := handleGitCommand(writer, cmd); err != nil {
+	if err := git.HandleGitCommand(cmd, writer); err != nil {
 		return err
 	}
 
@@ -89,7 +76,7 @@ func _findBranchNames(repoPath string) ([][]byte, error) {
 
 	scanner := bufio.NewScanner(cmd)
 	for scanner.Scan() {
-		names, _ = appendRef(names, scanner.Bytes())
+		names, _ = git.AppendRef(names, scanner.Bytes())
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("reading standard input: %v", err)
