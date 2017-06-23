@@ -2,14 +2,13 @@ package commit
 
 import pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
-type server struct{}
+const maxMsgSize = 1024
 
-// NewServer creates a new instance of a grpc CommitServer
-func NewServer() pb.CommitServiceServer {
-	return &server{}
+type server struct {
+	MaxMsgSize int
 }
 
-func (s *server) CommitsBetween(in *pb.CommitsBetweenRequest, stream pb.CommitService_CommitsBetweenServer) error {
-	// TODO: Implement
-	return nil
+// NewServer creates a new instance of a grpc CommitServiceServer
+func NewServer() pb.CommitServiceServer {
+	return &server{MaxMsgSize: maxMsgSize}
 }
