@@ -11,6 +11,8 @@ export GOPATH=${BUILD_DIR}/_build
 export GO15VENDOREXPERIMENT=1
 export PATH:=${GOPATH}/bin:$(PATH)
 
+.NOTPARALLEL:
+
 .PHONY: all
 all: build
 
