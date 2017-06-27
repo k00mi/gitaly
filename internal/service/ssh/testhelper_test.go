@@ -12,27 +12,70 @@ import (
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"gitlab.com/gitlab-org/gitaly/internal/service/renameadapter"
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
 const (
-	scratchDir = "testdata/scratch"
+	testPath     = "testdata"
+	scratchDir   = testPath + "/scratch"
+	testRepoRoot = testPath + "/data"
 )
 
 var (
 	serverSocketPath = path.Join(scratchDir, "gitaly.sock")
+	workDir          string
+	testRepo         *pb.Repository
+
+	uploadPackPath  string
+	receivePackPath string
+
+	cwd string
 )
 
 func TestMain(m *testing.M) {
+	cwd = mustGetCwd()
+
+	err := os.RemoveAll(testPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	testRepo = testhelper.TestRepository()
+
+	if err := os.MkdirAll(testRepoRoot, 0755); err != nil {
+		log.Fatal(err)
+	}
+	defer os.RemoveAll(testRepoRoot)
+
 	if err := os.MkdirAll(scratchDir, 0755); err != nil {
 		log.Fatal(err)
 	}
 	defer os.RemoveAll(scratchDir)
 
+	// Build the test-binary that we need
+	os.Remove("gitaly-upload-pack")
+	testhelper.MustRunCommand(nil, nil, "go", "build", "gitlab.com/gitlab-org/gitaly/internal/service/ssh/cmd/gitaly-upload-pack")
+	defer os.Remove("gitaly-upload-pack")
+	uploadPackPath = path.Join(cwd, "gitaly-upload-pack")
+
+	os.Remove("gitaly-receive-pack")
+	testhelper.MustRunCommand(nil, nil, "go", "build", "gitlab.com/gitlab-org/gitaly/internal/service/ssh/cmd/gitaly-receive-pack")
+	defer os.Remove("gitaly-receive-pack")
+	receivePackPath = path.Join(cwd, "gitaly-receive-pack")
+
 	os.Exit(func() int {
 		return m.Run()
 	}())
+}
+
+func mustGetCwd() string {
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Panic(err)
+	}
+	return wd
 }
 
 func runSSHServer(t *testing.T) *grpc.Server {
