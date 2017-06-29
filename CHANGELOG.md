@@ -4,6 +4,9 @@ UNRELEASED
 
 - Added integration test for SSH, and a client package
   https://gitlab.com/gitlab-org/gitaly/merge_requests/178/
+- Override gRPC code to Canceled/DeadlineExceeded on requests with
+  canceled contexts
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/199
 
 v0.13.0
 
