@@ -5,8 +5,8 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly/internal/helper/fieldextractors"
 	"gitlab.com/gitlab-org/gitaly/internal/service"
-	"gitlab.com/gitlab-org/gitaly/internal/service/middleware/panichandler"
-	"gitlab.com/gitlab-org/gitaly/internal/service/middleware/sentryhandler"
+	"gitlab.com/gitlab-org/gitaly/internal/middleware/panichandler"
+	"gitlab.com/gitlab-org/gitaly/internal/middleware/sentryhandler"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"

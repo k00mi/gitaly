@@ -5,7 +5,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/getsentry/raven-go"
-	"gitlab.com/gitlab-org/gitaly/internal/service/middleware/panichandler"
+	"gitlab.com/gitlab-org/gitaly/internal/middleware/panichandler"
 )
 
 // ConfigureSentry configures the sentry DSN
