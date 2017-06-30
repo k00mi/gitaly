@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.14.0
 
 - Added integration test for SSH, and a client package
   https://gitlab.com/gitlab-org/gitaly/merge_requests/178/
