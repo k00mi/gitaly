@@ -4,9 +4,10 @@ import (
 	log "github.com/Sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitaly/internal/helper/fieldextractors"
+	"gitlab.com/gitlab-org/gitaly/internal/middleware/cancelhandler"
+	"gitlab.com/gitlab-org/gitaly/internal/middleware/panichandler"
+	"gitlab.com/gitlab-org/gitaly/internal/middleware/sentryhandler"
 	"gitlab.com/gitlab-org/gitaly/internal/service"
-	"gitlab.com/gitlab-org/gitaly/internal/service/middleware/panichandler"
-	"gitlab.com/gitlab-org/gitaly/internal/service/middleware/sentryhandler"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
@@ -32,6 +33,7 @@ func New() *grpc.Server {
 			grpc_prometheus.StreamServerInterceptor,
 			grpc_logrus.StreamServerInterceptor(logrusEntry),
 			sentryhandler.StreamLogHandler,
+			cancelhandler.Stream, // Should be below LogHandler
 			authStreamServerInterceptor(),
 			// Panic handler should remain last so that application panics will be
 			// converted to errors and logged
@@ -42,6 +44,7 @@ func New() *grpc.Server {
 			grpc_prometheus.UnaryServerInterceptor,
 			grpc_logrus.UnaryServerInterceptor(logrusEntry),
 			sentryhandler.UnaryLogHandler,
+			cancelhandler.Unary, // Should be below LogHandler
 			authUnaryServerInterceptor(),
 			// Panic handler should remain last so that application panics will be
 			// converted to errors and logged
