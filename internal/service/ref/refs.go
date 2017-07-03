@@ -11,8 +11,8 @@ import (
 	"google.golang.org/grpc/codes"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
 	"golang.org/x/net/context"
 )
 
@@ -23,7 +23,7 @@ var (
 	headReference   = _headReference
 )
 
-func findRefs(writer git.RefsWriter, repo *pb.Repository, pattern string, args ...string) error {
+func findRefs(writer lines.Sender, repo *pb.Repository, pattern string, args ...string) error {
 	repoPath, err := helper.GetRepoPath(repo)
 	if err != nil {
 		return err
@@ -48,7 +48,7 @@ func findRefs(writer git.RefsWriter, repo *pb.Repository, pattern string, args .
 	}
 	defer cmd.Kill()
 
-	if err := git.HandleGitCommand(cmd, writer); err != nil {
+	if err := lines.Send(cmd, writer); err != nil {
 		return err
 	}
 
@@ -57,12 +57,12 @@ func findRefs(writer git.RefsWriter, repo *pb.Repository, pattern string, args .
 
 // FindAllBranchNames creates a stream of ref names for all branches in the given repository
 func (s *server) FindAllBranchNames(in *pb.FindAllBranchNamesRequest, stream pb.RefService_FindAllBranchNamesServer) error {
-	return findRefs(newFindAllBranchNamesWriter(stream, s.MaxMsgSize), in.Repository, "refs/heads")
+	return findRefs(newFindAllBranchNamesWriter(stream), in.Repository, "refs/heads")
 }
 
 // FindAllTagNames creates a stream of ref names for all tags in the given repository
 func (s *server) FindAllTagNames(in *pb.FindAllTagNamesRequest, stream pb.RefService_FindAllTagNamesServer) error {
-	return findRefs(newFindAllTagNamesWriter(stream, s.MaxMsgSize), in.Repository, "refs/tags")
+	return findRefs(newFindAllTagNamesWriter(stream), in.Repository, "refs/tags")
 }
 
 func _findBranchNames(repoPath string) ([][]byte, error) {
@@ -76,7 +76,7 @@ func _findBranchNames(repoPath string) ([][]byte, error) {
 
 	scanner := bufio.NewScanner(cmd)
 	for scanner.Scan() {
-		names, _ = git.AppendRef(names, scanner.Bytes())
+		names, _ = lines.CopyAndAppend(names, scanner.Bytes())
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("reading standard input: %v", err)
@@ -195,7 +195,7 @@ func (s *server) FindLocalBranches(in *pb.FindLocalBranchesRequest, stream pb.Re
 	// %00 inserts the null character into the output (see for-each-ref docs)
 	formatFlag := "--format=" + strings.Join(localBranchFormatFields, "%00")
 	sortFlag := "--sort=" + parseSortKey(in.GetSortBy())
-	writer := newFindLocalBranchesWriter(stream, s.MaxMsgSize)
+	writer := newFindLocalBranchesWriter(stream)
 
 	return findRefs(writer, in.Repository, "refs/heads", formatFlag, sortFlag)
 }

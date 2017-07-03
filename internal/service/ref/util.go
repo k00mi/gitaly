@@ -5,34 +5,20 @@ import (
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 )
 
-var localBranchFormatFields = append([]string{"%(refname)"}, git.CommitFormatFields...)
-
-type branchesSender struct {
-	stream pb.Ref_FindAllBranchNamesServer
-}
-
-func (w branchesSender) SendRefs(refs [][]byte) error {
-	return w.stream.Send(&pb.FindAllBranchNamesResponse{Names: refs})
-}
-
-type tagsSender struct {
-	stream pb.Ref_FindAllTagNamesServer
-}
-
-func (w tagsSender) SendRefs(refs [][]byte) error {
-	return w.stream.Send(&pb.FindAllTagNamesResponse{Names: refs})
-}
-
-type localBranchesSender struct {
-	stream pb.Ref_FindLocalBranchesServer
+var localBranchFormatFields = []string{
+	"%(refname)", "%(objectname)", "%(contents:subject)", "%(authorname)",
+	"%(authoremail)", "%(authordate:iso-strict)", "%(committername)",
+	"%(committeremail)", "%(committerdate:iso-strict)",
 }
 
 func buildBranch(elements [][]byte) (*pb.FindLocalBranchResponse, error) {
-	target, err := git.BuildCommit(elements[1:])
+	target, err := git.NewCommit(elements[1], elements[2], elements[3],
+		elements[4], elements[5], elements[6], elements[7], elements[8])
 
 	if err != nil {
 		return nil, err
@@ -44,40 +30,33 @@ func buildBranch(elements [][]byte) (*pb.FindLocalBranchResponse, error) {
 	}, nil
 }
 
-func (w localBranchesSender) SendRefs(refs [][]byte) error {
-	var branches []*pb.FindLocalBranchResponse
+func newFindAllBranchNamesWriter(stream pb.Ref_FindAllBranchNamesServer) lines.Sender {
+	return func(refs [][]byte) error {
+		return stream.Send(&pb.FindAllBranchNamesResponse{Names: refs})
+	}
+}
 
-	for _, ref := range refs {
-		elements := bytes.Split(ref, []byte("\x00"))
-		if len(elements) != 9 {
-			return grpc.Errorf(codes.Internal, "error parsing ref %q", ref)
+func newFindAllTagNamesWriter(stream pb.Ref_FindAllTagNamesServer) lines.Sender {
+	return func(refs [][]byte) error {
+		return stream.Send(&pb.FindAllTagNamesResponse{Names: refs})
+	}
+}
+
+func newFindLocalBranchesWriter(stream pb.Ref_FindLocalBranchesServer) lines.Sender {
+	return func(refs [][]byte) error {
+		var branches []*pb.FindLocalBranchResponse
+
+		for _, ref := range refs {
+			elements := bytes.Split(ref, []byte("\x00"))
+			if len(elements) != 9 {
+				return grpc.Errorf(codes.Internal, "error parsing ref %q", ref)
+			}
+			branch, err := buildBranch(elements)
+			if err != nil {
+				return err
+			}
+			branches = append(branches, branch)
 		}
-		branch, err := buildBranch(elements)
-		if err != nil {
-			return err
-		}
-		branches = append(branches, branch)
-	}
-	return w.stream.Send(&pb.FindLocalBranchesResponse{Branches: branches})
-}
-
-func newFindAllBranchNamesWriter(stream pb.Ref_FindAllBranchNamesServer, maxMsgSize int) git.RefsWriter {
-	return git.RefsWriter{
-		RefsSender: branchesSender{stream},
-		MaxMsgSize: maxMsgSize,
-	}
-}
-
-func newFindAllTagNamesWriter(stream pb.Ref_FindAllTagNamesServer, maxMsgSize int) git.RefsWriter {
-	return git.RefsWriter{
-		RefsSender: tagsSender{stream},
-		MaxMsgSize: maxMsgSize,
-	}
-}
-
-func newFindLocalBranchesWriter(stream pb.Ref_FindLocalBranchesServer, maxMsgSize int) git.RefsWriter {
-	return git.RefsWriter{
-		RefsSender: localBranchesSender{stream},
-		MaxMsgSize: maxMsgSize,
+		return stream.Send(&pb.FindLocalBranchesResponse{Branches: branches})
 	}
 }
