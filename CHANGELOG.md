@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Ensure that sub-processes inherit TZ environment variable
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/201
+
 v0.14.0
 
 - Added integration test for SSH, and a client package
