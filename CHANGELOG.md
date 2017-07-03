@@ -7,6 +7,8 @@ v0.14.0
 - Override gRPC code to Canceled/DeadlineExceeded on requests with
   canceled contexts
   https://gitlab.com/gitlab-org/gitaly/merge_requests/199
+- Add RepositoryExists Implementation
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/200
 
 v0.13.0
 

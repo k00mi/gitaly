@@ -18,6 +18,26 @@ import (
 // relevant error codes and should be passed back to gRPC without further
 // decoration.
 func GetRepoPath(repo *pb.Repository) (string, error) {
+	repoPath, err := GetPath(repo)
+	if err != nil {
+		return "", err
+	}
+
+	if repoPath == "" {
+		return "", grpc.Errorf(codes.InvalidArgument, "GetRepoPath: empty repo")
+	}
+
+	if IsGitDirectory(repoPath) {
+		return repoPath, nil
+	}
+
+	return "", grpc.Errorf(codes.NotFound, "GetRepoPath: not a git repository '%s'", repoPath)
+}
+
+// GetPath returns the path of the repo passed as first argument. An error is
+// returned when either the storage can't be found or the path includes
+// constructs trying to perform directory traversal.
+func GetPath(repo *pb.Repository) (string, error) {
 	storagePath, ok := config.StoragePath(repo.GetStorageName())
 	if !ok {
 		return "", grpc.Errorf(codes.InvalidArgument, "GetRepoPath: invalid storage name '%s'", repo.GetStorageName())
@@ -33,15 +53,23 @@ func GetRepoPath(repo *pb.Repository) (string, error) {
 		return "", grpc.Errorf(codes.InvalidArgument, "GetRepoPath: relative path can't contain directory traversal")
 	}
 
-	repoPath := path.Join(storagePath, relativePath)
+	return path.Join(storagePath, relativePath), nil
+}
 
-	if repoPath == "" {
-		return "", grpc.Errorf(codes.InvalidArgument, "GetRepoPath: empty repo")
+// IsGitDirectory checks if the directory passed as first argument looks like
+// a valid git directory.
+func IsGitDirectory(dir string) bool {
+	if dir == "" {
+		return false
 	}
 
-	if _, err := os.Stat(path.Join(repoPath, "objects")); err != nil {
-		return "", grpc.Errorf(codes.NotFound, "GetRepoPath: not a git repository '%s'", repoPath)
+	if _, err := os.Stat(path.Join(dir, "objects")); err != nil {
+		return false
 	}
 
-	return repoPath, nil
+	if _, err := os.Stat(path.Join(dir, "HEAD")); err != nil {
+		return false
+	}
+
+	return true
 }
