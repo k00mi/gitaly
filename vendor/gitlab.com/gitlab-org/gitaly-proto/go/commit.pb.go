@@ -96,9 +96,11 @@ func (m *CommitIsAncestorResponse) GetValue() bool {
 
 type TreeEntryRequest struct {
 	Repository *Repository `protobuf:"bytes,1,opt,name=repository" json:"repository,omitempty"`
-	Revision   []byte      `protobuf:"bytes,2,opt,name=revision,proto3" json:"revision,omitempty"`
-	Path       []byte      `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`
-	Limit      int64       `protobuf:"varint,4,opt,name=limit" json:"limit,omitempty"`
+	// commit ID or refname
+	Revision []byte `protobuf:"bytes,2,opt,name=revision,proto3" json:"revision,omitempty"`
+	// entry path relative to repository root
+	Path  []byte `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`
+	Limit int64  `protobuf:"varint,4,opt,name=limit" json:"limit,omitempty"`
 }
 
 func (m *TreeEntryRequest) Reset()                    { *m = TreeEntryRequest{} }
@@ -136,10 +138,13 @@ func (m *TreeEntryRequest) GetLimit() int64 {
 
 type TreeEntryResponse struct {
 	Type TreeEntryResponse_ObjectType `protobuf:"varint,1,opt,name=type,enum=gitaly.TreeEntryResponse_ObjectType" json:"type,omitempty"`
-	Oid  string                       `protobuf:"bytes,2,opt,name=oid" json:"oid,omitempty"`
-	Size int64                        `protobuf:"varint,3,opt,name=size" json:"size,omitempty"`
-	Mode int32                        `protobuf:"varint,4,opt,name=mode" json:"mode,omitempty"`
-	Data []byte                       `protobuf:"bytes,5,opt,name=data,proto3" json:"data,omitempty"`
+	// SHA1 object ID
+	Oid  string `protobuf:"bytes,2,opt,name=oid" json:"oid,omitempty"`
+	Size int64  `protobuf:"varint,3,opt,name=size" json:"size,omitempty"`
+	// file mode
+	Mode int32 `protobuf:"varint,4,opt,name=mode" json:"mode,omitempty"`
+	// raw object contents
+	Data []byte `protobuf:"bytes,5,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (m *TreeEntryResponse) Reset()                    { *m = TreeEntryResponse{} }
