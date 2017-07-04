@@ -7,8 +7,8 @@ import (
 	"os/exec"
 	"path"
 	"strconv"
-	"strings"
 
+	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
@@ -18,10 +18,9 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-type objectInfo struct {
+type entryInfo struct {
 	objectType string
 	oid        string
-	size       int64
 	mode       int32
 }
 
@@ -62,15 +61,15 @@ func (s *server) TreeEntry(in *pb.TreeEntryRequest, stream pb.CommitService_Tree
 
 	stdout := bufio.NewReader(cmd)
 
-	treeInfo, err := parseObjectInfo(stdout)
+	treeInfo, err := catfile.ParseObjectInfo(stdout)
 	if err != nil {
 		return grpc.Errorf(codes.Internal, "TreeEntry: %v", err)
 	}
-	if treeInfo.oid == "" {
+	if treeInfo.Oid == "" {
 		return sendNotFoundResponse(stream)
 	}
 
-	treeEntryInfo, err := extractEntryInfoFromTreeData(stdout, treeInfo.size, baseName)
+	treeEntryInfo, err := extractEntryInfoFromTreeData(stdout, treeInfo.Size, baseName)
 	if err != nil {
 		return grpc.Errorf(codes.Internal, "TreeEntry: %v", err)
 	}
@@ -94,38 +93,38 @@ func (s *server) TreeEntry(in *pb.TreeEntryRequest, stream pb.CommitService_Tree
 	stdinWriter.Write([]byte(treeEntryInfo.oid))
 	stdinWriter.Close()
 
-	objectInfo, err := parseObjectInfo(stdout)
+	objectInfo, err := catfile.ParseObjectInfo(stdout)
 	if err != nil {
 		return grpc.Errorf(codes.Internal, "TreeEntry: %v", err)
 	}
 
-	if treeEntryInfo.objectType != objectInfo.objectType {
+	if treeEntryInfo.objectType != objectInfo.Type {
 		return grpc.Errorf(
 			codes.Internal,
 			"TreeEntry: mismatched object type: tree-oid=%s object-oid=%s entry-type=%s object-type=%s",
-			treeEntryInfo.oid, objectInfo.oid, treeEntryInfo.objectType, objectInfo.objectType,
+			treeEntryInfo.oid, objectInfo.Oid, treeEntryInfo.objectType, objectInfo.Type,
 		)
 	}
 
-	if objectInfo.objectType == "tree" {
+	if objectInfo.Type == "tree" {
 		response := &pb.TreeEntryResponse{
 			Type: pb.TreeEntryResponse_TREE,
-			Oid:  objectInfo.oid,
-			Size: objectInfo.size,
+			Oid:  objectInfo.Oid,
+			Size: objectInfo.Size,
 			Mode: treeEntryInfo.mode,
 		}
 		return helper.DecorateError(codes.Unavailable, stream.Send(response))
 	}
 
-	dataLength := objectInfo.size
+	dataLength := objectInfo.Size
 	if in.Limit > 0 && dataLength > in.Limit {
 		dataLength = in.Limit
 	}
 
 	response := &pb.TreeEntryResponse{
 		Type: pb.TreeEntryResponse_BLOB,
-		Oid:  objectInfo.oid,
-		Size: objectInfo.size,
+		Oid:  objectInfo.Oid,
+		Size: objectInfo.Size,
 		Mode: treeEntryInfo.mode,
 	}
 	if dataLength == 0 {
@@ -165,33 +164,7 @@ func validateRequest(in *pb.TreeEntryRequest) error {
 	return nil
 }
 
-func parseObjectInfo(stdout *bufio.Reader) (*objectInfo, error) {
-	infoLine, err := stdout.ReadString('\n')
-	if err != nil {
-		return nil, fmt.Errorf("read info line: %v", err)
-	}
-
-	infoLine = strings.TrimSuffix(infoLine, "\n")
-	if strings.HasSuffix(infoLine, " missing") {
-		return &objectInfo{}, nil
-	}
-
-	info := strings.Split(infoLine, " ")
-
-	objectSizeStr := info[2]
-	objectSize, err := strconv.ParseInt(objectSizeStr, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("parse object size: %v", err)
-	}
-
-	return &objectInfo{
-		objectType: info[1],
-		oid:        info[0],
-		size:       objectSize,
-	}, nil
-}
-
-func extractEntryInfoFromTreeData(stdout *bufio.Reader, treeSize int64, baseName string) (*objectInfo, error) {
+func extractEntryInfoFromTreeData(stdout *bufio.Reader, treeSize int64, baseName string) (*entryInfo, error) {
 	var modeBytes, path []byte
 	var objectType string
 	var err error
@@ -233,7 +206,7 @@ func extractEntryInfoFromTreeData(stdout *bufio.Reader, treeSize int64, baseName
 	}
 
 	if !entryFound {
-		return &objectInfo{}, nil
+		return &entryInfo{}, nil
 	}
 
 	mode, err := strconv.ParseInt(string(modeBytes), 8, 32)
@@ -253,7 +226,7 @@ func extractEntryInfoFromTreeData(stdout *bufio.Reader, treeSize int64, baseName
 		objectType = "blob"
 	}
 
-	return &objectInfo{
+	return &entryInfo{
 		objectType: objectType,
 		mode:       int32(mode),
 		oid:        oid,
