@@ -124,3 +124,18 @@ func CommitsEqual(a *pb.GitCommit, b *pb.GitCommit) bool {
 		AuthorsEqual(a.Author, b.Author) &&
 		AuthorsEqual(a.Committer, b.Committer)
 }
+
+// FindLocalBranchCommitAuthorsEqual tests if two `FindLocalBranchCommitAuthor`s are equal
+func FindLocalBranchCommitAuthorsEqual(a *pb.FindLocalBranchCommitAuthor, b *pb.FindLocalBranchCommitAuthor) bool {
+	return bytes.Equal(a.Name, b.Name) &&
+		bytes.Equal(a.Email, b.Email) &&
+		a.Date.Seconds == b.Date.Seconds
+}
+
+// FindLocalBranchResponsesEqual tests if two `FindLocalBranchResponse`s are equal
+func FindLocalBranchResponsesEqual(a *pb.FindLocalBranchResponse, b *pb.FindLocalBranchResponse) bool {
+	return a.CommitId == b.CommitId &&
+		bytes.Equal(a.CommitSubject, b.CommitSubject) &&
+		FindLocalBranchCommitAuthorsEqual(a.CommitAuthor, b.CommitAuthor) &&
+		FindLocalBranchCommitAuthorsEqual(a.CommitCommitter, b.CommitCommitter)
+}

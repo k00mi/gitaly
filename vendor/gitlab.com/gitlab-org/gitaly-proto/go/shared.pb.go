@@ -21,7 +21,7 @@ type Repository struct {
 func (m *Repository) Reset()                    { *m = Repository{} }
 func (m *Repository) String() string            { return proto.CompactTextString(m) }
 func (*Repository) ProtoMessage()               {}
-func (*Repository) Descriptor() ([]byte, []int) { return fileDescriptor6, []int{0} }
+func (*Repository) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{0} }
 
 func (m *Repository) GetStorageName() string {
 	if m != nil {
@@ -48,7 +48,7 @@ type GitCommit struct {
 func (m *GitCommit) Reset()                    { *m = GitCommit{} }
 func (m *GitCommit) String() string            { return proto.CompactTextString(m) }
 func (*GitCommit) ProtoMessage()               {}
-func (*GitCommit) Descriptor() ([]byte, []int) { return fileDescriptor6, []int{1} }
+func (*GitCommit) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{1} }
 
 func (m *GitCommit) GetId() string {
 	if m != nil {
@@ -94,7 +94,7 @@ type CommitAuthor struct {
 func (m *CommitAuthor) Reset()                    { *m = CommitAuthor{} }
 func (m *CommitAuthor) String() string            { return proto.CompactTextString(m) }
 func (*CommitAuthor) ProtoMessage()               {}
-func (*CommitAuthor) Descriptor() ([]byte, []int) { return fileDescriptor6, []int{2} }
+func (*CommitAuthor) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{2} }
 
 func (m *CommitAuthor) GetName() []byte {
 	if m != nil {
@@ -124,7 +124,7 @@ type ExitStatus struct {
 func (m *ExitStatus) Reset()                    { *m = ExitStatus{} }
 func (m *ExitStatus) String() string            { return proto.CompactTextString(m) }
 func (*ExitStatus) ProtoMessage()               {}
-func (*ExitStatus) Descriptor() ([]byte, []int) { return fileDescriptor6, []int{3} }
+func (*ExitStatus) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{3} }
 
 func (m *ExitStatus) GetValue() int32 {
 	if m != nil {
@@ -140,9 +140,9 @@ func init() {
 	proto.RegisterType((*ExitStatus)(nil), "gitaly.ExitStatus")
 }
 
-func init() { proto.RegisterFile("shared.proto", fileDescriptor6) }
+func init() { proto.RegisterFile("shared.proto", fileDescriptor7) }
 
-var fileDescriptor6 = []byte{
+var fileDescriptor7 = []byte{
 	// 326 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x51, 0xc1, 0x4a, 0xc3, 0x40,
 	0x10, 0x25, 0x69, 0x1a, 0xcd, 0x34, 0x8a, 0x2c, 0x3d, 0x84, 0x82, 0x58, 0xe3, 0xa5, 0x07, 0x49,

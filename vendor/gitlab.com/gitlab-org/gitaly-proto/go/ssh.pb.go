@@ -27,7 +27,7 @@ type SSHUploadPackRequest struct {
 func (m *SSHUploadPackRequest) Reset()                    { *m = SSHUploadPackRequest{} }
 func (m *SSHUploadPackRequest) String() string            { return proto.CompactTextString(m) }
 func (*SSHUploadPackRequest) ProtoMessage()               {}
-func (*SSHUploadPackRequest) Descriptor() ([]byte, []int) { return fileDescriptor8, []int{0} }
+func (*SSHUploadPackRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{0} }
 
 func (m *SSHUploadPackRequest) GetRepository() *Repository {
 	if m != nil {
@@ -56,7 +56,7 @@ type SSHUploadPackResponse struct {
 func (m *SSHUploadPackResponse) Reset()                    { *m = SSHUploadPackResponse{} }
 func (m *SSHUploadPackResponse) String() string            { return proto.CompactTextString(m) }
 func (*SSHUploadPackResponse) ProtoMessage()               {}
-func (*SSHUploadPackResponse) Descriptor() ([]byte, []int) { return fileDescriptor8, []int{1} }
+func (*SSHUploadPackResponse) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{1} }
 
 func (m *SSHUploadPackResponse) GetStdout() []byte {
 	if m != nil {
@@ -93,7 +93,7 @@ type SSHReceivePackRequest struct {
 func (m *SSHReceivePackRequest) Reset()                    { *m = SSHReceivePackRequest{} }
 func (m *SSHReceivePackRequest) String() string            { return proto.CompactTextString(m) }
 func (*SSHReceivePackRequest) ProtoMessage()               {}
-func (*SSHReceivePackRequest) Descriptor() ([]byte, []int) { return fileDescriptor8, []int{2} }
+func (*SSHReceivePackRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{2} }
 
 func (m *SSHReceivePackRequest) GetRepository() *Repository {
 	if m != nil {
@@ -136,7 +136,7 @@ type SSHReceivePackResponse struct {
 func (m *SSHReceivePackResponse) Reset()                    { *m = SSHReceivePackResponse{} }
 func (m *SSHReceivePackResponse) String() string            { return proto.CompactTextString(m) }
 func (*SSHReceivePackResponse) ProtoMessage()               {}
-func (*SSHReceivePackResponse) Descriptor() ([]byte, []int) { return fileDescriptor8, []int{3} }
+func (*SSHReceivePackResponse) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{3} }
 
 func (m *SSHReceivePackResponse) GetStdout() []byte {
 	if m != nil {
@@ -339,9 +339,9 @@ var _SSHService_serviceDesc = grpc.ServiceDesc{
 	Metadata: "ssh.proto",
 }
 
-func init() { proto.RegisterFile("ssh.proto", fileDescriptor8) }
+func init() { proto.RegisterFile("ssh.proto", fileDescriptor9) }
 
-var fileDescriptor8 = []byte{
+var fileDescriptor9 = []byte{
 	// 307 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x52, 0xcf, 0x4e, 0x32, 0x31,
 	0x10, 0xff, 0xfa, 0x09, 0x24, 0x0c, 0x8b, 0x87, 0x11, 0x09, 0x21, 0x6a, 0xc8, 0x7a, 0xe1, 0x44,
