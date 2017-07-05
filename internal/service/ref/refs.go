@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -13,6 +12,7 @@ import (
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
 	"golang.org/x/net/context"
 )
 
@@ -23,20 +23,7 @@ var (
 	headReference   = _headReference
 )
 
-func handleGitCommand(w refsWriter, r io.Reader) error {
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		if err := w.AddRef(scanner.Bytes()); err != nil {
-			return err
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-	return w.Flush()
-}
-
-func findRefs(writer refsWriter, repo *pb.Repository, pattern string, args ...string) error {
+func findRefs(writer lines.Sender, repo *pb.Repository, pattern string, args ...string) error {
 	repoPath, err := helper.GetRepoPath(repo)
 	if err != nil {
 		return err
@@ -61,7 +48,7 @@ func findRefs(writer refsWriter, repo *pb.Repository, pattern string, args ...st
 	}
 	defer cmd.Kill()
 
-	if err := handleGitCommand(writer, cmd); err != nil {
+	if err := lines.Send(cmd, writer); err != nil {
 		return err
 	}
 
@@ -70,12 +57,12 @@ func findRefs(writer refsWriter, repo *pb.Repository, pattern string, args ...st
 
 // FindAllBranchNames creates a stream of ref names for all branches in the given repository
 func (s *server) FindAllBranchNames(in *pb.FindAllBranchNamesRequest, stream pb.RefService_FindAllBranchNamesServer) error {
-	return findRefs(newFindAllBranchNamesWriter(stream, s.MaxMsgSize), in.Repository, "refs/heads")
+	return findRefs(newFindAllBranchNamesWriter(stream), in.Repository, "refs/heads")
 }
 
 // FindAllTagNames creates a stream of ref names for all tags in the given repository
 func (s *server) FindAllTagNames(in *pb.FindAllTagNamesRequest, stream pb.RefService_FindAllTagNamesServer) error {
-	return findRefs(newFindAllTagNamesWriter(stream, s.MaxMsgSize), in.Repository, "refs/tags")
+	return findRefs(newFindAllTagNamesWriter(stream), in.Repository, "refs/tags")
 }
 
 func _findBranchNames(repoPath string) ([][]byte, error) {
@@ -89,7 +76,7 @@ func _findBranchNames(repoPath string) ([][]byte, error) {
 
 	scanner := bufio.NewScanner(cmd)
 	for scanner.Scan() {
-		names, _ = appendRef(names, scanner.Bytes())
+		names, _ = lines.CopyAndAppend(names, scanner.Bytes())
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("reading standard input: %v", err)
@@ -208,7 +195,7 @@ func (s *server) FindLocalBranches(in *pb.FindLocalBranchesRequest, stream pb.Re
 	// %00 inserts the null character into the output (see for-each-ref docs)
 	formatFlag := "--format=" + strings.Join(localBranchFormatFields, "%00")
 	sortFlag := "--sort=" + parseSortKey(in.GetSortBy())
-	writer := newFindLocalBranchesWriter(stream, s.MaxMsgSize)
+	writer := newFindLocalBranchesWriter(stream)
 
 	return findRefs(writer, in.Repository, "refs/heads", formatFlag, sortFlag)
 }

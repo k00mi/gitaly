@@ -10,6 +10,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	"google.golang.org/grpc"
@@ -40,6 +41,10 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
+	// Use 100 bytes as the maximum message size to test that fragmenting the
+	// ref list works correctly
+	lines.MaxMsgSize = 100
+
 	os.Exit(func() int {
 		return m.Run()
 	}())
@@ -53,8 +58,7 @@ func runRefServer(t *testing.T) *grpc.Server {
 		t.Fatal(err)
 	}
 
-	// Use 100 bytes as the maximum message size to test that fragmenting the ref list works correctly
-	pb.RegisterRefServer(grpcServer, renameadapter.NewRefAdapter(&server{MaxMsgSize: 100}))
+	pb.RegisterRefServer(grpcServer, renameadapter.NewRefAdapter(&server{}))
 	reflection.Register(grpcServer)
 
 	go grpcServer.Serve(listener)

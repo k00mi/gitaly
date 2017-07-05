@@ -24,7 +24,7 @@ type RepositoryExistsRequest struct {
 func (m *RepositoryExistsRequest) Reset()                    { *m = RepositoryExistsRequest{} }
 func (m *RepositoryExistsRequest) String() string            { return proto.CompactTextString(m) }
 func (*RepositoryExistsRequest) ProtoMessage()               {}
-func (*RepositoryExistsRequest) Descriptor() ([]byte, []int) { return fileDescriptor5, []int{0} }
+func (*RepositoryExistsRequest) Descriptor() ([]byte, []int) { return fileDescriptor6, []int{0} }
 
 func (m *RepositoryExistsRequest) GetRepository() *Repository {
 	if m != nil {
@@ -40,7 +40,7 @@ type RepositoryExistsResponse struct {
 func (m *RepositoryExistsResponse) Reset()                    { *m = RepositoryExistsResponse{} }
 func (m *RepositoryExistsResponse) String() string            { return proto.CompactTextString(m) }
 func (*RepositoryExistsResponse) ProtoMessage()               {}
-func (*RepositoryExistsResponse) Descriptor() ([]byte, []int) { return fileDescriptor5, []int{1} }
+func (*RepositoryExistsResponse) Descriptor() ([]byte, []int) { return fileDescriptor6, []int{1} }
 
 func (m *RepositoryExistsResponse) GetExists() bool {
 	if m != nil {
@@ -126,9 +126,9 @@ var _RepositoryService_serviceDesc = grpc.ServiceDesc{
 	Metadata: "repository-service.proto",
 }
 
-func init() { proto.RegisterFile("repository-service.proto", fileDescriptor5) }
+func init() { proto.RegisterFile("repository-service.proto", fileDescriptor6) }
 
-var fileDescriptor5 = []byte{
+var fileDescriptor6 = []byte{
 	// 172 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x92, 0x28, 0x4a, 0x2d, 0xc8,
 	0x2f, 0xce, 0x2c, 0xc9, 0x2f, 0xaa, 0xd4, 0x2d, 0x4e, 0x2d, 0x2a, 0xcb, 0x4c, 0x4e, 0xd5, 0x2b,

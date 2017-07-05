@@ -21,8 +21,9 @@ import (
 const scratchDir = "testdata/scratch"
 
 var (
-	serverSocketPath = path.Join(scratchDir, "gitaly.sock")
-	testRepo         *pb.Repository
+	serverSocketPath  = path.Join(scratchDir, "gitaly.sock")
+	serviceSocketPath = path.Join(scratchDir, "service.sock")
+	testRepo          *pb.Repository
 )
 
 func TestMain(m *testing.M) {
@@ -38,6 +39,13 @@ func TestMain(m *testing.M) {
 		defer func() {
 			server.Stop()
 			os.Remove(serverSocketPath)
+		}()
+
+		os.Remove(serviceSocketPath)
+		service := runCommitServiceServer(m)
+		defer func() {
+			service.Stop()
+			os.Remove(serviceSocketPath)
 		}()
 
 		return m.Run()
@@ -59,6 +67,21 @@ func runCommitServer(m *testing.M) *grpc.Server {
 	return server
 }
 
+func runCommitServiceServer(m *testing.M) *grpc.Server {
+	server := grpc.NewServer()
+	listener, err := net.Listen("unix", serviceSocketPath)
+	if err != nil {
+		log.WithError(err).Fatal("failed to start server")
+	}
+
+	pb.RegisterCommitServiceServer(server, NewServer())
+	reflection.Register(server)
+
+	go server.Serve(listener)
+
+	return server
+}
+
 func newCommitClient(t *testing.T) pb.CommitClient {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
@@ -72,4 +95,19 @@ func newCommitClient(t *testing.T) pb.CommitClient {
 	}
 
 	return pb.NewCommitClient(conn)
+}
+
+func newCommitServiceClient(t *testing.T) pb.CommitServiceClient {
+	connOpts := []grpc.DialOption{
+		grpc.WithInsecure(),
+		grpc.WithDialer(func(addr string, _ time.Duration) (net.Conn, error) {
+			return net.Dial("unix", addr)
+		}),
+	}
+	conn, err := grpc.Dial(serviceSocketPath, connOpts...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return pb.NewCommitServiceClient(conn)
 }

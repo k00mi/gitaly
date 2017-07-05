@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/timestamp"
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -363,23 +364,10 @@ func localBranches() []*pb.FindLocalBranchResponse {
 	}
 }
 
-func authorsEqual(a *pb.FindLocalBranchCommitAuthor, b *pb.FindLocalBranchCommitAuthor) bool {
-	return bytes.Equal(a.Name, b.Name) &&
-		bytes.Equal(a.Email, b.Email) &&
-		a.Date.Seconds == b.Date.Seconds
-}
-
-func branchesEqual(a *pb.FindLocalBranchResponse, b *pb.FindLocalBranchResponse) bool {
-	return a.CommitId == b.CommitId &&
-		bytes.Equal(a.CommitSubject, b.CommitSubject) &&
-		authorsEqual(a.CommitAuthor, b.CommitAuthor) &&
-		authorsEqual(a.CommitCommitter, b.CommitCommitter)
-}
-
 func validateContainsBranch(t *testing.T, branches []*pb.FindLocalBranchResponse, branch *pb.FindLocalBranchResponse) {
 	for _, b := range branches {
 		if bytes.Equal(branch.Name, b.Name) {
-			if !branchesEqual(branch, b) {
+			if !testhelper.FindLocalBranchResponsesEqual(branch, b) {
 				t.Fatalf("Expected branch\n%v\ngot\n%v", branch, b)
 			}
 			return // Found the branch and it maches. Success!
