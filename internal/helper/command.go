@@ -34,6 +34,7 @@ func NewCommand(cmd *exec.Cmd, stdin io.Reader, stdout, stderr io.Writer, env ..
 		fmt.Sprintf("HOME=%s", os.Getenv("HOME")),
 		fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
 		fmt.Sprintf("LD_LIBRARY_PATH=%s", os.Getenv("LD_LIBRARY_PATH")),
+		fmt.Sprintf("TZ=%s", os.Getenv("TZ")),
 	}
 	cmd.Env = append(cmd.Env, env...)
 
