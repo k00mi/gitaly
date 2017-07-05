@@ -6,6 +6,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/201
 - Implement CommitService::CommitsBetween
   https://gitlab.com/gitlab-org/gitaly/merge_requests/197
+- Implement CountCommits RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/203
 
 v0.14.0
 
