@@ -1,6 +1,9 @@
 # Gitaly changelog
 
-v0.15.0
+UNRELEASED
+
+- Ensure that sub-processes inherit TZ environment variable
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/201
 - Implement CommitService::CommitsBetween
   https://gitlab.com/gitlab-org/gitaly/merge_requests/197
 
