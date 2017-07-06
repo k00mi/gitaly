@@ -1,6 +1,8 @@
 package commit
 
-import pb "gitlab.com/gitlab-org/gitaly-proto/go"
+import (
+	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+)
 
 type server struct{}
 

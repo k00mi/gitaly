@@ -17,6 +17,7 @@ type writer struct {
 	sender Sender
 	size   int
 	lines  [][]byte
+	split  bufio.SplitFunc
 }
 
 // CopyAndAppend adds a newly allocated copy of `e` to the `s` slice. Useful to
@@ -63,6 +64,11 @@ func (w *writer) addLine(p []byte) error {
 // flushes after being done reading.
 func (w *writer) consume(r io.Reader) error {
 	scanner := bufio.NewScanner(r)
+
+	if w.split != nil {
+		scanner.Split(w.split)
+	}
+
 	for scanner.Scan() {
 		if err := w.addLine(scanner.Bytes()); err != nil {
 			return err
@@ -74,8 +80,9 @@ func (w *writer) consume(r io.Reader) error {
 	return w.flush()
 }
 
-// Send reads from `r` and handles the buffered lines using `sender`
-func Send(r io.Reader, sender Sender) error {
-	writer := &writer{sender: sender}
+// Send reads from `r` and handles the buffered lines using `sender`, optionally
+// using the SplitFunc `split` for the Scanner
+func Send(r io.Reader, sender Sender, split bufio.SplitFunc) error {
+	writer := &writer{sender: sender, split: split}
 	return writer.consume(r)
 }

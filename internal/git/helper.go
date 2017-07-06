@@ -8,7 +8,7 @@ import (
 )
 
 // NewCommit creates a commit based on the given elements
-func NewCommit(id, subject, authorName, authorEmail, authorDate,
+func NewCommit(id, subject, body, authorName, authorEmail, authorDate,
 	committerName, committerEmail, committerDate []byte) (*pb.GitCommit, error) {
 	authorDateTime, err := time.Parse(time.RFC3339, string(authorDate))
 	if err != nil {
@@ -34,6 +34,7 @@ func NewCommit(id, subject, authorName, authorEmail, authorDate,
 	return &pb.GitCommit{
 		Id:        string(id),
 		Subject:   subject,
+		Body:      body,
 		Author:    &author,
 		Committer: &committer,
 	}, nil

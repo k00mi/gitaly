@@ -15,13 +15,14 @@ func newCommitsBetweenWriter(stream pb.CommitService_CommitsBetweenServer) lines
 		var commits []*pb.GitCommit
 
 		for _, ref := range refs {
-			elements := bytes.Split(ref, []byte("\x00"))
-			if len(elements) != 8 {
+			elements := bytes.Split(ref, []byte("\x1f"))
+			if len(elements) != 9 {
 				return grpc.Errorf(codes.Internal, "error parsing ref %q", ref)
 			}
 
 			commit, err := git.NewCommit(elements[0], elements[1], elements[2],
-				elements[3], elements[4], elements[5], elements[6], elements[7])
+				elements[3], elements[4], elements[5], elements[6], elements[7],
+				elements[8])
 			if err != nil {
 				return err
 			}

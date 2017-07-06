@@ -16,6 +16,7 @@ import (
 var commitLogFormatFields = []string{
 	"%H",  // commit hash
 	"%s",  // subject
+	"%b",  // body
 	"%an", // author name
 	"%ae", // author email
 	"%aI", // author date, strict ISO 8601 format
@@ -37,15 +38,26 @@ func gitLog(writer lines.Sender, repo *pb.Repository, from string, to string) er
 	}).Debug("GitLog")
 
 	revisionRange := string(from) + ".." + string(to)
-	formatFlag := "--pretty=format:" + strings.Join(commitLogFormatFields, "%x00")
+	// Use \x1f (ASCII field separator) as the field delimiter
+	formatFlag := "--pretty=format:" + strings.Join(commitLogFormatFields, "%x1f")
 
-	cmd, err := helper.GitCommandReader("--git-dir", repoPath, "log", "--reverse", revisionRange, formatFlag)
+	args := []string{
+		"--git-dir",
+		repoPath,
+		"log",
+		"-z", // use 0x00 as the entry terminator (instead of \n)
+		"--reverse",
+		formatFlag,
+		revisionRange,
+	}
+	cmd, err := helper.GitCommandReader(args...)
 	if err != nil {
 		return err
 	}
 	defer cmd.Kill()
 
-	if err := lines.Send(cmd, writer); err != nil {
+	split := lines.ScanWithDelimiter([]byte("\x00"))
+	if err := lines.Send(cmd, writer, split); err != nil {
 		return err
 	}
 

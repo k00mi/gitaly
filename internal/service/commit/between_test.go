@@ -22,6 +22,7 @@ func TestSuccessfulCommitsBetween(t *testing.T) {
 		{
 			Id:      "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 			Subject: []byte("Merge branch 'branch-merged' into 'master'"),
+			Body:    []byte("adds bar folder and branch-test text file to check Repository merged_to_root_ref method\r\n\r\n\r\n\r\nSee merge request !12"),
 			Author: &pb.CommitAuthor{
 				Name:  []byte("Job van der Voort"),
 				Email: []byte("job@gitlab.com"),
@@ -36,6 +37,7 @@ func TestSuccessfulCommitsBetween(t *testing.T) {
 		{
 			Id:      "4a24d82dbca5c11c61556f3b35ca472b7463187e",
 			Subject: []byte("Update README.md to include `Usage in testing and development`"),
+			Body:    []byte(""),
 			Author: &pb.CommitAuthor{
 				Name:  []byte("Luke \"Jared\" Bennett"),
 				Email: []byte("lbennett@gitlab.com"),
@@ -50,6 +52,7 @@ func TestSuccessfulCommitsBetween(t *testing.T) {
 		{
 			Id:      "e63f41fe459e62e1228fcef60d7189127aeba95a",
 			Subject: []byte("Merge branch 'gitlab-test-usage-dev-testing-docs' into 'master'"),
+			Body:    []byte("Update README.md to include `Usage in testing and development`\r\n\r\nSee merge request !21"),
 			Author: &pb.CommitAuthor{
 				Name:  []byte("Sean McGivern"),
 				Email: []byte("sean@mcgivern.me.uk"),

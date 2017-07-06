@@ -48,7 +48,7 @@ func findRefs(writer lines.Sender, repo *pb.Repository, pattern string, args ...
 	}
 	defer cmd.Kill()
 
-	if err := lines.Send(cmd, writer); err != nil {
+	if err := lines.Send(cmd, writer, nil); err != nil {
 		return err
 	}
 
