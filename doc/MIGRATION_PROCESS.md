@@ -84,16 +84,15 @@ A feature is tested in dev, staging and gitlab.com. If the results are satisfact
 
 The following procedure should be used for testing:
 
-1. Update the relevant [chef roles](https://dev.gitlab.org/cookbooks/chef-repo) to enable the feature flag(s) under `default_attributes -> omnibus-gitlab -> gitlab_rb -> gitlab-rails -> env`:
-  - For dev: `roles/dev-gitlab-org.json`
-  - For staging: `roles/gitlab-staging-base.json`
-  - For production: `roles/gitlab-base-fe.json` and `roles/gitlab-base-be-sidekiq.json`
 1. Create a new row in the Gitaly dashboard to monitor the feature in the [`gitaly-dashboards`](https://gitlab.com/gitlab-org/gitaly-dashboards) repo.
   - Merge the chef-repo MRs
   - Make sure new role file is on chef server `bundle exec knife role from file [role-path]`
   - Run chef client and restart unicorn: `bundle exec knife ssh -C 1 roles:[role-name] 'sudo chef-client; sleep 60; sudo gitlab-ctl term unicorn; echo done $?'`
   - Verify the process have the env values set: `bundle exec knife ssh roles:[role-name] 'for p in $(pgrep -f "unicorn master"); do ps -o pid,etime,args -p $p; sudo strings -f /proc/$p/environ | grep GITALY; done'`
-1. Restart client process (unicorn, workhorse, etc) if necessary to enable the feature.
+1. Enable the feature:
+  - For dev: ssh into dev.gitlab.org and run in a rails console: `Feature.get('gitaly_<my_feature>').enable`
+  - For staging: run the cog command `!feature-set gitaly_<my_feature> true` on channel #development
+  - For production: run the cog command `!feature-set gitaly_<my_feature> true` on channel #production
 1. Monitor dashboards and host systems to ensure that feature is working.
 1. Get the production engineer to roll the feature back.
 1. Review data:
