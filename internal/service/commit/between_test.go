@@ -20,17 +20,17 @@ func TestSuccessfulCommitsBetween(t *testing.T) {
 	fakeRef := []byte("non-existing-ref")
 	expectedCommits := []*pb.GitCommit{
 		{
-			Id:      "e63f41fe459e62e1228fcef60d7189127aeba95a",
-			Subject: []byte("Merge branch 'gitlab-test-usage-dev-testing-docs' into 'master'"),
+			Id:      "b83d6e391c22777fca1ed3012fce84f633d7fed0",
+			Subject: []byte("Merge branch 'branch-merged' into 'master'"),
 			Author: &pb.CommitAuthor{
-				Name:  []byte("Sean McGivern"),
-				Email: []byte("sean@mcgivern.me.uk"),
-				Date:  &timestamp.Timestamp{Seconds: 1491906794},
+				Name:  []byte("Job van der Voort"),
+				Email: []byte("job@gitlab.com"),
+				Date:  &timestamp.Timestamp{Seconds: 1474987066},
 			},
 			Committer: &pb.CommitAuthor{
-				Name:  []byte("Sean McGivern"),
-				Email: []byte("sean@mcgivern.me.uk"),
-				Date:  &timestamp.Timestamp{Seconds: 1491906794},
+				Name:  []byte("Job van der Voort"),
+				Email: []byte("job@gitlab.com"),
+				Date:  &timestamp.Timestamp{Seconds: 1474987066},
 			},
 		},
 		{
@@ -48,17 +48,17 @@ func TestSuccessfulCommitsBetween(t *testing.T) {
 			},
 		},
 		{
-			Id:      "b83d6e391c22777fca1ed3012fce84f633d7fed0",
-			Subject: []byte("Merge branch 'branch-merged' into 'master'"),
+			Id:      "e63f41fe459e62e1228fcef60d7189127aeba95a",
+			Subject: []byte("Merge branch 'gitlab-test-usage-dev-testing-docs' into 'master'"),
 			Author: &pb.CommitAuthor{
-				Name:  []byte("Job van der Voort"),
-				Email: []byte("job@gitlab.com"),
-				Date:  &timestamp.Timestamp{Seconds: 1474987066},
+				Name:  []byte("Sean McGivern"),
+				Email: []byte("sean@mcgivern.me.uk"),
+				Date:  &timestamp.Timestamp{Seconds: 1491906794},
 			},
 			Committer: &pb.CommitAuthor{
-				Name:  []byte("Job van der Voort"),
-				Email: []byte("job@gitlab.com"),
-				Date:  &timestamp.Timestamp{Seconds: 1474987066},
+				Name:  []byte("Sean McGivern"),
+				Email: []byte("sean@mcgivern.me.uk"),
+				Date:  &timestamp.Timestamp{Seconds: 1491906794},
 			},
 		},
 	}

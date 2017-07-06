@@ -39,7 +39,7 @@ func gitLog(writer lines.Sender, repo *pb.Repository, from string, to string) er
 	revisionRange := string(from) + ".." + string(to)
 	formatFlag := "--pretty=format:" + strings.Join(commitLogFormatFields, "%x00")
 
-	cmd, err := helper.GitCommandReader("--git-dir", repoPath, "log", revisionRange, formatFlag)
+	cmd, err := helper.GitCommandReader("--git-dir", repoPath, "log", "--reverse", revisionRange, formatFlag)
 	if err != nil {
 		return err
 	}
