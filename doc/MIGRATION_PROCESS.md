@@ -28,6 +28,14 @@ The order of migration is roughly determined using the formula described in the 
 
 Once a route has been selected, the route in the client will be analysed and profiled in order to figure out the best way of migrating the route to Gitaly.
 
+During the migration analysis, the following factors should be taken into consideration:
+
+1. *Test coverage of the legacy code*: 
+   * How well covered is the legacy code? Use https://gitlab-org.gitlab.io/gitlab-ce/coverage-ruby to find out.
+   * Are there important codepaths in the legacy code base that are not being tested?
+   * If so, should we create tests for these codepaths before continuing with the migration?
+1.  
+
 The artefacts of this stage will be:
 
 1. **Rough estimation of the amount of work involved in the migration**: from the analysis, we should have a rough idea of how long this migration will take.
