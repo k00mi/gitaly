@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Implement BlobService.GetBlob
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/202
+
 v0.15.0
 
 - Ensure that sub-processes inherit TZ environment variable

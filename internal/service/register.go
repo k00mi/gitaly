@@ -2,6 +2,7 @@ package service
 
 import (
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly/internal/service/blob"
 	"gitlab.com/gitlab-org/gitaly/internal/service/commit"
 	"gitlab.com/gitlab-org/gitaly/internal/service/diff"
 	"gitlab.com/gitlab-org/gitaly/internal/service/notifications"
@@ -35,6 +36,9 @@ func RegisterAll(grpcServer *grpc.Server) {
 
 	sshService := ssh.NewServer()
 	pb.RegisterSSHServiceServer(grpcServer, sshService)
+
+	blobService := blob.NewServer()
+	pb.RegisterBlobServiceServer(grpcServer, blobService)
 
 	// Deprecated Services
 	pb.RegisterNotificationsServer(grpcServer, renameadapter.NewNotificationAdapter(notificationsService))
