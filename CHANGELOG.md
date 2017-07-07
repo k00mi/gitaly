@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.16.0
 
 - Implement BlobService.GetBlob
   https://gitlab.com/gitlab-org/gitaly/merge_requests/202
