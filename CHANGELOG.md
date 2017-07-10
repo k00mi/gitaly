@@ -6,6 +6,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/216
 - Streamio chunk size optimizations
   https://gitlab.com/gitlab-org/gitaly/merge_requests/206
+- Implement CommitService.GetTreeEntries
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/208
 
 v0.18.0
 
