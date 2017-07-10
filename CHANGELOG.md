@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Streamio chunk size optimizations
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/206
+
 v0.18.0
 
 - Add config to specify a git binary path
