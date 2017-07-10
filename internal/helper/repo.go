@@ -63,12 +63,10 @@ func IsGitDirectory(dir string) bool {
 		return false
 	}
 
-	if _, err := os.Stat(path.Join(dir, "objects")); err != nil {
-		return false
-	}
-
-	if _, err := os.Stat(path.Join(dir, "HEAD")); err != nil {
-		return false
+	for _, element := range []string{"objects", "refs", "HEAD"} {
+		if _, err := os.Stat(path.Join(dir, element)); err != nil {
+			return false
+		}
 	}
 
 	return true

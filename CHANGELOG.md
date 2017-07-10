@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Also check for "refs" folder for repo existence
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/207
+
 v0.16.0
 
 - Implement BlobService.GetBlob
