@@ -24,7 +24,7 @@ listen_addr = ":8081"
 prometheus_listen_addr = ":9236"
 
 [auth]
-# unenforced = false
+# transitioning = false
 # token = "abc123def456......."
 
 [[storage]]
@@ -58,18 +58,18 @@ Authentication is disabled when the token setting in config.toml is absent or th
 token = "the secret token"
 ```
 
-It is possible to temporarily disable authentication with the 'unenforced'
+It is possible to temporarily disable authentication with the 'transitioning'
 setting. This allows you to monitor (see below) if all clients are
 authenticating correctly without causing a service outage for clients
 that are not configured correctly yet.
 
-> **Warning:** Remember to disable 'unenforced' when you are done
+> **Warning:** Remember to disable 'transitioning' when you are done
 changing your token settings.
 
 ```toml
 [auth]
 token = "the secret token"
-unenforced = true
+transitioning = true
 ```
 
 All authentication attempts are counted in Prometheus under

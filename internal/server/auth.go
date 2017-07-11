@@ -18,7 +18,7 @@ var (
 			Name: "gitaly_authentications",
 			Help: "Counts of of Gitaly request authentication attempts",
 		},
-		[]string{"unenforced", "status"},
+		[]string{"enforced", "status"},
 	)
 )
 
@@ -65,14 +65,14 @@ func check(ctx context.Context) (context.Context, error) {
 }
 
 func ifEnforced(err error) error {
-	if config.Config.Auth.Unenforced {
+	if config.Config.Auth.Transitioning {
 		return nil
 	}
 	return err
 }
 
 func okLabel() string {
-	if config.Config.Auth.Unenforced {
+	if config.Config.Auth.Transitioning {
 		// This special value is an extra warning sign to administrators that
 		// authentication is currently not enforced.
 		return "would be ok"
@@ -81,9 +81,9 @@ func okLabel() string {
 }
 
 func countStatus(status string) prometheus.Counter {
-	unenforced := "false"
-	if config.Config.Auth.Unenforced {
-		unenforced = "true"
+	enforced := "true"
+	if config.Config.Auth.Transitioning {
+		enforced = "false"
 	}
-	return authCount.WithLabelValues(unenforced, status)
+	return authCount.WithLabelValues(enforced, status)
 }

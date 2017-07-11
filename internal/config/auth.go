@@ -8,8 +8,8 @@ import (
 
 // Auth contains the authentication settings for this Gitaly process.
 type Auth struct {
-	Unenforced bool  `toml:"unenforced"`
-	Token      Token `toml:"token"`
+	Transitioning bool  `toml:"transitioning"`
+	Token         Token `toml:"token"`
 }
 
 // Token is a string of the form "name:secret". It specifies a Gitaly
@@ -22,10 +22,10 @@ func (t Token) Equal(other string) bool {
 }
 
 func validateToken() error {
-	if !Config.Auth.Unenforced || len(Config.Auth.Token) == 0 {
+	if !Config.Auth.Transitioning || len(Config.Auth.Token) == 0 {
 		return nil
 	}
 
-	log.Warn("Authentication is enabled but not enforced. Gitaly will accept unauthenticated requests.")
+	log.Warn("Authentication is enabled but not enforced because transitioning=true. Gitaly will accept unauthenticated requests.")
 	return nil
 }
