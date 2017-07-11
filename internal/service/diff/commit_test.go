@@ -13,6 +13,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/service/renameadapter"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
+	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -374,6 +375,195 @@ func TestSuccessfulCommitDiffRequestWithIgnoreWhitespaceChange(t *testing.T) {
 	}
 }
 
+func TestSuccessfulCommitDiffRequestWithLimits(t *testing.T) {
+	server := runDiffServer(t)
+	defer server.Stop()
+
+	client := newDiffClient(t)
+	rightCommit := "899d3d27b04690ac1cd9ef4d8a74fde0667c57f1"
+	leftCommit := "184a47d38677e2e439964859b877ae9bc424ab11"
+
+	type diffAttributes struct {
+		path                      string
+		collapsed, overflowMarker bool
+	}
+
+	requestsAndResults := []struct {
+		desc    string
+		request pb.CommitDiffRequest
+		result  []diffAttributes
+	}{
+		{
+			desc: "no enforcement",
+			request: pb.CommitDiffRequest{
+				EnforceLimits: false,
+			},
+			result: []diffAttributes{
+				{path: "CHANGELOG"},
+				{path: "CONTRIBUTING.md"},
+				{path: "LICENSE"},
+				{path: "PROCESS.md"},
+				{path: "VERSION"},
+			},
+		},
+		{
+			desc: "max file count enforcement",
+			request: pb.CommitDiffRequest{
+				EnforceLimits: true,
+				MaxFiles:      3,
+				MaxLines:      1000,
+				MaxBytes:      3 * 5 * 1024,
+			},
+			result: []diffAttributes{
+				{path: "CHANGELOG"},
+				{path: "CONTRIBUTING.md"},
+				{path: "LICENSE"},
+				{overflowMarker: true},
+			},
+		},
+		{
+			desc: "max line count enforcement",
+			request: pb.CommitDiffRequest{
+				EnforceLimits: true,
+				MaxFiles:      5,
+				MaxLines:      100,
+				MaxBytes:      5 * 5 * 1024,
+			},
+			result: []diffAttributes{
+				{path: "CHANGELOG"},
+				{path: "CONTRIBUTING.md"},
+				{overflowMarker: true},
+			},
+		},
+		{
+			desc: "max byte count enforcement",
+			request: pb.CommitDiffRequest{
+				EnforceLimits: true,
+				MaxFiles:      5,
+				MaxLines:      1000,
+				MaxBytes:      7650,
+			},
+			result: []diffAttributes{
+				{path: "CHANGELOG"},
+				{path: "CONTRIBUTING.md"},
+				{path: "LICENSE"},
+				{path: "PROCESS.md"},
+				{overflowMarker: true},
+			},
+		},
+		{
+			desc: "no collapse",
+			request: pb.CommitDiffRequest{
+				EnforceLimits: true,
+				CollapseDiffs: false,
+				MaxFiles:      3,
+				MaxLines:      1000,
+				MaxBytes:      3 * 5 * 1024,
+				SafeMaxFiles:  1,
+				SafeMaxLines:  1000,
+				SafeMaxBytes:  1 * 5 * 1024,
+			},
+			result: []diffAttributes{
+				{path: "CHANGELOG"},
+				{path: "CONTRIBUTING.md"},
+				{path: "LICENSE"},
+				{overflowMarker: true},
+			},
+		},
+		{
+			desc: "collapse after safe max file count is exceeded",
+			request: pb.CommitDiffRequest{
+				EnforceLimits: true,
+				CollapseDiffs: true,
+				MaxFiles:      3,
+				MaxLines:      1000,
+				MaxBytes:      3 * 5 * 1024,
+				SafeMaxFiles:  1,
+				SafeMaxLines:  1000,
+				SafeMaxBytes:  1 * 5 * 1024,
+			},
+			result: []diffAttributes{
+				{path: "CHANGELOG"},
+				{path: "CONTRIBUTING.md", collapsed: true},
+				{path: "LICENSE", collapsed: true},
+				{overflowMarker: true},
+			},
+		},
+		{
+			desc: "collapse after safe max line count is exceeded",
+			request: pb.CommitDiffRequest{
+				EnforceLimits: true,
+				CollapseDiffs: true,
+				MaxFiles:      5,
+				MaxLines:      100,
+				MaxBytes:      5 * 5 * 1024,
+				SafeMaxFiles:  5,
+				SafeMaxLines:  45,
+				SafeMaxBytes:  5 * 5 * 1024,
+			},
+			result: []diffAttributes{
+				{path: "CHANGELOG"},
+				{path: "CONTRIBUTING.md", collapsed: true},
+				{path: "LICENSE", collapsed: true},
+				{path: "PROCESS.md", collapsed: true},
+				{path: "VERSION", collapsed: true},
+			},
+		},
+		{
+			desc: "collapse after safe max byte count is exceeded",
+			request: pb.CommitDiffRequest{
+				EnforceLimits: true,
+				CollapseDiffs: true,
+				MaxFiles:      4,
+				MaxLines:      1000,
+				MaxBytes:      4 * 5 * 1024,
+				SafeMaxFiles:  4,
+				SafeMaxLines:  1000,
+				SafeMaxBytes:  4830,
+			},
+			result: []diffAttributes{
+				{path: "CHANGELOG"},
+				{path: "CONTRIBUTING.md"},
+				{path: "LICENSE"},
+				{path: "PROCESS.md", collapsed: true},
+				{overflowMarker: true},
+			},
+		},
+	}
+
+	for _, requestAndResult := range requestsAndResults {
+		t.Logf("test case: %s", requestAndResult.desc)
+
+		request := requestAndResult.request
+		request.Repository = testRepo
+		request.LeftCommitId = leftCommit
+		request.RightCommitId = rightCommit
+
+		c, err := client.CommitDiff(context.Background(), &request)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		receivedDiffs := getDiffsFromCommitDiffClient(t, c)
+
+		require.Equal(t, len(requestAndResult.result), len(receivedDiffs), "number of diffs received")
+		for i, diff := range receivedDiffs {
+			if overflowMarker := requestAndResult.result[i].overflowMarker; overflowMarker {
+				require.Equal(t, overflowMarker, diff.OverflowMarker, "overflow marker")
+				continue
+			}
+
+			require.Equal(t, requestAndResult.result[i].path, string(diff.FromPath), "path")
+
+			collapsed := requestAndResult.result[i].collapsed
+			require.Equal(t, collapsed, diff.Collapsed, "collapsed")
+			if collapsed {
+				require.Empty(t, diff.Patch, "patch")
+			}
+		}
+	}
+}
+
 func TestFailedCommitDiffRequestDueToValidationError(t *testing.T) {
 	server := runDiffServer(t)
 	defer server.Stop()
@@ -710,14 +900,16 @@ func getDiffsFromCommitDiffClient(t *testing.T, client pb.DiffService_CommitDiff
 
 		if currentDiff == nil {
 			currentDiff = &diff.Diff{
-				FromID:   fetchedDiff.FromId,
-				ToID:     fetchedDiff.ToId,
-				OldMode:  fetchedDiff.OldMode,
-				NewMode:  fetchedDiff.NewMode,
-				FromPath: fetchedDiff.FromPath,
-				ToPath:   fetchedDiff.ToPath,
-				Binary:   fetchedDiff.Binary,
-				Patch:    fetchedDiff.RawPatchData,
+				FromID:         fetchedDiff.FromId,
+				ToID:           fetchedDiff.ToId,
+				OldMode:        fetchedDiff.OldMode,
+				NewMode:        fetchedDiff.NewMode,
+				FromPath:       fetchedDiff.FromPath,
+				ToPath:         fetchedDiff.ToPath,
+				Binary:         fetchedDiff.Binary,
+				Collapsed:      fetchedDiff.Collapsed,
+				OverflowMarker: fetchedDiff.OverflowMarker,
+				Patch:          fetchedDiff.RawPatchData,
 			}
 		} else {
 			currentDiff.Patch = append(currentDiff.Patch, fetchedDiff.RawPatchData...)
