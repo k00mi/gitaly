@@ -1,6 +1,8 @@
 package helper
 
 import (
+	"os"
+	"path"
 	"testing"
 
 	"gitlab.com/gitlab-org/gitaly/internal/config"
@@ -127,5 +129,28 @@ func TestGetRepoPath(t *testing.T) {
 		}
 
 		assert.Equal(t, tc.path, path, tc.desc)
+	}
+}
+
+func assertInvalidRepoWithoutFile(t *testing.T, repo *pb.Repository, repoPath, file string) {
+	oldRoute := path.Join(repoPath, file)
+	renamedRoute := path.Join(repoPath, file+"moved")
+	os.Rename(oldRoute, renamedRoute)
+	defer func() {
+		os.Rename(renamedRoute, oldRoute)
+	}()
+
+	_, err := GetRepoPath(repo)
+
+	testhelper.AssertGrpcError(t, err, codes.NotFound, "")
+}
+
+func TestGetRepoPathWithCorruptedRepo(t *testing.T) {
+	testRepo := testhelper.TestRepository()
+	testRepoStoragePath := testhelper.GitlabTestStoragePath()
+	testRepoPath := path.Join(testRepoStoragePath, testRepo.RelativePath)
+
+	for _, file := range []string{"objects", "refs", "HEAD"} {
+		assertInvalidRepoWithoutFile(t, testRepo, testRepoPath, file)
 	}
 }
