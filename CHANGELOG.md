@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Rename auth 'unenforced' to 'transitioning'
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/209
 - Also check for "refs" folder for repo existence
   https://gitlab.com/gitlab-org/gitaly/merge_requests/207
 

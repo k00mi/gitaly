@@ -110,7 +110,7 @@ func TestAuthSuccess(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		config.Config.Auth.Token = tc.token
-		config.Config.Auth.Unenforced = !tc.required
+		config.Config.Auth.Transitioning = !tc.required
 		t.Logf("%+v", config.Config.Auth)
 		connOpts := append(tc.opts, grpc.WithInsecure())
 		func() {
