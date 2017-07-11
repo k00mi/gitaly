@@ -1,6 +1,7 @@
 package commit
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -70,24 +71,28 @@ func gitLog(writer lines.Sender, repo *pb.Repository, from string, to string) er
 	return nil
 }
 
-func validateCommitsBetweenRequest(in *pb.CommitsBetweenRequest) error {
-	if len(in.GetFrom()) == 0 {
-		return fmt.Errorf("empty From")
+func parseCommitsBetweenRevision(revision []byte) (string, error) {
+	if len(revision) == 0 {
+		return "", fmt.Errorf("empty revision")
+	}
+	if bytes.HasPrefix(revision, []byte("-")) {
+		return "", fmt.Errorf("revision can't start with '-'")
 	}
 
-	if len(in.GetTo()) == 0 {
-		return fmt.Errorf("empty To")
-	}
-
-	return nil
+	return string(revision), nil
 }
 
 func (s *server) CommitsBetween(in *pb.CommitsBetweenRequest, stream pb.CommitService_CommitsBetweenServer) error {
-	if err := validateCommitsBetweenRequest(in); err != nil {
-		return grpc.Errorf(codes.InvalidArgument, "CommitsBetween: %v", err)
+	from, err := parseCommitsBetweenRevision(in.GetFrom())
+	if err != nil {
+		return grpc.Errorf(codes.InvalidArgument, "CommitsBetween: from: %v", err)
+	}
+	to, err := parseCommitsBetweenRevision(in.GetTo())
+	if err != nil {
+		return grpc.Errorf(codes.InvalidArgument, "CommitsBetween: to: %v", err)
 	}
 
 	writer := newCommitsBetweenWriter(stream)
 
-	return gitLog(writer, in.GetRepository(), string(in.GetFrom()), string(in.GetTo()))
+	return gitLog(writer, in.GetRepository(), from, to)
 }

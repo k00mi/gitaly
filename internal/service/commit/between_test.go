@@ -191,6 +191,18 @@ func TestFailedCommitsBetweenRequest(t *testing.T) {
 			to:          nil,
 			code:        codes.InvalidArgument,
 		},
+		{
+			description: "From begins with '-'",
+			from:        append([]byte("-"), from...),
+			to:          to,
+			code:        codes.InvalidArgument,
+		},
+		{
+			description: "To begins with '-'",
+			from:        from,
+			to:          append([]byte("-"), to...),
+			code:        codes.InvalidArgument,
+		},
 	}
 
 	for _, tc := range testCases {
