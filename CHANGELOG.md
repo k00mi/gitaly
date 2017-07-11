@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.17.0
 
 - Rename auth 'unenforced' to 'transitioning'
   https://gitlab.com/gitlab-org/gitaly/merge_requests/209
