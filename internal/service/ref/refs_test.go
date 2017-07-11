@@ -258,7 +258,7 @@ func TestDefaultBranchName(t *testing.T) {
 		FindBranchNames = testCase.findBranchNames
 		headReference = testCase.headReference
 
-		defaultBranch, err := defaultBranchName("")
+		defaultBranch, err := DefaultBranchName("")
 		if err != nil {
 			t.Fatal(err)
 		}

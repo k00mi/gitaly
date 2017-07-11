@@ -16,7 +16,3 @@ func NewServer() pb.CommitServiceServer {
 func (server) FindCommit(ctx context.Context, in *pb.FindCommitRequest) (*pb.FindCommitResponse, error) {
 	return nil, nil
 }
-
-func (server) ListFiles(*pb.ListFilesRequest, pb.CommitService_ListFilesServer) error {
-	return nil
-}

@@ -120,7 +120,8 @@ func _headReference(repoPath string) ([]byte, error) {
 	return headRef, nil
 }
 
-func defaultBranchName(repoPath string) ([]byte, error) {
+// DefaultBranchName looks up the name of the default branch given a repoPath
+func DefaultBranchName(repoPath string) ([]byte, error) {
 	branches, err := FindBranchNames(repoPath)
 
 	if err != nil {
@@ -171,7 +172,7 @@ func (s *server) FindDefaultBranchName(ctx context.Context, in *pb.FindDefaultBr
 		"RepoPath": repoPath,
 	}).Debug("FindDefaultBranchName")
 
-	defaultBranchName, err := defaultBranchName(repoPath)
+	defaultBranchName, err := DefaultBranchName(repoPath)
 	if err != nil {
 		return nil, grpc.Errorf(codes.Internal, err.Error())
 	}
