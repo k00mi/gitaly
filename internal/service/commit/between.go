@@ -17,7 +17,7 @@ import (
 var commitLogFormatFields = []string{
 	"%H",  // commit hash
 	"%s",  // subject
-	"%b",  // body
+	"%B",  // raw body (subject + body)
 	"%an", // author name
 	"%ae", // author email
 	"%aI", // author date, strict ISO 8601 format

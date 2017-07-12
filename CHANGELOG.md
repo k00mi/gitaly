@@ -1,5 +1,9 @@
 # Gitaly changelog
 
+UNRELEASED
+- Send raw body on CommitService.CommitsBetween
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/216
+
 v0.18.0
 
 - Add config to specify a git binary path
