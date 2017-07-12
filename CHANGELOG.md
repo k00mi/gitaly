@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.18.0
 
 - Add config to specify a git binary path
   https://gitlab.com/gitlab-org/gitaly/merge_requests/177
