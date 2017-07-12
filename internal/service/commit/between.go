@@ -1,6 +1,7 @@
 package commit
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -16,6 +17,7 @@ import (
 var commitLogFormatFields = []string{
 	"%H",  // commit hash
 	"%s",  // subject
+	"%b",  // body
 	"%an", // author name
 	"%ae", // author email
 	"%aI", // author date, strict ISO 8601 format
@@ -37,15 +39,26 @@ func gitLog(writer lines.Sender, repo *pb.Repository, from string, to string) er
 	}).Debug("GitLog")
 
 	revisionRange := string(from) + ".." + string(to)
-	formatFlag := "--pretty=format:" + strings.Join(commitLogFormatFields, "%x00")
+	// Use \x1f (ASCII field separator) as the field delimiter
+	formatFlag := "--pretty=format:" + strings.Join(commitLogFormatFields, "%x1f")
 
-	cmd, err := helper.GitCommandReader("--git-dir", repoPath, "log", revisionRange, formatFlag)
+	args := []string{
+		"--git-dir",
+		repoPath,
+		"log",
+		"-z", // use 0x00 as the entry terminator (instead of \n)
+		"--reverse",
+		formatFlag,
+		revisionRange,
+	}
+	cmd, err := helper.GitCommandReader(args...)
 	if err != nil {
 		return err
 	}
 	defer cmd.Kill()
 
-	if err := lines.Send(cmd, writer); err != nil {
+	split := lines.ScanWithDelimiter([]byte("\x00"))
+	if err := lines.Send(cmd, writer, split); err != nil {
 		return err
 	}
 
@@ -58,24 +71,28 @@ func gitLog(writer lines.Sender, repo *pb.Repository, from string, to string) er
 	return nil
 }
 
-func validateCommitsBetweenRequest(in *pb.CommitsBetweenRequest) error {
-	if len(in.GetFrom()) == 0 {
-		return fmt.Errorf("empty From")
+func parseCommitsBetweenRevision(revision []byte) (string, error) {
+	if len(revision) == 0 {
+		return "", fmt.Errorf("empty revision")
+	}
+	if bytes.HasPrefix(revision, []byte("-")) {
+		return "", fmt.Errorf("revision can't start with '-'")
 	}
 
-	if len(in.GetTo()) == 0 {
-		return fmt.Errorf("empty To")
-	}
-
-	return nil
+	return string(revision), nil
 }
 
 func (s *server) CommitsBetween(in *pb.CommitsBetweenRequest, stream pb.CommitService_CommitsBetweenServer) error {
-	if err := validateCommitsBetweenRequest(in); err != nil {
-		return grpc.Errorf(codes.InvalidArgument, "CommitsBetween: %v", err)
+	from, err := parseCommitsBetweenRevision(in.GetFrom())
+	if err != nil {
+		return grpc.Errorf(codes.InvalidArgument, "CommitsBetween: from: %v", err)
+	}
+	to, err := parseCommitsBetweenRevision(in.GetTo())
+	if err != nil {
+		return grpc.Errorf(codes.InvalidArgument, "CommitsBetween: to: %v", err)
 	}
 
 	writer := newCommitsBetweenWriter(stream)
 
-	return gitLog(writer, in.GetRepository(), string(in.GetFrom()), string(in.GetTo()))
+	return gitLog(writer, in.GetRepository(), from, to)
 }

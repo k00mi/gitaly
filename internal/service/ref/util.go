@@ -17,7 +17,7 @@ var localBranchFormatFields = []string{
 }
 
 func buildBranch(elements [][]byte) (*pb.FindLocalBranchResponse, error) {
-	target, err := git.NewCommit(elements[1], elements[2], elements[3],
+	target, err := git.NewCommit(elements[1], elements[2], nil, elements[3],
 		elements[4], elements[5], elements[6], elements[7], elements[8])
 	author := pb.FindLocalBranchCommitAuthor{
 		Name:  target.Author.Name,

@@ -121,6 +121,7 @@ func AuthorsEqual(a *pb.CommitAuthor, b *pb.CommitAuthor) bool {
 func CommitsEqual(a *pb.GitCommit, b *pb.GitCommit) bool {
 	return a.Id == b.Id &&
 		bytes.Equal(a.Subject, b.Subject) &&
+		bytes.Equal(a.Body, b.Body) &&
 		AuthorsEqual(a.Author, b.Author) &&
 		AuthorsEqual(a.Committer, b.Committer)
 }
