@@ -4,6 +4,9 @@ UNRELEASED
 
 - Add config to specify a git binary path
   https://gitlab.com/gitlab-org/gitaly/merge_requests/177
+- CommitService.CommitsBetween fixes: Invert commits order, populates commit
+  message bodies, reject suspicious revisions
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/204
 
 v0.17.0
 
