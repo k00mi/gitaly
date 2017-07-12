@@ -47,7 +47,7 @@ func (s *server) PostReceivePack(stream pb.SmartHTTPService_PostReceivePackServe
 		"GlRepository": req.GlRepository,
 	}).Debug("PostReceivePack")
 
-	osCommand := exec.Command("git", "receive-pack", "--stateless-rpc", repoPath)
+	osCommand := exec.Command(helper.GitPath(), "receive-pack", "--stateless-rpc", repoPath)
 	cmd, err := helper.NewCommand(osCommand, stdin, stdout, nil, env...)
 
 	if err != nil {

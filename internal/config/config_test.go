@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -236,5 +237,52 @@ func TestStoragePath(t *testing.T) {
 			continue
 		}
 		assert.Equal(t, tc.out, out, "%+v", tc)
+	}
+}
+
+func TestLoadGit(t *testing.T) {
+	tmpFile := configFileReader(`[git]
+bin_path = "/my/git/path"`)
+
+	err := Load(tmpFile)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "/my/git/path", Config.Git.BinPath)
+}
+
+func TestSetGitPath(t *testing.T) {
+	defer func(oldGitSettings Git) {
+		Config.Git = oldGitSettings
+	}(Config.Git)
+
+	resolvedGitPath, err := exec.LookPath("git")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testCases := []struct {
+		desc       string
+		gitBinPath string
+		expected   string
+	}{
+		{
+			desc:       "With a Git Path set through the settings",
+			gitBinPath: "/path/to/myGit",
+			expected:   "/path/to/myGit",
+		},
+		{
+			desc:       "When a git path hasn't been set",
+			gitBinPath: "",
+			expected:   resolvedGitPath,
+		},
+	}
+
+	for _, tc := range testCases {
+		Config.Git.BinPath = tc.gitBinPath
+
+		SetGitPath()
+
+		assert.Equal(t, tc.expected, Config.Git.BinPath, tc.desc)
 	}
 }

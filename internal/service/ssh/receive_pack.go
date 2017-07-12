@@ -51,7 +51,7 @@ func (s *server) SSHReceivePack(stream pb.SSHService_SSHReceivePackServer) error
 		"GlRepository": req.GlRepository,
 	}).Debug("SSHReceivePack")
 
-	osCommand := exec.Command("git-receive-pack", repoPath)
+	osCommand := exec.Command(helper.GitPath(), "receive-pack", repoPath)
 	cmd, err := helper.NewCommand(osCommand, stdin, stdout, stderr, env...)
 
 	if err != nil {

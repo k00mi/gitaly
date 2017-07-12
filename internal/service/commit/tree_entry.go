@@ -40,7 +40,7 @@ func (s *server) TreeEntry(in *pb.TreeEntryRequest, stream pb.CommitService_Tree
 		"cat-file",
 		"--batch",
 	}
-	cmd, err := helper.NewCommand(exec.Command("git", cmdArgs...), stdinReader, nil, nil)
+	cmd, err := helper.NewCommand(exec.Command(helper.GitPath(), cmdArgs...), stdinReader, nil, nil)
 	if err != nil {
 		return grpc.Errorf(codes.Internal, "TreeEntry: cmd: %v", err)
 	}
