@@ -87,9 +87,9 @@ type opaqueWriter struct {
 
 func TestWriterChunking(t *testing.T) {
 	defer func(oldBufferSize int) {
-		writeBufferSize = oldBufferSize
-	}(writeBufferSize)
-	writeBufferSize = 5
+		WriteBufferSize = oldBufferSize
+	}(WriteBufferSize)
+	WriteBufferSize = 5
 
 	testData := "Hello this is some test data"
 	ts := &testSender{}
@@ -99,7 +99,7 @@ func TestWriterChunking(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, testData, string(bytes.Join(ts.sends, nil)))
 	for _, send := range ts.sends {
-		require.True(t, len(send) <= writeBufferSize, "send calls may not exceed writeBufferSize")
+		require.True(t, len(send) <= WriteBufferSize, "send calls may not exceed WriteBufferSize")
 	}
 }
 
@@ -116,9 +116,9 @@ func (ts *testSender) send(p []byte) error {
 
 func TestReadFrom(t *testing.T) {
 	defer func(oldBufferSize int) {
-		writeBufferSize = oldBufferSize
-	}(writeBufferSize)
-	writeBufferSize = 5
+		WriteBufferSize = oldBufferSize
+	}(WriteBufferSize)
+	WriteBufferSize = 5
 
 	testData := "Hello this is the test data that will be received. It goes on for a while bla bla bla."
 	testCases := []struct {
@@ -139,7 +139,7 @@ func TestReadFrom(t *testing.T) {
 		require.Equal(t, int64(len(testData)), n, tc.desc)
 		require.Equal(t, testData, string(bytes.Join(ts.sends, nil)), tc.desc)
 		for _, send := range ts.sends {
-			require.True(t, len(send) <= writeBufferSize, "send calls may not exceed writeBufferSize")
+			require.True(t, len(send) <= WriteBufferSize, "send calls may not exceed WriteBufferSize")
 		}
 	}
 }
