@@ -3,6 +3,8 @@
 UNRELEASED
 - Config: do not start Gitaly without at least one storage
   https://gitlab.com/gitlab-org/gitaly/merge_requests/227
+- Implement CommitService.GarbageCollect/Repack{Incremental,Full}
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/218
 
 v0.21.1
 - Make sure stdout.Read has enough bytes buffered to read from
