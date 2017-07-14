@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.21.0
 - Send an empty response for TreeEntry instead of nil
   https://gitlab.com/gitlab-org/gitaly/merge_requests/223
 
