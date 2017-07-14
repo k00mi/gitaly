@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"regexp"
 	"strconv"
 
@@ -24,16 +25,48 @@ type Diff struct {
 	Binary   bool
 	Status   byte
 	Patch    []byte
+	// OverflowMarker is used to inform caller (GitLab) that there are more diffs to display but a limit was reached instead.
+	OverflowMarker bool
+	// Collapsed means a soft limit was reached and the patch was pruned.
+	Collapsed bool
+	lineCount int
 }
 
 // Parser holds necessary state for parsing a diff stream
 type Parser struct {
+	limits            Limits
 	patchReader       *bufio.Reader
 	rawLines          [][]byte
 	currentDiff       *Diff
 	nextPatchFromPath []byte
+	filesProcessed    int
+	linesProcessed    int
+	bytesProcessed    int
 	finished          bool
+	overSafeLimits    bool
 	err               error
+}
+
+// Limits holds the limits at which either parsing stops or patches are collapsed
+type Limits struct {
+	// If true, Max{Files,Lines,Bytes} will cause parsing to stop if any of these limits is reached
+	EnforceLimits bool
+	// If true, SafeMax{Files,Lines,Bytes} will cause diffs to collapse (i.e. patches are emptied) after any of these limits reached
+	CollapseDiffs bool
+	// Number of maximum files to parse. The file parsed after this limit is reached is marked as the overflow.
+	MaxFiles int
+	// Number of diffs lines to parse (including lines preceded with --- or +++).
+	// The file in which this limit is reached is discarded and marked as the overflow.
+	MaxLines int
+	// Number of bytes to parse (including lines preceded with --- or +++).
+	// The file in which this limit is reached is discarded and marked as the overflow.
+	MaxBytes int
+	// Number of files to parse, after which all subsequent files are collapsed.
+	SafeMaxFiles int
+	// Number of lines to parse (including lines preceded with --- or +++), after which all subsequent files are collapsed.
+	SafeMaxLines int
+	// Number of bytes to parse (including lines preceded with --- or +++), after which all subsequent files are collapsed.
+	SafeMaxBytes int
 }
 
 var (
@@ -42,12 +75,13 @@ var (
 )
 
 // NewDiffParser returns a new Parser
-func NewDiffParser(src io.Reader) *Parser {
+func NewDiffParser(src io.Reader, limits Limits) *Parser {
 	parser := &Parser{}
 	reader := bufio.NewReader(src)
 
 	parser.cacheRawLines(reader)
 	parser.patchReader = reader
+	parser.limits = limits
 
 	return parser
 }
@@ -57,6 +91,8 @@ func NewDiffParser(src io.Reader) *Parser {
 // to get the error.
 func (parser *Parser) Parse() bool {
 	if parser.finished || len(parser.rawLines) == 0 {
+		// In case we didn't consume the whole output due to reaching limitations
+		io.Copy(ioutil.Discard, parser.patchReader)
 		return false
 	}
 
@@ -87,33 +123,52 @@ func (parser *Parser) Parse() bool {
 			}
 
 			if len(line) > 0 && len(line) < 10 {
-				consumeChunkLine(parser.patchReader, parser.currentDiff)
+				parser.consumeChunkLine()
 			}
 
-			return true
+			break
 		} else if err != nil {
 			parser.err = fmt.Errorf("peek diff line: %v", err)
 			return false
 		}
 
 		if bytes.HasPrefix(line, []byte("diff --git")) {
-			return true
+			break
 		} else if bytes.HasPrefix(line, []byte("Binary")) {
-			parser.err = consumeBinaryNotice(parser.patchReader, parser.currentDiff)
+			parser.consumeBinaryNotice()
 		} else if bytes.HasPrefix(line, []byte("@@")) {
-			parser.err = consumeChunkLine(parser.patchReader, parser.currentDiff)
+			parser.consumeChunkLine()
 		} else if helper.ByteSliceHasAnyPrefix(line, "---", "+++") {
-			parser.err = consumeLine(parser.patchReader)
+			parser.consumeLine(true)
 		} else if helper.ByteSliceHasAnyPrefix(line, "-", "+", " ", "\\") {
-			parser.err = consumeChunkLine(parser.patchReader, parser.currentDiff)
+			parser.consumeChunkLine()
 		} else {
-			parser.err = consumeLine(parser.patchReader)
+			parser.consumeLine(false)
 		}
 
 		if parser.err != nil {
 			return false
 		}
 	}
+
+	if parser.overSafeLimits && parser.currentDiff.lineCount > 0 {
+		parser.linesProcessed -= parser.currentDiff.lineCount
+		parser.bytesProcessed -= len(parser.currentDiff.Patch)
+		parser.currentDiff.Collapsed = true
+		parser.currentDiff.Patch = nil
+	}
+
+	if parser.limits.EnforceLimits {
+		maxFilesExceeded := parser.filesProcessed > parser.limits.MaxFiles
+		maxBytesOrLinesExceeded := parser.bytesProcessed >= parser.limits.MaxBytes || parser.linesProcessed >= parser.limits.MaxLines
+
+		if maxFilesExceeded || maxBytesOrLinesExceeded {
+			parser.finished = true
+			parser.currentDiff = &Diff{OverflowMarker: true}
+		}
+	}
+
+	parser.setOverSafeLimits()
 
 	return true
 }
@@ -128,6 +183,18 @@ func (parser *Parser) Diff() *Diff {
 // returns false.
 func (parser *Parser) Err() error {
 	return parser.err
+}
+
+func (parser *Parser) setOverSafeLimits() {
+	if parser.overSafeLimits || !parser.limits.CollapseDiffs {
+		return
+	}
+
+	if parser.filesProcessed >= parser.limits.SafeMaxFiles ||
+		parser.linesProcessed >= parser.limits.SafeMaxLines ||
+		parser.bytesProcessed >= parser.limits.SafeMaxBytes {
+		parser.overSafeLimits = true
+	}
 }
 
 func (parser *Parser) cacheRawLines(reader *bufio.Reader) {
@@ -176,6 +243,8 @@ func (parser *Parser) initializeCurrentDiff() error {
 	if parser.currentDiff.Status == 'T' {
 		parser.handleTypeChangeDiff()
 	}
+
+	parser.filesProcessed++
 
 	return nil
 }
@@ -255,35 +324,47 @@ func parseRawLine(line []byte, diff *Diff) error {
 	return nil
 }
 
-func consumeChunkLine(reader *bufio.Reader, diff *Diff) error {
-	line, err := reader.ReadBytes('\n')
+func (parser *Parser) consumeChunkLine() {
+	line, err := parser.patchReader.ReadBytes('\n')
 	if err != nil && err != io.EOF {
-		return fmt.Errorf("read chunk line: %v", err)
+		parser.err = fmt.Errorf("read chunk line: %v", err)
+		return
 	}
 
-	diff.Patch = append(diff.Patch, line...)
+	parser.currentDiff.Patch = append(parser.currentDiff.Patch, line...)
+	parser.currentDiff.lineCount++
+	parser.linesProcessed++
+	parser.bytesProcessed += len(line)
 
-	return nil
+	return
 }
 
-func consumeBinaryNotice(reader *bufio.Reader, diff *Diff) error {
-	_, err := reader.ReadBytes('\n')
+func (parser *Parser) consumeBinaryNotice() {
+	_, err := parser.patchReader.ReadBytes('\n')
 	if err != nil && err != io.EOF {
-		return fmt.Errorf("read binary notice: %v", err)
+		parser.err = fmt.Errorf("read binary notice: %v", err)
+		return
 	}
 
-	diff.Binary = true
+	parser.currentDiff.Binary = true
 
-	return nil
+	return
 }
 
-func consumeLine(reader *bufio.Reader) error {
-	_, err := reader.ReadBytes('\n')
+func (parser *Parser) consumeLine(updateStats bool) {
+	line, err := parser.patchReader.ReadBytes('\n')
 	if err != nil && err != io.EOF {
-		return fmt.Errorf("read line: %v", err)
+		parser.err = fmt.Errorf("read line: %v", err)
+		return
 	}
 
-	return nil
+	if updateStats {
+		parser.currentDiff.lineCount++
+		parser.linesProcessed++
+		parser.bytesProcessed += len(line)
+	}
+
+	return
 }
 
 // unescape unescapes the escape codes used by 'git diff'

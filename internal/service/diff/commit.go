@@ -58,15 +58,29 @@ func (s *server) CommitDiff(in *pb.CommitDiffRequest, stream pb.DiffService_Comm
 		}
 	}
 
-	err = eachDiff("CommitDiff", cmdArgs, func(diff *diff.Diff) error {
+	var limits diff.Limits
+	if in.EnforceLimits {
+		limits.EnforceLimits = true
+		limits.MaxFiles = int(in.MaxFiles)
+		limits.MaxLines = int(in.MaxLines)
+		limits.MaxBytes = int(in.MaxBytes)
+	}
+	limits.CollapseDiffs = in.CollapseDiffs
+	limits.SafeMaxFiles = int(in.SafeMaxFiles)
+	limits.SafeMaxLines = int(in.SafeMaxLines)
+	limits.SafeMaxBytes = int(in.SafeMaxBytes)
+
+	err = eachDiff("CommitDiff", cmdArgs, limits, func(diff *diff.Diff) error {
 		response := &pb.CommitDiffResponse{
-			FromPath: diff.FromPath,
-			ToPath:   diff.ToPath,
-			FromId:   diff.FromID,
-			ToId:     diff.ToID,
-			OldMode:  diff.OldMode,
-			NewMode:  diff.NewMode,
-			Binary:   diff.Binary,
+			FromPath:       diff.FromPath,
+			ToPath:         diff.ToPath,
+			FromId:         diff.FromID,
+			ToId:           diff.ToID,
+			OldMode:        diff.OldMode,
+			NewMode:        diff.NewMode,
+			Binary:         diff.Binary,
+			OverflowMarker: diff.OverflowMarker,
+			Collapsed:      diff.Collapsed,
 		}
 
 		if len(diff.Patch) <= s.MsgSizeThreshold {
@@ -156,7 +170,7 @@ func (s *server) CommitDelta(in *pb.CommitDeltaRequest, stream pb.DiffService_Co
 		return nil
 	}
 
-	err = eachDiff("CommitDelta", cmdArgs, func(diff *diff.Diff) error {
+	err = eachDiff("CommitDelta", cmdArgs, diff.Limits{}, func(diff *diff.Diff) error {
 		delta := &pb.CommitDelta{
 			FromPath: diff.FromPath,
 			ToPath:   diff.ToPath,
@@ -199,14 +213,14 @@ func validateRequest(in requestWithLeftRightCommitIds) error {
 	return nil
 }
 
-func eachDiff(rpc string, cmdArgs []string, callback func(*diff.Diff) error) error {
+func eachDiff(rpc string, cmdArgs []string, limits diff.Limits, callback func(*diff.Diff) error) error {
 	cmd, err := helper.GitCommandReader(cmdArgs...)
 	if err != nil {
 		return grpc.Errorf(codes.Internal, "%s: cmd: %v", rpc, err)
 	}
 	defer cmd.Kill()
 
-	diffParser := diff.NewDiffParser(cmd)
+	diffParser := diff.NewDiffParser(cmd, limits)
 
 	for diffParser.Parse() {
 		if err := callback(diffParser.Diff()); err != nil {

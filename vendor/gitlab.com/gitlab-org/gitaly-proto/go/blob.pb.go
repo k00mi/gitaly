@@ -57,6 +57,12 @@ It has these top-level messages:
 	FindLocalBranchCommitAuthor
 	RepositoryExistsRequest
 	RepositoryExistsResponse
+	RepackIncrementalRequest
+	RepackIncrementalResponse
+	RepackFullRequest
+	RepackFullResponse
+	GarbageCollectRequest
+	GarbageCollectResponse
 	Repository
 	GitCommit
 	CommitAuthor
