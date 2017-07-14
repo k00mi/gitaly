@@ -199,14 +199,6 @@
 			"versionExact": "v0.16.0"
 		},
 		{
-			"checksumSHA1": "GkeSZfXVbtAkBZOrswot19GJZqQ=",
-			"path": "gitlab.com/gitlab-org/gitaly-proto/go/helper",
-			"revision": "c4481d2d5cda107e28c68c9bf6c373e413cf356e",
-			"revisionTime": "2017-07-06T13:31:57Z",
-			"version": "v0.13.0",
-			"versionExact": "v0.13.0"
-		},
-		{
 			"checksumSHA1": "Y+HGqEkYM15ir+J93MEaHdyFy0c=",
 			"path": "golang.org/x/net/context",
 			"revision": "59a0b19b5533c7977ddeb86b017bf507ed407b12",
