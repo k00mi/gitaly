@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.19.0
 
 - Send parent ids and raw body on CommitService.CommitsBetween
   https://gitlab.com/gitlab-org/gitaly/merge_requests/216
