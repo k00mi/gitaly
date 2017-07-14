@@ -4,7 +4,7 @@ import (
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
 
-const msgSizeThreshold = 1024
+const msgSizeThreshold = 5 * 1024
 
 type server struct {
 	MsgSizeThreshold int
