@@ -17,10 +17,6 @@ func (server) FindCommit(ctx context.Context, in *pb.FindCommitRequest) (*pb.Fin
 	return nil, nil
 }
 
-func (server) GetTreeEntries(*pb.GetTreeEntriesRequest, pb.CommitService_GetTreeEntriesServer) error {
-	return nil
-}
-
 func (server) ListFiles(*pb.ListFilesRequest, pb.CommitService_ListFilesServer) error {
 	return nil
 }

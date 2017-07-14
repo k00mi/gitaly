@@ -1,6 +1,7 @@
 package commit
 
 import (
+	"bytes"
 	"net"
 	"os"
 	"path"
@@ -110,4 +111,9 @@ func newCommitServiceClient(t *testing.T) pb.CommitServiceClient {
 	}
 
 	return pb.NewCommitServiceClient(conn)
+}
+
+func treeEntriesEqual(a, b *pb.TreeEntry) bool {
+	return a.CommitOid == b.CommitOid && a.Oid == b.Oid && a.Mode == b.Mode &&
+		bytes.Equal(a.Path, b.Path) && a.RootOid == b.RootOid && a.Type == b.Type
 }
