@@ -34,8 +34,7 @@ func treeEntryHandler(stream pb.Commit_TreeEntryServer, revision, path, baseName
 		}
 
 		if treeEntry == nil || len(treeEntry.Oid) == 0 {
-			// Not found, send nothing
-			return nil
+			return helper.DecorateError(codes.Unavailable, stream.Send(&pb.TreeEntryResponse{}))
 		}
 
 		if treeEntry.Type == pb.TreeEntry_COMMIT {
