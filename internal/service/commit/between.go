@@ -17,13 +17,14 @@ import (
 var commitLogFormatFields = []string{
 	"%H",  // commit hash
 	"%s",  // subject
-	"%b",  // body
+	"%B",  // raw body (subject + body)
 	"%an", // author name
 	"%ae", // author email
 	"%aI", // author date, strict ISO 8601 format
 	"%cn", // committer name
 	"%ce", // committer email
 	"%cI", // committer date, strict ISO 8601 format
+	"%P",  // parent hashes
 }
 
 func gitLog(writer lines.Sender, repo *pb.Repository, from string, to string) error {

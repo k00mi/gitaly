@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -123,7 +124,8 @@ func CommitsEqual(a *pb.GitCommit, b *pb.GitCommit) bool {
 		bytes.Equal(a.Subject, b.Subject) &&
 		bytes.Equal(a.Body, b.Body) &&
 		AuthorsEqual(a.Author, b.Author) &&
-		AuthorsEqual(a.Committer, b.Committer)
+		AuthorsEqual(a.Committer, b.Committer) &&
+		reflect.DeepEqual(a.ParentIds, b.ParentIds)
 }
 
 // FindLocalBranchCommitAuthorsEqual tests if two `FindLocalBranchCommitAuthor`s are equal

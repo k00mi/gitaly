@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Send parent ids and raw body on CommitService.CommitsBetween
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/216
 - Streamio chunk size optimizations
   https://gitlab.com/gitlab-org/gitaly/merge_requests/206
 
