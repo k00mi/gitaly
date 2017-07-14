@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.20.0
 - Implement commit diff limiting logic
   https://gitlab.com/gitlab-org/gitaly/merge_requests/211
 - Increase message size to 5 KB for Diff service
