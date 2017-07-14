@@ -1,5 +1,9 @@
 # Gitaly changelog
 
+UNRELEASED
+- Send an empty response for TreeEntry instead of nil
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/223
+
 v0.20.0
 - Implement commit diff limiting logic
   https://gitlab.com/gitlab-org/gitaly/merge_requests/211
