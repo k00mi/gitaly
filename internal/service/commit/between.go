@@ -24,6 +24,7 @@ var commitLogFormatFields = []string{
 	"%cn", // committer name
 	"%ce", // committer email
 	"%cI", // committer date, strict ISO 8601 format
+	"%P",  // parent hashes
 }
 
 func gitLog(writer lines.Sender, repo *pb.Repository, from string, to string) error {

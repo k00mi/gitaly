@@ -33,6 +33,10 @@ func TestSuccessfulCommitsBetween(t *testing.T) {
 				Email: []byte("job@gitlab.com"),
 				Date:  &timestamp.Timestamp{Seconds: 1474987066},
 			},
+			ParentIds: []string{
+				"1b12f15a11fc6e62177bef08f47bc7b5ce50b141",
+				"498214de67004b1da3d820901307bed2a68a8ef6",
+			},
 		},
 		{
 			Id:      "4a24d82dbca5c11c61556f3b35ca472b7463187e",
@@ -48,6 +52,7 @@ func TestSuccessfulCommitsBetween(t *testing.T) {
 				Email: []byte("lbennett@gitlab.com"),
 				Date:  &timestamp.Timestamp{Seconds: 1491905339},
 			},
+			ParentIds: []string{"b83d6e391c22777fca1ed3012fce84f633d7fed0"},
 		},
 		{
 			Id:      "e63f41fe459e62e1228fcef60d7189127aeba95a",
@@ -62,6 +67,10 @@ func TestSuccessfulCommitsBetween(t *testing.T) {
 				Name:  []byte("Sean McGivern"),
 				Email: []byte("sean@mcgivern.me.uk"),
 				Date:  &timestamp.Timestamp{Seconds: 1491906794},
+			},
+			ParentIds: []string{
+				"b83d6e391c22777fca1ed3012fce84f633d7fed0",
+				"4a24d82dbca5c11c61556f3b35ca472b7463187e",
 			},
 		},
 	}
