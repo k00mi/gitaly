@@ -1,5 +1,9 @@
 # Gitaly changelog
 
+UNRELEASED
+- Make sure stdout.Read has enough bytes buffered to read from
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/224
+
 v0.21.0
 - Send an empty response for TreeEntry instead of nil
   https://gitlab.com/gitlab-org/gitaly/merge_requests/223

@@ -52,7 +52,13 @@ func extractEntryInfoFromTreeData(stdout *bufio.Reader, commitOid, rootOid strin
 		bytesLeft -= int64(len(path))
 		path = path[:len(path)-1]
 
-		if n, _ := stdout.Read(oidBytes); n != 20 {
+		// bufio.Reader.Read isn't guaranteed to read len(p) since bytes
+		// are taken from at most one Read on the underlying Reader.
+		// We call Peek to make sure we have enough bytes buffered to read into oidBytes.
+		if _, err := stdout.Peek(len(oidBytes)); err != nil {
+			return nil, fmt.Errorf("peek entry oid: %v", err)
+		}
+		if n, err := stdout.Read(oidBytes); n != 20 || err != nil {
 			return nil, fmt.Errorf("read entry oid: %v", err)
 		}
 
