@@ -2,12 +2,13 @@ package commit
 
 import (
 	"fmt"
+	"path"
 	"strconv"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
 
-func newTreeEntry(commitOid, rootOid string, path, oidBytes, modeBytes []byte) (*pb.TreeEntry, error) {
+func newTreeEntry(commitOid, rootOid, rootPath string, filename, oidBytes, modeBytes []byte) (*pb.TreeEntry, error) {
 	var objectType pb.TreeEntry_EntryType
 
 	mode, err := strconv.ParseInt(string(modeBytes), 8, 32)
@@ -31,7 +32,7 @@ func newTreeEntry(commitOid, rootOid string, path, oidBytes, modeBytes []byte) (
 		CommitOid: commitOid,
 		RootOid:   rootOid,
 		Oid:       oid,
-		Path:      path,
+		Path:      []byte(path.Join(rootPath, string(filename))),
 		Type:      objectType,
 		Mode:      int32(mode),
 	}, nil

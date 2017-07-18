@@ -5,6 +5,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/229
 - Implement FindAllCommits RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/226
+- Send full repository path instead of filename on field `path` of TreeEntry
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/232
 
 v0.21.2
 - Config: do not start Gitaly without at least one storage
