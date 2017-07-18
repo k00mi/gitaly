@@ -1,6 +1,6 @@
 PREFIX=/usr/local
 PKG=gitlab.com/gitlab-org/gitaly
-BUILD_DIR=$(shell pwd)
+BUILD_DIR=${CURDIR}
 BIN_BUILD_DIR=${BUILD_DIR}/_build/bin
 PKG_BUILD_DIR:=${BUILD_DIR}/_build/src/${PKG}
 CMDS:=$(shell cd cmd && ls)
@@ -31,7 +31,7 @@ install: build
 	mkdir -p $(DESTDIR)${PREFIX}/bin/
 	cd ${BIN_BUILD_DIR} && install ${CMDS} ${DESTDIR}${PREFIX}/bin/
 
-verify: lint check-formatting govendor-status
+verify: lint check-formatting govendor-status notice-up-to-date
 
 check-formatting: install-developer-tools
 	go run _support/gofmt-all.go -n
@@ -52,12 +52,11 @@ package: build
 	./_support/package/package ${CMDS}
 
 notice:	${BUILD_DIR}/_build install-developer-tools
-	rm -f ${PKG_BUILD_DIR}/NOTICE # Avoid NOTICE-in-NOTICE
 	cd ${PKG_BUILD_DIR} && govendor license -template _support/notice.template -o ${BUILD_DIR}/NOTICE
 
-notice-up-to-date:	notice
-	git ls-files --error-unmatch NOTICE # NOTICE is a tracked file
-	git diff --exit-code # there are no changed files
+.PHONY: notice-up-to-date
+notice-up-to-date: ${BUILD_DIR}/_build install-developer-tools
+	@(cd ${PKG_BUILD_DIR} && govendor license -template _support/notice.template | cmp - NOTICE) || (echo >&2 "NOTICE requires update: 'make notice'" && false)
 
 clean:	clean-build
 	rm -rf internal/testhelper/testdata
