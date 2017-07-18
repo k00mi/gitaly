@@ -1,5 +1,9 @@
 # Gitaly changelog
 
+UNRELEASED
+- Various build file improvements
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/229
+
 v0.21.2
 - Config: do not start Gitaly without at least one storage
   https://gitlab.com/gitlab-org/gitaly/merge_requests/227
