@@ -120,6 +120,10 @@ func AuthorsEqual(a *pb.CommitAuthor, b *pb.CommitAuthor) bool {
 
 // CommitsEqual tests if two `GitCommit`s are equal
 func CommitsEqual(a *pb.GitCommit, b *pb.GitCommit) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+
 	return a.Id == b.Id &&
 		bytes.Equal(a.Subject, b.Subject) &&
 		bytes.Equal(a.Body, b.Body) &&
