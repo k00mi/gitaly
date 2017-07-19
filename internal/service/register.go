@@ -8,6 +8,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/service/notifications"
 	"gitlab.com/gitlab-org/gitaly/internal/service/ref"
 	"gitlab.com/gitlab-org/gitaly/internal/service/renameadapter"
+	"gitlab.com/gitlab-org/gitaly/internal/service/repository"
 	"gitlab.com/gitlab-org/gitaly/internal/service/smarthttp"
 	"gitlab.com/gitlab-org/gitaly/internal/service/ssh"
 
@@ -39,6 +40,9 @@ func RegisterAll(grpcServer *grpc.Server) {
 
 	blobService := blob.NewServer()
 	pb.RegisterBlobServiceServer(grpcServer, blobService)
+
+	repositoryService := repository.NewServer()
+	pb.RegisterRepositoryServiceServer(grpcServer, repositoryService)
 
 	// Deprecated Services
 	pb.RegisterNotificationsServer(grpcServer, renameadapter.NewNotificationAdapter(notificationsService))
