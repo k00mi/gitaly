@@ -100,9 +100,13 @@ func treeEntries(revision, path string, stdin io.Writer, stdout *bufio.Reader) (
 		return entries, nil
 	}
 
-	treeInfo, err := getTreeInfo(revision, path, stdin, stdout)
+	treeEntryInfo, err := getTreeInfo(revision, path, stdin, stdout)
 	if err != nil {
 		return nil, err
 	}
-	return extractEntryInfoFromTreeData(stdout, revision, rootTreeInfo.Oid, path, treeInfo)
+	if treeEntryInfo.Type != "tree" {
+		return []*pb.TreeEntry{}, nil
+	}
+
+	return extractEntryInfoFromTreeData(stdout, revision, rootTreeInfo.Oid, path, treeEntryInfo)
 }

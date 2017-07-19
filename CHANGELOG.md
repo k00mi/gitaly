@@ -11,6 +11,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/217
 - Register RepositoryService
   https://gitlab.com/gitlab-org/gitaly/merge_requests/233
+- Correctly handle a non-tree path on CommitService.TreeEntries
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/234
 
 v0.22.0
 - Various build file improvements
