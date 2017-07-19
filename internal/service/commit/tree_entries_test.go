@@ -198,6 +198,18 @@ func TestSuccessfulGetTreeEntries(t *testing.T) {
 			path:        []byte("files"),
 			entries:     filesDirEntries,
 		},
+		{
+			description: "with a file",
+			revision:    []byte(commitID),
+			path:        []byte(".gitignore"),
+			entries:     []*pb.TreeEntry{},
+		},
+		{
+			description: "with a non-existing path",
+			revision:    []byte(commitID),
+			path:        []byte("i-dont/exist"),
+			entries:     []*pb.TreeEntry{},
+		},
 	}
 
 	for _, testCase := range testCases {
