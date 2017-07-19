@@ -5,6 +5,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/231
 - Implement CommitService.ListFiles
   https://gitlab.com/gitlab-org/gitaly/merge_requests/205
+- Change the build process from copying to using symlinks
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/230
 
 v0.22.0
 - Various build file improvements
