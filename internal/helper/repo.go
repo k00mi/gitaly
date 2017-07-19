@@ -71,3 +71,19 @@ func IsGitDirectory(dir string) bool {
 
 	return true
 }
+
+// IsValidRef checks if a ref in a repo is valid
+func IsValidRef(path, ref string) bool {
+	if path == "" || ref == "" {
+		return false
+	}
+
+	cmd, err := GitCommandReader("--git-dir", path, "log", "-1", ref)
+	if err != nil {
+		return false
+	}
+	defer cmd.Kill()
+	cmd.Stdout, cmd.Stderr, cmd.Stdin = nil, nil, nil
+
+	return cmd.Wait() == nil
+}

@@ -3,6 +3,8 @@
 UNRELEASED
 - Version without Build Time
   https://gitlab.com/gitlab-org/gitaly/merge_requests/231
+- Implement CommitService.ListFiles
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/205
 
 v0.22.0
 - Various build file improvements
