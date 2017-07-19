@@ -9,6 +9,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/230
 - Implement CommitService.FindCommit
   https://gitlab.com/gitlab-org/gitaly/merge_requests/217
+- Register RepositoryService
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/233
 
 v0.22.0
 - Various build file improvements

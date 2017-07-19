@@ -1,6 +1,7 @@
 package repository
 
 import (
+	log "github.com/Sirupsen/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -14,6 +15,11 @@ func (server) GarbageCollect(ctx context.Context, in *pb.GarbageCollectRequest) 
 	if err != nil {
 		return nil, err
 	}
+
+	log.WithFields(log.Fields{
+		"RepoPath":     repoPath,
+		"WriteBitmaps": in.GetCreateBitmap(),
+	}).Debug("GarbageCollect")
 
 	args := []string{"-C", repoPath, "-c"}
 	if in.GetCreateBitmap() {
