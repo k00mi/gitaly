@@ -6,9 +6,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/golang/protobuf/ptypes/timestamp"
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -314,68 +312,6 @@ func TestInvalidRepoFindDefaultBranchNameRequest(t *testing.T) {
 	}
 }
 
-func localBranches() []*pb.FindLocalBranchResponse {
-	return []*pb.FindLocalBranchResponse{
-		{
-			Name:          []byte("refs/heads/100%branch"),
-			CommitId:      "1b12f15a11fc6e62177bef08f47bc7b5ce50b141",
-			CommitSubject: []byte("Merge branch 'add-directory-with-space' into 'master'\r \r Add a directory containing a space in its name\r \r needed for verifying the fix of `https://gitlab.com/gitlab-com/support-forum/issues/952` \r \r See merge request !11"),
-			CommitAuthor: &pb.FindLocalBranchCommitAuthor{
-				Name:  []byte("Stan Hu"),
-				Email: []byte("<stanhu@gmail.com>"),
-				Date:  &timestamp.Timestamp{Seconds: 1471558878},
-			},
-			CommitCommitter: &pb.FindLocalBranchCommitAuthor{
-				Name:  []byte("Stan Hu"),
-				Email: []byte("<stanhu@gmail.com>"),
-				Date:  &timestamp.Timestamp{Seconds: 1471558878},
-			},
-		},
-		{
-			Name:          []byte("refs/heads/improve/awesome"),
-			CommitId:      "5937ac0a7beb003549fc5fd26fc247adbce4a52e",
-			CommitSubject: []byte("Add submodule from gitlab.com"),
-			CommitAuthor: &pb.FindLocalBranchCommitAuthor{
-				Name:  []byte("Dmitriy Zaporozhets"),
-				Email: []byte("<dmitriy.zaporozhets@gmail.com>"),
-				Date:  &timestamp.Timestamp{Seconds: 1393491698},
-			},
-			CommitCommitter: &pb.FindLocalBranchCommitAuthor{
-				Name:  []byte("Dmitriy Zaporozhets"),
-				Email: []byte("<dmitriy.zaporozhets@gmail.com>"),
-				Date:  &timestamp.Timestamp{Seconds: 1393491698},
-			},
-		},
-		{
-			Name:          []byte("refs/heads/'test'"),
-			CommitId:      "e56497bb5f03a90a51293fc6d516788730953899",
-			CommitSubject: []byte("Merge branch 'tree_helper_spec' into 'master'"),
-			CommitAuthor: &pb.FindLocalBranchCommitAuthor{
-				Name:  []byte("Sytse Sijbrandij"),
-				Email: []byte("<sytse@gitlab.com>"),
-				Date:  &timestamp.Timestamp{Seconds: 1420925009},
-			},
-			CommitCommitter: &pb.FindLocalBranchCommitAuthor{
-				Name:  []byte("Sytse Sijbrandij"),
-				Email: []byte("<sytse@gitlab.com>"),
-				Date:  &timestamp.Timestamp{Seconds: 1420925009},
-			},
-		},
-	}
-}
-
-func validateContainsBranch(t *testing.T, branches []*pb.FindLocalBranchResponse, branch *pb.FindLocalBranchResponse) {
-	for _, b := range branches {
-		if bytes.Equal(branch.Name, b.Name) {
-			if !testhelper.FindLocalBranchResponsesEqual(branch, b) {
-				t.Fatalf("Expected branch\n%v\ngot\n%v", branch, b)
-			}
-			return // Found the branch and it maches. Success!
-		}
-	}
-	t.Fatalf("Expected to find branch %q in local branches", branch.Name)
-}
-
 func TestSuccessfulFindLocalBranches(t *testing.T) {
 	server := runRefServer(t)
 	defer server.Stop()
@@ -400,8 +336,23 @@ func TestSuccessfulFindLocalBranches(t *testing.T) {
 		branches = append(branches, r.GetBranches()...)
 	}
 
-	for _, branch := range localBranches() {
-		validateContainsBranch(t, branches, branch)
+	for name, target := range localBranches {
+		localBranch := &pb.FindLocalBranchResponse{
+			Name:          []byte(name),
+			CommitId:      target.Id,
+			CommitSubject: target.Subject,
+			CommitAuthor: &pb.FindLocalBranchCommitAuthor{
+				Name:  target.Author.Name,
+				Email: target.Author.Email,
+				Date:  target.Author.Date,
+			},
+			CommitCommitter: &pb.FindLocalBranchCommitAuthor{
+				Name:  target.Committer.Name,
+				Email: target.Committer.Email,
+				Date:  target.Committer.Date,
+			},
+		}
+		assertContainsLocalBranch(t, branches, localBranch)
 	}
 }
 

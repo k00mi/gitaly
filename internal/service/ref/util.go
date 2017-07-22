@@ -16,9 +16,24 @@ var localBranchFormatFields = []string{
 	"%(committeremail)", "%(committerdate:iso-strict)",
 }
 
-func buildBranch(elements [][]byte) (*pb.FindLocalBranchResponse, error) {
-	target, err := git.NewCommit(elements[1], elements[2], nil, elements[3],
-		elements[4], elements[5], elements[6], elements[7], elements[8])
+func parseRef(ref []byte) ([][]byte, error) {
+	elements := bytes.Split(ref, []byte("\x00"))
+	if len(elements) != 9 {
+		return nil, grpc.Errorf(codes.Internal, "error parsing ref %q", ref)
+	}
+	return elements, nil
+}
+
+func buildCommit(elements [][]byte) (*pb.GitCommit, error) {
+	return git.NewCommit(elements[0], elements[1], nil, elements[2],
+		elements[3], elements[4], elements[5], elements[6], elements[7])
+}
+
+func buildLocalBranch(elements [][]byte) (*pb.FindLocalBranchResponse, error) {
+	target, err := buildCommit(elements[1:])
+	if err != nil {
+		return nil, err
+	}
 	author := pb.FindLocalBranchCommitAuthor{
 		Name:  target.Author.Name,
 		Email: target.Author.Email,
@@ -28,10 +43,6 @@ func buildBranch(elements [][]byte) (*pb.FindLocalBranchResponse, error) {
 		Name:  target.Committer.Name,
 		Email: target.Committer.Email,
 		Date:  target.Committer.Date,
-	}
-
-	if err != nil {
-		return nil, err
 	}
 
 	return &pb.FindLocalBranchResponse{
@@ -60,11 +71,11 @@ func newFindLocalBranchesWriter(stream pb.Ref_FindLocalBranchesServer) lines.Sen
 		var branches []*pb.FindLocalBranchResponse
 
 		for _, ref := range refs {
-			elements := bytes.Split(ref, []byte("\x00"))
-			if len(elements) != 9 {
-				return grpc.Errorf(codes.Internal, "error parsing ref %q", ref)
+			elements, err := parseRef(ref)
+			if err != nil {
+				return err
 			}
-			branch, err := buildBranch(elements)
+			branch, err := buildLocalBranch(elements)
 			if err != nil {
 				return err
 			}
