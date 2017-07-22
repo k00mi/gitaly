@@ -54,6 +54,18 @@ func buildLocalBranch(elements [][]byte) (*pb.FindLocalBranchResponse, error) {
 	}, nil
 }
 
+func buildBranch(elements [][]byte) (*pb.FindAllBranchesResponse_Branch, error) {
+	target, err := buildCommit(elements[1:])
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.FindAllBranchesResponse_Branch{
+		Name:   elements[0],
+		Target: target,
+	}, nil
+}
+
 func newFindAllBranchNamesWriter(stream pb.Ref_FindAllBranchNamesServer) lines.Sender {
 	return func(refs [][]byte) error {
 		return stream.Send(&pb.FindAllBranchNamesResponse{Names: refs})
@@ -82,5 +94,24 @@ func newFindLocalBranchesWriter(stream pb.Ref_FindLocalBranchesServer) lines.Sen
 			branches = append(branches, branch)
 		}
 		return stream.Send(&pb.FindLocalBranchesResponse{Branches: branches})
+	}
+}
+
+func newFindAllBranchesWriter(stream pb.RefService_FindAllBranchesServer) lines.Sender {
+	return func(refs [][]byte) error {
+		var branches []*pb.FindAllBranchesResponse_Branch
+
+		for _, ref := range refs {
+			elements, err := parseRef(ref)
+			if err != nil {
+				return err
+			}
+			branch, err := buildBranch(elements)
+			if err != nil {
+				return err
+			}
+			branches = append(branches, branch)
+		}
+		return stream.Send(&pb.FindAllBranchesResponse{Branches: branches})
 	}
 }

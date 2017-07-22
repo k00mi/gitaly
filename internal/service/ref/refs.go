@@ -201,3 +201,10 @@ func (s *server) FindLocalBranches(in *pb.FindLocalBranchesRequest, stream pb.Re
 
 	return findRefs(stream.Context(), writer, in.Repository, []string{"refs/heads"}, formatFlag, sortFlag)
 }
+
+func (s *server) FindAllBranches(in *pb.FindAllBranchesRequest, stream pb.RefService_FindAllBranchesServer) error {
+	formatFlag := "--format=" + strings.Join(localBranchFormatFields, "%00")
+	writer := newFindAllBranchesWriter(stream)
+
+	return findRefs(stream.Context(), writer, in.Repository, []string{"refs/heads", "refs/remotes"}, formatFlag)
+}

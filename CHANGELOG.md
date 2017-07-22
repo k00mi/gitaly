@@ -4,6 +4,8 @@ UNRELEASED
 
 - Consume stdout during repack/gc
   https://gitlab.com/gitlab-org/gitaly/merge_requests/249
+- Implement RefService.FindAllBranches RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/239
 
 v0.23.0
 

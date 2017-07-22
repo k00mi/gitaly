@@ -162,3 +162,19 @@ func assertContainsLocalBranch(t *testing.T, branches []*pb.FindLocalBranchRespo
 	}
 	t.Errorf("Expected to find branch %q in local branches", branch.Name)
 }
+
+func assertContainsBranch(t *testing.T, branches []*pb.FindAllBranchesResponse_Branch, branch *pb.FindAllBranchesResponse_Branch) {
+	var branchNames [][]byte
+
+	for _, b := range branches {
+		if bytes.Equal(branch.Name, b.Name) {
+			if !testhelper.CommitsEqual(branch.Target, b.Target) {
+				t.Errorf("Expected branch\n%v\ngot\n%v", branch, b)
+			}
+			return // Found the branch and it maches. Success!
+		}
+		branchNames = append(branchNames, b.Name)
+	}
+
+	t.Errorf("Expected to find branch %q in branches %s", branch.Name, branchNames)
+}
