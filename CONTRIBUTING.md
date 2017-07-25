@@ -26,15 +26,16 @@ We only create GitLab CE changelog entries for two types of merge request:
 
 ## Gitaly Maintainers
 
-|*Maintainer        *|
+| Maintainer         |
 |--------------------|
 |@jacobvosmaer-gitlab|
 
-## Development Process
+
+## Development Process
 
 We use long-running "~Conversation" issues (aka meta-issues) to track the progress of endpoint migrations and other work.
 
-These issues can be tracked on the [Migration Board](https://gitlab.com/gitlab-org/gitaly/boards/331341).
+These issues can be tracked on the **[Migration Board](https://gitlab.com/gitlab-org/gitaly/boards/331341)**.
 
 Conversation issues help us track migrations through the stages of the [migration process](doc/MIGRATION_PROCESS.md):
 - ~"Migration:Ready-for-Development"
@@ -51,7 +52,7 @@ Conversation issues help us track migrations through the stages of the [migratio
 While migration may take several releases from end-to-end, and, so that we can better track progress, each stage of the migration will
 spawn it's own issue. These issues should generally not stay open for more than a week or two.
 
-## How to develop a migration
+## How to develop a migration
 
 1. **Select a migration endpoint**: select a migration from the [migration board](https://gitlab.com/gitlab-org/gitaly/boards/331341). These migrations are prioritised so choose one near the top.
    - Assign the conversation issue to yourself so that others know that you are working on it.
@@ -80,7 +81,7 @@ spawn it's own issue. These issues should generally not stay open for more than 
 1. The Gitaly team uses a weekly Wednesday-Wednesday iteration with retrospectives every second week.
 1. Work for the cycle should be assigned to the [appropriate Infrastructure Deliverable](https://gitlab.com/gitlab-org/gitaly/milestones/) milestone and tagged with the ~"Infrastructure Deliverable" label.
    - Please **do not assign ~Conversation issues** to the weekly infrastructure deliverable milestone or the  ~"Infrastructure Deliverable" label.
-   - ~Conversations are ongoing work-streams while ~"Infrastructure Deliverable" issues should be closed by the upcoming milestone.
+   - ~"Conversation"s are ongoing work-streams while ~"Infrastructure Deliverable" issues should be closed by the upcoming milestone.
 1. To keep track of slipping issues, items which we have been unable to complete by the infrastructure deliverable milestone should be moved over to the next milestone and marked with ~"Moved:x1",  ~"Moved:x2",  ~"Moved:x3" etc
 
 ## Reviews and Approvals
