@@ -21,7 +21,7 @@ func (s *server) CommitsByMessage(in *pb.CommitsByMessageRequest, stream pb.Comm
 	}
 
 	ctx := stream.Context()
-	writer := newCommitsWriter(&commitsByMessageSender{stream})
+	sender := &commitsByMessageSender{stream}
 
 	gitLogExtraOptions := []string{
 		"--grep=" + in.GetQuery(),
@@ -54,7 +54,7 @@ func (s *server) CommitsByMessage(in *pb.CommitsByMessageRequest, stream pb.Comm
 		paths = append(paths, string(path))
 	}
 
-	return gitLog(ctx, writer, in.GetRepository(), []string{string(revision)}, paths, gitLogExtraOptions...)
+	return sendCommits(stream.Context(), sender, in.GetRepository(), []string{string(revision)}, paths, gitLogExtraOptions...)
 }
 
 func validateCommitsByMessageRequest(in *pb.CommitsByMessageRequest) error {
