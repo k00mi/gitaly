@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.24.0
 
 - Consume stdout during repack/gc
   https://gitlab.com/gitlab-org/gitaly/merge_requests/249
