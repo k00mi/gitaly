@@ -30,7 +30,8 @@ We only create GitLab CE changelog entries for two types of merge request:
 |--------------------|
 |@jacobvosmaer-gitlab|
 
-## Development Process
+
+## Development Process
 
 We use long-running "~Conversation" issues (aka meta-issues) to track the progress of endpoint migrations and other work.
 
