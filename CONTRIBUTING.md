@@ -83,7 +83,7 @@ spawn it's own issue. These issues should generally not stay open for more than 
    - ~Conversations are ongoing work-streams while ~"Infrastructure Deliverable" issues should be closed by the upcoming milestone.
 1. To keep track of slipping issues, items which we have been unable to complete by the infrastructure deliverable milestone should be moved over to the next milestone and marked with ~"Moved:x1",  ~"Moved:x2",  ~"Moved:x3" etc
 
-## Reviews
+## Reviews and Approvals
 
 Merge requests need to **approval by at least two [Gitaly team members](https://gitlab.com/groups/gl-gitaly/group_members)**.
 
@@ -101,6 +101,20 @@ Examples of code that **does not require maintainer approval** include:
 
 Additionally, if you feel that the change you are making is sufficiently complicated or just for your own confidence,
 please feel free to assign a maintainer.
+
+### Review Process
+
+The Gitaly team uses the following process:
+
+- When you merge request is ready for review, select two approvers from the Merge Request edit view.
+- Assign the first reviewer
+- When the first reviewer is done, they assign the second reviewer
+- When the second reviewer is done
+  - If there are no discussions, they are free to merge
+  - Otherwise assign back to the author for next round of review.
+
+**Note**: the author-reviewer 1-reviewer 2-author cycle works best with small changes. With larger changes feel free to use
+the traditional author-reviewer 1-author-reviewer 1-reviewer 2-author-reviewer 2-cycle.
 
 ## Gitaly Developer Quick-start Guide
 
