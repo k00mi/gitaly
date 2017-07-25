@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Consume stdout during repack/gc
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/249
+
 v0.23.0
 
 - Version without Build Time
