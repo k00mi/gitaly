@@ -26,7 +26,7 @@ We only create GitLab CE changelog entries for two types of merge request:
 
 ## Gitaly Maintainers
 
-|*Maintainer        *|
+| Maintainer         |
 |--------------------|
 |@jacobvosmaer-gitlab|
 
