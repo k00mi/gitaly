@@ -52,7 +52,7 @@ Conversation issues help us track migrations through the stages of the [migratio
 While migration may take several releases from end-to-end, and, so that we can better track progress, each stage of the migration will
 spawn it's own issue. These issues should generally not stay open for more than a week or two.
 
-## How to develop a migration
+## How to develop a migration
 
 1. **Select a migration endpoint**: select a migration from the [migration board](https://gitlab.com/gitlab-org/gitaly/boards/331341). These migrations are prioritised so choose one near the top.
    - Assign the conversation issue to yourself so that others know that you are working on it.
