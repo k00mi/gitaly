@@ -81,7 +81,7 @@ spawn it's own issue. These issues should generally not stay open for more than 
 1. The Gitaly team uses a weekly Wednesday-Wednesday iteration with retrospectives every second week.
 1. Work for the cycle should be assigned to the [appropriate Infrastructure Deliverable](https://gitlab.com/gitlab-org/gitaly/milestones/) milestone and tagged with the ~"Infrastructure Deliverable" label.
    - Please **do not assign ~Conversation issues** to the weekly infrastructure deliverable milestone or the  ~"Infrastructure Deliverable" label.
-   - ~Conversations are ongoing work-streams while ~"Infrastructure Deliverable" issues should be closed by the upcoming milestone.
+   - ~"Conversation"s are ongoing work-streams while ~"Infrastructure Deliverable" issues should be closed by the upcoming milestone.
 1. To keep track of slipping issues, items which we have been unable to complete by the infrastructure deliverable milestone should be moved over to the next milestone and marked with ~"Moved:x1",  ~"Moved:x2",  ~"Moved:x3" etc
 
 ## Reviews and Approvals
