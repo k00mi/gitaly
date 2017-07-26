@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Implement FindAllTags RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/246
+
 v0.24.1
 
 - Return an empty array on field `ParentIds` of `GitCommit`s if it has none
@@ -11,8 +16,6 @@ v0.24.0
   https://gitlab.com/gitlab-org/gitaly/merge_requests/249
 - Implement RefService.FindAllBranches RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/239
-- Implement FindAllTags RPC
-  https://gitlab.com/gitlab-org/gitaly/merge_requests/246
 
 v0.23.0
 
