@@ -20,6 +20,7 @@ export PATH := $(GOPATH)/bin:$(PATH)
 
 # Returns a list of all non-vendored (local packages)
 LOCAL_PACKAGES = $(shell cd "$(PKG_BUILD_DIR)" && GOPATH=$(GOPATH) $(GOVENDOR) list -no-status +local)
+LOCAL_GO_FILES = $(shell find -L $(PKG_BUILD_DIR)  -name "*.go" -not -path "$(PKG_BUILD_DIR)/vendor/*" -not -path "$(PKG_BUILD_DIR)/_build/*")
 COMMAND_PACKAGES = $(shell cd "$(PKG_BUILD_DIR)" && GOPATH=$(GOPATH) $(GOVENDOR) list -no-status +local +p ./cmd/...)
 COMMANDS = $(subst $(PKG)/cmd/,,$(COMMAND_PACKAGES))
 
@@ -27,6 +28,7 @@ COMMANDS = $(subst $(PKG)/cmd/,,$(COMMAND_PACKAGES))
 GOVENDOR = $(BIN_BUILD_DIR)/govendor
 GOLINT = $(BIN_BUILD_DIR)/golint
 GOCOVMERGE = $(BIN_BUILD_DIR)/gocovmerge
+GOIMPORTS = $(BIN_BUILD_DIR)/goimports
 
 .NOTPARALLEL:
 
@@ -53,10 +55,6 @@ install: $(GOVENDOR) build
 .PHONY: verify
 verify: lint check-formatting govendor-status notice-up-to-date
 
-.PHONY: check-formatting
-check-formatting:
-	go run _support/gofmt-all.go -n
-
 .PHONY: govendor-status
 govendor-status: $(TARGET_SETUP) $(GOVENDOR)
 	cd $(PKG_BUILD_DIR) && govendor status
@@ -75,6 +73,16 @@ prepare-tests: $(TARGET_SETUP) $(GOVENDOR) $(TEST_REPO)
 lint: $(GOLINT)
 	go run _support/lint.go
 
+.PHONY: check-formatting
+check-formatting: $(TARGET_SETUP) $(GOIMPORTS)
+	@test -z "$$($(GOIMPORTS) -e -l $(LOCAL_GO_FILES))" || (echo >&2 "Formatting or imports need fixing: 'make format'" && $(GOIMPORTS) -e -l $(LOCAL_GO_FILES) && false)
+
+.PHONY: format
+format: $(TARGET_SETUP) $(GOIMPORTS)
+    # In addition to fixing imports, goimports also formats your code in the same style as gofmt
+	# so it can be used as a replacement.
+	@$(GOIMPORTS) -w -l $(LOCAL_GO_FILES)
+
 .PHONY: package
 package: build
 	./_support/package/package $(COMMANDS)
@@ -90,10 +98,6 @@ notice-up-to-date: $(TARGET_SETUP) $(GOVENDOR)
 .PHONY: clean
 clean:
 	rm -rf $(TARGET_DIR) $(TEST_REPO) $(TEST_REPO_STORAGE_PATH) ./internal/service/ssh/gitaly-*-pack
-
-.PHONY: format
-format:
-	@go run _support/gofmt-all.go -f
 
 .PHONY: cover
 cover: $(TARGET_SETUP) $(TEST_REPO) $(GOVENDOR) $(GOCOVMERGE)
@@ -124,3 +128,7 @@ $(GOLINT): $(TARGET_SETUP)
 # Install gocovmerge
 $(GOCOVMERGE): $(TARGET_SETUP)
 	go get -v github.com/wadey/gocovmerge
+
+# Install goimports
+$(GOIMPORTS): $(TARGET_SETUP)
+	go get -v golang.org/x/tools/cmd/goimports
