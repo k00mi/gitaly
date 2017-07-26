@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Return an empty array on field `ParentIds` of `GitCommit`s if it has none
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/237
+
 v0.24.0
 
 - Consume stdout during repack/gc
