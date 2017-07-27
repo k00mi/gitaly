@@ -43,11 +43,13 @@ $(TARGET_SETUP):
 	mkdir -p "$(BIN_BUILD_DIR)"
 	touch "$(TARGET_SETUP)"
 
-.PHONY: build
-build: $(TARGET_SETUP)
-	cd ruby && bundle install
+build:	.ruby-bundle $(TARGET_SETUP)
 	go install $(LDFLAGS) $(COMMAND_PACKAGES)
 	cp $(foreach cmd,$(COMMANDS),$(BIN_BUILD_DIR)/$(cmd)) $(BUILD_DIR)/
+
+.ruby-bundle:	ruby/Gemfile.lock
+	cd ruby && bundle install
+	touch $@
 
 .PHONY: install
 install: build
@@ -65,7 +67,7 @@ $(TEST_REPO):
 	git clone --bare https://gitlab.com/gitlab-org/gitlab-test.git $@
 
 .PHONY: test
-test: $(TARGET_SETUP) $(TEST_REPO) prepare-tests
+test: $(TARGET_SETUP) $(TEST_REPO) prepare-tests .ruby-bundle
 	@go test $(LOCAL_PACKAGES)
 
 .PHONY: prepare-tests
@@ -99,7 +101,7 @@ notice-up-to-date: $(TARGET_SETUP) $(GOVENDOR)
 
 .PHONY: clean
 clean:
-	rm -rf $(TARGET_DIR) $(TEST_REPO) $(TEST_REPO_STORAGE_PATH) ./internal/service/ssh/gitaly-*-pack
+	rm -rf $(TARGET_DIR) $(TEST_REPO) $(TEST_REPO_STORAGE_PATH) ./internal/service/ssh/gitaly-*-pack .ruby-bundle
 
 .PHONY: cover
 cover: $(TARGET_SETUP) $(TEST_REPO) $(GOCOVMERGE)
