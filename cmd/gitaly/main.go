@@ -9,12 +9,14 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/connectioncounter"
+	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/server"
 	"gitlab.com/gitlab-org/gitaly/internal/version"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
@@ -121,6 +123,37 @@ func main() {
 		listeners = append(listeners, connectioncounter.New("tcp", l))
 	}
 
+	if config.Config.PrometheusListenAddr != "" {
+		log.WithField("address", config.Config.PrometheusListenAddr).Info("Starting prometheus listener")
+		promMux := http.NewServeMux()
+		promMux.Handle("/metrics", promhttp.Handler())
+		go func() {
+			http.ListenAndServe(config.Config.PrometheusListenAddr, promMux)
+		}()
+	}
+
+	log.WithError(run(listeners)).Fatal("shutting down")
+}
+
+func createUnixListener(socketPath string) (net.Listener, error) {
+	if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+	l, err := net.Listen("unix", socketPath)
+	return connectioncounter.New("unix", l), err
+}
+
+// Inside here we can use deferred functions. This is needed because
+// log.Fatal bypasses deferred functions.
+func run(listeners []net.Listener) error {
+	ruby, err := rubyserver.Start()
+	if err != nil {
+		// TODO: this will be a fatal error in the future
+		log.WithError(err).Warn("failed to start ruby service")
+	} else {
+		defer ruby.Stop()
+	}
+
 	server := server.New()
 
 	serverError := make(chan error, len(listeners))
@@ -132,22 +165,5 @@ func main() {
 		}(listener)
 	}
 
-	if config.Config.PrometheusListenAddr != "" {
-		log.WithField("address", config.Config.PrometheusListenAddr).Info("Starting prometheus listener")
-		promMux := http.NewServeMux()
-		promMux.Handle("/metrics", promhttp.Handler())
-		go func() {
-			http.ListenAndServe(config.Config.PrometheusListenAddr, promMux)
-		}()
-	}
-
-	log.Fatal(<-serverError)
-}
-
-func createUnixListener(socketPath string) (net.Listener, error) {
-	if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
-		return nil, err
-	}
-	l, err := net.Listen("unix", socketPath)
-	return connectioncounter.New("unix", l), err
+	return <-serverError
 }
