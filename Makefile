@@ -20,9 +20,9 @@ export GOPATH := $(TARGET_DIR)
 export PATH := $(GOPATH)/bin:$(PATH)
 
 # Returns a list of all non-vendored (local packages)
-LOCAL_PACKAGES = $(shell cd "$(PKG_BUILD_DIR)" && GOPATH=$(GOPATH) $(GOVENDOR) list -no-status +local)
+LOCAL_PACKAGES = $(shell cd "$(PKG_BUILD_DIR)" && GOPATH=$(GOPATH) go list ./... | grep -v '^$(PKG)/vendor/')
 LOCAL_GO_FILES = $(shell find -L $(PKG_BUILD_DIR)  -name "*.go" -not -path "$(PKG_BUILD_DIR)/vendor/*" -not -path "$(PKG_BUILD_DIR)/_build/*")
-COMMAND_PACKAGES = $(shell cd "$(PKG_BUILD_DIR)" && GOPATH=$(GOPATH) $(GOVENDOR) list -no-status +local +p ./cmd/...)
+COMMAND_PACKAGES = $(shell cd "$(PKG_BUILD_DIR)" && GOPATH=$(GOPATH) go list ./cmd/...)
 COMMANDS = $(subst $(PKG)/cmd/,,$(COMMAND_PACKAGES))
 
 # Developer Tools
@@ -44,13 +44,13 @@ $(TARGET_SETUP):
 	touch "$(TARGET_SETUP)"
 
 .PHONY: build
-build: $(TARGET_SETUP) $(GOVENDOR)
+build: $(TARGET_SETUP)
 	cd ruby && bundle install
 	go install $(LDFLAGS) $(COMMAND_PACKAGES)
 	cp $(foreach cmd,$(COMMANDS),$(BIN_BUILD_DIR)/$(cmd)) $(BUILD_DIR)/
 
 .PHONY: install
-install: $(GOVENDOR) build
+install: build
 	mkdir -p $(INSTALL_DEST_DIR)
 	cd $(BIN_BUILD_DIR) && install $(COMMANDS) $(INSTALL_DEST_DIR)
 
@@ -65,11 +65,11 @@ $(TEST_REPO):
 	git clone --bare https://gitlab.com/gitlab-org/gitlab-test.git $@
 
 .PHONY: test
-test: $(TARGET_SETUP) $(TEST_REPO) $(GOVENDOR) prepare-tests
+test: $(TARGET_SETUP) $(TEST_REPO) prepare-tests
 	@go test $(LOCAL_PACKAGES)
 
 .PHONY: prepare-tests
-prepare-tests: $(TARGET_SETUP) $(GOVENDOR) $(TEST_REPO)
+prepare-tests: $(TARGET_SETUP) $(TEST_REPO)
 
 .PHONY: lint
 lint: $(GOLINT)
@@ -102,7 +102,7 @@ clean:
 	rm -rf $(TARGET_DIR) $(TEST_REPO) $(TEST_REPO_STORAGE_PATH) ./internal/service/ssh/gitaly-*-pack
 
 .PHONY: cover
-cover: $(TARGET_SETUP) $(TEST_REPO) $(GOVENDOR) $(GOCOVMERGE)
+cover: $(TARGET_SETUP) $(TEST_REPO) $(GOCOVMERGE)
 	@echo "NOTE: make cover does not exit 1 on failure, don't use it to check for tests success!"
 	mkdir -p "$(COVERAGE_DIR)"
 	rm -f $(COVERAGE_DIR)/*.out "$(COVERAGE_DIR)/all.merged" "$(COVERAGE_DIR)/all.html"
