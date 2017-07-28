@@ -4,6 +4,8 @@ UNRELEASED
 
 - Add storage dir existence check to repo lookup
   https://gitlab.com/gitlab-org/gitaly/merge_requests/259
+- Implement RawBlame RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/257
 
 v0.26.0
 

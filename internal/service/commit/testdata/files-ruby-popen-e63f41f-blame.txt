@@ -1,0 +1,106 @@
+913c66a37b4a45b9769037c55c2d238bd0942d2e 1 1 3
+author Dmitriy Zaporozhets
+author-mail <dmitriy.zaporozhets@gmail.com>
+author-time 1393488896
+author-tz +0200
+committer Dmitriy Zaporozhets
+committer-mail <dmitriy.zaporozhets@gmail.com>
+committer-time 1393488896
+committer-tz +0200
+summary Files, encoding and much more
+filename files/ruby/popen.rb
+	require 'fileutils'
+913c66a37b4a45b9769037c55c2d238bd0942d2e 2 2
+	require 'open3'
+913c66a37b4a45b9769037c55c2d238bd0942d2e 3 3
+	
+874797c3a73b60d2187ed6e2fcabd289ff75171e 4 4 2
+author Dmitriy Zaporozhets
+author-mail <dmitriy.zaporozhets@gmail.com>
+author-time 1393489145
+author-tz +0200
+committer Dmitriy Zaporozhets
+committer-mail <dmitriy.zaporozhets@gmail.com>
+committer-time 1393489145
+committer-tz +0200
+summary Ruby files modified
+previous 2f63565e7aac07bcdadb654e253078b727143ec4 files/ruby/popen.rb
+filename files/ruby/popen.rb
+	module Popen
+874797c3a73b60d2187ed6e2fcabd289ff75171e 5 5
+	  extend self
+913c66a37b4a45b9769037c55c2d238bd0942d2e 7 6 1
+	
+874797c3a73b60d2187ed6e2fcabd289ff75171e 7 7 2
+	  def popen(cmd, path=nil)
+874797c3a73b60d2187ed6e2fcabd289ff75171e 8 8
+	    unless cmd.is_a?(Array)
+570e7b2abdd848b95f2f578043fc23bd6f6fd24d 9 9 1
+author Dmitriy Zaporozhets
+author-mail <dmitriy.zaporozhets@gmail.com>
+author-time 1393491451
+author-tz +0200
+committer Dmitriy Zaporozhets
+committer-mail <dmitriy.zaporozhets@gmail.com>
+committer-time 1393491451
+committer-tz +0200
+summary Change some files
+previous 6f6d7e7ed97bb5f0054f2b1df789b39ca89b6ff9 files/ruby/popen.rb
+filename files/ruby/popen.rb
+	      raise RuntimeError, "System commands must be given as an array of strings"
+874797c3a73b60d2187ed6e2fcabd289ff75171e 10 10 1
+	    end
+913c66a37b4a45b9769037c55c2d238bd0942d2e 16 11 1
+	
+874797c3a73b60d2187ed6e2fcabd289ff75171e 12 12 1
+	    path ||= Dir.pwd
+570e7b2abdd848b95f2f578043fc23bd6f6fd24d 13 13 8
+	
+570e7b2abdd848b95f2f578043fc23bd6f6fd24d 14 14
+	    vars = {
+570e7b2abdd848b95f2f578043fc23bd6f6fd24d 15 15
+	      "PWD" => path
+570e7b2abdd848b95f2f578043fc23bd6f6fd24d 16 16
+	    }
+570e7b2abdd848b95f2f578043fc23bd6f6fd24d 17 17
+	
+570e7b2abdd848b95f2f578043fc23bd6f6fd24d 18 18
+	    options = {
+570e7b2abdd848b95f2f578043fc23bd6f6fd24d 19 19
+	      chdir: path
+570e7b2abdd848b95f2f578043fc23bd6f6fd24d 20 20
+	    }
+913c66a37b4a45b9769037c55c2d238bd0942d2e 20 21 1
+	
+874797c3a73b60d2187ed6e2fcabd289ff75171e 16 22 3
+	    unless File.directory?(path)
+874797c3a73b60d2187ed6e2fcabd289ff75171e 17 23
+	      FileUtils.mkdir_p(path)
+874797c3a73b60d2187ed6e2fcabd289ff75171e 18 24
+	    end
+913c66a37b4a45b9769037c55c2d238bd0942d2e 28 25 1
+	
+874797c3a73b60d2187ed6e2fcabd289ff75171e 20 26 2
+	    @cmd_output = ""
+874797c3a73b60d2187ed6e2fcabd289ff75171e 21 27
+	    @cmd_status = 0
+570e7b2abdd848b95f2f578043fc23bd6f6fd24d 28 28 1
+	
+874797c3a73b60d2187ed6e2fcabd289ff75171e 22 29 4
+	    Open3.popen3(vars, *cmd, options) do |stdin, stdout, stderr, wait_thr|
+874797c3a73b60d2187ed6e2fcabd289ff75171e 23 30
+	      @cmd_output << stdout.read
+874797c3a73b60d2187ed6e2fcabd289ff75171e 24 31
+	      @cmd_output << stderr.read
+874797c3a73b60d2187ed6e2fcabd289ff75171e 25 32
+	      @cmd_status = wait_thr.value.exitstatus
+913c66a37b4a45b9769037c55c2d238bd0942d2e 30 33 1
+	    end
+874797c3a73b60d2187ed6e2fcabd289ff75171e 27 34 2
+	
+874797c3a73b60d2187ed6e2fcabd289ff75171e 28 35
+	    return @cmd_output, @cmd_status
+913c66a37b4a45b9769037c55c2d238bd0942d2e 31 36 2
+	  end
+913c66a37b4a45b9769037c55c2d238bd0942d2e 32 37
+	end
