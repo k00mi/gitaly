@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.26.0
 
 - Implement CommitService.CommitLanguages, add gitaly-ruby
   https://gitlab.com/gitlab-org/gitaly/merge_requests/210
