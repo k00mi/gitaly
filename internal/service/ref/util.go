@@ -23,6 +23,7 @@ var tagsFormatFields = []string{
 	// tag info
 	"%(refname:strip=2)",
 	"%(objectname)",
+	"%(objecttype)",
 	"%(*objecttype)",
 	"%(contents)",
 	// commit info, present for annotated tag
@@ -132,7 +133,7 @@ func newFindAllTagsWriter(repo *pb.Repository, stream pb.RefService_FindAllTagsS
 
 		for _, ref := range refs {
 			elements := bytes.Split(ref, []byte("\x1f"))
-			if len(elements) != 24 {
+			if len(elements) != 25 {
 				return grpc.Errorf(codes.Internal, "FindAllTags: error parsing ref %q", ref)
 			}
 
@@ -140,14 +141,15 @@ func newFindAllTagsWriter(repo *pb.Repository, stream pb.RefService_FindAllTagsS
 			var commitInfo [][]byte
 			var commit *pb.GitCommit
 
-			switch string(elements[2]) { // elements[2] is the object type the tag is pointing to
-			case "commit": // tag is annotated tag pointing to a commit
-				message = elements[3]
-				commitInfo = elements[4:14]
-			case "": // tag is a lightweight tag (essentially a commit), so it points to nothing
-				commitInfo = elements[14:24]
-			default: // tag is annotated tag pointing to something else (e.g. a blob), so we don't collect commit info because there is none
-				message = elements[3]
+			tagType := string(elements[2])
+			dereferencedTagType := string(elements[3])
+			if tagType == "tag" { // annotated tag
+				message = elements[4]
+				if dereferencedTagType == "commit" {
+					commitInfo = elements[5:15]
+				}
+			} else if tagType == "commit" { // lightweight tag
+				commitInfo = elements[15:25]
 			}
 
 			if len(commitInfo) > 0 {
