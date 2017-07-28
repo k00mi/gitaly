@@ -332,6 +332,7 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 	committerName := "Scrooge McDuck"
 	committerEmail := "scrooge@mcduck.com"
 	blobID := "faaf198af3a36dbf41961466703cc1d47c61d051"
+	commitID := "6f6d7e7ed97bb5f0054f2b1df789b39ca89b6ff9"
 
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoCopyPath,
 		"-c", fmt.Sprintf("user.name=%s", committerName),
@@ -343,9 +344,12 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoCopyPath,
 		"-c", fmt.Sprintf("user.name=%s", committerName),
 		"-c", fmt.Sprintf("user.email=%s", committerEmail),
-		"tag", "v1.3.0", "6f6d7e7ed97bb5f0054f2b1df789b39ca89b6ff9")
-	lightweightTagID := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoCopyPath, "tag", "-l", "--format=%(objectname)", "v1.3.0")
-	lightweightTagID = bytes.TrimSpace(lightweightTagID)
+		"tag", "v1.3.0", commitID)
+
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoCopyPath,
+		"-c", fmt.Sprintf("user.name=%s", committerName),
+		"-c", fmt.Sprintf("user.email=%s", committerEmail),
+		"tag", "v1.4.0", blobID)
 
 	client := newRefServiceClient(t)
 	rpcRequest := &pb.FindAllTagsRequest{
@@ -422,7 +426,7 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 		},
 		{
 			Name: []byte("v1.3.0"),
-			Id:   string(lightweightTagID),
+			Id:   string(commitID),
 			TargetCommit: &pb.GitCommit{
 				Id:      "6f6d7e7ed97bb5f0054f2b1df789b39ca89b6ff9",
 				Subject: []byte("More submodules"),
@@ -440,6 +444,10 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 				ParentIds: []string{"d14d6c0abdd253381df51a723d58691b2ee1ab08"},
 			},
 		},
+		{
+			Name: []byte("v1.4.0"),
+			Id:   string(blobID),
+		},
 	}
 
 	require.Len(t, expectedTags, len(receivedTags))
@@ -448,7 +456,7 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 		t.Logf("test case: %q", expectedTags[i].Name)
 
 		require.Equal(t, expectedTags[i].Name, receivedTag.Name, "mismatched tag name")
-		require.Equal(t, expectedTags[i].Id, receivedTag.Id, "mismatched target ID")
+		require.Equal(t, expectedTags[i].Id, receivedTag.Id, "mismatched ID")
 		require.Equal(t, expectedTags[i].Message, receivedTag.Message, "mismatched message")
 		require.Equal(t, expectedTags[i].TargetCommit, receivedTag.TargetCommit)
 	}
