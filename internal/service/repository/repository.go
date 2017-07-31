@@ -15,3 +15,7 @@ func (s *server) Exists(ctx context.Context, in *pb.RepositoryExistsRequest) (*p
 
 	return &pb.RepositoryExistsResponse{Exists: helper.IsGitDirectory(path)}, nil
 }
+
+func (s *server) RepositoryExists(ctx context.Context, in *pb.RepositoryExistsRequest) (*pb.RepositoryExistsResponse, error) {
+	return nil, nil
+}

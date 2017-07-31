@@ -6,6 +6,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/259
 - Implement RawBlame RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/257
+- Implement LastCommitForPath RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/260
 
 v0.26.0
 
