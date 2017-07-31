@@ -13,7 +13,7 @@ func TestLanguages(t *testing.T) {
 	client := newCommitServiceClient(t)
 	request := &pb.CommitLanguagesRequest{
 		Repository: testRepo,
-		Revision:   []byte("e63f41fe459e62e1228fcef60d7189127aeba95a"),
+		Revision:   []byte("cb19058ecc02d01f8e4290b7e79cafd16a8839b6"),
 	}
 
 	resp, err := client.CommitLanguages(context.Background(), request)
@@ -26,7 +26,12 @@ func TestLanguages(t *testing.T) {
 		{Name: "JavaScript", Share: 22, Color: "#f1e05a"},
 		{Name: "HTML", Share: 7, Color: "#e44b23"},
 		{Name: "CoffeeScript", Share: 2, Color: "#244776"},
+		// Modula-2 is a special case because Linguist has no color for it. This
+		// test case asserts that we invent a color for it (SHA256 of the name).
+		{Name: "Modula-2", Share: 2, Color: "#3fd5e0"},
 	}
+
+	require.Equal(t, len(expectedLanguages), len(resp.Languages))
 
 	for i, el := range expectedLanguages {
 		actualLanguage := resp.Languages[i]
