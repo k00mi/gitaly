@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
@@ -17,12 +19,17 @@ func TestRepositoryExists(t *testing.T) {
 	server := runRepoServer(t)
 	defer server.Stop()
 
+	storageOtherDir, err := ioutil.TempDir("", "gitaly-repository-exists-test")
+	require.NoError(t, err, "tempdir")
+	defer os.Remove(storageOtherDir)
+
 	client := newRepositoryClient(t)
 
 	// Setup storage paths
 	testStorages := []config.Storage{
 		{Name: "default", Path: testhelper.GitlabTestStoragePath()},
-		{Name: "other", Path: "/home/git/repositories2"},
+		{Name: "other", Path: storageOtherDir},
+		{Name: "broken", Path: "/does/not/exist"},
 	}
 
 	defer func(oldStorages []config.Storage) {
@@ -31,61 +38,81 @@ func TestRepositoryExists(t *testing.T) {
 	config.Config.Storages = testStorages
 
 	queries := []struct {
-		Request   *pb.RepositoryExistsRequest
-		ErrorCode codes.Code
-		Exists    bool
+		desc      string
+		request   *pb.RepositoryExistsRequest
+		errorCode codes.Code
+		exists    bool
 	}{
 		{
-			Request: &pb.RepositoryExistsRequest{
+			desc: "repository nil",
+			request: &pb.RepositoryExistsRequest{
 				Repository: nil,
 			},
-			ErrorCode: codes.InvalidArgument,
+			errorCode: codes.InvalidArgument,
 		},
 		{
-			Request: &pb.RepositoryExistsRequest{
+			desc: "storage name empty",
+			request: &pb.RepositoryExistsRequest{
 				Repository: &pb.Repository{
 					StorageName:  "",
 					RelativePath: testhelper.TestRelativePath,
 				},
 			},
-			ErrorCode: codes.InvalidArgument,
+			errorCode: codes.InvalidArgument,
 		},
 		{
-			Request: &pb.RepositoryExistsRequest{
+			desc: "relative path empty",
+			request: &pb.RepositoryExistsRequest{
 				Repository: &pb.Repository{
 					StorageName:  "default",
 					RelativePath: "",
 				},
 			},
-			ErrorCode: codes.InvalidArgument,
+			errorCode: codes.InvalidArgument,
 		},
 		{
-			Request: &pb.RepositoryExistsRequest{
+			desc: "exists true",
+			request: &pb.RepositoryExistsRequest{
 				Repository: &pb.Repository{
 					StorageName:  "default",
 					RelativePath: testhelper.TestRelativePath,
 				},
 			},
-			Exists: true,
+			exists: true,
 		},
 		{
-			Request: &pb.RepositoryExistsRequest{
+			desc: "exists false, wrong storage",
+			request: &pb.RepositoryExistsRequest{
 				Repository: &pb.Repository{
 					StorageName:  "other",
 					RelativePath: testhelper.TestRelativePath,
 				},
 			},
-			Exists: false,
+			exists: false,
+		},
+		{
+			desc: "storage directory does not exist",
+			request: &pb.RepositoryExistsRequest{
+				Repository: &pb.Repository{
+					StorageName:  "broken",
+					RelativePath: "foobar.git",
+				},
+			},
+			errorCode: codes.Internal,
 		},
 	}
 
 	for _, tc := range queries {
-		response, err := client.Exists(context.Background(), tc.Request)
+		t.Log(tc.desc)
+		response, err := client.Exists(context.Background(), tc.request)
+
+		require.Equal(t, tc.errorCode, grpc.Code(err))
+
 		if err != nil {
-			require.Equal(t, tc.ErrorCode, grpc.Code(err))
+			// Ignore the response message if there was an error
 			continue
 		}
 
-		require.Equal(t, tc.Exists, response.Exists)
+		require.Equal(t, tc.exists, response.Exists)
 	}
 }
