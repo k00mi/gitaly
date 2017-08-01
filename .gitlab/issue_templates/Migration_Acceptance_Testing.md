@@ -22,8 +22,8 @@ Feature Toggle Name: `gitaly_xxxxx`
 
 ## 2. Development and Staging Trial
 
-- Enable on `dev.gitlab.com`:
-  - ssh into `dev.gitlab.com` and enable the feature running by running `Feature.get('gitaly_FEATURE_NAME').enable` on a rails console.
+- Enable on `dev.gitlab.org`:
+  - ssh into `dev.gitlab.org` and enable the feature running by running `Feature.get('gitaly_FEATURE_NAME').enable` on a rails console.
   - Perform some testing and leave the feature enabled
 - Enable on `staging.gitlab.com` in [`#development`](https://gitlab.slack.com/messages/C02PF508L/)
   - Perform some testing and leave the feature enabled
