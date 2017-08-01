@@ -40,6 +40,8 @@ It has these top-level messages:
 	FindAllCommitsResponse
 	CommitLanguagesRequest
 	CommitLanguagesResponse
+	RawBlameRequest
+	RawBlameResponse
 	CommitDiffRequest
 	CommitDiffResponse
 	CommitDeltaRequest
