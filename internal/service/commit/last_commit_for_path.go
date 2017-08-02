@@ -11,7 +11,7 @@ import (
 )
 
 type lastCommitForPathSender struct {
-	commitPointer **pb.GitCommit
+	commit *pb.GitCommit
 }
 
 func (s *server) LastCommitForPath(ctx context.Context, in *pb.LastCommitForPathRequest) (*pb.LastCommitForPathResponse, error) {
@@ -19,8 +19,8 @@ func (s *server) LastCommitForPath(ctx context.Context, in *pb.LastCommitForPath
 		return nil, grpc.Errorf(codes.InvalidArgument, "LastCommitForPath: %v", err)
 	}
 
-	var commit *pb.GitCommit
-	writer := newCommitsWriter(&lastCommitForPathSender{&commit})
+	sender := &lastCommitForPathSender{}
+	writer := newCommitsWriter(sender)
 
 	path := in.GetPath()
 	if len(path) == 0 {
@@ -31,7 +31,7 @@ func (s *server) LastCommitForPath(ctx context.Context, in *pb.LastCommitForPath
 		return nil, err
 	}
 
-	return &pb.LastCommitForPathResponse{Commit: commit}, nil
+	return &pb.LastCommitForPathResponse{Commit: sender.commit}, nil
 }
 
 func validateLastCommitForPathRequest(in *pb.LastCommitForPathRequest) error {
@@ -45,7 +45,7 @@ func (sender *lastCommitForPathSender) Send(commits []*pb.GitCommit) error {
 	// Since LastCommitForPath's response is not streamed this is not actually
 	// _sending_ anything. We just set the commit for the caller to return it.
 	if len(commits) > 0 {
-		*sender.commitPointer = commits[0]
+		sender.commit = commits[0]
 	}
 	return nil
 }
