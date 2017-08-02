@@ -8,6 +8,10 @@ import (
 )
 
 func (s *server) Exists(ctx context.Context, in *pb.RepositoryExistsRequest) (*pb.RepositoryExistsResponse, error) {
+	return s.RepositoryExists(ctx, in)
+}
+
+func (s *server) RepositoryExists(ctx context.Context, in *pb.RepositoryExistsRequest) (*pb.RepositoryExistsResponse, error) {
 	path, err := helper.GetPath(in.Repository)
 	if err != nil {
 		return nil, err
