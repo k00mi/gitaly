@@ -12,6 +12,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
@@ -118,4 +119,12 @@ func newCommitServiceClient(t *testing.T) pb.CommitServiceClient {
 func treeEntriesEqual(a, b *pb.TreeEntry) bool {
 	return a.CommitOid == b.CommitOid && a.Oid == b.Oid && a.Mode == b.Mode &&
 		bytes.Equal(a.Path, b.Path) && a.RootOid == b.RootOid && a.Type == b.Type
+}
+
+func dummyCommitAuthor(ts int64) *pb.CommitAuthor {
+	return &pb.CommitAuthor{
+		Name:  []byte("Ahmad Sherif"),
+		Email: []byte("ahmad+gitlab-test@gitlab.com"),
+		Date:  &timestamp.Timestamp{Seconds: ts},
+	}
 }

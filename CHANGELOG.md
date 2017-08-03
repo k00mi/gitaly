@@ -6,6 +6,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/265
 - Implement RepositorySize RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/262
+- Implement CommitsByMessage RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/263
 
 v0.27.0
 

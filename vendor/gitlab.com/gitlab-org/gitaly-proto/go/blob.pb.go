@@ -44,6 +44,8 @@ It has these top-level messages:
 	RawBlameResponse
 	LastCommitForPathRequest
 	LastCommitForPathResponse
+	CommitsByMessageRequest
+	CommitsByMessageResponse
 	CommitDiffRequest
 	CommitDiffResponse
 	CommitDeltaRequest
