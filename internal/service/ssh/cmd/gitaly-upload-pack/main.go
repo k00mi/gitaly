@@ -35,6 +35,18 @@ func main() {
 		},
 	}
 
+	// Use GL_CONFIG_OPTIONS instead of GIT_CONFIG_PARAMETERS because the latter
+	// would be swallowed by the client git process
+	gitConfig := os.Getenv("GL_CONFIG_OPTIONS")
+
+	if len(gitConfig) > 0 {
+		configs := strings.Split(gitConfig, " ")
+
+		for _, c := range configs {
+			req.GitConfigOptions = append(req.GitConfigOptions, c)
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	code, err := client.UploadPack(ctx, conn, os.Stdin, os.Stdout, os.Stderr, req)

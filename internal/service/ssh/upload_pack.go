@@ -37,7 +37,16 @@ func (s *server) SSHUploadPack(stream pb.SSHService_SSHUploadPackServer) error {
 		return err
 	}
 
-	osCommand := exec.Command(helper.GitPath(), "upload-pack", repoPath)
+	args := []string{}
+
+	for _, params := range req.GitConfigOptions {
+		args = append(args, "-c", params)
+	}
+
+	args = append(args, "upload-pack", repoPath)
+
+	osCommand := exec.Command(helper.GitPath(), args...)
+
 	cmd, err := helper.NewCommand(stream.Context(), osCommand, stdin, stdout, stderr)
 
 	if err != nil {

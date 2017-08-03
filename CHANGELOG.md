@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Support `git -c` options in SSH upload-pack
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/242
 - Add storage dir existence check to repo lookup
   https://gitlab.com/gitlab-org/gitaly/merge_requests/259
 - Implement RawBlame RPC
