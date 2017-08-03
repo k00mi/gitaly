@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Increase gitaly-ruby connection timeout to 20s
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/265
+
 v0.27.0
 
 - Support `git -c` options in SSH upload-pack

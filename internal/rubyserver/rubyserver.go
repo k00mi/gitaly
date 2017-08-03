@@ -32,7 +32,7 @@ var (
 	lazyInit sync.Once
 
 	// ConnectTimeout is the timeout for establishing a connection to the gitaly-ruby process.
-	ConnectTimeout = 10 * time.Second
+	ConnectTimeout = 20 * time.Second
 )
 
 func init() {
