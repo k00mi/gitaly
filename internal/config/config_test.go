@@ -3,11 +3,14 @@ package config
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func configFileReader(content string) io.Reader {
@@ -284,5 +287,58 @@ func TestSetGitPath(t *testing.T) {
 		SetGitPath()
 
 		assert.Equal(t, tc.expected, Config.Git.BinPath, tc.desc)
+	}
+}
+
+func TestValidateShellPath(t *testing.T) {
+	defer func(oldShellSettings GitlabShell) {
+		Config.GitlabShell = oldShellSettings
+	}(Config.GitlabShell)
+
+	tmpDir, err := ioutil.TempDir("", "gitaly-tests-")
+	require.NoError(t, err)
+	tmpFile := path.Join(tmpDir, "my-file")
+	defer os.RemoveAll(tmpDir)
+	fp, err := os.Create(tmpFile)
+	require.NoError(t, err)
+	require.NoError(t, fp.Close())
+
+	testCases := []struct {
+		desc      string
+		path      string
+		shouldErr bool
+	}{
+		{
+			desc:      "When no Shell Path set",
+			path:      "",
+			shouldErr: false,
+		},
+		{
+			desc:      "When Shell Path set to non-existing path",
+			path:      "/non/existing/path",
+			shouldErr: true,
+		},
+		{
+			desc:      "When Shell Path set to non-dir path",
+			path:      tmpFile,
+			shouldErr: true,
+		},
+		{
+			desc:      "When Shell Path set to a valid directory",
+			path:      tmpDir,
+			shouldErr: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Log(tc.desc)
+		Config.GitlabShell.Dir = tc.path
+		err = validateShell()
+		if tc.shouldErr {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+		}
+
 	}
 }

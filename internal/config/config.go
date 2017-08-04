@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 
 	log "github.com/Sirupsen/logrus"
@@ -17,15 +18,21 @@ var (
 )
 
 type config struct {
-	SocketPath           string     `toml:"socket_path" split_words:"true"`
-	ListenAddr           string     `toml:"listen_addr" split_words:"true"`
-	PrometheusListenAddr string     `toml:"prometheus_listen_addr" split_words:"true"`
-	Git                  Git        `toml:"git" envconfig:"git"`
-	Storages             []Storage  `toml:"storage" envconfig:"storage"`
-	Logging              Logging    `toml:"logging" envconfig:"logging"`
-	Prometheus           Prometheus `toml:"prometheus"`
-	Auth                 Auth       `toml:"auth"`
-	Ruby                 Ruby       `toml:"gitaly-ruby"`
+	SocketPath           string      `toml:"socket_path" split_words:"true"`
+	ListenAddr           string      `toml:"listen_addr" split_words:"true"`
+	PrometheusListenAddr string      `toml:"prometheus_listen_addr" split_words:"true"`
+	Git                  Git         `toml:"git" envconfig:"git"`
+	Storages             []Storage   `toml:"storage" envconfig:"storage"`
+	Logging              Logging     `toml:"logging" envconfig:"logging"`
+	Prometheus           Prometheus  `toml:"prometheus"`
+	Auth                 Auth        `toml:"auth"`
+	Ruby                 Ruby        `toml:"gitaly-ruby"`
+	GitlabShell          GitlabShell `toml:"gitlab-shell"`
+}
+
+// GitlabShell contains the settings required for executing `gitlab-shell`
+type GitlabShell struct {
+	Dir string `toml:"dir"`
 }
 
 // Git contains the settings for the Git executable
@@ -72,11 +79,35 @@ func Load(file io.Reader) error {
 
 // Validate checks the current Config for sanity.
 func Validate() error {
-	for _, err := range []error{validateStorages(), validateToken(), SetGitPath()} {
+	for _, err := range []error{validateStorages(), validateToken(), SetGitPath(), validateShell()} {
 		if err != nil {
 			return err
 		}
 	}
+	return nil
+}
+
+func validateShell() error {
+	if len(Config.GitlabShell.Dir) == 0 {
+		log.WithField("dir", Config.GitlabShell.Dir).
+			Warn("gitlab-shell.dir not set")
+		return nil
+	}
+
+	if s, err := os.Stat(Config.GitlabShell.Dir); err != nil {
+		log.WithField("dir", Config.GitlabShell.Dir).
+			WithError(err).
+			Warn("gitlab-shell.dir set but not found")
+		return err
+	} else if !s.IsDir() {
+		log.WithField("dir", Config.GitlabShell.Dir).
+			Warn("gitlab-shell.dir set but not a directory")
+		return fmt.Errorf("not a directory: %q", Config.GitlabShell.Dir)
+	}
+
+	log.WithField("dir", Config.GitlabShell.Dir).
+		Debug("gitlab-shell.dir set")
+
 	return nil
 }
 
