@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.28.0
 
 - Increase gitaly-ruby connection timeout to 20s
   https://gitlab.com/gitlab-org/gitaly/merge_requests/265
