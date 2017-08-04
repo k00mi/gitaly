@@ -75,6 +75,8 @@ It has these top-level messages:
 	RepackFullResponse
 	GarbageCollectRequest
 	GarbageCollectResponse
+	RepositorySizeRequest
+	RepositorySizeResponse
 	Repository
 	GitCommit
 	CommitAuthor
