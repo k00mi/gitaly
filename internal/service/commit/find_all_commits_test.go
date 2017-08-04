@@ -306,14 +306,6 @@ func TestFailedFindAllCommitsRequest(t *testing.T) {
 	}
 }
 
-func dummyCommitAuthor(ts int64) *pb.CommitAuthor {
-	return &pb.CommitAuthor{
-		Name:  []byte("Ahmad Sherif"),
-		Email: []byte("ahmad+gitlab-test@gitlab.com"),
-		Date:  &timestamp.Timestamp{Seconds: ts},
-	}
-}
-
 func drainFindAllCommitsResponse(c pb.CommitService_FindAllCommitsClient) error {
 	var err error
 	for err == nil {

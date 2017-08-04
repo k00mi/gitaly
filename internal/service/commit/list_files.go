@@ -11,10 +11,7 @@ import (
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
-	"gitlab.com/gitlab-org/gitaly/internal/service/ref"
 )
-
-var defaultBranchName = ref.DefaultBranchName
 
 func (s *server) ListFiles(in *pb.ListFilesRequest, stream pb.CommitService_ListFilesServer) error {
 	grpc_logrus.Extract(stream.Context()).WithFields(log.Fields{
