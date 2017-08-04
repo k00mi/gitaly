@@ -7,13 +7,15 @@ require 'grpc'
 require_relative '../lib/gitaly_server.rb'
 
 def main
-  if ARGV.length != 1
-    abort "Usage: #{$0} /path/to/socket"
+  if ARGV.length != 2
+    abort "Usage: #{$0} PPID /path/to/socket"
   end
+  ppid, socket_path = ARGV
 
-  start_parent_watcher
+  ppid_i = ppid.to_i
+  abort "invalid PPID: #{ppid.inspect}" unless ppid_i > 0
+  start_parent_watcher(ppid_i)
 
-  socket_path = ARGV.first
   FileUtils.rm_f(socket_path)
   socket_dir = File.dirname(socket_path)
   FileUtils.mkdir_p(socket_dir)
@@ -29,11 +31,11 @@ def main
   s.run_till_terminated
 end
 
-def start_parent_watcher
+def start_parent_watcher(original_ppid)
   Thread.new do
     loop do
-      if Process.ppid == 1
-        # If our parent is PID 1, our original parent is gone. Self-terminate.
+      if Process.ppid != original_ppid
+        # Our original parent is gone. Self-terminate.
         Process.kill(9, Process.pid)
       end
 

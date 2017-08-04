@@ -4,6 +4,8 @@ UNRELEASED
 
 - Add GitLab-Shell Path to config
   https://gitlab.com/gitlab-org/gitaly/merge_requests/267
+- Don't count on PID 1 to be the reaper
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/270
 
 v0.28.0
 
