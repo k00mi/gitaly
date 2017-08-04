@@ -39,9 +39,9 @@ const (
 	fieldDelimiterGitFormatString = "%x1f"
 )
 
-func gitLog(ctx context.Context, writer lines.Sender, repo *pb.Repository, revisionRange [][]byte, extraArgs ...string) error {
+func gitLog(ctx context.Context, sender lines.Sender, repo *pb.Repository, revisions []string, paths []string, extraOptions ...string) error {
 	grpc_logrus.Extract(ctx).WithFields(log.Fields{
-		"Revision Range": revisionRange,
+		"Revision Range": revisions,
 	}).Debug("GitLog")
 
 	repoPath, err := helper.GetRepoPath(repo)
@@ -58,10 +58,11 @@ func gitLog(ctx context.Context, writer lines.Sender, repo *pb.Repository, revis
 		"-z", // use 0x00 as the entry terminator (instead of \n)
 		formatFlag,
 	}
-	args = append(args, extraArgs...)
-	for _, revision := range revisionRange {
-		args = append(args, string(revision))
-	}
+
+	args = append(args, extraOptions...)
+	args = append(args, revisions...)
+	args = append(args, "--")
+	args = append(args, paths...)
 
 	cmd, err := helper.GitCommandReader(ctx, args...)
 	if err != nil {
@@ -70,13 +71,13 @@ func gitLog(ctx context.Context, writer lines.Sender, repo *pb.Repository, revis
 	defer cmd.Kill()
 
 	split := lines.ScanWithDelimiter([]byte("\x00"))
-	if err := lines.Send(cmd, writer, split); err != nil {
+	if err := lines.Send(cmd, sender, split); err != nil {
 		return err
 	}
 
 	if err := cmd.Wait(); err != nil {
 		// We expect this error to be caused by non-existing references. In that
-		// case, we just log the error and send no commits to the `writer`.
+		// case, we just log the error and send no commits to the `sender`.
 		grpc_logrus.Extract(ctx).WithError(err).Info("ignoring git-log error")
 	}
 
