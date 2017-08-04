@@ -9,3 +9,4 @@
 /internal/service/ssh/gitaly-*-pack
 /.ruby-bundle
 /ruby/vendor/bundle
+/ruby/.bundle
