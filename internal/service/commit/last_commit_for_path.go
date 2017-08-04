@@ -27,7 +27,8 @@ func (s *server) LastCommitForPath(ctx context.Context, in *pb.LastCommitForPath
 		path = "."
 	}
 
-	if err := gitLog(ctx, writer, in.GetRepository(), []string{string(in.GetRevision())}, []string{path}, "-1"); err != nil {
+	revisions := []string{string(in.GetRevision())}
+	if err := gitLog(ctx, writer, in.GetRepository(), revisions, []string{path}, "--max-count=1"); err != nil {
 		return nil, err
 	}
 
