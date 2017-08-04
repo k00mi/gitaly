@@ -18,8 +18,8 @@ func (s *server) FindCommit(ctx context.Context, in *pb.FindCommitRequest) (*pb.
 
 	sender := &findCommitSender{}
 	writer := newCommitsWriter(sender)
-
-	if err := gitLog(ctx, writer, in.GetRepository(), []string{string(in.GetRevision())}, "--max-count=1"); err != nil {
+	revisions := []string{string(in.GetRevision())}
+	if err := gitLog(ctx, writer, in.GetRepository(), revisions, nil, "--max-count=1"); err != nil {
 		return nil, err
 	}
 

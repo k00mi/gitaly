@@ -22,23 +22,23 @@ type findAllCommitsSender struct {
 func (s *server) FindAllCommits(in *pb.FindAllCommitsRequest, stream pb.CommitService_FindAllCommitsServer) error {
 	writer := newCommitsWriter(&findAllCommitsSender{stream})
 
-	var gitLogExtraArgs []string
+	var gitLogExtraOptions []string
 	if maxCount := in.GetMaxCount(); maxCount > 0 {
-		gitLogExtraArgs = append(gitLogExtraArgs, fmt.Sprintf("--max-count=%d", maxCount))
+		gitLogExtraOptions = append(gitLogExtraOptions, fmt.Sprintf("--max-count=%d", maxCount))
 	}
 	if skip := in.GetSkip(); skip > 0 {
-		gitLogExtraArgs = append(gitLogExtraArgs, fmt.Sprintf("--skip=%d", skip))
+		gitLogExtraOptions = append(gitLogExtraOptions, fmt.Sprintf("--skip=%d", skip))
 	}
 	switch in.GetOrder() {
 	case pb.FindAllCommitsRequest_NONE:
 		// Do nothing
 	case pb.FindAllCommitsRequest_DATE:
-		gitLogExtraArgs = append(gitLogExtraArgs, "--date-order")
+		gitLogExtraOptions = append(gitLogExtraOptions, "--date-order")
 	case pb.FindAllCommitsRequest_TOPO:
-		gitLogExtraArgs = append(gitLogExtraArgs, "--topo-order")
+		gitLogExtraOptions = append(gitLogExtraOptions, "--topo-order")
 	}
 
-	var revisionRange []string
+	var revisions []string
 	if len(in.GetRevision()) == 0 {
 		repoPath, err := helper.GetRepoPath(in.GetRepository())
 		if err != nil {
@@ -51,13 +51,13 @@ func (s *server) FindAllCommits(in *pb.FindAllCommitsRequest, stream pb.CommitSe
 		}
 
 		for _, branch := range branchNames {
-			revisionRange = append(revisionRange, string(branch))
+			revisions = append(revisions, string(branch))
 		}
 	} else {
-		revisionRange = []string{string(in.GetRevision())}
+		revisions = []string{string(in.GetRevision())}
 	}
 
-	return gitLog(stream.Context(), writer, in.GetRepository(), revisionRange, gitLogExtraArgs...)
+	return gitLog(stream.Context(), writer, in.GetRepository(), revisions, nil, gitLogExtraOptions...)
 }
 
 func (sender *findAllCommitsSender) Send(commits []*pb.GitCommit) error {

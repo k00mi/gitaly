@@ -22,9 +22,8 @@ func (s *server) CommitsBetween(in *pb.CommitsBetweenRequest, stream pb.CommitSe
 
 	writer := newCommitsWriter(&commitsBetweenSender{stream})
 	revisionRange := fmt.Sprintf("%s..%s", in.GetFrom(), in.GetTo())
-	gitLogExtraArgs := []string{"--reverse"}
 
-	return gitLog(stream.Context(), writer, in.GetRepository(), []string{revisionRange}, gitLogExtraArgs...)
+	return gitLog(stream.Context(), writer, in.GetRepository(), []string{revisionRange}, nil, "--reverse")
 }
 
 func (sender *commitsBetweenSender) Send(commits []*pb.GitCommit) error {

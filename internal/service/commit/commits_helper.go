@@ -39,9 +39,9 @@ const (
 	fieldDelimiterGitFormatString = "%x1f"
 )
 
-func gitLog(ctx context.Context, sender lines.Sender, repo *pb.Repository, revisionRange []string, extraArgs ...string) error {
+func gitLog(ctx context.Context, sender lines.Sender, repo *pb.Repository, revisions []string, paths []string, extraOptions ...string) error {
 	grpc_logrus.Extract(ctx).WithFields(log.Fields{
-		"Revision Range": revisionRange,
+		"Revision Range": revisions,
 	}).Debug("GitLog")
 
 	repoPath, err := helper.GetRepoPath(repo)
@@ -58,10 +58,11 @@ func gitLog(ctx context.Context, sender lines.Sender, repo *pb.Repository, revis
 		"-z", // use 0x00 as the entry terminator (instead of \n)
 		formatFlag,
 	}
-	args = append(args, extraArgs...)
-	for _, revision := range revisionRange {
-		args = append(args, revision)
-	}
+
+	args = append(args, extraOptions...)
+	args = append(args, revisions...)
+	args = append(args, "--")
+	args = append(args, paths...)
 
 	cmd, err := helper.GitCommandReader(ctx, args...)
 	if err != nil {
