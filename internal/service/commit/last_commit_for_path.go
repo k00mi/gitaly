@@ -22,12 +22,12 @@ func (s *server) LastCommitForPath(ctx context.Context, in *pb.LastCommitForPath
 	sender := &lastCommitForPathSender{}
 	writer := newCommitsWriter(sender)
 
-	path := in.GetPath()
+	path := string(in.GetPath())
 	if len(path) == 0 {
-		path = []byte(".")
+		path = "."
 	}
 
-	if err := gitLog(ctx, writer, in.GetRepository(), [][]byte{in.GetRevision(), []byte("--"), path}, "-1"); err != nil {
+	if err := gitLog(ctx, writer, in.GetRepository(), []string{string(in.GetRevision()), "--", path}, "-1"); err != nil {
 		return nil, err
 	}
 

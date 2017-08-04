@@ -38,7 +38,7 @@ func (s *server) FindAllCommits(in *pb.FindAllCommitsRequest, stream pb.CommitSe
 		gitLogExtraArgs = append(gitLogExtraArgs, "--topo-order")
 	}
 
-	var revisionRange [][]byte
+	var revisionRange []string
 	if len(in.GetRevision()) == 0 {
 		repoPath, err := helper.GetRepoPath(in.GetRepository())
 		if err != nil {
@@ -50,9 +50,11 @@ func (s *server) FindAllCommits(in *pb.FindAllCommitsRequest, stream pb.CommitSe
 			return grpc.Errorf(codes.InvalidArgument, "FindAllCommits: %v", err)
 		}
 
-		revisionRange = branchNames
+		for _, branch := range branchNames {
+			revisionRange = append(revisionRange, string(branch))
+		}
 	} else {
-		revisionRange = [][]byte{in.GetRevision()}
+		revisionRange = []string{string(in.GetRevision())}
 	}
 
 	return gitLog(stream.Context(), writer, in.GetRepository(), revisionRange, gitLogExtraArgs...)

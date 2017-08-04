@@ -1,7 +1,7 @@
 package commit
 
 import (
-	"bytes"
+	"fmt"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"google.golang.org/grpc"
@@ -21,15 +21,10 @@ func (s *server) CommitsBetween(in *pb.CommitsBetweenRequest, stream pb.CommitSe
 	}
 
 	writer := newCommitsWriter(&commitsBetweenSender{stream})
-	revisionRange := bytes.Join([][]byte{
-		in.GetFrom(),
-		{'.', '.'},
-		in.GetTo(),
-	}, nil)
-
+	revisionRange := fmt.Sprintf("%s..%s", in.GetFrom(), in.GetTo())
 	gitLogExtraArgs := []string{"--reverse"}
 
-	return gitLog(stream.Context(), writer, in.GetRepository(), [][]byte{revisionRange}, gitLogExtraArgs...)
+	return gitLog(stream.Context(), writer, in.GetRepository(), []string{revisionRange}, gitLogExtraArgs...)
 }
 
 func (sender *commitsBetweenSender) Send(commits []*pb.GitCommit) error {
