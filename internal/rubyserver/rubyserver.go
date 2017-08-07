@@ -1,6 +1,7 @@
 package rubyserver
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
@@ -59,7 +60,7 @@ func prepareSocketPath() {
 func Start() (*supervisor.Process, error) {
 	lazyInit.Do(prepareSocketPath)
 
-	args := []string{"bundle", "exec", "bin/gitaly-ruby", socketPath}
+	args := []string{"bundle", "exec", "bin/gitaly-ruby", fmt.Sprintf("%d", os.Getpid()), socketPath}
 	return supervisor.New(nil, args, config.Config.Ruby.Dir)
 }
 
