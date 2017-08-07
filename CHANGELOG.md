@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Use BUNDLE_PATH instead of --path for gitaly-ruby
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/271
 - Add GitLab-Shell Path to config
   https://gitlab.com/gitlab-org/gitaly/merge_requests/267
 - Don't count on PID 1 to be the reaper
