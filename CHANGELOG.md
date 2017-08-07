@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Add GitLab-Shell Path to config
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/267
+
 v0.28.0
 
 - Increase gitaly-ruby connection timeout to 20s
