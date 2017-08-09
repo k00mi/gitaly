@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Implement DiffService.CommitPatch RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/279
+
 v0.32.0
 
 - RefService::RefExists endpoint

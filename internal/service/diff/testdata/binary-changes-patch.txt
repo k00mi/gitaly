@@ -1,0 +1,3 @@
+diff --git a/files/images/6049019_460s.jpg b/files/images/6049019_460s.jpg
+index 18079e3..08cf843 100644
+Binary files a/files/images/6049019_460s.jpg and b/files/images/6049019_460s.jpg differ
