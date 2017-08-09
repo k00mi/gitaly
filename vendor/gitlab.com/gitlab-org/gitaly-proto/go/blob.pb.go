@@ -83,6 +83,8 @@ It has these top-level messages:
 	RepositorySizeResponse
 	ApplyGitattributesRequest
 	ApplyGitattributesResponse
+	FetchRemoteRequest
+	FetchRemoteResponse
 	Repository
 	GitCommit
 	CommitAuthor
