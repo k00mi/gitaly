@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -14,28 +13,14 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-const scratchDir = "testdata/scratch"
-
 // Stamp taken from https://golang.org/pkg/time/#pkg-constants
 const testTimeString = "200601021504.05"
 
 var (
 	testTime         = time.Date(2006, 1, 2, 15, 4, 5, 0, time.UTC)
 	serverSocketPath = testhelper.GetTemporaryGitalySocketFileName()
-	testRepo         *pb.Repository
+	testRepo         = testhelper.TestRepository()
 )
-
-func TestMain(m *testing.M) {
-	testRepo = testhelper.TestRepository()
-
-	if err := os.MkdirAll(scratchDir, 0755); err != nil {
-		log.WithError(err).Fatal("mkdirall failed")
-	}
-
-	os.Exit(func() int {
-		return m.Run()
-	}())
-}
 
 func newRepositoryClient(t *testing.T) pb.RepositoryServiceClient {
 	connOpts := []grpc.DialOption{
@@ -53,7 +38,7 @@ func newRepositoryClient(t *testing.T) pb.RepositoryServiceClient {
 }
 
 func runRepoServer(t *testing.T) *grpc.Server {
-	server := grpc.NewServer()
+	server := testhelper.NewTestGrpcServer(t)
 	listener, err := net.Listen("unix", serverSocketPath)
 	if err != nil {
 		t.Fatal(err)
