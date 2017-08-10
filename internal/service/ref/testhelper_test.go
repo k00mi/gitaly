@@ -91,7 +91,7 @@ func TestMain(m *testing.M) {
 
 func runRefServer(t *testing.T) *grpc.Server {
 	os.Remove(serverSocketPath)
-	grpcServer := grpc.NewServer()
+	grpcServer := testhelper.NewTestGrpcServer(t)
 	listener, err := net.Listen("unix", serverSocketPath)
 	if err != nil {
 		t.Fatal(err)
@@ -107,7 +107,8 @@ func runRefServer(t *testing.T) *grpc.Server {
 
 func runRefServiceServer(t *testing.T) *grpc.Server {
 	os.Remove(serverSocketPath)
-	grpcServer := grpc.NewServer()
+	grpcServer := testhelper.NewTestGrpcServer(t)
+
 	listener, err := net.Listen("unix", serverSocketPath)
 	if err != nil {
 		t.Fatal(err)
