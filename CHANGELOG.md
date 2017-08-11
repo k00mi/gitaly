@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.30.0
 
 - Add a middleware for handling Git object dir attributes
   https://gitlab.com/gitlab-org/gitaly/merge_requests/273
