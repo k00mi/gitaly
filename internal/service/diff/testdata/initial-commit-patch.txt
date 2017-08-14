@@ -1,8 +1,8 @@
-diff --git a/.gitignore b/.gitignore
+diff --git b/.gitignore a/.gitignore
 new file mode 100644
 index 0000000..470ad2f
 --- /dev/null
-+++ b/.gitignore
++++ a/.gitignore
 @@ -0,0 +1,19 @@
 +*.rbc
 +*.sassc
@@ -23,11 +23,11 @@ index 0000000..470ad2f
 +pickle-email-*.html
 +.project
 +config/initializers/secret_token.rb
-diff --git a/LICENSE b/LICENSE
+diff --git b/LICENSE a/LICENSE
 new file mode 100644
 index 0000000..50b27c6
 --- /dev/null
-+++ b/LICENSE
++++ a/LICENSE
 @@ -0,0 +1,20 @@
 +The MIT License (MIT)
 +
@@ -49,11 +49,11 @@ index 0000000..50b27c6
 +COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 +IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 +CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-diff --git a/README.md b/README.md
+diff --git b/README.md a/README.md
 new file mode 100644
 index 0000000..faaf198
 --- /dev/null
-+++ b/README.md
++++ a/README.md
 @@ -0,0 +1,4 @@
 +testme
 +======

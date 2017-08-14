@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"net"
 	"testing"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
@@ -13,12 +12,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/reflection"
 )
-
-var serverSocketPath = testhelper.GetTemporaryGitalySocketFileName()
 
 func TestSuccessfulCommitDiffRequest(t *testing.T) {
 	server := runDiffServer(t)
@@ -871,21 +866,6 @@ func TestFailedCommitDeltaRequestWithNonExistentCommit(t *testing.T) {
 
 	err = drainCommitDeltaResponse(c)
 	testhelper.AssertGrpcError(t, err, codes.Unavailable, "")
-}
-
-func runDiffServer(t *testing.T) *grpc.Server {
-	server := testhelper.NewTestGrpcServer(t, nil, nil)
-	listener, err := net.Listen("unix", serverSocketPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	pb.RegisterDiffServiceServer(server, NewServer())
-	reflection.Register(server)
-
-	go server.Serve(listener)
-
-	return server
 }
 
 func drainCommitDiffResponse(c pb.Diff_CommitDiffClient) error {
