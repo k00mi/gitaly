@@ -43,23 +43,23 @@ func TestApplyGitattributesSuccess(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Log(test.desc)
+		t.Run(test.desc, func(t *testing.T) {
+			// Test when no /info folder exists
+			if err := os.RemoveAll(infoPath); err != nil {
+				t.Fatal(err)
+			}
+			assertGitattributesApplied(t, client, attributesPath, test.revision, test.contents)
 
-		// Test when no /info folder exists
-		if err := os.RemoveAll(infoPath); err != nil {
-			t.Fatal(err)
-		}
-		assertGitattributesApplied(t, client, attributesPath, test.revision, test.contents)
+			// Test when no git attributes file exists
+			if err := os.Remove(attributesPath); err != nil && !os.IsNotExist(err) {
+				t.Fatal(err)
+			}
+			assertGitattributesApplied(t, client, attributesPath, test.revision, test.contents)
 
-		// Test when no git attributes file exists
-		if err := os.Remove(attributesPath); err != nil && !os.IsNotExist(err) {
-			t.Fatal(err)
-		}
-		assertGitattributesApplied(t, client, attributesPath, test.revision, test.contents)
-
-		// Test when a gitattributes file already exists
-		ioutil.WriteFile(attributesPath, []byte("*.docx diff=word"), 0644)
-		assertGitattributesApplied(t, client, attributesPath, test.revision, test.contents)
+			// Test when a git attributes file already exists
+			ioutil.WriteFile(attributesPath, []byte("*.docx diff=word"), 0644)
+			assertGitattributesApplied(t, client, attributesPath, test.revision, test.contents)
+		})
 	}
 }
 

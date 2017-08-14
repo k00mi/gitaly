@@ -22,7 +22,9 @@ func applyGitattributesHandler(ctx context.Context, repoPath string, revision []
 		infoPath := path.Join(repoPath, "info")
 		attributesPath := path.Join(infoPath, "attributes")
 
-		fmt.Fprintf(stdin, "%s\n", revision)
+		if _, err := fmt.Fprintf(stdin, "%s\n", revision); err != nil {
+			return err
+		}
 		revisionInfo, err := catfile.ParseObjectInfo(stdout)
 		if err != nil {
 			return err
@@ -35,7 +37,9 @@ func applyGitattributesHandler(ctx context.Context, repoPath string, revision []
 			return fmt.Errorf("stdout discard: %v", err)
 		}
 
-		fmt.Fprintf(stdin, "%s:%s\n", revision, ".gitattributes")
+		if _, err := fmt.Fprintf(stdin, "%s:%s\n", revision, ".gitattributes"); err != nil {
+			return err
+		}
 		blobInfo, err := catfile.ParseObjectInfo(stdout)
 		if err != nil {
 			return err
@@ -53,10 +57,8 @@ func applyGitattributesHandler(ctx context.Context, repoPath string, revision []
 		}
 
 		// Create  /info folder if it doesn't exist
-		if _, err := os.Stat(infoPath); os.IsNotExist(err) {
-			if err := os.Mkdir(infoPath, 0755); err != nil {
-				return err
-			}
+		if err := os.MkdirAll(infoPath, 0755); err != nil {
+			return err
 		}
 
 		tempFile, err := ioutil.TempFile(infoPath, "attributes")
@@ -67,8 +69,13 @@ func applyGitattributesHandler(ctx context.Context, repoPath string, revision []
 
 		// Write attributes to temp file
 		limitReader := io.LimitReader(stdout, blobInfo.Size)
-		if _, err := io.Copy(tempFile, limitReader); err != nil {
+		n, err := io.Copy(tempFile, limitReader)
+		if err != nil {
 			return err
+		}
+		if n != blobInfo.Size {
+			return grpc.Errorf(codes.Internal,
+				"ApplyGitAttributes: copy yielded %v bytes, expected %v", n, blobInfo.Size)
 		}
 
 		if err := tempFile.Close(); err != nil {
