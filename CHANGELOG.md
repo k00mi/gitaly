@@ -6,6 +6,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/266
 - Log spawned process metrics
   https://gitlab.com/gitlab-org/gitaly/merge_requests/284
+- Implement RepositoryService.ApplyGitattributes RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/278
 
 v0.30.0
 
