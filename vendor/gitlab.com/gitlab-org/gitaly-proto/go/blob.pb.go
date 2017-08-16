@@ -71,6 +71,8 @@ It has these top-level messages:
 	FindAllBranchesResponse
 	FindAllTagsRequest
 	FindAllTagsResponse
+	RefExistsRequest
+	RefExistsResponse
 	RepositoryExistsRequest
 	RepositoryExistsResponse
 	RepackIncrementalRequest
