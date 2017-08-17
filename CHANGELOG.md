@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Fix bugs in RepositoryService.FetchRemote
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/300
+
 v0.33.0
 
 - Implement DiffService.CommitPatch RPC
