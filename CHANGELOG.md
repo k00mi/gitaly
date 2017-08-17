@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.32.0
 
 - RefService::RefExists endpoint
   https://gitlab.com/gitlab-org/gitaly/merge_requests/275
