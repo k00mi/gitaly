@@ -12,7 +12,7 @@ import (
 )
 
 func TestFindRefNameSuccess(t *testing.T) {
-	server := runRefServer(t)
+	server := runRefServiceServer(t)
 	defer server.Stop()
 
 	client, conn := newRefClient(t)
@@ -38,7 +38,7 @@ func TestFindRefNameSuccess(t *testing.T) {
 }
 
 func TestFindRefNameEmptyCommit(t *testing.T) {
-	server := runRefServer(t)
+	server := runRefServiceServer(t)
 	defer server.Stop()
 
 	client, conn := newRefClient(t)
@@ -66,7 +66,7 @@ func TestFindRefNameEmptyCommit(t *testing.T) {
 }
 
 func TestFindRefNameInvalidRepo(t *testing.T) {
-	server := runRefServer(t)
+	server := runRefServiceServer(t)
 	defer server.Stop()
 
 	client, conn := newRefClient(t)
@@ -95,7 +95,7 @@ func TestFindRefNameInvalidRepo(t *testing.T) {
 }
 
 func TestFindRefNameInvalidPrefix(t *testing.T) {
-	server := runRefServer(t)
+	server := runRefServiceServer(t)
 	defer server.Stop()
 
 	client, conn := newRefClient(t)
@@ -118,7 +118,7 @@ func TestFindRefNameInvalidPrefix(t *testing.T) {
 }
 
 func TestFindRefNameInvalidObject(t *testing.T) {
-	server := runRefServer(t)
+	server := runRefServiceServer(t)
 	defer server.Stop()
 
 	client, conn := newRefClient(t)
