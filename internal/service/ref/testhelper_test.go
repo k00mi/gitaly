@@ -10,15 +10,13 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/ptypes/timestamp"
 
+	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
+	"gitlab.com/gitlab-org/gitaly/internal/service/renameadapter"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-	"gitlab.com/gitlab-org/gitaly/internal/service/renameadapter"
 )
 
 var (
@@ -122,7 +120,7 @@ func runRefServiceServer(t *testing.T) *grpc.Server {
 	return grpcServer
 }
 
-func newRefClient(t *testing.T) (pb.RefClient, *grpc.ClientConn) {
+func newRefClient(t *testing.T) (pb.RefServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithDialer(func(addr string, _ time.Duration) (net.Conn, error) {
@@ -134,7 +132,7 @@ func newRefClient(t *testing.T) (pb.RefClient, *grpc.ClientConn) {
 		t.Fatal(err)
 	}
 
-	return pb.NewRefClient(conn), conn
+	return pb.NewRefServiceClient(conn), conn
 }
 
 func newRefServiceClient(t *testing.T) (pb.RefServiceClient, *grpc.ClientConn) {

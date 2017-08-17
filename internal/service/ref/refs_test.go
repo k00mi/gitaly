@@ -28,7 +28,7 @@ func containsRef(refs [][]byte, ref string) bool {
 }
 
 func TestSuccessfulFindAllBranchNames(t *testing.T) {
-	server := runRefServer(t)
+	server := runRefServiceServer(t)
 	defer server.Stop()
 
 	client, conn := newRefClient(t)
@@ -61,7 +61,7 @@ func TestSuccessfulFindAllBranchNames(t *testing.T) {
 }
 
 func TestEmptyFindAllBranchNamesRequest(t *testing.T) {
-	server := runRefServer(t)
+	server := runRefServiceServer(t)
 	defer server.Stop()
 
 	client, conn := newRefClient(t)
@@ -86,7 +86,7 @@ func TestEmptyFindAllBranchNamesRequest(t *testing.T) {
 }
 
 func TestInvalidRepoFindAllBranchNamesRequest(t *testing.T) {
-	server := runRefServer(t)
+	server := runRefServiceServer(t)
 	defer server.Stop()
 
 	client, conn := newRefClient(t)
@@ -112,7 +112,7 @@ func TestInvalidRepoFindAllBranchNamesRequest(t *testing.T) {
 }
 
 func TestSuccessfulFindAllTagNames(t *testing.T) {
-	server := runRefServer(t)
+	server := runRefServiceServer(t)
 	defer server.Stop()
 
 	client, conn := newRefClient(t)
@@ -146,7 +146,7 @@ func TestSuccessfulFindAllTagNames(t *testing.T) {
 }
 
 func TestEmptyFindAllTagNamesRequest(t *testing.T) {
-	server := runRefServer(t)
+	server := runRefServiceServer(t)
 	defer server.Stop()
 
 	client, conn := newRefClient(t)
@@ -171,7 +171,7 @@ func TestEmptyFindAllTagNamesRequest(t *testing.T) {
 }
 
 func TestInvalidRepoFindAllTagNamesRequest(t *testing.T) {
-	server := runRefServer(t)
+	server := runRefServiceServer(t)
 	defer server.Stop()
 
 	client, conn := newRefClient(t)
@@ -297,7 +297,7 @@ func TestDefaultBranchName(t *testing.T) {
 }
 
 func TestSuccessfulFindDefaultBranchName(t *testing.T) {
-	server := runRefServer(t)
+	server := runRefServiceServer(t)
 	defer server.Stop()
 
 	client, conn := newRefClient(t)
@@ -317,7 +317,7 @@ func TestSuccessfulFindDefaultBranchName(t *testing.T) {
 }
 
 func TestEmptyFindDefaultBranchNameRequest(t *testing.T) {
-	server := runRefServer(t)
+	server := runRefServiceServer(t)
 	defer server.Stop()
 
 	client, conn := newRefClient(t)
@@ -334,7 +334,7 @@ func TestEmptyFindDefaultBranchNameRequest(t *testing.T) {
 }
 
 func TestInvalidRepoFindDefaultBranchNameRequest(t *testing.T) {
-	server := runRefServer(t)
+	server := runRefServiceServer(t)
 	defer server.Stop()
 
 	client, conn := newRefClient(t)
@@ -543,7 +543,7 @@ func TestInvalidFindAllTagsRequest(t *testing.T) {
 }
 
 func TestSuccessfulFindLocalBranches(t *testing.T) {
-	server := runRefServer(t)
+	server := runRefServiceServer(t)
 	defer server.Stop()
 
 	client, conn := newRefClient(t)
@@ -630,7 +630,7 @@ func TestFindLocalBranchesSort(t *testing.T) {
 		},
 	}
 
-	server := runRefServer(t)
+	server := runRefServiceServer(t)
 	defer server.Stop()
 
 	client, conn := newRefClient(t)
@@ -669,7 +669,7 @@ func TestFindLocalBranchesSort(t *testing.T) {
 }
 
 func TestEmptyFindLocalBranchesRequest(t *testing.T) {
-	server := runRefServer(t)
+	server := runRefServiceServer(t)
 	defer server.Stop()
 
 	client, conn := newRefClient(t)
