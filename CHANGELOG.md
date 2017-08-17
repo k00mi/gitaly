@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- RefService::RefExists endpoint
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/275
+
 v0.31.0
 
 - Implement CommitService.FindCommits
