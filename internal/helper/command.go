@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 	"syscall"
 	"time"
@@ -46,12 +47,13 @@ func GitCommandReader(ctx context.Context, args ...string) (*Command, error) {
 }
 
 // GitlabShellCommandReader creates a gitlab-shell Command with the given args
-func GitlabShellCommandReader(ctx context.Context, envs []string, args ...string) (*Command, error) {
+func GitlabShellCommandReader(ctx context.Context, envs []string, executable string, args ...string) (*Command, error) {
 	shellPath, ok := config.GitlabShellPath()
 	if !ok {
-		return nil, fmt.Errorf("path to `gitlab-shell` not set")
+		return nil, fmt.Errorf("path to gitlab-shell not set")
 	}
-	return NewCommand(ctx, exec.Command(shellPath, args...), nil, nil, nil, envs...)
+	// Don't allow any git-command to ask (interactively) for credentials
+	return NewCommand(ctx, exec.Command(path.Join(shellPath, executable), args...), nil, nil, nil, envs...)
 }
 
 // NewCommand creates a Command from an exec.Cmd
@@ -69,6 +71,7 @@ func NewCommand(ctx context.Context, cmd *exec.Cmd, stdin io.Reader, stdout, std
 		fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
 		fmt.Sprintf("LD_LIBRARY_PATH=%s", os.Getenv("LD_LIBRARY_PATH")),
 		fmt.Sprintf("TZ=%s", os.Getenv("TZ")),
+		"GIT_TERMINAL_PROMPT=0",
 	}
 	cmd.Env = append(cmd.Env, env...)
 	if dir, ok := objectdirhandler.ObjectDir(ctx); ok {

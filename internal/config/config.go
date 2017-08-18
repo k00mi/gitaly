@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path"
 
 	log "github.com/Sirupsen/logrus"
 
@@ -169,11 +168,11 @@ func StoragePath(storageName string) (string, bool) {
 	return "", false
 }
 
-// GitlabShellPath returns the full path to `gitlab-shell` including basename.
+// GitlabShellPath returns the full path to gitlab-shell.
 // The second boolean return value indicates if it's found
 func GitlabShellPath() (string, bool) {
 	if len(Config.GitlabShell.Dir) == 0 {
 		return "", false
 	}
-	return path.Join(Config.GitlabShell.Dir, "gitlab-shell"), true
+	return Config.GitlabShell.Dir, true
 }

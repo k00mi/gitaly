@@ -113,7 +113,7 @@ func TestFetchRemoteSuccess(t *testing.T) {
 	defer func(dir string) {
 		os.RemoveAll(dir)
 	}(dir)
-	testhelper.MustRunCommand(t, nil, "go", "build", "-o", path.Join(dir, "gitlab-shell"), "gitlab.com/gitlab-org/gitaly/internal/testhelper/gitlab-shell")
+	testhelper.MustRunCommand(t, nil, "go", "build", "-o", path.Join(dir, "gitlab-projects"), "gitlab.com/gitlab-org/gitaly/internal/testhelper/gitlab-projects")
 
 	// We need to know about gitlab-shell...
 	defer func(oldPath string) {
