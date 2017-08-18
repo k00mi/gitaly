@@ -4,6 +4,8 @@ UNRELEASED
 
 - Implement DiffService.CommitPatch RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/279
+- Use 'bundle config' for gitaly-ruby in source production installations
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/298
 
 v0.32.0
 
@@ -20,8 +22,6 @@ v0.31.0
   https://gitlab.com/gitlab-org/gitaly/merge_requests/278
 - Implement RepositoryService.FetchRemote RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/276
-- Use 'bundle config' for gitaly-ruby in source production installations
-  https://gitlab.com/gitlab-org/gitaly/merge_requests/298
 
 v0.30.0
 
