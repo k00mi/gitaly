@@ -15,6 +15,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/supervisor"
+	"gitlab.com/gitlab-org/gitaly/streamio"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
@@ -62,7 +63,8 @@ func Start() (*supervisor.Process, error) {
 	lazyInit.Do(prepareSocketPath)
 
 	args := []string{"bundle", "exec", "bin/gitaly-ruby", fmt.Sprintf("%d", os.Getpid()), socketPath}
-	env := append(os.Environ(), "GITALY_RUBY_GIT_BIN_PATH="+helper.GitPath())
+	env := append(os.Environ(), "GITALY_RUBY_GIT_BIN_PATH="+helper.GitPath(),
+		fmt.Sprintf("GITALY_RUBY_WRITE_BUFFER_SIZE=%d", streamio.WriteBufferSize))
 	return supervisor.New(env, args, config.Config.Ruby.Dir)
 }
 
@@ -72,6 +74,14 @@ func Start() (*supervisor.Process, error) {
 func CommitServiceClient(ctx context.Context) (pb.CommitServiceClient, error) {
 	conn, err := newConnection(ctx)
 	return pb.NewCommitServiceClient(conn), err
+}
+
+// DiffServiceClient returns a DiffServiceClient instance that is
+// configured to connect to the running Ruby server. This assumes Start()
+// has been called already.
+func DiffServiceClient(ctx context.Context) (pb.DiffServiceClient, error) {
+	conn, err := newConnection(ctx)
+	return pb.NewDiffServiceClient(conn), err
 }
 
 func newConnection(ctx context.Context) (*grpc.ClientConn, error) {

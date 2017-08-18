@@ -31,6 +31,10 @@ module Gitlab
       def bin_path
         ENV['GITALY_RUBY_GIT_BIN_PATH']
       end
+
+      def write_buffer_size
+        @write_buffer_size ||= ENV['GITALY_RUBY_WRITE_BUFFER_SIZE'].to_i
+      end
     end
 
     def git

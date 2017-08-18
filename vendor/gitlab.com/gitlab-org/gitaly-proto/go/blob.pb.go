@@ -53,6 +53,8 @@ It has these top-level messages:
 	CommitDeltaRequest
 	CommitDelta
 	CommitDeltaResponse
+	CommitPatchRequest
+	CommitPatchResponse
 	PostReceiveRequest
 	PostReceiveResponse
 	FindDefaultBranchNameRequest

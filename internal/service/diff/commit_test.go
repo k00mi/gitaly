@@ -4,23 +4,16 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"net"
 	"testing"
-	"time"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/diff"
-	"gitlab.com/gitlab-org/gitaly/internal/service/renameadapter"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/reflection"
 )
-
-var serverSocketPath = testhelper.GetTemporaryGitalySocketFileName()
 
 func TestSuccessfulCommitDiffRequest(t *testing.T) {
 	server := runDiffServer(t)
@@ -873,36 +866,6 @@ func TestFailedCommitDeltaRequestWithNonExistentCommit(t *testing.T) {
 
 	err = drainCommitDeltaResponse(c)
 	testhelper.AssertGrpcError(t, err, codes.Unavailable, "")
-}
-
-func runDiffServer(t *testing.T) *grpc.Server {
-	server := testhelper.NewTestGrpcServer(t, nil, nil)
-	listener, err := net.Listen("unix", serverSocketPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	pb.RegisterDiffServer(server, renameadapter.NewDiffAdapter(NewServer()))
-	reflection.Register(server)
-
-	go server.Serve(listener)
-
-	return server
-}
-
-func newDiffClient(t *testing.T) (pb.DiffClient, *grpc.ClientConn) {
-	connOpts := []grpc.DialOption{
-		grpc.WithInsecure(),
-		grpc.WithDialer(func(addr string, _ time.Duration) (net.Conn, error) {
-			return net.Dial("unix", addr)
-		}),
-	}
-	conn, err := grpc.Dial(serverSocketPath, connOpts...)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return pb.NewDiffClient(conn), conn
 }
 
 func drainCommitDiffResponse(c pb.Diff_CommitDiffClient) error {
