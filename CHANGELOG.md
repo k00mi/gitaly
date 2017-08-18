@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.33.0
 
 - Implement DiffService.CommitPatch RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/279
