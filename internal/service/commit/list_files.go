@@ -40,9 +40,7 @@ func (s *server) ListFiles(in *pb.ListFilesRequest, stream pb.CommitService_List
 	}
 	defer cmd.Close()
 
-	scanner := lines.ScanWithDelimiter([]byte{'\x00'})
-
-	return lines.Send(cmd, listFilesWriter(stream), scanner)
+	return lines.Send(cmd, listFilesWriter(stream), []byte{'\x00'})
 }
 
 func listFilesWriter(stream pb.CommitService_ListFilesServer) lines.Sender {
