@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/stretchr/testify/require"
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"golang.org/x/net/context"
@@ -102,8 +103,6 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 					Email: []byte("dmitriy.zaporozhets@gmail.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1393488198},
 				},
-				// In practice, same as `[]string{}`... but not for `DeepEquals`
-				// (which is used to check the ParentIds in `CommitsEqual`)
 				ParentIds: nil,
 			},
 		},
@@ -133,9 +132,7 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if !testhelper.CommitsEqual(testCase.commit, response.Commit) {
-				t.Fatalf("Expected commit %v, got %v", testCase.commit, response.Commit)
-			}
+			require.Equal(t, testCase.commit, response.Commit, "mismatched commits")
 		})
 	}
 }

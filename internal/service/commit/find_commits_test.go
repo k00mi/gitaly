@@ -5,8 +5,6 @@ import (
 	"io"
 	"testing"
 
-	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -56,7 +54,7 @@ func TestFindCommitsFields(t *testing.T) {
 	require.Equal(t, 1, len(resp.Commits), "expected exactly one commit in the first message")
 	firstCommit := resp.Commits[0]
 
-	require.True(t, testhelper.CommitsEqual(expectedCommit, firstCommit), "expected %v, got %v", expectedCommit, firstCommit)
+	require.Equal(t, expectedCommit, firstCommit, "mismatched commits")
 }
 
 func TestSuccessfulFindCommitsRequest(t *testing.T) {

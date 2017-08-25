@@ -265,9 +265,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 			require.Equal(t, len(testCase.expectedCommits), len(receivedCommits), "number of commits received")
 
 			for i, receivedCommit := range receivedCommits {
-				if !testhelper.CommitsEqual(receivedCommit, testCase.expectedCommits[i]) {
-					t.Fatalf("Expected commit\n%v\ngot\n%v", testCase.expectedCommits[i], receivedCommit)
-				}
+				require.Equal(t, testCase.expectedCommits[i], receivedCommit, "mismatched commits")
 			}
 		})
 	}

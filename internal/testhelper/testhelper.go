@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -133,20 +132,6 @@ func AuthorsEqual(a *pb.CommitAuthor, b *pb.CommitAuthor) bool {
 	return bytes.Equal(a.Name, b.Name) &&
 		bytes.Equal(a.Email, b.Email) &&
 		a.Date.Seconds == b.Date.Seconds
-}
-
-// CommitsEqual tests if two `GitCommit`s are equal
-func CommitsEqual(a *pb.GitCommit, b *pb.GitCommit) bool {
-	if a == nil || b == nil {
-		return a == b
-	}
-
-	return a.Id == b.Id &&
-		bytes.Equal(a.Subject, b.Subject) &&
-		bytes.Equal(a.Body, b.Body) &&
-		AuthorsEqual(a.Author, b.Author) &&
-		AuthorsEqual(a.Committer, b.Committer) &&
-		reflect.DeepEqual(a.ParentIds, b.ParentIds)
 }
 
 // FindLocalBranchCommitAuthorsEqual tests if two `FindLocalBranchCommitAuthor`s are equal
