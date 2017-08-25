@@ -8,6 +8,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/293
 - Use a fixed order when auto-loading Ruby files
   https://gitlab.com/gitlab-org/gitaly/merge_requests/302
+- Add signal handler for ruby socket cleanup on shutdown
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/304
 - Use grpc 1.4.5 in gitaly-ruby
   https://gitlab.com/gitlab-org/gitaly/merge_requests/308
 
