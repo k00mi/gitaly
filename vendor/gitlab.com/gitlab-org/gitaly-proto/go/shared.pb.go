@@ -27,7 +27,7 @@ type Repository struct {
 func (m *Repository) Reset()                    { *m = Repository{} }
 func (m *Repository) String() string            { return proto.CompactTextString(m) }
 func (*Repository) ProtoMessage()               {}
-func (*Repository) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{0} }
+func (*Repository) Descriptor() ([]byte, []int) { return fileDescriptor8, []int{0} }
 
 func (m *Repository) GetStorageName() string {
 	if m != nil {
@@ -70,7 +70,7 @@ type GitCommit struct {
 func (m *GitCommit) Reset()                    { *m = GitCommit{} }
 func (m *GitCommit) String() string            { return proto.CompactTextString(m) }
 func (*GitCommit) ProtoMessage()               {}
-func (*GitCommit) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{1} }
+func (*GitCommit) Descriptor() ([]byte, []int) { return fileDescriptor8, []int{1} }
 
 func (m *GitCommit) GetId() string {
 	if m != nil {
@@ -123,7 +123,7 @@ type CommitAuthor struct {
 func (m *CommitAuthor) Reset()                    { *m = CommitAuthor{} }
 func (m *CommitAuthor) String() string            { return proto.CompactTextString(m) }
 func (*CommitAuthor) ProtoMessage()               {}
-func (*CommitAuthor) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{2} }
+func (*CommitAuthor) Descriptor() ([]byte, []int) { return fileDescriptor8, []int{2} }
 
 func (m *CommitAuthor) GetName() []byte {
 	if m != nil {
@@ -153,7 +153,7 @@ type ExitStatus struct {
 func (m *ExitStatus) Reset()                    { *m = ExitStatus{} }
 func (m *ExitStatus) String() string            { return proto.CompactTextString(m) }
 func (*ExitStatus) ProtoMessage()               {}
-func (*ExitStatus) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{3} }
+func (*ExitStatus) Descriptor() ([]byte, []int) { return fileDescriptor8, []int{3} }
 
 func (m *ExitStatus) GetValue() int32 {
 	if m != nil {
@@ -171,7 +171,7 @@ type Branch struct {
 func (m *Branch) Reset()                    { *m = Branch{} }
 func (m *Branch) String() string            { return proto.CompactTextString(m) }
 func (*Branch) ProtoMessage()               {}
-func (*Branch) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{4} }
+func (*Branch) Descriptor() ([]byte, []int) { return fileDescriptor8, []int{4} }
 
 func (m *Branch) GetName() []byte {
 	if m != nil {
@@ -195,9 +195,9 @@ func init() {
 	proto.RegisterType((*Branch)(nil), "gitaly.Branch")
 }
 
-func init() { proto.RegisterFile("shared.proto", fileDescriptor7) }
+func init() { proto.RegisterFile("shared.proto", fileDescriptor8) }
 
-var fileDescriptor7 = []byte{
+var fileDescriptor8 = []byte{
 	// 428 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x52, 0x4d, 0x6f, 0xd3, 0x40,
 	0x10, 0x95, 0xd3, 0xc4, 0xe0, 0x89, 0x8b, 0x60, 0x95, 0x83, 0x55, 0xa9, 0x22, 0x98, 0x4b, 0x0f,

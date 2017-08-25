@@ -14,6 +14,7 @@ import (
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
+	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/service/renameadapter"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc"
@@ -78,6 +79,13 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	testhelper.ConfigureRuby()
+	ruby, err := rubyserver.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer ruby.Stop()
 
 	// Use 100 bytes as the maximum message size to test that fragmenting the
 	// ref list works correctly
