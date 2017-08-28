@@ -30,6 +30,9 @@ func TestSuccessfulRepositorySizeRequest(t *testing.T) {
 
 	repoCopyPath := path.Join(storagePath, "fixed-size-repo.git")
 	testhelper.MustRunCommand(t, nil, "cp", "-R", "testdata/fixed-size-repo.git", repoCopyPath)
+	// run `sync` because some filesystems (e.g. ZFS and BTRFS) do lazy-writes
+	// which leads to `du` returning 0 bytes used until it's finally written to disk.
+	testhelper.MustRunCommand(t, nil, "sync")
 	defer os.RemoveAll(repoCopyPath)
 
 	request := &pb.RepositorySizeRequest{
