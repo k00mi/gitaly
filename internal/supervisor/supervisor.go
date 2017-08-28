@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // Config holds configuration for the circuit breaker of the respawn loop.
@@ -21,14 +24,27 @@ type Config struct {
 	CrashResetTime time.Duration `split_words:"true" default:"1m"`
 }
 
-var config Config
+var (
+	config Config
+
+	rssGauge = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "gitaly_supervisor_rss_bytes",
+			Help: "Resident set size of supervised processes, in bytes.",
+		},
+		[]string{"name"},
+	)
+)
 
 func init() {
 	envconfig.MustProcess("gitaly_supervisor", &config)
+	prometheus.MustRegister(rssGauge)
 }
 
 // Process represents a running process.
 type Process struct {
+	Name string
+
 	// Information to start the process
 	env  []string
 	args []string
@@ -40,12 +56,13 @@ type Process struct {
 }
 
 // New creates a new proces instance.
-func New(env []string, args []string, dir string) (*Process, error) {
+func New(name string, env []string, args []string, dir string) (*Process, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("need at least one argument")
 	}
 
 	p := &Process{
+		Name: name,
 		env:  env,
 		args: args,
 		dir:  dir,
@@ -70,7 +87,7 @@ func watch(p *Process) {
 	// Count crashes to prevent a tight respawn loop. This is a 'circuit breaker'.
 	crashes := 0
 
-	logger := log.WithField("supervisor.args", p.args)
+	logger := log.WithField("supervisor.args", p.args).WithField("supervisor.name", p.Name)
 
 	for {
 		if crashes >= config.CrashThreshold {
@@ -97,6 +114,8 @@ func watch(p *Process) {
 			close(waitCh)
 		}()
 
+		go monitorRss(p.Name, cmd.Process.Pid, waitCh)
+
 	waitLoop:
 		for {
 			select {
@@ -113,6 +132,38 @@ func watch(p *Process) {
 			}
 		}
 	}
+}
+
+func monitorRss(name string, pid int, done <-chan struct{}) {
+	t := time.NewTicker(15 * time.Second)
+	defer t.Stop()
+
+	for {
+		rssGauge.WithLabelValues(name).Set(float64(1024 * getRss(pid)))
+
+		select {
+		case <-done:
+			return
+		case <-t.C:
+		}
+	}
+}
+
+// getRss returns RSS in kilobytes.
+func getRss(pid int) int {
+	// I tried adding a library to do this but it seemed like overkill
+	// and YAGNI compared to doing this one 'ps' call.
+	psRss, err := exec.Command("ps", "-o", "rss=", "-p", strconv.Itoa(pid)).Output()
+	if err != nil {
+		return 0
+	}
+
+	rss, err := strconv.Atoi(strings.TrimSpace(string(psRss)))
+	if err != nil {
+		return 0
+	}
+
+	return rss
 }
 
 // Stop terminates the process.
