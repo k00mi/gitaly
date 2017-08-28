@@ -15,6 +15,22 @@ module GitalyServer
       Gitaly::CommitLanguagesResponse.new(languages: language_messages)
     end
 
+    def commit_stats(request, _call)
+      repo = Gitlab::Git::Repository.from_call(_call)
+      revision = request.revision unless request.revision.empty?
+
+      commit = Gitlab::Git::Commit.find(repo, revision)
+
+      # In the odd case that the revision given doesn't exist we need to raise
+      # an exception. Since GitLab (currently) already does this for us we don't
+      # expect this to actually happen, just guarding against future code change
+      raise GRPC::Internal.new("commit not found for revision '#{revision}'") unless commit
+
+      stats = Gitlab::Git::CommitStats.new(commit)
+
+      Gitaly::CommitStatsResponse.new(oid: stats.id, additions: stats.additions, deletions: stats.deletions)
+    end
+
     def find_commits(request, _call)
       repository = Gitlab::Git::Repository.from_call(_call)
       options = {
