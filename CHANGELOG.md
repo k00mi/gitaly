@@ -4,6 +4,8 @@ UNRELEASED
 
 - Terminate commands when their context cancels
   https://gitlab.com/gitlab-org/gitaly/merge_requests/318
+- Implement FindBranch RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/315
 - Implement {Create,Delete}Branch RPCs
   https://gitlab.com/gitlab-org/gitaly/merge_requests/311
 

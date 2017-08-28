@@ -37,5 +37,15 @@ func (s *server) DeleteBranch(ctx context.Context, req *pb.DeleteBranchRequest) 
 }
 
 func (s *server) FindBranch(ctx context.Context, req *pb.FindBranchRequest) (*pb.FindBranchResponse, error) {
-	return nil, nil
+	client, err := rubyserver.RefServiceClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	clientCtx, err := rubyserver.SetHeaders(ctx, req.GetRepository())
+	if err != nil {
+		return nil, err
+	}
+
+	return client.FindBranch(clientCtx, req)
 }
