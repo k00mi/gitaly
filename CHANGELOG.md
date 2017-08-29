@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Implement CommitService.CommitStats
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/312
+
 v0.34.0
 
 - Export environment variables for git debugging
