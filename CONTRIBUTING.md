@@ -126,3 +126,39 @@ the traditional author-reviewer 1-author-reviewer 1-reviewer 2-author-reviewer 2
 - To get **coverage**: `make cover`
 - **Clean**: `make clean`
 - All-in-one: `make verify build test`
+
+## Debug Logging
+
+Debug logging can be enabled in Gitaly through the `GITALY_DEBUG` environment variable:
+
+```
+$ GITALY_DEBUG=1 ./gitaly config.toml
+```
+
+## Git Tracing
+
+Gitaly will reexport `GIT_TRACE*` [environment variables](https://git-scm.com/book/en/v2/Git-Internals-Environment-Variables) if they are set.
+
+This can be an aid to debugging some sets of problems. For example, if you would like to know what git is going internally, you can set `GIT_TRACE=true`:
+
+Note that since git stderr stream will be logged at debug level, you need to enable debug logging too.
+
+```shell
+$ GITALY_DEBUG=1 GIT_TRACE=true ./gitaly config.toml
+...
+DEBU[0015] 13:04:08.646399 git.c:322               trace: built-in: git 'gc'  grpc.method=GarbageCollect grpc.request.repoPath="gitlab/gitlab-design.git" grpc.request.repoStorage=default grpc.request.topLevelGroup=gitlab grpc.service=gitaly.RepositoryService peer.address= span.kind=server system=grpc
+DEBU[0015] 13:04:08.649346 run-command.c:626       trace: run_command: 'pack-refs' '--all' '--prune'  grpc.method=GarbageCollect grpc.request.repoPath="gitlab/gitlab-design.git" grpc.request.repoStorage=default grpc.request.topLevelGroup=gitlab grpc.service=gitaly.RepositoryService peer.address= span.kind=server system=grpc
+DEBU[0015] 13:04:08.652240 git.c:322               trace: built-in: git 'pack-refs' '--all' '--prune'  grpc.method=GarbageCollect grpc.request.repoPath="gitlab/gitlab-design.git" grpc.request.repoStorage=default grpc.request.topLevelGroup=gitlab grpc.service=gitaly.RepositoryService peer.address= span.kind=server system=grpc
+DEBU[0015] 13:04:08.655497 run-command.c:626       trace: run_command: 'reflog' 'expire' '--all'  grpc.method=GarbageCollect grpc.request.repoPath="gitlab/gitlab-design.git" grpc.request.repoStorage=default grpc.request.topLevelGroup=gitlab grpc.service=gitaly.RepositoryService peer.address= span.kind=server system=grpc
+DEBU[0015] 13:04:08.658331 git.c:322               trace: built-in: git 'reflog' 'expire' '--all'  grpc.method=GarbageCollect grpc.request.repoPath="gitlab/gitlab-design.git" grpc.request.repoStorage=default grpc.request.topLevelGroup=gitlab grpc.service=gitaly.RepositoryService peer.address= span.kind=server system=grpc
+DEBU[0015] 13:04:08.669787 run-command.c:626       trace: run_command: 'repack' '-d' '-l' '-A' '--unpack-unreachable=2.weeks.ago'  grpc.method=GarbageCollect grpc.request.repoPath="gitlab/gitlab-design.git" grpc.request.repoStorage=default grpc.request.topLevelGroup=gitlab grpc.service=gitaly.RepositoryService peer.address= span.kind=server system=grpc
+DEBU[0015] 13:04:08.672589 git.c:322               trace: built-in: git 'repack' '-d' '-l' '-A' '--unpack-unreachable=2.weeks.ago'  grpc.method=GarbageCollect grpc.request.repoPath="gitlab/gitlab-design.git" grpc.request.repoStorage=default grpc.request.topLevelGroup=gitlab grpc.service=gitaly.RepositoryService peer.address= span.kind=server system=grpc
+DEBU[0015] 13:04:08.673185 run-command.c:626       trace: run_command: 'pack-objects' '--keep-true-parents' '--non-empty' '--all' '--reflog' '--indexed-objects' '--write-bitmap-index' '--unpack-unreachable=2.weeks.ago' '--local' '--delta-base-offset' 'objects/pack/.tmp-60361-pack'  grpc.method=GarbageCollect grpc.request.repoPath="gitlab/gitlab-design.git" grpc.request.repoStorage=default grpc.request.topLevelGroup=gitlab grpc.service=gitaly.RepositoryService peer.address= span.kind=server system=grpc
+DEBU[0015] 13:04:08.675955 git.c:322               trace: built-in: git 'pack-objects' '--keep-true-parents' '--non-empty' '--all' '--reflog' '--indexed-objects' '--write-bitmap-index' '--unpack-unreachable=2.weeks.ago' '--local' '--delta-base-offset' 'objects/pack/.tmp-60361-pack'  grpc.method=GarbageCollect grpc.request.repoPath="gitlab/gitlab-design.git" grpc.request.repoStorage=default grpc.request.topLevelGroup=gitlab grpc.service=gitaly.RepositoryService peer.address= span.kind=server system=grpc
+DEBU[0037] 13:04:30.737687 run-command.c:626       trace: run_command: 'prune' '--expire' '2.weeks.ago'  grpc.method=GarbageCollect grpc.request.repoPath="gitlab/gitlab-design.git" grpc.request.repoStorage=default grpc.request.topLevelGroup=gitlab grpc.service=gitaly.RepositoryService peer.address= span.kind=server system=grpc
+DEBU[0037] 13:04:30.753856 git.c:322               trace: built-in: git 'prune' '--expire' '2.weeks.ago'  grpc.method=GarbageCollect grpc.request.repoPath="gitlab/gitlab-design.git" grpc.request.repoStorage=default grpc.request.topLevelGroup=gitlab grpc.service=gitaly.RepositoryService peer.address= span.kind=server system=grpc
+DEBU[0037] 13:04:31.071140 run-command.c:626       trace: run_command: 'worktree' 'prune' '--expire' '3.months.ago'  grpc.method=GarbageCollect grpc.request.repoPath="gitlab/gitlab-design.git" grpc.request.repoStorage=default grpc.request.topLevelGroup=gitlab grpc.service=gitaly.RepositoryService peer.address= span.kind=server system=grpc
+DEBU[0037] 13:04:31.074736 git.c:322               trace: built-in: git 'worktree' 'prune' '--expire' '3.months.ago'  grpc.method=GarbageCollect grpc.request.repoPath="gitlab/gitlab-design.git" grpc.request.repoStorage=default grpc.request.topLevelGroup=gitlab grpc.service=gitaly.RepositoryService peer.address= span.kind=server system=grpc
+DEBU[0037] 13:04:31.076135 run-command.c:626       trace: run_command: 'rerere' 'gc'  grpc.method=GarbageCollect grpc.request.repoPath="gitlab/gitlab-design.git" grpc.request.repoStorage=default grpc.request.topLevelGroup=gitlab grpc.service=gitaly.RepositoryService peer.address= span.kind=server system=grpc
+DEBU[0037] 13:04:31.079286 git.c:322               trace: built-in: git 'rerere' 'gc'  grpc.method=GarbageCollect grpc.request.repoPath="gitlab/gitlab-design.git" grpc.request.repoStorage=default grpc.request.topLevelGroup=gitlab grpc.service=gitaly.RepositoryService peer.address= span.kind=server system=grpc
+```

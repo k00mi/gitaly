@@ -19,6 +19,22 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+// exportedEnvVars contains a list of environment variables
+// that are always exported to child processes on spawn
+var exportedEnvVars = []string{
+	"HOME",
+	"PATH",
+	"LD_LIBRARY_PATH",
+	"TZ",
+
+	// Export git tracing variables for easier debugging
+	"GIT_TRACE",
+	"GIT_TRACE_PACK_ACCESS",
+	"GIT_TRACE_PACKET",
+	"GIT_TRACE_PERFORMANCE",
+	"GIT_TRACE_SETUP",
+}
+
 // Command encapsulates operations with commands creates with NewCommand
 type Command struct {
 	io.Reader
@@ -67,13 +83,12 @@ func NewCommand(ctx context.Context, cmd *exec.Cmd, stdin io.Reader, stdout, std
 
 	// Explicitly set the environment for the command
 	cmd.Env = []string{
-		fmt.Sprintf("HOME=%s", os.Getenv("HOME")),
-		fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
-		fmt.Sprintf("LD_LIBRARY_PATH=%s", os.Getenv("LD_LIBRARY_PATH")),
-		fmt.Sprintf("TZ=%s", os.Getenv("TZ")),
 		"GIT_TERMINAL_PROMPT=0",
 	}
-	cmd.Env = append(cmd.Env, env...)
+
+	// Export env vars
+	cmd.Env = exportEnvironment(cmd.Env)
+
 	if dir, ok := objectdirhandler.ObjectDir(ctx); ok {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("GIT_OBJECT_DIRECTORY=%s", dir))
 	}
@@ -105,7 +120,7 @@ func NewCommand(ctx context.Context, cmd *exec.Cmd, stdin io.Reader, stdout, std
 		cmd.Stderr = stderr
 	} else {
 		// If we don't do something with cmd.Stderr, Git errors will be lost
-		cmd.Stderr = os.Stderr
+		cmd.Stderr = grpc_logrus.Extract(ctx).WriterLevel(log.InfoLevel)
 	}
 
 	if err := cmd.Start(); err != nil {
@@ -113,6 +128,16 @@ func NewCommand(ctx context.Context, cmd *exec.Cmd, stdin io.Reader, stdout, std
 	}
 
 	return command, nil
+}
+
+func exportEnvironment(env []string) []string {
+	for _, envVarName := range exportedEnvVars {
+		if val, ok := os.LookupEnv(envVarName); ok {
+			env = append(env, fmt.Sprintf("%s=%s", envVarName, val))
+		}
+	}
+
+	return env
 }
 
 // Close will send a SIGTERM signal to the process group

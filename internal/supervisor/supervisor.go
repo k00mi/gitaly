@@ -2,7 +2,6 @@ package supervisor
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -73,13 +72,12 @@ func New(name string, env []string, args []string, dir string) (*Process, error)
 	return p, nil
 }
 
-func (p *Process) start() (*exec.Cmd, error) {
+func (p *Process) start(logger *log.Entry) (*exec.Cmd, error) {
 	cmd := exec.Command(p.args[0], p.args[1:]...)
 	cmd.Env = p.env
 	cmd.Dir = p.dir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
+	cmd.Stdout = logger.WriterLevel(log.InfoLevel)
+	cmd.Stderr = logger.WriterLevel(log.InfoLevel)
 	return cmd, cmd.Start()
 }
 
@@ -101,7 +99,7 @@ func watch(p *Process) {
 			}
 		}
 
-		cmd, err := p.start()
+		cmd, err := p.start(logger)
 		if err != nil {
 			crashes++
 			logger.WithError(err).Error("start failed")
