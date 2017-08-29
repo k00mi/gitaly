@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.34.0
 
 - Fix bugs in RepositoryService.FetchRemote
   https://gitlab.com/gitlab-org/gitaly/merge_requests/300
