@@ -21,10 +21,10 @@ func (s *server) CommitsBetween(in *pb.CommitsBetweenRequest, stream pb.CommitSe
 		return grpc.Errorf(codes.InvalidArgument, "CommitsBetween: to: %v", err)
 	}
 
-	writer := newCommitsWriter(&commitsBetweenSender{stream})
+	sender := &commitsBetweenSender{stream}
 	revisionRange := fmt.Sprintf("%s..%s", in.GetFrom(), in.GetTo())
 
-	return gitLog(stream.Context(), writer, in.GetRepository(), []string{revisionRange}, nil, "--reverse")
+	return sendCommits(stream.Context(), sender, in.GetRepository(), []string{revisionRange}, nil, "--reverse")
 }
 
 func (sender *commitsBetweenSender) Send(commits []*pb.GitCommit) error {

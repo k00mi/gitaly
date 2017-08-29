@@ -1,77 +1,51 @@
 package commit
 
 import (
-	"bytes"
 	"context"
-	"strings"
 
-	"gitlab.com/gitlab-org/gitaly/internal/git"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
-	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
+	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 )
 
 type commitsSender interface {
 	Send([]*pb.GitCommit) error
 }
 
-var commitLogFormatFields = []string{
-	"%H",  // commit hash
-	"%s",  // subject
-	"%B",  // raw body (subject + body)
-	"%an", // author name
-	"%ae", // author email
-	"%aI", // author date, strict ISO 8601 format
-	"%cn", // committer name
-	"%ce", // committer email
-	"%cI", // committer date, strict ISO 8601 format
-	"%P",  // parent hashes
-}
-
-const (
-	fieldDelimiter                = "\x1f"
-	fieldDelimiterGitFormatString = "%x1f"
-)
-
-func gitLog(ctx context.Context, sender lines.Sender, repo *pb.Repository, revisions []string, paths []string, extraOptions ...string) error {
-	grpc_logrus.Extract(ctx).WithFields(log.Fields{
-		"Revision Range": revisions,
-	}).Debug("GitLog")
-
-	repoPath, err := helper.GetRepoPath(repo)
-	if err != nil {
-		return err
-	}
-
-	formatFlag := "--pretty=format:" + strings.Join(commitLogFormatFields, fieldDelimiterGitFormatString)
-
-	args := []string{
-		"--git-dir",
-		repoPath,
-		"log",
-		"-z", // use 0x00 as the entry terminator (instead of \n)
-		formatFlag,
-	}
-
-	args = append(args, extraOptions...)
-	args = append(args, revisions...)
-	args = append(args, "--")
-	args = append(args, paths...)
-
-	cmd, err := helper.GitCommandReader(ctx, args...)
+func sendCommits(ctx context.Context, sender commitsSender, repo *pb.Repository, revisionRange []string, paths []string, extraArgs ...string) error {
+	cmd, err := log.GitLogCommand(ctx, repo, revisionRange, paths, extraArgs...)
 	if err != nil {
 		return err
 	}
 	defer cmd.Close()
 
-	split := lines.ScanWithDelimiter([]byte("\x00"))
-	if err := lines.Send(cmd, sender, split); err != nil {
+	logParser := log.NewLogParser(cmd)
+
+	var commits []*pb.GitCommit
+	commitsSize := 0
+
+	for logParser.Parse() {
+		commit := logParser.Commit()
+		commitsSize += commitSize(commit)
+
+		if commitsSize >= maxMsgSize {
+			if err := sender.Send(commits); err != nil {
+				return err
+			}
+			commits = nil
+			commitsSize = 0
+		}
+
+		commits = append(commits, commit)
+	}
+
+	if err := logParser.Err(); err != nil {
+		return err
+	}
+
+	if err := sender.Send(commits); err != nil {
 		return err
 	}
 
@@ -84,30 +58,9 @@ func gitLog(ctx context.Context, sender lines.Sender, repo *pb.Repository, revis
 	return nil
 }
 
-func newCommitsWriter(sender commitsSender) lines.Sender {
-	return func(refs [][]byte) error {
-		var commits []*pb.GitCommit
-
-		for _, ref := range refs {
-			elements := bytes.Split(ref, []byte(fieldDelimiter))
-			if len(elements) != 10 {
-				return grpc.Errorf(codes.Internal, "error parsing ref %q", ref)
-			}
-			var parentIds []string
-			if len(elements[9]) > 0 { // Any parents?
-				parentIds = strings.Split(string(elements[9]), " ")
-			}
-
-			commit, err := git.NewCommit(elements[0], elements[1], elements[2],
-				elements[3], elements[4], elements[5], elements[6], elements[7],
-				elements[8], parentIds...)
-			if err != nil {
-				return err
-			}
-
-			commits = append(commits, commit)
-		}
-
-		return sender.Send(commits)
-	}
+func commitSize(commit *pb.GitCommit) int {
+	return len(commit.Id) + len(commit.Subject) + len(commit.Body) +
+		len(commit.Author.Name) + len(commit.Author.Email) + len(commit.Committer.Name) + len(commit.Committer.Email) +
+		8 + 8 + // Author and Committer timestamps are int64
+		len(commit.ParentIds)*40
 }

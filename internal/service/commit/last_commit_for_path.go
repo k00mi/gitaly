@@ -3,6 +3,8 @@ package commit
 import (
 	"fmt"
 
+	"gitlab.com/gitlab-org/gitaly/internal/git/log"
+
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"golang.org/x/net/context"
@@ -10,43 +12,27 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-type lastCommitForPathSender struct {
-	commit *pb.GitCommit
-}
-
 func (s *server) LastCommitForPath(ctx context.Context, in *pb.LastCommitForPathRequest) (*pb.LastCommitForPathResponse, error) {
 	if err := validateLastCommitForPathRequest(in); err != nil {
 		return nil, grpc.Errorf(codes.InvalidArgument, "LastCommitForPath: %v", err)
 	}
-
-	sender := &lastCommitForPathSender{}
-	writer := newCommitsWriter(sender)
 
 	path := string(in.GetPath())
 	if len(path) == 0 {
 		path = "."
 	}
 
-	revisions := []string{string(in.GetRevision())}
-	if err := gitLog(ctx, writer, in.GetRepository(), revisions, []string{path}, "--max-count=1"); err != nil {
+	commit, err := log.GetCommit(ctx, in.GetRepository(), string(in.GetRevision()), path)
+	if err != nil {
 		return nil, err
 	}
 
-	return &pb.LastCommitForPathResponse{Commit: sender.commit}, nil
+	return &pb.LastCommitForPathResponse{Commit: commit}, nil
 }
 
 func validateLastCommitForPathRequest(in *pb.LastCommitForPathRequest) error {
 	if len(in.Revision) == 0 {
 		return fmt.Errorf("empty Revision")
-	}
-	return nil
-}
-
-func (sender *lastCommitForPathSender) Send(commits []*pb.GitCommit) error {
-	// Since LastCommitForPath's response is not streamed this is not actually
-	// _sending_ anything. We just set the commit for the caller to return it.
-	if len(commits) > 0 {
-		sender.commit = commits[0]
 	}
 	return nil
 }

@@ -8,7 +8,10 @@ import (
 
 type server struct{}
 
-var defaultBranchName = ref.DefaultBranchName
+var (
+	defaultBranchName = ref.DefaultBranchName
+	maxMsgSize        = 1024 * 128 // 128 KiB
+)
 
 // NewServer creates a new instance of a grpc CommitServiceServer
 func NewServer() pb.CommitServiceServer {

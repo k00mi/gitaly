@@ -10,6 +10,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/ptypes/timestamp"
 
+	"github.com/stretchr/testify/require"
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
@@ -167,9 +168,7 @@ func assertContainsBranch(t *testing.T, branches []*pb.FindAllBranchesResponse_B
 
 	for _, b := range branches {
 		if bytes.Equal(branch.Name, b.Name) {
-			if !testhelper.CommitsEqual(branch.Target, b.Target) {
-				t.Errorf("Expected branch\n%v\ngot\n%v", branch, b)
-			}
+			require.Equal(t, branch.Target, b.Target, "mismatched targets")
 			return // Found the branch and it maches. Success!
 		}
 		branchNames = append(branchNames, b.Name)

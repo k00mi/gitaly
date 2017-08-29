@@ -20,7 +20,7 @@ type findAllCommitsSender struct {
 }
 
 func (s *server) FindAllCommits(in *pb.FindAllCommitsRequest, stream pb.CommitService_FindAllCommitsServer) error {
-	writer := newCommitsWriter(&findAllCommitsSender{stream})
+	sender := &findAllCommitsSender{stream}
 
 	var gitLogExtraOptions []string
 	if maxCount := in.GetMaxCount(); maxCount > 0 {
@@ -57,7 +57,7 @@ func (s *server) FindAllCommits(in *pb.FindAllCommitsRequest, stream pb.CommitSe
 		revisions = []string{string(in.GetRevision())}
 	}
 
-	return gitLog(stream.Context(), writer, in.GetRepository(), revisions, nil, gitLogExtraOptions...)
+	return sendCommits(stream.Context(), sender, in.GetRepository(), revisions, nil, gitLogExtraOptions...)
 }
 
 func (sender *findAllCommitsSender) Send(commits []*pb.GitCommit) error {

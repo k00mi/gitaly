@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/timestamp"
 
+	"github.com/stretchr/testify/require"
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"golang.org/x/net/context"
@@ -158,9 +159,7 @@ func TestSuccessfulCommitsBetween(t *testing.T) {
 			}
 
 			for i, commit := range commits {
-				if !testhelper.CommitsEqual(commit, expectedCommits[i]) {
-					t.Fatalf("Expected commit\n%v\ngot\n%v", expectedCommits[i], commit)
-				}
+				require.Equal(t, expectedCommits[i], commit, "mismatched commits")
 			}
 		})
 	}
