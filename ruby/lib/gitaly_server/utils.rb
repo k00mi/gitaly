@@ -13,14 +13,10 @@ module GitalyServer
 
     def gitaly_commit_author_from_rugged(rugged_author)
       Gitaly::CommitAuthor.new(
-        name: bytes!(rugged_author[:name]),
-        email: bytes!(rugged_author[:email]),
+        name: rugged_author[:name].b,
+        email: rugged_author[:email].b,
         date: Google::Protobuf::Timestamp.new(seconds: rugged_author[:time].to_i)
       )
-    end
-
-    def bytes!(string)
-      string.force_encoding('ASCII-8BIT')
     end
   end
 end

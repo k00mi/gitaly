@@ -13,7 +13,7 @@ module GitalyServer
       Gitaly::CreateBranchResponse.new(
         status: :OK,
         branch: Gitaly::Branch.new(
-          name: bytes!(rugged_ref.name),
+          name: rugged_ref.name.b,
           target_commit: gitaly_commit_from_rugged(rugged_ref.target),
         ),
       )
