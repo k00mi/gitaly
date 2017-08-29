@@ -53,29 +53,29 @@ Required GitLab Version: `vX.X`
 - [ ] Set Gitaly to 1% using the command `!feature-set gitaly_FEATURE_NAME 1` in [`#production`](https://gitlab.slack.com/messages/C101F3796/)
 - [ ] Leave running for at least 15 minutes
 - Monitor sentry, grafana and kibaba links above, every 5 minutes but preferably in "real-time"
-  - [ ] On usual activity, disable trial with `!feature-set gitaly_FEATURE_NAME false` in [`#production`](https://gitlab.slack.com/messages/C101F3796/)
+  - [ ] On unusual activity, disable trial with `!feature-set gitaly_FEATURE_NAME false` in [`#production`](https://gitlab.slack.com/messages/C101F3796/)
 
 ## 6. Low Impact Trial
 
 - [ ] Set Gitaly to 5% using the command `!feature-set gitaly_FEATURE_NAME 5` in [`#production`](https://gitlab.slack.com/messages/C101F3796/)
 - [ ] Leave running for at least 2 hours
 - Monitor sentry, grafana and kibaba links above, every 30 minutes
-  - [ ] On usual activity, disable trial with `!feature-set gitaly_FEATURE_NAME false` in [`#production`](https://gitlab.slack.com/messages/C101F3796/)
+  - [ ] On unusual activity, disable trial with `!feature-set gitaly_FEATURE_NAME false` in [`#production`](https://gitlab.slack.com/messages/C101F3796/)
 
 ## 7. Mid Impact Trial
 
 - [ ] Set Gitaly to 50% using the command `!feature-set gitaly_FEATURE_NAME 50` in [`#production`](https://gitlab.slack.com/messages/C101F3796/)
 - [ ] Leave running for at least 24 hours
 - Monitor sentry, grafana and kibaba links above, every few hours
-  - [ ] On usual activity, disable trial with `!feature-set gitaly_FEATURE_NAME false` in [`#production`](https://gitlab.slack.com/messages/C101F3796/)
+  - [ ] On unusual activity, disable trial with `!feature-set gitaly_FEATURE_NAME false` in [`#production`](https://gitlab.slack.com/messages/C101F3796/)
 
 
 ## 8. Full Impact Trial
 
-- [ ] Set Gitaly to 100% using the command `!feature-set gitaly_FEATURE_NAME 50` in [`#production`](https://gitlab.slack.com/messages/C101F3796/)
+- [ ] Set Gitaly to 100% using the command `!feature-set gitaly_FEATURE_NAME 100` in [`#production`](https://gitlab.slack.com/messages/C101F3796/)
 - [ ] Leave running for at least a week
 - Monitor sentry, grafana and kibaba links above daily
-  - [ ] On usual activity, disable trial with `!feature-set gitaly_FEATURE_NAME false` in [`#production`](https://gitlab.slack.com/messages/C101F3796/)
+  - [ ] On unusual activity, disable trial with `!feature-set gitaly_FEATURE_NAME false` in [`#production`](https://gitlab.slack.com/messages/C101F3796/)
 
 
 ## 9. Outcome
