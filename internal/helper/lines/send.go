@@ -2,6 +2,7 @@ package lines
 
 import (
 	"bufio"
+	"bytes"
 	"io"
 )
 
@@ -17,7 +18,7 @@ type writer struct {
 	sender Sender
 	size   int
 	lines  [][]byte
-	split  bufio.SplitFunc
+	delim  []byte
 }
 
 // CopyAndAppend adds a newly allocated copy of `e` to the `s` slice. Useful to
@@ -63,26 +64,49 @@ func (w *writer) addLine(p []byte) error {
 // consume reads from an `io.Reader` and writes each line to the buffer. It
 // flushes after being done reading.
 func (w *writer) consume(r io.Reader) error {
-	scanner := bufio.NewScanner(r)
+	buf := bufio.NewReader(r)
 
-	if w.split != nil {
-		scanner.Split(w.split)
-	}
+	for finished := false; !finished; {
+		var line []byte
 
-	for scanner.Scan() {
-		if err := w.addLine(scanner.Bytes()); err != nil {
+		for {
+			// delim can be multiple bytes, so we read till the end byte of it ...
+			chunk, err := buf.ReadBytes(w.delim[len(w.delim)-1])
+			if err != nil && err != io.EOF {
+				return err
+			}
+
+			line = append(line, chunk...)
+			// ... then we check if the last bytes of line are the same as delim
+			if bytes.HasSuffix(line, w.delim) {
+				break
+			}
+
+			if err == io.EOF {
+				finished = true
+				break
+			}
+		}
+
+		line = bytes.TrimRight(line, string(w.delim))
+		if len(line) == 0 {
+			break
+		}
+
+		if err := w.addLine(line); err != nil {
 			return err
 		}
 	}
-	if err := scanner.Err(); err != nil {
-		return err
-	}
+
 	return w.flush()
 }
 
-// Send reads from `r` and handles the buffered lines using `sender`, optionally
-// using the SplitFunc `split` for the Scanner
-func Send(r io.Reader, sender Sender, split bufio.SplitFunc) error {
-	writer := &writer{sender: sender, split: split}
+// Send reads output from `r`, splits it at `delim`, then handles the buffered lines using `sender`.
+func Send(r io.Reader, sender Sender, delim []byte) error {
+	if len(delim) == 0 {
+		delim = []byte{'\n'}
+	}
+
+	writer := &writer{sender: sender, delim: delim}
 	return writer.consume(r)
 }

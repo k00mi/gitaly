@@ -27,8 +27,8 @@ var (
 )
 
 type findRefsOpts struct {
-	cmdArgs  []string
-	splitter bufio.SplitFunc
+	cmdArgs []string
+	delim   []byte
 }
 
 func findRefs(ctx context.Context, writer lines.Sender, repo *pb.Repository, patterns []string, opts *findRefsOpts) error {
@@ -57,7 +57,7 @@ func findRefs(ctx context.Context, writer lines.Sender, repo *pb.Repository, pat
 	}
 	defer cmd.Close()
 
-	if err := lines.Send(cmd, writer, opts.splitter); err != nil {
+	if err := lines.Send(cmd, writer, opts.delim); err != nil {
 		return err
 	}
 
@@ -76,8 +76,8 @@ func (s *server) FindAllTagNames(in *pb.FindAllTagNamesRequest, stream pb.RefSer
 
 func (s *server) FindAllTags(in *pb.FindAllTagsRequest, stream pb.RefService_FindAllTagsServer) error {
 	opts := &findRefsOpts{
-		cmdArgs:  []string{"--format=" + strings.Join(tagsFormatFields, "%1f") + "%00"},
-		splitter: lines.ScanWithDelimiter([]byte{'\x00', '\n'}),
+		cmdArgs: []string{"--format=" + strings.Join(tagsFormatFields, "%1f") + "%00"},
+		delim:   []byte("\x00\n"),
 	}
 
 	repo := in.GetRepository()

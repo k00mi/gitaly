@@ -4,6 +4,8 @@ UNRELEASED
 
 - Implement CommitService.CommitStats
   https://gitlab.com/gitlab-org/gitaly/merge_requests/312
+- Use bufio.Reader instead of bufio.Scanner for lines.Send
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/303
 
 v0.34.0
 
