@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.36.0
 
 - Terminate commands when their context cancels
   https://gitlab.com/gitlab-org/gitaly/merge_requests/318
