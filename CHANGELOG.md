@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.35.0
 
 - Implement CommitService.CommitStats
   https://gitlab.com/gitlab-org/gitaly/merge_requests/312
