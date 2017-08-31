@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.37.0
 
 - Implement FindBranch RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/315
