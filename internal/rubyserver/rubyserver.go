@@ -111,6 +111,14 @@ func DiffServiceClient(ctx context.Context) (pb.DiffServiceClient, error) {
 	return pb.NewDiffServiceClient(conn), err
 }
 
+// RefServiceClient returns a RefServiceClient instance that is
+// configured to connect to the running Ruby server. This assumes Start()
+// has been called already.
+func RefServiceClient(ctx context.Context) (pb.RefServiceClient, error) {
+	conn, err := newConnection(ctx)
+	return pb.NewRefServiceClient(conn), err
+}
+
 func newConnection(ctx context.Context) (*grpc.ClientConn, error) {
 	dialCtx, cancel := context.WithTimeout(ctx, ConnectTimeout)
 	defer cancel()
