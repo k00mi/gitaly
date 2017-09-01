@@ -14,7 +14,7 @@ export GITALY_TEST_RUBY_DIR := $(BUILD_DIR)/ruby
 BUILDTIME = $(shell date -u +%Y%m%d.%H%M%S)
 VERSION_PREFIXED = $(shell git describe)
 VERSION = $(VERSION_PREFIXED:v%=%)
-LDFLAGS = -ldflags '-X $(PKG)/internal/version.version=$(VERSION) -X $(PKG)/internal/version.buildtime=$(BUILDTIME)'
+GO_LDFLAGS = -ldflags '-X $(PKG)/internal/version.version=$(VERSION) -X $(PKG)/internal/version.buildtime=$(BUILDTIME)'
 
 export GOPATH := $(TARGET_DIR)
 export PATH := $(GOPATH)/bin:$(PATH)
@@ -46,7 +46,7 @@ $(TARGET_SETUP):
 	touch "$(TARGET_SETUP)"
 
 build:	.ruby-bundle $(TARGET_SETUP)
-	go install $(LDFLAGS) $(COMMAND_PACKAGES)
+	go install $(GO_LDFLAGS) $(COMMAND_PACKAGES)
 	cp $(foreach cmd,$(COMMANDS),$(BIN_BUILD_DIR)/$(cmd)) $(BUILD_DIR)/
 
 .ruby-bundle:	ruby/Gemfile.lock ruby/Gemfile
