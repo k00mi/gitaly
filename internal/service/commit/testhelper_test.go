@@ -30,6 +30,8 @@ func TestMain(m *testing.M) {
 }
 
 func testMain(m *testing.M) int {
+	defer testhelper.MustHaveNoChildProcess()
+
 	testhelper.ConfigureRuby()
 	if err := linguist.LoadColors(); err != nil {
 		log.Fatal(err)
