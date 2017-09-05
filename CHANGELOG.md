@@ -6,6 +6,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/324
 - Add missing cmd.Close in log.GetCommit
   https://gitlab.com/gitlab-org/gitaly/merge_requests/326
+- Populate `flat_path` field of `TreeEntry`s
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/328
 
 v0.37.0
 

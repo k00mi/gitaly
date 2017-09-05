@@ -85,7 +85,8 @@ func newCommitServiceClient(t *testing.T, serviceSocketPath string) (pb.CommitSe
 
 func treeEntriesEqual(a, b *pb.TreeEntry) bool {
 	return a.CommitOid == b.CommitOid && a.Oid == b.Oid && a.Mode == b.Mode &&
-		bytes.Equal(a.Path, b.Path) && a.RootOid == b.RootOid && a.Type == b.Type
+		bytes.Equal(a.Path, b.Path) && bytes.Equal(a.FlatPath, b.FlatPath) &&
+		a.RootOid == b.RootOid && a.Type == b.Type
 }
 
 func dummyCommitAuthor(ts int64) *pb.CommitAuthor {
