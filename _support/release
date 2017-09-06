@@ -44,7 +44,7 @@ def main(version)
   $stdout.flush
   abort unless $stdin.gets.chomp == 'Yes'
 
-  run!(%W[echo git push origin HEAD #{tag_name}])
+  run!(%W[git push origin HEAD #{tag_name}])
 end
 
 def write_version_file(version)
