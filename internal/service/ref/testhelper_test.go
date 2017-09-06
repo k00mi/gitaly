@@ -74,6 +74,8 @@ func TestMain(m *testing.M) {
 	os.Exit(testMain(m))
 }
 
+var rubyServer *rubyserver.Server
+
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
@@ -86,11 +88,11 @@ func testMain(m *testing.M) int {
 	}
 
 	testhelper.ConfigureRuby()
-	ruby, err := rubyserver.Start()
+	rubyServer, err = rubyserver.Start()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer ruby.Stop()
+	defer rubyServer.Stop()
 
 	// Use 100 bytes as the maximum message size to test that fragmenting the
 	// ref list works correctly
@@ -108,7 +110,7 @@ func runRefServiceServer(t *testing.T) *grpc.Server {
 		t.Fatal(err)
 	}
 
-	pb.RegisterRefServiceServer(grpcServer, &server{})
+	pb.RegisterRefServiceServer(grpcServer, &server{rubyServer})
 	reflection.Register(grpcServer)
 
 	go grpcServer.Serve(listener)

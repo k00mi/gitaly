@@ -29,6 +29,8 @@ func TestMain(m *testing.M) {
 	os.Exit(testMain(m))
 }
 
+var rubyServer *rubyserver.Server
+
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
@@ -37,11 +39,12 @@ func testMain(m *testing.M) int {
 		log.Fatal(err)
 	}
 
-	ruby, err := rubyserver.Start()
+	var err error
+	rubyServer, err = rubyserver.Start()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer ruby.Stop()
+	defer rubyServer.Stop()
 	return m.Run()
 }
 
@@ -61,7 +64,7 @@ func startTestServices(t *testing.T) *grpc.Server {
 		t.Fatal("failed to start server")
 	}
 
-	pb.RegisterCommitServiceServer(server, NewServer())
+	pb.RegisterCommitServiceServer(server, NewServer(rubyServer))
 	reflection.Register(server)
 
 	go server.Serve(listener)

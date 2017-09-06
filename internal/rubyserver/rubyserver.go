@@ -70,11 +70,19 @@ func socketPath() string {
 // Server represents a gitaly-ruby helper process.
 type Server struct {
 	*supervisor.Process
+	clientConnMu sync.RWMutex
+	clientConn   *grpc.ClientConn
 }
 
 // Stop shuts down the gitaly-ruby helper process and cleans up resources.
 func (s *Server) Stop() {
 	if s != nil {
+		s.clientConnMu.RLock()
+		defer s.clientConnMu.RUnlock()
+		if s.clientConn != nil {
+			s.clientConn.Close()
+		}
+
 		if s.Process != nil {
 			s.Process.Stop()
 		}
@@ -99,31 +107,57 @@ func Start() (*Server, error) {
 // CommitServiceClient returns a CommitServiceClient instance that is
 // configured to connect to the running Ruby server. This assumes Start()
 // has been called already.
-func CommitServiceClient(ctx context.Context) (pb.CommitServiceClient, error) {
-	conn, err := newConnection(ctx)
+func (s *Server) CommitServiceClient(ctx context.Context) (pb.CommitServiceClient, error) {
+	conn, err := s.getConnection(ctx)
 	return pb.NewCommitServiceClient(conn), err
 }
 
 // DiffServiceClient returns a DiffServiceClient instance that is
 // configured to connect to the running Ruby server. This assumes Start()
 // has been called already.
-func DiffServiceClient(ctx context.Context) (pb.DiffServiceClient, error) {
-	conn, err := newConnection(ctx)
+func (s *Server) DiffServiceClient(ctx context.Context) (pb.DiffServiceClient, error) {
+	conn, err := s.getConnection(ctx)
 	return pb.NewDiffServiceClient(conn), err
 }
 
 // RefServiceClient returns a RefServiceClient instance that is
 // configured to connect to the running Ruby server. This assumes Start()
 // has been called already.
-func RefServiceClient(ctx context.Context) (pb.RefServiceClient, error) {
-	conn, err := newConnection(ctx)
+func (s *Server) RefServiceClient(ctx context.Context) (pb.RefServiceClient, error) {
+	conn, err := s.getConnection(ctx)
 	return pb.NewRefServiceClient(conn), err
 }
 
-func newConnection(ctx context.Context) (*grpc.ClientConn, error) {
+func (s *Server) getConnection(ctx context.Context) (*grpc.ClientConn, error) {
+	s.clientConnMu.RLock()
+	conn := s.clientConn
+	s.clientConnMu.RUnlock()
+
+	if conn != nil {
+		return conn, nil
+	}
+
+	return s.createConnection(ctx)
+}
+
+func (s *Server) createConnection(ctx context.Context) (*grpc.ClientConn, error) {
+	s.clientConnMu.Lock()
+	defer s.clientConnMu.Unlock()
+
+	if conn := s.clientConn; conn != nil {
+		return conn, nil
+	}
+
 	dialCtx, cancel := context.WithTimeout(ctx, ConnectTimeout)
 	defer cancel()
-	return grpc.DialContext(dialCtx, socketPath(), dialOptions()...)
+
+	conn, err := grpc.DialContext(dialCtx, socketPath(), dialOptions()...)
+	if err != nil {
+		return nil, err
+	}
+
+	s.clientConn = conn
+	return s.clientConn, nil
 }
 
 func dialOptions() []grpc.DialOption {
