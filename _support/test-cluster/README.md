@@ -3,7 +3,8 @@
 This directory contains a
 [docker-compose.yml](https://docs.docker.com/compose/) and Omnibus
 GitLab configuration files to boot GitLab with multiple Gitaly servers
-behind it. This is meant for testing purposes.
+behind it. This setup is meant for testing purposes only and SHOULD NOT be used
+in production environments because it handles secrets in an unsafe way.
 
 Boot the cluster with `docker-compose up`. After some time you can log
 in to your GitLab instance at `localhost:8080`.
