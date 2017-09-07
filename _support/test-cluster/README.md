@@ -9,5 +9,7 @@ in production environments because it handles secrets in an unsafe way.
 Boot the cluster with `docker-compose up`. After some time you can log
 in to your GitLab instance at `localhost:8080`.
 
-Edit `docker-compose.yml` if you want to use a different GitLab
-version from what is currently in there.
+This template uses nightly docker images. To see what GitLab version you are
+currently running, run
+`docker-compose exec app1 grep gitlab-ce /opt/gitlab/version-manifest.txt`. To
+update to the latest nightly images run `docker-compose pull`.
