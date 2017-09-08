@@ -4,6 +4,8 @@ UNRELEASED
 
 - Reimplement FindAllTags RPC in Ruby
   https://gitlab.com/gitlab-org/gitaly/merge_requests/334
+- Re-use gitaly-ruby client connection
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/330
 
 v0.38.0
 
