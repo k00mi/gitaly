@@ -40,9 +40,9 @@ func GetRepoPath(repo *pb.Repository) (string, error) {
 // returned when either the storage can't be found or the path includes
 // constructs trying to perform directory traversal.
 func GetPath(repo *pb.Repository) (string, error) {
-	storagePath, ok := config.StoragePath(repo.GetStorageName())
-	if !ok {
-		return "", grpc.Errorf(codes.InvalidArgument, "GetPath: invalid storage name '%s'", repo.GetStorageName())
+	storagePath, err := GetStorageByName(repo.GetStorageName())
+	if err != nil {
+		return "", err
 	}
 
 	if _, err := os.Stat(storagePath); err != nil {
@@ -64,6 +64,17 @@ func GetPath(repo *pb.Repository) (string, error) {
 	}
 
 	return path.Join(storagePath, relativePath), nil
+}
+
+// GetStorageByName will return the path for the storage, which is fetched by
+// its key. An error is return if it cannot be found.
+func GetStorageByName(storageName string) (string, error) {
+	storagePath, ok := config.StoragePath(storageName)
+	if !ok {
+		return "", grpc.Errorf(codes.InvalidArgument, "Storage can not be found by name '%s'", storageName)
+	}
+
+	return storagePath, nil
 }
 
 // IsGitDirectory checks if the directory passed as first argument looks like
