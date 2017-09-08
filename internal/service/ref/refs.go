@@ -79,7 +79,7 @@ func (s *server) FindAllTagNames(in *pb.FindAllTagNamesRequest, stream pb.RefSer
 func (s *server) FindAllTags(in *pb.FindAllTagsRequest, stream pb.RefService_FindAllTagsServer) error {
 	ctx := stream.Context()
 
-	client, err := rubyserver.RefServiceClient(ctx)
+	client, err := s.RefServiceClient(ctx)
 	if err != nil {
 		return err
 	}
