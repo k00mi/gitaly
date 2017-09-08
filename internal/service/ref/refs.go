@@ -15,6 +15,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
+	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"golang.org/x/net/context"
 )
 
@@ -76,13 +77,30 @@ func (s *server) FindAllTagNames(in *pb.FindAllTagNamesRequest, stream pb.RefSer
 }
 
 func (s *server) FindAllTags(in *pb.FindAllTagsRequest, stream pb.RefService_FindAllTagsServer) error {
-	opts := &findRefsOpts{
-		cmdArgs: []string{"--format=" + strings.Join(tagsFormatFields, "%1f") + "%00"},
-		delim:   []byte("\x00\n"),
+	ctx := stream.Context()
+
+	client, err := rubyserver.RefServiceClient(ctx)
+	if err != nil {
+		return err
 	}
 
-	repo := in.GetRepository()
-	return findRefs(stream.Context(), newFindAllTagsWriter(repo, stream), repo, []string{"refs/tags"}, opts)
+	clientCtx, err := rubyserver.SetHeaders(ctx, in.GetRepository())
+	if err != nil {
+		return err
+	}
+
+	rubyStream, err := client.FindAllTags(clientCtx, in)
+	if err != nil {
+		return err
+	}
+
+	return rubyserver.Proxy(func() error {
+		resp, err := rubyStream.Recv()
+		if err != nil {
+			return err
+		}
+		return stream.Send(resp)
+	})
 }
 
 func _findBranchNames(ctx context.Context, repoPath string) ([][]byte, error) {
