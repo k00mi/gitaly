@@ -6,6 +6,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/334
 - Re-use gitaly-ruby client connection
   https://gitlab.com/gitlab-org/gitaly/merge_requests/330
+- Fix encoding-bug in GitalyServer#gitaly_commit_from_rugged
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/337
 
 v0.38.0
 
