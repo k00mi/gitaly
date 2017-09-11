@@ -1,7 +1,10 @@
 # Gitaly changelog
 
-v0.39.0
+UNRELEASED
+- Use context cancellation instead of command.Close
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/332
 
+v0.39.0
 - Reimplement FindAllTags RPC in Ruby
   https://gitlab.com/gitlab-org/gitaly/merge_requests/334
 - Re-use gitaly-ruby client connection
