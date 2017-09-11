@@ -69,6 +69,8 @@ It has these top-level messages:
 	PostReceiveResponse
 	UserCreateBranchRequest
 	UserCreateBranchResponse
+	UserDeleteBranchRequest
+	UserDeleteBranchResponse
 	UserDeleteTagRequest
 	UserDeleteTagResponse
 	FindDefaultBranchNameRequest

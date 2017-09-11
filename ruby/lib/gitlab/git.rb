@@ -65,12 +65,13 @@ end
 module Gitlab
   module Git
     class Repository
-      def self.from_call(_call)
-        new(GitalyServer.repo_path(_call))
+      def self.from_call(call)
+        new(GitalyServer.repo_path(call), GitalyServer.gl_repository(call))
       end
 
-      def initialize(path)
+      def initialize(path, gl_repository)
         @path = path
+        @gl_repository = gl_repository
         @rugged = Rugged::Repository.new(path)
         @attributes = Gitlab::Git::Attributes.new(path)
       end

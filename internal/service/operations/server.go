@@ -2,10 +2,9 @@ package operations
 
 import (
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
+	"golang.org/x/net/context"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-
-	"golang.org/x/net/context"
 )
 
 type server struct {
@@ -17,6 +16,7 @@ func NewServer(rs *rubyserver.Server) pb.OperationServiceServer {
 	return &server{rs}
 }
 
-func (s *server) UserCreateBranch(ctx context.Context, req *pb.UserCreateBranchRequest) (*pb.UserCreateBranchResponse, error) {
+// UserDeleteBranch is a stub
+func (s *server) UserDeleteBranch(ctx context.Context, req *pb.UserDeleteBranchRequest) (*pb.UserDeleteBranchResponse, error) {
 	return nil, nil
 }

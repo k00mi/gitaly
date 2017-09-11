@@ -11,9 +11,14 @@ require_relative 'gitaly_server/repository_service.rb'
 
 module GitalyServer
   REPO_PATH_HEADER = 'gitaly-repo-path'.freeze
+  GL_REPOSITORY_HEADER = 'gitaly-gl-repository'.freeze
 
-  def self.repo_path(_call)
-    _call.metadata.fetch(REPO_PATH_HEADER)
+  def self.repo_path(call)
+    call.metadata.fetch(REPO_PATH_HEADER)
+  end
+
+  def self.gl_repository(call)
+    call.metadata.fetch(GL_REPOSITORY_HEADER)
   end
 
   def self.register_handlers(server)

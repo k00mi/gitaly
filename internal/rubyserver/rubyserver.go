@@ -27,7 +27,8 @@ import (
 )
 
 const (
-	repoPathHeader = "gitaly-repo-path"
+	repoPathHeader     = "gitaly-repo-path"
+	glRepositoryHeader = "gitaly-gl-repository"
 )
 
 var (
@@ -199,7 +200,8 @@ func SetHeaders(ctx context.Context, repo *pb.Repository) (context.Context, erro
 		return nil, err
 	}
 
-	newCtx := metadata.NewOutgoingContext(ctx, metadata.Pairs(repoPathHeader, repoPath))
+	md := metadata.Pairs(repoPathHeader, repoPath, glRepositoryHeader, repo.GlRepository)
+	newCtx := metadata.NewOutgoingContext(ctx, md)
 	return newCtx, nil
 }
 
