@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.39.0
 
 - Reimplement FindAllTags RPC in Ruby
   https://gitlab.com/gitlab-org/gitaly/merge_requests/334
