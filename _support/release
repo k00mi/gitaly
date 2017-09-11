@@ -21,7 +21,7 @@ def main(version)
   end
 
   run!(%w[make verify])
-  run!(%w[make test])
+  run!(%w[make clean test])
 
   puts 'Testing for changed files'
   run!(%w[git diff --quiet --exit-code])
