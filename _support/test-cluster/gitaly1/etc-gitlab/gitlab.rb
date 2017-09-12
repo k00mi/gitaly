@@ -18,9 +18,6 @@ nginx['enable'] = false
 gitlab_rails['rake_cache_clear'] = false
 gitlab_rails['auto_migrate'] = false
 
-gitlab_rails['redis_host'] = 'app1'
-gitlab_rails['redis_port'] = 6379
-
 # Use the remote internal API
 gitlab_rails['internal_api_url'] = 'http://app1:80'
 
