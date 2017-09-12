@@ -25,4 +25,4 @@ gitlab_rails['redis_port'] = 6379
 gitlab_rails['internal_api_url'] = 'http://app1:80'
 
 # We have to use the same token in all hosts for internal API authentication
-gitlab_shell['secret_token'] = 'd07589078736b802db1b8aae2e61d8ba694c15837a7a015909c34b3f456417c231fffdb21352052620f9539c77a4ffb5d7c7050eb14d5f336585e9796df7bc1e'
+gitlab_shell['secret_token'] = 'f4kef1xedt0ken'
