@@ -325,7 +325,15 @@ func parseRawLine(line []byte, diff *Diff) error {
 }
 
 func (parser *Parser) consumeChunkLine() {
-	line, err := parser.patchReader.ReadBytes('\n')
+	var line []byte
+	var err error
+
+	if parser.finished {
+		line, err = ioutil.ReadAll(parser.patchReader)
+	} else {
+		line, err = parser.patchReader.ReadBytes('\n')
+	}
+
 	if err != nil && err != io.EOF {
 		parser.err = fmt.Errorf("read chunk line: %v", err)
 		return
