@@ -11,6 +11,7 @@ It is generated from these files:
 	diff.proto
 	namespace.proto
 	notifications.proto
+	operations.proto
 	ref.proto
 	repository-service.proto
 	shared.proto
@@ -66,6 +67,8 @@ It has these top-level messages:
 	RenameNamespaceResponse
 	PostReceiveRequest
 	PostReceiveResponse
+	UserCreateBranchRequest
+	UserCreateBranchResponse
 	FindDefaultBranchNameRequest
 	FindDefaultBranchNameResponse
 	FindAllBranchNamesRequest
@@ -109,6 +112,7 @@ It has these top-level messages:
 	CommitAuthor
 	ExitStatus
 	Branch
+	User
 	InfoRefsRequest
 	InfoRefsResponse
 	PostUploadPackRequest
