@@ -20,7 +20,7 @@ func TestSuccessfulCommitsBetween(t *testing.T) {
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
 	from := []byte("498214de67004b1da3d820901307bed2a68a8ef6") // branch-merged
-	to := []byte("e63f41fe459e62e1228fcef60d7189127aeba95a")   // master
+	to := []byte("ba3343bc4fa403a8dfbfcab7fc1a8c29ee34bd69")   // spooky-stuff
 	fakeHash := []byte("f63f41fe459e62e1228fcef60d7189127aeba95a")
 	fakeRef := []byte("non-existing-ref")
 	expectedCommits := []*pb.GitCommit{
@@ -77,6 +77,23 @@ func TestSuccessfulCommitsBetween(t *testing.T) {
 				"b83d6e391c22777fca1ed3012fce84f633d7fed0",
 				"4a24d82dbca5c11c61556f3b35ca472b7463187e",
 			},
+		},
+		{
+			Id:      "ba3343bc4fa403a8dfbfcab7fc1a8c29ee34bd69",
+			Subject: []byte("Weird commit date"),
+			Body:    []byte("Weird commit date\n"),
+			Author: &pb.CommitAuthor{
+				Name:  []byte("Alejandro Rodríguez"),
+				Email: []byte("alejorro70@gmail.com"),
+				// Not the actual commit date, but the biggest we can represent
+				Date: &timestamp.Timestamp{Seconds: 9223371974719179007},
+			},
+			Committer: &pb.CommitAuthor{
+				Name:  []byte("Alejandro Rodríguez"),
+				Email: []byte("alejorro70@gmail.com"),
+				Date:  &timestamp.Timestamp{Seconds: 9223371974719179007},
+			},
+			ParentIds: []string{"e63f41fe459e62e1228fcef60d7189127aeba95a"},
 		},
 	}
 	testCases := []struct {
