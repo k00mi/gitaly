@@ -53,31 +53,21 @@ func Color(language string) string {
 
 // LoadColors loads the name->color map from the Linguist gem.
 func LoadColors() error {
-	tempFile, err := ioutil.TempFile("", "gitaly-linguist")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tempFile.Name())
-
-	if err := tempFile.Close(); err != nil {
-		return err
-	}
-
-	// Replace the tempfile with a symlink to the directory where
-	// github-linguist is installed. We don't write the path to stdout
-	// because Bundler sometimes writes garbage to stdout.
-	rubyScript := `FileUtils.ln_sf(Bundler.rubygems.find_name('github-linguist').first.full_gem_path, ARGV.first)`
-	cmd := exec.Command("bundle", "exec", "ruby", "-r", "fileutils", "-e", rubyScript, tempFile.Name())
+	// We can't use 'bundle show' because that sometimes prints garbage on
+	// its stdout.
+	rubyScript := `print Bundler.rubygems.find_name('github-linguist').first.full_gem_path`
+	cmd := exec.Command("bundle", "exec", "ruby", "-e", rubyScript)
 	cmd.Dir = config.Config.Ruby.Dir
 
-	if err := cmd.Run(); err != nil {
+	linguistPath, err := cmd.Output()
+	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			err = fmt.Errorf("%v; stderr: %q", exitError, exitError.Stderr)
 		}
 		return err
 	}
 
-	languageJSON, err := ioutil.ReadFile(path.Join(tempFile.Name(), "lib/linguist/languages.json"))
+	languageJSON, err := ioutil.ReadFile(path.Join(string(linguistPath), "lib/linguist/languages.json"))
 	if err != nil {
 		return err
 	}
