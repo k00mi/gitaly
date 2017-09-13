@@ -7,6 +7,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/339
 - Fix diff parsing when the last 10 bytes of a stream contain newlines
   https://gitlab.com/gitlab-org/gitaly/merge_requests/348
+- Consume diff binary notice as a patch
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/349
 
 v0.39.0
 - Reimplement FindAllTags RPC in Ruby

@@ -134,13 +134,11 @@ func (parser *Parser) Parse() bool {
 
 		if bytes.HasPrefix(line, []byte("diff --git")) {
 			break
-		} else if bytes.HasPrefix(line, []byte("Binary")) {
-			parser.consumeBinaryNotice()
 		} else if bytes.HasPrefix(line, []byte("@@")) {
 			parser.consumeChunkLine()
 		} else if helper.ByteSliceHasAnyPrefix(line, "---", "+++") {
 			parser.consumeLine(true)
-		} else if helper.ByteSliceHasAnyPrefix(line, "-", "+", " ", "\\") {
+		} else if helper.ByteSliceHasAnyPrefix(line, "-", "+", " ", "\\", "Binary") {
 			parser.consumeChunkLine()
 		} else {
 			parser.consumeLine(false)
@@ -339,20 +337,14 @@ func (parser *Parser) consumeChunkLine() {
 		return
 	}
 
+	if bytes.HasPrefix(line, []byte("Binary")) {
+		parser.currentDiff.Binary = true
+	}
+
 	parser.currentDiff.Patch = append(parser.currentDiff.Patch, line...)
 	parser.currentDiff.lineCount++
 	parser.linesProcessed++
 	parser.bytesProcessed += len(line)
-}
-
-func (parser *Parser) consumeBinaryNotice() {
-	_, err := parser.patchReader.ReadBytes('\n')
-	if err != nil && err != io.EOF {
-		parser.err = fmt.Errorf("read binary notice: %v", err)
-		return
-	}
-
-	parser.currentDiff.Binary = true
 }
 
 func (parser *Parser) consumeLine(updateStats bool) {

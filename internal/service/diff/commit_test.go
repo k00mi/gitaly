@@ -71,6 +71,7 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 			FromPath: []byte("gitaly/logo-white.png"),
 			ToPath:   []byte("gitaly/logo-white.png"),
 			Binary:   true,
+			Patch:    []byte("Binary files /dev/null and b/gitaly/logo-white.png differ\n"),
 		},
 		{
 			FromID:   "ead5a0eee1391308803cfebd8a2a8530495645eb",
