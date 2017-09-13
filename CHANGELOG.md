@@ -3,6 +3,8 @@
 UNRELEASED
 - Use context cancellation instead of command.Close
   https://gitlab.com/gitlab-org/gitaly/merge_requests/332
+- Fix LastCommitForPath handling of tree root
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/350
 - Don't use 'bundle show' to find Linguist
   https://gitlab.com/gitlab-org/gitaly/merge_requests/339
 - Fix diff parsing when the last 10 bytes of a stream contain newlines

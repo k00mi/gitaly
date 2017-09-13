@@ -18,7 +18,7 @@ func (s *server) LastCommitForPath(ctx context.Context, in *pb.LastCommitForPath
 	}
 
 	path := string(in.GetPath())
-	if len(path) == 0 {
+	if len(path) == 0 || path == "/" {
 		path = "."
 	}
 
