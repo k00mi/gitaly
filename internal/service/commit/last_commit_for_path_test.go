@@ -55,6 +55,12 @@ func TestSuccessfulLastCommitForPathRequest(t *testing.T) {
 			commit:   commit,
 		},
 		{
+			desc:     "path is '/'",
+			revision: "570e7b2abdd848b95f2f578043fc23bd6f6fd24d",
+			commit:   commit,
+			path:     []byte("/"),
+		},
+		{
 			desc:     "file does not exist in this commit",
 			revision: "570e7b2abdd848b95f2f578043fc23bd6f6fd24d",
 			path:     []byte("files/lfs/lfs_object.iso"),
