@@ -21,7 +21,7 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 
 	client, conn := newDiffClient(t)
 	defer conn.Close()
-	rightCommit := "742518b2be68fc750bb4c357c0df821a88113286"
+	rightCommit := "e395f646b1499e8e0279445fc99a0596a65fab7e"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
 	rpcRequest := &pb.CommitDiffRequest{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: leftCommit, IgnoreWhitespaceChange: false}
 
@@ -148,6 +148,16 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 			FromPath: []byte("gitaly/テスト.txt"),
 			ToPath:   []byte("gitaly/テスト.txt"),
 			Binary:   false,
+		},
+		{
+			FromID:   "0000000000000000000000000000000000000000",
+			ToID:     "b1e67221afe8461efd244b487afca22d46b95eb8",
+			OldMode:  0,
+			NewMode:  0100644,
+			FromPath: []byte("z-short-diff"),
+			ToPath:   []byte("z-short-diff"),
+			Binary:   false,
+			Patch:    testhelper.MustReadFile(t, "testdata/z-short-diff-chunks.txt"),
 		},
 	}
 
