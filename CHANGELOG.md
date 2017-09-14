@@ -11,6 +11,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/348
 - Consume diff binary notice as a patch
   https://gitlab.com/gitlab-org/gitaly/merge_requests/349
+- Handle git dates larger than golang's and protobuf's limits
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/353
 
 v0.39.0
 - Reimplement FindAllTags RPC in Ruby
