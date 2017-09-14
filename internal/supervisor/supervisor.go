@@ -3,14 +3,11 @@ package supervisor
 import (
 	"fmt"
 	"os/exec"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 // Config holds configuration for the circuit breaker of the respawn loop.
@@ -25,19 +22,10 @@ type Config struct {
 
 var (
 	config Config
-
-	rssGauge = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "gitaly_supervisor_rss_bytes",
-			Help: "Resident set size of supervised processes, in bytes.",
-		},
-		[]string{"name"},
-	)
 )
 
 func init() {
 	envconfig.MustProcess("gitaly_supervisor", &config)
-	prometheus.MustRegister(rssGauge)
 }
 
 // Process represents a running process.
@@ -89,16 +77,29 @@ func watch(p *Process) {
 
 	logger := log.WithField("supervisor.args", p.args).WithField("supervisor.name", p.Name)
 
+	// Use a buffered channel because we don't want to block the respawn loop
+	// on the monitor goroutine.
+	monitorChan := make(chan monitorProcess, config.CrashThreshold)
+	monitorDone := make(chan struct{})
+	go monitorRss(monitorChan, monitorDone)
+
+spawnLoop:
 	for {
 		if crashes >= config.CrashThreshold {
 			logger.Warn("opening circuit breaker")
 			select {
-			case <-p.done:
-				return
+			case <-p.shutdown:
+				break spawnLoop
 			case <-time.After(config.CrashWaitTime):
 				logger.Warn("closing circuit breaker")
 				crashes = 0
 			}
+		}
+
+		select {
+		case <-p.shutdown:
+			break spawnLoop
+		default:
 		}
 
 		cmd, err := p.start(logger)
@@ -107,6 +108,7 @@ func watch(p *Process) {
 			logger.WithError(err).Error("start failed")
 			continue
 		}
+		logger.WithField("supervisor.pid", cmd.Process.Pid).Warn("spawned")
 
 		waitCh := make(chan struct{})
 		go func() {
@@ -114,7 +116,7 @@ func watch(p *Process) {
 			close(waitCh)
 		}()
 
-		go monitorRss(p.Name, cmd.Process.Pid, waitCh)
+		monitorChan <- monitorProcess{name: p.Name, pid: cmd.Process.Pid, wait: waitCh}
 
 	waitLoop:
 		for {
@@ -129,43 +131,14 @@ func watch(p *Process) {
 					cmd.Process.Kill()
 				}
 				<-waitCh
-				close(p.done)
-				return
+				break spawnLoop
 			}
 		}
 	}
-}
 
-func monitorRss(name string, pid int, done <-chan struct{}) {
-	t := time.NewTicker(15 * time.Second)
-	defer t.Stop()
-
-	for {
-		rssGauge.WithLabelValues(name).Set(float64(1024 * getRss(pid)))
-
-		select {
-		case <-done:
-			return
-		case <-t.C:
-		}
-	}
-}
-
-// getRss returns RSS in kilobytes.
-func getRss(pid int) int {
-	// I tried adding a library to do this but it seemed like overkill
-	// and YAGNI compared to doing this one 'ps' call.
-	psRss, err := exec.Command("ps", "-o", "rss=", "-p", strconv.Itoa(pid)).Output()
-	if err != nil {
-		return 0
-	}
-
-	rss, err := strconv.Atoi(strings.TrimSpace(string(psRss)))
-	if err != nil {
-		return 0
-	}
-
-	return rss
+	close(monitorChan)
+	<-monitorDone
+	close(p.done)
 }
 
 // Stop terminates the process.
