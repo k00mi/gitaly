@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 type testHook struct {

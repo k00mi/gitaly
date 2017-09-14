@@ -4,6 +4,8 @@ UNRELEASED
 
 - Wait for monitor goroutine to return during supervisor shutdown
   https://gitlab.com/gitlab-org/gitaly/merge_requests/341
+- Use grpc 1.6.0 and update all the things
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/354
 
 v0.40.0
 - Use context cancellation instead of command.Close
