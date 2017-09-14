@@ -21,7 +21,7 @@ GEM
       escape_utils (~> 1.1.0)
       mime-types (>= 1.19)
       rugged (>= 0.23.0b)
-    google-protobuf (3.3.0)
+    google-protobuf (3.4.0.2)
     googleauth (0.5.3)
       faraday (~> 0.12)
       jwt (~> 1.4)
