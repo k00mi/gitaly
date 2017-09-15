@@ -83,11 +83,6 @@ func GitPath() string {
 	return config.Config.Git.BinPath
 }
 
-// Git creates a git Command with the given args
-func Git(ctx context.Context, args ...string) (*Command, error) {
-	return New(ctx, exec.Command(GitPath(), args...), nil, nil, nil)
-}
-
 // GitlabShell creates a gitlab-shell Command with the given args
 func GitlabShell(ctx context.Context, envs []string, executable string, args ...string) (*Command, error) {
 	shellPath, ok := config.GitlabShellPath()
