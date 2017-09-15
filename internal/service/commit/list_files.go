@@ -13,7 +13,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
-	"gitlab.com/gitlab-org/gitaly/internal/ref"
 )
 
 func (s *server) ListFiles(in *pb.ListFilesRequest, stream pb.CommitService_ListFilesServer) error {
@@ -38,7 +37,7 @@ func (s *server) ListFiles(in *pb.ListFilesRequest, stream pb.CommitService_List
 			return grpc.Errorf(codes.NotFound, "Revision not found %q", in.GetRevision())
 		}
 	}
-	if !ref.IsValidRef(stream.Context(), repo, string(revision)) {
+	if !git.IsValidRef(stream.Context(), repo, string(revision)) {
 		return stream.Send(&pb.ListFilesResponse{})
 	}
 

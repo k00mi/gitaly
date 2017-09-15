@@ -1,9 +1,7 @@
-package ref
+package git
 
 import (
 	"context"
-
-	"gitlab.com/gitlab-org/gitaly/internal/git"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
@@ -14,7 +12,7 @@ func IsValidRef(ctx context.Context, repo *pb.Repository, ref string) bool {
 		return false
 	}
 
-	cmd, err := git.Command(ctx, repo, "log", "--max-count=1", ref)
+	cmd, err := Command(ctx, repo, "log", "--max-count=1", ref)
 	if err != nil {
 		return false
 	}

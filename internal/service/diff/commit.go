@@ -67,7 +67,7 @@ func (s *server) CommitDiff(in *pb.CommitDiffRequest, stream pb.DiffService_Comm
 	limits.SafeMaxLines = int(in.SafeMaxLines)
 	limits.SafeMaxBytes = int(in.SafeMaxBytes)
 
-	err := eachDiff(stream.Context(), "CommitDiff", in.Repository, cmdArgs, limits, func(diff *diff.Diff) error {
+	return eachDiff(stream.Context(), "CommitDiff", in.Repository, cmdArgs, limits, func(diff *diff.Diff) error {
 		response := &pb.CommitDiffResponse{
 			FromPath:       diff.FromPath,
 			ToPath:         diff.ToPath,
@@ -111,8 +111,6 @@ func (s *server) CommitDiff(in *pb.CommitDiffRequest, stream pb.DiffService_Comm
 
 		return nil
 	})
-
-	return err
 }
 
 func (s *server) CommitDelta(in *pb.CommitDeltaRequest, stream pb.DiffService_CommitDeltaServer) error {
