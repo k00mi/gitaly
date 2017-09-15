@@ -3,7 +3,7 @@ package config
 import (
 	"crypto/subtle"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // Auth contains the authentication settings for this Gitaly process.
