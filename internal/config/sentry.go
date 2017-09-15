@@ -16,6 +16,9 @@ func ConfigureSentry(version string) {
 
 	log.Debug("Using sentry logging")
 	raven.SetDSN(Config.Logging.SentryDSN)
+	if version != "" {
+		raven.SetRelease("v" + version)
+	}
 
 	panichandler.InstallPanicHandler(func(grpcMethod string, _err interface{}) {
 		err, ok := _err.(error)
@@ -27,10 +30,5 @@ func ConfigureSentry(version string) {
 			"grpcMethod": grpcMethod,
 			"panic":      "1",
 		})
-
 	})
-
-	if version != "" {
-		raven.SetRelease(version)
-	}
 }
