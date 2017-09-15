@@ -1,6 +1,7 @@
 package sentryhandler
 
 import (
+	"strings"
 	"time"
 
 	raven "github.com/getsentry/raven-go"
@@ -45,18 +46,38 @@ func stringMap(incoming map[string]interface{}) map[string]string {
 	return result
 }
 
-func logGrpcErrorToSentry(ctx context.Context, method string, start time.Time, err error) {
+func methodToCulprit(methodName string) string {
+	methodName = strings.TrimPrefix(methodName, "/gitaly.")
+	methodName = strings.Replace(methodName, "/", "::", 1)
+	return methodName
+}
+
+func generateRavenPacket(ctx context.Context, method string, start time.Time, err error) (*raven.Packet, map[string]string) {
 	grpcErrorCode := grpc.Code(err)
 
 	if grpcErrorCode == codes.OK {
-		return
+		return nil, nil
 	}
 
 	tags := grpc_ctxtags.Extract(ctx)
 	ravenDetails := stringMap(tags.Values())
+
 	ravenDetails["grpc.code"] = grpcErrorCode.String()
 	ravenDetails["grpc.method"] = method
+	ravenDetails["grpc.time_ms"] = fmt.Sprintf("%.0f", time.Since(start).Seconds()*1000)
 	ravenDetails["system"] = "grpc"
 
-	raven.CaptureError(err, ravenDetails, nil)
+	// Skip the stacktrace as it's not helpful in this context
+	packet := raven.NewPacket(err.Error(), raven.NewException(err, nil))
+	packet.Culprit = methodToCulprit(method)
+	return packet, ravenDetails
+}
+
+func logGrpcErrorToSentry(ctx context.Context, method string, start time.Time, err error) {
+	packet, tags := generateRavenPacket(ctx, method, start, err)
+	if packet == nil {
+		return
+	}
+
+	raven.Capture(packet, tags)
 }
