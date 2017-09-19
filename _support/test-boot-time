@@ -20,6 +20,9 @@ path = "#{dir}"
 
 [gitaly-ruby]
 dir = "#{gitaly_dir}/ruby"
+
+[gitlab-shell]
+dir = "#{gitaly_dir}"
 EOS
 )
 

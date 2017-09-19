@@ -83,12 +83,8 @@ func GitPath() string {
 
 // GitlabShell creates a gitlab-shell Command with the given args
 func GitlabShell(ctx context.Context, envs []string, executable string, args ...string) (*Command, error) {
-	shellPath, ok := config.GitlabShellPath()
-	if !ok {
-		return nil, fmt.Errorf("path to gitlab-shell not set")
-	}
 	// Don't allow any git-command to ask (interactively) for credentials
-	return New(ctx, exec.Command(path.Join(shellPath, executable), args...), nil, nil, nil, envs...)
+	return New(ctx, exec.Command(path.Join(config.GitlabShellBinPath(), executable), args...), nil, nil, nil, envs...)
 }
 
 var wg = &sync.WaitGroup{}
