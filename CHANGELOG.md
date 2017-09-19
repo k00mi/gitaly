@@ -14,6 +14,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/361
 - Fix path bug for gitlab-shell. gitlab-shell path is now required
   https://gitlab.com/gitlab-org/gitaly/merge_requests/365
+- Remove support for legacy services not ending in 'Service'
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/363
 
 v0.40.0
 - Use context cancellation instead of command.Close
