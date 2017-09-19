@@ -8,6 +8,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/354
 - Update vendored gitlab_git to 4c6c105909ea610eac7
   https://gitlab.com/gitlab-org/gitaly/merge_requests/360
+- Implement UserDeleteTag RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/366
 
 v0.40.0
 - Use context cancellation instead of command.Close

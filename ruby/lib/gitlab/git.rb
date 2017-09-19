@@ -16,6 +16,7 @@ vendor_gitlab_git = '../../vendor/gitlab_git/'
 # Some later requires are order-sensitive. Manually require whatever we need.
 require_relative File.join(vendor_gitlab_git, 'lib/gitlab/encoding_helper.rb')
 require_relative File.join(vendor_gitlab_git, 'lib/gitlab/git.rb')
+require_relative File.join(vendor_gitlab_git, 'lib/gitlab/git/popen.rb')
 require_relative File.join(vendor_gitlab_git, 'lib/gitlab/git/ref.rb')
 
 # Require all .rb files we can find in the vendored gitlab/git directory
