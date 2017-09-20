@@ -199,7 +199,7 @@ func TestInvalidRepoFindAllTagNamesRequest(t *testing.T) {
 func TestHeadReference(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	headRef, err := headReference(ctx, testRepoPath)
+	headRef, err := headReference(ctx, testRepo)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,7 +218,7 @@ func TestHeadReferenceWithNonExistingHead(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	headRef, err := headReference(ctx, testRepoPath)
+	headRef, err := headReference(ctx, testRepo)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,47 +236,47 @@ func TestDefaultBranchName(t *testing.T) {
 
 	testCases := []struct {
 		desc            string
-		findBranchNames func(context.Context, string) ([][]byte, error)
-		headReference   func(context.Context, string) ([]byte, error)
+		findBranchNames func(context.Context, *pb.Repository) ([][]byte, error)
+		headReference   func(context.Context, *pb.Repository) ([]byte, error)
 		expected        []byte
 	}{
 		{
 			desc:     "Get first branch when only one branch exists",
 			expected: []byte("refs/heads/foo"),
-			findBranchNames: func(context.Context, string) ([][]byte, error) {
+			findBranchNames: func(context.Context, *pb.Repository) ([][]byte, error) {
 				return [][]byte{[]byte("refs/heads/foo")}, nil
 			},
-			headReference: func(context.Context, string) ([]byte, error) { return nil, nil },
+			headReference: func(context.Context, *pb.Repository) ([]byte, error) { return nil, nil },
 		},
 		{
 			desc:            "Get empy ref if no branches exists",
 			expected:        nil,
-			findBranchNames: func(context.Context, string) ([][]byte, error) { return [][]byte{}, nil },
-			headReference:   func(context.Context, string) ([]byte, error) { return nil, nil },
+			findBranchNames: func(context.Context, *pb.Repository) ([][]byte, error) { return [][]byte{}, nil },
+			headReference:   func(context.Context, *pb.Repository) ([]byte, error) { return nil, nil },
 		},
 		{
 			desc:     "Get the name of the head reference when more than one branch exists",
 			expected: []byte("refs/heads/bar"),
-			findBranchNames: func(context.Context, string) ([][]byte, error) {
+			findBranchNames: func(context.Context, *pb.Repository) ([][]byte, error) {
 				return [][]byte{[]byte("refs/heads/foo"), []byte("refs/heads/bar")}, nil
 			},
-			headReference: func(context.Context, string) ([]byte, error) { return []byte("refs/heads/bar"), nil },
+			headReference: func(context.Context, *pb.Repository) ([]byte, error) { return []byte("refs/heads/bar"), nil },
 		},
 		{
 			desc:     "Get `ref/heads/master` when several branches exist",
 			expected: []byte("refs/heads/master"),
-			findBranchNames: func(context.Context, string) ([][]byte, error) {
+			findBranchNames: func(context.Context, *pb.Repository) ([][]byte, error) {
 				return [][]byte{[]byte("refs/heads/foo"), []byte("refs/heads/master"), []byte("refs/heads/bar")}, nil
 			},
-			headReference: func(context.Context, string) ([]byte, error) { return nil, nil },
+			headReference: func(context.Context, *pb.Repository) ([]byte, error) { return nil, nil },
 		},
 		{
 			desc:     "Get the name of the first branch when several branches exists and no other conditions are met",
 			expected: []byte("refs/heads/foo"),
-			findBranchNames: func(context.Context, string) ([][]byte, error) {
+			findBranchNames: func(context.Context, *pb.Repository) ([][]byte, error) {
 				return [][]byte{[]byte("refs/heads/foo"), []byte("refs/heads/bar"), []byte("refs/heads/baz")}, nil
 			},
-			headReference: func(context.Context, string) ([]byte, error) { return nil, nil },
+			headReference: func(context.Context, *pb.Repository) ([]byte, error) { return nil, nil },
 		},
 	}
 
@@ -286,7 +286,7 @@ func TestDefaultBranchName(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		defaultBranch, err := DefaultBranchName(ctx, "")
+		defaultBranch, err := DefaultBranchName(ctx, testRepo)
 		if err != nil {
 			t.Fatal(err)
 		}
