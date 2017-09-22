@@ -128,6 +128,14 @@ func (s *Server) RefServiceClient(ctx context.Context) (pb.RefServiceClient, err
 	return pb.NewRefServiceClient(conn), err
 }
 
+// OperationServiceClient returns a OperationServiceClient instance that is
+// configured to connect to the running Ruby server. This assumes Start()
+// has been called already.
+func (s *Server) OperationServiceClient(ctx context.Context) (pb.OperationServiceClient, error) {
+	conn, err := s.getConnection(ctx)
+	return pb.NewOperationServiceClient(conn), err
+}
+
 func (s *Server) getConnection(ctx context.Context) (*grpc.ClientConn, error) {
 	s.clientConnMu.RLock()
 	conn := s.clientConn

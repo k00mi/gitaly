@@ -8,6 +8,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/service/diff"
 	"gitlab.com/gitlab-org/gitaly/internal/service/namespace"
 	"gitlab.com/gitlab-org/gitaly/internal/service/notifications"
+	"gitlab.com/gitlab-org/gitaly/internal/service/operations"
 	"gitlab.com/gitlab-org/gitaly/internal/service/ref"
 	"gitlab.com/gitlab-org/gitaly/internal/service/renameadapter"
 	"gitlab.com/gitlab-org/gitaly/internal/service/repository"
@@ -48,6 +49,9 @@ func RegisterAll(grpcServer *grpc.Server, rubyServer *rubyserver.Server) {
 
 	namespaceService := namespace.NewServer()
 	pb.RegisterNamespaceServiceServer(grpcServer, namespaceService)
+
+	operationService := operations.NewServer(rubyServer)
+	pb.RegisterOperationServiceServer(grpcServer, operationService)
 
 	// Deprecated Services
 	pb.RegisterNotificationsServer(grpcServer, renameadapter.NewNotificationAdapter(notificationsService))
