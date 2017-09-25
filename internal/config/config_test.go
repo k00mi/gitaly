@@ -297,6 +297,7 @@ func TestValidateShellPath(t *testing.T) {
 
 	tmpDir, err := ioutil.TempDir("", "gitaly-tests-")
 	require.NoError(t, err)
+	require.NoError(t, os.MkdirAll(path.Join(tmpDir, "bin"), 0755))
 	tmpFile := path.Join(tmpDir, "my-file")
 	defer os.RemoveAll(tmpDir)
 	fp, err := os.Create(tmpFile)
@@ -311,7 +312,7 @@ func TestValidateShellPath(t *testing.T) {
 		{
 			desc:      "When no Shell Path set",
 			path:      "",
-			shouldErr: false,
+			shouldErr: true,
 		},
 		{
 			desc:      "When Shell Path set to non-existing path",

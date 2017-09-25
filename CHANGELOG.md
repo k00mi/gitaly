@@ -12,6 +12,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/366
 - Implement RepositoryService::CreateRepository
   https://gitlab.com/gitlab-org/gitaly/merge_requests/361
+- Fix path bug for gitlab-shell. gitlab-shell path is now required
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/365
 
 v0.40.0
 - Use context cancellation instead of command.Close
