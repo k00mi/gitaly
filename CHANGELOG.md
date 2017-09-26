@@ -4,6 +4,8 @@ UNRELEASED
 
 - Implement UserCreateTag RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/374
+- Return pre-receive errors in UserDeleteTag response
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/378
 
 v0.41.0
 

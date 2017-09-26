@@ -50,7 +50,7 @@ module GitalyServer
 
       Gitaly::UserDeleteTagResponse.new
     rescue Gitlab::Git::HooksService::PreReceiveError => e
-      raise GRPC::FailedPrecondition.new(e.to_s)
+      Gitaly::UserDeleteTagResponse.new(pre_receive_error: e.message)
     end
 
     def user_create_branch(request, call)
