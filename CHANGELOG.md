@@ -11,6 +11,8 @@ v0.42.0
   https://gitlab.com/gitlab-org/gitaly/merge_requests/374
 - Return pre-receive errors in UserDeleteTag response
   https://gitlab.com/gitlab-org/gitaly/merge_requests/378
+- Check if we don't overwrite a namespace moved to gitaly
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/375
 
 v0.41.0
 
