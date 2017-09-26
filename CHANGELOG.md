@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.41.0
 
 - Wait for monitor goroutine to return during supervisor shutdown
   https://gitlab.com/gitlab-org/gitaly/merge_requests/341
