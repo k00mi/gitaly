@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Fix path bug in CommitService::FindCommits
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/364
+
 v0.42.0
 
 - Implement UserCreateTag RPC
