@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.42.0
 
 - Implement UserCreateTag RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/374
