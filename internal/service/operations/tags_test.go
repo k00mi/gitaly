@@ -291,7 +291,7 @@ func TestFailedUserDeleteTagDueToHooks(t *testing.T) {
 		User:       user,
 	}
 
-	hookContent := []byte("#!/bin/false")
+	hookContent := []byte("#!/bin/sh\necho GL_ID=$GL_ID\nexit 1")
 
 	for _, hookName := range []string{"pre-receive", "update"} {
 		t.Run(hookName, func(t *testing.T) {
@@ -302,8 +302,9 @@ func TestFailedUserDeleteTagDueToHooks(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			_, err := client.UserDeleteTag(ctx, request)
-			testhelper.AssertGrpcError(t, err, codes.FailedPrecondition, "")
+			response, err := client.UserDeleteTag(ctx, request)
+			require.Nil(t, err)
+			require.Contains(t, response.PreReceiveError, "GL_ID="+user.GlId)
 
 			tags := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag")
 			require.Contains(t, string(tags), tagNameInput, "tag name does not exist in tags list")
