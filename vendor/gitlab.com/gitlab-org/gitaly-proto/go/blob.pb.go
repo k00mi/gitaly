@@ -57,6 +57,10 @@ It has these top-level messages:
 	CommitDeltaResponse
 	CommitPatchRequest
 	CommitPatchResponse
+	RawDiffRequest
+	RawDiffResponse
+	RawPatchRequest
+	RawPatchResponse
 	AddNamespaceRequest
 	RemoveNamespaceRequest
 	RenameNamespaceRequest

@@ -12,6 +12,8 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
@@ -19,6 +21,7 @@ import (
 var (
 	serverSocketPath = testhelper.GetTemporaryGitalySocketFileName()
 	testRepo         *pb.Repository
+	testRepoPath     string
 )
 
 func TestMain(m *testing.M) {
@@ -32,8 +35,13 @@ func testMain(m *testing.M) int {
 
 	testRepo = testhelper.TestRepository()
 
-	testhelper.ConfigureRuby()
 	var err error
+	testRepoPath, err = helper.GetRepoPath(testRepo)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	testhelper.ConfigureRuby()
 	rubyServer, err = rubyserver.Start()
 	if err != nil {
 		log.Fatal(err)
