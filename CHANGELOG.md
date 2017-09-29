@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Implement OperationService.UserDeleteBranch RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/377
 - Fix path bug in CommitService::FindCommits
   https://gitlab.com/gitlab-org/gitaly/merge_requests/364
 - Fail harder during startup, fix version string

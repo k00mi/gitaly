@@ -14,3 +14,8 @@ type server struct {
 func NewServer(rs *rubyserver.Server) pb.RepositoryServiceServer {
 	return &server{rs}
 }
+
+// GetArchive is a stub
+func (s *server) GetArchive(in *pb.GetArchiveRequest, stream pb.RepositoryService_GetArchiveServer) error {
+	return nil
+}
