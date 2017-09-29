@@ -8,6 +8,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/364
 - Fail harder during startup, fix version string
   https://gitlab.com/gitlab-org/gitaly/merge_requests/379
+- Implement RepositoryService.GetArchive RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/370
 
 v0.42.0
 
