@@ -10,6 +10,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/379
 - Implement RepositoryService.GetArchive RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/370
+- Add `gitaly-ssh` command
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/368
 
 v0.42.0
 
