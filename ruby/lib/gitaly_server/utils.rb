@@ -18,5 +18,14 @@ module GitalyServer
         date: Google::Protobuf::Timestamp.new(seconds: rugged_author[:time].to_i)
       )
     end
+
+    def bridge_exceptions
+      yield
+    rescue GRPC::BadStatus => e
+      # Pass GRPC back without wrapping
+      raise e
+    rescue StandardError => e
+      raise GRPC::Unknown.new(e.message, { "gitaly-ruby.exception.class": e.class.name })
+    end
   end
 end
