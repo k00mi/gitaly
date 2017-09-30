@@ -2,6 +2,9 @@
 
 UNRELEASED
 
+- Pass details of Gitaly-Ruby's Ruby exceptions back to
+  callers in the request trailers
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/358
 - Allow individual endpoints to be rate-limited per-repository
   https://gitlab.com/gitlab-org/gitaly/merge_requests/376
 - Implement OperationService.UserDeleteBranch RPC
