@@ -97,7 +97,7 @@ module GitalyServer
 
           Gitaly::UserDeleteBranchResponse.new
         rescue Gitlab::Git::HooksService::PreReceiveError => e
-          Gitaly::UserDeleteTagResponse.new(pre_receive_error: e.message)
+          Gitaly::UserDeleteBranchResponse.new(pre_receive_error: e.message)
         end
       end
     end
