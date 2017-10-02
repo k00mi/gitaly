@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.43.0
 
 - Pass details of Gitaly-Ruby's Ruby exceptions back to
   callers in the request trailers
