@@ -121,8 +121,8 @@ func TestLimiter(t *testing.T) {
 			iterations:     40,
 			buckets:        50,
 			// Intentionally leaving the max low because CI runners
-			// may struggle to do 80 things in parallel
-			wantMaxRange:     []int{80, 102},
+			// may struggle to do 100 things in parallel
+			wantMaxRange:     []int{50, 102},
 			wantMonitorCalls: true,
 		},
 	}
