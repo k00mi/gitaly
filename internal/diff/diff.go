@@ -136,7 +136,7 @@ func (parser *Parser) Parse() bool {
 			break
 		} else if bytes.HasPrefix(line, []byte("@@")) {
 			parser.consumeChunkLine()
-		} else if helper.ByteSliceHasAnyPrefix(line, "---", "+++") {
+		} else if helper.ByteSliceHasAnyPrefix(line, "---", "+++") && !parser.isParsingChunkLines() {
 			parser.consumeLine(true)
 		} else if helper.ByteSliceHasAnyPrefix(line, "-", "+", " ", "\\", "Binary") {
 			parser.consumeChunkLine()
@@ -359,6 +359,10 @@ func (parser *Parser) consumeLine(updateStats bool) {
 		parser.linesProcessed++
 		parser.bytesProcessed += len(line)
 	}
+}
+
+func (parser *Parser) isParsingChunkLines() bool {
+	return len(parser.currentDiff.Patch) > 0
 }
 
 // unescape unescapes the escape codes used by 'git diff'
