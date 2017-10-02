@@ -21,7 +21,7 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 
 	client, conn := newDiffClient(t)
 	defer conn.Close()
-	rightCommit := "e395f646b1499e8e0279445fc99a0596a65fab7e"
+	rightCommit := "ab2c9622c02288a2bbaaf35d96088cfdff31d9d9"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
 	rpcRequest := &pb.CommitDiffRequest{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: leftCommit, IgnoreWhitespaceChange: false}
 
@@ -62,6 +62,16 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 			ToPath:   []byte("gitaly/file-with-multiple-chunks"),
 			Binary:   false,
 			Patch:    testhelper.MustReadFile(t, "testdata/file-with-multiple-chunks-chunks.txt"),
+		},
+		{
+			FromID:   "0000000000000000000000000000000000000000",
+			ToID:     "389c7a36a6e133268b0d36b00e7ffc0f3a5b6651",
+			OldMode:  0,
+			NewMode:  0100644,
+			FromPath: []byte("gitaly/file-with-pluses.txt"),
+			ToPath:   []byte("gitaly/file-with-pluses.txt"),
+			Binary:   false,
+			Patch:    testhelper.MustReadFile(t, "testdata/file-with-pluses-chunks.txt"),
 		},
 		{
 			FromID:   "0000000000000000000000000000000000000000",

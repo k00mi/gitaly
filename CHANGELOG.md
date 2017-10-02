@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Fix incorrect parsing of diff chunks starting with ++ or --
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/385
+
 v0.43.0
 
 - Pass details of Gitaly-Ruby's Ruby exceptions back to
