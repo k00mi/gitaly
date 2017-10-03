@@ -1,5 +1,6 @@
 /_build
 /gitaly
+/gitaly-ssh
 /*.deb
 /_support/package/bin
 /_support/bin
