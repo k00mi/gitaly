@@ -4,6 +4,8 @@ UNRELEASED
 
 - Fix incorrect parsing of diff chunks starting with ++ or --
   https://gitlab.com/gitlab-org/gitaly/merge_requests/385
+- Implement Raw{Diff,Patch} RPCs
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/381
 
 v0.43.0
 
