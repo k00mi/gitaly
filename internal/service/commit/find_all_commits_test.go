@@ -283,8 +283,10 @@ func TestSuccessfulFindAllCommitsRequestWithAltGitObjectDirs(t *testing.T) {
 
 	storagePath := testhelper.GitlabTestStoragePath()
 	testRepoPath := path.Join(storagePath, testRepo.RelativePath)
-	testRepoCopyPath := path.Join(storagePath, "is-ancestor-alt-test-repo")
-	altObjectsPath := path.Join(testRepoCopyPath, ".git/alt-objects")
+	testRepoCopyName := "find-all-commits-alt-test-repo"
+	testRepoCopyPath := path.Join(storagePath, testRepoCopyName)
+	altObjectsDir := "./alt-objects"
+	altObjectsPath := path.Join(testRepoCopyPath, ".git", altObjectsDir)
 	gitObjectEnv := []string{
 		fmt.Sprintf("GIT_OBJECT_DIRECTORY=%s", altObjectsPath),
 		fmt.Sprintf("GIT_ALTERNATE_OBJECT_DIRECTORIES=%s", path.Join(testRepoCopyPath, ".git/objects")),
@@ -321,7 +323,7 @@ func TestSuccessfulFindAllCommitsRequestWithAltGitObjectDirs(t *testing.T) {
 	}{
 		{
 			desc:          "present GIT_ALTERNATE_OBJECT_DIRECTORIES",
-			altDirs:       []string{altObjectsPath},
+			altDirs:       []string{altObjectsDir},
 			expectedCount: 1,
 		},
 		{
@@ -337,7 +339,7 @@ func TestSuccessfulFindAllCommitsRequestWithAltGitObjectDirs(t *testing.T) {
 			request := &pb.FindAllCommitsRequest{
 				Repository: &pb.Repository{
 					StorageName:                   testRepo.StorageName,
-					RelativePath:                  testRepo.RelativePath,
+					RelativePath:                  path.Join(testRepoCopyName, ".git"),
 					GitAlternateObjectDirectories: testCase.altDirs,
 				},
 				Revision: currentHead,
