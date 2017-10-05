@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.44.0
 
 - Update gitlab_git to 4a0f720a502ac02423
   https://gitlab.com/gitlab-org/gitaly/merge_requests/389
