@@ -81,6 +81,10 @@ module Gitlab
       def rugged
         @rugged
       end
+
+      def circuit_breaker
+        FakeCircuitBreaker
+      end
     end
   end
 end
@@ -89,5 +93,11 @@ class String
   # Because we are not rendering HTML, this is a no-op in gitaly-ruby.
   def html_safe
     self
+  end
+end
+
+class FakeCircuitBreaker
+  def self.perform
+    yield
   end
 end
