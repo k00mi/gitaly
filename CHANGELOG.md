@@ -10,6 +10,8 @@ v0.44.0
   https://gitlab.com/gitlab-org/gitaly/merge_requests/381
 - Add client feature logging and metrics
   https://gitlab.com/gitlab-org/gitaly/merge_requests/392
+- Implement RepositoryService.HasLocalBranches RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/397
 
 v0.43.0
 
