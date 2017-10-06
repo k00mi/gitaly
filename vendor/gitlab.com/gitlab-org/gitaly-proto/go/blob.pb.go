@@ -121,6 +121,8 @@ It has these top-level messages:
 	CreateRepositoryResponse
 	GetArchiveRequest
 	GetArchiveResponse
+	HasLocalBranchesRequest
+	HasLocalBranchesResponse
 	Repository
 	GitCommit
 	CommitAuthor
