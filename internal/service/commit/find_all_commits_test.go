@@ -1,11 +1,7 @@
 package commit
 
 import (
-	"fmt"
 	"io"
-	"os"
-	"os/exec"
-	"path"
 	"testing"
 
 	"gitlab.com/gitlab-org/gitaly/internal/service/ref"
@@ -267,95 +263,6 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 			for i, receivedCommit := range receivedCommits {
 				require.Equal(t, testCase.expectedCommits[i], receivedCommit, "mismatched commits")
 			}
-		})
-	}
-}
-
-func TestSuccessfulFindAllCommitsRequestWithAltGitObjectDirs(t *testing.T) {
-	server := startTestServices(t)
-	defer server.Stop()
-
-	client, conn := newCommitServiceClient(t, serverSocketPath)
-	defer conn.Close()
-
-	committerName := "Scrooge McDuck"
-	committerEmail := "scrooge@mcduck.com"
-
-	storagePath := testhelper.GitlabTestStoragePath()
-	testRepoPath := path.Join(storagePath, testRepo.RelativePath)
-	testRepoCopyName := "find-all-commits-alt-test-repo"
-	testRepoCopyPath := path.Join(storagePath, testRepoCopyName)
-	altObjectsDir := "./alt-objects"
-	altObjectsPath := path.Join(testRepoCopyPath, ".git", altObjectsDir)
-	gitObjectEnv := []string{
-		fmt.Sprintf("GIT_OBJECT_DIRECTORY=%s", altObjectsPath),
-		fmt.Sprintf("GIT_ALTERNATE_OBJECT_DIRECTORIES=%s", path.Join(testRepoCopyPath, ".git/objects")),
-	}
-
-	testhelper.MustRunCommand(t, nil, "git", "clone", testRepoPath, testRepoCopyPath)
-	defer os.RemoveAll(testRepoCopyPath)
-
-	if err := os.Mkdir(altObjectsPath, 0777); err != nil {
-		t.Fatal(err)
-	}
-
-	cmd := exec.Command("git", "-C", testRepoCopyPath,
-		"-c", fmt.Sprintf("user.name=%s", committerName),
-		"-c", fmt.Sprintf("user.email=%s", committerEmail),
-		"commit", "--allow-empty", "-m", "An empty commit")
-	cmd.Env = gitObjectEnv
-	if _, err := cmd.Output(); err != nil {
-		stderr := err.(*exec.ExitError).Stderr // XXX
-		t.Fatalf("%s", stderr)
-	}
-
-	cmd = exec.Command("git", "-C", testRepoCopyPath, "show", "--format=format:%H", "--no-patch", "HEAD")
-	cmd.Env = gitObjectEnv
-	currentHead, err := cmd.Output()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	testCases := []struct {
-		desc          string
-		altDirs       []string
-		expectedCount int
-	}{
-		{
-			desc:          "present GIT_ALTERNATE_OBJECT_DIRECTORIES",
-			altDirs:       []string{altObjectsDir},
-			expectedCount: 1,
-		},
-		{
-			desc:          "empty GIT_ALTERNATE_OBJECT_DIRECTORIES",
-			altDirs:       []string{},
-			expectedCount: 0,
-		},
-	}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.desc, func(t *testing.T) {
-
-			request := &pb.FindAllCommitsRequest{
-				Repository: &pb.Repository{
-					StorageName:                   testRepo.StorageName,
-					RelativePath:                  path.Join(testRepoCopyName, ".git"),
-					GitAlternateObjectDirectories: testCase.altDirs,
-				},
-				Revision: currentHead,
-				MaxCount: 1,
-			}
-
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-			c, err := client.FindAllCommits(ctx, request)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			receivedCommits := collectCommtsFromFindAllCommitsClient(t, c)
-
-			require.Equal(t, testCase.expectedCount, len(receivedCommits), "number of commits received")
 		})
 	}
 }
