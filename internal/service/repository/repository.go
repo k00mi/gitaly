@@ -19,3 +19,7 @@ func (s *server) RepositoryExists(ctx context.Context, in *pb.RepositoryExistsRe
 
 	return &pb.RepositoryExistsResponse{Exists: helper.IsGitDirectory(path)}, nil
 }
+
+func (s *server) HasLocalBranches(ctx context.Context, in *pb.HasLocalBranchesRequest) (*pb.HasLocalBranchesResponse, error) {
+	return nil, nil
+}
