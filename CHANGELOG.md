@@ -8,6 +8,8 @@ v0.44.0
   https://gitlab.com/gitlab-org/gitaly/merge_requests/385
 - Implement Raw{Diff,Patch} RPCs
   https://gitlab.com/gitlab-org/gitaly/merge_requests/381
+- Add client feature logging and metrics
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/392
 
 v0.43.0
 
