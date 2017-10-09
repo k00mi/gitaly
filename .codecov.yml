@@ -1,0 +1,10 @@
+ignore:
+  - "_support"
+  - "_build"
+  - "vendor"
+  - "ruby/vendor"
+
+comment:
+  layout: "diff, flags, files"
+  require_changes: fale
+  behavior: default
