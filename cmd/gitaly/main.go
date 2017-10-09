@@ -13,6 +13,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/connectioncounter"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/linguist"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/server"
@@ -47,12 +48,18 @@ func loadConfig(configPath string) error {
 // registerServerVersionPromGauge registers a label with the current server version
 // making it easy to see what versions of Gitaly are running across a cluster
 func registerServerVersionPromGauge() {
+	gitVersion, err := git.Version()
+	if err != nil {
+		fmt.Printf("git version: %v\n", err)
+		os.Exit(1)
+	}
 	gitlabBuildInfoGauge := prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "gitlab_build_info",
 		Help: "Current build info for this GitLab Service",
 		ConstLabels: prometheus.Labels{
-			"version": version.GetVersion(),
-			"built":   version.GetBuildTime(),
+			"version":     version.GetVersion(),
+			"built":       version.GetBuildTime(),
+			"git_version": gitVersion,
 		},
 	})
 

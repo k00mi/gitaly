@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Add `git version` to `gitaly_build_info` metrics
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/400
 - Use relative paths for git object dir attributes
   https://gitlab.com/gitlab-org/gitaly/merge_requests/393
 
