@@ -5,6 +5,7 @@ import (
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 )
 
 func (s *server) Exists(ctx context.Context, in *pb.RepositoryExistsRequest) (*pb.RepositoryExistsResponse, error) {
@@ -21,5 +22,15 @@ func (s *server) RepositoryExists(ctx context.Context, in *pb.RepositoryExistsRe
 }
 
 func (s *server) HasLocalBranches(ctx context.Context, in *pb.HasLocalBranchesRequest) (*pb.HasLocalBranchesResponse, error) {
-	return nil, nil
+	client, err := s.RepositoryServiceClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	clientCtx, err := rubyserver.SetHeaders(ctx, in.GetRepository())
+	if err != nil {
+		return nil, err
+	}
+
+	return client.HasLocalBranches(clientCtx, in)
 }

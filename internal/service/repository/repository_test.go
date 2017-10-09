@@ -3,6 +3,7 @@ package repository
 import (
 	"io/ioutil"
 	"os"
+	"path"
 	"testing"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
@@ -117,6 +118,95 @@ func TestRepositoryExists(t *testing.T) {
 			}
 
 			require.Equal(t, tc.exists, response.Exists)
+		})
+	}
+}
+
+func TestSuccessfulHasLocalBranches(t *testing.T) {
+	server := runRepoServer(t)
+	defer server.Stop()
+
+	client, conn := newRepositoryClient(t)
+	defer conn.Close()
+
+	emptyRepoName := "empty-repo.git"
+	emptyRepoPath := path.Join(testhelper.GitlabTestStoragePath(), emptyRepoName)
+	testhelper.MustRunCommand(t, nil, "git", "init", "--bare", emptyRepoPath)
+	defer os.RemoveAll(emptyRepoPath)
+
+	testCases := []struct {
+		desc      string
+		request   *pb.HasLocalBranchesRequest
+		value     bool
+		errorCode codes.Code
+	}{
+		{
+			desc:    "repository has branches",
+			request: &pb.HasLocalBranchesRequest{Repository: testRepo},
+			value:   true,
+		},
+		{
+			desc: "repository doesn't have branches",
+			request: &pb.HasLocalBranchesRequest{
+				Repository: &pb.Repository{
+					StorageName:  "default",
+					RelativePath: emptyRepoName,
+				},
+			},
+			value: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			response, err := client.HasLocalBranches(ctx, tc.request)
+
+			require.Equal(t, tc.errorCode, grpc.Code(err))
+			if err != nil {
+				return
+			}
+
+			require.Equal(t, tc.value, response.Value)
+		})
+	}
+}
+
+func TestFailedHasLocalBranches(t *testing.T) {
+	server := runRepoServer(t)
+	defer server.Stop()
+
+	client, conn := newRepositoryClient(t)
+	defer conn.Close()
+
+	testCases := []struct {
+		desc       string
+		repository *pb.Repository
+		errorCode  codes.Code
+	}{
+		{
+			desc:       "repository nil",
+			repository: nil,
+			errorCode:  codes.InvalidArgument,
+		},
+		{
+			desc:       "repository doesn't exist",
+			repository: &pb.Repository{StorageName: "fake", RelativePath: "path"},
+			errorCode:  codes.InvalidArgument,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			request := &pb.HasLocalBranchesRequest{Repository: tc.repository}
+			_, err := client.HasLocalBranches(ctx, request)
+
+			require.Equal(t, tc.errorCode, grpc.Code(err))
 		})
 	}
 }
