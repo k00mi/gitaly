@@ -2,7 +2,6 @@ package rubyserver
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net"
 	"os"
@@ -14,7 +13,6 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/supervisor"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 
@@ -23,7 +21,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 )
 
 const (
@@ -191,29 +188,4 @@ func dialOptions() []grpc.DialOption {
 			return net.DialTimeout("unix", addr, timeout)
 		}),
 	}
-}
-
-// SetHeaders adds headers that tell gitaly-ruby the full path to the repository.
-func SetHeaders(ctx context.Context, repo *pb.Repository) (context.Context, error) {
-	repoPath, err := helper.GetPath(repo)
-	if err != nil {
-		return nil, err
-	}
-
-	md := metadata.Pairs(repoPathHeader, repoPath, glRepositoryHeader, repo.GlRepository)
-	newCtx := metadata.NewOutgoingContext(ctx, md)
-	return newCtx, nil
-}
-
-// Proxy calls recvSend until it receives an error. The error is returned
-// to the caller unless it is io.EOF.
-func Proxy(recvSend func() error) (err error) {
-	for err == nil {
-		err = recvSend()
-	}
-
-	if err == io.EOF {
-		err = nil
-	}
-	return err
 }

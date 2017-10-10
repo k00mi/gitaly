@@ -79,6 +79,8 @@ It has these top-level messages:
 	UserDeleteTagResponse
 	UserCreateTagRequest
 	UserCreateTagResponse
+	UserMergeBranchRequest
+	UserMergeBranchResponse
 	FindDefaultBranchNameRequest
 	FindDefaultBranchNameResponse
 	FindAllBranchNamesRequest

@@ -101,5 +101,30 @@ module GitalyServer
         end
       end
     end
+
+    def user_merge_branch(session, call)
+      Enumerator.new do |y|
+        bridge_exceptions do
+          repository = Gitlab::Git::Repository.from_call(call)
+
+          first_request = session.next
+          user = Gitlab::Git::User.from_gitaly(first_request.user)
+          source_sha = first_request.commit_id.dup
+          target_branch = first_request.branch.dup
+          message = first_request.message.dup
+
+          repository.merge(user, source_sha, target_branch, message) do |commit_id|
+            y << Gitaly::UserMergeBranchResponse.new(commit_id: commit_id)
+
+            second_request = session.next
+            unless second_request.apply
+              raise GRPC::FailedPrecondition, 'merge aborted by client'
+            end
+          end
+
+          y << Gitaly::UserMergeBranchResponse.new(applied: true)
+        end
+      end
+    end
   end
 end

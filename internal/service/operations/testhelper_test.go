@@ -25,7 +25,15 @@ var (
 	serverSocketPath = testhelper.GetTemporaryGitalySocketFileName()
 	testRepo         *pb.Repository
 	testRepoPath     string
+	gitlabPreHooks   = []string{"pre-receive", "update"}
+	gitlabPostHooks  = []string{"post-receive"}
+	gitlabHooks      []string
 )
+
+func init() {
+	copy(gitlabHooks, gitlabPreHooks)
+	gitlabHooks = append(gitlabHooks, gitlabPostHooks...)
+}
 
 func TestMain(m *testing.M) {
 	os.Exit(testMain(m))

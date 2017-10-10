@@ -101,7 +101,7 @@ func TestSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T) {
 		User:       user,
 	}
 
-	for _, hookName := range []string{"pre-receive", "update", "post-receive"} {
+	for _, hookName := range gitlabHooks {
 		t.Run(hookName, func(t *testing.T) {
 			defer exec.Command("git", "-C", testRepoPath, "branch", "-D", branchName).Run()
 
@@ -143,7 +143,7 @@ func TestFailedUserCreateBranchDueToHooks(t *testing.T) {
 	// so we can check that string for our env variables.
 	hookContent := []byte("#!/bin/sh\nprintenv | paste -sd ' ' -\nexit 1")
 
-	for _, hookName := range []string{"pre-receive", "update"} {
+	for _, hookName := range gitlabPreHooks {
 		hookPath := path.Join(testRepoPath, "hooks", hookName)
 		ioutil.WriteFile(hookPath, hookContent, 0755)
 		defer os.Remove(hookPath)
@@ -284,7 +284,7 @@ func TestSuccessfulGitHooksForUserDeleteBranchRequest(t *testing.T) {
 		User:       user,
 	}
 
-	for _, hookName := range []string{"pre-receive", "update", "post-receive"} {
+	for _, hookName := range gitlabHooks {
 		t.Run(hookName, func(t *testing.T) {
 			testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", branchNameInput)
 
@@ -384,7 +384,7 @@ func TestFailedUserDeleteBranchDueToHooks(t *testing.T) {
 
 	hookContent := []byte("#!/bin/sh\necho GL_ID=$GL_ID\nexit 1")
 
-	for _, hookName := range []string{"pre-receive", "update"} {
+	for _, hookName := range gitlabPreHooks {
 		t.Run(hookName, func(t *testing.T) {
 			hookPath := path.Join(testRepoPath, "hooks", hookName)
 			ioutil.WriteFile(hookPath, hookContent, 0755)
