@@ -11,6 +11,7 @@ require 'active_support/core_ext/enumerable'
 # We split our mock implementation of Gitlab::GitalyClient into a separate file
 require_relative 'gitaly_client.rb'
 require_relative 'git_logger.rb'
+require_relative 'rails_logger.rb'
 
 vendor_gitlab_git = '../../vendor/gitlab_git/'
 
