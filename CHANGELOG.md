@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.45.1
 
 - Implement OperationService::UserMergeBranch
   https://gitlab.com/gitlab-org/gitaly/merge_requests/394
