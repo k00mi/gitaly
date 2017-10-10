@@ -2,11 +2,15 @@ package git
 
 import (
 	"bytes"
+	"context"
 	"fmt"
+	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly/internal/command"
 )
 
 // FallbackTimeValue is the value returned by `SafeTimeParse` in case it
@@ -63,4 +67,25 @@ func NewCommit(id, subject, body, authorName, authorEmail, authorDate,
 		Committer: &committer,
 		ParentIds: parentIds,
 	}, nil
+}
+
+// Version returns the used git version.
+func Version() (string, error) {
+	var buf bytes.Buffer
+	cmd, err := command.New(context.Background(), exec.Command(command.GitPath(), "version"), nil, &buf, nil)
+	if err != nil {
+		return "", err
+	}
+
+	if err = cmd.Wait(); err != nil {
+		return "", err
+	}
+
+	out := strings.Trim(buf.String(), " \n")
+	ver := strings.SplitN(out, " ", 3)
+	if len(ver) != 3 {
+		return "", fmt.Errorf("invalid version format: %q", buf.String())
+	}
+
+	return ver[2], nil
 }
