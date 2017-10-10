@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"path"
 	"strings"
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
@@ -22,12 +23,17 @@ func Command(ctx context.Context, repo *pb.Repository, args ...string) (*command
 
 	var env []string
 	if dir := repo.GetGitObjectDirectory(); dir != "" {
-		env = append(env, fmt.Sprintf("GIT_OBJECT_DIRECTORY=%s", dir))
+		env = append(env, fmt.Sprintf("GIT_OBJECT_DIRECTORY=%s", path.Join(repoPath, dir)))
 	}
 
 	if dirs := repo.GetGitAlternateObjectDirectories(); len(dirs) > 0 {
-		dirsList := strings.Join(dirs, ":")
-		env = append(env, fmt.Sprintf("GIT_ALTERNATE_OBJECT_DIRECTORIES=%s", dirsList))
+		var dirsList []string
+
+		for _, dir := range dirs {
+			dirsList = append(dirsList, path.Join(repoPath, dir))
+		}
+
+		env = append(env, fmt.Sprintf("GIT_ALTERNATE_OBJECT_DIRECTORIES=%s", strings.Join(dirsList, ":")))
 	}
 
 	return command.New(ctx, exec.Command(command.GitPath(), args...), nil, nil, nil, env...)

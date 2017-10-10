@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Use relative paths for git object dir attributes
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/393
+
 v0.45.1
 
 - Implement OperationService::UserMergeBranch
