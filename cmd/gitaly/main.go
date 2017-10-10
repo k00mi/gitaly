@@ -42,7 +42,11 @@ func loadConfig(configPath string) error {
 		return err
 	}
 
-	return linguist.LoadColors()
+	if err := linguist.LoadColors(); err != nil {
+		return fmt.Errorf("load linguist colors: %v", err)
+	}
+
+	return nil
 }
 
 // registerServerVersionPromGauge registers a label with the current server version
