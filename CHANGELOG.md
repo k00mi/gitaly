@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.46.0
 
 - Add a Rails logger to ruby-git
   https://gitlab.com/gitlab-org/gitaly/merge_requests/405
