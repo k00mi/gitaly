@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.47.0
 
 - Pass full BranchUpdate result on successful merge
   https://gitlab.com/gitlab-org/gitaly/merge_requests/406
