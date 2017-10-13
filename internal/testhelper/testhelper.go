@@ -61,7 +61,9 @@ func GitlabTestStoragePath() string {
 	return path.Join(path.Dir(currentFile), "testdata/data")
 }
 
-func configureTestStorage() {
+// ConfigureTestStorage adds a storage entry to Config pointing to
+// the path of the gitlab-test repo.
+func ConfigureTestStorage() {
 	config.Config.Storages = []config.Storage{
 		{Name: "default", Path: GitlabTestStoragePath()},
 	}
@@ -81,7 +83,7 @@ func testRepoValid(repo *pb.Repository) bool {
 // Tests that involve modifications to the repo should copy/clone the repo
 // via the `Repository` returned from this function.
 func TestRepository() *pb.Repository {
-	configureTestStorage()
+	ConfigureTestStorage()
 	repo := &pb.Repository{
 		StorageName:  "default",
 		RelativePath: TestRelativePath,

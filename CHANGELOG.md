@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Implement WikiWritePage RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/410
+
 v0.47.0
 
 - Pass full BranchUpdate result on successful merge

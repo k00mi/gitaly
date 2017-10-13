@@ -13,6 +13,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/service/repository"
 	"gitlab.com/gitlab-org/gitaly/internal/service/smarthttp"
 	"gitlab.com/gitlab-org/gitaly/internal/service/ssh"
+	"gitlab.com/gitlab-org/gitaly/internal/service/wiki"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -32,6 +33,7 @@ func RegisterAll(grpcServer *grpc.Server, rubyServer *rubyserver.Server) {
 	pb.RegisterRepositoryServiceServer(grpcServer, repository.NewServer(rubyServer))
 	pb.RegisterSSHServiceServer(grpcServer, ssh.NewServer())
 	pb.RegisterSmartHTTPServiceServer(grpcServer, smarthttp.NewServer())
+	pb.RegisterWikiServiceServer(grpcServer, wiki.NewServer(rubyServer))
 
 	healthpb.RegisterHealthServer(grpcServer, health.NewServer())
 }

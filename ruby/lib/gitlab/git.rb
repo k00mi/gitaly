@@ -12,6 +12,7 @@ require 'active_support/core_ext/enumerable'
 require_relative 'gitaly_client.rb'
 require_relative 'git_logger.rb'
 require_relative 'rails_logger.rb'
+require_relative 'gollum.rb'
 
 vendor_gitlab_git = '../../vendor/gitlab_git/'
 
