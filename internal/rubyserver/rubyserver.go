@@ -148,6 +148,14 @@ func (s *Server) RepositoryServiceClient(ctx context.Context) (pb.RepositoryServ
 	return pb.NewRepositoryServiceClient(conn), err
 }
 
+// WikiServiceClient returns a WikiServiceClient instance that is
+// configured to connect to the running Ruby server. This assumes Start()
+// has been called already.
+func (s *Server) WikiServiceClient(ctx context.Context) (pb.WikiServiceClient, error) {
+	conn, err := s.getConnection(ctx)
+	return pb.NewWikiServiceClient(conn), err
+}
+
 func (s *Server) getConnection(ctx context.Context) (*grpc.ClientConn, error) {
 	s.clientConnMu.RLock()
 	conn := s.clientConn

@@ -146,9 +146,12 @@ It has these top-level messages:
 	SSHUploadPackResponse
 	SSHReceivePackRequest
 	SSHReceivePackResponse
+	WikiCommitDetails
 	WikiPageVersion
 	WikiGetPageVersionsRequest
 	WikiGetPageVersionsResponse
+	WikiWritePageRequest
+	WikiWritePageResponse
 */
 package gitaly
 
