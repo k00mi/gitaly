@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"io"
 
+	log "github.com/sirupsen/logrus"
+
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -81,6 +84,11 @@ func getTreeEntriesHandler(stream pb.CommitService_GetTreeEntriesServer, revisio
 }
 
 func (s *server) GetTreeEntries(in *pb.GetTreeEntriesRequest, stream pb.CommitService_GetTreeEntriesServer) error {
+	grpc_logrus.Extract(stream.Context()).WithFields(log.Fields{
+		"Revision": in.Revision,
+		"Path":     in.Path,
+	}).Debug("GetTreeEntries")
+
 	if err := validateGetTreeEntriesRequest(in); err != nil {
 		return grpc.Errorf(codes.InvalidArgument, "TreeEntry: %v", err)
 	}
