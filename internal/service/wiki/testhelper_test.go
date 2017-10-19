@@ -13,6 +13,7 @@ import (
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -84,4 +85,31 @@ func newWikiClient(t *testing.T, serverSocketPath string) (pb.WikiServiceClient,
 	}
 
 	return pb.NewWikiServiceClient(conn), conn
+}
+
+func writeWikiPage(t *testing.T, client pb.WikiServiceClient, name string, content []byte) {
+	commitDetails := &pb.WikiCommitDetails{
+		Name:    []byte("Ahmad Sherif"),
+		Email:   []byte("ahmad@gitlab.com"),
+		Message: []byte("Add " + name),
+	}
+
+	request := &pb.WikiWritePageRequest{
+		Repository:    wikiRepo,
+		Name:          []byte(name),
+		Format:        "markdown",
+		CommitDetails: commitDetails,
+		Content:       content,
+	}
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	stream, err := client.WikiWritePage(ctx)
+	require.NoError(t, err)
+
+	require.NoError(t, stream.Send(request))
+
+	_, err = stream.CloseAndRecv()
+	require.NoError(t, err)
 }

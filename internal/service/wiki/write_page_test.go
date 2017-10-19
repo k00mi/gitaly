@@ -64,7 +64,7 @@ func TestSuccessfulWikiWritePageRequest(t *testing.T) {
 
 	headID := testhelper.MustRunCommand(t, nil, "git", "-C", wikiRepoPath, "show", "--format=format:%H", "--no-patch", "HEAD")
 	commit, err := gitlog.GetCommit(ctx, wikiRepo, string(headID), "")
-	require.NoError(t, err, "look up git commit before merge is applied")
+	require.NoError(t, err, "look up git commit after writing a wiki page")
 
 	require.Equal(t, authorName, commit.Author.Name, "author name mismatched")
 	require.Equal(t, authorEmail, commit.Author.Email, "author email mismatched")
@@ -81,40 +81,33 @@ func TestFailedWikiWritePageDueToDuplicatePage(t *testing.T) {
 	client, conn := newWikiClient(t, serverSocketPath)
 	defer conn.Close()
 
+	pageName := "Installing Gitaly"
+	content := []byte("Mock wiki page content")
 	commitDetails := &pb.WikiCommitDetails{
 		Name:    []byte("Ahmad Sherif"),
 		Email:   []byte("ahmad@gitlab.com"),
-		Message: []byte("Add installation instructions"),
+		Message: []byte("Add " + pageName),
 	}
+
+	writeWikiPage(t, client, pageName, content)
 
 	request := &pb.WikiWritePageRequest{
 		Repository:    wikiRepo,
-		Name:          []byte("Installing Gitaly"),
+		Name:          []byte(pageName),
 		Format:        "markdown",
 		CommitDetails: commitDetails,
-		Content:       []byte("Mock wiki page content"),
+		Content:       content,
 	}
 
-	ctx1, cancel1 := testhelper.Context()
-	defer cancel1()
+	ctx, cancel := testhelper.Context()
+	defer cancel()
 
-	stream1, err := client.WikiWritePage(ctx1)
+	stream, err := client.WikiWritePage(ctx)
 	require.NoError(t, err)
 
-	require.NoError(t, stream1.Send(request))
+	require.NoError(t, stream.Send(request))
 
-	_, err = stream1.CloseAndRecv()
-	require.NoError(t, err)
-
-	ctx2, cancel2 := testhelper.Context()
-	defer cancel2()
-
-	stream2, err := client.WikiWritePage(ctx2)
-	require.NoError(t, err)
-
-	require.NoError(t, stream2.Send(request))
-
-	response, err := stream2.CloseAndRecv()
+	response, err := stream.CloseAndRecv()
 	require.NoError(t, err)
 
 	expectedResponse := &pb.WikiWritePageResponse{DuplicateError: []byte("Cannot write //Installing-Gitaly.md, found //Installing-Gitaly.md.")}
