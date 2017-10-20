@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Pass repo git alternate dirs to gitaly-ruby
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/421
+
 v0.49.0
 
 - Use sentry fingerprinting to group exceptions

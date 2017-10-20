@@ -2,7 +2,11 @@ package commit
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"os"
+	"os/exec"
+	"path"
 	"testing"
 
 	"google.golang.org/grpc/codes"
@@ -214,6 +218,107 @@ func TestSuccessfulFindCommitsRequest(t *testing.T) {
 			for i, id := range tc.ids {
 				require.Equal(t, id, ids[i])
 			}
+		})
+	}
+}
+
+func TestSuccessfulFindCommitsRequestWithAltGitObjectDirs(t *testing.T) {
+	server := startTestServices(t)
+	defer server.Stop()
+
+	client, conn := newCommitServiceClient(t, serverSocketPath)
+	defer conn.Close()
+
+	committerName := "Scrooge McDuck"
+	committerEmail := "scrooge@mcduck.com"
+
+	storagePath := testhelper.GitlabTestStoragePath()
+	testRepoPath := path.Join(storagePath, testRepo.RelativePath)
+	testRepoCopyName := "find-commits-alt-test-repo"
+	testRepoCopyPath := path.Join(storagePath, testRepoCopyName)
+	altObjectsDir := "./alt-objects"
+	altObjectsPath := path.Join(testRepoCopyPath, ".git", altObjectsDir)
+	gitObjectEnv := []string{
+		fmt.Sprintf("GIT_OBJECT_DIRECTORY=%s", altObjectsPath),
+		fmt.Sprintf("GIT_ALTERNATE_OBJECT_DIRECTORIES=%s", path.Join(testRepoCopyPath, ".git/objects")),
+	}
+
+	// This clone will store its objects in the normal location: 'find-commits-alt-test-repo/.git/objects'
+	testhelper.MustRunCommand(t, nil, "git", "clone", testRepoPath, testRepoCopyPath)
+	defer os.RemoveAll(testRepoCopyPath)
+
+	if err := os.Mkdir(altObjectsPath, 0777); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command("git", "-C", testRepoCopyPath,
+		"-c", fmt.Sprintf("user.name=%s", committerName),
+		"-c", fmt.Sprintf("user.email=%s", committerEmail),
+		"commit", "--allow-empty", "-m", "An empty commit")
+	// Because we set 'gitObjectEnv', the new objects created by this 'git commit' command will go
+	// into 'find-commits-alt-test-repo/.git/alt-objects'.
+	cmd.Env = gitObjectEnv
+	if _, err := cmd.Output(); err != nil {
+		stderr := err.(*exec.ExitError).Stderr
+		t.Fatalf("%s", stderr)
+	}
+
+	cmd = exec.Command("git", "-C", testRepoCopyPath, "show", "--format=format:%H", "--no-patch", "HEAD")
+	cmd.Env = gitObjectEnv
+	currentHead, err := cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testCases := []struct {
+		desc          string
+		altDirs       []string
+		expectedCount int
+	}{
+		{
+			desc:          "present GIT_ALTERNATE_OBJECT_DIRECTORIES",
+			altDirs:       []string{altObjectsDir},
+			expectedCount: 1,
+		},
+		{
+			desc:          "empty GIT_ALTERNATE_OBJECT_DIRECTORIES",
+			altDirs:       []string{},
+			expectedCount: 0,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			request := &pb.FindCommitsRequest{
+				Repository: &pb.Repository{
+					StorageName:                   testRepo.StorageName,
+					RelativePath:                  path.Join(testRepoCopyName, ".git"),
+					GitAlternateObjectDirectories: testCase.altDirs,
+				},
+				Revision: currentHead,
+				Limit:    1,
+			}
+
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			c, err := client.FindCommits(ctx, request)
+			require.NoError(t, err)
+
+			receivedCommits := []*pb.GitCommit{}
+
+			for {
+				resp, err := c.Recv()
+				if err == io.EOF {
+					break
+				} else if err != nil {
+					t.Fatal(err)
+				}
+
+				receivedCommits = append(receivedCommits, resp.GetCommits()...)
+			}
+
+			require.Equal(t, testCase.expectedCount, len(receivedCommits), "number of commits received")
 		})
 	}
 }

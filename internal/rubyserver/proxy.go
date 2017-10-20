@@ -3,6 +3,8 @@ package rubyserver
 import (
 	"context"
 	"io"
+	"os"
+	"strings"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -17,7 +19,15 @@ func SetHeaders(ctx context.Context, repo *pb.Repository) (context.Context, erro
 		return nil, err
 	}
 
-	md := metadata.Pairs(repoPathHeader, repoPath, glRepositoryHeader, repo.GlRepository)
+	repoAltDirs := repo.GetGitAlternateObjectDirectories()
+	repoAltDirs = append(repoAltDirs, repo.GetGitObjectDirectory())
+	repoAltDirsCombined := strings.Join(repoAltDirs, string(os.PathListSeparator))
+
+	md := metadata.Pairs(
+		repoPathHeader, repoPath,
+		glRepositoryHeader, repo.GlRepository,
+		repoAltDirsHeader, repoAltDirsCombined,
+	)
 	newCtx := metadata.NewOutgoingContext(ctx, md)
 	return newCtx, nil
 }

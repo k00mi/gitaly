@@ -26,6 +26,7 @@ import (
 const (
 	repoPathHeader     = "gitaly-repo-path"
 	glRepositoryHeader = "gitaly-gl-repository"
+	repoAltDirsHeader  = "gitaly-repo-alt-dirs"
 )
 
 var (
