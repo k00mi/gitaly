@@ -119,5 +119,30 @@ module GitalyServer
         end
       end
     end
+
+    def wiki_update_page(call)
+      bridge_exceptions do
+        repo = Gitlab::Git::Repository.from_call(call)
+        title = format = page_path = commit_details = nil
+        content = ""
+
+        wiki = Gitlab::Git::Wiki.new(repo)
+        call.each_remote_read.with_index do |request, index|
+          if index.zero?
+            title = request.title
+            page_path = request.page_path
+            format = request.format
+
+            commit_details = commit_details_from_gitaly(request.commit_details)
+          end
+
+          content << request.content
+        end
+
+        wiki.update_page(page_path, title, format.to_sym, content, commit_details)
+
+        Gitaly::WikiUpdatePageResponse.new
+      end
+    end
   end
 end

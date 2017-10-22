@@ -113,3 +113,20 @@ func writeWikiPage(t *testing.T, client pb.WikiServiceClient, name string, conte
 	_, err = stream.CloseAndRecv()
 	require.NoError(t, err)
 }
+
+func sendBytes(data []byte, chunkSize int, sender func([]byte) error) (int, error) {
+	i := 0
+	for ; len(data) > 0; i++ {
+		n := chunkSize
+		if n > len(data) {
+			n = len(data)
+		}
+
+		if err := sender(data[:n]); err != nil {
+			return i, err
+		}
+		data = data[n:]
+	}
+
+	return i, nil
+}
