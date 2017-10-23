@@ -2,7 +2,11 @@ package operations
 
 import (
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
+
+	"golang.org/x/net/context"
 )
 
 func (s *server) UserMergeBranch(bidi pb.OperationService_UserMergeBranchServer) error {
@@ -50,4 +54,8 @@ func (s *server) UserMergeBranch(bidi pb.OperationService_UserMergeBranchServer)
 			return bidi.Send(response)
 		},
 	)
+}
+
+func (s *server) UserFFBranch(_ context.Context, _ *pb.UserFFBranchRequest) (*pb.UserFFBranchResponse, error) {
+	return nil, helper.Unimplemented
 }

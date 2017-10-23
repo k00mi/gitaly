@@ -87,5 +87,37 @@ module GitalyServer
         end
       end
     end
+
+    def wiki_find_file(request, call)
+      bridge_exceptions do
+        repo = Gitlab::Git::Repository.from_call(call)
+        wiki = Gitlab::Git::Wiki.new(repo)
+
+        file = wiki.file(request.name, request.revision.presence)
+
+        unless file
+          return Enumerator.new do |y|
+            y.yield Gitaly::WikiFindFileResponse.new
+          end
+        end
+
+        response = Gitaly::WikiFindFileResponse.new(
+          name: file.name.b,
+          mime_type: file.mime_type,
+          path: file.path
+        )
+
+        Enumerator.new do |y|
+          io = StringIO.new(file.raw_data)
+          while chunk = io.read(Gitlab.config.git.write_buffer_size)
+            response.raw_data = chunk
+
+            y.yield response
+
+            response = Gitaly::WikiFindFileResponse.new
+          end
+        end
+      end
+    end
   end
 end
