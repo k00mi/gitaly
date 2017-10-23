@@ -152,6 +152,7 @@ It has these top-level messages:
 	SSHReceivePackResponse
 	WikiCommitDetails
 	WikiPageVersion
+	WikiPage
 	WikiGetPageVersionsRequest
 	WikiGetPageVersionsResponse
 	WikiWritePageRequest
@@ -160,6 +161,8 @@ It has these top-level messages:
 	WikiUpdatePageResponse
 	WikiDeletePageRequest
 	WikiDeletePageResponse
+	WikiFindPageRequest
+	WikiFindPageResponse
 */
 package gitaly
 

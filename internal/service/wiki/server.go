@@ -19,3 +19,7 @@ func NewServer(rs *rubyserver.Server) pb.WikiServiceServer {
 func (s *server) WikiGetPageVersions(_ *pb.WikiGetPageVersionsRequest, _ pb.WikiService_WikiGetPageVersionsServer) error {
 	return helper.Unimplemented
 }
+
+func (s *server) WikiFindPage(_ *pb.WikiFindPageRequest, _ pb.WikiService_WikiFindPageServer) error {
+	return helper.Unimplemented
+}
