@@ -72,13 +72,21 @@ module Gitlab
   module Git
     class Repository
       def self.from_call(call)
-        new(GitalyServer.repo_path(call), GitalyServer.gl_repository(call))
+        new(
+          GitalyServer.repo_path(call),
+          GitalyServer.gl_repository(call),
+          GitalyServer.repo_alt_dirs(call)
+        )
       end
 
-      def initialize(path, gl_repository)
+      def initialize(path, gl_repository, combined_alt_dirs="")
+        alt_dirs = combined_alt_dirs
+          .split(File::PATH_SEPARATOR)
+          .map { |d| File.join(path, d) }
+
         @path = path
         @gl_repository = gl_repository
-        @rugged = Rugged::Repository.new(path)
+        @rugged = Rugged::Repository.new(path, alternates: alt_dirs)
         @attributes = Gitlab::Git::Attributes.new(path)
       end
 
