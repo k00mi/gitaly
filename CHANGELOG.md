@@ -49,6 +49,10 @@ v0.45.1
 - Fix Commit Subject parsing in rubyserver
   https://gitlab.com/gitlab-org/gitaly/merge_requests/388
 
+v0.45.0
+
+Skipped. We cut and pushed the wrong tag.
+
 v0.44.0
 
 - Update gitlab_git to 4a0f720a502ac02423
