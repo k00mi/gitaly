@@ -6,9 +6,12 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 	"testing"
 	"time"
+
+	"google.golang.org/grpc/codes"
 
 	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -166,6 +169,171 @@ func TestAbortedMerge(t *testing.T) {
 			require.NoError(t, err, "look up git commit after call has finished")
 
 			require.Equal(t, mergeBranchHeadBefore, commit.Id, "branch should not change when the merge is aborted")
+		})
+	}
+}
+
+func TestSuccessfulUserFFBranchRequest(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	server, serverSocketPath := runOperationServiceServer(t)
+	defer server.Stop()
+
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	commitID := "cfe32cf61b73a0d5e9f13e774abde7ff789b1660"
+	branchName := "test-ff-target-branch"
+	request := &pb.UserFFBranchRequest{
+		Repository: testRepo,
+		CommitId:   commitID,
+		Branch:     []byte(branchName),
+		User:       mergeUser,
+	}
+	expectedResponse := &pb.UserFFBranchResponse{
+		BranchUpdate: &pb.OperationBranchUpdate{
+			RepoCreated:   false,
+			BranchCreated: false,
+			CommitId:      commitID,
+		},
+	}
+
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", "-f", branchName, "6d394385cf567f80a8fd85055db1ab4c5295806f")
+	defer exec.Command("git", "-C", testRepoPath, "branch", "-d", branchName).Run()
+
+	resp, err := client.UserFFBranch(ctx, request)
+	require.NoError(t, err)
+	require.Equal(t, expectedResponse, resp)
+	newBranchHead := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", branchName)
+	require.Equal(t, commitID, strings.TrimSpace(string(newBranchHead)), "branch head not updated")
+}
+
+func TestFailedUserFFBranchRequest(t *testing.T) {
+	server, serverSocketPath := runOperationServiceServer(t)
+	defer server.Stop()
+
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	commitID := "cfe32cf61b73a0d5e9f13e774abde7ff789b1660"
+	branchName := "test-ff-target-branch"
+
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", "-f", branchName, "6d394385cf567f80a8fd85055db1ab4c5295806f")
+	defer exec.Command("git", "-C", testRepoPath, "branch", "-d", branchName).Run()
+
+	testCases := []struct {
+		desc     string
+		user     *pb.User
+		branch   []byte
+		commitID string
+		repo     *pb.Repository
+		code     codes.Code
+	}{
+		{
+			desc:     "empty repository",
+			user:     mergeUser,
+			branch:   []byte(branchName),
+			commitID: commitID,
+			code:     codes.InvalidArgument,
+		},
+		{
+			desc:     "empty user",
+			repo:     testRepo,
+			branch:   []byte(branchName),
+			commitID: commitID,
+			code:     codes.InvalidArgument,
+		},
+		{
+			desc:   "empty commit",
+			repo:   testRepo,
+			user:   mergeUser,
+			branch: []byte(branchName),
+			code:   codes.InvalidArgument,
+		},
+		{
+			desc:     "non-existing commit",
+			repo:     testRepo,
+			user:     mergeUser,
+			branch:   []byte(branchName),
+			commitID: "f001",
+			code:     codes.InvalidArgument,
+		},
+		{
+			desc:     "empty branch",
+			repo:     testRepo,
+			user:     mergeUser,
+			commitID: commitID,
+			code:     codes.InvalidArgument,
+		},
+		{
+			desc:     "non-existing branch",
+			repo:     testRepo,
+			user:     mergeUser,
+			branch:   []byte("this-isnt-real"),
+			commitID: commitID,
+			code:     codes.InvalidArgument,
+		},
+		{
+			desc:     "commit is not a descendant of branch head",
+			repo:     testRepo,
+			user:     mergeUser,
+			branch:   []byte(branchName),
+			commitID: "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
+			code:     codes.FailedPrecondition,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			request := &pb.UserFFBranchRequest{
+				Repository: testCase.repo,
+				User:       testCase.user,
+				Branch:     testCase.branch,
+				CommitId:   testCase.commitID,
+			}
+			_, err := client.UserFFBranch(ctx, request)
+			testhelper.AssertGrpcError(t, err, testCase.code, "")
+		})
+	}
+}
+
+func TestFailedUserFFBranchDueToHooks(t *testing.T) {
+	server, serverSocketPath := runOperationServiceServer(t)
+	defer server.Stop()
+
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	commitID := "cfe32cf61b73a0d5e9f13e774abde7ff789b1660"
+	branchName := "test-ff-target-branch"
+	request := &pb.UserFFBranchRequest{
+		Repository: testRepo,
+		CommitId:   commitID,
+		Branch:     []byte(branchName),
+		User:       mergeUser,
+	}
+
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", "-f", branchName, "6d394385cf567f80a8fd85055db1ab4c5295806f")
+	defer exec.Command("git", "-C", testRepoPath, "branch", "-d", branchName).Run()
+
+	hookContent := []byte("#!/bin/sh\necho 'failure'\nexit 1")
+
+	for _, hookName := range gitlabPreHooks {
+		t.Run(hookName, func(t *testing.T) {
+			hookPath := path.Join(testRepoPath, "hooks", hookName)
+			ioutil.WriteFile(hookPath, hookContent, 0755)
+			defer os.Remove(hookPath)
+
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			resp, err := client.UserFFBranch(ctx, request)
+			require.Nil(t, err)
+			require.Contains(t, resp.PreReceiveError, "failure")
 		})
 	}
 }

@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Implement OperationService.UserFFMerge
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/426
 - Implement WikiFindFile RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/425
 - Implement WikiDeletePage RPC

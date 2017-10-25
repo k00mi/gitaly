@@ -122,15 +122,41 @@ module GitalyServer
             end
           end
 
-          branch_update = Gitaly::OperationBranchUpdate.new(
-            commit_id: result.newrev,
-            repo_created: result.repo_created,
-            branch_created: result.branch_created
-          )
+          branch_update = branch_update_result(result)
 
           y << Gitaly::UserMergeBranchResponse.new(branch_update: branch_update)
         end
       end
+    end
+
+    def user_ff_branch(request, call)
+      bridge_exceptions do
+        begin
+          repo = Gitlab::Git::Repository.from_call(call)
+          user = Gitlab::Git::User.from_gitaly(request.user)
+
+          result = repo.ff_merge(user, request.commit_id, request.branch)
+          branch_update = branch_update_result(result)
+
+          Gitaly::UserFFBranchResponse.new(branch_update: branch_update)
+        rescue Gitlab::Git::CommitError => e
+          raise GRPC::FailedPrecondition.new(e.to_s)
+        rescue ArgumentError => e
+          raise GRPC::InvalidArgument.new(e.to_s)
+        rescue Gitlab::Git::HooksService::PreReceiveError => e
+          Gitaly::UserFFBranchResponse.new(pre_receive_error: e.message)
+        end
+      end
+    end
+
+    private
+
+    def branch_update_result(gitlab_update_result)
+      Gitaly::OperationBranchUpdate.new(
+        commit_id: gitlab_update_result.newrev,
+        repo_created: gitlab_update_result.repo_created,
+        branch_created: gitlab_update_result.branch_created
+      )
     end
   end
 end
