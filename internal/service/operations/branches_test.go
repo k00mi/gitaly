@@ -90,9 +90,10 @@ func TestSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T) {
 
 	branchName := "new-branch"
 	user := &pb.User{
-		Name:  []byte("Alejandro Rodríguez"),
-		Email: []byte("alejandro@gitlab.com"),
-		GlId:  "user-1",
+		Name:       []byte("Alejandro Rodríguez"),
+		Email:      []byte("alejandro@gitlab.com"),
+		GlId:       "user-1",
+		GlUsername: "johndoe",
 	}
 	request := &pb.UserCreateBranchRequest{
 		Repository: testRepo,
@@ -117,6 +118,7 @@ func TestSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T) {
 
 			output := string(testhelper.MustReadFile(t, hookOutputTempPath))
 			require.Contains(t, output, "GL_ID="+user.GlId)
+			require.Contains(t, output, "GL_USERNAME="+user.GlUsername)
 		})
 	}
 }
@@ -129,9 +131,10 @@ func TestFailedUserCreateBranchDueToHooks(t *testing.T) {
 	defer conn.Close()
 
 	user := &pb.User{
-		Name:  []byte("Alejandro Rodríguez"),
-		Email: []byte("alejandro@gitlab.com"),
-		GlId:  "user-1",
+		Name:       []byte("Alejandro Rodríguez"),
+		Email:      []byte("alejandro@gitlab.com"),
+		GlId:       "user-1",
+		GlUsername: "johndoe",
 	}
 	request := &pb.UserCreateBranchRequest{
 		Repository: testRepo,
@@ -154,6 +157,7 @@ func TestFailedUserCreateBranchDueToHooks(t *testing.T) {
 		response, err := client.UserCreateBranch(ctx, request)
 		require.Nil(t, err)
 		require.Contains(t, response.PreReceiveError, "GL_ID="+user.GlId)
+		require.Contains(t, response.PreReceiveError, "GL_USERNAME="+user.GlUsername)
 		require.Contains(t, response.PreReceiveError, "GL_REPOSITORY="+testRepo.GlRepository)
 		require.Contains(t, response.PreReceiveError, "GL_PROTOCOL=web")
 		require.Contains(t, response.PreReceiveError, "PWD="+testRepoPath)
@@ -273,9 +277,10 @@ func TestSuccessfulGitHooksForUserDeleteBranchRequest(t *testing.T) {
 	defer exec.Command("git", "-C", testRepoPath, "branch", "-d", branchNameInput).Run()
 
 	user := &pb.User{
-		Name:  []byte("Alejandro Rodríguez"),
-		Email: []byte("alejandro@gitlab.com"),
-		GlId:  "user-123",
+		Name:       []byte("Alejandro Rodríguez"),
+		Email:      []byte("alejandro@gitlab.com"),
+		GlId:       "user-123",
+		GlUsername: "johndoe",
 	}
 
 	request := &pb.UserDeleteBranchRequest{
@@ -299,6 +304,7 @@ func TestSuccessfulGitHooksForUserDeleteBranchRequest(t *testing.T) {
 
 			output := testhelper.MustReadFile(t, hookOutputTempPath)
 			require.Contains(t, string(output), "GL_ID=user-123")
+			require.Contains(t, string(output), "GL_USERNAME=johndoe")
 		})
 	}
 }
