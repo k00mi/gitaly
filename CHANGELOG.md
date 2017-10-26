@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.50.0
 
 - Pass repo git alternate dirs to gitaly-ruby
   https://gitlab.com/gitlab-org/gitaly/merge_requests/421
