@@ -63,9 +63,10 @@ func TestSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T) {
 	defer exec.Command("git", "-C", testRepoPath, "tag", "-d", tagNameInput).Run()
 
 	user := &pb.User{
-		Name:  []byte("Ahmad Sherif"),
-		Email: []byte("ahmad@gitlab.com"),
-		GlId:  "user-123",
+		Name:       []byte("Ahmad Sherif"),
+		Email:      []byte("ahmad@gitlab.com"),
+		GlId:       "user-123",
+		GlUsername: "johndoe",
 	}
 
 	request := &pb.UserDeleteTagRequest{
@@ -89,6 +90,7 @@ func TestSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T) {
 
 			output := testhelper.MustReadFile(t, hookOutputTempPath)
 			require.Contains(t, string(output), "GL_ID=user-123")
+			require.Contains(t, string(output), "GL_USERNAME=johndoe")
 		})
 	}
 }
@@ -181,9 +183,10 @@ func TestSuccessfulGitHooksForUserCreateTagRequest(t *testing.T) {
 
 	tagName := "new-tag"
 	user := &pb.User{
-		Name:  []byte("Ahmad Sherif"),
-		Email: []byte("ahmad@gitlab.com"),
-		GlId:  "user-123",
+		Name:       []byte("Ahmad Sherif"),
+		Email:      []byte("ahmad@gitlab.com"),
+		GlId:       "user-123",
+		GlUsername: "johndoe",
 	}
 	request := &pb.UserCreateTagRequest{
 		Repository:     testRepo,
@@ -208,6 +211,7 @@ func TestSuccessfulGitHooksForUserCreateTagRequest(t *testing.T) {
 
 			output := string(testhelper.MustReadFile(t, hookOutputTempPath))
 			require.Contains(t, output, "GL_ID="+user.GlId)
+			require.Contains(t, output, "GL_USERNAME="+user.GlUsername)
 		})
 	}
 }
@@ -320,9 +324,10 @@ func TestFailedUserCreateTagDueToHooks(t *testing.T) {
 	defer conn.Close()
 
 	user := &pb.User{
-		Name:  []byte("Ahmad Sherif"),
-		Email: []byte("ahmad@gitlab.com"),
-		GlId:  "user-123",
+		Name:       []byte("Ahmad Sherif"),
+		Email:      []byte("ahmad@gitlab.com"),
+		GlId:       "user-123",
+		GlUsername: "johndoe",
 	}
 	request := &pb.UserCreateTagRequest{
 		Repository:     testRepo,
