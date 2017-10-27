@@ -20,8 +20,7 @@ import (
 )
 
 var (
-	testRepo         = testhelper.TestRepository()
-	serverSocketPath = testhelper.GetTemporaryGitalySocketFileName()
+	testRepo = testhelper.TestRepository()
 )
 
 func TestMain(m *testing.M) {
@@ -47,12 +46,9 @@ func testMain(m *testing.M) int {
 	return m.Run()
 }
 
-func startTestServices(t *testing.T) *grpc.Server {
+func startTestServices(t *testing.T) (*grpc.Server, string) {
 	server := testhelper.NewTestGrpcServer(t, nil, nil)
-
-	if err := os.RemoveAll(serverSocketPath); err != nil {
-		t.Fatal(err)
-	}
+	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 
 	listener, err := net.Listen("unix", serverSocketPath)
 	if err != nil {
@@ -63,14 +59,14 @@ func startTestServices(t *testing.T) *grpc.Server {
 	reflection.Register(server)
 
 	go server.Serve(listener)
-	return server
+	return server, serverSocketPath
 }
 
 func newCommitServiceClient(t *testing.T, serviceSocketPath string) (pb.CommitServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
-		grpc.WithDialer(func(addr string, _ time.Duration) (net.Conn, error) {
-			return net.Dial("unix", addr)
+		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
+			return net.DialTimeout("unix", addr, timeout)
 		}),
 	}
 	conn, err := grpc.Dial(serviceSocketPath, connOpts...)
