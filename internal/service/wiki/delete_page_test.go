@@ -13,6 +13,9 @@ import (
 )
 
 func TestSuccessfulWikiDeletePageRequest(t *testing.T) {
+	wikiRepo, cleanupFunc := setupWikiRepo()
+	defer cleanupFunc()
+
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
@@ -28,7 +31,7 @@ func TestSuccessfulWikiDeletePageRequest(t *testing.T) {
 	message := []byte("Delete " + pageName)
 	content := []byte("It was the best of wikis, it was the worst of wikis")
 
-	writeWikiPage(t, client, pageName, content)
+	writeWikiPage(t, client, wikiRepo, pageName, content)
 
 	request := &pb.WikiDeletePageRequest{
 		Repository: wikiRepo,
@@ -53,6 +56,9 @@ func TestSuccessfulWikiDeletePageRequest(t *testing.T) {
 }
 
 func TestFailedWikiDeletePageDueToValidations(t *testing.T) {
+	wikiRepo, cleanupFunc := setupWikiRepo()
+	defer cleanupFunc()
+
 	server, serverSocketPath := runWikiServiceServer(t)
 	defer server.Stop()
 

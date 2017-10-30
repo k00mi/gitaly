@@ -15,6 +15,9 @@ import (
 )
 
 func TestSuccessfulWikiFindPageRequest(t *testing.T) {
+	wikiRepo, cleanupFunc := setupWikiRepo()
+	defer cleanupFunc()
+
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
@@ -30,14 +33,14 @@ func TestSuccessfulWikiFindPageRequest(t *testing.T) {
 	page2Name := "Installing/Step 133-b"
 	page3Name := "Installing/Step 133-c"
 
-	writeWikiPage(t, client, page1Name, content)
+	writeWikiPage(t, client, wikiRepo, page1Name, content)
 	head1ID := testhelper.MustRunCommand(t, nil, "git", "-C", wikiRepoPath, "show", "--format=format:%H", "--no-patch", "HEAD")
 	page1Commit, err := gitlog.GetCommit(ctx, wikiRepo, string(head1ID), "")
 	require.NoError(t, err, "look up git commit after writing a wiki page")
 
-	writeWikiPage(t, client, page2Name, content)
+	writeWikiPage(t, client, wikiRepo, page2Name, content)
 
-	writeWikiPage(t, client, page3Name, content)
+	writeWikiPage(t, client, wikiRepo, page3Name, content)
 	head3ID := testhelper.MustRunCommand(t, nil, "git", "-C", wikiRepoPath, "show", "--format=format:%H", "--no-patch", "HEAD")
 	page3Commit, err := gitlog.GetCommit(ctx, wikiRepo, string(head3ID), "")
 	require.NoError(t, err, "look up git commit after writing a wiki page")
@@ -153,6 +156,9 @@ func TestSuccessfulWikiFindPageRequest(t *testing.T) {
 }
 
 func TestFailedWikiFindPageDueToValidation(t *testing.T) {
+	wikiRepo, cleanupFunc := setupWikiRepo()
+	defer cleanupFunc()
+
 	server, serverSocketPath := runWikiServiceServer(t)
 	defer server.Stop()
 

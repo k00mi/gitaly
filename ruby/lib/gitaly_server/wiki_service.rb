@@ -120,6 +120,39 @@ module GitalyServer
       end
     end
 
+    def wiki_get_page_versions(request, call)
+      bridge_exceptions do
+        repo = Gitlab::Git::Repository.from_call(call)
+        wiki = Gollum::Wiki.new(repo.path)
+        path = request.page_path
+
+        page = wiki.paged(Gollum::Page.canonicalize_filename(path), File.split(path).first)
+
+        unless page
+          return Enumerator.new do |y|
+            y.yield Gitaly::WikiGetPageVersionsResponse.new(versions: [])
+          end
+        end
+
+        Enumerator.new do |y|
+          page.versions.each_slice(20) do |slice|
+            versions =
+              slice.map do |commit|
+                gollum_page = wiki.page(page.title, commit.id)
+                obj = repo.rugged.rev_parse(commit.id)
+
+                Gitaly::WikiPageVersion.new(
+                  commit: gitaly_commit_from_rugged(obj),
+                  format: gollum_page&.format.to_s
+                )
+              end
+
+            y.yield Gitaly::WikiGetPageVersionsResponse.new(versions: versions)
+          end
+        end
+      end
+    end
+
     def wiki_update_page(call)
       bridge_exceptions do
         repo = Gitlab::Git::Repository.from_call(call)

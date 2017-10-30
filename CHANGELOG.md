@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Implement WikiGetPageVersions RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/430
+
 v0.52.0
 
 - Implement WikiUpdatePage RPC

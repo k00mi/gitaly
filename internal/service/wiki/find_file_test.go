@@ -17,6 +17,9 @@ import (
 )
 
 func TestSuccessfulWikiFindFileRequest(t *testing.T) {
+	_, cleanupFunc := setupWikiRepo()
+	defer cleanupFunc()
+
 	server, serverSocketPath := runWikiServiceServer(t)
 	defer server.Stop()
 
@@ -131,6 +134,9 @@ func TestSuccessfulWikiFindFileRequest(t *testing.T) {
 }
 
 func TestFailedWikiFindFileDueToValidation(t *testing.T) {
+	wikiRepo, cleanupFunc := setupWikiRepo()
+	defer cleanupFunc()
+
 	server, serverSocketPath := runWikiServiceServer(t)
 	defer server.Stop()
 

@@ -14,6 +14,9 @@ import (
 )
 
 func TestSuccessfulWikiWritePageRequest(t *testing.T) {
+	wikiRepo, cleanupFunc := setupWikiRepo()
+	defer cleanupFunc()
+
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
@@ -75,6 +78,9 @@ func TestSuccessfulWikiWritePageRequest(t *testing.T) {
 }
 
 func TestFailedWikiWritePageDueToDuplicatePage(t *testing.T) {
+	wikiRepo, cleanupFunc := setupWikiRepo()
+	defer cleanupFunc()
+
 	server, serverSocketPath := runWikiServiceServer(t)
 	defer server.Stop()
 
@@ -89,7 +95,7 @@ func TestFailedWikiWritePageDueToDuplicatePage(t *testing.T) {
 		Message: []byte("Add " + pageName),
 	}
 
-	writeWikiPage(t, client, pageName, content)
+	writeWikiPage(t, client, wikiRepo, pageName, content)
 
 	request := &pb.WikiWritePageRequest{
 		Repository:    wikiRepo,
@@ -115,6 +121,8 @@ func TestFailedWikiWritePageDueToDuplicatePage(t *testing.T) {
 }
 
 func TestFailedWikiWritePageDueToValidations(t *testing.T) {
+	wikiRepo := &pb.Repository{}
+
 	server, serverSocketPath := runWikiServiceServer(t)
 	defer server.Stop()
 
