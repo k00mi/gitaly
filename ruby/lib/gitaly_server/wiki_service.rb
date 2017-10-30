@@ -2,6 +2,19 @@ module GitalyServer
   class WikiService < Gitaly::WikiService::Service
     include Utils
 
+    def wiki_delete_page(request, call)
+      bridge_exceptions do
+        repo = Gitlab::Git::Repository.from_call(call)
+        wiki = Gitlab::Git::Wiki.new(repo)
+        page_path = request.page_path
+        commit_details = commit_details_from_gitaly(request.commit_details)
+
+        wiki.delete_page(page_path, commit_details)
+
+        Gitaly::WikiDeletePageResponse.new
+      end
+    end
+
     def wiki_write_page(call)
       bridge_exceptions do
         begin
@@ -20,11 +33,7 @@ module GitalyServer
           end
 
           wiki = Gitlab::Git::Wiki.new(repo)
-          commit_details = Gitlab::Git::Wiki::CommitDetails.new(
-            commit_details.name,
-            commit_details.email,
-            commit_details.message
-          )
+          commit_details = commit_details_from_gitaly(commit_details)
 
           wiki.write_page(name, format.to_sym, content, commit_details)
 

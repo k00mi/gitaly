@@ -1,12 +1,39 @@
 package wiki
 
 import (
-	"golang.org/x/net/context"
+	"fmt"
+
+	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
+
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 )
 
-func (*server) WikiDeletePage(ctx context.Context, in *pb.WikiDeletePageRequest) (*pb.WikiDeletePageResponse, error) {
-	return nil, helper.Unimplemented
+func (s *server) WikiDeletePage(ctx context.Context, request *pb.WikiDeletePageRequest) (*pb.WikiDeletePageResponse, error) {
+	if err := validateWikiDeletePageRequest(request); err != nil {
+		return nil, grpc.Errorf(codes.InvalidArgument, "WikiDeletePage: %v", err)
+	}
+
+	client, err := s.WikiServiceClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	clientCtx, err := rubyserver.SetHeaders(ctx, request.GetRepository())
+	if err != nil {
+		return nil, err
+	}
+
+	return client.WikiDeletePage(clientCtx, request)
+}
+
+func validateWikiDeletePageRequest(request *pb.WikiDeletePageRequest) error {
+	if len(request.GetPagePath()) == 0 {
+		return fmt.Errorf("empty PagePath")
+	}
+
+	return validateRequestCommitDetails(request)
 }

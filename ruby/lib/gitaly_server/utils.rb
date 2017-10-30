@@ -20,6 +20,14 @@ module GitalyServer
       )
     end
 
+    def commit_details_from_gitaly(gitaly_commit_details)
+      Gitlab::Git::Wiki::CommitDetails.new(
+        gitaly_commit_details.name,
+        gitaly_commit_details.email,
+        gitaly_commit_details.message
+      )
+    end
+
     def bridge_exceptions
       yield
     rescue GRPC::BadStatus => e

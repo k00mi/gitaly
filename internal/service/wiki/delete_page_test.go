@@ -1,0 +1,145 @@
+package wiki
+
+import (
+	"testing"
+
+	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
+
+	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+)
+
+func TestSuccessfulWikiDeletePageRequest(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	server, serverSocketPath := runWikiServiceServer(t)
+	defer server.Stop()
+
+	client, conn := newWikiClient(t, serverSocketPath)
+	defer conn.Close()
+
+	pageName := "A tale of two wikis"
+	authorName := []byte("Ahmad Sherif")
+	authorEmail := []byte("ahmad@gitlab.com")
+	message := []byte("Delete " + pageName)
+	content := []byte("It was the best of wikis, it was the worst of wikis")
+
+	writeWikiPage(t, client, pageName, content)
+
+	request := &pb.WikiDeletePageRequest{
+		Repository: wikiRepo,
+		PagePath:   []byte("a-tale-of-two-wikis"),
+		CommitDetails: &pb.WikiCommitDetails{
+			Name:    authorName,
+			Email:   authorEmail,
+			Message: message,
+		},
+	}
+
+	_, err := client.WikiDeletePage(ctx, request)
+	require.NoError(t, err)
+
+	headID := testhelper.MustRunCommand(t, nil, "git", "-C", wikiRepoPath, "show", "--format=format:%H", "--no-patch", "HEAD")
+	commit, err := gitlog.GetCommit(ctx, wikiRepo, string(headID), "")
+	require.NoError(t, err, "look up git commit after deleting a wiki page")
+
+	require.Equal(t, authorName, commit.Author.Name, "author name mismatched")
+	require.Equal(t, authorEmail, commit.Author.Email, "author email mismatched")
+	require.Equal(t, message, commit.Subject, "message mismatched")
+}
+
+func TestFailedWikiDeletePageDueToValidations(t *testing.T) {
+	server, serverSocketPath := runWikiServiceServer(t)
+	defer server.Stop()
+
+	client, conn := newWikiClient(t, serverSocketPath)
+	defer conn.Close()
+
+	commitDetails := &pb.WikiCommitDetails{
+		Name:    []byte("Ahmad Sherif"),
+		Email:   []byte("ahmad@gitlab.com"),
+		Message: []byte("Delete a wiki page"),
+	}
+
+	testCases := []struct {
+		desc    string
+		request *pb.WikiDeletePageRequest
+		code    codes.Code
+	}{
+		{
+			desc: "non existent  page path",
+			request: &pb.WikiDeletePageRequest{
+				Repository:    wikiRepo,
+				PagePath:      []byte("does-not-exist"),
+				CommitDetails: commitDetails,
+			},
+			code: codes.Unknown,
+		},
+		{
+			desc: "empty page path",
+			request: &pb.WikiDeletePageRequest{
+				Repository:    wikiRepo,
+				CommitDetails: commitDetails,
+			},
+			code: codes.InvalidArgument,
+		},
+		{
+			desc: "empty commit details",
+			request: &pb.WikiDeletePageRequest{
+				Repository: wikiRepo,
+				PagePath:   []byte("does-not-matter"),
+			},
+			code: codes.InvalidArgument,
+		},
+		{
+			desc: "empty commit details' name",
+			request: &pb.WikiDeletePageRequest{
+				Repository: wikiRepo,
+				PagePath:   []byte("does-not-matter"),
+				CommitDetails: &pb.WikiCommitDetails{
+					Email:   []byte("a@b.com"),
+					Message: []byte("A message"),
+				},
+			},
+			code: codes.InvalidArgument,
+		},
+		{
+			desc: "empty commit details' email",
+			request: &pb.WikiDeletePageRequest{
+				Repository: wikiRepo,
+				PagePath:   []byte("does-not-matter"),
+				CommitDetails: &pb.WikiCommitDetails{
+					Name:    []byte("A name"),
+					Message: []byte("A message"),
+				},
+			},
+			code: codes.InvalidArgument,
+		},
+		{
+			desc: "empty commit details' message",
+			request: &pb.WikiDeletePageRequest{
+				Repository: wikiRepo,
+				PagePath:   []byte("does-not-matter"),
+				CommitDetails: &pb.WikiCommitDetails{
+					Name:  []byte("A name"),
+					Email: []byte("a@b.com"),
+				},
+			},
+			code: codes.InvalidArgument,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			_, err := client.WikiDeletePage(ctx, testCase.request)
+			testhelper.AssertGrpcError(t, err, testCase.code, "")
+		})
+	}
+}
