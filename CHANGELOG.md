@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Implement WikiFindFile RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/425
 - Implement WikiDeletePage RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/414
 - Implement WikiFindPage RPC
