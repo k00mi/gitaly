@@ -1,12 +1,14 @@
 package operations
 
 import (
+	"fmt"
+
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
-
 	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 )
 
 func (s *server) UserMergeBranch(bidi pb.OperationService_UserMergeBranchServer) error {
@@ -56,6 +58,36 @@ func (s *server) UserMergeBranch(bidi pb.OperationService_UserMergeBranchServer)
 	)
 }
 
-func (s *server) UserFFBranch(_ context.Context, _ *pb.UserFFBranchRequest) (*pb.UserFFBranchResponse, error) {
-	return nil, helper.Unimplemented
+func validateFFRequest(in *pb.UserFFBranchRequest) error {
+	if len(in.Branch) == 0 {
+		return fmt.Errorf("empty branch name")
+	}
+
+	if in.User == nil {
+		return fmt.Errorf("empty user")
+	}
+
+	if in.CommitId == "" {
+		return fmt.Errorf("empty commit id")
+	}
+
+	return nil
+}
+
+func (s *server) UserFFBranch(ctx context.Context, in *pb.UserFFBranchRequest) (*pb.UserFFBranchResponse, error) {
+	if err := validateFFRequest(in); err != nil {
+		return nil, grpc.Errorf(codes.InvalidArgument, "UserFFBranch: %v", err)
+	}
+
+	client, err := s.OperationServiceClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	clientCtx, err := rubyserver.SetHeaders(ctx, in.GetRepository())
+	if err != nil {
+		return nil, err
+	}
+
+	return client.UserFFBranch(clientCtx, in)
 }
