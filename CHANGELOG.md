@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.51.0
 
 - Implement OperationService.UserFFMerge
   https://gitlab.com/gitlab-org/gitaly/merge_requests/426
