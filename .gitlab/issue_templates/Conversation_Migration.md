@@ -4,9 +4,9 @@
 
 - [ ] ~"RPC Design": [Create Issue](https://gitlab.com/gitlab-org/gitaly/issues/new?issuable_template=Migration_RPC_Design)
 
-- [ ] ~"Server Implementation": [Create Issue](https://gitlab.com/gitlab-org/gitaly/issues/new?issuable_template=Migration_Server_Implementation)
-
 - [ ] ~"Client Implementation": [Create Issue](https://gitlab.com/gitlab-org/gitaly/issues/new?issuable_template=Migration_Client_Implementation)
+
+- [ ] ~"Server Implementation": [Create Issue](https://gitlab.com/gitlab-org/gitaly/issues/new?issuable_template=Migration_Server_Implementation)
 
 - [ ] ~"Acceptance Testing": [Create Issue](https://gitlab.com/gitlab-org/gitaly/issues/new?issuable_template=Migration_Acceptance_Testing)
 
