@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.52.0
 
 - Implement WikiUpdatePage RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/422
