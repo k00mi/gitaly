@@ -77,7 +77,7 @@ func (s *server) RenameNamespace(ctx context.Context, in *pb.RenameNamespaceRequ
 
 	err = os.Rename(namespacePath(storagePath, in.GetFrom()), namespacePath(storagePath, in.GetTo()))
 	if _, ok := err.(*os.LinkError); ok {
-		return nil, grpc.Errorf(codes.InvalidArgument, "from directory not found")
+		return nil, grpc.Errorf(codes.InvalidArgument, "from directory %s not found", in.GetFrom)
 	} else if err != nil {
 		return nil, grpc.Errorf(codes.Internal, "rename: %v", err)
 	}
