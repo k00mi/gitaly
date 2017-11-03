@@ -46,6 +46,7 @@ cover:
   artifacts:
     paths:
       - _build/cover/all.html
+    expire_in: 1 week
 
 package:
   stage: package
@@ -87,6 +88,7 @@ codeclimate:
     - docker run --env CODECLIMATE_CODE="$PWD" --volume "$PWD":/code --volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp/cc:/tmp/cc dev.gitlab.org:5005/gitlab/gitlab-build-images:gitlab-codeclimate analyze -f json > codeclimate.json
   artifacts:
     paths: [codeclimate.json]
+    expire_in: 1 week
   allow_failure: true
 
 
