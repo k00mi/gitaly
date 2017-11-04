@@ -1,12 +1,14 @@
 package wiki
 
 import (
+	"bytes"
 	"net"
 	"os"
 	"path"
 	"testing"
 	"time"
 
+	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
@@ -19,7 +21,8 @@ import (
 )
 
 var (
-	wikiRepoPath string
+	wikiRepoPath    string
+	mockPageContent = bytes.Repeat([]byte("Mock wiki page content"), 10000)
 )
 
 func TestMain(m *testing.M) {
@@ -158,4 +161,16 @@ func sendBytes(data []byte, chunkSize int, sender func([]byte) error) (int, erro
 	}
 
 	return i, nil
+}
+
+func createTestWikiPage(t *testing.T, client pb.WikiServiceClient, wikiRepo *pb.Repository, pageName string) *pb.GitCommit {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	writeWikiPage(t, client, wikiRepo, pageName, mockPageContent)
+	head1ID := testhelper.MustRunCommand(t, nil, "git", "-C", wikiRepoPath, "show", "--format=format:%H", "--no-patch", "HEAD")
+	pageCommit, err := gitlog.GetCommit(ctx, wikiRepo, string(head1ID), "")
+	require.NoError(t, err, "look up git commit after writing a wiki page")
+
+	return pageCommit
 }
