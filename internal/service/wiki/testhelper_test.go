@@ -174,3 +174,27 @@ func createTestWikiPage(t *testing.T, client pb.WikiServiceClient, wikiRepo *pb.
 
 	return pageCommit
 }
+
+func requireWikiPagesEqual(t *testing.T, expectedPage *pb.WikiPage, actualPage *pb.WikiPage) {
+	// require.Equal doesn't display a proper diff when either expected/actual has a field
+	// with large data (RawData in our case), so we compare file attributes and content separately.
+	expectedContent := expectedPage.GetRawData()
+	if expectedPage != nil {
+		expectedPage.RawData = nil
+		defer func() {
+			expectedPage.RawData = expectedContent
+		}()
+	}
+	actualContent := actualPage.GetRawData()
+	if actualPage != nil {
+		actualPage.RawData = nil
+		defer func() {
+			actualPage.RawData = actualContent
+		}()
+	}
+
+	require.Equal(t, expectedPage, actualPage, "mismatched page attributes")
+	if expectedPage != nil {
+		require.Equal(t, expectedContent, actualContent, "mismatched page content")
+	}
+}
