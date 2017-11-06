@@ -22,6 +22,9 @@ func TestGetArchiveSuccess(t *testing.T) {
 	client, conn := newRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	formats := []pb.GetArchiveRequest_Format{
 		pb.GetArchiveRequest_ZIP,
 		pb.GetArchiveRequest_TAR,
@@ -89,6 +92,9 @@ func TestGetArchiveFailure(t *testing.T) {
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	commitID := "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863"
 

@@ -17,6 +17,9 @@ func TestSuccessfulGetBlob(t *testing.T) {
 	server, serverSocketPath := runBlobServer(t)
 	defer server.Stop()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	client, conn := newBlobClient(t, serverSocketPath)
 	defer conn.Close()
 	maintenanceMdBlobData := testhelper.MustReadFile(t, "testdata/maintenance-md-blob.txt")
@@ -94,6 +97,9 @@ func TestGetBlobNotFound(t *testing.T) {
 	client, conn := newBlobClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	request := &pb.GetBlobRequest{
 		Repository: testRepo,
 		Oid:        "doesnotexist",
@@ -143,6 +149,9 @@ func getBlob(stream pb.BlobService_GetBlobClient) (int64, string, []byte, error)
 func TestFailedGetBlobRequestDueToValidationError(t *testing.T) {
 	server, serverSocketPath := runBlobServer(t)
 	defer server.Stop()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	client, conn := newBlobClient(t, serverSocketPath)
 	defer conn.Close()

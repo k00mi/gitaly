@@ -36,6 +36,9 @@ func TestSuccessfulMerge(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	server, serverSocketPath := runOperationServiceServer(t)
 	defer server.Stop()
 
@@ -45,8 +48,7 @@ func TestSuccessfulMerge(t *testing.T) {
 	mergeBidi, err := client.UserMergeBranch(ctx)
 	require.NoError(t, err)
 
-	prepareMergeBranch(t)
-	defer deleteBranch(mergeBranchName)
+	prepareMergeBranch(t, testRepoPath)
 
 	hooks := GitlabHooks
 	hookTempfiles := make([]string, len(hooks))
@@ -117,6 +119,11 @@ func TestAbortedMerge(t *testing.T) {
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	prepareMergeBranch(t, testRepoPath)
+
 	firstRequest := &pb.UserMergeBranchRequest{
 		Repository: testRepo,
 		User:       mergeUser,
@@ -139,9 +146,6 @@ func TestAbortedMerge(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			mergeBidi, err := client.UserMergeBranch(ctx)
 			require.NoError(t, err)
-
-			prepareMergeBranch(t)
-			defer deleteBranch(mergeBranchName)
 
 			require.NoError(t, mergeBidi.Send(firstRequest), "send first request")
 
@@ -183,6 +187,9 @@ func TestSuccessfulUserFFBranchRequest(t *testing.T) {
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	commitID := "cfe32cf61b73a0d5e9f13e774abde7ff789b1660"
 	branchName := "test-ff-target-branch"
 	request := &pb.UserFFBranchRequest{
@@ -215,6 +222,9 @@ func TestFailedUserFFBranchRequest(t *testing.T) {
 
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	commitID := "cfe32cf61b73a0d5e9f13e774abde7ff789b1660"
 	branchName := "test-ff-target-branch"
@@ -308,6 +318,9 @@ func TestFailedUserFFBranchDueToHooks(t *testing.T) {
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	commitID := "cfe32cf61b73a0d5e9f13e774abde7ff789b1660"
 	branchName := "test-ff-target-branch"
 	request := &pb.UserFFBranchRequest{
@@ -338,8 +351,8 @@ func TestFailedUserFFBranchDueToHooks(t *testing.T) {
 	}
 }
 
-func prepareMergeBranch(t *testing.T) {
-	deleteBranch(mergeBranchName)
+func prepareMergeBranch(t *testing.T, testRepoPath string) {
+	deleteBranch(testRepoPath, mergeBranchName)
 	out, err := exec.Command("git", "-C", testRepoPath, "branch", mergeBranchName, mergeBranchHeadBefore).CombinedOutput()
 	require.NoError(t, err, "set up branch to merge into: %s", out)
 }
@@ -364,7 +377,7 @@ func consumeEOF(errorFunc func() error) error {
 	return err
 }
 
-func deleteBranch(branchName string) {
+func deleteBranch(testRepoPath, branchName string) {
 	exec.Command("git", "-C", testRepoPath, "branch", "-D", branchName).Run()
 }
 

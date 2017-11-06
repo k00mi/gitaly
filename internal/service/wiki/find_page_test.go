@@ -13,7 +13,7 @@ import (
 )
 
 func TestSuccessfulWikiFindPageRequest(t *testing.T) {
-	wikiRepo, cleanupFunc := setupWikiRepo()
+	wikiRepo, _, cleanupFunc := setupWikiRepo(t)
 	defer cleanupFunc()
 
 	server, serverSocketPath := runWikiServiceServer(t)
@@ -140,7 +140,7 @@ func TestSuccessfulWikiFindPageRequest(t *testing.T) {
 }
 
 func TestFailedWikiFindPageDueToValidation(t *testing.T) {
-	wikiRepo, cleanupFunc := setupWikiRepo()
+	wikiRepo, _, cleanupFunc := setupWikiRepo(t)
 	defer cleanupFunc()
 
 	server, serverSocketPath := runWikiServiceServer(t)

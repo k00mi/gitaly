@@ -31,6 +31,10 @@ func TestSuccessfulFindAllBranchNames(t *testing.T) {
 
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	rpcRequest := &pb.FindAllBranchNamesRequest{Repository: testRepo}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -115,6 +119,10 @@ func TestSuccessfulFindAllTagNames(t *testing.T) {
 
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	rpcRequest := &pb.FindAllTagNamesRequest{Repository: testRepo}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -197,6 +205,10 @@ func TestInvalidRepoFindAllTagNamesRequest(t *testing.T) {
 func TestHeadReference(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	headRef, err := headReference(ctx, testRepo)
 	if err != nil {
 		t.Fatal(err)
@@ -207,6 +219,9 @@ func TestHeadReference(t *testing.T) {
 }
 
 func TestHeadReferenceWithNonExistingHead(t *testing.T) {
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	// Write bad HEAD
 	ioutil.WriteFile(testRepoPath+"/HEAD", []byte("ref: refs/heads/nonexisting"), 0644)
 	defer func() {
@@ -231,6 +246,9 @@ func TestDefaultBranchName(t *testing.T) {
 		FindBranchNames = _findBranchNames
 		headReference = _headReference
 	}()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	testCases := []struct {
 		desc            string
@@ -300,6 +318,10 @@ func TestSuccessfulFindDefaultBranchName(t *testing.T) {
 
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	rpcRequest := &pb.FindDefaultBranchNameRequest{Repository: testRepo}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -402,6 +424,7 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
 	rpcRequest := &pb.FindAllTagsRequest{Repository: testRepoCopy}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -472,7 +495,7 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 		},
 	}
 
-	require.Len(t, expectedTags, len(receivedTags))
+	require.Len(t, receivedTags, len(expectedTags))
 
 	for i, receivedTag := range receivedTags {
 		t.Logf("test case: %q", expectedTags[i].Name)
@@ -534,6 +557,10 @@ func TestSuccessfulFindLocalBranches(t *testing.T) {
 
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	rpcRequest := &pb.FindLocalBranchesRequest{Repository: testRepo}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -622,6 +649,9 @@ func TestFindLocalBranchesSort(t *testing.T) {
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
 			rpcRequest := &pb.FindLocalBranchesRequest{Repository: testRepo, SortBy: testCase.sortBy}
@@ -679,11 +709,6 @@ func TestEmptyFindLocalBranchesRequest(t *testing.T) {
 	}
 }
 
-func deleteRemoteBranch(t *testing.T, repoPath, remoteName, branchName string) {
-	testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "update-ref", "-d",
-		"refs/remotes/"+remoteName+"/"+branchName)
-}
-
 func createRemoteBranch(t *testing.T, repoPath, remoteName, branchName, ref string) {
 	testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "update-ref",
 		"refs/remotes/"+remoteName+"/"+branchName, ref)
@@ -711,9 +736,11 @@ func TestSuccessfulFindAllBranchesRequest(t *testing.T) {
 		},
 	}
 
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	createRemoteBranch(t, testRepoPath, "origin", "fake-remote-branch",
 		remoteBranch.Target.Id)
-	defer deleteRemoteBranch(t, testRepoPath, "origin", "fake-remote-branch")
 
 	request := &pb.FindAllBranchesRequest{Repository: testRepo}
 	client, conn := newRefServiceClient(t, serverSocketPath)

@@ -21,6 +21,9 @@ func TestApplyGitattributesSuccess(t *testing.T) {
 	client, conn := newRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	infoPath := path.Join(testhelper.GitlabTestStoragePath(),
 		testRepo.GetRelativePath(), "info")
 	attributesPath := path.Join(infoPath, "attributes")
@@ -48,17 +51,17 @@ func TestApplyGitattributesSuccess(t *testing.T) {
 			if err := os.RemoveAll(infoPath); err != nil {
 				t.Fatal(err)
 			}
-			assertGitattributesApplied(t, client, attributesPath, test.revision, test.contents)
+			assertGitattributesApplied(t, client, testRepo, attributesPath, test.revision, test.contents)
 
 			// Test when no git attributes file exists
 			if err := os.Remove(attributesPath); err != nil && !os.IsNotExist(err) {
 				t.Fatal(err)
 			}
-			assertGitattributesApplied(t, client, attributesPath, test.revision, test.contents)
+			assertGitattributesApplied(t, client, testRepo, attributesPath, test.revision, test.contents)
 
 			// Test when a git attributes file already exists
 			ioutil.WriteFile(attributesPath, []byte("*.docx diff=word"), 0644)
-			assertGitattributesApplied(t, client, attributesPath, test.revision, test.contents)
+			assertGitattributesApplied(t, client, testRepo, attributesPath, test.revision, test.contents)
 		})
 	}
 }
@@ -69,6 +72,9 @@ func TestApplyGitattributesFailure(t *testing.T) {
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	tests := []struct {
 		repo     *pb.Repository
@@ -119,7 +125,7 @@ func TestApplyGitattributesFailure(t *testing.T) {
 	}
 }
 
-func assertGitattributesApplied(t *testing.T, client pb.RepositoryServiceClient, attributesPath string, revision, expectedContents []byte) {
+func assertGitattributesApplied(t *testing.T, client pb.RepositoryServiceClient, testRepo *pb.Repository, attributesPath string, revision, expectedContents []byte) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 

@@ -22,6 +22,9 @@ func TestSuccessfulRawBlameRequest(t *testing.T) {
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	testCases := []struct {
 		revision, path, data []byte
 	}{
@@ -79,6 +82,9 @@ func TestFailedRawBlameRequest(t *testing.T) {
 
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	invalidRepo := &pb.Repository{StorageName: "fake", RelativePath: "path"}
 

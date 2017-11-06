@@ -17,10 +17,6 @@ const (
 	pktFlushStr = "0000"
 )
 
-var (
-	testRepo = testhelper.TestRepository()
-)
-
 func runSmartHTTPServer(t *testing.T) (*grpc.Server, string) {
 	server := testhelper.NewTestGrpcServer(t, nil, nil)
 

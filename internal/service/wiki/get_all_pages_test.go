@@ -22,7 +22,7 @@ func TestSuccessfulWikiGetAllPagesRequest(t *testing.T) {
 	client, conn := newWikiClient(t, serverSocketPath)
 	defer conn.Close()
 
-	wikiRepo, cleanupFunc := setupWikiRepo()
+	wikiRepo, _, cleanupFunc := setupWikiRepo(t)
 	defer cleanupFunc()
 
 	page1Name := "Page 1"

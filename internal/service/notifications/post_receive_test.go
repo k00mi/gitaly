@@ -14,16 +14,16 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-var (
-	testRepo = testhelper.TestRepository()
-)
-
 func TestSuccessfulPostReceive(t *testing.T) {
 	server, serverSocketPath := runNotificationsServer(t)
 	defer server.Stop()
 
 	client, conn := newNotificationsClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	rpcRequest := &pb.PostReceiveRequest{Repository: testRepo}
 
 	ctx, cancel := context.WithCancel(context.Background())

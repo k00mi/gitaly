@@ -19,6 +19,10 @@ func TestSuccessfulCommitsBetween(t *testing.T) {
 
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	from := []byte("498214de67004b1da3d820901307bed2a68a8ef6") // branch-merged
 	to := []byte("ba3343bc4fa403a8dfbfcab7fc1a8c29ee34bd69")   // spooky-stuff
 	fakeHash := []byte("f63f41fe459e62e1228fcef60d7189127aeba95a")
@@ -188,6 +192,9 @@ func TestFailedCommitsBetweenRequest(t *testing.T) {
 
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	invalidRepo := &pb.Repository{StorageName: "fake", RelativePath: "path"}
 	from := []byte("498214de67004b1da3d820901307bed2a68a8ef6")

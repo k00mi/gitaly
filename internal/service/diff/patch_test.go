@@ -17,6 +17,9 @@ func TestSuccessfulCommitPatchRequest(t *testing.T) {
 	client, conn := newDiffClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	testCases := []struct {
 		desc     string
 		revision []byte

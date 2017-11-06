@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	"github.com/stretchr/testify/require"
 )
@@ -15,6 +16,10 @@ func TestLanguages(t *testing.T) {
 
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	request := &pb.CommitLanguagesRequest{
 		Repository: testRepo,
 		Revision:   []byte("cb19058ecc02d01f8e4290b7e79cafd16a8839b6"),
@@ -64,6 +69,10 @@ func TestLanguagesEmptyRevision(t *testing.T) {
 
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	request := &pb.CommitLanguagesRequest{
 		Repository: testRepo,
 	}

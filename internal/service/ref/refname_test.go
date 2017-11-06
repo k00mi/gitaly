@@ -9,6 +9,7 @@ import (
 	"golang.org/x/net/context"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
 func TestFindRefNameSuccess(t *testing.T) {
@@ -17,6 +18,10 @@ func TestFindRefNameSuccess(t *testing.T) {
 
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	rpcRequest := &pb.FindRefNameRequest{
 		Repository: testRepo,
 		CommitId:   "0b4bc9a49b562e85de7cc9e834518ea6828729b9",
@@ -43,6 +48,10 @@ func TestFindRefNameEmptyCommit(t *testing.T) {
 
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	rpcRequest := &pb.FindRefNameRequest{
 		Repository: testRepo,
 		CommitId:   "",
@@ -100,6 +109,10 @@ func TestFindRefNameInvalidPrefix(t *testing.T) {
 
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	rpcRequest := &pb.FindRefNameRequest{
 		Repository: testRepo,
 		CommitId:   "0b4bc9a49b562e85de7cc9e834518ea6828729b9",
@@ -123,6 +136,10 @@ func TestFindRefNameInvalidObject(t *testing.T) {
 
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	rpcRequest := &pb.FindRefNameRequest{
 		Repository: testRepo,
 		CommitId:   "dead1234dead1234dead1234dead1234dead1234",

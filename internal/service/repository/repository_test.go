@@ -129,6 +129,9 @@ func TestSuccessfulHasLocalBranches(t *testing.T) {
 	client, conn := newRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	emptyRepoName := "empty-repo.git"
 	emptyRepoPath := path.Join(testhelper.GitlabTestStoragePath(), emptyRepoName)
 	testhelper.MustRunCommand(t, nil, "git", "init", "--bare", emptyRepoPath)

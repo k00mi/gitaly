@@ -11,6 +11,9 @@ import (
 )
 
 func TestRefExists(t *testing.T) {
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	badRepo := &pb.Repository{StorageName: "invalid", RelativePath: "/etc/"}
 
 	tests := []struct {

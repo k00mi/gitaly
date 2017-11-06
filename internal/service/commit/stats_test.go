@@ -22,6 +22,9 @@ func TestCommitStatsSuccess(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	tests := []struct {
 		revision             []byte
 		oid                  string
@@ -59,6 +62,9 @@ func TestCommitStatsFailure(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	tests := []struct {
 		desc     string
