@@ -37,9 +37,6 @@ func TestAuthFailures(t *testing.T) {
 	}(config.Config.Auth)
 	config.Config.Auth.Token = config.Token("quxbaz")
 
-	srv, serverSocketPath := runServer(t)
-	defer srv.Stop()
-
 	testCases := []struct {
 		desc string
 		opts []grpc.DialOption
@@ -59,6 +56,9 @@ func TestAuthFailures(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
+			srv, serverSocketPath := runServer(t)
+			defer srv.Stop()
+
 			connOpts := append(tc.opts, grpc.WithInsecure())
 			conn, err := dial(serverSocketPath, connOpts)
 			require.NoError(t, err, tc.desc)
