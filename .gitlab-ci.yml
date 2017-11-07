@@ -77,7 +77,7 @@ publish:
   allow_failure: true
 
 # Create a code quality report
-codeclimate:
+codequality:
   image: docker:latest
   stage: build_test
   variables:
