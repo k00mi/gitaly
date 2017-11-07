@@ -138,11 +138,51 @@ func MustRunCommand(t *testing.T, stdin io.Reader, name string, args ...string) 
 	return output
 }
 
+// authorSortofEqual tests if two `CommitAuthor`s have the same name and email.
+//  useful when creating commits in the tests.
+func authorSortofEqual(a, b *pb.CommitAuthor) bool {
+	if (a == nil) != (b == nil) {
+		return false
+	}
+	return bytes.Equal(a.GetName(), b.GetName()) &&
+		bytes.Equal(a.GetEmail(), b.GetEmail())
+}
+
 // AuthorsEqual tests if two `CommitAuthor`s are equal
 func AuthorsEqual(a *pb.CommitAuthor, b *pb.CommitAuthor) bool {
-	return bytes.Equal(a.Name, b.Name) &&
-		bytes.Equal(a.Email, b.Email) &&
-		a.Date.Seconds == b.Date.Seconds
+	return authorSortofEqual(a, b) &&
+		a.GetDate().Seconds == b.GetDate().Seconds
+}
+
+// GitCommitEqual tests if two `GitCommit`s are equal
+func GitCommitEqual(a, b *pb.GitCommit) error {
+	if !authorSortofEqual(a.GetAuthor(), b.GetAuthor()) {
+		return fmt.Errorf("Author does not match: %v != %v", a.GetAuthor(), b.GetAuthor())
+	}
+	if !authorSortofEqual(a.GetCommitter(), b.GetCommitter()) {
+		return fmt.Errorf("Commiter does not match: %v != %v", a.GetCommitter(), b.GetCommitter())
+	}
+	if !bytes.Equal(a.GetBody(), b.GetBody()) {
+		return fmt.Errorf("Body differs: %q != %q", a.GetBody(), b.GetBody())
+	}
+	if !bytes.Equal(a.GetSubject(), b.GetSubject()) {
+		return fmt.Errorf("Subject differs: %q != %q", a.GetSubject(), b.GetSubject())
+	}
+	if strings.Compare(a.GetId(), b.GetId()) != 0 {
+		return fmt.Errorf("Id does not match: %q != %q", a.GetId(), b.GetId())
+	}
+	if len(a.GetParentIds()) != len(b.GetParentIds()) {
+		return fmt.Errorf("ParentId does not match: %v != %v", a.GetParentIds(), b.GetParentIds())
+	}
+
+	for i, pid := range a.GetParentIds() {
+		pid2 := b.GetParentIds()[i]
+		if strings.Compare(pid, pid2) != 0 {
+			return fmt.Errorf("parent id mismatch: %v != %v", pid, pid2)
+		}
+	}
+
+	return nil
 }
 
 // FindLocalBranchCommitAuthorsEqual tests if two `FindLocalBranchCommitAuthor`s are equal

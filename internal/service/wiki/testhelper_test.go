@@ -19,7 +19,6 @@ import (
 )
 
 var (
-	wikiRepo     *pb.Repository
 	wikiRepoPath string
 )
 
@@ -31,18 +30,6 @@ var rubyServer *rubyserver.Server
 
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
-
-	testhelper.ConfigureTestStorage()
-	storagePath := testhelper.GitlabTestStoragePath()
-	wikiRepoPath = path.Join(storagePath, "wiki-test.git")
-
-	testhelper.MustRunCommand(nil, nil, "git", "init", "--bare", wikiRepoPath)
-	defer os.RemoveAll(wikiRepoPath)
-
-	wikiRepo = &pb.Repository{
-		StorageName:  "default",
-		RelativePath: "wiki-test.git",
-	}
 
 	var err error
 	testhelper.ConfigureRuby()
@@ -87,7 +74,7 @@ func newWikiClient(t *testing.T, serverSocketPath string) (pb.WikiServiceClient,
 	return pb.NewWikiServiceClient(conn), conn
 }
 
-func writeWikiPage(t *testing.T, client pb.WikiServiceClient, name string, content []byte) {
+func writeWikiPage(t *testing.T, client pb.WikiServiceClient, wikiRepo *pb.Repository, name string, content []byte) {
 	commitDetails := &pb.WikiCommitDetails{
 		Name:    []byte("Ahmad Sherif"),
 		Email:   []byte("ahmad@gitlab.com"),
@@ -112,6 +99,48 @@ func writeWikiPage(t *testing.T, client pb.WikiServiceClient, name string, conte
 
 	_, err = stream.CloseAndRecv()
 	require.NoError(t, err)
+}
+
+func updateWikiPage(t *testing.T, client pb.WikiServiceClient, wikiRepo *pb.Repository, name string, content []byte) {
+	commitDetails := &pb.WikiCommitDetails{
+		Name:    []byte("Ahmad Sherif"),
+		Email:   []byte("ahmad@gitlab.com"),
+		Message: []byte("Update " + name),
+	}
+
+	request := &pb.WikiUpdatePageRequest{
+		Repository:    wikiRepo,
+		PagePath:      []byte(name),
+		Title:         []byte(name),
+		Format:        "markdown",
+		CommitDetails: commitDetails,
+		Content:       content,
+	}
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	stream, err := client.WikiUpdatePage(ctx)
+	require.NoError(t, err)
+	require.NoError(t, stream.Send(request))
+
+	_, err = stream.CloseAndRecv()
+	require.NoError(t, err)
+}
+
+func setupWikiRepo() (*pb.Repository, func()) {
+	testhelper.ConfigureTestStorage()
+	storagePath := testhelper.GitlabTestStoragePath()
+	wikiRepoPath = path.Join(storagePath, "wiki-test.git")
+
+	testhelper.MustRunCommand(nil, nil, "git", "init", "--bare", wikiRepoPath)
+
+	wikiRepo := &pb.Repository{
+		StorageName:  "default",
+		RelativePath: "wiki-test.git",
+	}
+
+	return wikiRepo, func() { os.RemoveAll(wikiRepoPath) }
 }
 
 func sendBytes(data []byte, chunkSize int, sender func([]byte) error) (int, error) {
