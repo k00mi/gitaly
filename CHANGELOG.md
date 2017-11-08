@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Update vendored gitlab_git to 6f045671e665e42c7
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/446
 - Implement WikiGetPageVersions RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/430
 
