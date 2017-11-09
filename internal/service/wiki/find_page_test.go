@@ -1,11 +1,9 @@
 package wiki
 
 import (
-	"bytes"
 	"io"
 	"testing"
 
-	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
@@ -18,32 +16,18 @@ func TestSuccessfulWikiFindPageRequest(t *testing.T) {
 	wikiRepo, cleanupFunc := setupWikiRepo()
 	defer cleanupFunc()
 
-	ctx, cancel := testhelper.Context()
-	defer cancel()
-
 	server, serverSocketPath := runWikiServiceServer(t)
 	defer server.Stop()
 
 	client, conn := newWikiClient(t, serverSocketPath)
 	defer conn.Close()
 
-	content := bytes.Repeat([]byte("Mock wiki page content"), 10000)
-
 	page1Name := "Home Page"
 	page2Name := "Installing/Step 133-b"
 	page3Name := "Installing/Step 133-c"
-
-	writeWikiPage(t, client, wikiRepo, page1Name, content)
-	head1ID := testhelper.MustRunCommand(t, nil, "git", "-C", wikiRepoPath, "show", "--format=format:%H", "--no-patch", "HEAD")
-	page1Commit, err := gitlog.GetCommit(ctx, wikiRepo, string(head1ID), "")
-	require.NoError(t, err, "look up git commit after writing a wiki page")
-
-	writeWikiPage(t, client, wikiRepo, page2Name, content)
-
-	writeWikiPage(t, client, wikiRepo, page3Name, content)
-	head3ID := testhelper.MustRunCommand(t, nil, "git", "-C", wikiRepoPath, "show", "--format=format:%H", "--no-patch", "HEAD")
-	page3Commit, err := gitlog.GetCommit(ctx, wikiRepo, string(head3ID), "")
-	require.NoError(t, err, "look up git commit after writing a wiki page")
+	page1Commit := createTestWikiPage(t, client, wikiRepo, page1Name)
+	createTestWikiPage(t, client, wikiRepo, page2Name)
+	page3Commit := createTestWikiPage(t, client, wikiRepo, page3Name)
 
 	testCases := []struct {
 		desc         string
@@ -149,7 +133,7 @@ func TestSuccessfulWikiFindPageRequest(t *testing.T) {
 
 			require.Equal(t, expectedPage, receivedPage, "mismatched page attributes")
 			if expectedPage != nil {
-				require.Equal(t, content, receivedContent, "mismatched page content")
+				require.Equal(t, mockPageContent, receivedContent, "mismatched page content")
 			}
 		})
 	}

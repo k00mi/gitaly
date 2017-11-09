@@ -1,12 +1,14 @@
 package wiki
 
 import (
+	"bytes"
 	"net"
 	"os"
 	"path"
 	"testing"
 	"time"
 
+	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
@@ -19,7 +21,8 @@ import (
 )
 
 var (
-	wikiRepoPath string
+	wikiRepoPath    string
+	mockPageContent = bytes.Repeat([]byte("Mock wiki page content"), 10000)
 )
 
 func TestMain(m *testing.M) {
@@ -158,4 +161,40 @@ func sendBytes(data []byte, chunkSize int, sender func([]byte) error) (int, erro
 	}
 
 	return i, nil
+}
+
+func createTestWikiPage(t *testing.T, client pb.WikiServiceClient, wikiRepo *pb.Repository, pageName string) *pb.GitCommit {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	writeWikiPage(t, client, wikiRepo, pageName, mockPageContent)
+	head1ID := testhelper.MustRunCommand(t, nil, "git", "-C", wikiRepoPath, "show", "--format=format:%H", "--no-patch", "HEAD")
+	pageCommit, err := gitlog.GetCommit(ctx, wikiRepo, string(head1ID), "")
+	require.NoError(t, err, "look up git commit after writing a wiki page")
+
+	return pageCommit
+}
+
+func requireWikiPagesEqual(t *testing.T, expectedPage *pb.WikiPage, actualPage *pb.WikiPage) {
+	// require.Equal doesn't display a proper diff when either expected/actual has a field
+	// with large data (RawData in our case), so we compare file attributes and content separately.
+	expectedContent := expectedPage.GetRawData()
+	if expectedPage != nil {
+		expectedPage.RawData = nil
+		defer func() {
+			expectedPage.RawData = expectedContent
+		}()
+	}
+	actualContent := actualPage.GetRawData()
+	if actualPage != nil {
+		actualPage.RawData = nil
+		defer func() {
+			actualPage.RawData = actualContent
+		}()
+	}
+
+	require.Equal(t, expectedPage, actualPage, "mismatched page attributes")
+	if expectedPage != nil {
+		require.Equal(t, expectedContent, actualContent, "mismatched page content")
+	}
 }
