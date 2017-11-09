@@ -11,6 +11,7 @@ INSTALL_DEST_DIR := $(DESTDIR)$(PREFIX)/bin/
 COVERAGE_DIR := $(TARGET_DIR)/cover
 ASSEMBLY_ROOT := $(TARGET_DIR)/assembly
 export GITALY_TEST_RUBY_DIR := $(BUILD_DIR)/ruby
+BUNDLE_FLAGS ?= --deployment
 
 BUILDTIME = $(shell date -u +%Y%m%d.%H%M%S)
 VERSION_PREFIXED = $(shell git describe)
@@ -55,8 +56,7 @@ build:	.ruby-bundle $(TARGET_SETUP)
 	cp $(foreach cmd,$(COMMANDS),$(BIN_BUILD_DIR)/$(cmd)) $(BUILD_DIR)/
 
 .ruby-bundle:	ruby/Gemfile.lock ruby/Gemfile
-	if test -z "${BUNDLE_PATH}" ; then cd ruby && bundle config --local path vendor/bundle; fi
-	cd ruby && bundle install
+	cd ruby && bundle install $(BUNDLE_FLAGS)
 	touch $@
 
 # TODO: confirm what references this target? Omnibus? Source installs?
