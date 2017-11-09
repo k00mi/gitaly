@@ -65,10 +65,14 @@ install: build
 	mkdir -p $(INSTALL_DEST_DIR)
 	cd $(BIN_BUILD_DIR) && install $(COMMANDS) $(INSTALL_DEST_DIR)
 
+.PHONY: force-ruby-bundle
+force-ruby-bundle:
+	rm .ruby-bundle
+
 # Assembles all runtime components into a directory
 # Used by the GDK: run `make assemble ASSEMBLY_ROOT=.../gitaly`
 .PHONY: assemble
-assemble: build
+assemble: force-ruby-bundle build
 	rm -rf $(ASSEMBLY_ROOT)/bin $(ASSEMBLY_ROOT)/ruby
 	mkdir -p $(ASSEMBLY_ROOT)/bin
 	cp -r ruby $(ASSEMBLY_ROOT)/ruby
