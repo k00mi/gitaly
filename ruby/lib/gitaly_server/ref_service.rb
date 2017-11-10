@@ -11,7 +11,7 @@ module GitalyServer
           start_point = 'HEAD' if start_point.empty?
           branch_name = request.name
 
-          repo = Gitlab::Git::Repository.from_call(call)
+          repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
           rugged_ref = repo.rugged.branches.create(branch_name, start_point)
 
           Gitaly::CreateBranchResponse.new(
@@ -42,7 +42,7 @@ module GitalyServer
           branch_name = request.name
           raise GRPC::InvalidArgument.new("empty Name") if branch_name.empty?
 
-          repo = Gitlab::Git::Repository.from_call(call)
+          repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
           repo.delete_branch(branch_name)
 
           Gitaly::DeleteBranchResponse.new
@@ -57,7 +57,7 @@ module GitalyServer
         branch_name = request.name
         raise GRPC::InvalidArgument.new("empty Name") if branch_name.empty?
 
-        repo = Gitlab::Git::Repository.from_call(call)
+        repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
         rugged_branch = repo.find_branch(branch_name)
         gitaly_branch = Gitaly::Branch.new(
           name: rugged_branch.name.b,
@@ -70,7 +70,7 @@ module GitalyServer
 
     def find_all_tags(request, call)
       bridge_exceptions do
-        repo = Gitlab::Git::Repository.from_call(call)
+        repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
 
         Enumerator.new do |y|
           repo.tags.each_slice(TAGS_PER_MESSAGE) do |gitlab_tags|

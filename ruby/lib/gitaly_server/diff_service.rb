@@ -4,7 +4,7 @@ module GitalyServer
 
     def commit_patch(request, call)
       bridge_exceptions do
-        repo = Gitlab::Git::Repository.from_call(call)
+        repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
         commit = Gitlab::Git::Commit.find(repo, request.revision)
 
         Enumerator.new do |y|

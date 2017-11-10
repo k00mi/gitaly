@@ -4,7 +4,7 @@ module GitalyServer
 
     def wiki_delete_page(request, call)
       bridge_exceptions do
-        repo = Gitlab::Git::Repository.from_call(call)
+        repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
         wiki = Gitlab::Git::Wiki.new(repo)
         page_path = request.page_path
         commit_details = commit_details_from_gitaly(request.commit_details)
@@ -18,12 +18,12 @@ module GitalyServer
     def wiki_write_page(call)
       bridge_exceptions do
         begin
-          repo = Gitlab::Git::Repository.from_call(call)
-          name = format = commit_details = nil
+          repo = name = format = commit_details = nil
           content = ""
 
           call.each_remote_read.with_index do |request, index|
             if index.zero?
+              repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
               name = request.name
               format = request.format
               commit_details = request.commit_details
@@ -46,7 +46,7 @@ module GitalyServer
 
     def wiki_find_page(request, call)
       bridge_exceptions do
-        repo = Gitlab::Git::Repository.from_call(call)
+        repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
         wiki = Gitlab::Git::Wiki.new(repo)
 
         page = wiki.page(
@@ -90,7 +90,7 @@ module GitalyServer
 
     def wiki_get_all_pages(request, call)
       bridge_exceptions do
-        repo = Gitlab::Git::Repository.from_call(call)
+        repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
         wiki = Gitlab::Git::Wiki.new(repo)
 
         Enumerator.new do |y|
@@ -126,7 +126,7 @@ module GitalyServer
 
     def wiki_find_file(request, call)
       bridge_exceptions do
-        repo = Gitlab::Git::Repository.from_call(call)
+        repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
         wiki = Gitlab::Git::Wiki.new(repo)
 
         file = wiki.file(request.name, request.revision.presence)
@@ -158,7 +158,7 @@ module GitalyServer
 
     def wiki_get_page_versions(request, call)
       bridge_exceptions do
-        repo = Gitlab::Git::Repository.from_call(call)
+        repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
         wiki = Gollum::Wiki.new(repo.path)
         path = request.page_path
 
@@ -191,13 +191,13 @@ module GitalyServer
 
     def wiki_update_page(call)
       bridge_exceptions do
-        repo = Gitlab::Git::Repository.from_call(call)
-        title = format = page_path = commit_details = nil
+        repo = wiki = title = format = page_path = commit_details = nil
         content = ""
 
-        wiki = Gitlab::Git::Wiki.new(repo)
         call.each_remote_read.with_index do |request, index|
           if index.zero?
+            repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
+            wiki = Gitlab::Git::Wiki.new(repo)
             title = request.title
             page_path = request.page_path
             format = request.format

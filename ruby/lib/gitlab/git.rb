@@ -1,6 +1,7 @@
 # External dependencies of Gitlab::Git
 require 'rugged'
 require 'linguist/blob_helper'
+require 'securerandom'
 
 # Ruby on Rails mix-ins that GitLab::Git code relies on
 require 'active_support/core_ext/object/blank'
@@ -72,15 +73,18 @@ end
 module Gitlab
   module Git
     class Repository
-      def self.from_call(call)
+      def self.from_gitaly(gitaly_repository, call)
         new(
+          gitaly_repository,
           GitalyServer.repo_path(call),
           GitalyServer.gl_repository(call),
           GitalyServer.repo_alt_dirs(call)
         )
       end
 
-      def initialize(path, gl_repository, combined_alt_dirs="")
+      def initialize(gitaly_repository, path, gl_repository, combined_alt_dirs="")
+        @gitaly_repository = gitaly_repository
+
         alt_dirs = combined_alt_dirs
           .split(File::PATH_SEPARATOR)
           .map { |d| File.join(path, d) }
@@ -98,6 +102,10 @@ module Gitlab
 
       def circuit_breaker
         FakeCircuitBreaker
+      end
+
+      def gitaly_repository
+        @gitaly_repository
       end
     end
   end
