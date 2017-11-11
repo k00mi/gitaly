@@ -5,7 +5,7 @@ module GitalyServer
     def user_create_tag(request, call)
       bridge_exceptions do
         begin
-          repo = Gitlab::Git::Repository.from_call(call)
+          repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
 
           gitaly_user = request.user
           raise GRPC::InvalidArgument.new('empty user') unless gitaly_user
@@ -43,7 +43,7 @@ module GitalyServer
     def user_delete_tag(request, call)
       bridge_exceptions do
         begin
-          repo = Gitlab::Git::Repository.from_call(call)
+          repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
 
           gitaly_user = request.user
           raise GRPC::InvalidArgument.new('empty user') unless gitaly_user
@@ -64,7 +64,7 @@ module GitalyServer
     def user_create_branch(request, call)
       bridge_exceptions do
         begin
-          repo = Gitlab::Git::Repository.from_call(call)
+          repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
           target = request.start_point
           raise GRPC::InvalidArgument.new('empty start_point') if target.empty?
           gitaly_user = request.user
@@ -90,7 +90,7 @@ module GitalyServer
     def user_delete_branch(request, call)
       bridge_exceptions do
         begin
-          repo = Gitlab::Git::Repository.from_call(call)
+          repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
           user = Gitlab::Git::User.from_gitaly(request.user)
 
           repo.rm_branch(request.branch_name, user: user)
@@ -105,9 +105,9 @@ module GitalyServer
     def user_merge_branch(session, call)
       Enumerator.new do |y|
         bridge_exceptions do
-          repository = Gitlab::Git::Repository.from_call(call)
-
           first_request = session.next
+
+          repository = Gitlab::Git::Repository.from_gitaly(first_request.repository, call)
           user = Gitlab::Git::User.from_gitaly(first_request.user)
           source_sha = first_request.commit_id.dup
           target_branch = first_request.branch.dup
@@ -132,7 +132,7 @@ module GitalyServer
     def user_ff_branch(request, call)
       bridge_exceptions do
         begin
-          repo = Gitlab::Git::Repository.from_call(call)
+          repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
           user = Gitlab::Git::User.from_gitaly(request.user)
 
           result = repo.ff_merge(user, request.commit_id, request.branch)

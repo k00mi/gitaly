@@ -13,7 +13,7 @@ module GitalyServer
     end
 
     def has_local_branches(request, call)
-      repo = Gitlab::Git::Repository.from_call(call)
+      repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
 
       Gitaly::HasLocalBranchesResponse.new(value: repo.has_local_branches?)
     end

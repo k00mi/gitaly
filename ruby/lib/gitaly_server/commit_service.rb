@@ -4,7 +4,7 @@ module GitalyServer
 
     def commit_stats(request, call)
       bridge_exceptions do
-        repo = Gitlab::Git::Repository.from_call(call)
+        repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
         revision = request.revision unless request.revision.empty?
 
         commit = Gitlab::Git::Commit.find(repo, revision)
@@ -22,7 +22,7 @@ module GitalyServer
 
     def find_commits(request, call)
       bridge_exceptions do
-        repository = Gitlab::Git::Repository.from_call(call)
+        repository = Gitlab::Git::Repository.from_gitaly(request.repository, call)
         options = {
           ref: request.revision,
           limit: request.limit,
