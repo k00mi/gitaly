@@ -113,6 +113,8 @@ It has these top-level messages:
 	DeleteBranchResponse
 	FindBranchRequest
 	FindBranchResponse
+	DeleteRefsRequest
+	DeleteRefsResponse
 	RepositoryExistsRequest
 	RepositoryExistsResponse
 	RepositoryIsEmptyRequest
