@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Use --deployment flag for bundler and force `bundle install` on `make assemble`
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/448
 - Implement RepositoryService::FetchSourceBranch
   https://gitlab.com/gitlab-org/gitaly/merge_requests/434
 
