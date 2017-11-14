@@ -17,6 +17,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
@@ -296,4 +297,37 @@ func mustFindNoRunningChildProcess() {
 // Context returns a cancellable context.
 func Context() (context.Context, func()) {
 	return context.WithCancel(context.Background())
+}
+
+// SetupCopyTestRepo creates a bare copy of the test repository.
+func SetupCopyTestRepo(t *testing.T) (repo *pb.Repository, repoPath string, cleanup func()) {
+	return cloneTestRepo(t, true)
+}
+
+// SetupMutableTestRepo creates a copy of the test repository apt for changes.
+func SetupMutableTestRepo(t *testing.T) (repo *pb.Repository, repoPath string, cleanup func()) {
+	return cloneTestRepo(t, false)
+}
+
+func cloneTestRepo(t *testing.T, bare bool) (repo *pb.Repository, repoPath string, cleanup func()) {
+	testRepo := TestRepository()
+	storagePath := GitlabTestStoragePath()
+	testRepoPath := path.Join(storagePath, testRepo.RelativePath)
+
+	repoPath, err := ioutil.TempDir(storagePath, t.Name())
+	require.NoError(t, err)
+	relativePath, err := filepath.Rel(storagePath, repoPath)
+	require.NoError(t, err)
+	repo = &pb.Repository{StorageName: "default", RelativePath: relativePath}
+
+	args := []string{"clone"}
+	if bare {
+		args = append(args, "--bare")
+	} else {
+		// For non-bare repos the relative path is the .git folder inside the path
+		repo.RelativePath = path.Join(relativePath, ".git")
+	}
+	MustRunCommand(t, nil, "git", append(args, testRepoPath, repoPath)...)
+
+	return repo, repoPath, func() { os.RemoveAll(repoPath) }
 }

@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
-	"path"
 	"testing"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -355,12 +353,8 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 	server, serverSocketPath := runRefServiceServer(t)
 	defer server.Stop()
 
-	storagePath := testhelper.GitlabTestStoragePath()
-	testRepoPath := path.Join(storagePath, testRepo.RelativePath)
-	testRepoCopyName := "gitlab-test-for-tags"
-	testRepoCopyPath := path.Join(storagePath, testRepoCopyName)
-	testhelper.MustRunCommand(t, nil, "git", "clone", "--bare", testRepoPath, testRepoCopyPath)
-	defer os.RemoveAll(testRepoCopyPath)
+	testRepoCopy, testRepoCopyPath, cleanupFn := testhelper.SetupMutableTestRepo(t)
+	defer cleanupFn()
 
 	committerName := "Scrooge McDuck"
 	committerEmail := "scrooge@mcduck.com"
@@ -408,12 +402,7 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
-	rpcRequest := &pb.FindAllTagsRequest{
-		Repository: &pb.Repository{
-			StorageName:  testRepo.StorageName,
-			RelativePath: testRepoCopyName,
-		},
-	}
+	rpcRequest := &pb.FindAllTagsRequest{Repository: testRepoCopy}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
