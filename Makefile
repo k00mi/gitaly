@@ -67,7 +67,7 @@ install: build
 
 .PHONY: force-ruby-bundle
 force-ruby-bundle:
-	rm .ruby-bundle
+	rm -f .ruby-bundle
 
 # Assembles all runtime components into a directory
 # Used by the GDK: run `make assemble ASSEMBLY_ROOT=.../gitaly`
