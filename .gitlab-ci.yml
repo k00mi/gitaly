@@ -2,30 +2,42 @@ image: registry.gitlab.com/gitlab-org/gitaly/build-ruby-2.3-golang-1.8-git-2.13:
 
 stages:
   - build_images
-  - build_test
+  - build
+  - test
   - package
   - publish
 
-variables:
-  BUNDLE_PATH: /bundle-cache/vendor/bundle
-
 verify:
-  stage: build_test
+  stage: test
   script:
     - make verify
 
+.build_template: &build_definition
+  before_script:
+    # Override gemfile config (for some reasong `config --delete` doesn't do it)
+    - bundle config --local gemfile Gemfile
+  stage: build
+  cache:
+    key: gems
+    paths:
+      - ruby/vendor/bundle
+  script:
+    - make
+    - _support/test-boot-time .
+
 .test_template: &test_definition
-  stage: build_test
+  before_script:
+    - bundle config --local gemfile Gemfile
+  stage: test
+  cache:
+    key: gems
+    paths:
+      - ruby/vendor/bundle
+    policy: pull
   script:
     - go version
     - git version
     - make test
-
-.build_template: &build_definition
-  stage: build_test
-  script:
-    - make
-    - _support/test-boot-time .
 
 build:default:
   <<: *build_definition
@@ -38,7 +50,7 @@ test:go1.8-git2.8:
   image: registry.gitlab.com/gitlab-org/gitaly/build-ruby-2.3-golang-1.8-git-2.8:latest
 
 cover:
-  stage: build_test
+  stage: test
   script:
     - make cover
   after_script:
@@ -79,7 +91,7 @@ publish:
 # Create a code quality report
 codequality:
   image: docker:latest
-  stage: build_test
+  stage: test
   variables:
     DOCKER_DRIVER: overlay
   services:
@@ -121,7 +133,7 @@ update-downstream-server-version:
 
 # Ensure that gitlab-git vendoring from gitlab-ce is functioning
 test-vendor-gitaly-ruby:
-  stage: build_test
+  stage: test
   only:
    - schedules
   before_script:
