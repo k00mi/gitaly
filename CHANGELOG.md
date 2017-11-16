@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Implement RefService.DeleteRefs
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/453
 - Use --deployment flag for bundler and force `bundle install` on `make assemble`
   https://gitlab.com/gitlab-org/gitaly/merge_requests/448
 - Implement RepositoryService::FetchSourceBranch

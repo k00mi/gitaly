@@ -2,8 +2,6 @@ package diff
 
 import (
 	"fmt"
-	"os"
-	"path"
 	"testing"
 
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -32,6 +30,9 @@ func TestSuccessfulRawDiffRequest(t *testing.T) {
 	c, err := client.RawDiff(ctx, rpcRequest)
 	require.NoError(t, err)
 
+	_, sandboxRepoPath, cleanupFn := testhelper.SetupMutableTestRepo(t)
+	defer cleanupFn()
+
 	reader := streamio.NewReader(func() ([]byte, error) {
 		response, err := c.Recv()
 		return response.GetData(), err
@@ -39,12 +40,7 @@ func TestSuccessfulRawDiffRequest(t *testing.T) {
 
 	committerName := "Scrooge McDuck"
 	committerEmail := "scrooge@mcduck.com"
-	storagePath := testhelper.GitlabTestStoragePath()
-	sandboxRepoPath := path.Join(storagePath, "raw-diff-sandbox")
-
-	testhelper.MustRunCommand(t, nil, "git", "clone", testRepoPath, sandboxRepoPath)
 	testhelper.MustRunCommand(t, nil, "git", "-C", sandboxRepoPath, "reset", "--hard", leftCommit)
-	defer os.RemoveAll(sandboxRepoPath)
 
 	testhelper.MustRunCommand(t, reader, "git", "-C", sandboxRepoPath, "apply")
 	testhelper.MustRunCommand(t, reader, "git", "-C", sandboxRepoPath, "add", ".")
@@ -132,12 +128,10 @@ func TestSuccessfulRawPatchRequest(t *testing.T) {
 		return response.GetData(), err
 	})
 
-	storagePath := testhelper.GitlabTestStoragePath()
-	sandboxRepoPath := path.Join(storagePath, "raw-patch-sandbox")
+	_, sandboxRepoPath, cleanupFn := testhelper.SetupMutableTestRepo(t)
+	defer cleanupFn()
 
-	testhelper.MustRunCommand(t, nil, "git", "clone", testRepoPath, sandboxRepoPath)
 	testhelper.MustRunCommand(t, nil, "git", "-C", sandboxRepoPath, "reset", "--hard", leftCommit)
-	defer os.RemoveAll(sandboxRepoPath)
 
 	testhelper.MustRunCommand(t, reader, "git", "-C", sandboxRepoPath, "am")
 

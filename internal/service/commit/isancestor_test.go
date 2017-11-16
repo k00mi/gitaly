@@ -184,19 +184,15 @@ func TestSuccessfulIsAncestorRequestWithAltGitObjectDirs(t *testing.T) {
 	committerName := "Scrooge McDuck"
 	committerEmail := "scrooge@mcduck.com"
 
-	storagePath := testhelper.GitlabTestStoragePath()
-	testRepoPath := path.Join(storagePath, testRepo.RelativePath)
-	testRepoCopyName := "is-ancestor-alt-test-repo"
-	testRepoCopyPath := path.Join(storagePath, testRepoCopyName)
+	testRepoCopy, testRepoCopyPath, cleanupFn := testhelper.SetupMutableTestRepo(t)
+	defer cleanupFn()
+
 	altObjectsDir := "./alt-objects"
 	altObjectsPath := path.Join(testRepoCopyPath, ".git", altObjectsDir)
 	gitObjectEnv := []string{
 		fmt.Sprintf("GIT_OBJECT_DIRECTORY=%s", altObjectsPath),
 		fmt.Sprintf("GIT_ALTERNATE_OBJECT_DIRECTORIES=%s", path.Join(testRepoCopyPath, ".git/objects")),
 	}
-
-	testhelper.MustRunCommand(t, nil, "git", "clone", testRepoPath, testRepoCopyPath)
-	defer os.RemoveAll(testRepoCopyPath)
 
 	if err := os.Mkdir(altObjectsPath, 0777); err != nil {
 		t.Fatal(err)
@@ -240,12 +236,9 @@ func TestSuccessfulIsAncestorRequestWithAltGitObjectDirs(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
+			testRepoCopy.GitAlternateObjectDirectories = testCase.altDirs
 			request := &pb.CommitIsAncestorRequest{
-				Repository: &pb.Repository{
-					StorageName:                   testRepo.StorageName,
-					RelativePath:                  path.Join(testRepoCopyName, ".git"),
-					GitAlternateObjectDirectories: testCase.altDirs,
-				},
+				Repository: testRepoCopy,
 				AncestorId: string(previousHead),
 				ChildId:    string(currentHead),
 			}
