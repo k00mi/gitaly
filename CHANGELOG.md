@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.54.0
 
 - Implement RefService.DeleteRefs
   https://gitlab.com/gitlab-org/gitaly/merge_requests/453
