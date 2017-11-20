@@ -75,11 +75,11 @@ func TestSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T) {
 		User:       user,
 	}
 
-	for _, hookName := range gitlabHooks {
+	for _, hookName := range GitlabHooks {
 		t.Run(hookName, func(t *testing.T) {
 			testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", tagNameInput)
 
-			hookPath, hookOutputTempPath := writeEnvToHook(t, hookName)
+			hookPath, hookOutputTempPath := WriteEnvToHook(t, testRepoPath, hookName)
 			defer os.Remove(hookPath)
 
 			ctx, cancel := testhelper.Context()
@@ -195,11 +195,11 @@ func TestSuccessfulGitHooksForUserCreateTagRequest(t *testing.T) {
 		User:           user,
 	}
 
-	for _, hookName := range gitlabHooks {
+	for _, hookName := range GitlabHooks {
 		t.Run(hookName, func(t *testing.T) {
 			defer exec.Command("git", "-C", testRepoPath, "tag", "-d", tagName).Run()
 
-			hookPath, hookOutputTempPath := writeEnvToHook(t, hookName)
+			hookPath, hookOutputTempPath := WriteEnvToHook(t, testRepoPath, hookName)
 			defer os.Remove(hookPath)
 
 			ctx, cancel := testhelper.Context()

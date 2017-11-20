@@ -48,11 +48,11 @@ func TestSuccessfulMerge(t *testing.T) {
 	prepareMergeBranch(t)
 	defer deleteBranch(mergeBranchName)
 
-	hooks := gitlabHooks
+	hooks := GitlabHooks
 	hookTempfiles := make([]string, len(hooks))
 	for i, h := range hooks {
 		var hookPath string
-		hookPath, hookTempfiles[i] = writeEnvToHook(t, h)
+		hookPath, hookTempfiles[i] = WriteEnvToHook(t, testRepoPath, h)
 		defer os.Remove(hookPath)
 		defer os.Remove(hookTempfiles[i])
 	}

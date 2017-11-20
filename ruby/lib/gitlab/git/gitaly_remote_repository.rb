@@ -19,6 +19,12 @@ module Gitlab
         !exists? || !has_visible_content?
       end
 
+      def branch_exists?(branch_name)
+        request = Gitaly::RefExistsRequest.new(repository: @gitaly_repository, ref: "refs/heads/#{branch_name}".b)
+        stub = Gitaly::RefService::Stub.new(address, credentials)
+        stub.ref_exists(request, request_kwargs).value
+      end
+
       def commit_id(revision)
         request = Gitaly::FindCommitRequest.new(repository: @gitaly_repository, revision: revision.b)
         stub = Gitaly::CommitService::Stub.new(address, credentials)
@@ -40,7 +46,9 @@ module Gitlab
       end
 
       def address
-        gitaly_client.address(storage)
+        addr = gitaly_client.address(storage)
+        addr = addr.sub(%r{^tcp://}, '') if URI(addr).scheme == 'tcp'
+        addr
       end
 
       def credentials

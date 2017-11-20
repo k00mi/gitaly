@@ -102,11 +102,11 @@ func TestSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T) {
 		User:       user,
 	}
 
-	for _, hookName := range gitlabHooks {
+	for _, hookName := range GitlabHooks {
 		t.Run(hookName, func(t *testing.T) {
 			defer exec.Command("git", "-C", testRepoPath, "branch", "-D", branchName).Run()
 
-			hookPath, hookOutputTempPath := writeEnvToHook(t, hookName)
+			hookPath, hookOutputTempPath := WriteEnvToHook(t, testRepoPath, hookName)
 			defer os.Remove(hookPath)
 
 			ctx, cancel := testhelper.Context()
@@ -289,11 +289,11 @@ func TestSuccessfulGitHooksForUserDeleteBranchRequest(t *testing.T) {
 		User:       user,
 	}
 
-	for _, hookName := range gitlabHooks {
+	for _, hookName := range GitlabHooks {
 		t.Run(hookName, func(t *testing.T) {
 			testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", branchNameInput)
 
-			hookPath, hookOutputTempPath := writeEnvToHook(t, hookName)
+			hookPath, hookOutputTempPath := WriteEnvToHook(t, testRepoPath, hookName)
 			defer os.Remove(hookPath)
 
 			ctx, cancel := testhelper.Context()
