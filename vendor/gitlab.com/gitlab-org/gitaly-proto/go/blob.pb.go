@@ -55,6 +55,8 @@ It has these top-level messages:
 	LastCommitForPathResponse
 	CommitsByMessageRequest
 	CommitsByMessageResponse
+	FilterShasWithSignaturesRequest
+	FilterShasWithSignaturesResponse
 	CommitDiffRequest
 	CommitDiffResponse
 	CommitDeltaRequest
@@ -89,6 +91,8 @@ It has these top-level messages:
 	OperationBranchUpdate
 	UserFFBranchRequest
 	UserFFBranchResponse
+	UserCherryPickRequest
+	UserCherryPickResponse
 	FindDefaultBranchNameRequest
 	FindDefaultBranchNameResponse
 	FindAllBranchNamesRequest

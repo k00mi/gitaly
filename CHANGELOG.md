@@ -4,6 +4,8 @@ UNRELEASED
 
 - Fix a panic in ListFiles RPC when git process is killed abruptly
   https://gitlab.com/gitlab-org/gitaly/merge_requests/460
+- Implement CommitService::FilterShasWithSignatures
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/461
 
 v0.55.0
 

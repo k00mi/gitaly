@@ -47,5 +47,21 @@ module GitalyServer
         end
       end
     end
+
+    def filter_shas_with_signatures(session, call)
+      Enumerator.new do |y|
+        bridge_exceptions do
+          repository = nil
+
+          call.each_remote_read.with_index do |request, index|
+            if index.zero?
+              repository = Gitlab::Git::Repository.from_gitaly(request.repository, call)
+            end
+
+            y << Gitaly::FilterShasWithSignaturesResponse.new(shas: Gitlab::Git::Commit.shas_with_signatures(repository, request.shas))
+          end
+        end
+      end
+    end
   end
 end
