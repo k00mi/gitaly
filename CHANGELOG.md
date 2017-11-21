@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Include pprof debug access in the Prometheus listener
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/442
 - Run gitaly-ruby in the same directory as gitaly
   https://gitlab.com/gitlab-org/gitaly/merge_requests/458
 
