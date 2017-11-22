@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Fix a panic in ListFiles RPC when git process is killed abruptly
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/460
+
 v0.55.0
 
 - Include pprof debug access in the Prometheus listener
