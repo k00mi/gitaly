@@ -57,7 +57,15 @@ func listFilesWriter(stream pb.CommitService_ListFilesServer) lines.Sender {
 		paths := make([][]byte, 0)
 		for _, obj := range objs {
 			data := bytes.SplitN(obj, []byte{'\t'}, 2)
+			if len(data) != 2 {
+				return grpc.Errorf(codes.Internal, "ListFiles: failed parsing line")
+			}
+
 			meta := bytes.SplitN(data[0], []byte{' '}, 3)
+			if len(meta) != 3 {
+				return grpc.Errorf(codes.Internal, "ListFiles: failed parsing meta")
+			}
+
 			if bytes.Equal(meta[1], []byte("blob")) {
 				paths = append(paths, data[1])
 			}
