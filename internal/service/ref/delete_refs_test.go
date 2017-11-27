@@ -18,7 +18,7 @@ func TestSuccessfulDeleteRefs(t *testing.T) {
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
-	repo, repoPath, cleanupFn := testhelper.SetupCopyTestRepo(t)
+	repo, repoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
 	testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "update-ref", "refs/delete/a", "b83d6e391c22777fca1ed3012fce84f633d7fed0")

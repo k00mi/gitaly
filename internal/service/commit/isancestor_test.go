@@ -184,7 +184,7 @@ func TestSuccessfulIsAncestorRequestWithAltGitObjectDirs(t *testing.T) {
 	committerName := "Scrooge McDuck"
 	committerEmail := "scrooge@mcduck.com"
 
-	testRepoCopy, testRepoCopyPath, cleanupFn := testhelper.SetupMutableTestRepo(t)
+	testRepoCopy, testRepoCopyPath, cleanupFn := testhelper.NewTestRepoWithWorktree(t)
 	defer cleanupFn()
 
 	altObjectsDir := "./alt-objects"

@@ -30,7 +30,7 @@ func TestSuccessfulRawDiffRequest(t *testing.T) {
 	c, err := client.RawDiff(ctx, rpcRequest)
 	require.NoError(t, err)
 
-	_, sandboxRepoPath, cleanupFn := testhelper.SetupMutableTestRepo(t)
+	_, sandboxRepoPath, cleanupFn := testhelper.NewTestRepoWithWorktree(t)
 	defer cleanupFn()
 
 	reader := streamio.NewReader(func() ([]byte, error) {
@@ -128,7 +128,7 @@ func TestSuccessfulRawPatchRequest(t *testing.T) {
 		return response.GetData(), err
 	})
 
-	_, sandboxRepoPath, cleanupFn := testhelper.SetupMutableTestRepo(t)
+	_, sandboxRepoPath, cleanupFn := testhelper.NewTestRepoWithWorktree(t)
 	defer cleanupFn()
 
 	testhelper.MustRunCommand(t, nil, "git", "-C", sandboxRepoPath, "reset", "--hard", leftCommit)
