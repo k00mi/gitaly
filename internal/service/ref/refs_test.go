@@ -353,7 +353,7 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 	server, serverSocketPath := runRefServiceServer(t)
 	defer server.Stop()
 
-	testRepoCopy, testRepoCopyPath, cleanupFn := testhelper.SetupMutableTestRepo(t)
+	testRepoCopy, testRepoCopyPath, cleanupFn := testhelper.NewTestRepoWithWorktree(t)
 	defer cleanupFn()
 
 	committerName := "Scrooge McDuck"

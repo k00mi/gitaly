@@ -299,13 +299,14 @@ func Context() (context.Context, func()) {
 	return context.WithCancel(context.Background())
 }
 
-// SetupCopyTestRepo creates a bare copy of the test repository.
-func SetupCopyTestRepo(t *testing.T) (repo *pb.Repository, repoPath string, cleanup func()) {
+// NewTestRepo creates a bare copy of the test repository.
+func NewTestRepo(t *testing.T) (repo *pb.Repository, repoPath string, cleanup func()) {
 	return cloneTestRepo(t, true)
 }
 
-// SetupMutableTestRepo creates a copy of the test repository apt for changes.
-func SetupMutableTestRepo(t *testing.T) (repo *pb.Repository, repoPath string, cleanup func()) {
+// NewTestRepoWithWorktree creates a copy of the test repository with a
+// worktree. This is allows you to run normal 'non-bare' Git commands.
+func NewTestRepoWithWorktree(t *testing.T) (repo *pb.Repository, repoPath string, cleanup func()) {
 	return cloneTestRepo(t, false)
 }
 
