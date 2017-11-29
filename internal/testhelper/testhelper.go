@@ -3,6 +3,8 @@ package testhelper
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -27,10 +29,14 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 )
 
 // TestRelativePath is the path inside its storage of the gitlab-test repo
-const TestRelativePath = "gitlab-test.git"
+const (
+	TestRelativePath    = "gitlab-test.git"
+	RepositoryAuthToken = "the-secret-token"
+)
 
 // MustReadFile returns the content of a file or fails at once.
 func MustReadFile(t *testing.T, filename string) []byte {
@@ -68,6 +74,24 @@ func ConfigureTestStorage() {
 	config.Config.Storages = []config.Storage{
 		{Name: "default", Path: GitlabTestStoragePath()},
 	}
+}
+
+// GitalyServersMetadata returns a metadata pair for gitaly-servers to be used in
+// inter-gitaly operations.
+func GitalyServersMetadata(t *testing.T, serverSocketPath string) metadata.MD {
+	gitalyServers := map[string]map[string]string{
+		"default": {
+			"address": "unix:" + serverSocketPath,
+			"token":   RepositoryAuthToken,
+		},
+	}
+
+	gitalyServersJSON, err := json.Marshal(gitalyServers)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return metadata.Pairs("gitaly-servers", base64.StdEncoding.EncodeToString(gitalyServersJSON))
 }
 
 func testRepoValid(repo *pb.Repository) bool {

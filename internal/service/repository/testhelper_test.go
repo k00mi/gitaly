@@ -30,7 +30,6 @@ var (
 	testRepo     = testhelper.TestRepository()
 	TestRepoPath string
 	RubyServer   *rubyserver.Server
-	AuthToken    = "the-secret-token"
 )
 
 func newRepositoryClient(t *testing.T, serverSocketPath string) (pb.RepositoryServiceClient, *grpc.ClientConn) {
@@ -39,7 +38,7 @@ func newRepositoryClient(t *testing.T, serverSocketPath string) (pb.RepositorySe
 		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
 			return net.DialTimeout("unix", addr, timeout)
 		}),
-		grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials(AuthToken)),
+		grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials(testhelper.RepositoryAuthToken)),
 	}
 	conn, err := grpc.Dial(serverSocketPath, connOpts...)
 	if err != nil {
@@ -94,7 +93,7 @@ func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
 	testhelper.ConfigureRuby()
-	config.Config.Auth = config.Auth{Token: config.Token(AuthToken)}
+	config.Config.Auth = config.Auth{Token: config.Token(testhelper.RepositoryAuthToken)}
 
 	var err error
 	config.Config.GitlabShell.Dir, err = filepath.Abs("testdata/gitlab-shell")

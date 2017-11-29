@@ -101,6 +101,8 @@ module Gitlab
           .split(File::PATH_SEPARATOR)
           .map { |d| File.join(path, d) }
 
+        @storage = gitaly_repository.storage_name
+        @relative_path = gitaly_repository.relative_path
         @path = path
         @gl_repository = gl_repository
         @rugged = Rugged::Repository.new(path, alternates: alt_dirs)

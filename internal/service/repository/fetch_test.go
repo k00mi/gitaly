@@ -1,8 +1,6 @@
 package repository_test
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"net"
 	"os"
 	"strings"
@@ -33,8 +31,7 @@ func TestFetchSourceBranchSourceRepositorySuccess(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	md, err := gitalyServersMetadata(serverSocketPath)
-	require.NoError(t, err)
+	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
 	ctx := metadata.NewOutgoingContext(ctxOuter, md)
 
 	targetRepo, _ := newTestRepo(t, "fetch-source-target.git")
@@ -70,8 +67,7 @@ func TestFetchSourceBranchSameRepositorySuccess(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	md, err := gitalyServersMetadata(serverSocketPath)
-	require.NoError(t, err)
+	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
 	ctx := metadata.NewOutgoingContext(ctxOuter, md)
 
 	repo, repoPath := newTestRepo(t, "fetch-source-source.git")
@@ -106,8 +102,7 @@ func TestFetchSourceBranchBranchNotFound(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	md, err := gitalyServersMetadata(serverSocketPath)
-	require.NoError(t, err)
+	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
 	ctx := metadata.NewOutgoingContext(ctxOuter, md)
 
 	targetRepo, _ := newTestRepo(t, "fetch-source-target.git")
@@ -176,22 +171,6 @@ func TestFetchFullServerRequiresAuthentication(t *testing.T) {
 	client := healthpb.NewHealthClient(conn)
 	_, err = client.Check(ctx, &healthpb.HealthCheckRequest{})
 	testhelper.AssertGrpcError(t, err, codes.Unauthenticated, "")
-}
-
-func gitalyServersMetadata(serverSocketPath string) (metadata.MD, error) {
-	gitalyServers := map[string]map[string]string{
-		"default": {
-			"address": "unix:" + serverSocketPath,
-			"token":   repository.AuthToken,
-		},
-	}
-
-	gitalyServersJSON, err := json.Marshal(gitalyServers)
-	if err != nil {
-		return nil, err
-	}
-
-	return metadata.Pairs("gitaly-servers", base64.StdEncoding.EncodeToString(gitalyServersJSON)), nil
 }
 
 func createCommit(t *testing.T, repoPath string, branchName string) string {

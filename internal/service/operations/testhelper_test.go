@@ -26,19 +26,19 @@ var (
 	testRepoPath    string
 	gitlabPreHooks  = []string{"pre-receive", "update"}
 	gitlabPostHooks = []string{"post-receive"}
-	gitlabHooks     []string
+	GitlabPreHooks  = gitlabPreHooks
+	GitlabHooks     []string
+	RubyServer      *rubyserver.Server
 )
 
 func init() {
-	copy(gitlabHooks, gitlabPreHooks)
-	gitlabHooks = append(gitlabHooks, gitlabPostHooks...)
+	copy(GitlabHooks, gitlabPreHooks)
+	GitlabHooks = append(GitlabHooks, gitlabPostHooks...)
 }
 
 func TestMain(m *testing.M) {
 	os.Exit(testMain(m))
 }
-
-var rubyServer *rubyserver.Server
 
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
@@ -52,11 +52,11 @@ func testMain(m *testing.M) int {
 	}
 
 	testhelper.ConfigureRuby()
-	rubyServer, err = rubyserver.Start()
+	RubyServer, err = rubyserver.Start()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer rubyServer.Stop()
+	defer RubyServer.Stop()
 
 	return m.Run()
 }
@@ -70,7 +70,7 @@ func runOperationServiceServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	pb.RegisterOperationServiceServer(grpcServer, &server{rubyServer})
+	pb.RegisterOperationServiceServer(grpcServer, &server{RubyServer})
 	reflection.Register(grpcServer)
 
 	go grpcServer.Serve(listener)
@@ -93,7 +93,9 @@ func newOperationClient(t *testing.T, serverSocketPath string) (pb.OperationServ
 	return pb.NewOperationServiceClient(conn), conn
 }
 
-func writeEnvToHook(t *testing.T, hookName string) (string, string) {
+var NewOperationClient = newOperationClient
+
+func WriteEnvToHook(t *testing.T, repoPath, hookName string) (string, string) {
 	hookOutputTemp, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
 	require.NoError(t, hookOutputTemp.Close())
@@ -102,7 +104,7 @@ func writeEnvToHook(t *testing.T, hookName string) (string, string) {
 
 	hookContent := fmt.Sprintf("#!/bin/sh\n/usr/bin/env > %s\n", hookOutputTemp.Name())
 
-	hookPath := path.Join(testRepoPath, "hooks", hookName)
+	hookPath := path.Join(repoPath, "hooks", hookName)
 	ioutil.WriteFile(hookPath, []byte(hookContent), 0755)
 
 	return hookPath, hookOutputTemp.Name()
