@@ -13,14 +13,8 @@ import (
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-)
-
-var (
-	testRepo     *pb.Repository
-	testRepoPath string
 )
 
 func TestMain(m *testing.M) {
@@ -32,13 +26,7 @@ var rubyServer *rubyserver.Server
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
-	testRepo = testhelper.TestRepository()
-
 	var err error
-	testRepoPath, err = helper.GetRepoPath(testRepo)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	testhelper.ConfigureRuby()
 	rubyServer, err = rubyserver.Start()

@@ -22,6 +22,9 @@ func TestRepackIncrementalSuccess(t *testing.T) {
 	client, conn := newRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	packPath := path.Join(testhelper.GitlabTestStoragePath(), testRepo.GetRelativePath(), "objects", "pack")
 
 	// Reset mtime to a long while ago since some filesystems don't have sub-second
@@ -54,7 +57,7 @@ func TestRepackIncrementalFailure(t *testing.T) {
 		{desc: "nil repo", repo: nil, code: codes.InvalidArgument},
 		{desc: "invalid storage name", repo: &pb.Repository{StorageName: "foo"}, code: codes.InvalidArgument},
 		{desc: "no storage name", repo: &pb.Repository{RelativePath: "bar"}, code: codes.InvalidArgument},
-		{desc: "non-existing repo", repo: &pb.Repository{StorageName: testRepo.GetStorageName(), RelativePath: "bar"}, code: codes.NotFound},
+		{desc: "non-existing repo", repo: &pb.Repository{StorageName: testhelper.TestRepository().GetStorageName(), RelativePath: "bar"}, code: codes.NotFound},
 	}
 
 	for _, test := range tests {
@@ -74,6 +77,9 @@ func TestRepackFullSuccess(t *testing.T) {
 	client, conn := newRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	tests := []struct {
 		req  *pb.RepackFullRequest
 		desc string
@@ -82,7 +88,7 @@ func TestRepackFullSuccess(t *testing.T) {
 		{req: &pb.RepackFullRequest{Repository: testRepo, CreateBitmap: false}, desc: "without bitmap"},
 	}
 
-	packPath := path.Join(testhelper.GitlabTestStoragePath(), testRepo.GetRelativePath(), "objects", "pack")
+	packPath := path.Join(testRepoPath, "objects", "pack")
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
@@ -131,7 +137,7 @@ func TestRepackFullFailure(t *testing.T) {
 		{desc: "nil repo", repo: nil, code: codes.InvalidArgument},
 		{desc: "invalid storage name", repo: &pb.Repository{StorageName: "foo"}, code: codes.InvalidArgument},
 		{desc: "no storage name", repo: &pb.Repository{RelativePath: "bar"}, code: codes.InvalidArgument},
-		{desc: "non-existing repo", repo: &pb.Repository{StorageName: testRepo.GetStorageName(), RelativePath: "bar"}, code: codes.NotFound},
+		{desc: "non-existing repo", repo: &pb.Repository{StorageName: testhelper.TestRepository().GetStorageName(), RelativePath: "bar"}, code: codes.NotFound},
 	}
 
 	for _, test := range tests {

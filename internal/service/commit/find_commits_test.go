@@ -25,6 +25,9 @@ func TestFindCommitsFields(t *testing.T) {
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	expectedCommit := &pb.GitCommit{
 		Id:      "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 		Subject: []byte("Merge branch 'branch-merged' into 'master'"),
@@ -70,6 +73,9 @@ func TestSuccessfulFindCommitsRequest(t *testing.T) {
 
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	testCases := []struct {
 		desc    string
@@ -321,6 +327,9 @@ func TestFailureFindCommitsRequest(t *testing.T) {
 
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	testCases := []struct {
 		desc    string

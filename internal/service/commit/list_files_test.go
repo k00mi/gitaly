@@ -56,6 +56,9 @@ func TestListFilesSuccess(t *testing.T) {
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	tests := []struct {
 		revision string
 		files    [][]byte

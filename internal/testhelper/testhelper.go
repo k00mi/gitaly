@@ -345,7 +345,7 @@ func cloneTestRepo(t *testing.T, bare bool) (repo *pb.Repository, repoPath strin
 	require.NoError(t, err)
 	repo = &pb.Repository{StorageName: "default", RelativePath: relativePath}
 
-	args := []string{"clone"}
+	args := []string{"clone", "--no-hardlinks", "--dissociate"}
 	if bare {
 		args = append(args, "--bare")
 	} else {

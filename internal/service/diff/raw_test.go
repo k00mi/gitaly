@@ -23,6 +23,9 @@ func TestSuccessfulRawDiffRequest(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	rightCommit := "e395f646b1499e8e0279445fc99a0596a65fab7e"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
 	rpcRequest := &pb.RawDiffRequest{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
@@ -60,6 +63,9 @@ func TestFailedRawDiffRequestDueToValidations(t *testing.T) {
 
 	client, conn := newDiffClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	testCases := []struct {
 		desc    string
@@ -116,6 +122,9 @@ func TestSuccessfulRawPatchRequest(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	rightCommit := "e395f646b1499e8e0279445fc99a0596a65fab7e"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
 	rpcRequest := &pb.RawPatchRequest{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
@@ -146,6 +155,9 @@ func TestFailedRawPatchRequestDueToValidations(t *testing.T) {
 
 	client, conn := newDiffClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	testCases := []struct {
 		desc    string

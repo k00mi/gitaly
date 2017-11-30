@@ -23,6 +23,7 @@ func TestSuccessfulReceivePackRequest(t *testing.T) {
 	server, serverSocketPath := runSmartHTTPServer(t)
 	defer server.Stop()
 
+	testRepo := testhelper.TestRepository()
 	storagePath := testhelper.GitlabTestStoragePath()
 	remoteRepoRelativePath := "gitlab-test-remote"
 	localRepoRelativePath := "gitlab-test-local"

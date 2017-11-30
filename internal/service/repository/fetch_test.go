@@ -189,13 +189,16 @@ func createCommit(t *testing.T, repoPath string, branchName string) string {
 }
 
 func newTestRepo(t *testing.T, relativePath string) (*pb.Repository, string) {
+	_, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	repo := &pb.Repository{StorageName: "default", RelativePath: relativePath}
 
 	repoPath, err := helper.GetPath(repo)
 	require.NoError(t, err)
 
 	require.NoError(t, os.RemoveAll(repoPath))
-	testhelper.MustRunCommand(t, nil, "git", "clone", "--bare", repository.TestRepoPath, repoPath)
+	testhelper.MustRunCommand(t, nil, "git", "clone", "--bare", testRepoPath, repoPath)
 
 	return repo, repoPath
 }

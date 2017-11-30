@@ -35,6 +35,9 @@ func copyRepoWithNewRemote(t *testing.T, repo *pb.Repository, remote string) *pb
 }
 
 func TestFetchRemoteArgsBuilder(t *testing.T) {
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	tests := []struct {
 		desc string
 		req  *pb.FetchRemoteRequest
@@ -109,6 +112,9 @@ func TestFetchRemoteArgsBuilder(t *testing.T) {
 func TestFetchRemoteSuccess(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	dir, err := ioutil.TempDir("", "gitlab-shell.")
 	require.NoError(t, err)

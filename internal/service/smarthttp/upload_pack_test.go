@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
@@ -26,13 +27,13 @@ const (
 	clientCapabilities = `multi_ack_detailed no-done side-band-64k thin-pack include-tag ofs-delta deepen-since deepen-not agent=git/2.12.2`
 )
 
-var (
-	testRepoPath = path.Join(testhelper.GitlabTestStoragePath(), testRepo.RelativePath)
-)
-
 func TestSuccessfulUploadPackRequest(t *testing.T) {
 	server, serverSocketPath := runSmartHTTPServer(t)
 	defer server.Stop()
+
+	testRepo := testhelper.TestRepository()
+	testRepoPath, err := helper.GetRepoPath(testRepo)
+	require.NoError(t, err)
 
 	storagePath := testhelper.GitlabTestStoragePath()
 	remoteRepoRelativePath := "gitlab-test-remote"
@@ -93,6 +94,10 @@ func TestUploadPackRequestWithGitConfigOptions(t *testing.T) {
 	server, serverSocketPath := runSmartHTTPServer(t)
 	defer server.Stop()
 
+	testRepo := testhelper.TestRepository()
+	testRepoPath, err := helper.GetRepoPath(testRepo)
+	require.NoError(t, err)
+
 	storagePath := testhelper.GitlabTestStoragePath()
 	ourRepoRelativePath := "gitlab-test-remote"
 	ourRepoPath := path.Join(storagePath, ourRepoRelativePath)
@@ -148,6 +153,8 @@ func TestUploadPackRequestWithGitConfigOptions(t *testing.T) {
 func TestSuccessfulUploadPackDeepenRequest(t *testing.T) {
 	server, serverSocketPath := runSmartHTTPServer(t)
 	defer server.Stop()
+
+	testRepo := testhelper.TestRepository()
 
 	requestBody := &bytes.Buffer{}
 	pktLine(requestBody, fmt.Sprintf("want e63f41fe459e62e1228fcef60d7189127aeba95a %s\n", clientCapabilities))

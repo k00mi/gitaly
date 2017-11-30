@@ -19,6 +19,9 @@ func TestSuccessfulInfoRefsUploadPack(t *testing.T) {
 	server, serverSocketPath := runSmartHTTPServer(t)
 	defer server.Stop()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	rpcRequest := &pb.InfoRefsRequest{Repository: testRepo}
 
 	response, err := makeInfoRefsUploadPackRequest(t, serverSocketPath, rpcRequest)
@@ -32,6 +35,9 @@ func TestSuccessfulInfoRefsUploadPack(t *testing.T) {
 func TestSuccessfulInfoRefsUploadPackWithGitConfigOptions(t *testing.T) {
 	server, serverSocketPath := runSmartHTTPServer(t)
 	defer server.Stop()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	// transfer.hideRefs=refs will hide every ref that info-refs would normally
 	// output, allowing us to test that the custom configuration is respected
@@ -68,6 +74,10 @@ func TestSuccessfulInfoRefsReceivePack(t *testing.T) {
 
 	client, conn := newSmartHTTPClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	rpcRequest := &pb.InfoRefsRequest{Repository: testRepo}
 
 	ctx, cancel := context.WithCancel(context.Background())

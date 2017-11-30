@@ -20,6 +20,9 @@ func TestSuccessfulLastCommitForPathRequest(t *testing.T) {
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	commit := &pb.GitCommit{
 		Id:      "570e7b2abdd848b95f2f578043fc23bd6f6fd24d",
 		Subject: []byte("Change some files"),
@@ -93,6 +96,9 @@ func TestFailedLastCommitForPathRequest(t *testing.T) {
 
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	invalidRepo := &pb.Repository{StorageName: "fake", RelativePath: "path"}
 

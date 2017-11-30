@@ -19,9 +19,7 @@ import (
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
 
-var (
-	testRepo = testhelper.TestRepository()
-)
+var ()
 
 func TestMain(m *testing.M) {
 	os.Exit(testMain(m))

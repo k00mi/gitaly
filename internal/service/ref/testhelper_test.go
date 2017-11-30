@@ -12,7 +12,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -21,8 +20,6 @@ import (
 )
 
 var (
-	testRepo      *pb.Repository
-	testRepoPath  string
 	localBranches = map[string]*pb.GitCommit{
 		"refs/heads/100%branch": {
 			Id:      "1b12f15a11fc6e62177bef08f47bc7b5ce50b141",
@@ -78,13 +75,7 @@ var rubyServer *rubyserver.Server
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
-	testRepo = testhelper.TestRepository()
-
 	var err error
-	testRepoPath, err = helper.GetRepoPath(testRepo)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	testhelper.ConfigureRuby()
 	rubyServer, err = rubyserver.Start()

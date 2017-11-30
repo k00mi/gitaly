@@ -22,6 +22,9 @@ func TestSuccessfulCountCommitsRequest(t *testing.T) {
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	testCases := []struct {
 		revision, path      []byte
 		before, after, desc string
@@ -116,6 +119,9 @@ func TestFailedCountCommitsRequestDueToValidationError(t *testing.T) {
 
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	revision := []byte("d42783470dc29fde2cf459eb3199ee1d7e3f3a72")
 

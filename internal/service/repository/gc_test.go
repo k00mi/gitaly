@@ -22,6 +22,9 @@ func TestGarbageCollectSuccess(t *testing.T) {
 	client, conn := newRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	tests := []struct {
 		req  *pb.GarbageCollectRequest
 		desc string
@@ -76,6 +79,9 @@ func TestGarbageCollectFailure(t *testing.T) {
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	tests := []struct {
 		repo *pb.Repository

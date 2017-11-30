@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
@@ -22,8 +21,6 @@ import (
 )
 
 var (
-	testRepo        *pb.Repository
-	testRepoPath    string
 	gitlabPreHooks  = []string{"pre-receive", "update"}
 	gitlabPostHooks = []string{"post-receive"}
 	GitlabPreHooks  = gitlabPreHooks
@@ -43,13 +40,7 @@ func TestMain(m *testing.M) {
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
-	testRepo = testhelper.TestRepository()
-
 	var err error
-	testRepoPath, err = helper.GetRepoPath(testRepo)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	testhelper.ConfigureRuby()
 	RubyServer, err = rubyserver.Start()

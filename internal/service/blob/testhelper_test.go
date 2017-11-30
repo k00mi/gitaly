@@ -13,10 +13,6 @@ import (
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
 
-var (
-	testRepo = testhelper.TestRepository()
-)
-
 func runBlobServer(t *testing.T) (*grpc.Server, string) {
 	server := testhelper.NewTestGrpcServer(t, nil, nil)
 

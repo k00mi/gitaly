@@ -12,7 +12,6 @@ import (
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/server/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -26,10 +25,8 @@ import (
 const testTimeString = "200601021504.05"
 
 var (
-	testTime     = time.Date(2006, 1, 2, 15, 4, 5, 0, time.UTC)
-	testRepo     = testhelper.TestRepository()
-	TestRepoPath string
-	RubyServer   *rubyserver.Server
+	testTime   = time.Date(2006, 1, 2, 15, 4, 5, 0, time.UTC)
+	RubyServer *rubyserver.Server
 )
 
 func newRepositoryClient(t *testing.T, serverSocketPath string) (pb.RepositoryServiceClient, *grpc.ClientConn) {
@@ -119,11 +116,6 @@ func testMain(m *testing.M) int {
 		log.Fatal(err)
 	}
 	defer RubyServer.Stop()
-
-	TestRepoPath, err = helper.GetPath(testRepo)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	return m.Run()
 }

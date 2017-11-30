@@ -21,6 +21,9 @@ func TestSuccessfulUserCreateBranchRequest(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	server, serverSocketPath := runOperationServiceServer(t)
 	defer server.Stop()
 
@@ -82,6 +85,9 @@ func TestSuccessfulUserCreateBranchRequest(t *testing.T) {
 }
 
 func TestSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T) {
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	server, serverSocketPath := runOperationServiceServer(t)
 	defer server.Stop()
 
@@ -124,6 +130,9 @@ func TestSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T) {
 }
 
 func TestFailedUserCreateBranchDueToHooks(t *testing.T) {
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	server, serverSocketPath := runOperationServiceServer(t)
 	defer server.Stop()
 
@@ -170,6 +179,9 @@ func TestFailedUserCreateBranchRequest(t *testing.T) {
 
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	user := &pb.User{
 		Name:  []byte("Alejandro Rodríguez"),
@@ -235,6 +247,9 @@ func TestSuccessfulUserDeleteBranchRequest(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	server, serverSocketPath := runOperationServiceServer(t)
 	defer server.Stop()
 
@@ -267,6 +282,9 @@ func TestSuccessfulUserDeleteBranchRequest(t *testing.T) {
 }
 
 func TestSuccessfulGitHooksForUserDeleteBranchRequest(t *testing.T) {
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	server, serverSocketPath := runOperationServiceServer(t)
 	defer server.Stop()
 
@@ -315,6 +333,9 @@ func TestFailedUserDeleteBranchDueToValidation(t *testing.T) {
 
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	user := &pb.User{
 		Name:  []byte("Alejandro Rodríguez"),
@@ -366,6 +387,9 @@ func TestFailedUserDeleteBranchDueToValidation(t *testing.T) {
 }
 
 func TestFailedUserDeleteBranchDueToHooks(t *testing.T) {
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	server, serverSocketPath := runOperationServiceServer(t)
 	defer server.Stop()
 
@@ -392,6 +416,7 @@ func TestFailedUserDeleteBranchDueToHooks(t *testing.T) {
 
 	for _, hookName := range gitlabPreHooks {
 		t.Run(hookName, func(t *testing.T) {
+			require.NoError(t, os.MkdirAll(path.Join(testRepoPath, "hooks"), 0755))
 			hookPath := path.Join(testRepoPath, "hooks", hookName)
 			ioutil.WriteFile(hookPath, hookContent, 0755)
 			defer os.Remove(hookPath)

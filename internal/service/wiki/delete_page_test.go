@@ -13,7 +13,7 @@ import (
 )
 
 func TestSuccessfulWikiDeletePageRequest(t *testing.T) {
-	wikiRepo, cleanupFunc := setupWikiRepo()
+	wikiRepo, wikiRepoPath, cleanupFunc := setupWikiRepo(t)
 	defer cleanupFunc()
 
 	ctx, cancel := testhelper.Context()
@@ -56,7 +56,7 @@ func TestSuccessfulWikiDeletePageRequest(t *testing.T) {
 }
 
 func TestFailedWikiDeletePageDueToValidations(t *testing.T) {
-	wikiRepo, cleanupFunc := setupWikiRepo()
+	wikiRepo, _, cleanupFunc := setupWikiRepo(t)
 	defer cleanupFunc()
 
 	server, serverSocketPath := runWikiServiceServer(t)

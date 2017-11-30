@@ -21,6 +21,10 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 
 	client, conn := newDiffClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	rightCommit := "ab2c9622c02288a2bbaaf35d96088cfdff31d9d9"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
 	rpcRequest := &pb.CommitDiffRequest{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: leftCommit, IgnoreWhitespaceChange: false}
@@ -181,6 +185,10 @@ func TestSuccessfulCommitDiffRequestWithPaths(t *testing.T) {
 
 	client, conn := newDiffClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	rightCommit := "e4003da16c1c2c3fc4567700121b17bf8e591c6c"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
 	rpcRequest := &pb.CommitDiffRequest{
@@ -255,6 +263,10 @@ func TestSuccessfulCommitDiffRequestWithTypeChangeDiff(t *testing.T) {
 
 	client, conn := newDiffClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	rightCommit := "184a47d38677e2e439964859b877ae9bc424ab11"
 	leftCommit := "80d56eb72ba5d77fd8af857eced17a7d0640cb82"
 	rpcRequest := &pb.CommitDiffRequest{
@@ -302,6 +314,10 @@ func TestSuccessfulCommitDiffRequestWithIgnoreWhitespaceChange(t *testing.T) {
 
 	client, conn := newDiffClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	rightCommit := "e4003da16c1c2c3fc4567700121b17bf8e591c6c"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
 
@@ -412,6 +428,10 @@ func TestSuccessfulCommitDiffRequestWithLimits(t *testing.T) {
 
 	client, conn := newDiffClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	rightCommit := "899d3d27b04690ac1cd9ef4d8a74fde0667c57f1"
 	leftCommit := "184a47d38677e2e439964859b877ae9bc424ab11"
 
@@ -605,6 +625,10 @@ func TestFailedCommitDiffRequestDueToValidationError(t *testing.T) {
 
 	client, conn := newDiffClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	rightCommit := "d42783470dc29fde2cf459eb3199ee1d7e3f3a72"
 	leftCommit := rightCommit + "~" // Parent of rightCommit
 
@@ -637,6 +661,10 @@ func TestFailedCommitDiffRequestWithNonExistentCommit(t *testing.T) {
 
 	client, conn := newDiffClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	nonExistentCommitID := "deadfacedeadfacedeadfacedeadfacedeadface"
 	leftCommit := nonExistentCommitID + "~" // Parent of rightCommit
 	rpcRequest := &pb.CommitDiffRequest{Repository: testRepo, RightCommitId: nonExistentCommitID, LeftCommitId: leftCommit}
@@ -658,6 +686,10 @@ func TestSuccessfulCommitDeltaRequest(t *testing.T) {
 
 	client, conn := newDiffClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	rightCommit := "742518b2be68fc750bb4c357c0df821a88113286"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
 	rpcRequest := &pb.CommitDeltaRequest{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
@@ -777,6 +809,10 @@ func TestSuccessfulCommitDeltaRequestWithPaths(t *testing.T) {
 
 	client, conn := newDiffClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	rightCommit := "e4003da16c1c2c3fc4567700121b17bf8e591c6c"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
 	rpcRequest := &pb.CommitDeltaRequest{
@@ -842,6 +878,10 @@ func TestFailedCommitDeltaRequestDueToValidationError(t *testing.T) {
 
 	client, conn := newDiffClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	rightCommit := "d42783470dc29fde2cf459eb3199ee1d7e3f3a72"
 	leftCommit := rightCommit + "~" // Parent of rightCommit
 
@@ -874,6 +914,10 @@ func TestFailedCommitDeltaRequestWithNonExistentCommit(t *testing.T) {
 
 	client, conn := newDiffClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	nonExistentCommitID := "deadfacedeadfacedeadfacedeadfacedeadface"
 	leftCommit := nonExistentCommitID + "~" // Parent of rightCommit
 	rpcRequest := &pb.CommitDeltaRequest{Repository: testRepo, RightCommitId: nonExistentCommitID, LeftCommitId: leftCommit}

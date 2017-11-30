@@ -18,6 +18,9 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	testCases := []struct {
 		description string
 		revision    string
@@ -143,6 +146,10 @@ func TestFailedFindCommitRequest(t *testing.T) {
 
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	invalidRepo := &pb.Repository{StorageName: "fake", RelativePath: "path"}
 
 	testCases := []struct {

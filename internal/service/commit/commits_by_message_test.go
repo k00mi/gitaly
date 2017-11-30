@@ -21,6 +21,9 @@ func TestSuccessfulCommitsByMessageRequest(t *testing.T) {
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	commits := []*pb.GitCommit{
 		{
 			Id:        "bf6e164cac2dc32b1f391ca4290badcbe4ffc5fb",
@@ -154,6 +157,9 @@ func TestFailedCommitsByMessageRequest(t *testing.T) {
 
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	invalidRepo := &pb.Repository{StorageName: "fake", RelativePath: "path"}
 

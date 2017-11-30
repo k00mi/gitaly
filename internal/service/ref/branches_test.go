@@ -24,6 +24,9 @@ func TestSuccessfulCreateBranchRequest(t *testing.T) {
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	headCommit, err := log.GetCommit(ctx, testRepo, "HEAD", "")
 	require.NoError(t, err)
 
@@ -83,6 +86,9 @@ func TestFailedCreateBranchRequest(t *testing.T) {
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	testCases := []struct {
 		desc       string
 		branchName string
@@ -133,6 +139,9 @@ func TestSuccessfulDeleteBranchRequest(t *testing.T) {
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	branchNameInput := "to-be-deleted-soon"
 
 	defer exec.Command("git", "-C", testRepoPath, "branch", "-D", branchNameInput).Run()
@@ -179,6 +188,9 @@ func TestFailedDeleteBranchRequest(t *testing.T) {
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	testCases := []struct {
 		desc       string
 		branchName string
@@ -221,6 +233,9 @@ func TestSuccessfulFindBranchRequest(t *testing.T) {
 
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	branchNameInput := "master"
 	branchTarget, err := log.GetCommit(ctx, testRepo, branchNameInput, "")
@@ -281,6 +296,9 @@ func TestFailedFindBranchRequest(t *testing.T) {
 
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	testCases := []struct {
 		desc       string

@@ -14,7 +14,7 @@ import (
 )
 
 func TestWikiGetPageVersionsRequest(t *testing.T) {
-	wikiRepo, cleanupFunc := setupWikiRepo()
+	wikiRepo, wikiRepoPath, cleanupFunc := setupWikiRepo(t)
 	defer cleanupFunc()
 
 	ctx, cancel := testhelper.Context()

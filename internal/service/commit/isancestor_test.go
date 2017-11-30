@@ -24,6 +24,9 @@ func TestCommitIsAncestorFailure(t *testing.T) {
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	queries := []struct {
 		Request   *pb.CommitIsAncestorRequest
 		ErrorCode codes.Code
@@ -86,6 +89,9 @@ func TestCommitIsAncestorSuccess(t *testing.T) {
 
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	queries := []struct {
 		Request  *pb.CommitIsAncestorRequest

@@ -27,6 +27,9 @@ func TestSuccessfulUserDeleteTagRequest(t *testing.T) {
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	tagNameInput := "to-be-deleted-soon-tag"
 
 	defer exec.Command("git", "-C", testRepoPath, "tag", "-d", tagNameInput).Run()
@@ -58,6 +61,9 @@ func TestSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T) {
 
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	tagNameInput := "to-be-deleted-soon-tag"
 	defer exec.Command("git", "-C", testRepoPath, "tag", "-d", tagNameInput).Run()
@@ -104,6 +110,9 @@ func TestSuccessfulUserCreateTagRequest(t *testing.T) {
 
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	targetRevision := "c7fbe50c7c7419d9701eebe64b1fdacc3df5b9dd"
 	targetRevisionCommit, err := log.GetCommit(ctx, testRepo, targetRevision, "")
@@ -181,6 +190,9 @@ func TestSuccessfulGitHooksForUserCreateTagRequest(t *testing.T) {
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	tagName := "new-tag"
 	user := &pb.User{
 		Name:       []byte("Ahmad Sherif"),
@@ -222,6 +234,9 @@ func TestFailedUserDeleteTagRequestDueToValidation(t *testing.T) {
 
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	user := &pb.User{
 		Name:  []byte("Ahmad Sherif"),
@@ -279,6 +294,9 @@ func TestFailedUserDeleteTagDueToHooks(t *testing.T) {
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	tagNameInput := "to-be-deleted-soon-tag"
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", tagNameInput)
 	defer exec.Command("git", "-C", testRepoPath, "tag", "-d", tagNameInput).Run()
@@ -323,6 +341,9 @@ func TestFailedUserCreateTagDueToHooks(t *testing.T) {
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	user := &pb.User{
 		Name:       []byte("Ahmad Sherif"),
 		Email:      []byte("ahmad@gitlab.com"),
@@ -358,6 +379,9 @@ func TestFailedUserCreateTagRequestDueToTagExistence(t *testing.T) {
 
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	user := &pb.User{
 		Name:  []byte("Ahmad Sherif"),
@@ -396,6 +420,9 @@ func TestFailedUserCreateTagRequestDueToValidation(t *testing.T) {
 
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	user := &pb.User{
 		Name:  []byte("Ahmad Sherif"),

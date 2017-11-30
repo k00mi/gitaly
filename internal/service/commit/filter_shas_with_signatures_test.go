@@ -22,6 +22,9 @@ func TestFilterShasWithSignaturesSuccessful(t *testing.T) {
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	testCases := []struct {
 		desc string
 		in   [][]byte

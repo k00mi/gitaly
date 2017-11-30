@@ -5,10 +5,12 @@ import (
 	"net"
 	"os"
 	"path"
+	"strings"
 	"testing"
 	"time"
 
 	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
@@ -21,7 +23,6 @@ import (
 )
 
 var (
-	wikiRepoPath    string
 	mockPageContent = bytes.Repeat([]byte("Mock wiki page content"), 10000)
 )
 
@@ -131,19 +132,20 @@ func updateWikiPage(t *testing.T, client pb.WikiServiceClient, wikiRepo *pb.Repo
 	require.NoError(t, err)
 }
 
-func setupWikiRepo() (*pb.Repository, func()) {
+func setupWikiRepo(t *testing.T) (*pb.Repository, string, func()) {
 	testhelper.ConfigureTestStorage()
+	relPath := strings.Join([]string{t.Name(), "wiki-test.git"}, "-")
 	storagePath := testhelper.GitlabTestStoragePath()
-	wikiRepoPath = path.Join(storagePath, "wiki-test.git")
+	wikiRepoPath := path.Join(storagePath, relPath)
 
 	testhelper.MustRunCommand(nil, nil, "git", "init", "--bare", wikiRepoPath)
 
 	wikiRepo := &pb.Repository{
 		StorageName:  "default",
-		RelativePath: "wiki-test.git",
+		RelativePath: relPath,
 	}
 
-	return wikiRepo, func() { os.RemoveAll(wikiRepoPath) }
+	return wikiRepo, wikiRepoPath, func() { os.RemoveAll(wikiRepoPath) }
 }
 
 func sendBytes(data []byte, chunkSize int, sender func([]byte) error) (int, error) {
@@ -166,6 +168,9 @@ func sendBytes(data []byte, chunkSize int, sender func([]byte) error) (int, erro
 func createTestWikiPage(t *testing.T, client pb.WikiServiceClient, wikiRepo *pb.Repository, pageName string) *pb.GitCommit {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
+
+	wikiRepoPath, err := helper.GetRepoPath(wikiRepo)
+	require.NoError(t, err)
 
 	writeWikiPage(t, client, wikiRepo, pageName, mockPageContent)
 	head1ID := testhelper.MustRunCommand(t, nil, "git", "-C", wikiRepoPath, "show", "--format=format:%H", "--no-patch", "HEAD")
