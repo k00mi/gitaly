@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
@@ -16,6 +17,9 @@ func TestSuccessfulListCommitsByOidRequest(t *testing.T) {
 
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	commits := []*pb.GitCommit{
 		{
