@@ -10,6 +10,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/460
 - Implement CommitService::FilterShasWithSignatures
   https://gitlab.com/gitlab-org/gitaly/merge_requests/461
+- Implement CommitService::ListCommitsByOid
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/438
 
 v0.55.0
 
