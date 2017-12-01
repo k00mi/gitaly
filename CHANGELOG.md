@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Implement UserRevert RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/471
 - Fix commit message encoding and support alternates in CatFile
   https://gitlab.com/gitlab-org/gitaly/merge_requests/469
 - Raise an exception when Git::Env.all is called

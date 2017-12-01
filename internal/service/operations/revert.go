@@ -9,9 +9,9 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-func (s *server) UserCherryPick(ctx context.Context, req *pb.UserCherryPickRequest) (*pb.UserCherryPickResponse, error) {
+func (s *server) UserRevert(ctx context.Context, req *pb.UserRevertRequest) (*pb.UserRevertResponse, error) {
 	if err := validateCherryPickOrRevertRequest(req); err != nil {
-		return nil, grpc.Errorf(codes.InvalidArgument, "UserCherryPick: %v", err)
+		return nil, grpc.Errorf(codes.InvalidArgument, "UserRevert: %v", err)
 	}
 
 	client, err := s.OperationServiceClient(ctx)
@@ -24,5 +24,5 @@ func (s *server) UserCherryPick(ctx context.Context, req *pb.UserCherryPickReque
 		return nil, err
 	}
 
-	return client.UserCherryPick(clientCtx, req)
+	return client.UserRevert(clientCtx, req)
 }

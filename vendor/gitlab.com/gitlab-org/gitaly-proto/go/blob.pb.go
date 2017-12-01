@@ -93,6 +93,8 @@ It has these top-level messages:
 	UserFFBranchResponse
 	UserCherryPickRequest
 	UserCherryPickResponse
+	UserRevertRequest
+	UserRevertResponse
 	FindDefaultBranchNameRequest
 	FindDefaultBranchNameResponse
 	FindAllBranchNamesRequest
@@ -145,6 +147,10 @@ It has these top-level messages:
 	ChangeStorageResponse
 	FetchSourceBranchRequest
 	FetchSourceBranchResponse
+	FsckRequest
+	FsckResponse
+	WriteRefRequest
+	WriteRefResponse
 	Repository
 	GitCommit
 	CommitAuthor

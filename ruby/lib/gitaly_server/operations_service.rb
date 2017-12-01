@@ -178,6 +178,35 @@ module GitalyServer
       end
     end
 
+    def user_revert(request, call)
+      bridge_exceptions do
+        begin
+          repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
+          user = Gitlab::Git::User.from_gitaly(request.user)
+          commit = Gitlab::Git::Commit.new(repo, request.commit)
+          start_repository = Gitlab::Git::GitalyRemoteRepository.new(request.start_repository || request.repository, call)
+
+          result = repo.revert(
+            user: user,
+            commit: commit,
+            branch_name: request.branch_name,
+            message: request.message.dup,
+            start_branch_name: request.start_branch_name.presence,
+            start_repository: start_repository
+          )
+
+          branch_update = branch_update_result(result)
+          Gitaly::UserRevertResponse.new(branch_update: branch_update)
+        rescue Gitlab::Git::Repository::CreateTreeError => e
+          Gitaly::UserRevertResponse.new(create_tree_error: e.message)
+        rescue Gitlab::Git::CommitError => e
+          Gitaly::UserRevertResponse.new(commit_error: e.message)
+        rescue Gitlab::Git::HooksService::PreReceiveError => e
+          Gitaly::UserRevertResponse.new(pre_receive_error: e.message)
+        end
+      end
+    end
+
     private
 
     def branch_update_result(gitlab_update_result)
