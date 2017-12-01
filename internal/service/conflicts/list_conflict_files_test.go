@@ -21,7 +21,7 @@ func TestSuccessfulListConflictFilesRequest(t *testing.T) {
 	server, serverSocketPath := runConflictsServer(t)
 	defer server.Stop()
 
-	client, conn := newConflictsClient(t, serverSocketPath)
+	client, conn := NewConflictsClient(t, serverSocketPath)
 	defer conn.Close()
 
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
@@ -71,7 +71,7 @@ func TestFailedListConflictFilesRequestDueToConflictSideMissing(t *testing.T) {
 	server, serverSocketPath := runConflictsServer(t)
 	defer server.Stop()
 
-	client, conn := newConflictsClient(t, serverSocketPath)
+	client, conn := NewConflictsClient(t, serverSocketPath)
 	defer conn.Close()
 
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
@@ -97,7 +97,7 @@ func TestFailedListConflictFilesRequestDueToValidation(t *testing.T) {
 	server, serverSocketPath := runConflictsServer(t)
 	defer server.Stop()
 
-	client, conn := newConflictsClient(t, serverSocketPath)
+	client, conn := NewConflictsClient(t, serverSocketPath)
 	defer conn.Close()
 
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)

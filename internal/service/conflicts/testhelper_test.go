@@ -21,7 +21,7 @@ func TestMain(m *testing.M) {
 	os.Exit(testMain(m))
 }
 
-var rubyServer *rubyserver.Server
+var RubyServer *rubyserver.Server
 
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
@@ -29,11 +29,11 @@ func testMain(m *testing.M) int {
 	var err error
 
 	testhelper.ConfigureRuby()
-	rubyServer, err = rubyserver.Start()
+	RubyServer, err = rubyserver.Start()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer rubyServer.Stop()
+	defer RubyServer.Stop()
 
 	return m.Run()
 }
@@ -47,7 +47,7 @@ func runConflictsServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	pb.RegisterConflictsServiceServer(server, NewServer(rubyServer))
+	pb.RegisterConflictsServiceServer(server, NewServer(RubyServer))
 	reflection.Register(server)
 
 	go server.Serve(listener)
@@ -55,7 +55,7 @@ func runConflictsServer(t *testing.T) (*grpc.Server, string) {
 	return server, serverSocketPath
 }
 
-func newConflictsClient(t *testing.T, serverSocketPath string) (pb.ConflictsServiceClient, *grpc.ClientConn) {
+func NewConflictsClient(t *testing.T, serverSocketPath string) (pb.ConflictsServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {

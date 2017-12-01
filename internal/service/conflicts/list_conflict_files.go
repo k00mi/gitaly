@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -55,8 +54,4 @@ func validateListConflictFilesRequest(in *pb.ListConflictFilesRequest) error {
 	}
 
 	return nil
-}
-
-func (s *server) ResolveConflicts(stream pb.ConflictsService_ResolveConflictsServer) error {
-	return helper.Unimplemented
 }
