@@ -178,6 +178,14 @@ func (s *Server) WikiServiceClient(ctx context.Context) (pb.WikiServiceClient, e
 	return pb.NewWikiServiceClient(conn), err
 }
 
+// ConflictsServiceClient returns a ConflictsServiceClient instance that is
+// configured to connect to the running Ruby server. This assumes Start()
+// has been called already.
+func (s *Server) ConflictsServiceClient(ctx context.Context) (pb.ConflictsServiceClient, error) {
+	conn, err := s.getConnection(ctx)
+	return pb.NewConflictsServiceClient(conn), err
+}
+
 func (s *Server) getConnection(ctx context.Context) (*grpc.ClientConn, error) {
 	s.clientConnMu.RLock()
 	conn := s.clientConn
