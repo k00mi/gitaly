@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- More logging in housekeeping
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/435
+
 v0.56.0
 
 - Implement UserCherryPick RPC

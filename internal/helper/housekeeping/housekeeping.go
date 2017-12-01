@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 )
 
@@ -14,9 +15,12 @@ const deleteTempFilesOlderThanDuration = 7 * 24 * time.Hour
 
 // Perform will perform housekeeping duties on a repository
 func Perform(ctx context.Context, repoPath string) error {
-	log := grpc_logrus.Extract(ctx)
+	logger := grpc_logrus.Extract(ctx).WithField("system", "housekeeping")
 
-	return filepath.Walk(repoPath, func(path string, info os.FileInfo, err error) error {
+	filesMarkedForRemoval := 0
+	unremovableFiles := 0
+
+	err := filepath.Walk(repoPath, func(path string, info os.FileInfo, err error) error {
 		if repoPath == path {
 			// Never consider the root path
 			return nil
@@ -26,9 +30,12 @@ func Perform(ctx context.Context, repoPath string) error {
 			return nil
 		}
 
+		filesMarkedForRemoval++
+
 		err = forceRemove(path)
 		if err != nil {
-			log.WithError(err).WithField("path", path).Warn("Unable to remove stray file")
+			unremovableFiles++
+			logger.WithError(err).WithField("path", path).Warn("unable to remove stray file")
 		}
 
 		if info.IsDir() {
@@ -38,6 +45,15 @@ func Perform(ctx context.Context, repoPath string) error {
 
 		return nil
 	})
+
+	if filesMarkedForRemoval > 0 {
+		logger.WithFields(log.Fields{
+			"files":    filesMarkedForRemoval,
+			"failures": unremovableFiles,
+		}).Info("removed files")
+	}
+
+	return err
 }
 
 func fixPermissions(path string) {
