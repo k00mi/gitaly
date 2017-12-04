@@ -164,6 +164,7 @@ func TestSuccessfulGitHooksForUserCherryPickRequest(t *testing.T) {
 		t.Run(hookName, func(t *testing.T) {
 			hookPath, hookOutputTempPath := operations.WriteEnvToHook(t, testRepoPath, hookName)
 			defer os.Remove(hookPath)
+			defer os.Remove(hookOutputTempPath)
 
 			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
 			ctx := metadata.NewOutgoingContext(ctxOuter, md)
