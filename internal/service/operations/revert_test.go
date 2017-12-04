@@ -2,25 +2,22 @@ package operations_test
 
 import (
 	"io/ioutil"
-	"net"
 	"os"
 	"path"
 	"testing"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
-	serverPkg "gitlab.com/gitlab-org/gitaly/internal/server"
 	"gitlab.com/gitlab-org/gitaly/internal/service/operations"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 )
 
-func TestSuccessfulUserCherryPickRequest(t *testing.T) {
+func TestSuccessfulUserRevertRequest(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
@@ -33,7 +30,7 @@ func TestSuccessfulUserCherryPickRequest(t *testing.T) {
 	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	destinationBranch := "cherry-picking-dst"
+	destinationBranch := "revert-dst"
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", destinationBranch, "master")
 
 	masterHeadCommit, err := log.GetCommit(ctxOuter, testRepo, "master", "")
@@ -45,7 +42,7 @@ func TestSuccessfulUserCherryPickRequest(t *testing.T) {
 		GlId:  "user-123",
 	}
 
-	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab", "")
+	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, "d59c60028b053793cecfb4022de34602e1a9218e", "")
 	require.NoError(t, err)
 
 	testRepoCopy, _, cleanup := testhelper.NewTestRepo(t)
@@ -53,40 +50,40 @@ func TestSuccessfulUserCherryPickRequest(t *testing.T) {
 
 	testCases := []struct {
 		desc         string
-		request      *pb.UserCherryPickRequest
+		request      *pb.UserRevertRequest
 		branchUpdate *pb.OperationBranchUpdate
 	}{
 		{
 			desc: "branch exists",
-			request: &pb.UserCherryPickRequest{
+			request: &pb.UserRevertRequest{
 				Repository: testRepo,
 				User:       user,
-				Commit:     cherryPickedCommit,
+				Commit:     revertedCommit,
 				BranchName: []byte(destinationBranch),
-				Message:    []byte("Cherry-picking " + cherryPickedCommit.Id),
+				Message:    []byte("Reverting " + revertedCommit.Id),
 			},
 			branchUpdate: &pb.OperationBranchUpdate{},
 		},
 		{
 			desc: "nonexistent branch + start_repository == repository",
-			request: &pb.UserCherryPickRequest{
+			request: &pb.UserRevertRequest{
 				Repository:      testRepo,
 				User:            user,
-				Commit:          cherryPickedCommit,
-				BranchName:      []byte("to-be-cherry-picked-into-1"),
-				Message:         []byte("Cherry-picking " + cherryPickedCommit.Id),
+				Commit:          revertedCommit,
+				BranchName:      []byte("to-be-reverted-into-1"),
+				Message:         []byte("Reverting " + revertedCommit.Id),
 				StartBranchName: []byte("master"),
 			},
 			branchUpdate: &pb.OperationBranchUpdate{BranchCreated: true},
 		},
 		{
 			desc: "nonexistent branch + start_repository != repository",
-			request: &pb.UserCherryPickRequest{
+			request: &pb.UserRevertRequest{
 				Repository:      testRepo,
 				User:            user,
-				Commit:          cherryPickedCommit,
-				BranchName:      []byte("to-be-cherry-picked-into-2"),
-				Message:         []byte("Cherry-picking " + cherryPickedCommit.Id),
+				Commit:          revertedCommit,
+				BranchName:      []byte("to-be-reverted-into-2"),
+				Message:         []byte("Reverting " + revertedCommit.Id),
 				StartRepository: testRepoCopy,
 				StartBranchName: []byte("master"),
 			},
@@ -94,12 +91,12 @@ func TestSuccessfulUserCherryPickRequest(t *testing.T) {
 		},
 		{
 			desc: "nonexistent branch + empty start_repository",
-			request: &pb.UserCherryPickRequest{
+			request: &pb.UserRevertRequest{
 				Repository:      testRepo,
 				User:            user,
-				Commit:          cherryPickedCommit,
-				BranchName:      []byte("to-be-cherry-picked-into-3"),
-				Message:         []byte("Cherry-picking " + cherryPickedCommit.Id),
+				Commit:          revertedCommit,
+				BranchName:      []byte("to-be-reverted-into-3"),
+				Message:         []byte("Reverting " + revertedCommit.Id),
 				StartBranchName: []byte("master"),
 			},
 			branchUpdate: &pb.OperationBranchUpdate{BranchCreated: true},
@@ -111,7 +108,7 @@ func TestSuccessfulUserCherryPickRequest(t *testing.T) {
 			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
 			ctx := metadata.NewOutgoingContext(ctxOuter, md)
 
-			response, err := client.UserCherryPick(ctx, testCase.request)
+			response, err := client.UserRevert(ctx, testCase.request)
 			require.NoError(t, err)
 
 			headCommit, err := log.GetCommit(ctx, testRepo, string(testCase.request.BranchName), "")
@@ -127,7 +124,7 @@ func TestSuccessfulUserCherryPickRequest(t *testing.T) {
 	}
 }
 
-func TestSuccessfulGitHooksForUserCherryPickRequest(t *testing.T) {
+func TestSuccessfulGitHooksForUserRevertRequest(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
@@ -140,7 +137,7 @@ func TestSuccessfulGitHooksForUserCherryPickRequest(t *testing.T) {
 	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	destinationBranch := "cherry-picking-dst"
+	destinationBranch := "revert-dst"
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", destinationBranch, "master")
 
 	user := &pb.User{
@@ -149,15 +146,15 @@ func TestSuccessfulGitHooksForUserCherryPickRequest(t *testing.T) {
 		GlId:  "user-123",
 	}
 
-	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab", "")
+	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, "d59c60028b053793cecfb4022de34602e1a9218e", "")
 	require.NoError(t, err)
 
-	request := &pb.UserCherryPickRequest{
+	request := &pb.UserRevertRequest{
 		Repository: testRepo,
 		User:       user,
-		Commit:     cherryPickedCommit,
+		Commit:     revertedCommit,
 		BranchName: []byte(destinationBranch),
-		Message:    []byte("Cherry-picking " + cherryPickedCommit.Id),
+		Message:    []byte("Reverting " + revertedCommit.Id),
 	}
 
 	for _, hookName := range operations.GitlabHooks {
@@ -169,7 +166,7 @@ func TestSuccessfulGitHooksForUserCherryPickRequest(t *testing.T) {
 			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
 			ctx := metadata.NewOutgoingContext(ctxOuter, md)
 
-			response, err := client.UserCherryPick(ctx, request)
+			response, err := client.UserRevert(ctx, request)
 			require.NoError(t, err)
 			require.Empty(t, response.PreReceiveError)
 
@@ -180,7 +177,7 @@ func TestSuccessfulGitHooksForUserCherryPickRequest(t *testing.T) {
 	}
 }
 
-func TestFailedUserCherryPickRequestDueToValidations(t *testing.T) {
+func TestFailedUserRevertRequestDueToValidations(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
@@ -193,10 +190,10 @@ func TestFailedUserCherryPickRequestDueToValidations(t *testing.T) {
 	testRepo, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab", "")
+	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, "d59c60028b053793cecfb4022de34602e1a9218e", "")
 	require.NoError(t, err)
 
-	destinationBranch := "cherry-picking-dst"
+	destinationBranch := "revert-dst"
 
 	user := &pb.User{
 		Name:  []byte("Ahmad Sherif"),
@@ -206,48 +203,48 @@ func TestFailedUserCherryPickRequestDueToValidations(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.UserCherryPickRequest
+		request *pb.UserRevertRequest
 		code    codes.Code
 	}{
 		{
 			desc: "empty user",
-			request: &pb.UserCherryPickRequest{
+			request: &pb.UserRevertRequest{
 				Repository: testRepo,
 				User:       nil,
-				Commit:     cherryPickedCommit,
+				Commit:     revertedCommit,
 				BranchName: []byte(destinationBranch),
-				Message:    []byte("Cherry-picking " + cherryPickedCommit.Id),
+				Message:    []byte("Reverting " + revertedCommit.Id),
 			},
 			code: codes.InvalidArgument,
 		},
 		{
 			desc: "empty commit",
-			request: &pb.UserCherryPickRequest{
+			request: &pb.UserRevertRequest{
 				Repository: testRepo,
 				User:       user,
 				Commit:     nil,
 				BranchName: []byte(destinationBranch),
-				Message:    []byte("Cherry-picking " + cherryPickedCommit.Id),
+				Message:    []byte("Reverting " + revertedCommit.Id),
 			},
 			code: codes.InvalidArgument,
 		},
 		{
 			desc: "empty branch name",
-			request: &pb.UserCherryPickRequest{
+			request: &pb.UserRevertRequest{
 				Repository: testRepo,
 				User:       user,
-				Commit:     cherryPickedCommit,
+				Commit:     revertedCommit,
 				BranchName: nil,
-				Message:    []byte("Cherry-picking " + cherryPickedCommit.Id),
+				Message:    []byte("Reverting " + revertedCommit.Id),
 			},
 			code: codes.InvalidArgument,
 		},
 		{
 			desc: "empty message",
-			request: &pb.UserCherryPickRequest{
+			request: &pb.UserRevertRequest{
 				Repository: testRepo,
 				User:       user,
-				Commit:     cherryPickedCommit,
+				Commit:     revertedCommit,
 				BranchName: []byte(destinationBranch),
 				Message:    nil,
 			},
@@ -260,13 +257,13 @@ func TestFailedUserCherryPickRequestDueToValidations(t *testing.T) {
 			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
 			ctx := metadata.NewOutgoingContext(ctxOuter, md)
 
-			_, err := client.UserCherryPick(ctx, testCase.request)
+			_, err := client.UserRevert(ctx, testCase.request)
 			testhelper.AssertGrpcError(t, err, testCase.code, "")
 		})
 	}
 }
 
-func TestFailedUserCherryPickRequestDueToPreReceiveError(t *testing.T) {
+func TestFailedUserRevertRequestDueToPreReceiveError(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
@@ -279,7 +276,7 @@ func TestFailedUserCherryPickRequestDueToPreReceiveError(t *testing.T) {
 	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	destinationBranch := "cherry-picking-dst"
+	destinationBranch := "revert-dst"
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", destinationBranch, "master")
 
 	user := &pb.User{
@@ -288,15 +285,15 @@ func TestFailedUserCherryPickRequestDueToPreReceiveError(t *testing.T) {
 		GlId:  "user-123",
 	}
 
-	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab", "")
+	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, "d59c60028b053793cecfb4022de34602e1a9218e", "")
 	require.NoError(t, err)
 
-	request := &pb.UserCherryPickRequest{
+	request := &pb.UserRevertRequest{
 		Repository: testRepo,
 		User:       user,
-		Commit:     cherryPickedCommit,
+		Commit:     revertedCommit,
 		BranchName: []byte(destinationBranch),
-		Message:    []byte("Cherry-picking " + cherryPickedCommit.Id),
+		Message:    []byte("Reverting " + revertedCommit.Id),
 	}
 
 	hookContent := []byte("#!/bin/sh\necho GL_ID=$GL_ID\nexit 1")
@@ -310,14 +307,14 @@ func TestFailedUserCherryPickRequestDueToPreReceiveError(t *testing.T) {
 			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
 			ctx := metadata.NewOutgoingContext(ctxOuter, md)
 
-			response, err := client.UserCherryPick(ctx, request)
+			response, err := client.UserRevert(ctx, request)
 			require.NoError(t, err)
 			require.Contains(t, response.PreReceiveError, "GL_ID="+user.GlId)
 		})
 	}
 }
 
-func TestFailedUserCherryPickRequestDueToCreateTreeError(t *testing.T) {
+func TestFailedUserRevertRequestDueToCreateTreeError(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
@@ -330,7 +327,7 @@ func TestFailedUserCherryPickRequestDueToCreateTreeError(t *testing.T) {
 	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	destinationBranch := "cherry-picking-dst"
+	destinationBranch := "revert-dst"
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", destinationBranch, "master")
 
 	user := &pb.User{
@@ -339,27 +336,27 @@ func TestFailedUserCherryPickRequestDueToCreateTreeError(t *testing.T) {
 		GlId:  "user-123",
 	}
 
-	// This commit already exists in master
-	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "4a24d82dbca5c11c61556f3b35ca472b7463187e", "")
+	// This revert patch of the following commit cannot be applied to the destinationBranch above
+	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, "372ab6950519549b14d220271ee2322caa44d4eb", "")
 	require.NoError(t, err)
 
-	request := &pb.UserCherryPickRequest{
+	request := &pb.UserRevertRequest{
 		Repository: testRepo,
 		User:       user,
-		Commit:     cherryPickedCommit,
+		Commit:     revertedCommit,
 		BranchName: []byte(destinationBranch),
-		Message:    []byte("Cherry-picking " + cherryPickedCommit.Id),
+		Message:    []byte("Reverting " + revertedCommit.Id),
 	}
 
 	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
 	ctx := metadata.NewOutgoingContext(ctxOuter, md)
 
-	response, err := client.UserCherryPick(ctx, request)
+	response, err := client.UserRevert(ctx, request)
 	require.NoError(t, err)
 	require.Equal(t, "Gitlab::Git::Repository::CreateTreeError", response.CreateTreeError)
 }
 
-func TestFailedUserCherryPickRequestDueToCommitError(t *testing.T) {
+func TestFailedUserRevertRequestDueToCommitError(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
@@ -372,10 +369,10 @@ func TestFailedUserCherryPickRequestDueToCommitError(t *testing.T) {
 	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	sourceBranch := "cherry-pick-src"
-	destinationBranch := "cherry-picking-dst"
+	sourceBranch := "revert-src"
+	destinationBranch := "revert-dst"
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", destinationBranch, "master")
-	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", sourceBranch, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab")
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", sourceBranch, "a5391128b0ef5d21df5dd23d98557f4ef12fae20")
 
 	user := &pb.User{
 		Name:  []byte("Ahmad Sherif"),
@@ -383,36 +380,22 @@ func TestFailedUserCherryPickRequestDueToCommitError(t *testing.T) {
 		GlId:  "user-123",
 	}
 
-	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, sourceBranch, "")
+	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, sourceBranch, "")
 	require.NoError(t, err)
 
-	request := &pb.UserCherryPickRequest{
+	request := &pb.UserRevertRequest{
 		Repository:      testRepo,
 		User:            user,
-		Commit:          cherryPickedCommit,
-		BranchName:      []byte(sourceBranch),
-		Message:         []byte("Cherry-picking " + cherryPickedCommit.Id),
-		StartBranchName: []byte(destinationBranch),
+		Commit:          revertedCommit,
+		BranchName:      []byte(destinationBranch),
+		Message:         []byte("Reverting " + revertedCommit.Id),
+		StartBranchName: []byte(sourceBranch),
 	}
 
 	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
 	ctx := metadata.NewOutgoingContext(ctxOuter, md)
 
-	response, err := client.UserCherryPick(ctx, request)
+	response, err := client.UserRevert(ctx, request)
 	require.NoError(t, err)
 	require.Equal(t, "Branch diverged", response.CommitError)
-}
-
-func runFullServer(t *testing.T) (*grpc.Server, string) {
-	server := serverPkg.New(operations.RubyServer)
-	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
-
-	listener, err := net.Listen("unix", serverSocketPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	go server.Serve(listener)
-
-	return server, serverSocketPath
 }

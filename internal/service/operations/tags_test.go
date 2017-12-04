@@ -87,6 +87,7 @@ func TestSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T) {
 
 			hookPath, hookOutputTempPath := WriteEnvToHook(t, testRepoPath, hookName)
 			defer os.Remove(hookPath)
+			defer os.Remove(hookOutputTempPath)
 
 			ctx, cancel := testhelper.Context()
 			defer cancel()
@@ -213,6 +214,7 @@ func TestSuccessfulGitHooksForUserCreateTagRequest(t *testing.T) {
 
 			hookPath, hookOutputTempPath := WriteEnvToHook(t, testRepoPath, hookName)
 			defer os.Remove(hookPath)
+			defer os.Remove(hookOutputTempPath)
 
 			ctx, cancel := testhelper.Context()
 			defer cancel()
