@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.57.0
 
 - Implement UserRevert RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/471
