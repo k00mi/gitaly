@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Update vendored gitlab_git to f3a3bd50eafdcfcaeea21d6cfa0b8bbae7720fec
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/478
+
 v0.57.0
 
 - Implement UserRevert RPC
