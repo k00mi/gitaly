@@ -159,6 +159,8 @@ It has these top-level messages:
 	FsckResponse
 	WriteRefRequest
 	WriteRefResponse
+	FindMergeBaseRequest
+	FindMergeBaseResponse
 	Repository
 	GitCommit
 	CommitAuthor
