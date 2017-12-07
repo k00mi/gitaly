@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Update vendored gitlab_git to 359b65beac43e009b715c2db048e06b6f96b0ee8
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/481
+
 v0.59.0
 
 - Restart gitaly-ruby when it uses too much memory
