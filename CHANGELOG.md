@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.59.0
 
 - Restart gitaly-ruby when it uses too much memory
   https://gitlab.com/gitlab-org/gitaly/merge_requests/465
