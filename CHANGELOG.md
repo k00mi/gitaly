@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Restart gitaly-ruby when it uses too much memory
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/465
+
 v0.58.0
 
 - Implement RepostoryService::Fsck
