@@ -4,7 +4,6 @@ stages:
   - build_images
   - build
   - test
-  - package
   - publish
 
 verify:
@@ -59,34 +58,6 @@ cover:
     paths:
       - _build/cover/all.html
     expire_in: 1 week
-
-package:
-  stage: package
-  only:
-    - tags
-  script:
-    - GOOS=linux GOARCH=amd64 make clean package
-    - ls -l # Want to see permissions as they went into the .deb
-    - dpkg -e *.deb
-    - cat DEBIAN/control
-    - cat DEBIAN/md5sums
-    - rm -rf DEBIAN
-  artifacts:
-    paths:
-      - ./*.deb
-
-publish:
-  stage: publish
-  only:
-    - tags
-  variables:
-    GIT_STRATEGY: none
-  script:
-    - gem install package_cloud
-    - ls -lh *.deb
-    - shasum -a256 *.deb
-    - package_cloud push $PACKAGECLOUD_REPO *.deb --url=https://packages.gitlab.com
-  allow_failure: true
 
 # Create a code quality report
 codequality:
