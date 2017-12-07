@@ -29,7 +29,7 @@ type monitorProcess struct {
 	wait <-chan struct{}
 }
 
-func monitorRss(procs <-chan monitorProcess, done chan<- struct{}) {
+func monitorRss(procs <-chan monitorProcess, done chan<- struct{}, events chan<- Event, threshold int) {
 	t := time.NewTicker(15 * time.Second)
 	defer t.Stop()
 
@@ -38,7 +38,21 @@ func monitorRss(procs <-chan monitorProcess, done chan<- struct{}) {
 	for mp := range procs {
 	monitorLoop:
 		for {
-			rssGauge.WithLabelValues(mp.name).Set(float64(1024 * getRss(mp.pid)))
+			rss := 1024 * getRss(mp.pid)
+			rssGauge.WithLabelValues(mp.name).Set(float64(rss))
+
+			if rss > 0 {
+				event := Event{Type: MemoryLow, Pid: mp.pid}
+				if rss > threshold {
+					event.Type = MemoryHigh
+				}
+
+				select {
+				case events <- event:
+				default:
+					// The default case makes this non-blocking
+				}
+			}
 
 			select {
 			case <-mp.wait:

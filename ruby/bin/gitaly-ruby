@@ -28,7 +28,20 @@ def main
 
   GitalyServer.register_handlers(s)
 
-  s.run_till_terminated
+  wait_thread = Thread.new do
+    sleep
+  end
+
+  trap('TERM') { wait_thread.kill }
+
+  run_thread = Thread.new do
+    s.run
+    wait_thread.kill
+  end
+
+  wait_thread.join
+  s.stop
+  run_thread.join
 end
 
 def start_parent_watcher(original_ppid)

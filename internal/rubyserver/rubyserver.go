@@ -13,6 +13,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
+	"gitlab.com/gitlab-org/gitaly/internal/rubyserver/balancer"
 	"gitlab.com/gitlab-org/gitaly/internal/supervisor"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 
@@ -53,17 +54,17 @@ func prepareSocketPath() {
 	}
 }
 
-func socketPath() string {
+func socketPath(id int) string {
 	if socketDir == "" {
 		panic("socketDir is not set")
 	}
 
-	return path.Join(filepath.Clean(socketDir), "socket")
+	return path.Join(filepath.Clean(socketDir), fmt.Sprintf("socket.%d", id))
 }
 
 // Server represents a gitaly-ruby helper process.
 type Server struct {
-	*supervisor.Process
+	workers      []*worker
 	clientConnMu sync.RWMutex
 	clientConn   *grpc.ClientConn
 }
@@ -77,8 +78,8 @@ func (s *Server) Stop() {
 			s.clientConn.Close()
 		}
 
-		if s.Process != nil {
-			s.Process.Stop()
+		for _, w := range s.workers {
+			w.Process.Stop()
 		}
 	}
 
@@ -97,21 +98,36 @@ func Start() (*Server, error) {
 	}
 
 	cfg := config.Config
-	env := []string{
-		"GITALY_RUBY_GIT_BIN_PATH=" + command.GitPath(),
+	env := append(
+		os.Environ(),
+		"GITALY_RUBY_GIT_BIN_PATH="+command.GitPath(),
 		fmt.Sprintf("GITALY_RUBY_WRITE_BUFFER_SIZE=%d", streamio.WriteBufferSize),
-		"GITALY_RUBY_GITLAB_SHELL_PATH=" + cfg.GitlabShell.Dir,
-		"GITALY_RUBY_GITALY_BIN_DIR=" + cfg.BinDir,
-	}
+		"GITALY_RUBY_GITLAB_SHELL_PATH="+cfg.GitlabShell.Dir,
+		"GITALY_RUBY_GITALY_BIN_DIR="+cfg.BinDir,
+	)
 	gitalyRuby := path.Join(cfg.Ruby.Dir, "bin/gitaly-ruby")
 
-	// Use 'ruby-cd' to make sure gitaly-ruby has the same working directory
-	// as the current process. This is a hack to sort-of support relative
-	// Unix socket paths.
-	args := []string{"bundle", "exec", "bin/ruby-cd", wd, gitalyRuby, fmt.Sprintf("%d", os.Getpid()), socketPath()}
+	s := &Server{}
+	for i := 0; i < numWorkers; i++ {
+		name := fmt.Sprintf("gitaly-ruby.%d", i)
+		socketPath := socketPath(i)
 
-	p, err := supervisor.New("gitaly-ruby", append(os.Environ(), env...), args, cfg.Ruby.Dir)
-	return &Server{Process: p}, err
+		// Use 'ruby-cd' to make sure gitaly-ruby has the same working directory
+		// as the current process. This is a hack to sort-of support relative
+		// Unix socket paths.
+		args := []string{"bundle", "exec", "bin/ruby-cd", wd, gitalyRuby, strconv.Itoa(os.Getpid()), socketPath}
+
+		events := make(chan supervisor.Event)
+
+		p, err := supervisor.New(name, env, args, cfg.Ruby.Dir, cfg.Ruby.MaxRSS, events)
+		if err != nil {
+			return nil, err
+		}
+
+		s.workers = append(s.workers, newWorker(p, socketPath, events))
+	}
+
+	return s, nil
 }
 
 // CommitServiceClient returns a CommitServiceClient instance that is
@@ -185,7 +201,7 @@ func (s *Server) createConnection(ctx context.Context) (*grpc.ClientConn, error)
 	dialCtx, cancel := context.WithTimeout(ctx, ConnectTimeout)
 	defer cancel()
 
-	conn, err := grpc.DialContext(dialCtx, socketPath(), dialOptions()...)
+	conn, err := grpc.DialContext(dialCtx, balancer.Scheme+"://gitaly-ruby", dialOptions()...)
 	if err != nil {
 		return nil, err
 	}

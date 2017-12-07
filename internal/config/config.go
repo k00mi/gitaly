@@ -116,14 +116,6 @@ func validateShell() error {
 	return validateIsDirectory(Config.GitlabShell.Dir, "gitlab-shell.dir")
 }
 
-func validateRuby() error {
-	if len(Config.Ruby.Dir) == 0 {
-		return fmt.Errorf("gitaly-ruby.dir is not set")
-	}
-
-	return validateIsDirectory(Config.Ruby.Dir, "gitaly-ruby.dir")
-}
-
 func validateIsDirectory(path, name string) error {
 	s, err := os.Stat(path)
 	if err != nil {

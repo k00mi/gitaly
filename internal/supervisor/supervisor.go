@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -21,16 +22,28 @@ type Config struct {
 }
 
 var (
+	startCounter = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "gitaly_supervisor_starts_total",
+			Help: "Number of starts of supervised processes.",
+		},
+		[]string{"name"},
+	)
+
 	config Config
 )
 
 func init() {
 	envconfig.MustProcess("gitaly_supervisor", &config)
+	prometheus.MustRegister(startCounter)
 }
 
 // Process represents a running process.
 type Process struct {
 	Name string
+
+	memoryThreshold int
+	events          chan<- Event
 
 	// Information to start the process
 	env  []string
@@ -44,18 +57,20 @@ type Process struct {
 }
 
 // New creates a new proces instance.
-func New(name string, env []string, args []string, dir string) (*Process, error) {
+func New(name string, env []string, args []string, dir string, memoryThreshold int, events chan<- Event) (*Process, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("need at least one argument")
 	}
 
 	p := &Process{
-		Name:     name,
-		env:      env,
-		args:     args,
-		dir:      dir,
-		shutdown: make(chan struct{}),
-		done:     make(chan struct{}),
+		Name:            name,
+		memoryThreshold: memoryThreshold,
+		events:          events,
+		env:             env,
+		args:            args,
+		dir:             dir,
+		shutdown:        make(chan struct{}),
+		done:            make(chan struct{}),
 	}
 
 	go watch(p)
@@ -63,12 +78,22 @@ func New(name string, env []string, args []string, dir string) (*Process, error)
 }
 
 func (p *Process) start(logger *log.Entry) (*exec.Cmd, error) {
+	startCounter.WithLabelValues(p.Name).Inc()
+
 	cmd := exec.Command(p.args[0], p.args[1:]...)
 	cmd.Env = p.env
 	cmd.Dir = p.dir
 	cmd.Stdout = logger.WriterLevel(log.InfoLevel)
 	cmd.Stderr = logger.WriterLevel(log.InfoLevel)
 	return cmd, cmd.Start()
+}
+
+// Non-blocking notification
+func (p *Process) notifyUp(pid int) {
+	select {
+	case p.events <- Event{Type: Up, Pid: pid}:
+	default:
+	}
 }
 
 func watch(p *Process) {
@@ -81,7 +106,7 @@ func watch(p *Process) {
 	// on the monitor goroutine.
 	monitorChan := make(chan monitorProcess, config.CrashThreshold)
 	monitorDone := make(chan struct{})
-	go monitorRss(monitorChan, monitorDone)
+	go monitorRss(monitorChan, monitorDone, p.events, p.memoryThreshold)
 
 spawnLoop:
 	for {
@@ -108,19 +133,26 @@ spawnLoop:
 			logger.WithError(err).Error("start failed")
 			continue
 		}
-		logger.WithField("supervisor.pid", cmd.Process.Pid).Warn("spawned")
+		pid := cmd.Process.Pid
+		p.notifyUp(pid)
+		logger.WithField("supervisor.pid", pid).Warn("spawned")
 
 		waitCh := make(chan struct{})
-		go func() {
-			logger.WithError(cmd.Wait()).Warn("exited")
+		go func(cmd *exec.Cmd, waitCh chan struct{}) {
+			err := cmd.Wait()
 			close(waitCh)
-		}()
+			logger.WithError(err).Warn("exited")
+		}(cmd, waitCh)
 
-		monitorChan <- monitorProcess{name: p.Name, pid: cmd.Process.Pid, wait: waitCh}
+		monitorChan <- monitorProcess{name: p.Name, pid: pid, wait: waitCh}
 
 	waitLoop:
 		for {
 			select {
+			case <-time.After(1 * time.Minute):
+				// We repeat this idempotent notification because its delivery is not
+				// guaranteed.
+				p.notifyUp(pid)
 			case <-time.After(config.CrashResetTime):
 				crashes = 0
 			case <-waitCh:
