@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.58.0
 
 - Implement RepostoryService::Fsck
   https://gitlab.com/gitlab-org/gitaly/merge_requests/475
