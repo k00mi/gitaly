@@ -7,6 +7,7 @@ Package gitaly is a generated protocol buffer package.
 It is generated from these files:
 	blob.proto
 	commit.proto
+	conflicts.proto
 	deprecated-services.proto
 	diff.proto
 	namespace.proto
@@ -57,6 +58,13 @@ It has these top-level messages:
 	CommitsByMessageResponse
 	FilterShasWithSignaturesRequest
 	FilterShasWithSignaturesResponse
+	ListConflictFilesRequest
+	ConflictFileHeader
+	ConflictFile
+	ListConflictFilesResponse
+	ResolveConflictsRequestHeader
+	ResolveConflictsRequest
+	ResolveConflictsResponse
 	CommitDiffRequest
 	CommitDiffResponse
 	CommitDeltaRequest

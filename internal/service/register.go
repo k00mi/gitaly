@@ -5,6 +5,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/service/blob"
 	"gitlab.com/gitlab-org/gitaly/internal/service/commit"
+	"gitlab.com/gitlab-org/gitaly/internal/service/conflicts"
 	"gitlab.com/gitlab-org/gitaly/internal/service/diff"
 	"gitlab.com/gitlab-org/gitaly/internal/service/namespace"
 	"gitlab.com/gitlab-org/gitaly/internal/service/notifications"
@@ -34,6 +35,7 @@ func RegisterAll(grpcServer *grpc.Server, rubyServer *rubyserver.Server) {
 	pb.RegisterSSHServiceServer(grpcServer, ssh.NewServer())
 	pb.RegisterSmartHTTPServiceServer(grpcServer, smarthttp.NewServer())
 	pb.RegisterWikiServiceServer(grpcServer, wiki.NewServer(rubyServer))
+	pb.RegisterConflictsServiceServer(grpcServer, conflicts.NewServer(rubyServer))
 
 	healthpb.RegisterHealthServer(grpcServer, health.NewServer())
 }
