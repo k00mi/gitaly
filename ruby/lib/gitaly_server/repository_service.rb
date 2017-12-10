@@ -39,5 +39,18 @@ module GitalyServer
     rescue Rugged::RepositoryError => ex
       Gitaly::FsckResponse.new(error: ex.message.b)
     end
+
+    def find_merge_base(request, call)
+      bridge_exceptions do
+        begin
+          repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
+          base = repo.merge_base_commit(*request.revisions)
+
+          Gitaly::FindMergeBaseResponse.new(base: base.to_s)
+        rescue Rugged::ReferenceError
+          Gitaly::FindMergeBaseResponse.new
+        end
+      end
+    end
   end
 end
