@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.60.0
 
 - Implement FindMergeBase RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/477
