@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -24,12 +25,13 @@ func init() {
 }
 
 type monitorProcess struct {
-	name string
 	pid  int
 	wait <-chan struct{}
 }
 
-func monitorRss(procs <-chan monitorProcess, done chan<- struct{}, events chan<- Event, threshold int) {
+func monitorRss(procs <-chan monitorProcess, done chan<- struct{}, events chan<- Event, name string, threshold int) {
+	log.WithField("supervisor.name", name).WithField("supervisor.rss_threshold", threshold).Info("starting RSS monitor")
+
 	t := time.NewTicker(15 * time.Second)
 	defer t.Stop()
 
@@ -39,7 +41,7 @@ func monitorRss(procs <-chan monitorProcess, done chan<- struct{}, events chan<-
 	monitorLoop:
 		for {
 			rss := 1024 * getRss(mp.pid)
-			rssGauge.WithLabelValues(mp.name).Set(float64(rss))
+			rssGauge.WithLabelValues(name).Set(float64(rss))
 
 			if rss > 0 {
 				event := Event{Type: MemoryLow, Pid: mp.pid}
