@@ -24,6 +24,7 @@ import (
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
+	"gitlab.com/gitlab-org/gitaly/internal/storage"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
@@ -79,7 +80,7 @@ func ConfigureTestStorage() {
 // GitalyServersMetadata returns a metadata pair for gitaly-servers to be used in
 // inter-gitaly operations.
 func GitalyServersMetadata(t *testing.T, serverSocketPath string) metadata.MD {
-	gitalyServers := map[string]map[string]string{
+	gitalyServers := storage.GitalyServers{
 		"default": {
 			"address": "unix:" + serverSocketPath,
 			"token":   RepositoryAuthToken,
