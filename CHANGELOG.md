@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Update vendored gitlab_git to 31fa9313991881258b4697cb507cfc8ab205b7dc
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/486
+
 v0.60.0
 
 - Implement FindMergeBase RPC
