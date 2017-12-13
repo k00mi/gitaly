@@ -15,7 +15,7 @@ module Gitlab
         raise 'gitaly-ruby cannot access remote repositories by path'
       end
 
-      def empty_repo?
+      def empty?
         !exists? || !has_visible_content?
       end
 
