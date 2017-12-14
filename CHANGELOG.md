@@ -1,12 +1,16 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Implement RemoteService.AddRemote RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/490
+
 v0.61.1
 
 - Use go 1.9
   https://gitlab.com/gitlab-org/gitaly/merge_requests/496
 
 v0.61.0
-
 - Add rdoc to gitaly-ruby's Gemfile
   https://gitlab.com/gitlab-org/gitaly/merge_requests/487
 - Limit the number of concurrent process spawns
