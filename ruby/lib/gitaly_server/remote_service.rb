@@ -14,6 +14,16 @@ module GitalyServer
       end
     end
 
+    def remove_remote(request, call)
+      bridge_exceptions do
+        repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
+
+        result = repo.remove_remote(request.name)
+
+        Gitaly::RemoveRemoteResponse.new(result: result)
+      end
+    end
+
     private
 
     def parse_refmap(refmap)

@@ -137,3 +137,72 @@ func TestFailedAddRemoteDueToValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestSuccessfulRemoveRemote(t *testing.T) {
+	server, serverSocketPath := runRemoteServiceServer(t)
+	defer server.Stop()
+
+	client, conn := newRemoteClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "remote", "add", "my-remote", "http://my-repo.git")
+
+	testCases := []struct {
+		description string
+		remoteName  string
+		result      bool
+	}{
+		{
+			description: "removes the remote",
+			remoteName:  "my-remote",
+			result:      true,
+		},
+		{
+			description: "returns false if the remote doesn't exist",
+			remoteName:  "not-a-real-remote",
+			result:      false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			request := &pb.RemoveRemoteRequest{
+				Repository: testRepo,
+				Name:       tc.remoteName,
+			}
+
+			r, err := client.RemoveRemote(ctx, request)
+			require.NoError(t, err)
+			require.Equal(t, tc.result, r.GetResult())
+
+			remotes := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "remote")
+
+			require.NotContains(t, string(remotes), tc.remoteName)
+		})
+	}
+}
+
+func TestFailedRemoveRemoteDueToValidation(t *testing.T) {
+	server, serverSocketPath := runRemoteServiceServer(t)
+	defer server.Stop()
+
+	client, conn := newRemoteClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	request := &pb.RemoveRemoteRequest{Repository: testRepo} // Remote name empty
+
+	_, err := client.RemoveRemote(ctx, request)
+	testhelper.AssertGrpcError(t, err, codes.InvalidArgument, "")
+}

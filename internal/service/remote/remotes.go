@@ -10,7 +10,6 @@ import (
 	"google.golang.org/grpc"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 )
 
@@ -45,6 +44,28 @@ func validateAddRemoteRequest(req *pb.AddRemoteRequest) error {
 }
 
 // RemoveRemote removes the given remote
-func (s *server) RemoveRemote(context.Context, *pb.RemoveRemoteRequest) (*pb.RemoveRemoteResponse, error) {
-	return nil, helper.Unimplemented
+func (s *server) RemoveRemote(ctx context.Context, req *pb.RemoveRemoteRequest) (*pb.RemoveRemoteResponse, error) {
+	if err := validateRemoveRemoteRequest(req); err != nil {
+		return nil, grpc.Errorf(codes.InvalidArgument, "AddRemote: %v", err)
+	}
+
+	client, err := s.RemoteServiceClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	clientCtx, err := rubyserver.SetHeaders(ctx, req.GetRepository())
+	if err != nil {
+		return nil, err
+	}
+
+	return client.RemoveRemote(clientCtx, req)
+}
+
+func validateRemoveRemoteRequest(req *pb.RemoveRemoteRequest) error {
+	if req.GetName() == "" {
+		return fmt.Errorf("empty remote name")
+	}
+
+	return nil
 }
