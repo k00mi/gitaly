@@ -106,7 +106,7 @@ func watch(p *Process) {
 	// on the monitor goroutine.
 	monitorChan := make(chan monitorProcess, config.CrashThreshold)
 	monitorDone := make(chan struct{})
-	go monitorRss(monitorChan, monitorDone, p.events, p.memoryThreshold)
+	go monitorRss(monitorChan, monitorDone, p.events, p.Name, p.memoryThreshold)
 
 spawnLoop:
 	for {
@@ -144,7 +144,7 @@ spawnLoop:
 			logger.WithError(err).Warn("exited")
 		}(cmd, waitCh)
 
-		monitorChan <- monitorProcess{name: p.Name, pid: pid, wait: waitCh}
+		monitorChan <- monitorProcess{pid: pid, wait: waitCh}
 
 	waitLoop:
 		for {
