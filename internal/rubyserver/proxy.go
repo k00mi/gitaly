@@ -17,6 +17,7 @@ import (
 var ProxyHeaderWhitelist = []string{"gitaly-servers"}
 
 const (
+	storagePathHeader  = "gitaly-storage-path"
 	repoPathHeader     = "gitaly-repo-path"
 	glRepositoryHeader = "gitaly-gl-repository"
 	repoAltDirsHeader  = "gitaly-repo-alt-dirs"
@@ -24,6 +25,11 @@ const (
 
 // SetHeaders adds headers that tell gitaly-ruby the full path to the repository.
 func SetHeaders(ctx context.Context, repo *pb.Repository) (context.Context, error) {
+	storagePath, err := helper.GetStorageByName(repo.GetStorageName())
+	if err != nil {
+		return nil, err
+	}
+
 	repoPath, err := helper.GetPath(repo)
 	if err != nil {
 		return nil, err
@@ -34,6 +40,7 @@ func SetHeaders(ctx context.Context, repo *pb.Repository) (context.Context, erro
 	repoAltDirsCombined := strings.Join(repoAltDirs, string(os.PathListSeparator))
 
 	md := metadata.Pairs(
+		storagePathHeader, storagePath,
 		repoPathHeader, repoPath,
 		glRepositoryHeader, repo.GlRepository,
 		repoAltDirsHeader, repoAltDirsCombined,

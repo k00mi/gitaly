@@ -13,10 +13,15 @@ require_relative 'gitaly_server/wiki_service.rb'
 require_relative 'gitaly_server/conflicts_service.rb'
 
 module GitalyServer
+  STORAGE_PATH_HEADER = 'gitaly-storage-path'.freeze
   REPO_PATH_HEADER = 'gitaly-repo-path'.freeze
   GL_REPOSITORY_HEADER = 'gitaly-gl-repository'.freeze
   REPO_ALT_DIRS_HEADER = 'gitaly-repo-alt-dirs'.freeze
   GITALY_SERVERS_HEADER = 'gitaly-servers'.freeze
+
+  def self.storage_path(call)
+    call.metadata.fetch(STORAGE_PATH_HEADER)
+  end
 
   def self.repo_path(call)
     call.metadata.fetch(REPO_PATH_HEADER)
