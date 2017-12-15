@@ -2,6 +2,7 @@ package supervisor
 
 import (
 	"fmt"
+	"io"
 	"os/exec"
 	"sync"
 	"time"
@@ -141,6 +142,9 @@ spawnLoop:
 		go func(cmd *exec.Cmd, waitCh chan struct{}) {
 			err := cmd.Wait()
 			close(waitCh)
+
+			cmd.Stdout.(io.WriteCloser).Close()
+			cmd.Stderr.(io.WriteCloser).Close()
 			logger.WithError(err).Warn("exited")
 		}(cmd, waitCh)
 
