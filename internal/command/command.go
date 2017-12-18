@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
 	"sync"
 	"syscall"
 	"time"
@@ -79,12 +78,6 @@ func GitPath() string {
 	}
 
 	return config.Config.Git.BinPath
-}
-
-// GitlabShell creates a gitlab-shell Command with the given args
-func GitlabShell(ctx context.Context, envs []string, executable string, args ...string) (*Command, error) {
-	// Don't allow any git-command to ask (interactively) for credentials
-	return New(ctx, exec.Command(path.Join(config.GitlabShellBinPath(), executable), args...), nil, nil, nil, envs...)
 }
 
 var wg = &sync.WaitGroup{}
