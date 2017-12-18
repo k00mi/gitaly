@@ -186,6 +186,14 @@ func (s *Server) ConflictsServiceClient(ctx context.Context) (pb.ConflictsServic
 	return pb.NewConflictsServiceClient(conn), err
 }
 
+// RemoteServiceClient returns a RemoteServiceClient instance that is
+// configured to connect to the running Ruby server. This assumes Start()
+// has been called already.
+func (s *Server) RemoteServiceClient(ctx context.Context) (pb.RemoteServiceClient, error) {
+	conn, err := s.getConnection(ctx)
+	return pb.NewRemoteServiceClient(conn), err
+}
+
 func (s *Server) getConnection(ctx context.Context) (*grpc.ClientConn, error) {
 	s.clientConnMu.RLock()
 	conn := s.clientConn

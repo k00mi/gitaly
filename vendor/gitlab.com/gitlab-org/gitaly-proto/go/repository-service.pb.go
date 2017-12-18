@@ -42,7 +42,9 @@ var GetArchiveRequest_Format_value = map[string]int32{
 func (x GetArchiveRequest_Format) String() string {
 	return proto.EnumName(GetArchiveRequest_Format_name, int32(x))
 }
-func (GetArchiveRequest_Format) EnumDescriptor() ([]byte, []int) { return fileDescriptor9, []int{18, 0} }
+func (GetArchiveRequest_Format) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor10, []int{18, 0}
+}
 
 type RepositoryExistsRequest struct {
 	Repository *Repository `protobuf:"bytes,1,opt,name=repository" json:"repository,omitempty"`
@@ -51,7 +53,7 @@ type RepositoryExistsRequest struct {
 func (m *RepositoryExistsRequest) Reset()                    { *m = RepositoryExistsRequest{} }
 func (m *RepositoryExistsRequest) String() string            { return proto.CompactTextString(m) }
 func (*RepositoryExistsRequest) ProtoMessage()               {}
-func (*RepositoryExistsRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{0} }
+func (*RepositoryExistsRequest) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{0} }
 
 func (m *RepositoryExistsRequest) GetRepository() *Repository {
 	if m != nil {
@@ -67,7 +69,7 @@ type RepositoryExistsResponse struct {
 func (m *RepositoryExistsResponse) Reset()                    { *m = RepositoryExistsResponse{} }
 func (m *RepositoryExistsResponse) String() string            { return proto.CompactTextString(m) }
 func (*RepositoryExistsResponse) ProtoMessage()               {}
-func (*RepositoryExistsResponse) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{1} }
+func (*RepositoryExistsResponse) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{1} }
 
 func (m *RepositoryExistsResponse) GetExists() bool {
 	if m != nil {
@@ -83,7 +85,7 @@ type RepositoryIsEmptyRequest struct {
 func (m *RepositoryIsEmptyRequest) Reset()                    { *m = RepositoryIsEmptyRequest{} }
 func (m *RepositoryIsEmptyRequest) String() string            { return proto.CompactTextString(m) }
 func (*RepositoryIsEmptyRequest) ProtoMessage()               {}
-func (*RepositoryIsEmptyRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{2} }
+func (*RepositoryIsEmptyRequest) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{2} }
 
 func (m *RepositoryIsEmptyRequest) GetRepository() *Repository {
 	if m != nil {
@@ -99,7 +101,7 @@ type RepositoryIsEmptyResponse struct {
 func (m *RepositoryIsEmptyResponse) Reset()                    { *m = RepositoryIsEmptyResponse{} }
 func (m *RepositoryIsEmptyResponse) String() string            { return proto.CompactTextString(m) }
 func (*RepositoryIsEmptyResponse) ProtoMessage()               {}
-func (*RepositoryIsEmptyResponse) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{3} }
+func (*RepositoryIsEmptyResponse) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{3} }
 
 func (m *RepositoryIsEmptyResponse) GetIsEmpty() bool {
 	if m != nil {
@@ -115,7 +117,7 @@ type RepackIncrementalRequest struct {
 func (m *RepackIncrementalRequest) Reset()                    { *m = RepackIncrementalRequest{} }
 func (m *RepackIncrementalRequest) String() string            { return proto.CompactTextString(m) }
 func (*RepackIncrementalRequest) ProtoMessage()               {}
-func (*RepackIncrementalRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{4} }
+func (*RepackIncrementalRequest) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{4} }
 
 func (m *RepackIncrementalRequest) GetRepository() *Repository {
 	if m != nil {
@@ -130,7 +132,7 @@ type RepackIncrementalResponse struct {
 func (m *RepackIncrementalResponse) Reset()                    { *m = RepackIncrementalResponse{} }
 func (m *RepackIncrementalResponse) String() string            { return proto.CompactTextString(m) }
 func (*RepackIncrementalResponse) ProtoMessage()               {}
-func (*RepackIncrementalResponse) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{5} }
+func (*RepackIncrementalResponse) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{5} }
 
 type RepackFullRequest struct {
 	Repository   *Repository `protobuf:"bytes,1,opt,name=repository" json:"repository,omitempty"`
@@ -140,7 +142,7 @@ type RepackFullRequest struct {
 func (m *RepackFullRequest) Reset()                    { *m = RepackFullRequest{} }
 func (m *RepackFullRequest) String() string            { return proto.CompactTextString(m) }
 func (*RepackFullRequest) ProtoMessage()               {}
-func (*RepackFullRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{6} }
+func (*RepackFullRequest) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{6} }
 
 func (m *RepackFullRequest) GetRepository() *Repository {
 	if m != nil {
@@ -162,7 +164,7 @@ type RepackFullResponse struct {
 func (m *RepackFullResponse) Reset()                    { *m = RepackFullResponse{} }
 func (m *RepackFullResponse) String() string            { return proto.CompactTextString(m) }
 func (*RepackFullResponse) ProtoMessage()               {}
-func (*RepackFullResponse) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{7} }
+func (*RepackFullResponse) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{7} }
 
 type GarbageCollectRequest struct {
 	Repository   *Repository `protobuf:"bytes,1,opt,name=repository" json:"repository,omitempty"`
@@ -172,7 +174,7 @@ type GarbageCollectRequest struct {
 func (m *GarbageCollectRequest) Reset()                    { *m = GarbageCollectRequest{} }
 func (m *GarbageCollectRequest) String() string            { return proto.CompactTextString(m) }
 func (*GarbageCollectRequest) ProtoMessage()               {}
-func (*GarbageCollectRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{8} }
+func (*GarbageCollectRequest) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{8} }
 
 func (m *GarbageCollectRequest) GetRepository() *Repository {
 	if m != nil {
@@ -194,7 +196,7 @@ type GarbageCollectResponse struct {
 func (m *GarbageCollectResponse) Reset()                    { *m = GarbageCollectResponse{} }
 func (m *GarbageCollectResponse) String() string            { return proto.CompactTextString(m) }
 func (*GarbageCollectResponse) ProtoMessage()               {}
-func (*GarbageCollectResponse) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{9} }
+func (*GarbageCollectResponse) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{9} }
 
 type RepositorySizeRequest struct {
 	Repository *Repository `protobuf:"bytes,1,opt,name=repository" json:"repository,omitempty"`
@@ -203,7 +205,7 @@ type RepositorySizeRequest struct {
 func (m *RepositorySizeRequest) Reset()                    { *m = RepositorySizeRequest{} }
 func (m *RepositorySizeRequest) String() string            { return proto.CompactTextString(m) }
 func (*RepositorySizeRequest) ProtoMessage()               {}
-func (*RepositorySizeRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{10} }
+func (*RepositorySizeRequest) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{10} }
 
 func (m *RepositorySizeRequest) GetRepository() *Repository {
 	if m != nil {
@@ -220,7 +222,7 @@ type RepositorySizeResponse struct {
 func (m *RepositorySizeResponse) Reset()                    { *m = RepositorySizeResponse{} }
 func (m *RepositorySizeResponse) String() string            { return proto.CompactTextString(m) }
 func (*RepositorySizeResponse) ProtoMessage()               {}
-func (*RepositorySizeResponse) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{11} }
+func (*RepositorySizeResponse) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{11} }
 
 func (m *RepositorySizeResponse) GetSize() int64 {
 	if m != nil {
@@ -237,7 +239,7 @@ type ApplyGitattributesRequest struct {
 func (m *ApplyGitattributesRequest) Reset()                    { *m = ApplyGitattributesRequest{} }
 func (m *ApplyGitattributesRequest) String() string            { return proto.CompactTextString(m) }
 func (*ApplyGitattributesRequest) ProtoMessage()               {}
-func (*ApplyGitattributesRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{12} }
+func (*ApplyGitattributesRequest) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{12} }
 
 func (m *ApplyGitattributesRequest) GetRepository() *Repository {
 	if m != nil {
@@ -259,7 +261,7 @@ type ApplyGitattributesResponse struct {
 func (m *ApplyGitattributesResponse) Reset()                    { *m = ApplyGitattributesResponse{} }
 func (m *ApplyGitattributesResponse) String() string            { return proto.CompactTextString(m) }
 func (*ApplyGitattributesResponse) ProtoMessage()               {}
-func (*ApplyGitattributesResponse) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{13} }
+func (*ApplyGitattributesResponse) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{13} }
 
 type FetchRemoteRequest struct {
 	Repository *Repository `protobuf:"bytes,1,opt,name=repository" json:"repository,omitempty"`
@@ -274,7 +276,7 @@ type FetchRemoteRequest struct {
 func (m *FetchRemoteRequest) Reset()                    { *m = FetchRemoteRequest{} }
 func (m *FetchRemoteRequest) String() string            { return proto.CompactTextString(m) }
 func (*FetchRemoteRequest) ProtoMessage()               {}
-func (*FetchRemoteRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{14} }
+func (*FetchRemoteRequest) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{14} }
 
 func (m *FetchRemoteRequest) GetRepository() *Repository {
 	if m != nil {
@@ -331,7 +333,7 @@ type FetchRemoteResponse struct {
 func (m *FetchRemoteResponse) Reset()                    { *m = FetchRemoteResponse{} }
 func (m *FetchRemoteResponse) String() string            { return proto.CompactTextString(m) }
 func (*FetchRemoteResponse) ProtoMessage()               {}
-func (*FetchRemoteResponse) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{15} }
+func (*FetchRemoteResponse) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{15} }
 
 type CreateRepositoryRequest struct {
 	Repository *Repository `protobuf:"bytes,1,opt,name=repository" json:"repository,omitempty"`
@@ -340,7 +342,7 @@ type CreateRepositoryRequest struct {
 func (m *CreateRepositoryRequest) Reset()                    { *m = CreateRepositoryRequest{} }
 func (m *CreateRepositoryRequest) String() string            { return proto.CompactTextString(m) }
 func (*CreateRepositoryRequest) ProtoMessage()               {}
-func (*CreateRepositoryRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{16} }
+func (*CreateRepositoryRequest) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{16} }
 
 func (m *CreateRepositoryRequest) GetRepository() *Repository {
 	if m != nil {
@@ -355,7 +357,7 @@ type CreateRepositoryResponse struct {
 func (m *CreateRepositoryResponse) Reset()                    { *m = CreateRepositoryResponse{} }
 func (m *CreateRepositoryResponse) String() string            { return proto.CompactTextString(m) }
 func (*CreateRepositoryResponse) ProtoMessage()               {}
-func (*CreateRepositoryResponse) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{17} }
+func (*CreateRepositoryResponse) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{17} }
 
 type GetArchiveRequest struct {
 	Repository *Repository              `protobuf:"bytes,1,opt,name=repository" json:"repository,omitempty"`
@@ -367,7 +369,7 @@ type GetArchiveRequest struct {
 func (m *GetArchiveRequest) Reset()                    { *m = GetArchiveRequest{} }
 func (m *GetArchiveRequest) String() string            { return proto.CompactTextString(m) }
 func (*GetArchiveRequest) ProtoMessage()               {}
-func (*GetArchiveRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{18} }
+func (*GetArchiveRequest) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{18} }
 
 func (m *GetArchiveRequest) GetRepository() *Repository {
 	if m != nil {
@@ -404,7 +406,7 @@ type GetArchiveResponse struct {
 func (m *GetArchiveResponse) Reset()                    { *m = GetArchiveResponse{} }
 func (m *GetArchiveResponse) String() string            { return proto.CompactTextString(m) }
 func (*GetArchiveResponse) ProtoMessage()               {}
-func (*GetArchiveResponse) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{19} }
+func (*GetArchiveResponse) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{19} }
 
 func (m *GetArchiveResponse) GetData() []byte {
 	if m != nil {
@@ -420,7 +422,7 @@ type HasLocalBranchesRequest struct {
 func (m *HasLocalBranchesRequest) Reset()                    { *m = HasLocalBranchesRequest{} }
 func (m *HasLocalBranchesRequest) String() string            { return proto.CompactTextString(m) }
 func (*HasLocalBranchesRequest) ProtoMessage()               {}
-func (*HasLocalBranchesRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{20} }
+func (*HasLocalBranchesRequest) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{20} }
 
 func (m *HasLocalBranchesRequest) GetRepository() *Repository {
 	if m != nil {
@@ -436,7 +438,7 @@ type HasLocalBranchesResponse struct {
 func (m *HasLocalBranchesResponse) Reset()                    { *m = HasLocalBranchesResponse{} }
 func (m *HasLocalBranchesResponse) String() string            { return proto.CompactTextString(m) }
 func (*HasLocalBranchesResponse) ProtoMessage()               {}
-func (*HasLocalBranchesResponse) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{21} }
+func (*HasLocalBranchesResponse) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{21} }
 
 func (m *HasLocalBranchesResponse) GetValue() bool {
 	if m != nil {
@@ -453,7 +455,7 @@ type ChangeStorageRequest struct {
 func (m *ChangeStorageRequest) Reset()                    { *m = ChangeStorageRequest{} }
 func (m *ChangeStorageRequest) String() string            { return proto.CompactTextString(m) }
 func (*ChangeStorageRequest) ProtoMessage()               {}
-func (*ChangeStorageRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{22} }
+func (*ChangeStorageRequest) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{22} }
 
 func (m *ChangeStorageRequest) GetRepository() *Repository {
 	if m != nil {
@@ -475,7 +477,7 @@ type ChangeStorageResponse struct {
 func (m *ChangeStorageResponse) Reset()                    { *m = ChangeStorageResponse{} }
 func (m *ChangeStorageResponse) String() string            { return proto.CompactTextString(m) }
 func (*ChangeStorageResponse) ProtoMessage()               {}
-func (*ChangeStorageResponse) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{23} }
+func (*ChangeStorageResponse) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{23} }
 
 type FetchSourceBranchRequest struct {
 	Repository       *Repository `protobuf:"bytes,1,opt,name=repository" json:"repository,omitempty"`
@@ -487,7 +489,7 @@ type FetchSourceBranchRequest struct {
 func (m *FetchSourceBranchRequest) Reset()                    { *m = FetchSourceBranchRequest{} }
 func (m *FetchSourceBranchRequest) String() string            { return proto.CompactTextString(m) }
 func (*FetchSourceBranchRequest) ProtoMessage()               {}
-func (*FetchSourceBranchRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{24} }
+func (*FetchSourceBranchRequest) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{24} }
 
 func (m *FetchSourceBranchRequest) GetRepository() *Repository {
 	if m != nil {
@@ -524,7 +526,7 @@ type FetchSourceBranchResponse struct {
 func (m *FetchSourceBranchResponse) Reset()                    { *m = FetchSourceBranchResponse{} }
 func (m *FetchSourceBranchResponse) String() string            { return proto.CompactTextString(m) }
 func (*FetchSourceBranchResponse) ProtoMessage()               {}
-func (*FetchSourceBranchResponse) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{25} }
+func (*FetchSourceBranchResponse) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{25} }
 
 func (m *FetchSourceBranchResponse) GetResult() bool {
 	if m != nil {
@@ -540,7 +542,7 @@ type FsckRequest struct {
 func (m *FsckRequest) Reset()                    { *m = FsckRequest{} }
 func (m *FsckRequest) String() string            { return proto.CompactTextString(m) }
 func (*FsckRequest) ProtoMessage()               {}
-func (*FsckRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{26} }
+func (*FsckRequest) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{26} }
 
 func (m *FsckRequest) GetRepository() *Repository {
 	if m != nil {
@@ -556,7 +558,7 @@ type FsckResponse struct {
 func (m *FsckResponse) Reset()                    { *m = FsckResponse{} }
 func (m *FsckResponse) String() string            { return proto.CompactTextString(m) }
 func (*FsckResponse) ProtoMessage()               {}
-func (*FsckResponse) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{27} }
+func (*FsckResponse) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{27} }
 
 func (m *FsckResponse) GetError() []byte {
 	if m != nil {
@@ -575,7 +577,7 @@ type WriteRefRequest struct {
 func (m *WriteRefRequest) Reset()                    { *m = WriteRefRequest{} }
 func (m *WriteRefRequest) String() string            { return proto.CompactTextString(m) }
 func (*WriteRefRequest) ProtoMessage()               {}
-func (*WriteRefRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{28} }
+func (*WriteRefRequest) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{28} }
 
 func (m *WriteRefRequest) GetRepository() *Repository {
 	if m != nil {
@@ -612,7 +614,7 @@ type WriteRefResponse struct {
 func (m *WriteRefResponse) Reset()                    { *m = WriteRefResponse{} }
 func (m *WriteRefResponse) String() string            { return proto.CompactTextString(m) }
 func (*WriteRefResponse) ProtoMessage()               {}
-func (*WriteRefResponse) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{29} }
+func (*WriteRefResponse) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{29} }
 
 func (m *WriteRefResponse) GetError() []byte {
 	if m != nil {
@@ -632,7 +634,7 @@ type FindMergeBaseRequest struct {
 func (m *FindMergeBaseRequest) Reset()                    { *m = FindMergeBaseRequest{} }
 func (m *FindMergeBaseRequest) String() string            { return proto.CompactTextString(m) }
 func (*FindMergeBaseRequest) ProtoMessage()               {}
-func (*FindMergeBaseRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{30} }
+func (*FindMergeBaseRequest) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{30} }
 
 func (m *FindMergeBaseRequest) GetRepository() *Repository {
 	if m != nil {
@@ -655,7 +657,7 @@ type FindMergeBaseResponse struct {
 func (m *FindMergeBaseResponse) Reset()                    { *m = FindMergeBaseResponse{} }
 func (m *FindMergeBaseResponse) String() string            { return proto.CompactTextString(m) }
 func (*FindMergeBaseResponse) ProtoMessage()               {}
-func (*FindMergeBaseResponse) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{31} }
+func (*FindMergeBaseResponse) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{31} }
 
 func (m *FindMergeBaseResponse) GetBase() string {
 	if m != nil {
@@ -1295,9 +1297,9 @@ var _RepositoryService_serviceDesc = grpc.ServiceDesc{
 	Metadata: "repository-service.proto",
 }
 
-func init() { proto.RegisterFile("repository-service.proto", fileDescriptor9) }
+func init() { proto.RegisterFile("repository-service.proto", fileDescriptor10) }
 
-var fileDescriptor9 = []byte{
+var fileDescriptor10 = []byte{
 	// 1137 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x57, 0xdd, 0x4e, 0xe3, 0x46,
 	0x14, 0x4e, 0x08, 0x24, 0xe4, 0x90, 0xdd, 0x86, 0xd9, 0x00, 0xc6, 0x40, 0x97, 0x4e, 0x7b, 0x81,

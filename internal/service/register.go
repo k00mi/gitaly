@@ -11,6 +11,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/service/notifications"
 	"gitlab.com/gitlab-org/gitaly/internal/service/operations"
 	"gitlab.com/gitlab-org/gitaly/internal/service/ref"
+	"gitlab.com/gitlab-org/gitaly/internal/service/remote"
 	"gitlab.com/gitlab-org/gitaly/internal/service/repository"
 	"gitlab.com/gitlab-org/gitaly/internal/service/smarthttp"
 	"gitlab.com/gitlab-org/gitaly/internal/service/ssh"
@@ -36,6 +37,7 @@ func RegisterAll(grpcServer *grpc.Server, rubyServer *rubyserver.Server) {
 	pb.RegisterSmartHTTPServiceServer(grpcServer, smarthttp.NewServer())
 	pb.RegisterWikiServiceServer(grpcServer, wiki.NewServer(rubyServer))
 	pb.RegisterConflictsServiceServer(grpcServer, conflicts.NewServer(rubyServer))
+	pb.RegisterRemoteServiceServer(grpcServer, remote.NewServer(rubyServer))
 
 	healthpb.RegisterHealthServer(grpcServer, health.NewServer())
 }

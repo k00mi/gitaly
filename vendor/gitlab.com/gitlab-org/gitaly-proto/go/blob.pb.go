@@ -14,6 +14,7 @@ It is generated from these files:
 	notifications.proto
 	operations.proto
 	ref.proto
+	remote.proto
 	repository-service.proto
 	shared.proto
 	smarthttp.proto
@@ -129,6 +130,12 @@ It has these top-level messages:
 	FindBranchResponse
 	DeleteRefsRequest
 	DeleteRefsResponse
+	AddRemoteRequest
+	AddRemoteResponse
+	RemoveRemoteRequest
+	RemoveRemoteResponse
+	FetchInternalRemoteRequest
+	FetchInternalRemoteResponse
 	RepositoryExistsRequest
 	RepositoryExistsResponse
 	RepositoryIsEmptyRequest
