@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Add rdoc to gitaly-ruby's Gemfile
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/487
 - Limit the number of concurrent process spawns
   https://gitlab.com/gitlab-org/gitaly/merge_requests/492
 - Update vendored gitlab_git to 858edadf781c0cc54b15832239c19fca378518ad
