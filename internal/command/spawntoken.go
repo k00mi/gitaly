@@ -1,6 +1,8 @@
 package command
 
 import (
+	"context"
+	"fmt"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -33,4 +35,22 @@ type SpawnConfig struct {
 func init() {
 	envconfig.MustProcess("gitaly_command_spawn", &spawnConfig)
 	spawnTokens = make(chan struct{}, spawnConfig.MaxParallel)
+}
+
+func getSpawnToken(ctx context.Context) (putToken func(), err error) {
+	// Go has a global lock (syscall.ForkLock) for spawning new processes.
+	// This select statement is a safety valve to prevent lots of Gitaly
+	// requests from piling up behind the ForkLock if forking for some reason
+	// slows down. This has happened in real life, see
+	// https://gitlab.com/gitlab-org/gitaly/issues/823.
+	select {
+	case spawnTokens <- struct{}{}:
+		return func() {
+			<-spawnTokens
+		}, nil
+	case <-time.After(spawnConfig.Timeout):
+		return nil, spawnTimeoutError(fmt.Errorf("process spawn timed out after %v", spawnConfig.Timeout))
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
