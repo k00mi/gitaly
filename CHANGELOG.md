@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.61.1
 
 - Use go 1.9
   https://gitlab.com/gitlab-org/gitaly/merge_requests/496
