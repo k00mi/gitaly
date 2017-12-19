@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.61.0
 
 - Add rdoc to gitaly-ruby's Gemfile
   https://gitlab.com/gitlab-org/gitaly/merge_requests/487
