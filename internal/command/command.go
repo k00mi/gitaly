@@ -107,28 +107,12 @@ func New(ctx context.Context, cmd *exec.Cmd, stdin io.Reader, stdout, stderr io.
 		panic(contextWithoutDonePanic("command spawned with context without Done() channel"))
 	}
 
-	// Go has a global lock (syscall.ForkLock) for spawning new processes.
-	// This select statement is a safety valve to prevent lots of Gitaly
-	// requests from piling up behind the ForkLock if forking for some reason
-	// slows down. This has happened in real life, see
-	// https://gitlab.com/gitlab-org/gitaly/issues/823.
-	select {
-	case spawnTokens <- struct{}{}:
-		defer func() {
-			// This function is deferred so that it runs even if 'newCommand' panics.
-			<-spawnTokens
-		}()
-
-		return newCommand(ctx, cmd, stdin, stdout, stderr, env...)
-	case <-time.After(spawnConfig.Timeout):
-		return nil, spawnTimeoutError(fmt.Errorf("process spawn timed out after %v", spawnConfig.Timeout))
-	case <-ctx.Done():
-		return nil, ctx.Err()
+	putToken, err := getSpawnToken(ctx)
+	if err != nil {
+		return nil, err
 	}
-}
+	defer putToken()
 
-// Don't call 'newCommand', use 'New'.
-func newCommand(ctx context.Context, cmd *exec.Cmd, stdin io.Reader, stdout, stderr io.Writer, env ...string) (*Command, error) {
 	logPid := -1
 	defer func() {
 		grpc_logrus.Extract(ctx).WithFields(log.Fields{
