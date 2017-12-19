@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Use go 1.9
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/496
+
 v0.61.0
 
 - Add rdoc to gitaly-ruby's Gemfile
