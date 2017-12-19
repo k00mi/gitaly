@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- gitaly-ruby shutdown improvements
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/500
 - Use go 1.9
   https://gitlab.com/gitlab-org/gitaly/merge_requests/496
 
