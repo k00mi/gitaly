@@ -1,5 +1,12 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Implement RemoteService.RemoveRemote RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/490
+- Implement RemoteService.AddRemote RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/490
+
 v0.61.1
 
 - gitaly-ruby shutdown improvements
