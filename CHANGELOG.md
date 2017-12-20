@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.62.0
 
 - Implement ConflictsService.ResolveConflicts RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/470
