@@ -2,6 +2,10 @@
 
 UNRELEASED
 
+- Implement ConflictsService.ResolveConflicts RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/470
+- Implement ConflictsService.ListConflictFiles RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/470
 - Implement RemoteService.RemoveRemote RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/490
 - Implement RemoteService.AddRemote RPC
