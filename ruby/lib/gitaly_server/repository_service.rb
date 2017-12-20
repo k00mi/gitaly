@@ -52,5 +52,23 @@ module GitalyServer
         end
       end
     end
+
+    def fetch_remote(request, call)
+      bridge_exceptions do
+        gitlab_projects = Gitlab::Git::GitlabProjects.from_gitaly(request.repository, call)
+
+        success = gitlab_projects.fetch_remote(request.remote, request.timeout,
+                                               force: request.force,
+                                               tags: !request.no_tags,
+                                               ssh_key: request.ssh_key,
+                                               known_hosts: request.known_hosts)
+
+        unless success
+          raise GRPC::Unknown.new("Fetching remote #{request.remote} failed: #{gitlab_projects.output}")
+        end
+
+        Gitaly::FetchRemoteResponse.new
+      end
+    end
   end
 end

@@ -123,6 +123,19 @@ module Gitlab
         @gitaly_repository
       end
     end
+
+    class GitlabProjects
+      def self.from_gitaly(gitaly_repository, call)
+        storage_path = GitalyServer.storage_path(call)
+
+        Gitlab::Git::GitlabProjects.new(
+          storage_path,
+          gitaly_repository.relative_path,
+          global_hooks_path: Gitlab.config.gitlab_shell.hooks_path,
+          logger: Rails.logger
+        )
+      end
+    end
   end
 end
 
