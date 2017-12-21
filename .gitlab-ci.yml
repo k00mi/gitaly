@@ -130,6 +130,7 @@ codequality:
   services:
   - docker:dind
   script:
+    - mkdir -p _support/build-images/$CI_JOB_NAME/
     - cp ruby/Gemfile ruby/Gemfile.lock _support/build-images/$CI_JOB_NAME/
     - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
     - docker build -t registry.gitlab.com/gitlab-org/gitaly/build-$CI_JOB_NAME:latest --build-arg CUSTOM_IMAGE_VERSION=$CI_JOB_NAME _support/build-images/versioned/
@@ -146,7 +147,7 @@ ruby-2.3-golang-1.9-git-2.14: *build_image
 update-downstream-server-version:
   stage: publish
   only:
-    - tags
+    - tags@gitlab-org/gitaly
   script:
     - ruby _support/update-downstream-server-version
   allow_failure: true
