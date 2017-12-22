@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.64.0
 
 - Update vendored gitlab_git to b98c69470f52185117fcdb5e28096826b32363ca
   https://gitlab.com/gitlab-org/gitaly/merge_requests/506
