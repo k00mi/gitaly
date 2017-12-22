@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-var rubyServer *rubyserver.Server
+var RubyServer *rubyserver.Server
 
 func TestMain(m *testing.M) {
 	os.Exit(testMain(m))
@@ -26,11 +26,13 @@ func testMain(m *testing.M) int {
 	var err error
 
 	testhelper.ConfigureRuby()
-	rubyServer, err = rubyserver.Start()
+	testhelper.ConfigureGitalySSH()
+
+	RubyServer, err = rubyserver.Start()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer rubyServer.Stop()
+	defer RubyServer.Stop()
 
 	return m.Run()
 }
@@ -44,7 +46,7 @@ func runRemoteServiceServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	pb.RegisterRemoteServiceServer(grpcServer, &server{rubyServer})
+	pb.RegisterRemoteServiceServer(grpcServer, &server{RubyServer})
 	reflection.Register(grpcServer)
 
 	go grpcServer.Serve(listener)
@@ -52,7 +54,7 @@ func runRemoteServiceServer(t *testing.T) (*grpc.Server, string) {
 	return grpcServer, serverSocketPath
 }
 
-func newRemoteClient(t *testing.T, serverSocketPath string) (pb.RemoteServiceClient, *grpc.ClientConn) {
+func NewRemoteClient(t *testing.T, serverSocketPath string) (pb.RemoteServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {

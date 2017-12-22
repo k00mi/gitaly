@@ -24,6 +24,17 @@ module GitalyServer
       end
     end
 
+    def fetch_internal_remote(request, call)
+      bridge_exceptions do
+        repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
+        remote_repo = Gitlab::Git::GitalyRemoteRepository.new(request.remote_repository, call)
+
+        result = repo.fetch_repository_as_mirror(remote_repo)
+
+        Gitaly::FetchInternalRemoteResponse.new(result: result)
+      end
+    end
+
     private
 
     def parse_refmap(refmap)

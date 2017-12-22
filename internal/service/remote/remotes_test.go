@@ -19,7 +19,7 @@ func TestSuccessfulAddRemote(t *testing.T) {
 	server, serverSocketPath := runRemoteServiceServer(t)
 	defer server.Stop()
 
-	client, conn := newRemoteClient(t, serverSocketPath)
+	client, conn := NewRemoteClient(t, serverSocketPath)
 	defer conn.Close()
 
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
@@ -94,7 +94,7 @@ func TestFailedAddRemoteDueToValidation(t *testing.T) {
 	server, serverSocketPath := runRemoteServiceServer(t)
 	defer server.Stop()
 
-	client, conn := newRemoteClient(t, serverSocketPath)
+	client, conn := NewRemoteClient(t, serverSocketPath)
 	defer conn.Close()
 
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
@@ -142,7 +142,7 @@ func TestSuccessfulRemoveRemote(t *testing.T) {
 	server, serverSocketPath := runRemoteServiceServer(t)
 	defer server.Stop()
 
-	client, conn := newRemoteClient(t, serverSocketPath)
+	client, conn := NewRemoteClient(t, serverSocketPath)
 	defer conn.Close()
 
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
@@ -192,7 +192,7 @@ func TestFailedRemoveRemoteDueToValidation(t *testing.T) {
 	server, serverSocketPath := runRemoteServiceServer(t)
 	defer server.Stop()
 
-	client, conn := newRemoteClient(t, serverSocketPath)
+	client, conn := NewRemoteClient(t, serverSocketPath)
 	defer conn.Close()
 
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)

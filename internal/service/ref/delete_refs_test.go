@@ -37,14 +37,13 @@ func TestSuccessfulDeleteRefs(t *testing.T) {
 	_, err := client.DeleteRefs(ctx, rpcRequest)
 	require.NoError(t, err)
 
-	refs := testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "for-each-ref")
-	refsStr := string(refs)
+	refs := testhelper.GetRepositoryRefs(t, repoPath)
 
-	require.NotContains(t, refsStr, "refs/delete/a")
-	require.NotContains(t, refsStr, "refs/also-delete/b")
-	require.Contains(t, refsStr, "refs/keep/c")
-	require.Contains(t, refsStr, "refs/also-keep/d")
-	require.Contains(t, refsStr, "refs/heads/master")
+	require.NotContains(t, refs, "refs/delete/a")
+	require.NotContains(t, refs, "refs/also-delete/b")
+	require.Contains(t, refs, "refs/keep/c")
+	require.Contains(t, refs, "refs/also-keep/d")
+	require.Contains(t, refs, "refs/heads/master")
 }
 
 func TestFailedDeleteRefsDueToValidation(t *testing.T) {
