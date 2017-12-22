@@ -122,9 +122,7 @@ module GitalyServer
             end
           end
 
-          branch_update = branch_update_result(result)
-
-          y << Gitaly::UserMergeBranchResponse.new(branch_update: branch_update)
+          y << Gitaly::UserMergeBranchResponse.new(branch_update: branch_update_result(result))
         end
       end
     end
@@ -210,6 +208,8 @@ module GitalyServer
     private
 
     def branch_update_result(gitlab_update_result)
+      return if gitlab_update_result.nil?
+
       Gitaly::OperationBranchUpdate.new(
         commit_id: gitlab_update_result.newrev,
         repo_created: gitlab_update_result.repo_created,
