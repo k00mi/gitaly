@@ -177,6 +177,53 @@ func TestAbortedMerge(t *testing.T) {
 	}
 }
 
+func TestFailedMergeConcurrentUpdate(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	server, serverSocketPath := runOperationServiceServer(t)
+	defer server.Stop()
+
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	mergeBidi, err := client.UserMergeBranch(ctx)
+	require.NoError(t, err)
+
+	prepareMergeBranch(t, testRepoPath)
+
+	mergeCommitMessage := "Merged by Gitaly"
+	firstRequest := &pb.UserMergeBranchRequest{
+		Repository: testRepo,
+		User:       mergeUser,
+		CommitId:   commitToMerge,
+		Branch:     []byte(mergeBranchName),
+		Message:    []byte(mergeCommitMessage),
+	}
+
+	require.NoError(t, mergeBidi.Send(firstRequest), "send first request")
+	firstResponse, err := mergeBidi.Recv()
+	require.NoError(t, err, "receive first response")
+
+	// This concurrent update of the branch we are merging into should make the merge fail.
+	concurrentCommitID := testhelper.CreateCommit(t, testRepoPath, mergeBranchName)
+	require.NotEqual(t, firstResponse.CommitId, concurrentCommitID)
+
+	require.NoError(t, mergeBidi.Send(&pb.UserMergeBranchRequest{Apply: true}), "apply merge")
+	require.NoError(t, mergeBidi.CloseSend(), "close send")
+
+	secondResponse, err := mergeBidi.Recv()
+	require.NoError(t, err, "receive second response")
+	require.Equal(t, *secondResponse, pb.UserMergeBranchResponse{}, "response should be empty")
+
+	commit, err := gitlog.GetCommit(ctx, testRepo, mergeBranchName, "")
+	require.NoError(t, err, "get commit after RPC finished")
+	require.Equal(t, commit.Id, concurrentCommitID, "RPC should not have trampled concurrent update")
+}
+
 func TestSuccessfulUserFFBranchRequest(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
