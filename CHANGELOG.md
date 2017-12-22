@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.63.0
 
 - Handle failed merge when branch gets updated
   https://gitlab.com/gitlab-org/gitaly/merge_requests/505
