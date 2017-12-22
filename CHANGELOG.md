@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Update vendored gitlab_git to b98c69470f52185117fcdb5e28096826b32363ca
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/506
+
 v0.63.0
 
 - Handle failed merge when branch gets updated
