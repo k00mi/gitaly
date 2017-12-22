@@ -28,6 +28,7 @@ func TestSuccessfulCountCommitsRequest(t *testing.T) {
 	testCases := []struct {
 		revision, path      []byte
 		before, after, desc string
+		maxCount            int32
 		count               int32
 	}{
 		{
@@ -44,6 +45,12 @@ func TestSuccessfulCountCommitsRequest(t *testing.T) {
 			desc:     "revision only #3",
 			revision: []byte("e63f41fe459e62e1228fcef60d7189127aeba95a"),
 			count:    39,
+		},
+		{
+			desc:     "revision + max-count",
+			revision: []byte("e63f41fe459e62e1228fcef60d7189127aeba95a"),
+			maxCount: 15,
+			count:    15,
 		},
 		{
 			desc:     "non-existing revision",
@@ -95,6 +102,10 @@ func TestSuccessfulCountCommitsRequest(t *testing.T) {
 					t.Fatal(err)
 				}
 				request.After = &timestamp.Timestamp{Seconds: after.Unix()}
+			}
+
+			if testCase.maxCount != 0 {
+				request.MaxCount = testCase.maxCount
 			}
 
 			if testCase.path != nil {

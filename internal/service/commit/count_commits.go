@@ -31,6 +31,9 @@ func (s *server) CountCommits(ctx context.Context, in *pb.CountCommitsRequest) (
 	if after := in.GetAfter(); after != nil {
 		cmdArgs = append(cmdArgs, "--after="+timestampToRFC3339(after.Seconds))
 	}
+	if maxCount := in.GetMaxCount(); maxCount != 0 {
+		cmdArgs = append(cmdArgs, fmt.Sprintf("--max-count=%d", maxCount))
+	}
 	if path := in.GetPath(); path != nil {
 		cmdArgs = append(cmdArgs, "--", string(path))
 	}
