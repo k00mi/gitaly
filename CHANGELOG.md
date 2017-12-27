@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.65.0
 
 - Add support for MaxCount in CountCommits RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/507
