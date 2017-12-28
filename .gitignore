@@ -1,13 +1,12 @@
 /_build
 /gitaly
-/gitaly-ssh
+/**/gitaly-ssh
 /*.deb
 /_support/package/bin
 /_support/bin
 /internal/service/smarthttp/testdata
 /internal/testhelper/testdata
 /config.toml
-/internal/service/ssh/gitaly-ssh
 /.ruby-bundle
 /ruby/vendor/bundle
 /ruby/.bundle

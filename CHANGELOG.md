@@ -2,6 +2,8 @@
 
 v0.65.0
 
+- Implement RemoteService.FetchInternalRemote RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/508
 - Add support for MaxCount in CountCommits RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/507
 - Implement CreateFork RPC

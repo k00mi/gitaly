@@ -360,3 +360,28 @@ func cloneTestRepo(t *testing.T, bare bool) (repo *pb.Repository, repoPath strin
 
 	return repo, repoPath, func() { os.RemoveAll(repoPath) }
 }
+
+// ConfigureGitalySSH configures the gitaly-ssh command for tests
+func ConfigureGitalySSH() {
+	var err error
+
+	config.Config.BinDir, err = filepath.Abs("testdata/gitaly-libexec")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	goBuildArgs := []string{
+		"build",
+		"-o",
+		path.Join(config.Config.BinDir, "gitaly-ssh"),
+		"gitlab.com/gitlab-org/gitaly/cmd/gitaly-ssh",
+	}
+	MustRunCommand(nil, nil, "go", goBuildArgs...)
+}
+
+// GetRepositoryRefs gives a list of each repository ref as a string
+func GetRepositoryRefs(t *testing.T, repoPath string) string {
+	refs := MustRunCommand(t, nil, "git", "-C", repoPath, "for-each-ref")
+
+	return string(refs)
+}

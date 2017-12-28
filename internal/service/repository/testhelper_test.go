@@ -4,7 +4,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"path"
 	"path/filepath"
 	"testing"
 	"time"
@@ -98,18 +97,7 @@ func testMain(m *testing.M) int {
 		log.Fatal(err)
 	}
 
-	config.Config.BinDir, err = filepath.Abs("testdata/gitaly-libexec")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	goBuildArgs := []string{
-		"build",
-		"-o",
-		path.Join(config.Config.BinDir, "gitaly-ssh"),
-		"gitlab.com/gitlab-org/gitaly/cmd/gitaly-ssh",
-	}
-	testhelper.MustRunCommand(nil, nil, "go", goBuildArgs...)
+	testhelper.ConfigureGitalySSH()
 
 	RubyServer, err = rubyserver.Start()
 	if err != nil {
