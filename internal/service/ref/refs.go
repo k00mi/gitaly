@@ -234,13 +234,37 @@ func (s *server) FindLocalBranches(in *pb.FindLocalBranchesRequest, stream pb.Re
 }
 
 func (s *server) FindAllBranches(in *pb.FindAllBranchesRequest, stream pb.RefService_FindAllBranchesServer) error {
+	args := []string{
+		// %00 inserts the null character into the output (see for-each-ref docs)
+		"--format=" + strings.Join(localBranchFormatFields, "%00"),
+	}
+
+	var patterns []string
+
+	if in.MergedOnly {
+		defaultBranchName, err := DefaultBranchName(stream.Context(), in.Repository)
+		if err != nil {
+			if _, ok := status.FromError(err); ok {
+				return err
+			}
+			return grpc.Errorf(codes.Internal, err.Error())
+		}
+
+		args = append(args, fmt.Sprintf("--merged=%s", string(defaultBranchName)))
+
+		if len(in.MergedBranches) > 0 {
+			for _, mergedBranch := range in.MergedBranches {
+				patterns = append(patterns, string(mergedBranch))
+			}
+		} else {
+			patterns = append(patterns, "refs/heads", "refs/remotes")
+		}
+	}
+
 	opts := &findRefsOpts{
-		cmdArgs: []string{
-			// %00 inserts the null character into the output (see for-each-ref docs)
-			"--format=" + strings.Join(localBranchFormatFields, "%00"),
-		},
+		cmdArgs: args,
 	}
 	writer := newFindAllBranchesWriter(stream)
 
-	return findRefs(stream.Context(), writer, in.Repository, []string{"refs/heads", "refs/remotes"}, opts)
+	return findRefs(stream.Context(), writer, in.Repository, patterns, opts)
 }

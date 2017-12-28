@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 	"testing"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/require"
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -752,17 +754,7 @@ func TestSuccessfulFindAllBranchesRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var branches []*pb.FindAllBranchesResponse_Branch
-	for {
-		r, err := c.Recv()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			t.Fatal(err)
-		}
-		branches = append(branches, r.GetBranches()...)
-	}
+	branches := readFindAllBranchesResponsesFromClient(t, c)
 
 	// It contains local branches
 	for name, target := range localBranches {
@@ -775,6 +767,99 @@ func TestSuccessfulFindAllBranchesRequest(t *testing.T) {
 
 	// It contains our fake remote branch
 	assertContainsBranch(t, branches, remoteBranch)
+}
+
+func TestSuccessfulFindAllBranchesRequestWithMergedBranches(t *testing.T) {
+	server, serverSocketPath := runRefServiceServer(t)
+	defer server.Stop()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	client, conn := newRefServiceClient(t, serverSocketPath)
+	defer conn.Close()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	localRefs := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "for-each-ref", "--format=%(refname:strip=2)", "refs/heads")
+	for _, ref := range strings.Split(string(localRefs), "\n") {
+		ref = strings.TrimSpace(ref)
+		if _, ok := localBranches["refs/heads/"+ref]; ok || ref == "master" || ref == "" {
+			continue
+		}
+		testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", "-D", ref)
+	}
+
+	expectedRefs := []string{"refs/heads/100%branch", "refs/heads/improve/awesome", "refs/heads/'test'"}
+
+	var expectedBranches []*pb.FindAllBranchesResponse_Branch
+	for _, name := range expectedRefs {
+		target, ok := localBranches[name]
+		require.True(t, ok)
+
+		branch := &pb.FindAllBranchesResponse_Branch{
+			Name:   []byte(name),
+			Target: target,
+		}
+		expectedBranches = append(expectedBranches, branch)
+	}
+
+	masterCommit, err := log.GetCommit(ctx, testRepo, "master", "")
+	require.NoError(t, err)
+	expectedBranches = append(expectedBranches, &pb.FindAllBranchesResponse_Branch{
+		Name:   []byte("refs/heads/master"),
+		Target: masterCommit,
+	})
+
+	testCases := []struct {
+		desc             string
+		request          *pb.FindAllBranchesRequest
+		expectedBranches []*pb.FindAllBranchesResponse_Branch
+	}{
+		{
+			desc: "all merged branches",
+			request: &pb.FindAllBranchesRequest{
+				Repository: testRepo,
+				MergedOnly: true,
+			},
+			expectedBranches: expectedBranches,
+		},
+		{
+			desc: "all merged from a list of branches",
+			request: &pb.FindAllBranchesRequest{
+				Repository: testRepo,
+				MergedOnly: true,
+				MergedBranches: [][]byte{
+					[]byte("refs/heads/100%branch"),
+					[]byte("refs/heads/improve/awesome"),
+					[]byte("refs/heads/gitaly-stuff"),
+				},
+			},
+			expectedBranches: expectedBranches[:2],
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			c, err := client.FindAllBranches(ctx, testCase.request)
+			require.NoError(t, err)
+
+			branches := readFindAllBranchesResponsesFromClient(t, c)
+			require.Len(t, branches, len(testCase.expectedBranches))
+
+			for _, branch := range branches {
+				// The GitCommit object returned by GetCommit() above and the one returned in the response
+				// vary a lot. We can't guarantee that master will be fixed at a certain commit so we can't create
+				// a structure for it manually, hence this hack.
+				if string(branch.Name) == "refs/heads/master" {
+					continue
+				}
+
+				assertContainsBranch(t, testCase.expectedBranches, branch)
+			}
+		})
+	}
 }
 
 func TestInvalidFindAllBranchesRequest(t *testing.T) {
@@ -820,4 +905,18 @@ func TestInvalidFindAllBranchesRequest(t *testing.T) {
 			testhelper.AssertGrpcError(t, recvError, codes.InvalidArgument, "")
 		})
 	}
+}
+
+func readFindAllBranchesResponsesFromClient(t *testing.T, c pb.RefService_FindAllBranchesClient) (branches []*pb.FindAllBranchesResponse_Branch) {
+	for {
+		r, err := c.Recv()
+		if err == io.EOF {
+			break
+		}
+		require.NoError(t, err)
+
+		branches = append(branches, r.GetBranches()...)
+	}
+
+	return
 }
