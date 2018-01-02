@@ -109,6 +109,8 @@ It has these top-level messages:
 	UserCommitFilesRequestHeader
 	UserCommitFilesRequest
 	UserCommitFilesResponse
+	UserRebaseRequest
+	UserRebaseResponse
 	FindDefaultBranchNameRequest
 	FindDefaultBranchNameResponse
 	FindAllBranchNamesRequest

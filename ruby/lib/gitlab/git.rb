@@ -124,3 +124,11 @@ module Gitlab
     end
   end
 end
+
+module Gitlab
+  module GlId
+    def self.gl_id(user)
+      user.gl_id
+    end
+  end
+end
