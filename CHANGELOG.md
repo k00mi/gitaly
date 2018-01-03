@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.66.0
 
 - Implement RemoteService.FetchInternalRemote RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/508
