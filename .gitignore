@@ -10,3 +10,5 @@
 /.ruby-bundle
 /ruby/vendor/bundle
 /ruby/.bundle
+/ruby/tmp
+*.socket
