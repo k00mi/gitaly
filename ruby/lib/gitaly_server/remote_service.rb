@@ -6,7 +6,7 @@ module GitalyServer
       bridge_exceptions do
         repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
 
-        mirror_refmap = parse_refmap(request.mirror_refmap)
+        mirror_refmap = parse_refmaps(request.mirror_refmaps)
 
         repo.add_remote(request.name, request.url, mirror_refmap: mirror_refmap)
 
@@ -37,16 +37,22 @@ module GitalyServer
 
     private
 
-    def parse_refmap(refmap)
-      return unless refmap && refmap.rstrip != ""
+    def parse_refmaps(refmaps)
+      return unless refmaps.present?
 
-      refmap_spec = refmap.to_sym
+      parsed_refmaps = refmaps.map do |refmap|
+        next unless refmap.present?
 
-      if Gitlab::Git::RepositoryMirroring::REFMAPS.has_key?(refmap_spec)
-        refmap_spec
-      else
-        refmap
+        refmap_spec = refmap.to_sym
+
+        if Gitlab::Git::RepositoryMirroring::REFMAPS.has_key?(refmap_spec)
+          refmap_spec
+        else
+          refmap
+        end
       end
+
+      parsed_refmaps.compact.presence
     end
   end
 end
