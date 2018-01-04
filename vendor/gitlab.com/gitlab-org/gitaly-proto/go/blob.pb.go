@@ -179,6 +179,8 @@ It has these top-level messages:
 	FindMergeBaseResponse
 	CreateForkRequest
 	CreateForkResponse
+	IsRebaseInProgressRequest
+	IsRebaseInProgressResponse
 	Repository
 	GitCommit
 	CommitAuthor

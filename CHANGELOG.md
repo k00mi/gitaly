@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Implement IsRebaseInProgress RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/519
 - Update to gitaly-proto v0.67.0
   https://gitlab.com/gitlab-org/gitaly/merge_requests/520
 - Fix an error in merged all branches logic

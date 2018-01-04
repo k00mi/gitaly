@@ -70,5 +70,15 @@ module GitalyServer
         Gitaly::FetchRemoteResponse.new
       end
     end
+
+    def is_rebase_in_progress(request, call) # rubocop:disable Naming/PredicateName
+      bridge_exceptions do
+        repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
+
+        result = repo.rebase_in_progress?(request.rebase_id)
+
+        Gitaly::IsRebaseInProgressResponse.new(in_progress: result)
+      end
+    end
   end
 end
