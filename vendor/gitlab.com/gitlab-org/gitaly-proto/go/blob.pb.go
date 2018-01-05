@@ -158,8 +158,6 @@ It has these top-level messages:
 	GetArchiveResponse
 	HasLocalBranchesRequest
 	HasLocalBranchesResponse
-	ChangeStorageRequest
-	ChangeStorageResponse
 	FetchSourceBranchRequest
 	FetchSourceBranchResponse
 	FsckRequest

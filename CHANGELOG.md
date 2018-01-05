@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Add support for MergedBranches in FindAllBranches RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/510
+
 v0.66.0
 
 - Implement RemoteService.FetchInternalRemote RPC
