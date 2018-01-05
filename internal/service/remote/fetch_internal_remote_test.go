@@ -3,7 +3,6 @@ package remote_test
 import (
 	"context"
 	"net"
-	"os"
 	"testing"
 
 	"gitlab.com/gitlab-org/gitaly/internal/service/remote"
@@ -13,7 +12,6 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	serverPkg "gitlab.com/gitlab-org/gitaly/internal/server"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
@@ -30,7 +28,7 @@ func TestSuccessfulFetchInternalRemote(t *testing.T) {
 	remoteRepo, remoteRepoPath, remoteCleanupFn := testhelper.NewTestRepo(t)
 	defer remoteCleanupFn()
 
-	repo, repoPath, cleanupFn := initRepo(t)
+	repo, repoPath, cleanupFn := testhelper.InitBareRepo(t)
 	defer cleanupFn()
 
 	ctxOuter, cancel := testhelper.Context()
@@ -60,7 +58,7 @@ func TestFailedFetchInternalRemote(t *testing.T) {
 	client, conn := remote.NewRemoteClient(t, serverSocketPath)
 	defer conn.Close()
 
-	repo, _, cleanupFn := initRepo(t)
+	repo, _, cleanupFn := testhelper.InitBareRepo(t)
 	defer cleanupFn()
 
 	ctxOuter, cancel := testhelper.Context()
@@ -115,18 +113,6 @@ func TestFailedFetchInternalRemoteDueToValidations(t *testing.T) {
 			testhelper.AssertGrpcError(t, err, codes.InvalidArgument, tc.desc)
 		})
 	}
-}
-
-func initRepo(t *testing.T) (*pb.Repository, string, func()) {
-	testhelper.ConfigureTestStorage()
-
-	repo := &pb.Repository{StorageName: "default", RelativePath: "repo.git"}
-	repoPath, err := helper.GetPath(repo)
-	require.NoError(t, err)
-
-	testhelper.MustRunCommand(t, nil, "git", "init", "--bare", repoPath)
-
-	return repo, repoPath, func() { os.RemoveAll(repoPath) }
 }
 
 func runFullServer(t *testing.T) (*grpc.Server, string) {

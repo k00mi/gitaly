@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Implement OperationService.UserCommitFiles RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/516
 - Use grpc-go 1.9.1
   https://gitlab.com/gitlab-org/gitaly/merge_requests/547
 

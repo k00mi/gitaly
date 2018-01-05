@@ -329,6 +329,35 @@ func Context() (context.Context, func()) {
 	return context.WithCancel(context.Background())
 }
 
+func createRepo(t *testing.T, storagePath string) (repo *pb.Repository, repoPath, relativePath string) {
+	repoPath, err := ioutil.TempDir(storagePath, t.Name())
+	require.NoError(t, err)
+	relativePath, err = filepath.Rel(storagePath, repoPath)
+	require.NoError(t, err)
+	repo = &pb.Repository{StorageName: "default", RelativePath: relativePath}
+
+	return repo, repoPath, relativePath
+}
+
+// InitBareRepo creates a new bare repository
+func InitBareRepo(t *testing.T) (*pb.Repository, string, func()) {
+	return initRepo(t, true)
+}
+
+func initRepo(t *testing.T, bare bool) (*pb.Repository, string, func()) {
+	ConfigureTestStorage()
+
+	repo, repoPath, _ := createRepo(t, GitlabTestStoragePath())
+	args := []string{"init"}
+	if bare {
+		args = append(args, "--bare")
+	}
+
+	MustRunCommand(t, nil, "git", append(args, repoPath)...)
+
+	return repo, repoPath, func() { os.RemoveAll(repoPath) }
+}
+
 // NewTestRepo creates a bare copy of the test repository.
 func NewTestRepo(t *testing.T) (repo *pb.Repository, repoPath string, cleanup func()) {
 	return cloneTestRepo(t, true)
@@ -341,23 +370,19 @@ func NewTestRepoWithWorktree(t *testing.T) (repo *pb.Repository, repoPath string
 }
 
 func cloneTestRepo(t *testing.T, bare bool) (repo *pb.Repository, repoPath string, cleanup func()) {
-	testRepo := TestRepository()
 	storagePath := GitlabTestStoragePath()
+	repo, repoPath, relativePath := createRepo(t, storagePath)
+	testRepo := TestRepository()
 	testRepoPath := path.Join(storagePath, testRepo.RelativePath)
-
-	repoPath, err := ioutil.TempDir(storagePath, t.Name())
-	require.NoError(t, err)
-	relativePath, err := filepath.Rel(storagePath, repoPath)
-	require.NoError(t, err)
-	repo = &pb.Repository{StorageName: "default", RelativePath: relativePath}
-
 	args := []string{"clone", "--no-hardlinks", "--dissociate"}
+
 	if bare {
 		args = append(args, "--bare")
 	} else {
 		// For non-bare repos the relative path is the .git folder inside the path
 		repo.RelativePath = path.Join(relativePath, ".git")
 	}
+
 	MustRunCommand(t, nil, "git", append(args, testRepoPath, repoPath)...)
 
 	return repo, repoPath, func() { os.RemoveAll(repoPath) }
