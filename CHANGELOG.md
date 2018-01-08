@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Update to gitaly-proto v0.67.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/520
 - Fix an error in merged all branches logic
   https://gitlab.com/gitlab-org/gitaly/merge_requests/517
 - Allow RemoteService.AddRemote to receive several mirror_refmaps

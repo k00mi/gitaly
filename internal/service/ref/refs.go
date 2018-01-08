@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
+
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -267,4 +269,12 @@ func (s *server) FindAllBranches(in *pb.FindAllBranchesRequest, stream pb.RefSer
 	writer := newFindAllBranchesWriter(stream)
 
 	return findRefs(stream.Context(), writer, in.Repository, patterns, opts)
+}
+
+func (*server) ListBranchNamesContainingCommit(context.Context, *pb.ListBranchNamesContainingCommitRequest) (*pb.ListBranchNamesContainingCommitResponse, error) {
+	return nil, helper.Unimplemented
+}
+
+func (*server) ListTagNamesContainingCommit(context.Context, *pb.ListTagNamesContainingCommitRequest) (*pb.ListTagNamesContainingCommitResponse, error) {
+	return nil, helper.Unimplemented
 }

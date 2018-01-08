@@ -104,6 +104,11 @@ It has these top-level messages:
 	UserCherryPickResponse
 	UserRevertRequest
 	UserRevertResponse
+	UserCommitFilesActionHeader
+	UserCommitFilesAction
+	UserCommitFilesRequestHeader
+	UserCommitFilesRequest
+	UserCommitFilesResponse
 	FindDefaultBranchNameRequest
 	FindDefaultBranchNameResponse
 	FindAllBranchNamesRequest
@@ -130,12 +135,18 @@ It has these top-level messages:
 	FindBranchResponse
 	DeleteRefsRequest
 	DeleteRefsResponse
+	ListBranchNamesContainingCommitRequest
+	ListBranchNamesContainingCommitResponse
+	ListTagNamesContainingCommitRequest
+	ListTagNamesContainingCommitResponse
 	AddRemoteRequest
 	AddRemoteResponse
 	RemoveRemoteRequest
 	RemoveRemoteResponse
 	FetchInternalRemoteRequest
 	FetchInternalRemoteResponse
+	UpdateRemoteMirrorRequest
+	UpdateRemoteMirrorResponse
 	RepositoryExistsRequest
 	RepositoryExistsResponse
 	RepositoryIsEmptyRequest
