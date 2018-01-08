@@ -239,7 +239,7 @@ func (s *server) FindAllBranches(in *pb.FindAllBranchesRequest, stream pb.RefSer
 		"--format=" + strings.Join(localBranchFormatFields, "%00"),
 	}
 
-	var patterns []string
+	patterns := []string{"refs/heads", "refs/remotes"}
 
 	if in.MergedOnly {
 		defaultBranchName, err := DefaultBranchName(stream.Context(), in.Repository)
@@ -253,11 +253,11 @@ func (s *server) FindAllBranches(in *pb.FindAllBranchesRequest, stream pb.RefSer
 		args = append(args, fmt.Sprintf("--merged=%s", string(defaultBranchName)))
 
 		if len(in.MergedBranches) > 0 {
+			patterns = nil
+
 			for _, mergedBranch := range in.MergedBranches {
 				patterns = append(patterns, string(mergedBranch))
 			}
-		} else {
-			patterns = append(patterns, "refs/heads", "refs/remotes")
 		}
 	}
 
