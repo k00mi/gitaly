@@ -2,7 +2,6 @@ package remote
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"google.golang.org/grpc/codes"
@@ -29,44 +28,51 @@ func TestSuccessfulAddRemote(t *testing.T) {
 	defer cancel()
 
 	testCases := []struct {
-		description  string
-		remoteName   string
-		url          string
-		mirrorRefmap string
+		description           string
+		remoteName            string
+		url                   string
+		mirrorRefmaps         []string
+		resolvedMirrorRefmaps []string
 	}{
 		{
-			description:  "creates a new remote",
-			remoteName:   "my-remote",
-			url:          "http://my-repo.git",
-			mirrorRefmap: "",
+			description: "creates a new remote",
+			remoteName:  "my-remote",
+			url:         "http://my-repo.git",
 		},
 		{
-			description:  "if a remote with the same name exists, it updates it",
-			remoteName:   "my-remote",
-			url:          "johndoe@host:my-new-repo.git",
-			mirrorRefmap: "",
+			description: "if a remote with the same name exists, it updates it",
+			remoteName:  "my-remote",
+			url:         "johndoe@host:my-new-repo.git",
 		},
 		{
-			description:  "sets the remote as mirror if mirror_refmap is present",
-			remoteName:   "my-mirror-remote",
-			url:          "http://my-mirror-repo.git",
-			mirrorRefmap: "all_refs",
+			description:   "doesn't set the remote as mirror if mirror_refmaps is not `present`",
+			remoteName:    "my-non-mirror-remote",
+			url:           "johndoe@host:my-new-repo.git",
+			mirrorRefmaps: []string{""},
 		},
 		{
-			description:  "doesn't set the remote as mirror if mirror_refmap is blank",
-			remoteName:   "my-non-mirror-remote",
-			url:          "http://my-non-mirror-repo.git",
-			mirrorRefmap: "    ",
+			description:           "sets the remote as mirror if a mirror_refmap is present",
+			remoteName:            "my-mirror-remote",
+			url:                   "http://my-mirror-repo.git",
+			mirrorRefmaps:         []string{"all_refs"},
+			resolvedMirrorRefmaps: []string{"+refs/*:refs/*"},
+		},
+		{
+			description:           "sets the remote as mirror with multiple mirror_refmaps",
+			remoteName:            "my-other-mirror-remote",
+			url:                   "http://my-non-mirror-repo.git",
+			mirrorRefmaps:         []string{"all_refs", "+refs/pull/*/head:refs/merge-requests/*/head"},
+			resolvedMirrorRefmaps: []string{"+refs/*:refs/*", "+refs/pull/*/head:refs/merge-requests/*/head"},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
 			request := &pb.AddRemoteRequest{
-				Repository:   testRepo,
-				Name:         tc.remoteName,
-				Url:          tc.url,
-				MirrorRefmap: tc.mirrorRefmap,
+				Repository:    testRepo,
+				Name:          tc.remoteName,
+				Url:           tc.url,
+				MirrorRefmaps: tc.mirrorRefmaps,
 			}
 
 			_, err := client.AddRemote(ctx, request)
@@ -79,8 +85,10 @@ func TestSuccessfulAddRemote(t *testing.T) {
 
 			mirrorConfigRegexp := fmt.Sprintf("remote.%s", tc.remoteName)
 			mirrorConfig := string(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "config", "--get-regexp", mirrorConfigRegexp))
-			if strings.TrimSpace(tc.mirrorRefmap) != "" {
-				require.Contains(t, mirrorConfig, "fetch +refs/*:refs/*")
+			if len(tc.resolvedMirrorRefmaps) > 0 {
+				for _, resolvedMirrorRefmap := range tc.resolvedMirrorRefmaps {
+					require.Contains(t, mirrorConfig, resolvedMirrorRefmap)
+				}
 				require.Contains(t, mirrorConfig, "mirror true")
 				require.Contains(t, mirrorConfig, "prune true")
 			} else {
@@ -126,10 +134,9 @@ func TestFailedAddRemoteDueToValidation(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
 			request := &pb.AddRemoteRequest{
-				Repository:   testRepo,
-				Name:         tc.remoteName,
-				Url:          tc.url,
-				MirrorRefmap: "",
+				Repository: testRepo,
+				Name:       tc.remoteName,
+				Url:        tc.url,
 			}
 
 			_, err := client.AddRemote(ctx, request)

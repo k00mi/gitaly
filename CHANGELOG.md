@@ -4,6 +4,8 @@ UNRELEASED
 
 - Fix an error in merged all branches logic
   https://gitlab.com/gitlab-org/gitaly/merge_requests/517
+- Allow RemoteService.AddRemote to receive several mirror_refmaps
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/513
 - Update vendored gitlab_git to 33cea50976
   https://gitlab.com/gitlab-org/gitaly/merge_requests/518
 - Update vendored gitlab_git to bce886b776a
