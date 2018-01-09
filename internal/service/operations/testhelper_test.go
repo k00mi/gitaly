@@ -42,6 +42,8 @@ func testMain(m *testing.M) int {
 
 	var err error
 
+	testhelper.ConfigureGitalySSH()
+
 	testhelper.ConfigureRuby()
 	RubyServer, err = rubyserver.Start()
 	if err != nil {

@@ -205,6 +205,28 @@ module GitalyServer
       end
     end
 
+    def user_rebase(request, call)
+      bridge_exceptions do
+          repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
+          user = Gitlab::Git::User.from_gitaly(request.user)
+          remote_repository = Gitlab::Git::GitalyRemoteRepository.new(request.remote_repository, call)
+
+        begin
+          rebase_sha = repo.rebase(user, request.rebase_id,
+                                   branch: request.branch,
+                                   branch_sha: request.branch_sha,
+                                   remote_repository: remote_repository,
+                                   remote_branch: request.remote_branch)
+
+          Gitaly::UserRebaseResponse.new(rebase_sha: rebase_sha)
+        rescue Gitlab::Git::HooksService::PreReceiveError => e
+          return Gitaly::UserRebaseResponse.new(pre_receive_error: e.message)
+        rescue Gitlab::Git::Repository::GitError => e
+          return Gitaly::UserRebaseResponse.new(git_error: e.message)
+        end
+      end
+    end
+
     private
 
     def branch_update_result(gitlab_update_result)

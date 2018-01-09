@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Implement UserRebase RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/511
 - Implement IsRebaseInProgress RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/519
 - Update to gitaly-proto v0.67.0
