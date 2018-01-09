@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.67.0
 
 - Implement UserRebase RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/511
