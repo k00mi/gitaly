@@ -935,3 +935,145 @@ func readFindAllBranchesResponsesFromClient(t *testing.T, c pb.RefService_FindAl
 
 	return
 }
+
+func TestListTagNamesContainingCommit(t *testing.T) {
+	server, serverSocketPath := runRefServiceServer(t)
+	defer server.Stop()
+
+	client, conn := newRefServiceClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	testCases := []struct {
+		description string
+		commitID    string
+		code        codes.Code
+		tags        []string
+	}{
+		{
+			description: "no commit ID",
+			commitID:    "",
+			code:        codes.InvalidArgument,
+		},
+		{
+			description: "current master HEAD",
+			commitID:    "e63f41fe459e62e1228fcef60d7189127aeba95a",
+			code:        codes.OK,
+			tags:        []string{""},
+		},
+		{
+			description: "init commit",
+			commitID:    "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
+			code:        codes.OK,
+			tags:        []string{"v1.0.0", "v1.1.0"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			request := &pb.ListTagNamesContainingCommitRequest{Repository: testRepo, CommitId: tc.commitID}
+
+			c, err := client.ListTagNamesContainingCommit(ctx, request)
+			if tc.code != codes.OK {
+				testhelper.AssertGrpcError(t, err, tc.code, "")
+
+				return
+			}
+			require.NoError(t, err)
+
+			foundTags := c.GetTagNames()
+
+			set := make(map[string]bool)
+			for _, name := range foundTags {
+				set[string(name)] = true
+			}
+
+			// Test for inclusion instead of equality because new refs
+			// will get added to the gitlab-test repo over time.
+			for _, name := range tc.tags {
+				require.True(t, set[name], fmt.Sprintf("%s was not found in %v", name, set))
+			}
+		})
+	}
+}
+
+func TestListBranchNamesContainingCommit(t *testing.T) {
+	server, serverSocketPath := runRefServiceServer(t)
+	defer server.Stop()
+
+	client, conn := newRefServiceClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	testCases := []struct {
+		description string
+		commitID    string
+		code        codes.Code
+		branches    []string
+	}{
+		{
+			description: "no commit ID",
+			commitID:    "",
+			code:        codes.InvalidArgument,
+		},
+		{
+			description: "current master HEAD",
+			commitID:    "e63f41fe459e62e1228fcef60d7189127aeba95a",
+			code:        codes.OK,
+			branches:    []string{"master"},
+		},
+		{
+			description: "init commit",
+			commitID:    "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
+			code:        codes.OK,
+			// subset to keep it readable
+			branches: []string{
+				"deleted-image-test",
+				"ends-with.json",
+				"master",
+				"conflict-non-utf8",
+				"'test'",
+				"ʕ•ᴥ•ʔ",
+				"'test'",
+				"100%branch",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			request := &pb.ListBranchNamesContainingCommitRequest{Repository: testRepo, CommitId: tc.commitID}
+
+			c, err := client.ListBranchNamesContainingCommit(ctx, request)
+			if tc.code != codes.OK {
+				testhelper.AssertGrpcError(t, err, tc.code, "")
+
+				return
+			}
+			require.NoError(t, err)
+
+			foundBranches := c.GetBranchNames()
+
+			set := make(map[string]bool)
+			for _, name := range foundBranches {
+				set[string(name)] = true
+			}
+
+			// Test for inclusion instead of equality because new refs
+			// will get added to the gitlab-test repo over time.
+			for _, name := range tc.branches {
+				require.True(t, set[name], fmt.Sprintf("%s was not found in %v", name, set))
+			}
+		})
+	}
+}

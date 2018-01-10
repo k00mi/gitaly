@@ -4,6 +4,10 @@ UNRELEASED
 
 - Vendor Gitlab::Git @ f9b946c1c9756533fd95c8735803d7b54d6dd204
   https://gitlab.com/gitlab-org/gitaly/merge_requests/563
+- ListBranchNamesContainingCommit server implementation
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/537
+- ListTagNamesContainingCommit server implementation
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/537
 
 v0.74.0
 

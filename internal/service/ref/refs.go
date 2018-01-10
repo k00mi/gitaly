@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io/ioutil"
+	"regexp"
 	"strings"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -270,10 +271,62 @@ func (s *server) FindAllBranches(in *pb.FindAllBranchesRequest, stream pb.RefSer
 	return findRefs(stream.Context(), writer, in.Repository, patterns, opts)
 }
 
-func (*server) ListBranchNamesContainingCommit(*pb.ListBranchNamesContainingCommitRequest, pb.RefService_ListBranchNamesContainingCommitServer) error {
-	return helper.Unimplemented
+func (*server) ListBranchNamesContainingCommit(ctx context.Context, in *pb.ListBranchNamesContainingCommitRequest) (*pb.ListBranchNamesContainingCommitResponse, error) {
+	if !validCommitID(in.GetCommitId()) {
+		return nil, grpc.Errorf(codes.InvalidArgument, "commit id was not a 40 character hexidecimal")
+	}
+
+	branchNames, err := findRefsContainingCommit(ctx, in.Repository, in.CommitId, "refs/heads/")
+
+	return &pb.ListBranchNamesContainingCommitResponse{BranchNames: branchNames}, err
 }
 
-func (*server) ListTagNamesContainingCommit(*pb.ListTagNamesContainingCommitRequest, pb.RefService_ListTagNamesContainingCommitServer) error {
-	return helper.Unimplemented
+func (*server) ListTagNamesContainingCommit(ctx context.Context, in *pb.ListTagNamesContainingCommitRequest) (*pb.ListTagNamesContainingCommitResponse, error) {
+	if !validCommitID(in.GetCommitId()) {
+		return nil, grpc.Errorf(codes.InvalidArgument, "commit id was not a 40 character hexidecimal")
+	}
+
+	tagNames, err := findRefsContainingCommit(ctx, in.Repository, in.CommitId, "refs/tags/")
+
+	return &pb.ListTagNamesContainingCommitResponse{TagNames: tagNames}, err
+}
+
+func validCommitID(id string) bool {
+	if match, err := regexp.MatchString(`\A[0-9a-f]{40}\z`, id); !match || err != nil {
+		return false
+	}
+
+	return true
+}
+
+func findRefsContainingCommit(ctx context.Context, repo *pb.Repository, commitID, dirPrefix string) ([][]byte, error) {
+	args := []string{
+		"for-each-ref",
+		"--contains=" + commitID,
+		"--format=%(refname)",
+		dirPrefix,
+	}
+
+	cmd, err := git.Command(ctx, repo, args...)
+	if err != nil {
+		return nil, grpc.Errorf(codes.Internal, err.Error())
+	}
+
+	buff, err := ioutil.ReadAll(cmd)
+	if err != nil {
+		return nil, grpc.Errorf(codes.Internal, err.Error())
+	}
+
+	lines := bytes.Split(buff, []byte("\n"))
+	filteredLines := make([][]byte, len(lines))
+
+	for _, line := range lines {
+		if len(line) != 0 {
+			refName := bytes.TrimPrefix(line, []byte(dirPrefix))
+
+			filteredLines = append(filteredLines, refName)
+		}
+	}
+
+	return filteredLines, nil
 }
