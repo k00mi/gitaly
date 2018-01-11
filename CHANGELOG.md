@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Implement ExtractCommitSignature RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/521
 - Update Gitlab::Git vendoring to b10ea6e386a025759aca5e9ef0d23931e77d1012
   https://gitlab.com/gitlab-org/gitaly/merge_requests/525
 - Use gitlay-proto 0.71.0
