@@ -25,7 +25,7 @@ export GOPATH := $(TARGET_DIR)
 export PATH := $(GOPATH)/bin:$(PATH)
 
 # Returns a list of all non-vendored (local packages)
-LOCAL_PACKAGES = $(shell cd "$(PKG_BUILD_DIR)" && GOPATH=$(GOPATH) go list ./... | grep -v '^$(PKG)/vendor/')
+LOCAL_PACKAGES = $(shell cd "$(PKG_BUILD_DIR)" && GOPATH=$(GOPATH) go list ./... | grep -v '^$(PKG)/vendor/' | grep -v '^$(PKG)/ruby/')
 LOCAL_GO_FILES = $(shell find -L $(PKG_BUILD_DIR)  -name "*.go" -not -path "$(PKG_BUILD_DIR)/vendor/*" -not -path "$(PKG_BUILD_DIR)/_build/*")
 CHANGED_LOCAL_GO_FILES = $(shell git status  --porcelain --short | awk '{ print $$2 }' | grep -v '^$(PKG)/vendor/' | grep .go$)
 CHANGED_LOCAL_GO_PACKAGES = $(foreach file,$(CHANGED_LOCAL_GO_FILES),./$(dir $(file))/...)
