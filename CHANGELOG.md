@@ -5,6 +5,8 @@ UNRELEASED
 
 - Handle non-existent commits in ExtractCommitSignature
   https://gitlab.com/gitlab-org/gitaly/merge_requests/535
+- Implement RepositoryService::WriteRef
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/526
 
 v0.69.0
 

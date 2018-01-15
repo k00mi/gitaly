@@ -26,7 +26,12 @@ func ValidateRevision(revision []byte) error {
 	if bytes.HasPrefix(revision, []byte("-")) {
 		return fmt.Errorf("revision can't start with '-'")
 	}
-
+	if bytes.Contains(revision, []byte(" ")) {
+		return fmt.Errorf("revision can't contain whitespace")
+	}
+	if bytes.Contains(revision, []byte("\x00")) {
+		return fmt.Errorf("revision can't contain NUL")
+	}
 	return nil
 }
 

@@ -80,5 +80,17 @@ module GitalyServer
         Gitaly::IsRebaseInProgressResponse.new(in_progress: result)
       end
     end
+
+    def write_ref(request, call)
+      bridge_exceptions do
+        repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
+
+        # We ignore the output since the shell-version returns the output
+        #  while the rugged-version returns true. But both throws expections on errors
+        repo.write_ref(request.ref, request.revision, old_ref: request.old_revision, shell: request.shell)
+
+        Gitaly::WriteRefResponse.new
+      end
+    end
   end
 end
