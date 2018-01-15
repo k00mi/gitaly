@@ -3,8 +3,8 @@ FROM registry.gitlab.com/gitlab-org/gitlab-build-images:${CUSTOM_IMAGE_VERSION}
 
 RUN mkdir -p /bundle-cache
 
-COPY Gemfile /bundle-cache
-COPY Gemfile.lock /bundle-cache
+COPY ./ruby/Gemfile /bundle-cache
+COPY ./ruby/Gemfile.lock /bundle-cache
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get update -qq && \
     DEBIAN_FRONTEND=noninteractive apt-get install -qq -y rubygems bundler cmake build-essential libicu-dev && \
