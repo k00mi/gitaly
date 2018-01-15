@@ -118,6 +118,12 @@ func (s *server) TreeEntry(in *pb.TreeEntryRequest, stream pb.CommitService_Tree
 	}
 
 	requestPath := string(in.GetPath())
+	// path.Dir("api/docs") => "api" Correct!
+	// path.Dir("api/docs/") => "api/docs" WRONG!
+	if len(requestPath) > 1 {
+		requestPath = strings.TrimRight(requestPath, "/")
+	}
+
 	handler := treeEntryHandler(stream, string(in.GetRevision()), path.Dir(requestPath), requestPath, in.GetLimit())
 	return catfile.CatFile(stream.Context(), in.Repository, handler)
 }
