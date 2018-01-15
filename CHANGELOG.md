@@ -1,5 +1,11 @@
 # Gitaly changelog
 
+
+UNRELEASED
+
+- Handle non-existent commits in ExtractCommitSignature
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/535
+
 v0.69.0
 
 - Fix handling of paths ending with slashes in TreeEntry
