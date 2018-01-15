@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.69.0
 
 - Fix handling of paths ending with slashes in TreeEntry
   https://gitlab.com/gitlab-org/gitaly/merge_requests/532
