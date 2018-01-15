@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Implement CreateRepositoryFromURL RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/529
+
 v0.68.0
 
 - Check repo existence before passing to gitaly-ruby

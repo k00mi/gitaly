@@ -185,6 +185,8 @@ It has these top-level messages:
 	CreateForkResponse
 	IsRebaseInProgressRequest
 	IsRebaseInProgressResponse
+	CreateRepositoryFromURLRequest
+	CreateRepositoryFromURLResponse
 	Repository
 	GitCommit
 	CommitAuthor

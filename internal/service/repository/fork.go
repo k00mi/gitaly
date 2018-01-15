@@ -8,7 +8,6 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
-	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
@@ -93,12 +92,8 @@ func (s *server) CreateFork(ctx context.Context, req *pb.CreateForkRequest) (*pb
 		return nil, grpc.Errorf(codes.Internal, "CreateFork: clone cmd wait: %v", err)
 	}
 
-	cmd, err = git.Command(ctx, targetRepository, "remote", "remove", "origin")
-	if err != nil {
-		return nil, grpc.Errorf(codes.Internal, "CreateFork: remote cmd start: %v", err)
-	}
-	if err := cmd.Wait(); err != nil {
-		return nil, grpc.Errorf(codes.Internal, "CreateFork: remote cmd wait: %v", err)
+	if err := removeOriginInRepo(ctx, targetRepository); err != nil {
+		return nil, grpc.Errorf(codes.Internal, "CreateFork: %v", err)
 	}
 
 	// CreateRepository is harmless on existing repositories with the side effect that it creates the hook symlink.

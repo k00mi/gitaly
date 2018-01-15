@@ -84,6 +84,7 @@ func TestFailedCreateForkRequestDueToExistingTarget(t *testing.T) {
 		{
 			desc:     "target is a directory",
 			repoPath: "forks/test-repo-fork-dir.git",
+			isDir:    true,
 		},
 		{
 			desc:     "target is a file",
