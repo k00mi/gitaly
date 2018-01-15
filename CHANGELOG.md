@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Fix handling of paths ending with slashes in TreeEntry
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/532
 - Implement CreateRepositoryFromURL RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/529
 

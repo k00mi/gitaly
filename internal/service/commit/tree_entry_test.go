@@ -114,6 +114,16 @@ func TestSuccessfulTreeEntry(t *testing.T) {
 			},
 		},
 		{
+			revision: []byte("c347ca2e140aa667b968e51ed0ffe055501fe4f4"),
+			path:     []byte("files/js/"),
+			expectedTreeEntry: treeEntry{
+				objectType: pb.TreeEntryResponse_TREE,
+				oid:        "31405c5ddef582c5a9b7a85230413ff90e2fe720",
+				size:       83,
+				mode:       040000,
+			},
+		},
+		{
 			revision: []byte("b83d6e391c22777fca1ed3012fce84f633d7fed0"),
 			path:     []byte("foo/bar/.gitkeep"),
 			expectedTreeEntry: treeEntry{
