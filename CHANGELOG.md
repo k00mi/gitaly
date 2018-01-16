@@ -1,7 +1,7 @@
 # Gitaly changelog
 
 
-UNRELEASED
+v0.70.0
 
 - Handle non-existent commits in ExtractCommitSignature
   https://gitlab.com/gitlab-org/gitaly/merge_requests/535
