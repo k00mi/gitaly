@@ -17,6 +17,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/linguist"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/server"
+	"gitlab.com/gitlab-org/gitaly/internal/tempdir"
 	"gitlab.com/gitlab-org/gitaly/internal/version"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -104,6 +105,8 @@ func main() {
 	config.ConfigureSentry(version.GetVersion())
 	config.ConfigurePrometheus()
 	config.ConfigureConcurrencyLimits()
+
+	tempdir.StartCleaning()
 
 	var listeners []net.Listener
 
