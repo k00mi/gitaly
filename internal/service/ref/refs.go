@@ -271,6 +271,8 @@ func (s *server) FindAllBranches(in *pb.FindAllBranchesRequest, stream pb.RefSer
 	return findRefs(stream.Context(), writer, in.Repository, patterns, opts)
 }
 
+// ListBranchNamesContainingCommit returns the first 1000 branches bases on alphabetical
+// order, which contain the SHA1 passed as argument
 func (*server) ListBranchNamesContainingCommit(ctx context.Context, in *pb.ListBranchNamesContainingCommitRequest) (*pb.ListBranchNamesContainingCommitResponse, error) {
 	if !validCommitID(in.GetCommitId()) {
 		return nil, grpc.Errorf(codes.InvalidArgument, "commit id was not a 40 character hexidecimal")
@@ -281,6 +283,8 @@ func (*server) ListBranchNamesContainingCommit(ctx context.Context, in *pb.ListB
 	return &pb.ListBranchNamesContainingCommitResponse{BranchNames: branchNames}, err
 }
 
+// ListTagNamesContainingCommit returns the first 1000 tags bases on alphabetical
+// order, which contain the SHA1 passed as argument
 func (*server) ListTagNamesContainingCommit(ctx context.Context, in *pb.ListTagNamesContainingCommitRequest) (*pb.ListTagNamesContainingCommitResponse, error) {
 	if !validCommitID(in.GetCommitId()) {
 		return nil, grpc.Errorf(codes.InvalidArgument, "commit id was not a 40 character hexidecimal")
@@ -303,6 +307,7 @@ func findRefsContainingCommit(ctx context.Context, repo *pb.Repository, commitID
 	args := []string{
 		"for-each-ref",
 		"--contains=" + commitID,
+		"--count=1000",
 		"--format=%(refname)",
 		dirPrefix,
 	}
