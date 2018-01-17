@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Implement GetLfsPointers RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/543
 - Add tempdir package
   https://gitlab.com/gitlab-org/gitaly/merge_requests/538
 

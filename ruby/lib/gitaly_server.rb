@@ -4,6 +4,7 @@ require_relative 'gitlab/git.rb'
 
 require_relative 'gitaly_server/client.rb'
 require_relative 'gitaly_server/utils.rb'
+require_relative 'gitaly_server/blob_service.rb'
 require_relative 'gitaly_server/commit_service.rb'
 require_relative 'gitaly_server/diff_service.rb'
 require_relative 'gitaly_server/ref_service.rb'
@@ -49,5 +50,6 @@ module GitalyServer
     server.handle(WikiService.new)
     server.handle(ConflictsService.new)
     server.handle(RemoteService.new)
+    server.handle(BlobService.new)
   end
 end

@@ -1,10 +1,13 @@
 package blob
 
 import (
+	"log"
 	"net"
+	"os"
 	"testing"
 	"time"
 
+	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	"google.golang.org/grpc"
@@ -13,8 +16,28 @@ import (
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
 
+var rubyServer *rubyserver.Server
+
+func TestMain(m *testing.M) {
+	os.Exit(testMain(m))
+}
+
+func testMain(m *testing.M) int {
+	defer testhelper.MustHaveNoChildProcess()
+
+	var err error
+	testhelper.ConfigureRuby()
+	rubyServer, err = rubyserver.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rubyServer.Stop()
+
+	return m.Run()
+}
+
 func runBlobServer(t *testing.T) (*grpc.Server, string) {
-	server := testhelper.NewTestGrpcServer(t, nil, nil)
+	grpcServer := testhelper.NewTestGrpcServer(t, nil, nil)
 
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 	listener, err := net.Listen("unix", serverSocketPath)
@@ -23,12 +46,12 @@ func runBlobServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	pb.RegisterBlobServiceServer(server, NewServer())
-	reflection.Register(server)
+	pb.RegisterBlobServiceServer(grpcServer, &server{rubyServer})
+	reflection.Register(grpcServer)
 
-	go server.Serve(listener)
+	go grpcServer.Serve(listener)
 
-	return server, serverSocketPath
+	return grpcServer, serverSocketPath
 }
 
 func newBlobClient(t *testing.T, serverSocketPath string) (pb.BlobServiceClient, *grpc.ClientConn) {

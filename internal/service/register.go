@@ -25,7 +25,7 @@ import (
 // RegisterAll will register all the known grpc services with
 // the specified grpc service instance
 func RegisterAll(grpcServer *grpc.Server, rubyServer *rubyserver.Server) {
-	pb.RegisterBlobServiceServer(grpcServer, blob.NewServer())
+	pb.RegisterBlobServiceServer(grpcServer, blob.NewServer(rubyServer))
 	pb.RegisterCommitServiceServer(grpcServer, commit.NewServer(rubyServer))
 	pb.RegisterDiffServiceServer(grpcServer, diff.NewServer(rubyServer))
 	pb.RegisterNamespaceServiceServer(grpcServer, namespace.NewServer())
