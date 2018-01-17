@@ -13,6 +13,10 @@ module Gitlab
         whitelist = [:fetch_ref, :fetch_internal]
         yield whitelist.include?(args.first)
       end
+
+      def allow_n_plus_1_calls
+        yield
+      end
     end
   end
 end

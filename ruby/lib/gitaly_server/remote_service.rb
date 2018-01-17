@@ -35,6 +35,22 @@ module GitalyServer
       end
     end
 
+    def update_remote_mirror(call)
+      bridge_exceptions do
+        request_enum = call.each_remote_read
+        first_request = request_enum.next
+        repo = Gitlab::Git::Repository.from_gitaly(first_request.repository, call)
+        only_branches_matching = first_request.only_branches_matching.to_a
+
+        only_branches_matching += request_enum.flat_map(&:only_branches_matching)
+
+        remote_mirror = Gitlab::Git::RemoteMirror.new(repo, first_request.ref_name)
+        remote_mirror.update(only_branches_matching: only_branches_matching)
+
+        Gitaly::UpdateRemoteMirrorResponse.new
+      end
+    end
+
     private
 
     def parse_refmaps(refmaps)

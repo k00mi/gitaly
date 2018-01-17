@@ -47,11 +47,12 @@ module Gitlab
           gitaly_repository,
           GitalyServer.repo_path(call),
           GitalyServer.gl_repository(call),
+          Gitlab::Git::GitlabProjects.from_gitaly(gitaly_repository, call),
           GitalyServer.repo_alt_dirs(call)
         )
       end
 
-      def initialize(gitaly_repository, path, gl_repository, combined_alt_dirs="")
+      def initialize(gitaly_repository, path, gl_repository, gitlab_projects, combined_alt_dirs="")
         @gitaly_repository = gitaly_repository
 
         alt_dirs = combined_alt_dirs
@@ -62,6 +63,7 @@ module Gitlab
         @relative_path = gitaly_repository.relative_path
         @path = path
         @gl_repository = gl_repository
+        @gitlab_projects = gitlab_projects
         @rugged = Rugged::Repository.new(path, alternates: alt_dirs)
         @attributes = Gitlab::Git::Attributes.new(path)
       end
