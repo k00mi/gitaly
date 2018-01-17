@@ -194,6 +194,14 @@ func (s *Server) RemoteServiceClient(ctx context.Context) (pb.RemoteServiceClien
 	return pb.NewRemoteServiceClient(conn), err
 }
 
+// BlobServiceClient returns a BlobServiceClient instance that is
+// configured to connect to the running Ruby server. This assumes Start()
+// has been called already.
+func (s *Server) BlobServiceClient(ctx context.Context) (pb.BlobServiceClient, error) {
+	conn, err := s.getConnection(ctx)
+	return pb.NewBlobServiceClient(conn), err
+}
+
 func (s *Server) getConnection(ctx context.Context) (*grpc.ClientConn, error) {
 	s.clientConnMu.RLock()
 	conn := s.clientConn
