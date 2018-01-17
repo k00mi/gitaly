@@ -17,11 +17,11 @@ func (s *server) ResolveConflicts(stream pb.ConflictsService_ResolveConflictsSer
 
 	header := firstRequest.GetHeader()
 	if header == nil {
-		return grpc.Errorf(codes.InvalidArgument, "ListConflictFiles: empty ResolveConflictsRequestHeader")
+		return grpc.Errorf(codes.InvalidArgument, "ResolveConflicts: empty ResolveConflictsRequestHeader")
 	}
 
 	if err = validateResolveConflictsHeader(header); err != nil {
-		return grpc.Errorf(codes.InvalidArgument, "ListConflictFiles: %v", err)
+		return grpc.Errorf(codes.InvalidArgument, "ResolveConflicts: %v", err)
 	}
 
 	ctx := stream.Context()
