@@ -44,7 +44,7 @@ func validateWriteRefRequest(req *pb.WriteRefRequest) error {
 		}
 	}
 
-	if !bytes.HasPrefix(req.Ref, []byte("refs/")) {
+	if !bytes.Equal(req.Ref, []byte("HEAD")) && !bytes.HasPrefix(req.Ref, []byte("refs/")) {
 		return fmt.Errorf("Ref has to be a full reference")
 	}
 	return nil

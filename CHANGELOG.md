@@ -4,6 +4,8 @@ UNRELEASED
 
 - Add tempdir package
   https://gitlab.com/gitlab-org/gitaly/merge_requests/538
+- Fix validation for Repositoryservice::WriteRef
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/542
 
 v0.70.0
 
