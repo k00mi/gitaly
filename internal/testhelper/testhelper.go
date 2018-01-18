@@ -31,6 +31,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 // TestRelativePath is the path inside its storage of the gitlab-test repo
@@ -131,7 +132,8 @@ func AssertGrpcError(t *testing.T, err error, expectedCode codes.Code, containsT
 	}
 
 	// Check that the code matches
-	if code := grpc.Code(err); code != expectedCode {
+	status, _ := status.FromError(err)
+	if code := status.Code(); code != expectedCode {
 		t.Fatalf("Expected an error with code %v, got %v. The error was %v", expectedCode, code, err)
 	}
 
