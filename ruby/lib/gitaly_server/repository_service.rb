@@ -87,9 +87,13 @@ module GitalyServer
 
         # We ignore the output since the shell-version returns the output
         #  while the rugged-version returns true. But both throws expections on errors
-        repo.write_ref(request.ref, request.revision, old_ref: request.old_revision, shell: request.shell)
+        begin
+          repo.write_ref(request.ref, request.revision, old_ref: request.old_revision, shell: request.shell)
 
-        Gitaly::WriteRefResponse.new
+          Gitaly::WriteRefResponse.new
+        rescue Rugged::OSError => ex
+          Gitaly::WriteRefResponse.new(error: ex.message.b)
+        end
       end
     end
   end
