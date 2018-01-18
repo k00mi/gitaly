@@ -190,6 +190,8 @@ It has these top-level messages:
 	IsRebaseInProgressResponse
 	CreateRepositoryFromURLRequest
 	CreateRepositoryFromURLResponse
+	CreateBundleRequest
+	CreateBundleResponse
 	Repository
 	GitCommit
 	CommitAuthor
