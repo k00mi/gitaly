@@ -207,11 +207,10 @@ module GitalyServer
 
     def user_rebase(request, call)
       bridge_exceptions do
+        begin
           repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
           user = Gitlab::Git::User.from_gitaly(request.user)
           remote_repository = Gitlab::Git::GitalyRemoteRepository.new(request.remote_repository, call)
-
-        begin
           rebase_sha = repo.rebase(user, request.rebase_id,
                                    branch: request.branch,
                                    branch_sha: request.branch_sha,
@@ -227,7 +226,69 @@ module GitalyServer
       end
     end
 
+    def user_commit_files(call)
+      bridge_exceptions do
+        begin
+          actions = []
+          request_enum = call.each_remote_read
+          header = request_enum.next.header
+
+          loop do
+            action = request_enum.next.action
+
+            if action.header
+              actions << commit_files_action_from_gitaly_request(action.header)
+            else
+              actions.last[:content] << action.content
+            end
+          end
+
+          repo = Gitlab::Git::Repository.from_gitaly(header.repository, call)
+          user = Gitlab::Git::User.from_gitaly(header.user)
+          opts = commit_files_opts(call, header, actions)
+
+          branch_update = branch_update_result(repo.multi_action(user, opts))
+
+          Gitaly::UserCommitFilesResponse.new(branch_update: branch_update)
+        rescue Gitlab::Git::Index::IndexError => e
+          Gitaly::UserCommitFilesResponse.new(index_error: e.message)
+        rescue Gitlab::Git::HooksService::PreReceiveError => e
+          Gitaly::UserCommitFilesResponse.new(pre_receive_error: e.message)
+        end
+      end
+    end
+
     private
+
+    def commit_files_opts(call, header, actions)
+      opts = {
+        branch_name: header.branch_name,
+        message: header.commit_message.b,
+        actions: actions
+      }
+
+      if header.start_repository
+        opts[:start_repository] = Gitlab::Git::GitalyRemoteRepository.new(header.start_repository, call)
+      end
+
+      optional_fields = {
+        start_branch_name: 'start_branch_name',
+        author_name: 'commit_author_name',
+        author_email: 'commit_author_email'
+      }.transform_values { |v| header[v].presence }
+
+      opts.merge(optional_fields)
+    end
+
+    def commit_files_action_from_gitaly_request(header)
+      {
+        action: header.action.downcase,
+        file_path: header.file_path,
+        previous_path: header.previous_path,
+        encoding: header.base64_content ? 'base64' : '',
+        content: ''
+      }
+    end
 
     def branch_update_result(gitlab_update_result)
       return if gitlab_update_result.nil?
