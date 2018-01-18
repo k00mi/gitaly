@@ -1,0 +1,89 @@
+package repository
+
+import (
+	"io"
+	"io/ioutil"
+	"os"
+	"testing"
+
+	"gitlab.com/gitlab-org/gitaly/internal/tempdir"
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
+	"gitlab.com/gitlab-org/gitaly/streamio"
+
+	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+)
+
+func TestSuccessfulCreateBundleRequest(t *testing.T) {
+	server, serverSocketPath := runRepoServer(t)
+	defer server.Stop()
+
+	client, conn := newRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	request := &pb.CreateBundleRequest{Repository: testRepo}
+
+	c, err := client.CreateBundle(ctx, request)
+	require.NoError(t, err)
+
+	reader := streamio.NewReader(func() ([]byte, error) {
+		response, err := c.Recv()
+		return response.GetData(), err
+	})
+
+	dstDir, err := tempdir.New(testRepo)
+	require.NoError(t, err)
+	dstFile, err := ioutil.TempFile(dstDir, "")
+	require.NoError(t, err)
+	defer dstFile.Close()
+	defer os.RemoveAll(dstFile.Name())
+
+	_, err = io.Copy(dstFile, reader)
+	require.NoError(t, err)
+
+	output := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "bundle", "verify", dstFile.Name())
+	// Extra sanity; running verify should fail on bad bundles
+	require.Contains(t, string(output), "The bundle records a complete history")
+}
+
+func TestFailedCreateBundleRequestDueToValidations(t *testing.T) {
+	server, serverSocketPath := runRepoServer(t)
+	defer server.Stop()
+
+	client, conn := newRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testCases := []struct {
+		desc    string
+		request *pb.CreateBundleRequest
+		code    codes.Code
+	}{
+		{
+			desc:    "empty repository",
+			request: &pb.CreateBundleRequest{},
+			code:    codes.InvalidArgument,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			stream, err := client.CreateBundle(ctx, testCase.request)
+			require.NoError(t, err)
+
+			_, err = stream.Recv()
+			require.NotEqual(t, io.EOF, err)
+			testhelper.AssertGrpcError(t, err, testCase.code, "")
+		})
+	}
+}
