@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Implement RemoteService.UpdateRemoteMirror RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/544
 - Implement OperationService.UserCommitFiles RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/516
 - Use grpc-go 1.9.1
