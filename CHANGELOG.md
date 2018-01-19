@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.73.0
 
 - Implement CreateBundle RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/546
