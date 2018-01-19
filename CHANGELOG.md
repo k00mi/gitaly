@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Add automatic tempdir cleaner
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/540
+
 v0.73.0
 
 - Implement CreateBundle RPC
