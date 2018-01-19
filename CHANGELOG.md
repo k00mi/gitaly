@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Implement CreateBundle RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/546
+
 v0.72.0
 
 - Implement RemoteService.UpdateRemoteMirror RPC
