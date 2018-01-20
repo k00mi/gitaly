@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Implement CreateRepositoryFromBundle RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/557
 - Use gitaly-proto v0.77.0
   https://gitlab.com/gitlab-org/gitaly/merge_requests/556
 - Automatically remove tempdir when context is over

@@ -198,6 +198,8 @@ It has these top-level messages:
 	CreateBundleResponse
 	WriteConfigRequest
 	WriteConfigResponse
+	CreateRepositoryFromBundleRequest
+	CreateRepositoryFromBundleResponse
 	Repository
 	GitCommit
 	CommitAuthor

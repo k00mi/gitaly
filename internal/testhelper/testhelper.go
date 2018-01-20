@@ -38,6 +38,7 @@ import (
 const (
 	TestRelativePath    = "gitlab-test.git"
 	RepositoryAuthToken = "the-secret-token"
+	DefaultStorageName  = "default"
 )
 
 // MustReadFile returns the content of a file or fails at once.

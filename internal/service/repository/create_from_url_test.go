@@ -15,8 +15,6 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-const defaultStorageName = "default"
-
 func TestSuccessfulCreateRepositoryFromURLRequest(t *testing.T) {
 	server, serverSocketPath := runRepoServer(t)
 	defer server.Stop()
@@ -29,7 +27,7 @@ func TestSuccessfulCreateRepositoryFromURLRequest(t *testing.T) {
 
 	importedRepo := &pb.Repository{
 		RelativePath: "imports/test-repo-imported.git",
-		StorageName:  defaultStorageName,
+		StorageName:  testhelper.DefaultStorageName,
 	}
 
 	req := &pb.CreateRepositoryFromURLRequest{
@@ -85,7 +83,7 @@ func TestFailedCreateRepositoryFromURLRequestDueToExistingTarget(t *testing.T) {
 		t.Run(testCase.desc, func(t *testing.T) {
 			importedRepo := &pb.Repository{
 				RelativePath: "imports/test-repo-imported.git",
-				StorageName:  defaultStorageName,
+				StorageName:  testhelper.DefaultStorageName,
 			}
 
 			importedRepoPath, err := helper.GetPath(importedRepo)

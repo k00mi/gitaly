@@ -201,12 +201,12 @@
 			"revisionTime": "2017-12-31T12:27:32Z"
 		},
 		{
-			"checksumSHA1": "HRwH8wsOtJ/CyxCg0RR9GTSeInU=",
+			"checksumSHA1": "9BK5yWtcYn5D3i4Ud+gFl2SMlGs=",
 			"path": "gitlab.com/gitlab-org/gitaly-proto/go",
-			"revision": "06b06fd73af2594ac470e61063962412220eadc5",
-			"revisionTime": "2018-01-19T20:56:55Z",
-			"version": "v0.77.0",
-			"versionExact": "v0.77.0"
+			"revision": "cb15ef08feb05fa109621f1f8f0151891c5f9078",
+			"revisionTime": "2018-01-22T19:53:06Z",
+			"version": "v0.78.0",
+			"versionExact": "v0.78.0"
 		},
 		{
 			"checksumSHA1": "nqWNlnMmVpt628zzvyo6Yv2CX5Q=",

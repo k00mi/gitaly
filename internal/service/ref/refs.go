@@ -270,10 +270,10 @@ func (s *server) FindAllBranches(in *pb.FindAllBranchesRequest, stream pb.RefSer
 	return findRefs(stream.Context(), writer, in.Repository, patterns, opts)
 }
 
-func (*server) ListBranchNamesContainingCommit(context.Context, *pb.ListBranchNamesContainingCommitRequest) (*pb.ListBranchNamesContainingCommitResponse, error) {
-	return nil, helper.Unimplemented
+func (*server) ListBranchNamesContainingCommit(*pb.ListBranchNamesContainingCommitRequest, pb.RefService_ListBranchNamesContainingCommitServer) error {
+	return helper.Unimplemented
 }
 
-func (*server) ListTagNamesContainingCommit(context.Context, *pb.ListTagNamesContainingCommitRequest) (*pb.ListTagNamesContainingCommitResponse, error) {
-	return nil, helper.Unimplemented
+func (*server) ListTagNamesContainingCommit(*pb.ListTagNamesContainingCommitRequest, pb.RefService_ListTagNamesContainingCommitServer) error {
+	return helper.Unimplemented
 }
