@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Use gitaly-proto v0.77.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/556
 - Automatically remove tempdir when context is over
   https://gitlab.com/gitlab-org/gitaly/merge_requests/555
 - Add automatic tempdir cleaner

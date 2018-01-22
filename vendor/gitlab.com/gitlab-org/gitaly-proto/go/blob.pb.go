@@ -116,6 +116,8 @@ It has these top-level messages:
 	UserCommitFilesResponse
 	UserRebaseRequest
 	UserRebaseResponse
+	UserSquashRequest
+	UserSquashResponse
 	FindDefaultBranchNameRequest
 	FindDefaultBranchNameResponse
 	FindAllBranchNamesRequest
@@ -188,10 +190,14 @@ It has these top-level messages:
 	CreateForkResponse
 	IsRebaseInProgressRequest
 	IsRebaseInProgressResponse
+	IsSquashInProgressRequest
+	IsSquashInProgressResponse
 	CreateRepositoryFromURLRequest
 	CreateRepositoryFromURLResponse
 	CreateBundleRequest
 	CreateBundleResponse
+	WriteConfigRequest
+	WriteConfigResponse
 	Repository
 	GitCommit
 	CommitAuthor
