@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Implement ServerVersion and ServerGitVersion
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/561
+
 v0.74.0
 
 - Implement CreateRepositoryFromBundle RPC
