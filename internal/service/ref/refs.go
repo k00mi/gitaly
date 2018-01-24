@@ -4,13 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"regexp"
 	"strings"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 
 	log "github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -271,28 +271,69 @@ func (s *server) FindAllBranches(in *pb.FindAllBranchesRequest, stream pb.RefSer
 	return findRefs(stream.Context(), writer, in.Repository, patterns, opts)
 }
 
-// ListBranchNamesContainingCommit returns the first 1000 branches bases on alphabetical
-// order, which contain the SHA1 passed as argument
-func (*server) ListBranchNamesContainingCommit(ctx context.Context, in *pb.ListBranchNamesContainingCommitRequest) (*pb.ListBranchNamesContainingCommitResponse, error) {
+// ListBranchNamesContainingCommit returns a maximum of in.GetLimit() Branch names
+// which contain the SHA1 passed as argument
+func (*server) ListBranchNamesContainingCommit(in *pb.ListBranchNamesContainingCommitRequest, stream pb.RefService_ListBranchNamesContainingCommitServer) error {
 	if !validCommitID(in.GetCommitId()) {
-		return nil, grpc.Errorf(codes.InvalidArgument, "commit id was not a 40 character hexidecimal")
+		return grpc.Errorf(codes.InvalidArgument, "commit id was not a 40 character hexidecimal")
 	}
 
-	branchNames, err := findRefsContainingCommit(ctx, in.Repository, in.CommitId, "refs/heads/")
+	dirPrefix := "refs/heads/"
+	writer := func(refs [][]byte) error {
+		trimmed := make([][]byte, len(refs)-1)
+		// Filter out empty lines and trim the prefixes
+		// TODO find out why `%(refname:short)` does not work
+		for _, ref := range refs {
+			if len(ref) == 0 {
+				continue
+			}
 
-	return &pb.ListBranchNamesContainingCommitResponse{BranchNames: branchNames}, err
+			trimmed = append(trimmed, bytes.TrimPrefix(ref, []byte(dirPrefix)))
+		}
+		return stream.Send(&pb.ListBranchNamesContainingCommitResponse{BranchNames: trimmed})
+	}
+
+	return findRefs(stream.Context(), writer, in.Repository, []string{dirPrefix},
+		&findRefsOpts{
+			cmdArgs: []string{
+				fmt.Sprintf("--count=%d", in.GetLimit()),
+				fmt.Sprintf("--contains=%s", in.GetCommitId()),
+				"--format=%(refname)"},
+			delim: []byte("\n"),
+		})
 }
 
-// ListTagNamesContainingCommit returns the first 1000 tags bases on alphabetical
-// order, which contain the SHA1 passed as argument
-func (*server) ListTagNamesContainingCommit(ctx context.Context, in *pb.ListTagNamesContainingCommitRequest) (*pb.ListTagNamesContainingCommitResponse, error) {
+// ListTagNamesContainingCommit returns a maximum of in.GetLimit() Tag names
+// which contain the SHA1 passed as argument
+func (*server) ListTagNamesContainingCommit(in *pb.ListTagNamesContainingCommitRequest, stream pb.RefService_ListTagNamesContainingCommitServer) error {
 	if !validCommitID(in.GetCommitId()) {
-		return nil, grpc.Errorf(codes.InvalidArgument, "commit id was not a 40 character hexidecimal")
+		return grpc.Errorf(codes.InvalidArgument, "commit id was not a 40 character hexidecimal")
 	}
 
-	tagNames, err := findRefsContainingCommit(ctx, in.Repository, in.CommitId, "refs/tags/")
+	dirPrefix := "refs/tags/"
+	writer := func(refs [][]byte) error {
+		trimmed := make([][]byte, len(refs)-1)
+		// Filter out empty lines and trim the prefixes
+		// TODO find out why `%(refname:short)` does not work
+		for _, ref := range refs {
+			if len(ref) == 0 {
+				continue
+			}
 
-	return &pb.ListTagNamesContainingCommitResponse{TagNames: tagNames}, err
+			trimmed = append(trimmed, bytes.TrimPrefix(ref, []byte(dirPrefix)))
+		}
+		return stream.Send(&pb.ListTagNamesContainingCommitResponse{TagNames: trimmed})
+	}
+
+	return findRefs(stream.Context(), writer, in.Repository, []string{dirPrefix},
+		&findRefsOpts{
+			cmdArgs: []string{
+				fmt.Sprintf("--count=%d", in.GetLimit()),
+				fmt.Sprintf("--contains=%s", in.GetCommitId()),
+				"--format=%(refname)",
+			},
+			delim: []byte("\n"),
+		})
 }
 
 func validCommitID(id string) bool {
@@ -301,37 +342,4 @@ func validCommitID(id string) bool {
 	}
 
 	return true
-}
-
-func findRefsContainingCommit(ctx context.Context, repo *pb.Repository, commitID, dirPrefix string) ([][]byte, error) {
-	args := []string{
-		"for-each-ref",
-		"--contains=" + commitID,
-		"--count=1000",
-		"--format=%(refname)",
-		dirPrefix,
-	}
-
-	cmd, err := git.Command(ctx, repo, args...)
-	if err != nil {
-		return nil, grpc.Errorf(codes.Internal, err.Error())
-	}
-
-	buff, err := ioutil.ReadAll(cmd)
-	if err != nil {
-		return nil, grpc.Errorf(codes.Internal, err.Error())
-	}
-
-	lines := bytes.Split(buff, []byte("\n"))
-	filteredLines := make([][]byte, len(lines))
-
-	for _, line := range lines {
-		if len(line) != 0 {
-			refName := bytes.TrimPrefix(line, []byte(dirPrefix))
-
-			filteredLines = append(filteredLines, refName)
-		}
-	}
-
-	return filteredLines, nil
 }

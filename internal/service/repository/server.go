@@ -14,3 +14,7 @@ type server struct {
 func NewServer(rs *rubyserver.Server) pb.RepositoryServiceServer {
 	return &server{rs}
 }
+
+func (s *server) CreateRepositoryFromBundle(pb.RepositoryService_CreateRepositoryFromBundleServer) error {
+	return nil
+}

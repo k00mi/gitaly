@@ -950,6 +950,7 @@ func TestListTagNamesContainingCommit(t *testing.T) {
 		description string
 		commitID    string
 		code        codes.Code
+		limit       uint32
 		tags        []string
 	}{
 		{
@@ -961,13 +962,20 @@ func TestListTagNamesContainingCommit(t *testing.T) {
 			description: "current master HEAD",
 			commitID:    "e63f41fe459e62e1228fcef60d7189127aeba95a",
 			code:        codes.OK,
-			tags:        []string{""},
+			tags:        []string{},
 		},
 		{
 			description: "init commit",
 			commitID:    "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
 			code:        codes.OK,
 			tags:        []string{"v1.0.0", "v1.1.0"},
+		},
+		{
+			description: "limited response size",
+			commitID:    "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
+			code:        codes.OK,
+			limit:       1,
+			tags:        []string{"v1.0.0"},
 		},
 	}
 
@@ -979,18 +987,23 @@ func TestListTagNamesContainingCommit(t *testing.T) {
 			request := &pb.ListTagNamesContainingCommitRequest{Repository: testRepo, CommitId: tc.commitID}
 
 			c, err := client.ListTagNamesContainingCommit(ctx, request)
-			if tc.code != codes.OK {
-				testhelper.AssertGrpcError(t, err, tc.code, "")
-
-				return
-			}
 			require.NoError(t, err)
 
-			foundTags := c.GetTagNames()
-
 			set := make(map[string]bool)
-			for _, name := range foundTags {
-				set[string(name)] = true
+			for {
+				r, err := c.Recv()
+				if err == io.EOF {
+					break
+				} else if tc.code != codes.OK {
+					testhelper.AssertGrpcError(t, err, tc.code, "")
+
+					return
+				}
+				require.NoError(t, err)
+
+				for _, name := range r.GetTagNames() {
+					set[string(name)] = true
+				}
 			}
 
 			// Test for inclusion instead of equality because new refs
@@ -1033,7 +1046,6 @@ func TestListBranchNamesContainingCommit(t *testing.T) {
 			description: "init commit",
 			commitID:    "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
 			code:        codes.OK,
-			// subset to keep it readable
 			branches: []string{
 				"deleted-image-test",
 				"ends-with.json",
@@ -1055,18 +1067,23 @@ func TestListBranchNamesContainingCommit(t *testing.T) {
 			request := &pb.ListBranchNamesContainingCommitRequest{Repository: testRepo, CommitId: tc.commitID}
 
 			c, err := client.ListBranchNamesContainingCommit(ctx, request)
-			if tc.code != codes.OK {
-				testhelper.AssertGrpcError(t, err, tc.code, "")
-
-				return
-			}
 			require.NoError(t, err)
 
-			foundBranches := c.GetBranchNames()
-
 			set := make(map[string]bool)
-			for _, name := range foundBranches {
-				set[string(name)] = true
+			for {
+				r, err := c.Recv()
+				if err == io.EOF {
+					break
+				} else if tc.code != codes.OK {
+					testhelper.AssertGrpcError(t, err, tc.code, "")
+
+					return
+				}
+				require.NoError(t, err)
+
+				for _, name := range r.GetBranchNames() {
+					set[string(name)] = true
+				}
 			}
 
 			// Test for inclusion instead of equality because new refs
