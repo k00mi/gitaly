@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Update recommended and minimum git versions to 2.14.3 and 2.9.0 respectively
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/548
 - Handle binary commit messages better
   https://gitlab.com/gitlab-org/gitaly/merge_requests/577
 - Vendor gitlab_git at a03ea19332736c36ecb9
