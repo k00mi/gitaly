@@ -981,7 +981,7 @@ func TestListTagNamesContainingCommit(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 
 			request := &pb.ListTagNamesContainingCommitRequest{Repository: testRepo, CommitId: tc.commitID}
@@ -989,7 +989,7 @@ func TestListTagNamesContainingCommit(t *testing.T) {
 			c, err := client.ListTagNamesContainingCommit(ctx, request)
 			require.NoError(t, err)
 
-			set := make(map[string]bool)
+			var names []string
 			for {
 				r, err := c.Recv()
 				if err == io.EOF {
@@ -1002,15 +1002,13 @@ func TestListTagNamesContainingCommit(t *testing.T) {
 				require.NoError(t, err)
 
 				for _, name := range r.GetTagNames() {
-					set[string(name)] = true
+					names = append(names, string(name))
 				}
 			}
 
 			// Test for inclusion instead of equality because new refs
 			// will get added to the gitlab-test repo over time.
-			for _, name := range tc.tags {
-				require.True(t, set[name], fmt.Sprintf("%s was not found in %v", name, set))
-			}
+			require.Subset(t, names, tc.tags)
 		})
 	}
 }
@@ -1029,6 +1027,7 @@ func TestListBranchNamesContainingCommit(t *testing.T) {
 		description string
 		commitID    string
 		code        codes.Code
+		limit       uint32
 		branches    []string
 	}{
 		{
@@ -1057,6 +1056,13 @@ func TestListBranchNamesContainingCommit(t *testing.T) {
 				"100%branch",
 			},
 		},
+		{
+			description: "init commit",
+			commitID:    "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
+			code:        codes.OK,
+			limit:       1,
+			branches:    []string{"'test'"},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -1069,7 +1075,7 @@ func TestListBranchNamesContainingCommit(t *testing.T) {
 			c, err := client.ListBranchNamesContainingCommit(ctx, request)
 			require.NoError(t, err)
 
-			set := make(map[string]bool)
+			var names []string
 			for {
 				r, err := c.Recv()
 				if err == io.EOF {
@@ -1082,15 +1088,13 @@ func TestListBranchNamesContainingCommit(t *testing.T) {
 				require.NoError(t, err)
 
 				for _, name := range r.GetBranchNames() {
-					set[string(name)] = true
+					names = append(names, string(name))
 				}
 			}
 
 			// Test for inclusion instead of equality because new refs
 			// will get added to the gitlab-test repo over time.
-			for _, name := range tc.branches {
-				require.True(t, set[name], fmt.Sprintf("%s was not found in %v", name, set))
-			}
+			require.Subset(t, names, tc.branches)
 		})
 	}
 }

@@ -10,7 +10,6 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 
 	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -275,31 +274,22 @@ func (s *server) FindAllBranches(in *pb.FindAllBranchesRequest, stream pb.RefSer
 // which contain the SHA1 passed as argument
 func (*server) ListBranchNamesContainingCommit(in *pb.ListBranchNamesContainingCommitRequest, stream pb.RefService_ListBranchNamesContainingCommitServer) error {
 	if !validCommitID(in.GetCommitId()) {
-		return grpc.Errorf(codes.InvalidArgument, "commit id was not a 40 character hexidecimal")
+		return status.Errorf(codes.InvalidArgument, "commit id was not a 40 character hexidecimal")
 	}
 
-	dirPrefix := "refs/heads/"
+	args := []string{fmt.Sprintf("--contains=%s", in.GetCommitId()), "--format=%(refname:strip=2)"}
+	if in.GetLimit() != 0 {
+		args = append(args, fmt.Sprintf("--count=%d", in.GetLimit()))
+	}
+
 	writer := func(refs [][]byte) error {
-		trimmed := make([][]byte, len(refs)-1)
-		// Filter out empty lines and trim the prefixes
-		// TODO find out why `%(refname:short)` does not work
-		for _, ref := range refs {
-			if len(ref) == 0 {
-				continue
-			}
-
-			trimmed = append(trimmed, bytes.TrimPrefix(ref, []byte(dirPrefix)))
-		}
-		return stream.Send(&pb.ListBranchNamesContainingCommitResponse{BranchNames: trimmed})
+		return stream.Send(&pb.ListBranchNamesContainingCommitResponse{BranchNames: refs})
 	}
 
-	return findRefs(stream.Context(), writer, in.Repository, []string{dirPrefix},
+	return findRefs(stream.Context(), writer, in.Repository, []string{"refs/heads"},
 		&findRefsOpts{
-			cmdArgs: []string{
-				fmt.Sprintf("--count=%d", in.GetLimit()),
-				fmt.Sprintf("--contains=%s", in.GetCommitId()),
-				"--format=%(refname)"},
-			delim: []byte("\n"),
+			cmdArgs: args,
+			delim:   []byte("\n"),
 		})
 }
 
@@ -307,32 +297,22 @@ func (*server) ListBranchNamesContainingCommit(in *pb.ListBranchNamesContainingC
 // which contain the SHA1 passed as argument
 func (*server) ListTagNamesContainingCommit(in *pb.ListTagNamesContainingCommitRequest, stream pb.RefService_ListTagNamesContainingCommitServer) error {
 	if !validCommitID(in.GetCommitId()) {
-		return grpc.Errorf(codes.InvalidArgument, "commit id was not a 40 character hexidecimal")
+		return status.Errorf(codes.InvalidArgument, "commit id was not a 40 character hexidecimal")
 	}
 
-	dirPrefix := "refs/tags/"
+	args := []string{fmt.Sprintf("--contains=%s", in.GetCommitId()), "--format=%(refname:strip=2)"}
+	if in.GetLimit() != 0 {
+		args = append(args, fmt.Sprintf("--count=%d", in.GetLimit()))
+	}
+
 	writer := func(refs [][]byte) error {
-		trimmed := make([][]byte, len(refs)-1)
-		// Filter out empty lines and trim the prefixes
-		// TODO find out why `%(refname:short)` does not work
-		for _, ref := range refs {
-			if len(ref) == 0 {
-				continue
-			}
-
-			trimmed = append(trimmed, bytes.TrimPrefix(ref, []byte(dirPrefix)))
-		}
-		return stream.Send(&pb.ListTagNamesContainingCommitResponse{TagNames: trimmed})
+		return stream.Send(&pb.ListTagNamesContainingCommitResponse{TagNames: refs})
 	}
 
-	return findRefs(stream.Context(), writer, in.Repository, []string{dirPrefix},
+	return findRefs(stream.Context(), writer, in.Repository, []string{"refs/tags"},
 		&findRefsOpts{
-			cmdArgs: []string{
-				fmt.Sprintf("--count=%d", in.GetLimit()),
-				fmt.Sprintf("--contains=%s", in.GetCommitId()),
-				"--format=%(refname)",
-			},
-			delim: []byte("\n"),
+			cmdArgs: args,
+			delim:   []byte("\n"),
 		})
 }
 
