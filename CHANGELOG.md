@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.74.0
 
 - Implement CreateRepositoryFromBundle RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/557
