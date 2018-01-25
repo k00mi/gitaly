@@ -13,43 +13,28 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/version"
 
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
-func TestGitalyServerVersion(t *testing.T) {
+func TestGitalyServerInfo(t *testing.T) {
 	server, serverSocketPath := runServer(t)
 	defer server.Stop()
 
 	client, conn := newServerClient(t, serverSocketPath)
 	defer conn.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	c, err := client.ServerVersion(ctx, &pb.ServerVersionRequest{})
+	c, err := client.ServerInfo(ctx, &pb.ServerInfoRequest{})
 	require.NoError(t, err)
 
-	require.Equal(t, version.GetVersion(), c.GetVersion())
-}
+	require.Equal(t, version.GetVersion(), c.GetServerVersion())
 
-func TestGitalyServerGitVersion(t *testing.T) {
-	server, serverSocketPath := runServer(t)
-	defer server.Stop()
-
-	client, conn := newServerClient(t, serverSocketPath)
-	defer conn.Close()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	c, err := client.ServerGitVersion(ctx, &pb.ServerGitVersionRequest{})
+	gitVersion, err := git.Version()
 	require.NoError(t, err)
-
-	version, err := git.Version()
-	require.NoError(t, err)
-	require.Equal(t, version, c.GetVersion())
+	require.Equal(t, gitVersion, c.GetGitVersion())
 }
 
 func runServer(t *testing.T) (*grpc.Server, string) {

@@ -6,6 +6,7 @@ import (
 
 type server struct{}
 
+// NewServer creates a new instance of a grpc ServerServiceServer
 func NewServer() pb.ServerServiceServer {
 	return &server{}
 }
