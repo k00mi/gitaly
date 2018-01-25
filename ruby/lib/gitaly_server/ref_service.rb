@@ -96,9 +96,17 @@ module GitalyServer
       bridge_exceptions do
         repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
 
-        repo.delete_all_refs_except(request.except_with_prefix)
+        begin
+          if request.refs.any?
+            repo.delete_refs(*request.refs)
+          else
+            repo.delete_all_refs_except(request.except_with_prefix)
+          end
 
-        Gitaly::DeleteRefsResponse.new
+          Gitaly::DeleteRefsResponse.new
+        rescue Gitlab::Git::Repository::GitError => e
+          Gitaly::DeleteRefsResponse.new(git_error: e.message)
+        end
       end
     end
   end

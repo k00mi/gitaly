@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Add support for Refs field in DeleteRefs RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/565
 - Wait between ruby worker removal from pool and graceful shutdown
   https://gitlab.com/gitlab-org/gitaly/merge_requests/567
 - Register the ServerService
@@ -10,7 +12,7 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/571
 - Vendor gitlab_git at 4376be84ce18cde22febc50
   https://gitlab.com/gitlab-org/gitaly/merge_requests/570
-  
+
 v0.75.0
 
 - Implement WikiGetFormattedData RPC
