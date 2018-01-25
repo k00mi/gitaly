@@ -17,59 +17,41 @@ var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
-type ServerVersionRequest struct {
+type ServerInfoRequest struct {
 }
 
-func (m *ServerVersionRequest) Reset()                    { *m = ServerVersionRequest{} }
-func (m *ServerVersionRequest) String() string            { return proto.CompactTextString(m) }
-func (*ServerVersionRequest) ProtoMessage()               {}
-func (*ServerVersionRequest) Descriptor() ([]byte, []int) { return fileDescriptor11, []int{0} }
+func (m *ServerInfoRequest) Reset()                    { *m = ServerInfoRequest{} }
+func (m *ServerInfoRequest) String() string            { return proto.CompactTextString(m) }
+func (*ServerInfoRequest) ProtoMessage()               {}
+func (*ServerInfoRequest) Descriptor() ([]byte, []int) { return fileDescriptor11, []int{0} }
 
-type ServerVersionResponse struct {
-	Version string `protobuf:"bytes,1,opt,name=version" json:"version,omitempty"`
+type ServerInfoResponse struct {
+	ServerVersion string `protobuf:"bytes,1,opt,name=server_version,json=serverVersion" json:"server_version,omitempty"`
+	GitVersion    string `protobuf:"bytes,2,opt,name=git_version,json=gitVersion" json:"git_version,omitempty"`
 }
 
-func (m *ServerVersionResponse) Reset()                    { *m = ServerVersionResponse{} }
-func (m *ServerVersionResponse) String() string            { return proto.CompactTextString(m) }
-func (*ServerVersionResponse) ProtoMessage()               {}
-func (*ServerVersionResponse) Descriptor() ([]byte, []int) { return fileDescriptor11, []int{1} }
+func (m *ServerInfoResponse) Reset()                    { *m = ServerInfoResponse{} }
+func (m *ServerInfoResponse) String() string            { return proto.CompactTextString(m) }
+func (*ServerInfoResponse) ProtoMessage()               {}
+func (*ServerInfoResponse) Descriptor() ([]byte, []int) { return fileDescriptor11, []int{1} }
 
-func (m *ServerVersionResponse) GetVersion() string {
+func (m *ServerInfoResponse) GetServerVersion() string {
 	if m != nil {
-		return m.Version
+		return m.ServerVersion
 	}
 	return ""
 }
 
-type ServerGitVersionRequest struct {
-}
-
-func (m *ServerGitVersionRequest) Reset()                    { *m = ServerGitVersionRequest{} }
-func (m *ServerGitVersionRequest) String() string            { return proto.CompactTextString(m) }
-func (*ServerGitVersionRequest) ProtoMessage()               {}
-func (*ServerGitVersionRequest) Descriptor() ([]byte, []int) { return fileDescriptor11, []int{2} }
-
-type ServerGitVersionResponse struct {
-	Version string `protobuf:"bytes,1,opt,name=version" json:"version,omitempty"`
-}
-
-func (m *ServerGitVersionResponse) Reset()                    { *m = ServerGitVersionResponse{} }
-func (m *ServerGitVersionResponse) String() string            { return proto.CompactTextString(m) }
-func (*ServerGitVersionResponse) ProtoMessage()               {}
-func (*ServerGitVersionResponse) Descriptor() ([]byte, []int) { return fileDescriptor11, []int{3} }
-
-func (m *ServerGitVersionResponse) GetVersion() string {
+func (m *ServerInfoResponse) GetGitVersion() string {
 	if m != nil {
-		return m.Version
+		return m.GitVersion
 	}
 	return ""
 }
 
 func init() {
-	proto.RegisterType((*ServerVersionRequest)(nil), "gitaly.ServerVersionRequest")
-	proto.RegisterType((*ServerVersionResponse)(nil), "gitaly.ServerVersionResponse")
-	proto.RegisterType((*ServerGitVersionRequest)(nil), "gitaly.ServerGitVersionRequest")
-	proto.RegisterType((*ServerGitVersionResponse)(nil), "gitaly.ServerGitVersionResponse")
+	proto.RegisterType((*ServerInfoRequest)(nil), "gitaly.ServerInfoRequest")
+	proto.RegisterType((*ServerInfoResponse)(nil), "gitaly.ServerInfoResponse")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -83,8 +65,7 @@ const _ = grpc.SupportPackageIsVersion4
 // Client API for ServerService service
 
 type ServerServiceClient interface {
-	ServerVersion(ctx context.Context, in *ServerVersionRequest, opts ...grpc.CallOption) (*ServerVersionResponse, error)
-	ServerGitVersion(ctx context.Context, in *ServerGitVersionRequest, opts ...grpc.CallOption) (*ServerGitVersionResponse, error)
+	ServerInfo(ctx context.Context, in *ServerInfoRequest, opts ...grpc.CallOption) (*ServerInfoResponse, error)
 }
 
 type serverServiceClient struct {
@@ -95,18 +76,9 @@ func NewServerServiceClient(cc *grpc.ClientConn) ServerServiceClient {
 	return &serverServiceClient{cc}
 }
 
-func (c *serverServiceClient) ServerVersion(ctx context.Context, in *ServerVersionRequest, opts ...grpc.CallOption) (*ServerVersionResponse, error) {
-	out := new(ServerVersionResponse)
-	err := grpc.Invoke(ctx, "/gitaly.ServerService/ServerVersion", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *serverServiceClient) ServerGitVersion(ctx context.Context, in *ServerGitVersionRequest, opts ...grpc.CallOption) (*ServerGitVersionResponse, error) {
-	out := new(ServerGitVersionResponse)
-	err := grpc.Invoke(ctx, "/gitaly.ServerService/ServerGitVersion", in, out, c.cc, opts...)
+func (c *serverServiceClient) ServerInfo(ctx context.Context, in *ServerInfoRequest, opts ...grpc.CallOption) (*ServerInfoResponse, error) {
+	out := new(ServerInfoResponse)
+	err := grpc.Invoke(ctx, "/gitaly.ServerService/ServerInfo", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -116,46 +88,27 @@ func (c *serverServiceClient) ServerGitVersion(ctx context.Context, in *ServerGi
 // Server API for ServerService service
 
 type ServerServiceServer interface {
-	ServerVersion(context.Context, *ServerVersionRequest) (*ServerVersionResponse, error)
-	ServerGitVersion(context.Context, *ServerGitVersionRequest) (*ServerGitVersionResponse, error)
+	ServerInfo(context.Context, *ServerInfoRequest) (*ServerInfoResponse, error)
 }
 
 func RegisterServerServiceServer(s *grpc.Server, srv ServerServiceServer) {
 	s.RegisterService(&_ServerService_serviceDesc, srv)
 }
 
-func _ServerService_ServerVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ServerVersionRequest)
+func _ServerService_ServerInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ServerInfoRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ServerServiceServer).ServerVersion(ctx, in)
+		return srv.(ServerServiceServer).ServerInfo(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/gitaly.ServerService/ServerVersion",
+		FullMethod: "/gitaly.ServerService/ServerInfo",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServerServiceServer).ServerVersion(ctx, req.(*ServerVersionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ServerService_ServerGitVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ServerGitVersionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ServerServiceServer).ServerGitVersion(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/gitaly.ServerService/ServerGitVersion",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServerServiceServer).ServerGitVersion(ctx, req.(*ServerGitVersionRequest))
+		return srv.(ServerServiceServer).ServerInfo(ctx, req.(*ServerInfoRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -165,12 +118,8 @@ var _ServerService_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*ServerServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "ServerVersion",
-			Handler:    _ServerService_ServerVersion_Handler,
-		},
-		{
-			MethodName: "ServerGitVersion",
-			Handler:    _ServerService_ServerGitVersion_Handler,
+			MethodName: "ServerInfo",
+			Handler:    _ServerService_ServerInfo_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -180,16 +129,15 @@ var _ServerService_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("server.proto", fileDescriptor11) }
 
 var fileDescriptor11 = []byte{
-	// 173 bytes of a gzipped FileDescriptorProto
+	// 160 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x29, 0x4e, 0x2d, 0x2a,
 	0x4b, 0x2d, 0xd2, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x4b, 0xcf, 0x2c, 0x49, 0xcc, 0xa9,
-	0x54, 0x12, 0xe3, 0x12, 0x09, 0x06, 0x8b, 0x87, 0xa5, 0x16, 0x15, 0x67, 0xe6, 0xe7, 0x05, 0xa5,
-	0x16, 0x96, 0xa6, 0x16, 0x97, 0x28, 0x19, 0x72, 0x89, 0xa2, 0x89, 0x17, 0x17, 0xe4, 0xe7, 0x15,
-	0xa7, 0x0a, 0x49, 0x70, 0xb1, 0x97, 0x41, 0x84, 0x24, 0x18, 0x15, 0x18, 0x35, 0x38, 0x83, 0x60,
-	0x5c, 0x25, 0x49, 0x2e, 0x71, 0x88, 0x16, 0xf7, 0xcc, 0x12, 0x34, 0xd3, 0x4c, 0xb8, 0x24, 0x30,
-	0xa5, 0x08, 0x19, 0x68, 0xb4, 0x83, 0x91, 0x8b, 0x17, 0xa2, 0x0d, 0x44, 0x66, 0x26, 0xa7, 0x0a,
-	0xf9, 0xc1, 0x04, 0xa0, 0x86, 0x08, 0xc9, 0xe8, 0x41, 0xfc, 0xa1, 0x87, 0xcd, 0x13, 0x52, 0xb2,
-	0x38, 0x64, 0x21, 0x36, 0x2b, 0x31, 0x08, 0x85, 0x73, 0x09, 0xa0, 0xbb, 0x4b, 0x48, 0x1e, 0x55,
-	0x13, 0x86, 0x67, 0xa4, 0x14, 0x70, 0x2b, 0x80, 0x19, 0x9c, 0xc4, 0x06, 0x0e, 0x65, 0x63, 0x40,
-	0x00, 0x00, 0x00, 0xff, 0xff, 0x03, 0xf8, 0x98, 0x0b, 0x75, 0x01, 0x00, 0x00,
+	0x54, 0x12, 0xe6, 0x12, 0x0c, 0x06, 0x8b, 0x7b, 0xe6, 0xa5, 0xe5, 0x07, 0xa5, 0x16, 0x96, 0xa6,
+	0x16, 0x97, 0x28, 0xc5, 0x70, 0x09, 0x21, 0x0b, 0x16, 0x17, 0xe4, 0xe7, 0x15, 0xa7, 0x0a, 0xa9,
+	0x72, 0xf1, 0x41, 0x8c, 0x88, 0x2f, 0x4b, 0x2d, 0x2a, 0xce, 0xcc, 0xcf, 0x93, 0x60, 0x54, 0x60,
+	0xd4, 0xe0, 0x0c, 0xe2, 0x85, 0x88, 0x86, 0x41, 0x04, 0x85, 0xe4, 0xb9, 0xb8, 0xd3, 0x33, 0x4b,
+	0xe0, 0x6a, 0x98, 0xc0, 0x6a, 0xb8, 0xd2, 0x33, 0x4b, 0xa0, 0x0a, 0x8c, 0xc2, 0xb8, 0x78, 0x21,
+	0xa6, 0x83, 0xc8, 0xcc, 0xe4, 0x54, 0x21, 0x57, 0x2e, 0x2e, 0x84, 0x75, 0x42, 0x92, 0x7a, 0x10,
+	0xa7, 0xe9, 0x61, 0xb8, 0x4b, 0x4a, 0x0a, 0x9b, 0x14, 0xc4, 0x75, 0x4a, 0x0c, 0x49, 0x6c, 0x60,
+	0x9f, 0x19, 0x03, 0x02, 0x00, 0x00, 0xff, 0xff, 0xa0, 0x30, 0xe2, 0x5e, 0xe9, 0x00, 0x00, 0x00,
 }

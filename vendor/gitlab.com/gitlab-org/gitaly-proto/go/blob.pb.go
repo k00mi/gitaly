@@ -201,10 +201,8 @@ It has these top-level messages:
 	WriteConfigResponse
 	CreateRepositoryFromBundleRequest
 	CreateRepositoryFromBundleResponse
-	ServerVersionRequest
-	ServerVersionResponse
-	ServerGitVersionRequest
-	ServerGitVersionResponse
+	ServerInfoRequest
+	ServerInfoResponse
 	Repository
 	GitCommit
 	CommitAuthor
