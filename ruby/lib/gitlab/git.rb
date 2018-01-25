@@ -65,7 +65,7 @@ module Gitlab
         @gl_repository = gl_repository
         @gitlab_projects = gitlab_projects
         @rugged = Rugged::Repository.new(path, alternates: alt_dirs)
-        @attributes = Gitlab::Git::Attributes.new(path)
+        @attributes = Gitlab::Git::InfoAttributes.new(path)
       end
 
       # Bypass the CircuitBreaker class which needs Redis
