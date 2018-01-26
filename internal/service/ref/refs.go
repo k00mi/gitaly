@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -270,10 +270,56 @@ func (s *server) FindAllBranches(in *pb.FindAllBranchesRequest, stream pb.RefSer
 	return findRefs(stream.Context(), writer, in.Repository, patterns, opts)
 }
 
-func (*server) ListBranchNamesContainingCommit(*pb.ListBranchNamesContainingCommitRequest, pb.RefService_ListBranchNamesContainingCommitServer) error {
-	return helper.Unimplemented
+// ListBranchNamesContainingCommit returns a maximum of in.GetLimit() Branch names
+// which contain the SHA1 passed as argument
+func (*server) ListBranchNamesContainingCommit(in *pb.ListBranchNamesContainingCommitRequest, stream pb.RefService_ListBranchNamesContainingCommitServer) error {
+	if !validCommitID(in.GetCommitId()) {
+		return status.Errorf(codes.InvalidArgument, "commit id was not a 40 character hexidecimal")
+	}
+
+	args := []string{fmt.Sprintf("--contains=%s", in.GetCommitId()), "--format=%(refname:strip=2)"}
+	if in.GetLimit() != 0 {
+		args = append(args, fmt.Sprintf("--count=%d", in.GetLimit()))
+	}
+
+	writer := func(refs [][]byte) error {
+		return stream.Send(&pb.ListBranchNamesContainingCommitResponse{BranchNames: refs})
+	}
+
+	return findRefs(stream.Context(), writer, in.Repository, []string{"refs/heads"},
+		&findRefsOpts{
+			cmdArgs: args,
+			delim:   []byte("\n"),
+		})
 }
 
-func (*server) ListTagNamesContainingCommit(*pb.ListTagNamesContainingCommitRequest, pb.RefService_ListTagNamesContainingCommitServer) error {
-	return helper.Unimplemented
+// ListTagNamesContainingCommit returns a maximum of in.GetLimit() Tag names
+// which contain the SHA1 passed as argument
+func (*server) ListTagNamesContainingCommit(in *pb.ListTagNamesContainingCommitRequest, stream pb.RefService_ListTagNamesContainingCommitServer) error {
+	if !validCommitID(in.GetCommitId()) {
+		return status.Errorf(codes.InvalidArgument, "commit id was not a 40 character hexidecimal")
+	}
+
+	args := []string{fmt.Sprintf("--contains=%s", in.GetCommitId()), "--format=%(refname:strip=2)"}
+	if in.GetLimit() != 0 {
+		args = append(args, fmt.Sprintf("--count=%d", in.GetLimit()))
+	}
+
+	writer := func(refs [][]byte) error {
+		return stream.Send(&pb.ListTagNamesContainingCommitResponse{TagNames: refs})
+	}
+
+	return findRefs(stream.Context(), writer, in.Repository, []string{"refs/tags"},
+		&findRefsOpts{
+			cmdArgs: args,
+			delim:   []byte("\n"),
+		})
+}
+
+func validCommitID(id string) bool {
+	if match, err := regexp.MatchString(`\A[0-9a-f]{40}\z`, id); !match || err != nil {
+		return false
+	}
+
+	return true
 }

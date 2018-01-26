@@ -935,3 +935,166 @@ func readFindAllBranchesResponsesFromClient(t *testing.T, c pb.RefService_FindAl
 
 	return
 }
+
+func TestListTagNamesContainingCommit(t *testing.T) {
+	server, serverSocketPath := runRefServiceServer(t)
+	defer server.Stop()
+
+	client, conn := newRefServiceClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	testCases := []struct {
+		description string
+		commitID    string
+		code        codes.Code
+		limit       uint32
+		tags        []string
+	}{
+		{
+			description: "no commit ID",
+			commitID:    "",
+			code:        codes.InvalidArgument,
+		},
+		{
+			description: "current master HEAD",
+			commitID:    "e63f41fe459e62e1228fcef60d7189127aeba95a",
+			code:        codes.OK,
+			tags:        []string{},
+		},
+		{
+			description: "init commit",
+			commitID:    "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
+			code:        codes.OK,
+			tags:        []string{"v1.0.0", "v1.1.0"},
+		},
+		{
+			description: "limited response size",
+			commitID:    "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
+			code:        codes.OK,
+			limit:       1,
+			tags:        []string{"v1.0.0"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			request := &pb.ListTagNamesContainingCommitRequest{Repository: testRepo, CommitId: tc.commitID}
+
+			c, err := client.ListTagNamesContainingCommit(ctx, request)
+			require.NoError(t, err)
+
+			var names []string
+			for {
+				r, err := c.Recv()
+				if err == io.EOF {
+					break
+				} else if tc.code != codes.OK {
+					testhelper.AssertGrpcError(t, err, tc.code, "")
+
+					return
+				}
+				require.NoError(t, err)
+
+				for _, name := range r.GetTagNames() {
+					names = append(names, string(name))
+				}
+			}
+
+			// Test for inclusion instead of equality because new refs
+			// will get added to the gitlab-test repo over time.
+			require.Subset(t, names, tc.tags)
+		})
+	}
+}
+
+func TestListBranchNamesContainingCommit(t *testing.T) {
+	server, serverSocketPath := runRefServiceServer(t)
+	defer server.Stop()
+
+	client, conn := newRefServiceClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	testCases := []struct {
+		description string
+		commitID    string
+		code        codes.Code
+		limit       uint32
+		branches    []string
+	}{
+		{
+			description: "no commit ID",
+			commitID:    "",
+			code:        codes.InvalidArgument,
+		},
+		{
+			description: "current master HEAD",
+			commitID:    "e63f41fe459e62e1228fcef60d7189127aeba95a",
+			code:        codes.OK,
+			branches:    []string{"master"},
+		},
+		{
+			description: "init commit",
+			commitID:    "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
+			code:        codes.OK,
+			branches: []string{
+				"deleted-image-test",
+				"ends-with.json",
+				"master",
+				"conflict-non-utf8",
+				"'test'",
+				"ʕ•ᴥ•ʔ",
+				"'test'",
+				"100%branch",
+			},
+		},
+		{
+			description: "init commit",
+			commitID:    "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
+			code:        codes.OK,
+			limit:       1,
+			branches:    []string{"'test'"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			request := &pb.ListBranchNamesContainingCommitRequest{Repository: testRepo, CommitId: tc.commitID}
+
+			c, err := client.ListBranchNamesContainingCommit(ctx, request)
+			require.NoError(t, err)
+
+			var names []string
+			for {
+				r, err := c.Recv()
+				if err == io.EOF {
+					break
+				} else if tc.code != codes.OK {
+					testhelper.AssertGrpcError(t, err, tc.code, "")
+
+					return
+				}
+				require.NoError(t, err)
+
+				for _, name := range r.GetBranchNames() {
+					names = append(names, string(name))
+				}
+			}
+
+			// Test for inclusion instead of equality because new refs
+			// will get added to the gitlab-test repo over time.
+			require.Subset(t, names, tc.branches)
+		})
+	}
+}
