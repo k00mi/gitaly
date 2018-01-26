@@ -16,6 +16,7 @@ It is generated from these files:
 	ref.proto
 	remote.proto
 	repository-service.proto
+	server.proto
 	shared.proto
 	smarthttp.proto
 	ssh.proto
@@ -200,6 +201,8 @@ It has these top-level messages:
 	WriteConfigResponse
 	CreateRepositoryFromBundleRequest
 	CreateRepositoryFromBundleResponse
+	ServerInfoRequest
+	ServerInfoResponse
 	Repository
 	GitCommit
 	CommitAuthor

@@ -26,7 +26,7 @@ type WikiCommitDetails struct {
 func (m *WikiCommitDetails) Reset()                    { *m = WikiCommitDetails{} }
 func (m *WikiCommitDetails) String() string            { return proto.CompactTextString(m) }
 func (*WikiCommitDetails) ProtoMessage()               {}
-func (*WikiCommitDetails) Descriptor() ([]byte, []int) { return fileDescriptor14, []int{0} }
+func (*WikiCommitDetails) Descriptor() ([]byte, []int) { return fileDescriptor15, []int{0} }
 
 func (m *WikiCommitDetails) GetName() []byte {
 	if m != nil {
@@ -57,7 +57,7 @@ type WikiPageVersion struct {
 func (m *WikiPageVersion) Reset()                    { *m = WikiPageVersion{} }
 func (m *WikiPageVersion) String() string            { return proto.CompactTextString(m) }
 func (*WikiPageVersion) ProtoMessage()               {}
-func (*WikiPageVersion) Descriptor() ([]byte, []int) { return fileDescriptor14, []int{1} }
+func (*WikiPageVersion) Descriptor() ([]byte, []int) { return fileDescriptor15, []int{1} }
 
 func (m *WikiPageVersion) GetCommit() *GitCommit {
 	if m != nil {
@@ -89,7 +89,7 @@ type WikiPage struct {
 func (m *WikiPage) Reset()                    { *m = WikiPage{} }
 func (m *WikiPage) String() string            { return proto.CompactTextString(m) }
 func (*WikiPage) ProtoMessage()               {}
-func (*WikiPage) Descriptor() ([]byte, []int) { return fileDescriptor14, []int{2} }
+func (*WikiPage) Descriptor() ([]byte, []int) { return fileDescriptor15, []int{2} }
 
 func (m *WikiPage) GetVersion() *WikiPageVersion {
 	if m != nil {
@@ -157,7 +157,7 @@ type WikiGetPageVersionsRequest struct {
 func (m *WikiGetPageVersionsRequest) Reset()                    { *m = WikiGetPageVersionsRequest{} }
 func (m *WikiGetPageVersionsRequest) String() string            { return proto.CompactTextString(m) }
 func (*WikiGetPageVersionsRequest) ProtoMessage()               {}
-func (*WikiGetPageVersionsRequest) Descriptor() ([]byte, []int) { return fileDescriptor14, []int{3} }
+func (*WikiGetPageVersionsRequest) Descriptor() ([]byte, []int) { return fileDescriptor15, []int{3} }
 
 func (m *WikiGetPageVersionsRequest) GetRepository() *Repository {
 	if m != nil {
@@ -194,7 +194,7 @@ type WikiGetPageVersionsResponse struct {
 func (m *WikiGetPageVersionsResponse) Reset()                    { *m = WikiGetPageVersionsResponse{} }
 func (m *WikiGetPageVersionsResponse) String() string            { return proto.CompactTextString(m) }
 func (*WikiGetPageVersionsResponse) ProtoMessage()               {}
-func (*WikiGetPageVersionsResponse) Descriptor() ([]byte, []int) { return fileDescriptor14, []int{4} }
+func (*WikiGetPageVersionsResponse) Descriptor() ([]byte, []int) { return fileDescriptor15, []int{4} }
 
 func (m *WikiGetPageVersionsResponse) GetVersions() []*WikiPageVersion {
 	if m != nil {
@@ -217,7 +217,7 @@ type WikiWritePageRequest struct {
 func (m *WikiWritePageRequest) Reset()                    { *m = WikiWritePageRequest{} }
 func (m *WikiWritePageRequest) String() string            { return proto.CompactTextString(m) }
 func (*WikiWritePageRequest) ProtoMessage()               {}
-func (*WikiWritePageRequest) Descriptor() ([]byte, []int) { return fileDescriptor14, []int{5} }
+func (*WikiWritePageRequest) Descriptor() ([]byte, []int) { return fileDescriptor15, []int{5} }
 
 func (m *WikiWritePageRequest) GetRepository() *Repository {
 	if m != nil {
@@ -261,7 +261,7 @@ type WikiWritePageResponse struct {
 func (m *WikiWritePageResponse) Reset()                    { *m = WikiWritePageResponse{} }
 func (m *WikiWritePageResponse) String() string            { return proto.CompactTextString(m) }
 func (*WikiWritePageResponse) ProtoMessage()               {}
-func (*WikiWritePageResponse) Descriptor() ([]byte, []int) { return fileDescriptor14, []int{6} }
+func (*WikiWritePageResponse) Descriptor() ([]byte, []int) { return fileDescriptor15, []int{6} }
 
 func (m *WikiWritePageResponse) GetDuplicateError() []byte {
 	if m != nil {
@@ -284,7 +284,7 @@ type WikiUpdatePageRequest struct {
 func (m *WikiUpdatePageRequest) Reset()                    { *m = WikiUpdatePageRequest{} }
 func (m *WikiUpdatePageRequest) String() string            { return proto.CompactTextString(m) }
 func (*WikiUpdatePageRequest) ProtoMessage()               {}
-func (*WikiUpdatePageRequest) Descriptor() ([]byte, []int) { return fileDescriptor14, []int{7} }
+func (*WikiUpdatePageRequest) Descriptor() ([]byte, []int) { return fileDescriptor15, []int{7} }
 
 func (m *WikiUpdatePageRequest) GetRepository() *Repository {
 	if m != nil {
@@ -335,7 +335,7 @@ type WikiUpdatePageResponse struct {
 func (m *WikiUpdatePageResponse) Reset()                    { *m = WikiUpdatePageResponse{} }
 func (m *WikiUpdatePageResponse) String() string            { return proto.CompactTextString(m) }
 func (*WikiUpdatePageResponse) ProtoMessage()               {}
-func (*WikiUpdatePageResponse) Descriptor() ([]byte, []int) { return fileDescriptor14, []int{8} }
+func (*WikiUpdatePageResponse) Descriptor() ([]byte, []int) { return fileDescriptor15, []int{8} }
 
 func (m *WikiUpdatePageResponse) GetError() []byte {
 	if m != nil {
@@ -353,7 +353,7 @@ type WikiDeletePageRequest struct {
 func (m *WikiDeletePageRequest) Reset()                    { *m = WikiDeletePageRequest{} }
 func (m *WikiDeletePageRequest) String() string            { return proto.CompactTextString(m) }
 func (*WikiDeletePageRequest) ProtoMessage()               {}
-func (*WikiDeletePageRequest) Descriptor() ([]byte, []int) { return fileDescriptor14, []int{9} }
+func (*WikiDeletePageRequest) Descriptor() ([]byte, []int) { return fileDescriptor15, []int{9} }
 
 func (m *WikiDeletePageRequest) GetRepository() *Repository {
 	if m != nil {
@@ -382,7 +382,7 @@ type WikiDeletePageResponse struct {
 func (m *WikiDeletePageResponse) Reset()                    { *m = WikiDeletePageResponse{} }
 func (m *WikiDeletePageResponse) String() string            { return proto.CompactTextString(m) }
 func (*WikiDeletePageResponse) ProtoMessage()               {}
-func (*WikiDeletePageResponse) Descriptor() ([]byte, []int) { return fileDescriptor14, []int{10} }
+func (*WikiDeletePageResponse) Descriptor() ([]byte, []int) { return fileDescriptor15, []int{10} }
 
 type WikiFindPageRequest struct {
 	Repository *Repository `protobuf:"bytes,1,opt,name=repository" json:"repository,omitempty"`
@@ -394,7 +394,7 @@ type WikiFindPageRequest struct {
 func (m *WikiFindPageRequest) Reset()                    { *m = WikiFindPageRequest{} }
 func (m *WikiFindPageRequest) String() string            { return proto.CompactTextString(m) }
 func (*WikiFindPageRequest) ProtoMessage()               {}
-func (*WikiFindPageRequest) Descriptor() ([]byte, []int) { return fileDescriptor14, []int{11} }
+func (*WikiFindPageRequest) Descriptor() ([]byte, []int) { return fileDescriptor15, []int{11} }
 
 func (m *WikiFindPageRequest) GetRepository() *Repository {
 	if m != nil {
@@ -433,7 +433,7 @@ type WikiFindPageResponse struct {
 func (m *WikiFindPageResponse) Reset()                    { *m = WikiFindPageResponse{} }
 func (m *WikiFindPageResponse) String() string            { return proto.CompactTextString(m) }
 func (*WikiFindPageResponse) ProtoMessage()               {}
-func (*WikiFindPageResponse) Descriptor() ([]byte, []int) { return fileDescriptor14, []int{12} }
+func (*WikiFindPageResponse) Descriptor() ([]byte, []int) { return fileDescriptor15, []int{12} }
 
 func (m *WikiFindPageResponse) GetPage() *WikiPage {
 	if m != nil {
@@ -452,7 +452,7 @@ type WikiFindFileRequest struct {
 func (m *WikiFindFileRequest) Reset()                    { *m = WikiFindFileRequest{} }
 func (m *WikiFindFileRequest) String() string            { return proto.CompactTextString(m) }
 func (*WikiFindFileRequest) ProtoMessage()               {}
-func (*WikiFindFileRequest) Descriptor() ([]byte, []int) { return fileDescriptor14, []int{13} }
+func (*WikiFindFileRequest) Descriptor() ([]byte, []int) { return fileDescriptor15, []int{13} }
 
 func (m *WikiFindFileRequest) GetRepository() *Repository {
 	if m != nil {
@@ -486,7 +486,7 @@ type WikiFindFileResponse struct {
 func (m *WikiFindFileResponse) Reset()                    { *m = WikiFindFileResponse{} }
 func (m *WikiFindFileResponse) String() string            { return proto.CompactTextString(m) }
 func (*WikiFindFileResponse) ProtoMessage()               {}
-func (*WikiFindFileResponse) Descriptor() ([]byte, []int) { return fileDescriptor14, []int{14} }
+func (*WikiFindFileResponse) Descriptor() ([]byte, []int) { return fileDescriptor15, []int{14} }
 
 func (m *WikiFindFileResponse) GetName() []byte {
 	if m != nil {
@@ -523,7 +523,7 @@ type WikiGetAllPagesRequest struct {
 func (m *WikiGetAllPagesRequest) Reset()                    { *m = WikiGetAllPagesRequest{} }
 func (m *WikiGetAllPagesRequest) String() string            { return proto.CompactTextString(m) }
 func (*WikiGetAllPagesRequest) ProtoMessage()               {}
-func (*WikiGetAllPagesRequest) Descriptor() ([]byte, []int) { return fileDescriptor14, []int{15} }
+func (*WikiGetAllPagesRequest) Descriptor() ([]byte, []int) { return fileDescriptor15, []int{15} }
 
 func (m *WikiGetAllPagesRequest) GetRepository() *Repository {
 	if m != nil {
@@ -542,7 +542,7 @@ type WikiGetAllPagesResponse struct {
 func (m *WikiGetAllPagesResponse) Reset()                    { *m = WikiGetAllPagesResponse{} }
 func (m *WikiGetAllPagesResponse) String() string            { return proto.CompactTextString(m) }
 func (*WikiGetAllPagesResponse) ProtoMessage()               {}
-func (*WikiGetAllPagesResponse) Descriptor() ([]byte, []int) { return fileDescriptor14, []int{16} }
+func (*WikiGetAllPagesResponse) Descriptor() ([]byte, []int) { return fileDescriptor15, []int{16} }
 
 func (m *WikiGetAllPagesResponse) GetPage() *WikiPage {
 	if m != nil {
@@ -1027,9 +1027,9 @@ var _WikiService_serviceDesc = grpc.ServiceDesc{
 	Metadata: "wiki.proto",
 }
 
-func init() { proto.RegisterFile("wiki.proto", fileDescriptor14) }
+func init() { proto.RegisterFile("wiki.proto", fileDescriptor15) }
 
-var fileDescriptor14 = []byte{
+var fileDescriptor15 = []byte{
 	// 846 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x56, 0xcd, 0x72, 0xdc, 0x44,
 	0x10, 0x8e, 0xbc, 0xeb, 0x5d, 0x6d, 0xdb, 0x71, 0xc8, 0x10, 0x12, 0x45, 0x36, 0xc6, 0x35, 0x50,
