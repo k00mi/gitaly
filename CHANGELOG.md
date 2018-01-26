@@ -4,6 +4,8 @@ UNRELEASED
 
 - Implement ServerVersion and ServerGitVersion
   https://gitlab.com/gitlab-org/gitaly/merge_requests/561
+- Vendor Gitlab::Git @ f9b946c1c9756533fd95c8735803d7b54d6dd204
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/563
 
 v0.74.0
 
