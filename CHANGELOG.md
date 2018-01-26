@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.75.0
 
 - Implement WikiGetFormattedData RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/564
