@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Vendor gitlab_git at 4376be84ce18cde22febc50
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/570
+  
 v0.75.0
 
 - Implement WikiGetFormattedData RPC
