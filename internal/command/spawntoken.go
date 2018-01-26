@@ -6,11 +6,19 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
 	spawnTokens chan struct{}
 	spawnConfig SpawnConfig
+
+	spawnTimeoutCount = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "gitaly_spawn_timeout_count",
+			Help: "Number of process spawn timeouts",
+		},
+	)
 )
 
 // SpawnConfig holds configuration for command spawning timeouts and parallelism.
@@ -35,6 +43,7 @@ type SpawnConfig struct {
 func init() {
 	envconfig.MustProcess("gitaly_command_spawn", &spawnConfig)
 	spawnTokens = make(chan struct{}, spawnConfig.MaxParallel)
+	prometheus.MustRegister(spawnTimeoutCount)
 }
 
 func getSpawnToken(ctx context.Context) (putToken func(), err error) {
@@ -49,6 +58,7 @@ func getSpawnToken(ctx context.Context) (putToken func(), err error) {
 			<-spawnTokens
 		}, nil
 	case <-time.After(spawnConfig.Timeout):
+		spawnTimeoutCount.Inc()
 		return nil, spawnTimeoutError(fmt.Errorf("process spawn timed out after %v", spawnConfig.Timeout))
 	case <-ctx.Done():
 		return nil, ctx.Err()
