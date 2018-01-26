@@ -31,7 +31,7 @@ func TestSuccessfulWikiDeletePageRequest(t *testing.T) {
 	message := []byte("Delete " + pageName)
 	content := []byte("It was the best of wikis, it was the worst of wikis")
 
-	writeWikiPage(t, client, wikiRepo, pageName, content)
+	writeWikiPage(t, client, wikiRepo, createWikiPageOpts{title: pageName, content: content})
 
 	request := &pb.WikiDeletePageRequest{
 		Repository: wikiRepo,

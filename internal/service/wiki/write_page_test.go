@@ -95,7 +95,7 @@ func TestFailedWikiWritePageDueToDuplicatePage(t *testing.T) {
 		Message: []byte("Add " + pageName),
 	}
 
-	writeWikiPage(t, client, wikiRepo, pageName, content)
+	writeWikiPage(t, client, wikiRepo, createWikiPageOpts{title: pageName, content: content})
 
 	request := &pb.WikiWritePageRequest{
 		Repository:    wikiRepo,

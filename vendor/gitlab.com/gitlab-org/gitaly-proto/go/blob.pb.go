@@ -237,6 +237,8 @@ It has these top-level messages:
 	WikiFindFileResponse
 	WikiGetAllPagesRequest
 	WikiGetAllPagesResponse
+	WikiGetFormattedDataRequest
+	WikiGetFormattedDataResponse
 */
 package gitaly
 

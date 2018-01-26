@@ -29,7 +29,7 @@ func TestWikiGetPageVersionsRequest(t *testing.T) {
 	pageTitle := "WikiGetPageVersions"
 
 	content := bytes.Repeat([]byte("Mock wiki page content"), 10000)
-	writeWikiPage(t, client, wikiRepo, pageTitle, content)
+	writeWikiPage(t, client, wikiRepo, createWikiPageOpts{title: pageTitle, content: content})
 	v1cid := testhelper.MustRunCommand(t, nil, "git", "-C", wikiRepoPath, "log", "-1", "--format=%H")
 	updateWikiPage(t, client, wikiRepo, pageTitle, []byte("New content"))
 	v2cid := testhelper.MustRunCommand(t, nil, "git", "-C", wikiRepoPath, "log", "-1", "--format=%H")
@@ -117,7 +117,7 @@ func TestWikiGetPageVersionsPaginationParams(t *testing.T) {
 
 	pageTitle := "WikiGetPageVersions"
 	content := []byte("page content")
-	writeWikiPage(t, client, wikiRepo, pageTitle, content)
+	writeWikiPage(t, client, wikiRepo, createWikiPageOpts{title: pageTitle, content: content})
 
 	for i := 0; i < 25; i++ {
 		updateWikiPage(t, client, wikiRepo, pageTitle, []byte(string(i)))

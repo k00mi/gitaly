@@ -27,8 +27,8 @@ func TestSuccessfulWikiGetAllPagesRequest(t *testing.T) {
 
 	page1Name := "Page 1"
 	page2Name := "Page 2"
-	createTestWikiPage(t, client, wikiRepo, page1Name)
-	page2Commit := createTestWikiPage(t, client, wikiRepo, page2Name)
+	createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page1Name})
+	page2Commit := createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page2Name})
 	expectedPage1 := &pb.WikiPage{
 		Version:    &pb.WikiPageVersion{Commit: page2Commit, Format: "markdown"},
 		Title:      []byte(page1Name),

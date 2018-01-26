@@ -26,7 +26,7 @@ func TestSuccessfulWikiUpdatePageRequest(t *testing.T) {
 	client, conn := newWikiClient(t, serverSocketPath)
 	defer conn.Close()
 
-	writeWikiPage(t, client, wikiRepo, "Installing Gitaly", []byte("foobar"))
+	writeWikiPage(t, client, wikiRepo, createWikiPageOpts{title: "Installing Gitaly", content: []byte("foobar")})
 
 	content := bytes.Repeat([]byte("Mock wiki page content"), 10000)
 
@@ -90,7 +90,7 @@ func TestFailedWikiUpdatePageDueToValidations(t *testing.T) {
 	client, conn := newWikiClient(t, serverSocketPath)
 	defer conn.Close()
 
-	writeWikiPage(t, client, wikiRepo, "Installing Gitaly", []byte("foobar"))
+	writeWikiPage(t, client, wikiRepo, createWikiPageOpts{title: "Installing Gitaly", content: []byte("foobar")})
 
 	commitDetails := &pb.WikiCommitDetails{
 		Name:    []byte("Ahmad Sherif"),

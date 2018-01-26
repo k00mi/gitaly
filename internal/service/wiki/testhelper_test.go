@@ -22,6 +22,12 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+type createWikiPageOpts struct {
+	title   string
+	content []byte
+	format  string
+}
+
 var (
 	mockPageContent = bytes.Repeat([]byte("Mock wiki page content"), 10000)
 )
@@ -78,17 +84,31 @@ func newWikiClient(t *testing.T, serverSocketPath string) (pb.WikiServiceClient,
 	return pb.NewWikiServiceClient(conn), conn
 }
 
-func writeWikiPage(t *testing.T, client pb.WikiServiceClient, wikiRepo *pb.Repository, name string, content []byte) {
+func writeWikiPage(t *testing.T, client pb.WikiServiceClient, wikiRepo *pb.Repository, opts createWikiPageOpts) {
+	var content []byte
+	if len(opts.content) == 0 {
+		content = mockPageContent
+	} else {
+		content = opts.content
+	}
+
+	var format string
+	if len(opts.format) == 0 {
+		format = "markdown"
+	} else {
+		format = opts.format
+	}
+
 	commitDetails := &pb.WikiCommitDetails{
 		Name:    []byte("Ahmad Sherif"),
 		Email:   []byte("ahmad@gitlab.com"),
-		Message: []byte("Add " + name),
+		Message: []byte("Add " + opts.title),
 	}
 
 	request := &pb.WikiWritePageRequest{
 		Repository:    wikiRepo,
-		Name:          []byte(name),
-		Format:        "markdown",
+		Name:          []byte(opts.title),
+		Format:        format,
 		CommitDetails: commitDetails,
 		Content:       content,
 	}
@@ -165,14 +185,14 @@ func sendBytes(data []byte, chunkSize int, sender func([]byte) error) (int, erro
 	return i, nil
 }
 
-func createTestWikiPage(t *testing.T, client pb.WikiServiceClient, wikiRepo *pb.Repository, pageName string) *pb.GitCommit {
+func createTestWikiPage(t *testing.T, client pb.WikiServiceClient, wikiRepo *pb.Repository, opts createWikiPageOpts) *pb.GitCommit {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	wikiRepoPath, err := helper.GetRepoPath(wikiRepo)
 	require.NoError(t, err)
 
-	writeWikiPage(t, client, wikiRepo, pageName, mockPageContent)
+	writeWikiPage(t, client, wikiRepo, opts)
 	head1ID := testhelper.MustRunCommand(t, nil, "git", "-C", wikiRepoPath, "show", "--format=format:%H", "--no-patch", "HEAD")
 	pageCommit, err := gitlog.GetCommit(ctx, wikiRepo, string(head1ID), "")
 	require.NoError(t, err, "look up git commit after writing a wiki page")

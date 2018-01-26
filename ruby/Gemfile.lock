@@ -17,7 +17,7 @@ GEM
       multipart-post (>= 1.2, < 3)
     gemojione (3.3.0)
       json
-    gitaly-proto (0.75.0)
+    gitaly-proto (0.82.0)
       google-protobuf (~> 3.1)
       grpc (~> 1.0)
     github-linguist (4.7.6)
@@ -31,6 +31,7 @@ GEM
       diff-lcs (~> 1.1)
       mime-types (>= 1.16)
       posix-spawn (~> 0.3)
+    gitlab-markup (1.6.3)
     gitlab-styles (2.0.0)
       rubocop (~> 0.49)
       rubocop-gitlab-security (~> 0.1.0)
@@ -136,8 +137,9 @@ PLATFORMS
 
 DEPENDENCIES
   activesupport
-  gitaly-proto (~> 0.75.0)
+  gitaly-proto (~> 0.82.0)
   github-linguist (~> 4.7.0)
+  gitlab-markup (~> 1.6.2)
   gitlab-styles (~> 2.0.0)
   gollum-lib (~> 4.2)
   gollum-rugged_adapter (~> 0.4.4)

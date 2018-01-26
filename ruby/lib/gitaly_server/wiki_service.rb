@@ -213,5 +213,27 @@ module GitalyServer
         Gitaly::WikiUpdatePageResponse.new
       end
     end
+
+    def wiki_get_formatted_data(request, call)
+      bridge_exceptions do
+        repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
+        wiki = Gitlab::Git::Wiki.new(repo)
+
+        page = wiki.page(
+          title: request.title,
+          version: request.revision.presence,
+          dir: request.directory.presence
+        )
+
+        raise GRPC::NotFound unless page
+
+        Enumerator.new do |y|
+          io = StringIO.new(page.formatted_data)
+          while chunk = io.read(Gitlab.config.git.write_buffer_size)
+            y.yield Gitaly::WikiGetFormattedDataResponse.new(data: chunk)
+          end
+        end
+      end
+    end
   end
 end

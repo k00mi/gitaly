@@ -25,9 +25,9 @@ func TestSuccessfulWikiFindPageRequest(t *testing.T) {
 	page1Name := "Home Page"
 	page2Name := "Installing/Step 133-b"
 	page3Name := "Installing/Step 133-c"
-	page1Commit := createTestWikiPage(t, client, wikiRepo, page1Name)
-	createTestWikiPage(t, client, wikiRepo, page2Name)
-	page3Commit := createTestWikiPage(t, client, wikiRepo, page3Name)
+	page1Commit := createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page1Name})
+	createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page2Name})
+	page3Commit := createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page3Name})
 
 	testCases := []struct {
 		desc         string
