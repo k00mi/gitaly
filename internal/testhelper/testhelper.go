@@ -331,7 +331,9 @@ func Context() (context.Context, func()) {
 }
 
 func createRepo(t *testing.T, storagePath string) (repo *pb.Repository, repoPath, relativePath string) {
-	repoPath, err := ioutil.TempDir(storagePath, t.Name())
+	normalizedPrefix := strings.Replace(t.Name(), "/", "-", -1) //TempDir doesn't like a prefix containing slashes
+
+	repoPath, err := ioutil.TempDir(storagePath, normalizedPrefix)
 	require.NoError(t, err)
 	relativePath, err = filepath.Rel(storagePath, repoPath)
 	require.NoError(t, err)
