@@ -53,7 +53,7 @@ func TestFsckFailureSeverlyBrokenRepo(t *testing.T) {
 	c, err := client.Fsck(ctx, &pb.FsckRequest{Repository: testRepo})
 	assert.NoError(t, err)
 	assert.NotNil(t, c)
-	assert.Contains(t, string(c.GetError()), "could not find repository")
+	assert.Contains(t, string(c.GetError()), "Not a git repository")
 }
 
 func TestFsckFailureSlightlyBrokenRepo(t *testing.T) {
