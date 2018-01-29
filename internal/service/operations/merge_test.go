@@ -224,6 +224,67 @@ func TestFailedMergeConcurrentUpdate(t *testing.T) {
 	require.Equal(t, commit.Id, concurrentCommitID, "RPC should not have trampled concurrent update")
 }
 
+func TestFailedMergeDueToHooks(t *testing.T) {
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	server, serverSocketPath := runOperationServiceServer(t)
+	defer server.Stop()
+
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	prepareMergeBranch(t, testRepoPath)
+
+	hookContent := []byte("#!/bin/sh\necho 'failure'\nexit 1")
+
+	for _, hookName := range gitlabPreHooks {
+		t.Run(hookName, func(t *testing.T) {
+			require.NoError(t, os.MkdirAll(path.Join(testRepoPath, "hooks"), 0755))
+			hookPath := path.Join(testRepoPath, "hooks", hookName)
+			ioutil.WriteFile(hookPath, hookContent, 0755)
+			defer os.Remove(hookPath)
+
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			mergeBidi, err := client.UserMergeBranch(ctx)
+			require.NoError(t, err)
+
+			mergeCommitMessage := "Merged by Gitaly"
+			firstRequest := &pb.UserMergeBranchRequest{
+				Repository: testRepo,
+				User:       mergeUser,
+				CommitId:   commitToMerge,
+				Branch:     []byte(mergeBranchName),
+				Message:    []byte(mergeCommitMessage),
+			}
+
+			require.NoError(t, mergeBidi.Send(firstRequest), "send first request")
+
+			_, err = mergeBidi.Recv()
+			require.NoError(t, err, "receive first response")
+
+			require.NoError(t, mergeBidi.Send(&pb.UserMergeBranchRequest{Apply: true}), "apply merge")
+			require.NoError(t, mergeBidi.CloseSend(), "close send")
+
+			secondResponse, err := mergeBidi.Recv()
+			require.NoError(t, err, "receive second response")
+			require.Contains(t, secondResponse.PreReceiveError, "failure")
+
+			err = consumeEOF(func() error {
+				_, err = mergeBidi.Recv()
+				return err
+			})
+			require.NoError(t, err, "consume EOF")
+
+			currentBranchHead := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", mergeBranchName)
+			require.Equal(t, mergeBranchHeadBefore, strings.TrimSpace(string(currentBranchHead)), "branch head updated")
+		})
+	}
+
+}
+
 func TestSuccessfulUserFFBranchRequest(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
