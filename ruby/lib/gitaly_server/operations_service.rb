@@ -113,16 +113,20 @@ module GitalyServer
           target_branch = first_request.branch.dup
           message = first_request.message.dup
 
-          result = repository.merge(user, source_sha, target_branch, message) do |commit_id|
-            y << Gitaly::UserMergeBranchResponse.new(commit_id: commit_id)
+          begin
+            result = repository.merge(user, source_sha, target_branch, message) do |commit_id|
+              y << Gitaly::UserMergeBranchResponse.new(commit_id: commit_id)
 
-            second_request = session.next
-            unless second_request.apply
-              raise GRPC::FailedPrecondition.new('merge aborted by client')
+              second_request = session.next
+              unless second_request.apply
+                raise GRPC::FailedPrecondition.new('merge aborted by client')
+              end
             end
-          end
 
-          y << Gitaly::UserMergeBranchResponse.new(branch_update: branch_update_result(result))
+            y << Gitaly::UserMergeBranchResponse.new(branch_update: branch_update_result(result))
+          rescue Gitlab::Git::HooksService::PreReceiveError => e
+            y << Gitaly::UserMergeBranchResponse.new(pre_receive_error: e.message)
+          end
         end
       end
     end

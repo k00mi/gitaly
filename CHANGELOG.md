@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Add support for PreReceiveError in UserMergeBranch
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/573
 - Add support for Refs field in DeleteRefs RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/565
 - Wait between ruby worker removal from pool and graceful shutdown
