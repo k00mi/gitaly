@@ -13,6 +13,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/service/ref"
 	"gitlab.com/gitlab-org/gitaly/internal/service/remote"
 	"gitlab.com/gitlab-org/gitaly/internal/service/repository"
+	"gitlab.com/gitlab-org/gitaly/internal/service/server"
 	"gitlab.com/gitlab-org/gitaly/internal/service/smarthttp"
 	"gitlab.com/gitlab-org/gitaly/internal/service/ssh"
 	"gitlab.com/gitlab-org/gitaly/internal/service/wiki"
@@ -38,6 +39,7 @@ func RegisterAll(grpcServer *grpc.Server, rubyServer *rubyserver.Server) {
 	pb.RegisterWikiServiceServer(grpcServer, wiki.NewServer(rubyServer))
 	pb.RegisterConflictsServiceServer(grpcServer, conflicts.NewServer(rubyServer))
 	pb.RegisterRemoteServiceServer(grpcServer, remote.NewServer(rubyServer))
+	pb.RegisterServerServiceServer(grpcServer, server.NewServer())
 
 	healthpb.RegisterHealthServer(grpcServer, health.NewServer())
 }
