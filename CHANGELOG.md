@@ -4,6 +4,8 @@ UNRELEASED
 
 - Register the ServerService
   https://gitlab.com/gitlab-org/gitaly/merge_requests/572
+- Vendor gitlab_git at f8dd398a21b19cb7d56
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/571
 - Vendor gitlab_git at 4376be84ce18cde22febc50
   https://gitlab.com/gitlab-org/gitaly/merge_requests/570
   

@@ -55,7 +55,7 @@ module Gitlab
       def initialize(gitaly_repository, path, gl_repository, gitlab_projects, combined_alt_dirs="")
         @gitaly_repository = gitaly_repository
 
-        alt_dirs = combined_alt_dirs
+        @absolute_object_directories = combined_alt_dirs
           .split(File::PATH_SEPARATOR)
           .map { |d| File.join(path, d) }
 
@@ -64,13 +64,7 @@ module Gitlab
         @path = path
         @gl_repository = gl_repository
         @gitlab_projects = gitlab_projects
-        @rugged = Rugged::Repository.new(path, alternates: alt_dirs)
         @attributes = Gitlab::Git::InfoAttributes.new(path)
-      end
-
-      # Bypass the CircuitBreaker class which needs Redis
-      def rugged
-        @rugged
       end
 
       def circuit_breaker
@@ -79,6 +73,14 @@ module Gitlab
 
       def gitaly_repository
         @gitaly_repository
+      end
+
+      def absolute_object_directories
+        @absolute_object_directories
+      end
+
+      def relative_object_directories
+        []
       end
     end
 
