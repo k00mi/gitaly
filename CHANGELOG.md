@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.76.0
 
 - Add support for PreReceiveError in UserMergeBranch
   https://gitlab.com/gitlab-org/gitaly/merge_requests/573
