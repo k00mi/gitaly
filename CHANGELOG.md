@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.77.0
 
 - Implement RepositoryService.WriteConfig RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/554
