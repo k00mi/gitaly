@@ -1,11 +1,22 @@
 package repository
 
 import (
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"golang.org/x/net/context"
+
+	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 )
 
-func (*server) WriteConfig(context.Context, *pb.WriteConfigRequest) (*pb.WriteConfigResponse, error) {
-	return nil, helper.Unimplemented
+func (s *server) WriteConfig(ctx context.Context, req *pb.WriteConfigRequest) (*pb.WriteConfigResponse, error) {
+	client, err := s.RepositoryServiceClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	clientCtx, err := rubyserver.SetHeaders(ctx, req.GetRepository())
+	if err != nil {
+		return nil, err
+	}
+
+	return client.WriteConfig(clientCtx, req)
 }

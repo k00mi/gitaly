@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Implement RepositoryService.WriteConfig RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/554
+
 v0.76.0
 
 - Add support for PreReceiveError in UserMergeBranch
