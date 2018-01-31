@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Implement GetBlobs RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/582
 - Check info split size in catfile parser
   https://gitlab.com/gitlab-org/gitaly/merge_requests/583
 

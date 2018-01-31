@@ -48,7 +48,12 @@ func CatFile(ctx context.Context, repo *pb.Repository, handler Handler) error {
 
 	stdout := bufio.NewReader(cmd)
 
-	return handler(stdinWriter, stdout)
+	if err := handler(stdinWriter, stdout); err != nil {
+		return err
+	}
+
+	stdinWriter.Close()
+	return cmd.Wait()
 }
 
 // ParseObjectInfo reads and parses one header line from `git cat-file --batch`
