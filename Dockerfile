@@ -6,7 +6,7 @@
 # See the _support/load-cluster/docker-compose.yml for an example of how to use
 # this image
 #
-FROM registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.8-git-2.13
+FROM registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.9-git-2.14
 
 RUN mkdir -p /app/ruby
 
