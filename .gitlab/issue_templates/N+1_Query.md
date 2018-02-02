@@ -31,3 +31,5 @@ If it's not clear what RPC's add up to the N+1 violation, do a new CI run on git
 If the answer to both questions is 'no' then downgrade the priority of this issue to `v1.1`.
 
 ------------------------------------------------------------
+
+/label ~"v1.0" 
