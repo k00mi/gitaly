@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	pathPkg "path"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -80,19 +81,27 @@ func extractEntryInfoFromTreeData(stdout *bufio.Reader, commitOid, rootOid, root
 	return entries, nil
 }
 
-func treeEntries(revision, path string, stdin io.Writer, stdout *bufio.Reader) ([]*pb.TreeEntry, error) {
+func treeEntries(revision, path string, stdin io.Writer, stdout *bufio.Reader, includeRootOid bool) ([]*pb.TreeEntry, error) {
 	if path == "." {
 		path = ""
 	}
 
-	// We always need to process the root path to get the rootTreeInfo.Oid
-	rootTreeInfo, err := getTreeInfo(revision, "", stdin, stdout)
-	if err != nil {
-		return nil, err
-	}
-	entries, err := extractEntryInfoFromTreeData(stdout, revision, rootTreeInfo.Oid, "", rootTreeInfo)
-	if err != nil {
-		return nil, err
+	var rootOid string
+	var entries []*pb.TreeEntry
+
+	if path == "" || includeRootOid {
+		// We always need to process the root path to get the rootTreeInfo.Oid
+		rootTreeInfo, err := getTreeInfo(revision, "", stdin, stdout)
+		if err != nil {
+			return nil, err
+		}
+
+		rootOid = rootTreeInfo.Oid
+
+		entries, err = extractEntryInfoFromTreeData(stdout, revision, rootOid, "", rootTreeInfo)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// If we were asked for the root path, good luck! We're done
@@ -108,5 +117,24 @@ func treeEntries(revision, path string, stdin io.Writer, stdout *bufio.Reader) (
 		return []*pb.TreeEntry{}, nil
 	}
 
-	return extractEntryInfoFromTreeData(stdout, revision, rootTreeInfo.Oid, path, treeEntryInfo)
+	return extractEntryInfoFromTreeData(stdout, revision, rootOid, path, treeEntryInfo)
+}
+
+// TreeEntryForRevisionAndPath returns a TreeEntry struct for the object present at the revision/path pair.
+func TreeEntryForRevisionAndPath(revision, path string, stdin io.Writer, stdout *bufio.Reader) (*pb.TreeEntry, error) {
+	entries, err := treeEntries(revision, pathPkg.Dir(path), stdin, stdout, false)
+	if err != nil {
+		return nil, err
+	}
+
+	var treeEntry *pb.TreeEntry
+
+	for _, entry := range entries {
+		if string(entry.Path) == path {
+			treeEntry = entry
+			break
+		}
+	}
+
+	return treeEntry, nil
 }

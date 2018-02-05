@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"path"
 	"strings"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
@@ -17,20 +16,11 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func treeEntryHandler(stream pb.Commit_TreeEntryServer, revision, path, baseName string, limit int64) catfile.Handler {
+func treeEntryHandler(stream pb.Commit_TreeEntryServer, revision, path string, limit int64) catfile.Handler {
 	return func(stdin io.Writer, stdout *bufio.Reader) error {
-		var treeEntry *pb.TreeEntry
-
-		entries, err := treeEntries(revision, path, stdin, stdout)
+		treeEntry, err := TreeEntryForRevisionAndPath(revision, path, stdin, stdout)
 		if err != nil {
 			return err
-		}
-
-		for _, entry := range entries {
-			if string(entry.Path) == baseName {
-				treeEntry = entry
-				break
-			}
 		}
 
 		if treeEntry == nil || len(treeEntry.Oid) == 0 {
@@ -124,7 +114,7 @@ func (s *server) TreeEntry(in *pb.TreeEntryRequest, stream pb.CommitService_Tree
 		requestPath = strings.TrimRight(requestPath, "/")
 	}
 
-	handler := treeEntryHandler(stream, string(in.GetRevision()), path.Dir(requestPath), requestPath, in.GetLimit())
+	handler := treeEntryHandler(stream, string(in.GetRevision()), requestPath, in.GetLimit())
 	return catfile.CatFile(stream.Context(), in.Repository, handler)
 }
 
