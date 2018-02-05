@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.79.0
 
 - Update the activesupport gem
   https://gitlab.com/gitlab-org/gitaly/merge_requests/584
