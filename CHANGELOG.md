@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Update the activesupport gem
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/584
 - Update the grpc gem to 1.8.7
   https://gitlab.com/gitlab-org/gitaly/merge_requests/585
 - Implement GetBlobs RPC
