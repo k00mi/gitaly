@@ -2,9 +2,11 @@
 
 UNRELEASED
 
+- Delete old lock files before performing Garbage Collection
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/587
 - Implement RepositoryService.IsSquashInProgress RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/593
-- Added test to prevent wiki page duplication 
+- Added test to prevent wiki page duplication
   https://gitlab.com/gitlab-org/gitaly/merge_requests/539
 - Fixed bug in wiki_find_page method
   https://gitlab.com/gitlab-org/gitaly/merge_requests/590
