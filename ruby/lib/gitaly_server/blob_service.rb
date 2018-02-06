@@ -34,6 +34,18 @@ module GitalyServer
       end
     end
 
+    def get_all_lfs_pointers(request, call)
+      Enumerator.new do |y|
+        bridge_exceptions do
+          changes = lfs_changes(request, call)
+
+          sliced_gitaly_lfs_pointers(changes.all_pointers) do |lfs_pointers|
+            y.yield Gitaly::GetAllLFSPointersResponse.new(lfs_pointers: lfs_pointers)
+          end
+        end
+      end
+    end
+
     private
 
     def lfs_changes(request, call)

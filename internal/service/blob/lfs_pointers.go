@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
@@ -12,6 +11,11 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+type getLFSPointerByRevisionRequest interface {
+	GetRepository() *pb.Repository
+	GetRevision() []byte
+}
 
 func (s *server) GetLFSPointers(req *pb.GetLFSPointersRequest, stream pb.BlobService_GetLFSPointersServer) error {
 	ctx := stream.Context()
@@ -61,7 +65,7 @@ func validateGetLFSPointersRequest(req *pb.GetLFSPointersRequest) error {
 func (s *server) GetNewLFSPointers(in *pb.GetNewLFSPointersRequest, stream pb.BlobService_GetNewLFSPointersServer) error {
 	ctx := stream.Context()
 
-	if err := validateGetNewLFSPointersRequest(in); err != nil {
+	if err := validateGetLfsPointersByRevisionRequest(in); err != nil {
 		return status.Errorf(codes.InvalidArgument, "GetNewLFSPointers: %v", err)
 	}
 
@@ -91,14 +95,43 @@ func (s *server) GetNewLFSPointers(in *pb.GetNewLFSPointersRequest, stream pb.Bl
 	})
 }
 
-func validateGetNewLFSPointersRequest(in *pb.GetNewLFSPointersRequest) error {
+func (s *server) GetAllLFSPointers(in *pb.GetAllLFSPointersRequest, stream pb.BlobService_GetAllLFSPointersServer) error {
+	ctx := stream.Context()
+
+	if err := validateGetLfsPointersByRevisionRequest(in); err != nil {
+		return status.Errorf(codes.InvalidArgument, "GetAllLFSPointers: %v", err)
+	}
+
+	client, err := s.BlobServiceClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	clientCtx, err := rubyserver.SetHeaders(ctx, in.GetRepository())
+	if err != nil {
+		return err
+	}
+
+	rubyStream, err := client.GetAllLFSPointers(clientCtx, in)
+	if err != nil {
+		return err
+	}
+
+	return rubyserver.Proxy(func() error {
+		resp, err := rubyStream.Recv()
+		if err != nil {
+			md := rubyStream.Trailer()
+			stream.SetTrailer(md)
+			return err
+		}
+		return stream.Send(resp)
+	})
+}
+
+func validateGetLfsPointersByRevisionRequest(in getLFSPointerByRevisionRequest) error {
 	if in.GetRepository() == nil {
 		return fmt.Errorf("empty Repository")
 	}
 
 	return git.ValidateRevision(in.GetRevision())
-}
-
-func (*server) GetAllLFSPointers(*pb.GetAllLFSPointersRequest, pb.BlobService_GetAllLFSPointersServer) error {
-	return helper.Unimplemented
 }

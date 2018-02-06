@@ -345,3 +345,119 @@ func drainNewPointers(c pb.BlobService_GetNewLFSPointersClient) error {
 		}
 	}
 }
+
+func TestSuccessfulGetAllLFSPointersRequest(t *testing.T) {
+	server, serverSocketPath := runBlobServer(t)
+	defer server.Stop()
+
+	client, conn := newBlobClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	request := &pb.GetAllLFSPointersRequest{
+		Repository: testRepo,
+		Revision:   []byte("54fcc214b94e78d7a41a9a8fe6d87a5e59500e51"),
+	}
+
+	c, err := client.GetAllLFSPointers(ctx, request)
+	require.NoError(t, err)
+
+	expectedLFSPointers := []*pb.LFSPointer{
+		{
+			Size: 133,
+			Data: []byte("version https://git-lfs.github.com/spec/v1\noid sha256:91eff75a492a3ed0dfcb544d7f31326bc4014c8551849c192fd1e48d4dd2c897\nsize 1575078\n\n"),
+			Oid:  "0c304a93cb8430108629bbbcaa27db3343299bc0",
+		},
+		{
+			Size: 127,
+			Data: []byte("version https://git-lfs.github.com/spec/v1\noid sha256:f2b0a1e7550e9b718dafc9b525a04879a766de62e4fbdfc46593d47f7ab74636\nsize 20\n"),
+			Oid:  "f78df813119a79bfbe0442ab92540a61d3ab7ff3",
+		},
+		{
+			Size: 127,
+			Data: []byte("version https://git-lfs.github.com/spec/v1\noid sha256:bad71f905b60729f502ca339f7c9f001281a3d12c68a5da7f15de8009f4bd63d\nsize 18\n"),
+			Oid:  "bab31d249f78fba464d1b75799aad496cc07fa3b",
+		},
+	}
+	require.ElementsMatch(t, getAllPointers(t, c), expectedLFSPointers)
+}
+
+func getAllPointers(t *testing.T, c pb.BlobService_GetAllLFSPointersClient) []*pb.LFSPointer {
+	var receivedLFSPointers []*pb.LFSPointer
+	for {
+		resp, err := c.Recv()
+		if err == io.EOF {
+			break
+		}
+		require.NoError(t, err)
+
+		receivedLFSPointers = append(receivedLFSPointers, resp.GetLfsPointers()...)
+	}
+
+	return receivedLFSPointers
+}
+
+func TestFailedGetAllLFSPointersRequestDueToValidations(t *testing.T) {
+	server, serverSocketPath := runBlobServer(t)
+	defer server.Stop()
+
+	client, conn := newBlobClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	testCases := []struct {
+		desc       string
+		repository *pb.Repository
+		revision   []byte
+	}{
+		{
+			desc:       "empty Repository",
+			repository: nil,
+			revision:   []byte("master"),
+		},
+		{
+			desc:       "empty revision",
+			repository: testRepo,
+			revision:   nil,
+		},
+		{
+			desc:       "revision can't start with '-'",
+			repository: testRepo,
+			revision:   []byte("-suspicious-revision"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			request := &pb.GetAllLFSPointersRequest{
+				Repository: tc.repository,
+				Revision:   tc.revision,
+			}
+
+			c, err := client.GetAllLFSPointers(ctx, request)
+			require.NoError(t, err)
+
+			err = drainAllPointers(c)
+			testhelper.AssertGrpcError(t, err, codes.InvalidArgument, tc.desc)
+		})
+	}
+}
+
+func drainAllPointers(c pb.BlobService_GetAllLFSPointersClient) error {
+	for {
+		_, err := c.Recv()
+		if err != nil {
+			return err
+		}
+	}
+}
