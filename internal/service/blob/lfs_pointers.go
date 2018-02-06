@@ -3,6 +3,7 @@ package blob
 import (
 	"fmt"
 
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 
@@ -57,8 +58,45 @@ func validateGetLFSPointersRequest(req *pb.GetLFSPointersRequest) error {
 	return nil
 }
 
-func (*server) GetNewLFSPointers(*pb.GetNewLFSPointersRequest, pb.BlobService_GetNewLFSPointersServer) error {
-	return helper.Unimplemented
+func (s *server) GetNewLFSPointers(in *pb.GetNewLFSPointersRequest, stream pb.BlobService_GetNewLFSPointersServer) error {
+	ctx := stream.Context()
+
+	if err := validateGetNewLFSPointersRequest(in); err != nil {
+		return status.Errorf(codes.InvalidArgument, "GetNewLFSPointers: %v", err)
+	}
+
+	client, err := s.BlobServiceClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	clientCtx, err := rubyserver.SetHeaders(ctx, in.GetRepository())
+	if err != nil {
+		return err
+	}
+
+	rubyStream, err := client.GetNewLFSPointers(clientCtx, in)
+	if err != nil {
+		return err
+	}
+
+	return rubyserver.Proxy(func() error {
+		resp, err := rubyStream.Recv()
+		if err != nil {
+			md := rubyStream.Trailer()
+			stream.SetTrailer(md)
+			return err
+		}
+		return stream.Send(resp)
+	})
+}
+
+func validateGetNewLFSPointersRequest(in *pb.GetNewLFSPointersRequest) error {
+	if in.GetRepository() == nil {
+		return fmt.Errorf("empty Repository")
+	}
+
+	return git.ValidateRevision(in.GetRevision())
 }
 
 func (*server) GetAllLFSPointers(*pb.GetAllLFSPointersRequest, pb.BlobService_GetAllLFSPointersServer) error {

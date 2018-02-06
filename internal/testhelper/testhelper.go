@@ -139,7 +139,7 @@ func AssertGrpcError(t *testing.T, err error, expectedCode codes.Code, containsT
 	}
 
 	if containsText != "" && !strings.Contains(err.Error(), containsText) {
-		t.Fatal(err)
+		t.Fatalf("Expected an error message containing %v, got %v", containsText, err.Error())
 	}
 }
 
