@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.80.0
 
 - Lock protobuf to 3.5.1
   https://gitlab.com/gitlab-org/gitaly/merge_requests/589
