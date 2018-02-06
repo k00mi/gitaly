@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Vendor gitlab_git at 7095c2bf4064911
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/591
 - Vendor gitlab_git at 9483cbab26ad239
   https://gitlab.com/gitlab-org/gitaly/merge_requests/588
 
