@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.81.0
 
 - Vendor gitlab_git at 7095c2bf4064911
   https://gitlab.com/gitlab-org/gitaly/merge_requests/591
