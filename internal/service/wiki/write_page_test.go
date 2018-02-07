@@ -120,6 +120,49 @@ func TestFailedWikiWritePageDueToDuplicatePage(t *testing.T) {
 	require.Equal(t, expectedResponse, response, "mismatched response")
 }
 
+func TestFailedWikiWritePageInPathDueToDuplicatePage(t *testing.T) {
+	wikiRepo, _, cleanupFunc := setupWikiRepo(t)
+	defer cleanupFunc()
+
+	server, serverSocketPath := runWikiServiceServer(t)
+	defer server.Stop()
+
+	client, conn := newWikiClient(t, serverSocketPath)
+	defer conn.Close()
+
+	pageName := "foo/Installing Gitaly"
+	content := []byte("Mock wiki page content")
+	commitDetails := &pb.WikiCommitDetails{
+		Name:    []byte("Ahmad Sherif"),
+		Email:   []byte("ahmad@gitlab.com"),
+		Message: []byte("Add " + pageName),
+	}
+
+	writeWikiPage(t, client, wikiRepo, createWikiPageOpts{title: pageName, content: content})
+
+	request := &pb.WikiWritePageRequest{
+		Repository:    wikiRepo,
+		Name:          []byte(pageName),
+		Format:        "markdown",
+		CommitDetails: commitDetails,
+		Content:       content,
+	}
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	stream, err := client.WikiWritePage(ctx)
+	require.NoError(t, err)
+
+	require.NoError(t, stream.Send(request))
+
+	response, err := stream.CloseAndRecv()
+	require.NoError(t, err)
+
+	expectedResponse := &pb.WikiWritePageResponse{DuplicateError: []byte("Cannot write foo/Installing-Gitaly.md, found foo/Installing-Gitaly.md.")}
+	require.Equal(t, expectedResponse, response, "mismatched response")
+}
+
 func TestFailedWikiWritePageDueToValidations(t *testing.T) {
 	wikiRepo := &pb.Repository{}
 
