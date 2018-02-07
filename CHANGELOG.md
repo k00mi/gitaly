@@ -6,6 +6,10 @@ v0.81.0
   https://gitlab.com/gitlab-org/gitaly/merge_requests/591
 - Vendor gitlab_git at 9483cbab26ad239
   https://gitlab.com/gitlab-org/gitaly/merge_requests/588
+- Added test to prevent wiki page duplication 
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/539
+- Fixed bug in wiki_find_page method
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/590
 
 v0.80.0
 
