@@ -81,6 +81,16 @@ module GitalyServer
       end
     end
 
+    def is_squash_in_progress(request, call) # rubocop:disable Naming/PredicateName
+      bridge_exceptions do
+        repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
+
+        result = repo.squash_in_progress?(request.squash_id)
+
+        Gitaly::IsSquashInProgressResponse.new(in_progress: result)
+      end
+    end
+
     def write_ref(request, call)
       bridge_exceptions do
         repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
