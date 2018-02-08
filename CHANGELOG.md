@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Implement RepositoryService.IsSquashInProgress RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/593
 - Added test to prevent wiki page duplication 
   https://gitlab.com/gitlab-org/gitaly/merge_requests/539
 - Fixed bug in wiki_find_page method
