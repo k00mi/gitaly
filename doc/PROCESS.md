@@ -1,9 +1,8 @@
-
 ## Plan
 
 We use our issues board for keeping our work in progress up to date in a single place. Please refer to it to see the current status of the project.
 
-### Version 1.0
+### [Version 1.0][v1.0-milestone]
 
 Version 1.0 is what we need to run gitlab.com 100% on Gitaly, with no
 NFS access to Git repositories anymore.
@@ -15,7 +14,7 @@ Version 1.0 will not be done until all included endpoints are in
 opt-out state, meaning that they are sufficiently performant and
 bug-free.
 
-### Version 1.1
+### [Version 1.1][v1.1-milestone]
 
 Version 1.1 will conclude the migration project. This means that that
 the only production (i.e. non-test) code in anywhere in GitLab that
@@ -35,8 +34,8 @@ after version 1.1.
 
 Current priorities:
 
-1. Work that gets us closer to version 1.0: issues with the [v1.0 label](https://gitlab.com/gitlab-org/gitaly/issues?label_name%5B%5D=v1.0)
-1. Work towards version 1.1: issues with the [v1.1 label](https://gitlab.com/gitlab-org/gitaly/issues?label_name%5B%5D=v1.1)
+1. Work that gets us closer to version 1.0: issues with the [v1.0 milestone][v1.0-milestone]
+1. Work towards version 1.1: issues with the [v1.1 milestone][v1.1-milestone]
 
 ## Gitaly Team Process
 
@@ -72,3 +71,6 @@ Like other GitLab projects, Gitaly uses the [GitLab Workflow](https://docs.gitla
 # Migration Process
 
 The Gitaly team aim to migrate each feature across to Gitaly according to a standardised process - read about the [Gitaly Migration Process here](MIGRATION_PROCESS.md)
+
+[v1.0-milestone]: https://gitlab.com/gitlab-org/gitaly/milestones/54
+[v1.1-milestone]: https://gitlab.com/gitlab-org/gitaly/milestones/55
