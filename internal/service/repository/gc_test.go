@@ -3,9 +3,12 @@ package repository
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"google.golang.org/grpc/codes"
 
@@ -13,6 +16,11 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+)
+
+var (
+	freshTime = time.Now()
+	oldTime   = freshTime.Add(-2 * time.Hour)
 )
 
 func TestGarbageCollectSuccess(t *testing.T) {
@@ -73,6 +81,124 @@ func TestGarbageCollectSuccess(t *testing.T) {
 	}
 }
 
+func TestGarbageCollectDeletesRefsLocks(t *testing.T) {
+	server, serverSocketPath := runRepoServer(t)
+	defer server.Stop()
+
+	client, conn := newRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	req := &pb.GarbageCollectRequest{Repository: testRepo}
+	refsPath := filepath.Join(testRepoPath, "refs")
+
+	// Note: Creating refs this way makes `git gc` crash but this actually works
+	// in our favor for this test since we can ensure that the files kept and
+	// deleted are all due to our *.lock cleanup step before gc runs (since
+	// `git gc` also deletes files from /refs when packing).
+	keepRefPath := filepath.Join(refsPath, "heads", "keepthis")
+	createFileWithTimes(keepRefPath, freshTime)
+	keepOldRefPath := filepath.Join(refsPath, "heads", "keepthisalso")
+	createFileWithTimes(keepOldRefPath, oldTime)
+	keepDeceitfulRef := filepath.Join(refsPath, "heads", " .lock.not-actually-a-lock.lock ")
+	createFileWithTimes(keepDeceitfulRef, oldTime)
+
+	keepLockPath := filepath.Join(refsPath, "heads", "keepthis.lock")
+	createFileWithTimes(keepLockPath, freshTime)
+
+	deleteLockPath := filepath.Join(refsPath, "heads", "deletethis.lock")
+	createFileWithTimes(deleteLockPath, oldTime)
+
+	c, err := client.GarbageCollect(ctx, req)
+	testhelper.AssertGrpcError(t, err, codes.Internal, "GarbageCollect: cmd wait")
+	assert.Nil(t, c)
+
+	// Sanity checks
+	assert.FileExists(t, keepRefPath)
+	assert.FileExists(t, keepOldRefPath)
+	assert.FileExists(t, keepDeceitfulRef)
+
+	assert.FileExists(t, keepLockPath)
+
+	// There's assert.FileExists but no assert.NotFileExists ¯\_(ツ)_/¯
+	_, err = os.Stat(deleteLockPath)
+	assert.True(t, os.IsNotExist(err))
+}
+
+func TestGarbageCollectDeletesPackedRefsLock(t *testing.T) {
+	server, serverSocketPath := runRepoServer(t)
+	defer server.Stop()
+
+	client, conn := newRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testCases := []struct {
+		desc        string
+		lockTime    *time.Time
+		shouldExist bool
+	}{
+		{
+			desc:        "with a recent lock",
+			lockTime:    &freshTime,
+			shouldExist: true,
+		},
+		{
+			desc:        "with an old lock",
+			lockTime:    &oldTime,
+			shouldExist: false,
+		},
+		{
+			desc:        "with a non-existing lock",
+			lockTime:    nil,
+			shouldExist: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+			defer cleanupFn()
+
+			// Force the packed-refs file to have an old time to test that even
+			// in that case it doesn't get deleted
+			packedRefsPath := filepath.Join(testRepoPath, "packed-refs")
+			os.Chtimes(packedRefsPath, oldTime, oldTime)
+
+			req := &pb.GarbageCollectRequest{Repository: testRepo}
+			lockPath := filepath.Join(testRepoPath, "packed-refs.lock")
+
+			if tc.lockTime != nil {
+				createFileWithTimes(lockPath, *tc.lockTime)
+			}
+
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			c, err := client.GarbageCollect(ctx, req)
+
+			// Sanity checks
+			assert.FileExists(t, filepath.Join(testRepoPath, "HEAD")) // For good measure
+			assert.FileExists(t, packedRefsPath)
+
+			if tc.shouldExist {
+				assert.FileExists(t, lockPath)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, c)
+
+				// There's assert.FileExists but no assert.NotFileExists ¯\_(ツ)_/¯
+				_, err = os.Stat(lockPath)
+				assert.True(t, os.IsNotExist(err))
+			}
+		})
+	}
+}
+
 func TestGarbageCollectFailure(t *testing.T) {
 	server, serverSocketPath := runRepoServer(t)
 	defer server.Stop()
@@ -102,4 +228,9 @@ func TestGarbageCollectFailure(t *testing.T) {
 		})
 	}
 
+}
+
+func createFileWithTimes(path string, mTime time.Time) {
+	ioutil.WriteFile(path, nil, 0644)
+	os.Chtimes(path, mTime, mTime)
 }
