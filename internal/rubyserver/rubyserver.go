@@ -15,6 +15,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver/balancer"
 	"gitlab.com/gitlab-org/gitaly/internal/supervisor"
+	"gitlab.com/gitlab-org/gitaly/internal/version"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
@@ -104,7 +105,12 @@ func Start() (*Server, error) {
 		fmt.Sprintf("GITALY_RUBY_WRITE_BUFFER_SIZE=%d", streamio.WriteBufferSize),
 		"GITALY_RUBY_GITLAB_SHELL_PATH="+cfg.GitlabShell.Dir,
 		"GITALY_RUBY_GITALY_BIN_DIR="+cfg.BinDir,
+		"GITALY_VERSION="+version.GetVersion(),
 	)
+	if dsn := cfg.Logging.SentryDSN; dsn != "" {
+		env = append(env, "SENTRY_DSN="+dsn)
+	}
+
 	gitalyRuby := path.Join(cfg.Ruby.Dir, "bin/gitaly-ruby")
 
 	s := &Server{}

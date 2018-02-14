@@ -5,6 +5,7 @@ require 'fileutils'
 require 'grpc'
 
 require_relative '../lib/gitaly_server.rb'
+require_relative '../lib/gitaly_server/sentry_interceptor.rb'
 
 SHUTDOWN_TIMEOUT = 600
 
@@ -22,7 +23,10 @@ def main
   FileUtils.mkdir_p(socket_dir)
   File.chmod(0700, socket_dir)
 
-  s = GRPC::RpcServer.new(poll_period: SHUTDOWN_TIMEOUT)
+  s = GRPC::RpcServer.new(
+    poll_period: SHUTDOWN_TIMEOUT,
+    interceptors: [GitalyServer::SentryInterceptor.new]
+  )
   port = 'unix:' + socket_path
   s.add_http2_port(port, :this_port_is_insecure)
   GRPC.logger.info("... running insecurely on #{port}")

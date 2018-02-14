@@ -123,6 +123,8 @@ GEM
     rugged (0.26.0)
     sanitize (2.1.0)
       nokogiri (>= 1.4.4)
+    sentry-raven (2.7.2)
+      faraday (>= 0.7.6, < 1.0)
     signet (0.8.1)
       addressable (~> 2.3)
       faraday (~> 0.9)
@@ -150,6 +152,7 @@ DEPENDENCIES
   licensee (~> 8.7.0)
   rdoc (~> 4.2)
   rspec
+  sentry-raven (~> 2.7.2)
 
 BUNDLED WITH
    1.16.1

@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Send gitaly-ruby exceptions to Sentry
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/598
 - Detect License type for repositories
   https://gitlab.com/gitlab-org/gitaly/merge_requests/601
 
