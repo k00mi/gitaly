@@ -37,7 +37,7 @@ func populateFlatPath(entries []*pb.TreeEntry, stdin io.Writer, stdout *bufio.Re
 		}
 
 		for {
-			subentries, err := treeEntries(entry.CommitOid, string(entry.FlatPath), stdin, stdout, true)
+			subentries, err := treeEntries(entry.CommitOid, string(entry.FlatPath), stdin, stdout, true, "", false)
 
 			if err != nil {
 				return err
@@ -53,15 +53,17 @@ func populateFlatPath(entries []*pb.TreeEntry, stdin io.Writer, stdout *bufio.Re
 	return nil
 }
 
-func getTreeEntriesHandler(stream pb.CommitService_GetTreeEntriesServer, revision, path string) catfile.Handler {
+func getTreeEntriesHandler(stream pb.CommitService_GetTreeEntriesServer, revision, path string, recursive bool) catfile.Handler {
 	return func(stdin io.Writer, stdout *bufio.Reader) error {
-		entries, err := treeEntries(revision, path, stdin, stdout, true)
+		entries, err := treeEntries(revision, path, stdin, stdout, true, "", recursive)
 		if err != nil {
 			return err
 		}
 
-		if err := populateFlatPath(entries, stdin, stdout); err != nil {
-			return err
+		if !recursive {
+			if err := populateFlatPath(entries, stdin, stdout); err != nil {
+				return err
+			}
 		}
 
 		for len(entries) > maxTreeEntries {
@@ -94,7 +96,7 @@ func (s *server) GetTreeEntries(in *pb.GetTreeEntriesRequest, stream pb.CommitSe
 
 	revision := string(in.GetRevision())
 	path := string(in.GetPath())
-	handler := getTreeEntriesHandler(stream, revision, path)
+	handler := getTreeEntriesHandler(stream, revision, path, in.Recursive)
 
 	return catfile.CatFile(stream.Context(), in.Repository, handler)
 }
