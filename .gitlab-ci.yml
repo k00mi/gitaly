@@ -1,10 +1,13 @@
 image: registry.gitlab.com/gitlab-org/gitaly/build-ruby-2.3-golang-1.9-git-2.14:latest
 
 stages:
-  - build_images
   - build
   - test
   - publish
+
+variables:
+  DOCKER_DRIVER: overlay
+  CUSTOM_IMAGE_VERSION: ruby-2.3-golang-1.9-git-2.14
 
 verify:
   stage: test
@@ -90,8 +93,6 @@ test:go1.9-git2.14:
 
 cover:
   <<: *ruby_definition
-  before_script:
-      - bundle config --local gemfile Gemfile
   stage: test
   script:
     - make cover
@@ -106,8 +107,6 @@ cover:
 codequality:
   image: docker:latest
   stage: test
-  variables:
-    DOCKER_DRIVER: overlay
   services:
     - docker:dind
   script:
@@ -118,26 +117,34 @@ codequality:
   allow_failure: true
 
 .build_image: &build_image
-  variables:
-    DOCKER_DRIVER: overlay
-  stage: build_images
-  only:
-   - schedules
+  stage: publish
   image: docker:latest
   services:
   - docker:dind
+
+docker:
+  <<: *build_image
   script:
     - mkdir -p _support/build-images/$CI_JOB_NAME/
     - cp ruby/Gemfile ruby/Gemfile.lock _support/build-images/$CI_JOB_NAME/
     - cp _support/build-images/versioned/Dockerfile _support/build-images/$CI_JOB_NAME/
-    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
-    - docker build -t registry.gitlab.com/gitlab-org/gitaly/build-$CI_JOB_NAME:latest --build-arg CUSTOM_IMAGE_VERSION=$CI_JOB_NAME _support/build-images/$CI_JOB_NAME
-    - docker push registry.gitlab.com/gitlab-org/gitaly/build-$CI_JOB_NAME:latest
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+    - docker build -t $CI_REGISTRY_IMAGE/gitaly:latest --build-arg CUSTOM_IMAGE_VERSION=$CUSTOM_IMAGE_VERSION _support/build-images/$CI_JOB_NAME
+    - docker push $CI_REGISTRY_IMAGE/gitaly:latest
+  only:
+    - master
 
-ruby-2.3-golang-1.8-git-2.14: *build_image
-
-ruby-2.3-golang-1.9-git-2.9: *build_image
-ruby-2.3-golang-1.9-git-2.14: *build_image
+docker-tag:
+  <<: *build_image
+  script:
+    - mkdir -p _support/build-images/$CI_JOB_NAME/
+    - cp ruby/Gemfile ruby/Gemfile.lock _support/build-images/$CI_JOB_NAME/
+    - cp _support/build-images/versioned/Dockerfile _support/build-images/$CI_JOB_NAME/
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+    - docker build -t $CI_REGISTRY_IMAGE/gitaly:$CI_COMMIT_TAG --build-arg CUSTOM_IMAGE_VERSION=$CUSTOM_IMAGE_VERSION _support/build-images/$CI_JOB_NAME
+    - docker push $CI_REGISTRY_IMAGE/gitaly:$CI_COMMIT_TAG
+  only:
+    - tags@gitlab-org/gitaly
 
 # Create a MR in GitLab-CE when releasing a Gitaly version
 update-downstream-server-version:
