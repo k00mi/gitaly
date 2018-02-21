@@ -201,12 +201,16 @@
 			"revisionTime": "2017-12-31T12:27:32Z"
 		},
 		{
-			"checksumSHA1": "qKH0EG0VUTl1DO0PRTYlSbFcpmM=",
+			"checksumSHA1": "S8J7IeYSe4cSrlTAHLfY/Nu1ExM=",
 			"path": "gitlab.com/gitlab-org/gitaly-proto/go",
-			"revision": "fc6f3cc448eb578d570da9bff7a0ec76603daa6d",
-			"revisionTime": "2018-02-02T20:23:22Z",
-			"version": "v0.84.0",
-			"versionExact": "v0.84.0"
+			"revision": "011721c5ed33572c78faa94e3e0a367cec3b5119",
+			"revisionTime": "2018-02-20T08:45:38Z",
+			"version": "=zj-licensee-key",
+			"versionExact": "zj-licensee-key"
+		},
+		{
+			"path": "gitlab.com/gitlab-org/gitaly-proto/go=zj-licensee-key",
+			"revision": ""
 		},
 		{
 			"checksumSHA1": "nqWNlnMmVpt628zzvyo6Yv2CX5Q=",
