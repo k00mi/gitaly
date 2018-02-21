@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Detect License type for repositories
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/601
+
 [v0.83.0](https://gitlab.com/gitlab-org/gitaly/tags/v0.83.0)
 
 - Delete old lock files before performing Garbage Collection
