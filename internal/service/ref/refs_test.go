@@ -1042,6 +1042,14 @@ func TestListBranchNamesContainingCommit(t *testing.T) {
 			branches:    []string{"master"},
 		},
 		{
+			// gitlab-test contains a branch refs/heads/1942eed5cc108b19c7405106e81fa96125d0be22
+			// which is in conflift with a commit with the same ID
+			description: "branch name is also commit id",
+			commitID:    "1942eed5cc108b19c7405106e81fa96125d0be22",
+			code:        codes.OK,
+			branches:    []string{"1942eed5cc108b19c7405106e81fa96125d0be22"},
+		},
+		{
 			description: "init commit",
 			commitID:    "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
 			code:        codes.OK,
