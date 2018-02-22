@@ -1,4 +1,4 @@
-image: registry.gitlab.com/gitlab-org/gitaly/build-ruby-2.3-golang-1.9-git-2.14:latest
+image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.9-git-2.14
 
 stages:
   - build
@@ -60,36 +60,48 @@ verify:
     - git version
     - make test
 
+build:go1.10:
+  <<: *build_definition
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.10-git-2.14
+  
 build:go1.9:
   <<: *build_definition
-  image: registry.gitlab.com/gitlab-org/gitaly/build-ruby-2.3-golang-1.9-git-2.14:latest
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.9-git-2.14
 
 build:go1.8:
   <<: *build_definition
-  image: registry.gitlab.com/gitlab-org/gitaly/build-ruby-2.3-golang-1.8-git-2.14:latest
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.8.6-git-2.14
+
+binaries_go1.10:
+  <<: *assemble_definition
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.10-git-2.14
 
 binaries_go1.9:
   <<: *assemble_definition
-  image: registry.gitlab.com/gitlab-org/gitaly/build-ruby-2.3-golang-1.9-git-2.14:latest
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.9-git-2.14
 
 binaries_go1.8:
   <<: *assemble_definition
-  image: registry.gitlab.com/gitlab-org/gitaly/build-ruby-2.3-golang-1.8-git-2.14:latest
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.8.6-git-2.14
 
 test:default:
   <<: *test_definition
 
 test:go1.8-git2.14:
   <<: *test_definition
-  image: registry.gitlab.com/gitlab-org/gitaly/build-ruby-2.3-golang-1.8-git-2.14:latest
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.8-git-2.14
 
 test:go1.9-git2.9:
   <<: *test_definition
-  image: registry.gitlab.com/gitlab-org/gitaly/build-ruby-2.3-golang-1.9-git-2.9:latest
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.9-git-2.9
 
 test:go1.9-git2.14:
   <<: *test_definition
-  image: registry.gitlab.com/gitlab-org/gitaly/build-ruby-2.3-golang-1.9-git-2.14:latest
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.9-git-2.14
+
+test:go1.10-git2.14:
+  <<: *test_definition
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.10-git-2.14
 
 cover:
   <<: *ruby_definition
