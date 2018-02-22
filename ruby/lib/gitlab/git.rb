@@ -52,6 +52,8 @@ module Gitlab
         )
       end
 
+      attr_reader :path
+
       def initialize(gitaly_repository, path, gl_repository, gitlab_projects, combined_alt_dirs="")
         @gitaly_repository = gitaly_repository
 

@@ -201,6 +201,8 @@ It has these top-level messages:
 	WriteConfigResponse
 	CreateRepositoryFromBundleRequest
 	CreateRepositoryFromBundleResponse
+	FindLicenseRequest
+	FindLicenseResponse
 	ServerInfoRequest
 	ServerInfoResponse
 	Repository
