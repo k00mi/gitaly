@@ -2,6 +2,8 @@
 
 [v0.84.0](https://gitlab.com/gitlab-org/gitaly/tags/v0.84.0)
 
+- Send gitaly-ruby exceptions to Sentry
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/598
 - Detect License type for repositories
   https://gitlab.com/gitlab-org/gitaly/merge_requests/601
 
