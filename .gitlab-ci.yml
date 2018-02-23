@@ -173,7 +173,7 @@ test-vendor-gitaly-ruby:
   only:
    - schedules
   before_script:
-    - DEBIAN_FRONTEND=noninteractive apt-get -q -y install rsync
+    - DEBIAN_FRONTEND=noninteractive apt-get update -qq && apt-get -q -y install rsync
   script:
     - _support/vendor-gitlab-git master
     - make test
