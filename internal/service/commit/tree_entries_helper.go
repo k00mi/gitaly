@@ -81,12 +81,11 @@ func extractEntryInfoFromTreeData(stdout *bufio.Reader, commitOid, rootOid, root
 	return entries, nil
 }
 
-func treeEntries(revision, path string, stdin io.Writer, stdout *bufio.Reader, includeRootOid bool) ([]*pb.TreeEntry, error) {
+func treeEntries(revision, path string, stdin io.Writer, stdout *bufio.Reader, includeRootOid bool, rootOid string, recursive bool) ([]*pb.TreeEntry, error) {
 	if path == "." {
 		path = ""
 	}
 
-	var rootOid string
 	var entries []*pb.TreeEntry
 
 	if path == "" || includeRootOid {
@@ -104,25 +103,45 @@ func treeEntries(revision, path string, stdin io.Writer, stdout *bufio.Reader, i
 		}
 	}
 
-	// If we were asked for the root path, good luck! We're done
-	if path == "" {
+	if path != "" {
+		treeEntryInfo, err := getTreeInfo(revision, path, stdin, stdout)
+		if err != nil {
+			return nil, err
+		}
+		if treeEntryInfo.Type != "tree" {
+			return nil, nil
+		}
+
+		entries, err = extractEntryInfoFromTreeData(stdout, revision, rootOid, path, treeEntryInfo)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if !recursive {
 		return entries, nil
 	}
 
-	treeEntryInfo, err := getTreeInfo(revision, path, stdin, stdout)
-	if err != nil {
-		return nil, err
-	}
-	if treeEntryInfo.Type != "tree" {
-		return []*pb.TreeEntry{}, nil
+	var orderdEntries []*pb.TreeEntry
+	for _, entry := range entries {
+		orderdEntries = append(orderdEntries, entry)
+
+		if entry.Type == pb.TreeEntry_TREE {
+			subentries, err := treeEntries(revision, string(entry.Path), stdin, stdout, true, rootOid, true)
+			if err != nil {
+				return nil, err
+			}
+
+			orderdEntries = append(orderdEntries, subentries...)
+		}
 	}
 
-	return extractEntryInfoFromTreeData(stdout, revision, rootOid, path, treeEntryInfo)
+	return orderdEntries, nil
 }
 
 // TreeEntryForRevisionAndPath returns a TreeEntry struct for the object present at the revision/path pair.
 func TreeEntryForRevisionAndPath(revision, path string, stdin io.Writer, stdout *bufio.Reader) (*pb.TreeEntry, error) {
-	entries, err := treeEntries(revision, pathPkg.Dir(path), stdin, stdout, false)
+	entries, err := treeEntries(revision, pathPkg.Dir(path), stdin, stdout, false, "", false)
 	if err != nil {
 		return nil, err
 	}

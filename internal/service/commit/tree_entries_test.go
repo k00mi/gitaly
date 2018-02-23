@@ -5,9 +5,9 @@ import (
 	"io"
 	"testing"
 
-	"google.golang.org/grpc/codes"
-
+	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
+	"google.golang.org/grpc/codes"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -21,8 +21,8 @@ func TestSuccessfulGetTreeEntries(t *testing.T) {
 		maxTreeEntries = oldMaxTreeEntries
 	}()
 
-	commitID := "ce369011c189f62c815f5971d096b26759bab0d1"
-	rootOid := "729bb692f55d49149609dd1ceaaf1febbdec7d0d"
+	commitID := "d25b6d94034242f3930dfcfeb6d8d9aac3583992"
+	rootOid := "21bdc8af908562ae485ed46d71dd5426c08b084a"
 
 	server, serverSocketPath := startTestServices(t)
 	defer server.Stop()
@@ -143,6 +143,15 @@ func TestSuccessfulGetTreeEntries(t *testing.T) {
 			CommitOid: commitID,
 		},
 		{
+			Oid:       "6fd00c6336d6385ef6efe553a29107b35d18d380",
+			RootOid:   rootOid,
+			Path:      []byte("level-0"),
+			FlatPath:  []byte("level-0"),
+			Type:      pb.TreeEntry_TREE,
+			Mode:      040000,
+			CommitOid: commitID,
+		},
+		{
 			Oid:       "409f37c4f05865e4fb208c771485f211a22c4c2d",
 			RootOid:   rootOid,
 			Path:      []byte("six"),
@@ -218,10 +227,54 @@ func TestSuccessfulGetTreeEntries(t *testing.T) {
 		},
 	}
 
+	recursiveEntries := []*pb.TreeEntry{
+		{
+			Oid:       "d564d0bc3dd917926892c55e3706cc116d5b165e",
+			RootOid:   rootOid,
+			Path:      []byte("level-0/level-1-1"),
+			Type:      pb.TreeEntry_TREE,
+			Mode:      040000,
+			CommitOid: commitID,
+		},
+		{
+			Oid:       "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+			RootOid:   rootOid,
+			Path:      []byte("level-0/level-1-1/.gitkeep"),
+			Type:      pb.TreeEntry_BLOB,
+			Mode:      0100644,
+			CommitOid: commitID,
+		},
+		{
+			Oid:       "02366a40d0cde8191e43a8c5b821176c0668522c",
+			RootOid:   rootOid,
+			Path:      []byte("level-0/level-1-2"),
+			Type:      pb.TreeEntry_TREE,
+			Mode:      040000,
+			CommitOid: commitID,
+		},
+		{
+			Oid:       "d564d0bc3dd917926892c55e3706cc116d5b165e",
+			RootOid:   rootOid,
+			Path:      []byte("level-0/level-1-2/level-2"),
+			Type:      pb.TreeEntry_TREE,
+			Mode:      040000,
+			CommitOid: commitID,
+		},
+		{
+			Oid:       "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+			RootOid:   rootOid,
+			Path:      []byte("level-0/level-1-2/level-2/.gitkeep"),
+			Type:      pb.TreeEntry_BLOB,
+			Mode:      0100644,
+			CommitOid: commitID,
+		},
+	}
+
 	testCases := []struct {
 		description string
 		revision    []byte
 		path        []byte
+		recursive   bool
 		entries     []*pb.TreeEntry
 	}{
 		{
@@ -237,16 +290,23 @@ func TestSuccessfulGetTreeEntries(t *testing.T) {
 			entries:     filesDirEntries,
 		},
 		{
+			description: "with recursive",
+			revision:    []byte(commitID),
+			path:        []byte("level-0"),
+			recursive:   true,
+			entries:     recursiveEntries,
+		},
+		{
 			description: "with a file",
 			revision:    []byte(commitID),
 			path:        []byte(".gitignore"),
-			entries:     []*pb.TreeEntry{},
+			entries:     nil,
 		},
 		{
 			description: "with a non-existing path",
 			revision:    []byte(commitID),
 			path:        []byte("i-dont/exist"),
-			entries:     []*pb.TreeEntry{},
+			entries:     nil,
 		},
 	}
 
@@ -256,6 +316,7 @@ func TestSuccessfulGetTreeEntries(t *testing.T) {
 				Repository: testRepo,
 				Revision:   testCase.revision,
 				Path:       testCase.path,
+				Recursive:  testCase.recursive,
 			}
 
 			ctx, cancel := context.WithCancel(context.Background())
@@ -265,22 +326,9 @@ func TestSuccessfulGetTreeEntries(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			assertTreeEntriesReceived(t, c, testCase.entries)
+			fetchedEntries := getTreeEntriesFromTreeEntryClient(t, c)
+			require.Equal(t, testCase.entries, fetchedEntries)
 		})
-	}
-}
-
-func assertTreeEntriesReceived(t *testing.T, client pb.CommitService_GetTreeEntriesClient, entries []*pb.TreeEntry) {
-	fetchedEntries := getTreeEntriesFromTreeEntryClient(t, client)
-
-	if len(fetchedEntries) != len(entries) {
-		t.Fatalf("Expected %d entries, got %d instead", len(entries), len(fetchedEntries))
-	}
-
-	for i, entry := range fetchedEntries {
-		if !treeEntriesEqual(entry, entries[i]) {
-			t.Fatalf("Expected tree entry %v, got %v instead", entries[i], entry)
-		}
 	}
 }
 
