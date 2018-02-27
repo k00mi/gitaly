@@ -2,9 +2,7 @@ package commit
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
-	"path"
 	"testing"
 
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -193,35 +191,13 @@ func TestSuccessfulIsAncestorRequestWithAltGitObjectDirs(t *testing.T) {
 	testRepoCopy, testRepoCopyPath, cleanupFn := testhelper.NewTestRepoWithWorktree(t)
 	defer cleanupFn()
 
-	altObjectsDir := "./alt-objects"
-	altObjectsPath := path.Join(testRepoCopyPath, ".git", altObjectsDir)
-	gitObjectEnv := []string{
-		fmt.Sprintf("GIT_OBJECT_DIRECTORY=%s", altObjectsPath),
-		fmt.Sprintf("GIT_ALTERNATE_OBJECT_DIRECTORIES=%s", path.Join(testRepoCopyPath, ".git/objects")),
-	}
-
-	if err := os.Mkdir(altObjectsPath, 0777); err != nil {
-		t.Fatal(err)
-	}
-
 	previousHead := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoCopyPath, "show", "--format=format:%H", "--no-patch", "HEAD")
 
 	cmd := exec.Command("git", "-C", testRepoCopyPath,
 		"-c", fmt.Sprintf("user.name=%s", committerName),
 		"-c", fmt.Sprintf("user.email=%s", committerEmail),
 		"commit", "--allow-empty", "-m", "An empty commit")
-	cmd.Env = gitObjectEnv
-	if _, err := cmd.Output(); err != nil {
-		stderr := err.(*exec.ExitError).Stderr // XXX
-		t.Fatalf("%s", stderr)
-	}
-
-	cmd = exec.Command("git", "-C", testRepoCopyPath, "show", "--format=format:%H", "--no-patch", "HEAD")
-	cmd.Env = gitObjectEnv
-	currentHead, err := cmd.Output()
-	if err != nil {
-		t.Fatal(err)
-	}
+	currentHead, altObjectsDir := testhelper.CreateCommitInAlternateObjectDirectory(t, testRepoCopyPath, cmd)
 
 	testCases := []struct {
 		desc    string

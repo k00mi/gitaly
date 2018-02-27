@@ -1,6 +1,10 @@
 package testhelper
 
 import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path"
 	"strings"
 	"testing"
 )
@@ -19,4 +23,38 @@ func CreateCommit(t *testing.T, repoPath string, branchName string) string {
 
 	MustRunCommand(t, nil, "git", "-C", repoPath, "update-ref", "refs/heads/"+branchName, newCommitID)
 	return newCommitID
+}
+
+// CreateCommitInAlternateObjectDirectory runs a command such that its created
+// objects will live in an alternate objects directory. It returns the current
+// head after the command is run and the alternate objects directory path
+func CreateCommitInAlternateObjectDirectory(t *testing.T, repoPath string, cmd *exec.Cmd) (currentHead []byte, altObjectsDir string) {
+	gitPath := path.Join(repoPath, ".git")
+	altObjectsDir = "./alt-objects"
+
+	altObjectsPath := path.Join(gitPath, altObjectsDir)
+	gitObjectEnv := []string{
+		fmt.Sprintf("GIT_OBJECT_DIRECTORY=%s", altObjectsPath),
+		fmt.Sprintf("GIT_ALTERNATE_OBJECT_DIRECTORIES=%s", path.Join(gitPath, "objects")),
+	}
+	if err := os.Mkdir(altObjectsPath, 0777); err != nil {
+		t.Fatal(err)
+	}
+
+	// Because we set 'gitObjectEnv', the new objects created by this command
+	// will go into 'find-commits-alt-test-repo/.git/alt-objects'.
+	cmd.Env = gitObjectEnv
+	if output, err := cmd.Output(); err != nil {
+		stderr := err.(*exec.ExitError).Stderr
+		t.Fatalf("stdout: %s, stderr: %s", output, stderr)
+	}
+
+	cmd = exec.Command("git", "-C", repoPath, "rev-parse", "HEAD")
+	cmd.Env = gitObjectEnv
+	currentHead, err := cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return currentHead[:len(currentHead)-1], altObjectsDir
 }

@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
 	"os/exec"
-	"path"
 	"testing"
 
 	"google.golang.org/grpc/codes"
@@ -283,35 +281,11 @@ func TestSuccessfulFindCommitsRequestWithAltGitObjectDirs(t *testing.T) {
 	testRepoCopy, testRepoCopyPath, cleanupFn := testhelper.NewTestRepoWithWorktree(t)
 	defer cleanupFn()
 
-	altObjectsDir := "./alt-objects"
-	altObjectsPath := path.Join(testRepoCopyPath, ".git", altObjectsDir)
-	gitObjectEnv := []string{
-		fmt.Sprintf("GIT_OBJECT_DIRECTORY=%s", altObjectsPath),
-		fmt.Sprintf("GIT_ALTERNATE_OBJECT_DIRECTORIES=%s", path.Join(testRepoCopyPath, ".git/objects")),
-	}
-
-	if err := os.Mkdir(altObjectsPath, 0777); err != nil {
-		t.Fatal(err)
-	}
-
 	cmd := exec.Command("git", "-C", testRepoCopyPath,
 		"-c", fmt.Sprintf("user.name=%s", committerName),
 		"-c", fmt.Sprintf("user.email=%s", committerEmail),
 		"commit", "--allow-empty", "-m", "An empty commit")
-	// Because we set 'gitObjectEnv', the new objects created by this 'git commit' command will go
-	// into 'find-commits-alt-test-repo/.git/alt-objects'.
-	cmd.Env = gitObjectEnv
-	if _, err := cmd.Output(); err != nil {
-		stderr := err.(*exec.ExitError).Stderr
-		t.Fatalf("%s", stderr)
-	}
-
-	cmd = exec.Command("git", "-C", testRepoCopyPath, "show", "--format=format:%H", "--no-patch", "HEAD")
-	cmd.Env = gitObjectEnv
-	currentHead, err := cmd.Output()
-	if err != nil {
-		t.Fatal(err)
-	}
+	currentHead, altObjectsDir := testhelper.CreateCommitInAlternateObjectDirectory(t, testRepoCopyPath, cmd)
 
 	testCases := []struct {
 		desc          string

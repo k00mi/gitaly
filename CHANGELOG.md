@@ -2,6 +2,10 @@
 
 UNRELEASED
 
+- Implement BlobService.GetAllLfsPointers
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/562
+- Implement BlobService.GetNewLfsPointers
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/562
 - Use gitaly-proto v0.86.0
   https://gitlab.com/gitlab-org/gitaly/merge_requests/606
 
