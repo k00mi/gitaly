@@ -3,6 +3,7 @@ package blob
 import (
 	"fmt"
 
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
@@ -54,4 +55,12 @@ func validateGetLFSPointersRequest(req *pb.GetLFSPointersRequest) error {
 	}
 
 	return nil
+}
+
+func (*server) GetNewLFSPointers(*pb.GetNewLFSPointersRequest, pb.BlobService_GetNewLFSPointersServer) error {
+	return helper.Unimplemented
+}
+
+func (*server) GetAllLFSPointers(*pb.GetAllLFSPointersRequest, pb.BlobService_GetAllLFSPointersServer) error {
+	return helper.Unimplemented
 }

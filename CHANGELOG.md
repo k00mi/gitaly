@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Use gitaly-proto v0.86.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/606
+
 [v0.85.0](https://gitlab.com/gitlab-org/gitaly/tags/v0.85.0)
 
 - Implement recursive tree entries fetching
