@@ -82,7 +82,7 @@ binaries_go1.9:
 
 binaries_go1.8:
   <<: *assemble_definition
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.8.6-git-2.16
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.8.6-git-2.14
 
 test:default:
   <<: *test_definition
