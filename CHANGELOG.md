@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Implement GetCommitSignatures RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/609
+
 [v0.86.0](https://gitlab.com/gitlab-org/gitaly/tags/v0.86.0)
 
 - Implement BlobService.GetAllLfsPointers
