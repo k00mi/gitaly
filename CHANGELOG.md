@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+[v0.87.0](https://gitlab.com/gitlab-org/gitaly/tags/v0.87.0)
 
 - Implement GetCommitSignatures RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/609
