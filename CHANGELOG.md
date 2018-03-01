@@ -1,5 +1,12 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Add support for all field to {Find,Count}Commits RPCs
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/611
+- Vendor gitlab_git at de454de9b10f
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/611
+
 [v0.87.0](https://gitlab.com/gitlab-org/gitaly/tags/v0.87.0)
 
 - Implement GetCommitSignatures RPC

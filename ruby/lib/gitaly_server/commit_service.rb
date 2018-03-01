@@ -53,7 +53,8 @@ module GitalyServer
           follow: request.follow,
           skip_merges: request.skip_merges,
           disable_walk: request.disable_walk,
-          offset: request.offset
+          offset: request.offset,
+          all: request.all
         }
         options[:path] = request.paths unless request.paths.empty?
 

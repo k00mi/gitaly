@@ -347,6 +347,11 @@ func InitBareRepo(t *testing.T) (*pb.Repository, string, func()) {
 	return initRepo(t, true)
 }
 
+// InitRepoWithWorktree creates a new repository with a worktree
+func InitRepoWithWorktree(t *testing.T) (*pb.Repository, string, func()) {
+	return initRepo(t, false)
+}
+
 func initRepo(t *testing.T, bare bool) (*pb.Repository, string, func()) {
 	ConfigureTestStorage()
 
@@ -357,6 +362,10 @@ func initRepo(t *testing.T, bare bool) (*pb.Repository, string, func()) {
 	}
 
 	MustRunCommand(t, nil, "git", append(args, repoPath)...)
+
+	if !bare {
+		repo.RelativePath = path.Join(repo.RelativePath, ".git")
+	}
 
 	return repo, repoPath, func() { os.RemoveAll(repoPath) }
 }

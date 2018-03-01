@@ -14,7 +14,7 @@ func (s *server) FindCommits(req *pb.FindCommitsRequest, stream pb.CommitService
 
 	// Use Gitaly's default branch lookup function because that is already
 	// migrated.
-	if revision := req.Revision; len(revision) == 0 {
+	if revision := req.Revision; len(revision) == 0 && !req.GetAll() {
 		var err error
 		req.Revision, err = defaultBranchName(ctx, req.Repository)
 		if err != nil {

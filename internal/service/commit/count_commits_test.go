@@ -22,49 +22,80 @@ func TestSuccessfulCountCommitsRequest(t *testing.T) {
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
-	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	testRepo1, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
+	testRepo2, testRepo2Path, cleanupFn := testhelper.InitRepoWithWorktree(t)
+	defer cleanupFn()
+
+	committerName := "Scrooge McDuck"
+	committerEmail := "scrooge@mcduck.com"
+
+	for i := 0; i < 5; i++ {
+		testhelper.MustRunCommand(t, nil, "git", "-C", testRepo2Path,
+			"-c", fmt.Sprintf("user.name=%s", committerName),
+			"-c", fmt.Sprintf("user.email=%s", committerEmail),
+			"commit", "--allow-empty", "-m", "Empty commit")
+	}
+
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepo2Path, "checkout", "-b", "another-branch")
+
+	for i := 0; i < 3; i++ {
+		testhelper.MustRunCommand(t, nil, "git", "-C", testRepo2Path,
+			"-c", fmt.Sprintf("user.name=%s", committerName),
+			"-c", fmt.Sprintf("user.email=%s", committerEmail),
+			"commit", "--allow-empty", "-m", "Empty commit")
+	}
+
 	testCases := []struct {
+		repo                *pb.Repository
 		revision, path      []byte
+		all                 bool
 		before, after, desc string
 		maxCount            int32
 		count               int32
 	}{
 		{
 			desc:     "revision only #1",
+			repo:     testRepo1,
 			revision: []byte("1a0b36b3cdad1d2ee32457c102a8c0b7056fa863"),
 			count:    1,
 		},
 		{
 			desc:     "revision only #2",
+			repo:     testRepo1,
 			revision: []byte("6d394385cf567f80a8fd85055db1ab4c5295806f"),
 			count:    2,
 		},
 		{
 			desc:     "revision only #3",
+			repo:     testRepo1,
 			revision: []byte("e63f41fe459e62e1228fcef60d7189127aeba95a"),
 			count:    39,
 		},
 		{
 			desc:     "revision + max-count",
+			repo:     testRepo1,
 			revision: []byte("e63f41fe459e62e1228fcef60d7189127aeba95a"),
 			maxCount: 15,
 			count:    15,
 		},
 		{
 			desc:     "non-existing revision",
+			repo:     testRepo1,
 			revision: []byte("deadfacedeadfacedeadfacedeadfacedeadface"),
 			count:    0,
 		},
 		{
 			desc:     "revision + before",
+			repo:     testRepo1,
 			revision: []byte("e63f41fe459e62e1228fcef60d7189127aeba95a"),
 			before:   "2015-12-07T11:54:28+01:00",
 			count:    26,
 		},
 		{
 			desc:     "revision + before + after",
+			repo:     testRepo1,
 			revision: []byte("e63f41fe459e62e1228fcef60d7189127aeba95a"),
 			before:   "2015-12-07T11:54:28+01:00",
 			after:    "2014-02-27T10:14:56+02:00",
@@ -72,20 +103,30 @@ func TestSuccessfulCountCommitsRequest(t *testing.T) {
 		},
 		{
 			desc:     "revision + before + after + path",
+			repo:     testRepo1,
 			revision: []byte("e63f41fe459e62e1228fcef60d7189127aeba95a"),
 			before:   "2015-12-07T11:54:28+01:00",
 			after:    "2014-02-27T10:14:56+02:00",
 			path:     []byte("files"),
 			count:    12,
 		},
+		{
+			desc:  "all refs #1",
+			repo:  testRepo2,
+			all:   true,
+			count: 8,
+		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
 
-			request := &pb.CountCommitsRequest{
-				Repository: testRepo,
-				Revision:   testCase.revision,
+			request := &pb.CountCommitsRequest{Repository: testCase.repo}
+
+			if testCase.all {
+				request.All = true
+			} else {
+				request.Revision = testCase.revision
 			}
 
 			if testCase.before != "" {
@@ -139,7 +180,7 @@ func TestFailedCountCommitsRequestDueToValidationError(t *testing.T) {
 	rpcRequests := []pb.CountCommitsRequest{
 		{Repository: &pb.Repository{StorageName: "fake", RelativePath: "path"}, Revision: revision}, // Repository doesn't exist
 		{Repository: nil, Revision: revision},                                                       // Repository is nil
-		{Repository: testRepo, Revision: nil},                                                       // Revision is empty
+		{Repository: testRepo, Revision: nil, All: false},                                           // Revision is empty and All is false
 	}
 
 	for _, rpcRequest := range rpcRequests {
