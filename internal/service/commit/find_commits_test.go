@@ -235,6 +235,15 @@ func TestSuccessfulFindCommitsRequest(t *testing.T) {
 				"913c66a37b4a45b9769037c55c2d238bd0942d2e",
 			},
 		},
+		{
+			desc: "all refs",
+			request: &pb.FindCommitsRequest{
+				Repository: testRepo,
+				All:        true,
+				Limit:      90,
+			},
+			minCommits: 90,
+		},
 	}
 
 	for _, tc := range testCases {

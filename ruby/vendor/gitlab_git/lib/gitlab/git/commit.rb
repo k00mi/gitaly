@@ -402,15 +402,6 @@ module Gitlab
         end
       end
 
-      # Get a collection of Rugged::Reference objects for this commit.
-      #
-      # Ex.
-      #   commit.ref(repo)
-      #
-      def refs(repo)
-        repo.refs_hash[id]
-      end
-
       # Get ref names collection
       #
       # Ex.
@@ -418,7 +409,7 @@ module Gitlab
       #
       def ref_names(repo)
         refs(repo).map do |ref|
-          ref.name.sub(%r{^refs/(heads|remotes|tags)/}, "")
+          ref.sub(%r{^refs/(heads|remotes|tags)/}, "")
         end
       end
 
@@ -517,7 +508,7 @@ module Gitlab
         @committed_date = Time.at(commit.committer.date.seconds).utc
         @committer_name = commit.committer.name.dup
         @committer_email = commit.committer.email.dup
-        @parent_ids = commit.parent_ids
+        @parent_ids = Array(commit.parent_ids)
       end
 
       def serialize_keys
@@ -552,6 +543,15 @@ module Gitlab
           email: author_or_committer[:email].b,
           date: Google::Protobuf::Timestamp.new(seconds: author_or_committer[:time].to_i)
         )
+      end
+
+      # Get a collection of Gitlab::Git::Ref objects for this commit.
+      #
+      # Ex.
+      #   commit.ref(repo)
+      #
+      def refs(repo)
+        repo.refs_hash[id]
       end
     end
   end

@@ -22,7 +22,13 @@ func (s *server) CountCommits(ctx context.Context, in *pb.CountCommitsRequest) (
 		return nil, status.Errorf(codes.InvalidArgument, "CountCommits: %v", err)
 	}
 
-	cmdArgs := []string{"rev-list", "--count", string(in.GetRevision())}
+	cmdArgs := []string{"rev-list", "--count"}
+
+	if in.GetAll() {
+		cmdArgs = append(cmdArgs, "--all")
+	} else {
+		cmdArgs = append(cmdArgs, string(in.GetRevision()))
+	}
 
 	if before := in.GetBefore(); before != nil {
 		cmdArgs = append(cmdArgs, "--before="+timestampToRFC3339(before.Seconds))
@@ -68,8 +74,8 @@ func (s *server) CountCommits(ctx context.Context, in *pb.CountCommitsRequest) (
 }
 
 func validateCountCommitsRequest(in *pb.CountCommitsRequest) error {
-	if len(in.GetRevision()) == 0 {
-		return fmt.Errorf("empty Revision")
+	if len(in.GetRevision()) == 0 && !in.GetAll() {
+		return fmt.Errorf("empty Revision and false All")
 	}
 
 	return nil
