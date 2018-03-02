@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+[v0.88.0](https://gitlab.com/gitlab-org/gitaly/tags/v0.88.0)
 
 - Add support for all field to {Find,Count}Commits RPCs
   https://gitlab.com/gitlab-org/gitaly/merge_requests/611
