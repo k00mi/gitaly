@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Fix FetchRemote throwing "Host key verification failed"
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/617
 - Use only 1 gitaly-ruby process in test
   https://gitlab.com/gitlab-org/gitaly/merge_requests/615
 - Bump github-linguist to 5.3.3
