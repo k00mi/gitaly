@@ -20,9 +20,6 @@ service for handling all the git calls made by GitLab.
 
 To see where it fits in please look at [GitLab's architecture](https://docs.gitlab.com/ce/development/architecture.html#system-layout)
 
-Gitaly is still under development. We expect it to become a standard
-component of GitLab in Q1 2017 and to reach full scope in Q3 2017.
-
 ## Project Goals
 
 Make the git data storage tier of large GitLab instances, and *GitLab.com in particular*, **fast**.
