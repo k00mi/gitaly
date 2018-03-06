@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Upgrade grpc gem to 1.10.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/620
 - Fix FetchRemote throwing "Host key verification failed"
   https://gitlab.com/gitlab-org/gitaly/merge_requests/617
 - Use only 1 gitaly-ruby process in test
