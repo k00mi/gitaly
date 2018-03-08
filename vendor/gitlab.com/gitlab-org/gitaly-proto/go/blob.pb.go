@@ -226,6 +226,8 @@ It has these top-level messages:
 	SSHUploadPackResponse
 	SSHReceivePackRequest
 	SSHReceivePackResponse
+	SSHUploadArchiveRequest
+	SSHUploadArchiveResponse
 	WikiCommitDetails
 	WikiPageVersion
 	WikiPage
