@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.89.0
 
 - Report original exceptions to Sentry instead of wrapped ones by the exception bridge
   https://gitlab.com/gitlab-org/gitaly/merge_requests/623
