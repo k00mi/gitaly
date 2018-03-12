@@ -65,16 +65,39 @@ describe GitalyServer::SentryInterceptor do
         end
       end
 
-      it 'sends the exception to Sentry' do
-        expect(Raven).to receive(:capture_exception).with(
-          ex,
-          { fingerprint: ['gitaly-ruby', 'GitalyServer::RefService#create_branch', 'unknown encoding'] }
-        )
+      context 'when exception is GRPC::Unknown raised by bridge_exceptions' do
+        include GitalyServer::Utils
 
-        begin
-          subject
-        rescue
-          nil
+        it 'sends the original cause to Sentry' do
+          expect(Raven).to receive(:capture_exception).with(
+            ex,
+            { fingerprint: ['gitaly-ruby', 'GitalyServer::RefService#create_branch', 'unknown encoding'] }
+          )
+
+          begin
+            described_class.new.server_streamer(call: call, method: meth) do
+              bridge_exceptions do
+                raise ex
+              end
+            end
+          rescue
+            nil
+          end
+        end
+      end
+
+      context 'when expcetion is normal' do
+        it 'sends the exception to Sentry' do
+          expect(Raven).to receive(:capture_exception).with(
+            ex,
+            { fingerprint: ['gitaly-ruby', 'GitalyServer::RefService#create_branch', 'unknown encoding'] }
+          )
+
+          begin
+            subject
+          rescue
+            nil
+          end
         end
       end
     end
