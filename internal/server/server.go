@@ -4,6 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitaly/internal/helper/fieldextractors"
+	"gitlab.com/gitlab-org/gitaly/internal/logsanitizer"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/cancelhandler"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/limithandler"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/metadatahandler"
@@ -24,7 +25,17 @@ import (
 
 // New returns a GRPC server with all Gitaly services and interceptors set up.
 func New(rubyServer *rubyserver.Server) *grpc.Server {
-	logrusEntry := log.NewEntry(log.StandardLogger())
+	logger := log.StandardLogger()
+
+	urlSanitizer := logsanitizer.NewURLSanitizerHook()
+	urlSanitizer.AddPossibleGrpcMethod(
+		"CreateRepositoryFromURL",
+		"FetchRemote",
+		"UpdateRemoteMirror",
+	)
+	logger.Hooks.Add(urlSanitizer)
+
+	logrusEntry := log.NewEntry(logger)
 	grpc_logrus.ReplaceGrpcLogger(logrusEntry)
 
 	ctxTagOpts := []grpc_ctxtags.Option{
