@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Report original exceptions to Sentry instead of wrapped ones by the exception bridge
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/623
 - Upgrade grpc gem to 1.10.0
   https://gitlab.com/gitlab-org/gitaly/merge_requests/620
 - Fix FetchRemote throwing "Host key verification failed"
