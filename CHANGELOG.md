@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Implement SSHService.SSHUploadArchive RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/621
 - Sanitize URLs before logging them
   https://gitlab.com/gitlab-org/gitaly/merge_requests/624
 - Clean stale worktrees before performing garbage collection

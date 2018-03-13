@@ -29,6 +29,8 @@ func main() {
 		packer = uploadPack
 	case "receive-pack":
 		packer = receivePack
+	case "upload-archive":
+		packer = uploadArchive
 	default:
 		log.Fatalf("invalid pack command: %q", os.Args[1])
 	}
