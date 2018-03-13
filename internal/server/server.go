@@ -39,7 +39,7 @@ func New(rubyServer *rubyserver.Server) *grpc.Server {
 	grpc_logrus.ReplaceGrpcLogger(logrusEntry)
 
 	ctxTagOpts := []grpc_ctxtags.Option{
-		grpc_ctxtags.WithFieldExtractorForInitialReq(fieldextractors.RepositoryFieldExtractor),
+		grpc_ctxtags.WithFieldExtractorForInitialReq(fieldextractors.FieldExtractor),
 	}
 
 	lh := limithandler.New()
