@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Sanitize URLs before sending gitaly-ruby exceptions to Sentry
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/625
+
 v0.90.0
 
 - Implement SSHService.SSHUploadArchive RPC
