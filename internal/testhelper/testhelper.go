@@ -18,6 +18,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
@@ -406,6 +408,13 @@ func cloneTestRepo(t *testing.T, bare bool) (repo *pb.Repository, repoPath strin
 	return repo, repoPath, func() { os.RemoveAll(repoPath) }
 }
 
+// AddWorktree creates a worktree in the repository path for tests
+func AddWorktree(t *testing.T, repoPath string, worktreeName string) {
+	args := []string{"-C", repoPath, "worktree", "add", "--detach", worktreeName}
+
+	MustRunCommand(t, nil, "git", args...)
+}
+
 // ConfigureGitalySSH configures the gitaly-ssh command for tests
 func ConfigureGitalySSH() {
 	var err error
@@ -429,4 +438,10 @@ func GetRepositoryRefs(t *testing.T, repoPath string) string {
 	refs := MustRunCommand(t, nil, "git", "-C", repoPath, "for-each-ref")
 
 	return string(refs)
+}
+
+// AssertFileNotExists asserts true if the file doesn't exist, false otherwise
+func AssertFileNotExists(t *testing.T, path string) {
+	_, err := os.Stat(path)
+	assert.True(t, os.IsNotExist(err))
 }

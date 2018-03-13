@@ -4,6 +4,8 @@ UNRELEASED
 
 - Sanitize URLs before logging them
   https://gitlab.com/gitlab-org/gitaly/merge_requests/624
+- Clean stale worktrees before performing garbage collection
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/622
 
 v0.89.0
 
