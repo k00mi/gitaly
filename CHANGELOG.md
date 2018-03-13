@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.90.0
 
 - Implement SSHService.SSHUploadArchive RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/621
