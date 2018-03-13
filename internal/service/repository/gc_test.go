@@ -13,14 +13,16 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
 
 var (
-	freshTime = time.Now()
-	oldTime   = freshTime.Add(-2 * time.Hour)
+	freshTime   = time.Now()
+	oldTime     = freshTime.Add(-2 * time.Hour)
+	oldTreeTime = freshTime.Add(-7 * time.Hour)
 )
 
 func TestGarbageCollectSuccess(t *testing.T) {
@@ -191,9 +193,70 @@ func TestGarbageCollectDeletesPackedRefsLock(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, c)
 
-				// There's assert.FileExists but no assert.NotFileExists ¯\_(ツ)_/¯
-				_, err = os.Stat(lockPath)
-				assert.True(t, os.IsNotExist(err))
+				testhelper.AssertFileNotExists(t, lockPath)
+			}
+		})
+	}
+}
+
+func TestGarbageCollectDeletesStaleWorktrees(t *testing.T) {
+	server, serverSocketPath := runRepoServer(t)
+	defer server.Stop()
+
+	client, conn := newRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testCases := []struct {
+		desc         string
+		worktreeTime time.Time
+		shouldExist  bool
+	}{
+		{
+			desc:         "with a recent worktree",
+			worktreeTime: freshTime,
+			shouldExist:  true,
+		},
+		{
+			desc:         "with a slightly old worktree",
+			worktreeTime: oldTime,
+			shouldExist:  true,
+		},
+		{
+			desc:         "with an old worktree",
+			worktreeTime: oldTreeTime,
+			shouldExist:  false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+			defer cleanupFn()
+
+			req := &pb.GarbageCollectRequest{Repository: testRepo}
+
+			testhelper.AddWorktree(t, testRepoPath, "test-worktree")
+			basePath := filepath.Join(testRepoPath, "worktrees")
+			worktreePath := filepath.Join(basePath, "test-worktree")
+
+			require.NoError(t, os.Chtimes(worktreePath, tc.worktreeTime, tc.worktreeTime))
+
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			c, err := client.GarbageCollect(ctx, req)
+
+			// Sanity check
+			assert.FileExists(t, filepath.Join(testRepoPath, "HEAD")) // For good measure
+
+			if tc.shouldExist {
+				assert.DirExists(t, basePath)
+				assert.DirExists(t, worktreePath)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, c)
+
+				testhelper.AssertFileNotExists(t, worktreePath)
 			}
 		})
 	}
