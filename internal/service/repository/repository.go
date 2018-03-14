@@ -1,11 +1,15 @@
 package repository
 
 import (
+	"io/ioutil"
+
 	"golang.org/x/net/context"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
-	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 )
 
 // Deprecated
@@ -23,15 +27,23 @@ func (s *server) RepositoryExists(ctx context.Context, in *pb.RepositoryExistsRe
 }
 
 func (s *server) HasLocalBranches(ctx context.Context, in *pb.HasLocalBranchesRequest) (*pb.HasLocalBranchesResponse, error) {
-	client, err := s.RepositoryServiceClient(ctx)
+	args := []string{"for-each-ref", "--count=1", "refs/heads"}
+	cmd, err := git.Command(ctx, in.GetRepository(), args...)
 	if err != nil {
-		return nil, err
+		if _, ok := status.FromError(err); ok {
+			return nil, err
+		}
+		return nil, status.Errorf(codes.Internal, "HasLocalBranches: gitCommand: %v", err)
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, in.GetRepository())
+	buff, err := ioutil.ReadAll(cmd)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "HasLocalBranches: read: %v", err)
 	}
 
-	return client.HasLocalBranches(clientCtx, in)
+	if err := cmd.Wait(); err != nil {
+		return nil, status.Errorf(codes.Internal, "HasLocalBranches: cmd wait: %v", err)
+	}
+
+	return &pb.HasLocalBranchesResponse{Value: len(buff) > 0}, nil
 }

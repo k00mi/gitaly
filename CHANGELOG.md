@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Rewrite RepositoryService.HasLocalBranches in Go
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/629
 - Rewrite RepositoryService.MergeBase in Go
   https://gitlab.com/gitlab-org/gitaly/merge_requests/632
 - Encode OperationsService errors in UTF-8 before sending them
