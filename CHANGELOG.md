@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Encode OperationsService errors in UTF-8 before sending them
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/627
 - Add param logging in NamespaceService RPCs
   https://gitlab.com/gitlab-org/gitaly/merge_requests/626
 - Sanitize URLs before sending gitaly-ruby exceptions to Sentry
