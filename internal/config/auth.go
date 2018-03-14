@@ -12,11 +12,10 @@ type Auth struct {
 	Token         Token `toml:"token"`
 }
 
-// Token is a string of the form "name:secret". It specifies a Gitaly
-// authentication token.
+// Token is a Gitaly authentication token.
 type Token string
 
-// Equal tests if t is equal to the token specified by name and secret.
+// Equal tests if t is equal to the other token
 func (t Token) Equal(other string) bool {
 	return subtle.ConstantTimeCompare([]byte(other), []byte(t)) == 1
 }
