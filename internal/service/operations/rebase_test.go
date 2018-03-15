@@ -136,7 +136,7 @@ func TestFailedUserRebaseRequestDueToGitError(t *testing.T) {
 	testRepoCopy, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	branchName := "gitaly-stuff"
+	branchName := "rebase-encoding-failure-trigger"
 	branchSha := string(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", branchName))
 	branchSha = strings.TrimSpace(branchSha)
 

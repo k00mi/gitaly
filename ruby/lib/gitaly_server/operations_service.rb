@@ -35,7 +35,7 @@ module GitalyServer
         rescue Gitlab::Git::Repository::TagExistsError
           return Gitaly::UserCreateTagResponse.new(exists: true)
         rescue Gitlab::Git::HooksService::PreReceiveError => e
-          return Gitaly::UserCreateTagResponse.new(pre_receive_error: e.message)
+          return Gitaly::UserCreateTagResponse.new(pre_receive_error: set_utf8!(e.message))
         end
       end
     end
@@ -56,7 +56,7 @@ module GitalyServer
 
           Gitaly::UserDeleteTagResponse.new
         rescue Gitlab::Git::HooksService::PreReceiveError => e
-          Gitaly::UserDeleteTagResponse.new(pre_receive_error: e.message)
+          Gitaly::UserDeleteTagResponse.new(pre_receive_error: set_utf8!(e.message))
         end
       end
     end
@@ -82,7 +82,7 @@ module GitalyServer
         rescue Gitlab::Git::Repository::InvalidRef, Gitlab::Git::CommitError => ex
           raise GRPC::FailedPrecondition.new(ex.message)
         rescue Gitlab::Git::HooksService::PreReceiveError => ex
-          return Gitaly::UserCreateBranchResponse.new(pre_receive_error: ex.message)
+          return Gitaly::UserCreateBranchResponse.new(pre_receive_error: set_utf8!(ex.message))
         end
       end
     end
@@ -97,7 +97,7 @@ module GitalyServer
 
           Gitaly::UserDeleteBranchResponse.new
         rescue Gitlab::Git::HooksService::PreReceiveError => e
-          Gitaly::UserDeleteBranchResponse.new(pre_receive_error: e.message)
+          Gitaly::UserDeleteBranchResponse.new(pre_receive_error: set_utf8!(e.message))
         end
       end
     end
@@ -125,7 +125,7 @@ module GitalyServer
 
             y << Gitaly::UserMergeBranchResponse.new(branch_update: branch_update_result(result))
           rescue Gitlab::Git::HooksService::PreReceiveError => e
-            y << Gitaly::UserMergeBranchResponse.new(pre_receive_error: e.message)
+            y << Gitaly::UserMergeBranchResponse.new(pre_receive_error: set_utf8!(e.message))
           end
         end
       end
@@ -146,7 +146,7 @@ module GitalyServer
         rescue ArgumentError => e
           raise GRPC::InvalidArgument.new(e.to_s)
         rescue Gitlab::Git::HooksService::PreReceiveError => e
-          Gitaly::UserFFBranchResponse.new(pre_receive_error: e.message)
+          Gitaly::UserFFBranchResponse.new(pre_receive_error: set_utf8!(e.message))
         end
       end
     end
@@ -171,11 +171,11 @@ module GitalyServer
           branch_update = branch_update_result(result)
           Gitaly::UserCherryPickResponse.new(branch_update: branch_update)
         rescue Gitlab::Git::Repository::CreateTreeError => e
-          Gitaly::UserCherryPickResponse.new(create_tree_error: e.message)
+          Gitaly::UserCherryPickResponse.new(create_tree_error: set_utf8!(e.message))
         rescue Gitlab::Git::CommitError => e
-          Gitaly::UserCherryPickResponse.new(commit_error: e.message)
+          Gitaly::UserCherryPickResponse.new(commit_error: set_utf8!(e.message))
         rescue Gitlab::Git::HooksService::PreReceiveError => e
-          Gitaly::UserCherryPickResponse.new(pre_receive_error: e.message)
+          Gitaly::UserCherryPickResponse.new(pre_receive_error: set_utf8!(e.message))
         end
       end
     end
@@ -200,11 +200,11 @@ module GitalyServer
           branch_update = branch_update_result(result)
           Gitaly::UserRevertResponse.new(branch_update: branch_update)
         rescue Gitlab::Git::Repository::CreateTreeError => e
-          Gitaly::UserRevertResponse.new(create_tree_error: e.message)
+          Gitaly::UserRevertResponse.new(create_tree_error: set_utf8!(e.message))
         rescue Gitlab::Git::CommitError => e
-          Gitaly::UserRevertResponse.new(commit_error: e.message)
+          Gitaly::UserRevertResponse.new(commit_error: set_utf8!(e.message))
         rescue Gitlab::Git::HooksService::PreReceiveError => e
-          Gitaly::UserRevertResponse.new(pre_receive_error: e.message)
+          Gitaly::UserRevertResponse.new(pre_receive_error: set_utf8!(e.message))
         end
       end
     end
@@ -223,9 +223,9 @@ module GitalyServer
 
           Gitaly::UserRebaseResponse.new(rebase_sha: rebase_sha)
         rescue Gitlab::Git::HooksService::PreReceiveError => e
-          return Gitaly::UserRebaseResponse.new(pre_receive_error: e.message)
+          return Gitaly::UserRebaseResponse.new(pre_receive_error: set_utf8!(e.message))
         rescue Gitlab::Git::Repository::GitError => e
-          return Gitaly::UserRebaseResponse.new(git_error: e.message)
+          return Gitaly::UserRebaseResponse.new(git_error: set_utf8!(e.message))
         end
       end
     end
@@ -255,9 +255,9 @@ module GitalyServer
 
           Gitaly::UserCommitFilesResponse.new(branch_update: branch_update)
         rescue Gitlab::Git::Index::IndexError => e
-          Gitaly::UserCommitFilesResponse.new(index_error: e.message)
+          Gitaly::UserCommitFilesResponse.new(index_error: set_utf8!(e.message))
         rescue Gitlab::Git::HooksService::PreReceiveError => e
-          Gitaly::UserCommitFilesResponse.new(pre_receive_error: e.message)
+          Gitaly::UserCommitFilesResponse.new(pre_receive_error: set_utf8!(e.message))
         end
       end
     end
@@ -278,7 +278,7 @@ module GitalyServer
 
           Gitaly::UserSquashResponse.new(squash_sha: squash_sha)
         rescue Gitlab::Git::Repository::GitError => e
-          Gitaly::UserSquashResponse.new(git_error: e.message)
+          Gitaly::UserSquashResponse.new(git_error: set_utf8!(e.message))
         end
       end
     end
