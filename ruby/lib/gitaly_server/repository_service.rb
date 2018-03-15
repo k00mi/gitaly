@@ -14,12 +14,6 @@ module GitalyServer
       end
     end
 
-    def has_local_branches(request, call) # rubocop:disable Naming/PredicateName
-      repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
-
-      Gitaly::HasLocalBranchesResponse.new(value: repo.has_local_branches?)
-    end
-
     def fetch_source_branch(request, call)
       bridge_exceptions do
         source_repository = Gitlab::Git::GitalyRemoteRepository.new(request.source_repository, call)
