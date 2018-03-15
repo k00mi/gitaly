@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Add param logging in NamespaceService RPCs
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/626
 - Sanitize URLs before sending gitaly-ruby exceptions to Sentry
   https://gitlab.com/gitlab-org/gitaly/merge_requests/625
 
