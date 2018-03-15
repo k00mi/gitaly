@@ -6,6 +6,7 @@ require 'grpc'
 
 require_relative '../lib/gitaly_server.rb'
 require_relative '../lib/gitaly_server/sentry_interceptor.rb'
+require_relative '../lib/gitaly_server/exception_sanitizer_interceptor.rb'
 
 SHUTDOWN_TIMEOUT = 600
 
@@ -25,7 +26,10 @@ def main
 
   s = GRPC::RpcServer.new(
     poll_period: SHUTDOWN_TIMEOUT,
-    interceptors: [GitalyServer::SentryInterceptor.new]
+    interceptors: [
+      GitalyServer::SentryInterceptor.new,
+      GitalyServer::ExceptionSanitizerInterceptor.new
+    ]
   )
   port = 'unix:' + socket_path
   s.add_http2_port(port, :this_port_is_insecure)

@@ -1,5 +1,8 @@
 module GitalyServer
   module Utils
+    # See internal/logsanitizer/url.go for credits and explanation.
+    URL_HOST_PATTERN = %r{([a-z][a-z0-9+\-.]*://)([a-z0-9\-._~%!$&'()*+,;=:]+@)([a-z0-9\-._~%]+|\[[a-z0-9\-._~%!$&'()*+,;=:]+\])}i
+
     def gitaly_commit_from_rugged(rugged_commit)
       message_split = rugged_commit.message.b.split("\n", 2)
       Gitaly::GitCommit.new(
@@ -36,6 +39,10 @@ module GitalyServer
 
       str.force_encoding('UTF-8')
       str.valid_encoding? ? str : raise(ArgumentError, "string is not valid UTF-8: #{str.inspect}")
+    end
+
+    def sanitize_url(str)
+      str.gsub(URL_HOST_PATTERN, '\1[FILTERED]@\3\4')
     end
 
     def bridge_exceptions
