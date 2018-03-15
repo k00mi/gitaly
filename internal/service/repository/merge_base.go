@@ -1,9 +1,11 @@
 package repository
 
 import (
-	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
+	"io/ioutil"
+	"strings"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
@@ -11,19 +13,35 @@ import (
 )
 
 func (s *server) FindMergeBase(ctx context.Context, req *pb.FindMergeBaseRequest) (*pb.FindMergeBaseResponse, error) {
-	if len(req.Revisions) != 2 {
+	revisions := req.GetRevisions()
+	if len(revisions) != 2 {
 		return nil, status.Errorf(codes.InvalidArgument, "FindMergeBase: 2 revisions are required")
 	}
 
-	client, err := s.RepositoryServiceClient(ctx)
+	args := []string{"merge-base"}
+	for _, revision := range revisions {
+		args = append(args, string(revision))
+	}
+
+	cmd, err := git.Command(ctx, req.GetRepository(), args...)
+	if err != nil {
+		if _, ok := status.FromError(err); ok {
+			return nil, err
+		}
+		return nil, status.Errorf(codes.Internal, "FindMergeBase: cmd: %v", err)
+	}
+
+	mergeBase, err := ioutil.ReadAll(cmd)
 	if err != nil {
 		return nil, err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, req.GetRepository())
-	if err != nil {
-		return nil, err
+	mergeBaseStr := strings.TrimSpace(string(mergeBase))
+
+	if err := cmd.Wait(); err != nil {
+		// On error just return an empty merge base
+		return &pb.FindMergeBaseResponse{Base: ""}, nil
 	}
 
-	return client.FindMergeBase(clientCtx, req)
+	return &pb.FindMergeBaseResponse{Base: mergeBaseStr}, nil
 }
