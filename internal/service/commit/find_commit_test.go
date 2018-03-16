@@ -2,11 +2,14 @@ package commit
 
 import (
 	"io/ioutil"
+	"strings"
 	"testing"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/require"
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly/internal/git/log"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
@@ -22,8 +25,19 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
-	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	bigMessage := "An empty commit with REALLY BIG message\n\n" + strings.Repeat("MOAR!\n", 20*1024)
+	bigCommitID := testhelper.CreateCommit(t, testRepoPath, "local-big-commits", &testhelper.CreateCommitOpts{
+		Message:  bigMessage,
+		ParentID: "60ecb67744cb56576c30214ff52294f8ce2def98",
+	})
+	bigCommit, err := log.GetCommit(ctx, testRepo, bigCommitID, "")
+	require.NoError(t, err)
 
 	testCases := []struct {
 		description string
@@ -48,6 +62,7 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 					Date:  &timestamp.Timestamp{Seconds: 1474470806},
 				},
 				ParentIds: []string{"1b12f15a11fc6e62177bef08f47bc7b5ce50b141"},
+				BodySize:  88,
 			},
 		},
 		{
@@ -68,6 +83,7 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 					Date:  &timestamp.Timestamp{Seconds: 1393491261},
 				},
 				ParentIds: []string{"d14d6c0abdd253381df51a723d58691b2ee1ab08"},
+				BodySize:  84,
 			},
 		},
 		{
@@ -91,6 +107,7 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 					"1b12f15a11fc6e62177bef08f47bc7b5ce50b141",
 					"498214de67004b1da3d820901307bed2a68a8ef6",
 				},
+				BodySize: 162,
 			},
 		},
 		{
@@ -111,6 +128,7 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 					Date:  &timestamp.Timestamp{Seconds: 1393488198},
 				},
 				ParentIds: nil,
+				BodySize:  15,
 			},
 		},
 		{
@@ -131,6 +149,7 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 					Date:  &timestamp.Timestamp{Seconds: 1512132977},
 				},
 				ParentIds: []string{"e63f41fe459e62e1228fcef60d7189127aeba95a"},
+				BodySize:  49,
 			},
 		},
 		{
@@ -151,6 +170,28 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 					Date:  &timestamp.Timestamp{Seconds: 1517328273},
 				},
 				ParentIds: []string{"60ecb67744cb56576c30214ff52294f8ce2def98"},
+				BodySize:  12,
+			},
+		},
+		{
+			description: "with a very large message",
+			revision:    bigCommitID,
+			commit: &pb.GitCommit{
+				Id:      bigCommitID,
+				Subject: []byte("An empty commit with REALLY BIG message"),
+				Author: &pb.CommitAuthor{
+					Name:  []byte("Scrooge McDuck"),
+					Email: []byte("scrooge@mcduck.com"),
+					Date:  &timestamp.Timestamp{Seconds: bigCommit.Author.Date.Seconds},
+				},
+				Committer: &pb.CommitAuthor{
+					Name:  []byte("Scrooge McDuck"),
+					Email: []byte("scrooge@mcduck.com"),
+					Date:  &timestamp.Timestamp{Seconds: bigCommit.Committer.Date.Seconds},
+				},
+				ParentIds: []string{"60ecb67744cb56576c30214ff52294f8ce2def98"},
+				Body:      []byte(bigMessage[:helper.MaxCommitOrTagMessageSize]),
+				BodySize:  int64(len(bigMessage)),
 			},
 		},
 		{

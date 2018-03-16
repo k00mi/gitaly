@@ -9,6 +9,10 @@ module Gitlab
       def write_buffer_size
         @write_buffer_size ||= ENV['GITALY_RUBY_WRITE_BUFFER_SIZE'].to_i
       end
+
+      def max_commit_or_tag_message_size
+        @max_commit_or_tag_message_size ||= ENV['GITALY_RUBY_MAX_COMMIT_OR_TAG_MESSAGE_SIZE'].to_i
+      end
     end
 
     class GitlabShell

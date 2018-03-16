@@ -54,6 +54,7 @@ func TestFindCommitsFields(t *testing.T) {
 					"1b12f15a11fc6e62177bef08f47bc7b5ce50b141",
 					"498214de67004b1da3d820901307bed2a68a8ef6",
 				},
+				BodySize: 162,
 			},
 		},
 		{
@@ -73,6 +74,7 @@ func TestFindCommitsFields(t *testing.T) {
 					Date:  &timestamp.Timestamp{Seconds: 1512132977},
 				},
 				ParentIds: []string{"e63f41fe459e62e1228fcef60d7189127aeba95a"},
+				BodySize:  49,
 			},
 		},
 		{
@@ -92,6 +94,7 @@ func TestFindCommitsFields(t *testing.T) {
 					Date:  &timestamp.Timestamp{Seconds: 1517328273},
 				},
 				ParentIds: []string{"60ecb67744cb56576c30214ff52294f8ce2def98"},
+				BodySize:  12,
 			},
 		},
 	}

@@ -5,14 +5,18 @@ module GitalyServer
 
     def gitaly_commit_from_rugged(rugged_commit)
       message_split = rugged_commit.message.b.split("\n", 2)
-      Gitaly::GitCommit.new(
+      gitaly_commit = Gitaly::GitCommit.new(
         id: rugged_commit.oid,
         subject: message_split[0] ? message_split[0].chomp : "",
         body: rugged_commit.message.b,
         parent_ids: rugged_commit.parent_ids,
         author: gitaly_commit_author_from_rugged(rugged_commit.author),
-        committer: gitaly_commit_author_from_rugged(rugged_commit.committer)
+        committer: gitaly_commit_author_from_rugged(rugged_commit.committer),
+        body_size: rugged_commit.message.bytesize
       )
+      truncate_gitaly_commit_body!(gitaly_commit) if gitaly_commit.body.bytesize > Gitlab.config.git.max_commit_or_tag_message_size
+
+      gitaly_commit
     end
 
     def gitaly_commit_author_from_rugged(rugged_author)
@@ -29,6 +33,29 @@ module GitalyServer
         gitaly_commit_details.email,
         gitaly_commit_details.message
       )
+    end
+
+    def gitaly_tag_from_gitlab_tag(gitlab_tag, commit=nil)
+      tag_message = gitlab_tag.message.to_s
+      tag = Gitaly::Tag.new(
+        name: gitlab_tag.name.b,
+        id: gitlab_tag.target,
+        message: tag_message.b,
+        target_commit: commit,
+        message_size: tag_message.bytesize
+      )
+
+      truncate_gitaly_tag_message!(tag) if tag.message.bytesize > Gitlab.config.git.max_commit_or_tag_message_size
+
+      tag
+    end
+
+    def truncate_gitaly_commit_body!(gitaly_commit)
+      gitaly_commit.body = gitaly_commit.body[0, Gitlab.config.git.max_commit_or_tag_message_size]
+    end
+
+    def truncate_gitaly_tag_message!(gitaly_tag)
+      gitaly_tag.message = gitaly_tag.message[0, Gitlab.config.git.max_commit_or_tag_message_size]
     end
 
     def set_utf8!(str)

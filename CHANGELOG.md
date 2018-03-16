@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Add handling for large commit and tag messages
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/635
 - Update gitaly-proto to v0.91.0
   https://gitlab.com/gitlab-org/gitaly/merge_requests/643
 

@@ -37,7 +37,7 @@ func TestFetchSourceBranchSourceRepositorySuccess(t *testing.T) {
 	sourceRepo, sourcePath := newTestRepo(t, "fetch-source-source.git")
 
 	sourceBranch := "fetch-source-branch-test-branch"
-	newCommitID := testhelper.CreateCommit(t, sourcePath, sourceBranch)
+	newCommitID := testhelper.CreateCommit(t, sourcePath, sourceBranch, nil)
 
 	targetRef := "refs/tmp/fetch-source-branch-test"
 	req := &pb.FetchSourceBranchRequest{
@@ -72,7 +72,7 @@ func TestFetchSourceBranchSameRepositorySuccess(t *testing.T) {
 	repo, repoPath := newTestRepo(t, "fetch-source-source.git")
 
 	sourceBranch := "fetch-source-branch-test-branch"
-	newCommitID := testhelper.CreateCommit(t, repoPath, sourceBranch)
+	newCommitID := testhelper.CreateCommit(t, repoPath, sourceBranch, nil)
 
 	targetRef := "refs/tmp/fetch-source-branch-test"
 	req := &pb.FetchSourceBranchRequest{

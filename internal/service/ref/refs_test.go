@@ -2,7 +2,6 @@ package ref
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -380,10 +379,9 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 	testRepoCopy, testRepoCopyPath, cleanupFn := testhelper.NewTestRepoWithWorktree(t)
 	defer cleanupFn()
 
-	committerName := "Scrooge McDuck"
-	committerEmail := "scrooge@mcduck.com"
 	blobID := "faaf198af3a36dbf41961466703cc1d47c61d051"
 	commitID := "6f6d7e7ed97bb5f0054f2b1df789b39ca89b6ff9"
+
 	gitCommit := &pb.GitCommit{
 		Id:      commitID,
 		Subject: []byte("More submodules"),
@@ -399,38 +397,39 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 			Date:  &timestamp.Timestamp{Seconds: 1393491261},
 		},
 		ParentIds: []string{"d14d6c0abdd253381df51a723d58691b2ee1ab08"},
+		BodySize:  84,
 	}
 
-	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoCopyPath,
-		"-c", fmt.Sprintf("user.name=%s", committerName),
-		"-c", fmt.Sprintf("user.email=%s", committerEmail),
-		"tag", "-m", "Blob tag", "v1.2.0", blobID)
-	annotatedTagID := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoCopyPath, "tag", "-l", "--format=%(objectname)", "v1.2.0")
-	annotatedTagID = bytes.TrimSpace(annotatedTagID)
+	ctx, cancel := testhelper.Context()
+	defer cancel()
 
-	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoCopyPath,
-		"-c", fmt.Sprintf("user.name=%s", committerName),
-		"-c", fmt.Sprintf("user.email=%s", committerEmail),
-		"tag", "v1.3.0", commitID)
+	bigCommitID := testhelper.CreateCommit(t, testRepoCopyPath, "local-big-commits", &testhelper.CreateCommitOpts{
+		Message:  "An empty commit with REALLY BIG message\n\n" + strings.Repeat("a", helper.MaxCommitOrTagMessageSize+1),
+		ParentID: "60ecb67744cb56576c30214ff52294f8ce2def98",
+	})
+	bigCommit, err := log.GetCommit(ctx, testRepoCopy, bigCommitID, "")
+	require.NoError(t, err)
 
-	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoCopyPath,
-		"-c", fmt.Sprintf("user.name=%s", committerName),
-		"-c", fmt.Sprintf("user.email=%s", committerEmail),
-		"tag", "v1.4.0", blobID)
+	annotatedTagID := testhelper.CreateTag(t, testRepoCopyPath, "v1.2.0", blobID, &testhelper.CreateTagOpts{Message: "Blob tag"})
+
+	testhelper.CreateTag(t, testRepoCopyPath, "v1.3.0", commitID, nil)
+	testhelper.CreateTag(t, testRepoCopyPath, "v1.4.0", blobID, nil)
 
 	// To test recursive resolving to a commit
-	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoCopyPath,
-		"-c", fmt.Sprintf("user.name=%s", committerName),
-		"-c", fmt.Sprintf("user.email=%s", committerEmail),
-		"tag", "v1.5.0", "v1.3.0")
+	testhelper.CreateTag(t, testRepoCopyPath, "v1.5.0", "v1.3.0", nil)
+
+	// A tag to commit with a big message
+	testhelper.CreateTag(t, testRepoCopyPath, "v1.6.0", bigCommitID, nil)
+
+	// A tag with a big message
+	bigMessage := strings.Repeat("a", 11*1024)
+	bigMessageTag1ID := testhelper.CreateTag(t, testRepoCopyPath, "v1.7.0", commitID, &testhelper.CreateTagOpts{Message: bigMessage})
 
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
 	rpcRequest := &pb.FindAllTagsRequest{Repository: testRepoCopy}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	c, err := client.FindAllTags(ctx, rpcRequest)
 	if err != nil {
 		t.Fatal(err)
@@ -454,6 +453,7 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 			Id:           "f4e6814c3e4e7a0de82a9e7cd20c626cc963a2f8",
 			TargetCommit: gitCommit,
 			Message:      []byte("Release"),
+			MessageSize:  7,
 		},
 		{
 			Name: []byte("v1.1.0"),
@@ -473,13 +473,16 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 					Date:  &timestamp.Timestamp{Seconds: 1393491698},
 				},
 				ParentIds: []string{"570e7b2abdd848b95f2f578043fc23bd6f6fd24d"},
+				BodySize:  98,
 			},
-			Message: []byte("Version 1.1.0"),
+			Message:     []byte("Version 1.1.0"),
+			MessageSize: 13,
 		},
 		{
-			Name:    []byte("v1.2.0"),
-			Id:      string(annotatedTagID),
-			Message: []byte("Blob tag"),
+			Name:        []byte("v1.2.0"),
+			Id:          string(annotatedTagID),
+			Message:     []byte("Blob tag"),
+			MessageSize: 8,
 		},
 		{
 			Name:         []byte("v1.3.0"),
@@ -495,6 +498,18 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 			Id:           string(commitID),
 			TargetCommit: gitCommit,
 		},
+		{
+			Name:         []byte("v1.6.0"),
+			Id:           string(bigCommitID),
+			TargetCommit: bigCommit,
+		},
+		{
+			Name:         []byte("v1.7.0"),
+			Id:           string(bigMessageTag1ID),
+			Message:      []byte(bigMessage[:helper.MaxCommitOrTagMessageSize]),
+			MessageSize:  int64(len(bigMessage)),
+			TargetCommit: gitCommit,
+		},
 	}
 
 	if len(receivedTags) < len(expectedTags) {
@@ -503,14 +518,9 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 
 	for _, expectedTag := range expectedTags {
 		t.Run(string(expectedTag.Name), func(t *testing.T) {
-
 			receivedTag := findTag(receivedTags, expectedTag.Name)
 			require.NotNil(t, receivedTag, "tag not found")
-
-			require.Equal(t, expectedTag.Name, receivedTag.Name, "mismatched tag name")
-			require.Equal(t, expectedTag.Id, receivedTag.Id, "mismatched ID")
-			require.Equal(t, expectedTag.Message, receivedTag.Message, "mismatched message")
-			require.Equal(t, expectedTag.TargetCommit, receivedTag.TargetCommit)
+			require.Equal(t, expectedTag, receivedTag)
 		})
 	}
 }
