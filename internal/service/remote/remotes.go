@@ -1,7 +1,9 @@
 package remote
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"strings"
 
 	"google.golang.org/grpc/codes"
@@ -10,6 +12,7 @@ import (
 	"golang.org/x/net/context"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 )
 
@@ -60,6 +63,34 @@ func (s *server) RemoveRemote(ctx context.Context, req *pb.RemoveRemoteRequest) 
 	}
 
 	return client.RemoveRemote(clientCtx, req)
+}
+
+func (s *server) FindRemoteRepository(ctx context.Context, req *pb.FindRemoteRepositoryRequest) (*pb.FindRemoteRepositoryResponse, error) {
+	if req.GetRemote() == "" {
+		return nil, status.Error(codes.InvalidArgument, "FindRemoteRepository: empty remote can't be checked.")
+	}
+
+	cmd, err := git.CommandWithoutRepo(ctx, "ls-remote", req.GetRemote(), "HEAD")
+
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "error executing git command: %s", err)
+	}
+
+	output, err := ioutil.ReadAll(cmd)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "unable to read stdout: %s", err)
+	}
+	if err := cmd.Wait(); err != nil {
+		return &pb.FindRemoteRepositoryResponse{Exists: false}, nil
+	}
+
+	// The output of a successful command is structured like
+	// Regexp would've read better, but this is faster
+	// 58fbff2e0d3b620f591a748c158799ead87b51cd	HEAD
+	fields := bytes.Fields(output)
+	match := len(fields) == 2 && len(fields[0]) == 40 && string(fields[1]) == "HEAD"
+
+	return &pb.FindRemoteRepositoryResponse{Exists: match}, nil
 }
 
 func validateRemoveRemoteRequest(req *pb.RemoveRemoteRequest) error {

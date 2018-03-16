@@ -20,3 +20,8 @@ func Command(ctx context.Context, repo *pb.Repository, args ...string) (*command
 	args = append([]string{"--git-dir", repoPath}, args...)
 	return command.New(ctx, exec.Command(command.GitPath(), args...), nil, nil, nil, env...)
 }
+
+// CommandWithoutRepo works like Command but without a git repository
+func CommandWithoutRepo(ctx context.Context, args ...string) (*command.Command, error) {
+	return command.New(ctx, exec.Command(command.GitPath(), args...), nil, nil, nil, "")
+}
