@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.91.0
 
 - Rewrite RepositoryService.HasLocalBranches in Go
   https://gitlab.com/gitlab-org/gitaly/merge_requests/629
