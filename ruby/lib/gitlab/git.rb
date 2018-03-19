@@ -7,6 +7,7 @@ require 'securerandom'
 require 'active_support/core_ext/object/blank'
 require 'active_support/core_ext/numeric/bytes'
 require 'active_support/core_ext/numeric/time'
+require 'active_support/core_ext/integer/time'
 require 'active_support/core_ext/module/delegation'
 require 'active_support/core_ext/hash/transform_values'
 require 'active_support/core_ext/enumerable'
@@ -83,6 +84,12 @@ module Gitlab
 
       def relative_object_directories
         []
+      end
+
+      # This method was prematurely deleted from gitlab-ce. TODO: implement it in Go.
+      def fsck
+        msg, status = run_git(%W[--git-dir=#{path} fsck], nice: true)
+        raise GitError.new("Could not fsck repository: #{msg}") unless status.zero?
       end
     end
 
