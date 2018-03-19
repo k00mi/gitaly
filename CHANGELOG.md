@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Implement Get{Tag,Commit}Messages RPCs
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/646
+
 v0.93.0
 
 - Fix concurrency limit handler stream interceptor

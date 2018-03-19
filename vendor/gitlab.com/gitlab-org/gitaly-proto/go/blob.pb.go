@@ -177,6 +177,8 @@ It has these top-level messages:
 	RepackFullResponse
 	GarbageCollectRequest
 	GarbageCollectResponse
+	CleanupRequest
+	CleanupResponse
 	RepositorySizeRequest
 	RepositorySizeResponse
 	ApplyGitattributesRequest
@@ -215,6 +217,8 @@ It has these top-level messages:
 	FindLicenseResponse
 	GetInfoAttributesRequest
 	GetInfoAttributesResponse
+	CalculateChecksumRequest
+	CalculateChecksumResponse
 	ServerInfoRequest
 	ServerInfoResponse
 	Repository
