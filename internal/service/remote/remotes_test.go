@@ -1,7 +1,11 @@
 package remote
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"google.golang.org/grpc/codes"
@@ -212,4 +216,60 @@ func TestFailedRemoveRemoteDueToValidation(t *testing.T) {
 
 	_, err := client.RemoveRemote(ctx, request)
 	testhelper.AssertGrpcError(t, err, codes.InvalidArgument, "")
+}
+
+func TestFindRemoteRepository(t *testing.T) {
+	server, serverSocketPath := runRemoteServiceServer(t)
+	defer server.Stop()
+
+	client, conn := NewRemoteClient(t, serverSocketPath)
+	defer conn.Close()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		infoRefs := testhelper.MustReadFile(t, "testdata/lsremotedata.txt")
+		w.Header().Set("Content-Type", "application/x-git-upload-pack-advertisement")
+		io.Copy(w, bytes.NewReader(infoRefs))
+	}))
+	defer ts.Close()
+
+	resp, err := client.FindRemoteRepository(ctx, &pb.FindRemoteRepositoryRequest{Remote: ts.URL})
+	require.NoError(t, err)
+
+	require.True(t, resp.Exists)
+}
+
+func TestFailedFindRemoteRepository(t *testing.T) {
+	server, serverSocketPath := runRemoteServiceServer(t)
+	defer server.Stop()
+
+	client, conn := NewRemoteClient(t, serverSocketPath)
+	defer conn.Close()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	testCases := []struct {
+		description string
+		remote      string
+		exists      bool
+		code        codes.Code
+	}{
+		{"non existing remote", "http://example.com/test.git", false, codes.OK},
+		{"empty remote", "", false, codes.InvalidArgument},
+	}
+
+	for _, tc := range testCases {
+		resp, err := client.FindRemoteRepository(ctx, &pb.FindRemoteRepositoryRequest{Remote: tc.remote})
+		if tc.code == codes.OK {
+			require.NoError(t, err)
+		} else {
+			testhelper.AssertGrpcError(t, err, tc.code, "")
+			continue
+		}
+
+		require.Equal(t, tc.exists, resp.GetExists(), tc.description)
+	}
 }

@@ -163,6 +163,8 @@ It has these top-level messages:
 	FetchInternalRemoteResponse
 	UpdateRemoteMirrorRequest
 	UpdateRemoteMirrorResponse
+	FindRemoteRepositoryRequest
+	FindRemoteRepositoryResponse
 	RepositoryExistsRequest
 	RepositoryExistsResponse
 	RepackIncrementalRequest
@@ -207,6 +209,8 @@ It has these top-level messages:
 	CreateRepositoryFromBundleResponse
 	FindLicenseRequest
 	FindLicenseResponse
+	GetInfoAttributesRequest
+	GetInfoAttributesResponse
 	ServerInfoRequest
 	ServerInfoResponse
 	Repository
