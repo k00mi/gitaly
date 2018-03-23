@@ -83,8 +83,8 @@ module GitalyServer
       Gitaly::ConflictFileHeader.new(
         repository: file.repository.gitaly_repository,
         commit_oid: file.commit_oid,
-        their_path: file.their_path,
-        our_path: file.our_path,
+        their_path: file.their_path.b,
+        our_path: file.our_path.b,
         our_mode: file.our_mode
       )
     end

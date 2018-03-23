@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Fix encoding error in ListConflictFiles
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/639
 - Add catfile convenience methods
   https://gitlab.com/gitlab-org/gitaly/merge_requests/638
 - Server implementation FindRemoteRepository
