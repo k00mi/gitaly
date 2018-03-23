@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package test;
+
+service Test {
+  rpc Unary(UnaryRequest) returns (UnaryResponse) {}
+  rpc StreamInput(stream StreamInputRequest) returns (StreamInputResponse) {}
+  rpc StreamOutput(StreamOutputRequest) returns (stream StreamOutputResponse) {}
+  rpc Bidirectional(stream BidirectionalRequest) returns (stream BidirectionalResponse) {}
+}
+
+message UnaryRequest {}
+message UnaryResponse {
+  bool ok = 1;
+}
+message StreamInputRequest {}
+message StreamInputResponse {
+  bool ok = 1;
+}
+message StreamOutputRequest {}
+message StreamOutputResponse {
+  bool ok = 1;
+}
+message BidirectionalRequest {}
+message BidirectionalResponse {
+  bool ok = 1;
+}
