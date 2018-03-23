@@ -1,71 +1,43 @@
 package commit
 
 import (
-	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	pathPkg "path"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 )
 
-func getTreeInfo(revision, path string, stdin io.Writer, stdout *bufio.Reader) (*catfile.ObjectInfo, error) {
-	if _, err := fmt.Fprintf(stdin, "%s^{tree}:%s\n", revision, path); err != nil {
-		return nil, status.Errorf(codes.Internal, "TreeEntry: stdin write: %v", err)
-	}
+const oidSize = 20
 
-	treeInfo, err := catfile.ParseObjectInfo(stdout)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "TreeEntry: %v", err)
-	}
-	return treeInfo, nil
-}
-
-func extractEntryInfoFromTreeData(stdout *bufio.Reader, commitOid, rootOid, rootPath string, treeInfo *catfile.ObjectInfo) ([]*pb.TreeEntry, error) {
-	var entries []*pb.TreeEntry
-	var modeBytes, filename []byte
-	var err error
-
-	// Non-existing tree, return empty entry list
+func extractEntryInfoFromTreeData(treeData *bytes.Buffer, commitOid, rootOid, rootPath string, treeInfo *catfile.ObjectInfo) ([]*pb.TreeEntry, error) {
 	if len(treeInfo.Oid) == 0 {
-		return entries, nil
+		return nil, fmt.Errorf("empty tree oid")
 	}
 
-	oidBytes := make([]byte, 20)
-	bytesLeft := treeInfo.Size
-
-	for bytesLeft > 0 {
-		modeBytes, err = stdout.ReadBytes(' ')
+	var entries []*pb.TreeEntry
+	oidBuf := &bytes.Buffer{}
+	for treeData.Len() > 0 {
+		modeBytes, err := treeData.ReadBytes(' ')
 		if err != nil || len(modeBytes) <= 1 {
 			return nil, fmt.Errorf("read entry mode: %v", err)
 		}
-		bytesLeft -= int64(len(modeBytes))
 		modeBytes = modeBytes[:len(modeBytes)-1]
 
-		filename, err = stdout.ReadBytes('\x00')
+		filename, err := treeData.ReadBytes('\x00')
 		if err != nil || len(filename) <= 1 {
 			return nil, fmt.Errorf("read entry path: %v", err)
 		}
-		bytesLeft -= int64(len(filename))
 		filename = filename[:len(filename)-1]
 
-		// bufio.Reader.Read isn't guaranteed to read len(p) since bytes
-		// are taken from at most one Read on the underlying Reader.
-		// We call Peek to make sure we have enough bytes buffered to read into oidBytes.
-		if _, err := stdout.Peek(len(oidBytes)); err != nil {
-			return nil, fmt.Errorf("peek entry oid: %v", err)
-		}
-		if n, err := stdout.Read(oidBytes); n != 20 || err != nil {
+		oidBuf.Reset()
+		if _, err := io.CopyN(oidBuf, treeData, oidSize); err != nil {
 			return nil, fmt.Errorf("read entry oid: %v", err)
 		}
 
-		bytesLeft -= int64(len(oidBytes))
-
-		treeEntry, err := newTreeEntry(commitOid, rootOid, rootPath, filename, oidBytes, modeBytes)
+		treeEntry, err := newTreeEntry(commitOid, rootOid, rootPath, filename, oidBuf.Bytes(), modeBytes)
 		if err != nil {
 			return nil, fmt.Errorf("new entry info: %v", err)
 		}
@@ -73,87 +45,89 @@ func extractEntryInfoFromTreeData(stdout *bufio.Reader, commitOid, rootOid, root
 		entries = append(entries, treeEntry)
 	}
 
-	// Extra byte for a linefeed at the end
-	if _, err := stdout.Discard(int(bytesLeft + 1)); err != nil {
-		return nil, fmt.Errorf("stdout discard: %v", err)
-	}
-
 	return entries, nil
 }
 
-func treeEntries(revision, path string, stdin io.Writer, stdout *bufio.Reader, includeRootOid bool, rootOid string, recursive bool) ([]*pb.TreeEntry, error) {
+func treeEntries(c *catfile.Batch, revision, path string, rootOid string, recursive bool) ([]*pb.TreeEntry, error) {
 	if path == "." {
 		path = ""
 	}
 
-	var entries []*pb.TreeEntry
-
-	if path == "" || includeRootOid {
-		// We always need to process the root path to get the rootTreeInfo.Oid
-		rootTreeInfo, err := getTreeInfo(revision, "", stdin, stdout)
+	if len(rootOid) == 0 {
+		rootTreeInfo, err := c.Info(revision + "^{tree}")
 		if err != nil {
+			if catfile.IsNotFound(err) {
+				return nil, nil
+			}
+
 			return nil, err
 		}
 
 		rootOid = rootTreeInfo.Oid
-
-		entries, err = extractEntryInfoFromTreeData(stdout, revision, rootOid, "", rootTreeInfo)
-		if err != nil {
-			return nil, err
-		}
 	}
 
-	if path != "" {
-		treeEntryInfo, err := getTreeInfo(revision, path, stdin, stdout)
-		if err != nil {
-			return nil, err
-		}
-		if treeEntryInfo.Type != "tree" {
+	treeEntryInfo, err := c.Info(fmt.Sprintf("%s^{tree}:%s", revision, path))
+	if err != nil {
+		if catfile.IsNotFound(err) {
 			return nil, nil
 		}
 
-		entries, err = extractEntryInfoFromTreeData(stdout, revision, rootOid, path, treeEntryInfo)
-		if err != nil {
-			return nil, err
-		}
+		return nil, err
+	}
+
+	if treeEntryInfo.Type != "tree" {
+		return nil, nil
+	}
+
+	treeReader, err := c.Tree(treeEntryInfo.Oid)
+	if err != nil {
+		return nil, err
+	}
+
+	treeBytes := &bytes.Buffer{}
+	if _, err := treeBytes.ReadFrom(treeReader); err != nil {
+		return nil, err
+	}
+
+	entries, err := extractEntryInfoFromTreeData(treeBytes, revision, rootOid, path, treeEntryInfo)
+	if err != nil {
+		return nil, err
 	}
 
 	if !recursive {
 		return entries, nil
 	}
 
-	var orderdEntries []*pb.TreeEntry
+	var orderedEntries []*pb.TreeEntry
 	for _, entry := range entries {
-		orderdEntries = append(orderdEntries, entry)
+		orderedEntries = append(orderedEntries, entry)
 
 		if entry.Type == pb.TreeEntry_TREE {
-			subentries, err := treeEntries(revision, string(entry.Path), stdin, stdout, true, rootOid, true)
+			subentries, err := treeEntries(c, revision, string(entry.Path), rootOid, true)
 			if err != nil {
 				return nil, err
 			}
 
-			orderdEntries = append(orderdEntries, subentries...)
+			orderedEntries = append(orderedEntries, subentries...)
 		}
 	}
 
-	return orderdEntries, nil
+	return orderedEntries, nil
 }
 
 // TreeEntryForRevisionAndPath returns a TreeEntry struct for the object present at the revision/path pair.
-func TreeEntryForRevisionAndPath(revision, path string, stdin io.Writer, stdout *bufio.Reader) (*pb.TreeEntry, error) {
-	entries, err := treeEntries(revision, pathPkg.Dir(path), stdin, stdout, false, "", false)
+func TreeEntryForRevisionAndPath(c *catfile.Batch, revision, path string) (*pb.TreeEntry, error) {
+	entries, err := treeEntries(c, revision, pathPkg.Dir(path), "", false)
 	if err != nil {
 		return nil, err
 	}
 
-	var treeEntry *pb.TreeEntry
-
 	for _, entry := range entries {
 		if string(entry.Path) == path {
-			treeEntry = entry
-			break
+			entry.RootOid = "" // Not sure why we do this
+			return entry, nil
 		}
 	}
 
-	return treeEntry, nil
+	return nil, nil
 }
