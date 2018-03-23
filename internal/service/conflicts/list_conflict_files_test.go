@@ -27,9 +27,16 @@ func TestSuccessfulListConflictFilesRequest(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	ourCommitOid := "0b4bc9a49b562e85de7cc9e834518ea6828729b9"
-	theirCommitOid := "bb5206fee213d983da88c47f9cf4cc6caf9c66dc"
-	conflictContent := `<<<<<<< files/ruby/feature.rb
+	ourCommitOid := "1a35b5a77cf6af7edf6703f88e82f6aff613666f"
+	theirCommitOid := "8309e68585b28d61eb85b7e2834849dda6bf1733"
+
+	conflictContent1 := `<<<<<<< encoding/codagé
+Content is not important, file name is
+=======
+Content can be important, but here, file name is of utmost importance
+>>>>>>> encoding/codagé
+`
+	conflictContent2 := `<<<<<<< files/ruby/feature.rb
 class Feature
   def foo
     puts 'bar'
@@ -56,15 +63,31 @@ end
 		t.Fatal(err)
 	}
 
-	files := getConflictFiles(t, c)
-	require.Len(t, files, 1)
+	expectedFiles := []*conflictFile{
+		{
+			header: &pb.ConflictFileHeader{
+				Repository: testRepo,
+				CommitOid:  ourCommitOid,
+				OurMode:    int32(0100644),
+				OurPath:    []byte("encoding/codagé"),
+				TheirPath:  []byte("encoding/codagé"),
+			},
+			content: []byte(conflictContent1),
+		},
+		{
+			header: &pb.ConflictFileHeader{
+				Repository: testRepo,
+				CommitOid:  ourCommitOid,
+				OurMode:    int32(0100644),
+				OurPath:    []byte("files/ruby/feature.rb"),
+				TheirPath:  []byte("files/ruby/feature.rb"),
+			},
+			content: []byte(conflictContent2),
+		},
+	}
 
-	file := files[0]
-	require.Equal(t, ourCommitOid, file.header.CommitOid)
-	require.Equal(t, int32(0100644), file.header.OurMode)
-	require.Equal(t, "files/ruby/feature.rb", string(file.header.OurPath))
-	require.Equal(t, "files/ruby/feature.rb", string(file.header.TheirPath))
-	require.Equal(t, conflictContent, string(file.content))
+	receivedFiles := getConflictFiles(t, c)
+	require.Equal(t, expectedFiles, receivedFiles)
 }
 
 func TestFailedListConflictFilesRequestDueToConflictSideMissing(t *testing.T) {
@@ -151,9 +174,10 @@ func TestFailedListConflictFilesRequestDueToValidation(t *testing.T) {
 	}
 }
 
-func getConflictFiles(t *testing.T, c pb.ConflictsService_ListConflictFilesClient) []conflictFile {
-	files := []conflictFile{}
-	currentFile := conflictFile{}
+func getConflictFiles(t *testing.T, c pb.ConflictsService_ListConflictFilesClient) []*conflictFile {
+	files := []*conflictFile{}
+	var currentFile *conflictFile
+
 	for {
 		r, err := c.Recv()
 		if err == io.EOF {
@@ -161,21 +185,22 @@ func getConflictFiles(t *testing.T, c pb.ConflictsService_ListConflictFilesClien
 		} else if err != nil {
 			t.Fatal(err)
 		}
+
 		for _, file := range r.GetFiles() {
 			// If there's a header this is the beginning of a new file
 			if header := file.GetHeader(); header != nil {
-				// Save previous file, except on the first iteration
-				if len(files) > 0 {
+				if currentFile != nil {
 					files = append(files, currentFile)
 				}
 
-				currentFile = conflictFile{header: header}
+				currentFile = &conflictFile{header: header}
 			} else {
 				// Append to current file's content
 				currentFile.content = append(currentFile.content, file.GetContent()...)
 			}
 		}
 	}
+
 	// Append leftover file
 	files = append(files, currentFile)
 
