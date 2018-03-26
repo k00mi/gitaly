@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Server Implementation GetInfoAttributes
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/641
 - Fix encoding error in ListConflictFiles
   https://gitlab.com/gitlab-org/gitaly/merge_requests/639
 - Add catfile convenience methods
