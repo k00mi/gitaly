@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.92.0
 
 - Server Implementation GetInfoAttributes
   https://gitlab.com/gitlab-org/gitaly/merge_requests/641
