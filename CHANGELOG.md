@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Update gitaly-proto to v0.91.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/643
+
 v0.92.0
 
 - Server Implementation GetInfoAttributes

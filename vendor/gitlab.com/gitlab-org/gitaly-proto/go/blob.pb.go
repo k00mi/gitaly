@@ -71,6 +71,8 @@ It has these top-level messages:
 	ExtractCommitSignatureResponse
 	GetCommitSignaturesRequest
 	GetCommitSignaturesResponse
+	GetCommitMessagesRequest
+	GetCommitMessagesResponse
 	ListConflictFilesRequest
 	ConflictFileHeader
 	ConflictFile
@@ -155,6 +157,8 @@ It has these top-level messages:
 	ListBranchNamesContainingCommitResponse
 	ListTagNamesContainingCommitRequest
 	ListTagNamesContainingCommitResponse
+	GetTagMessagesRequest
+	GetTagMessagesResponse
 	AddRemoteRequest
 	AddRemoteResponse
 	RemoveRemoteRequest
