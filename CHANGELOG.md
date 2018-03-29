@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Vendor gitlab_git at 9b76d8512a5491202e5a953
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/647
 - Add handling for large commit and tag messages
   https://gitlab.com/gitlab-org/gitaly/merge_requests/635
 - Update gitaly-proto to v0.91.0
