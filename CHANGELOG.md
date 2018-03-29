@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Fix concurrency limit handler stream interceptor
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/640
 - Vendor gitlab_git at 9b76d8512a5491202e5a953
   https://gitlab.com/gitlab-org/gitaly/merge_requests/647
 - Add handling for large commit and tag messages

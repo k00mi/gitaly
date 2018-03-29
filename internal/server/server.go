@@ -1,6 +1,8 @@
 package server
 
 import (
+	"golang.org/x/net/context"
+
 	log "github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitaly/internal/helper/fieldextractors"
@@ -23,6 +25,21 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+func concurrencyKeyFn(ctx context.Context) string {
+	tags := grpc_ctxtags.Extract(ctx)
+	ctxValue := tags.Values()["grpc.request.repoPath"]
+	if ctxValue == nil {
+		return ""
+	}
+
+	s, ok := ctxValue.(string)
+	if ok {
+		return s
+	}
+
+	return ""
+}
+
 // New returns a GRPC server with all Gitaly services and interceptors set up.
 func New(rubyServer *rubyserver.Server) *grpc.Server {
 	logger := log.StandardLogger()
@@ -42,7 +59,7 @@ func New(rubyServer *rubyserver.Server) *grpc.Server {
 		grpc_ctxtags.WithFieldExtractorForInitialReq(fieldextractors.FieldExtractor),
 	}
 
-	lh := limithandler.New()
+	lh := limithandler.New(concurrencyKeyFn)
 
 	server := grpc.NewServer(
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
