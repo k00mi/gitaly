@@ -78,12 +78,7 @@ module GitalyServer
               rugged_commit = gitlab_tag.dereferenced_target&.raw_commit
               gitaly_commit = gitaly_commit_from_rugged(rugged_commit) if rugged_commit
 
-              Gitaly::Tag.new(
-                name: gitlab_tag.name.b,
-                id: gitlab_tag.target,
-                message: gitlab_tag.message.to_s.b,
-                target_commit: gitaly_commit
-              )
+              gitaly_tag_from_gitlab_tag(gitlab_tag, gitaly_commit)
             end
 
             y.yield Gitaly::FindAllTagsResponse.new(tags: tags)

@@ -209,7 +209,7 @@ func TestFailedMergeConcurrentUpdate(t *testing.T) {
 	require.NoError(t, err, "receive first response")
 
 	// This concurrent update of the branch we are merging into should make the merge fail.
-	concurrentCommitID := testhelper.CreateCommit(t, testRepoPath, mergeBranchName)
+	concurrentCommitID := testhelper.CreateCommit(t, testRepoPath, mergeBranchName, nil)
 	require.NotEqual(t, firstResponse.CommitId, concurrentCommitID)
 
 	require.NoError(t, mergeBidi.Send(&pb.UserMergeBranchRequest{Apply: true}), "apply merge")

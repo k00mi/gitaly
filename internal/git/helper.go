@@ -11,6 +11,7 @@ import (
 	"github.com/golang/protobuf/ptypes/timestamp"
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
 // FallbackTimeValue is the value returned by `SafeTimeParse` in case it
@@ -64,14 +65,23 @@ func NewCommit(id, subject, body, authorName, authorEmail, authorDate,
 		Date:  &timestamp.Timestamp{Seconds: committerDateTime.Unix()},
 	}
 
-	return &pb.GitCommit{
+	commit := &pb.GitCommit{
 		Id:        string(id),
 		Subject:   subject,
-		Body:      body,
 		Author:    &author,
 		Committer: &committer,
 		ParentIds: parentIds,
-	}, nil
+		BodySize:  int64(len(body)),
+	}
+
+	bodyLengthToSend := len(body)
+	if threshold := helper.MaxCommitOrTagMessageSize; bodyLengthToSend > threshold {
+		bodyLengthToSend = threshold
+	}
+
+	commit.Body = body[:bodyLengthToSend]
+
+	return commit, nil
 }
 
 // Version returns the used git version.

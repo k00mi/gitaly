@@ -22,12 +22,7 @@ module GitalyServer
 
           rugged_commit = created_tag.dereferenced_target.rugged_commit
           commit = gitaly_commit_from_rugged(rugged_commit)
-          tag = Gitaly::Tag.new(
-            name: tag_name.b,
-            id: created_tag.target,
-            target_commit: commit,
-            message: created_tag.message.to_s.b
-          )
+          tag = gitaly_tag_from_gitlab_tag(created_tag, commit)
 
           Gitaly::UserCreateTagResponse.new(tag: tag)
         rescue Gitlab::Git::Repository::InvalidRef => e

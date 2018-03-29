@@ -32,6 +32,7 @@ func TestSuccessfulCommitsByMessageRequest(t *testing.T) {
 			Author:    dummyCommitAuthor(1500320272),
 			Committer: dummyCommitAuthor(1500320272),
 			ParentIds: []string{"9d526f87b82e2b2fd231ca44c95508e5e85624ca"},
+			BodySize:  11,
 		},
 		{
 			Id:        "79b06233d3dc769921576771a4e8bee4b439595d",
@@ -40,6 +41,7 @@ func TestSuccessfulCommitsByMessageRequest(t *testing.T) {
 			Author:    dummyCommitAuthor(1500320254),
 			Committer: dummyCommitAuthor(1500320254),
 			ParentIds: []string{"1a0b36b3cdad1d2ee32457c102a8c0b7056fa863"},
+			BodySize:  10,
 		},
 	}
 
@@ -96,6 +98,7 @@ func TestSuccessfulCommitsByMessageRequest(t *testing.T) {
 						Date:  &timestamp.Timestamp{Seconds: 1393488896},
 					},
 					ParentIds: []string{"cfe32cf61b73a0d5e9f13e774abde7ff789b1660"},
+					BodySize:  98,
 				},
 			},
 		},

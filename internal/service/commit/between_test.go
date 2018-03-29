@@ -46,6 +46,7 @@ func TestSuccessfulCommitsBetween(t *testing.T) {
 				"1b12f15a11fc6e62177bef08f47bc7b5ce50b141",
 				"498214de67004b1da3d820901307bed2a68a8ef6",
 			},
+			BodySize: 162,
 		},
 		{
 			Id:      "4a24d82dbca5c11c61556f3b35ca472b7463187e",
@@ -62,6 +63,7 @@ func TestSuccessfulCommitsBetween(t *testing.T) {
 				Date:  &timestamp.Timestamp{Seconds: 1491905339},
 			},
 			ParentIds: []string{"b83d6e391c22777fca1ed3012fce84f633d7fed0"},
+			BodySize:  62,
 		},
 		{
 			Id:      "e63f41fe459e62e1228fcef60d7189127aeba95a",
@@ -81,6 +83,7 @@ func TestSuccessfulCommitsBetween(t *testing.T) {
 				"b83d6e391c22777fca1ed3012fce84f633d7fed0",
 				"4a24d82dbca5c11c61556f3b35ca472b7463187e",
 			},
+			BodySize: 154,
 		},
 		{
 			Id:      "ba3343bc4fa403a8dfbfcab7fc1a8c29ee34bd69",
@@ -98,6 +101,7 @@ func TestSuccessfulCommitsBetween(t *testing.T) {
 				Date:  &timestamp.Timestamp{Seconds: 9223371974719179007},
 			},
 			ParentIds: []string{"e63f41fe459e62e1228fcef60d7189127aeba95a"},
+			BodySize:  18,
 		},
 	}
 	testCases := []struct {

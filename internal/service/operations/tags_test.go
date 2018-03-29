@@ -151,6 +151,7 @@ func TestSuccessfulUserCreateTagRequest(t *testing.T) {
 				Name:         []byte(inputTagName),
 				TargetCommit: targetRevisionCommit,
 				Message:      []byte("This is an annotated tag"),
+				MessageSize:  24,
 			},
 		},
 	}
