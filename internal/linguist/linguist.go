@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -53,14 +54,31 @@ func Color(language string) string {
 
 // LoadColors loads the name->color map from the Linguist gem.
 func LoadColors() error {
-	linguistPathSymlink, err := ioutil.TempFile("", "gitaly-linguist-path")
+	jsonReader, err := openLanguagesJSON()
 	if err != nil {
 		return err
+	}
+	defer jsonReader.Close()
+
+	return json.NewDecoder(jsonReader).Decode(&colorMap)
+}
+
+func openLanguagesJSON() (io.ReadCloser, error) {
+	if jsonPath := config.Config.Ruby.LinguistLanguagesPath; jsonPath != "" {
+		// This is a fallback for environments where dynamic discovery of the
+		// linguist path via Bundler is not working for some reason, for example
+		// https://gitlab.com/gitlab-org/gitaly/issues/1119.
+		return os.Open(jsonPath)
+	}
+
+	linguistPathSymlink, err := ioutil.TempFile("", "gitaly-linguist-path")
+	if err != nil {
+		return nil, err
 	}
 	defer os.Remove(linguistPathSymlink.Name())
 
 	if err := linguistPathSymlink.Close(); err != nil {
-		return err
+		return nil, err
 	}
 
 	// We use a symlink because we cannot trust Bundler to not print garbage
@@ -73,13 +91,8 @@ func LoadColors() error {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			err = fmt.Errorf("%v; stderr: %q", exitError, exitError.Stderr)
 		}
-		return err
+		return nil, err
 	}
 
-	languageJSON, err := ioutil.ReadFile(path.Join(linguistPathSymlink.Name(), "lib/linguist/languages.json"))
-	if err != nil {
-		return err
-	}
-
-	return json.Unmarshal(languageJSON, &colorMap)
+	return os.Open(path.Join(linguistPathSymlink.Name(), "lib/linguist/languages.json"))
 }

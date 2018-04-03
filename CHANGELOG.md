@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Add config option to point to languages.json
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/652
+
 v0.96.1
 
 - Make it a fatal error if gitaly-ruby can't start
