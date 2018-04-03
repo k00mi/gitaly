@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.93.0
 
 - Fix concurrency limit handler stream interceptor
   https://gitlab.com/gitlab-org/gitaly/merge_requests/640
