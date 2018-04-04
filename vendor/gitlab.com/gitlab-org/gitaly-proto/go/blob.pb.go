@@ -219,6 +219,10 @@ It has these top-level messages:
 	GetInfoAttributesResponse
 	CalculateChecksumRequest
 	CalculateChecksumResponse
+	GetSnapshotRequest
+	GetSnapshotResponse
+	CreateRepositoryFromSnapshotRequest
+	CreateRepositoryFromSnapshotResponse
 	ServerInfoRequest
 	ServerInfoResponse
 	Repository
