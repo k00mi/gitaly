@@ -104,5 +104,29 @@ module GitalyServer
         end
       end
     end
+
+    def get_tag_messages(request, call)
+      bridge_exceptions do
+        repository = Gitlab::Git::Repository.from_gitaly(request.repository, call)
+
+        Enumerator.new do |y|
+          request.tag_ids.each do |tag_id|
+            annotation = repository.rugged.rev_parse(tag_id)
+            next unless annotation
+
+            response = Gitaly::GetTagMessagesResponse.new(tag_id: tag_id)
+            io = StringIO.new(annotation.message)
+
+            while chunk = io.read(Gitlab.config.git.max_commit_or_tag_message_size)
+              response.message = chunk
+
+              y.yield response
+
+              response = Gitaly::GetTagMessagesResponse.new
+            end
+          end
+        end
+      end
+    end
   end
 end

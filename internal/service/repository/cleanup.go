@@ -7,9 +7,18 @@ import (
 	"strings"
 	"time"
 
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
+
+	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+
+	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+func (server) Cleanup(ctx context.Context, in *pb.CleanupRequest) (*pb.CleanupResponse, error) {
+	return nil, helper.Unimplemented
+}
 
 func cleanupRepo(repoPath string) error {
 	threshold := time.Now().Add(-1 * time.Hour)
