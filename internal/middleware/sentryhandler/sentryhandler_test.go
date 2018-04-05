@@ -48,6 +48,27 @@ func Test_generateRavenPacket(t *testing.T) {
 			err:        nil,
 			wantNil:    true,
 		},
+		{
+			name:       "Canceled",
+			method:     "/gitaly.RepoService/RepoExists",
+			sinceStart: 500 * time.Millisecond,
+			err:        status.Errorf(codes.Canceled, "Something failed"),
+			wantNil:    true,
+		},
+		{
+			name:       "DeadlineExceeded",
+			method:     "/gitaly.RepoService/RepoExists",
+			sinceStart: 500 * time.Millisecond,
+			err:        status.Errorf(codes.DeadlineExceeded, "Something failed"),
+			wantNil:    true,
+		},
+		{
+			name:       "FailedPrecondition",
+			method:     "/gitaly.RepoService/RepoExists",
+			sinceStart: 500 * time.Millisecond,
+			err:        status.Errorf(codes.FailedPrecondition, "Something failed"),
+			wantNil:    true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

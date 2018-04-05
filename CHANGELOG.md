@@ -6,6 +6,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/656
 - Run Go test suite with '-race' in CI
   https://gitlab.com/gitlab-org/gitaly/merge_requests/654
+- Ignore more grpc codes in sentry
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/655
 - Implement Get{Tag,Commit}Messages RPCs
   https://gitlab.com/gitlab-org/gitaly/merge_requests/646
 - Fix directory permission walker for Go 1.10
