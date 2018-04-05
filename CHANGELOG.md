@@ -4,6 +4,8 @@ UNRELEASED
 
 - Implement Get{Tag,Commit}Messages RPCs
   https://gitlab.com/gitlab-org/gitaly/merge_requests/646
+- Fix directory permission walker for Go 1.10
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/650
 
 v0.93.0
 
