@@ -108,3 +108,14 @@ func (server) GetBlob(_ *pb.GetBlobRequest, _ pb.BlobService_GetBlobServer) erro
     return helper.Unimplemented
 }
 ```
+
+## Concurrency
+
+The [documentation of "sync/atomic"](https://golang.org/pkg/sync/atomic/) says:
+
+> These functions require great care to be used correctly. Except for
+special, low-level applications, synchronization is better done with
+channels or the facilities of the sync package.
+
+Gitaly is not a low-level application so we should avoid "sync/atomic".
+We use channels and [package "sync"](https://golang.org/pkg/sync/).
