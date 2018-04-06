@@ -3,6 +3,7 @@ package repository
 import (
 	"os"
 	"path"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -53,7 +54,7 @@ func TestFsckFailureSeverlyBrokenRepo(t *testing.T) {
 	c, err := client.Fsck(ctx, &pb.FsckRequest{Repository: testRepo})
 	assert.NoError(t, err)
 	assert.NotNil(t, c)
-	assert.Contains(t, string(c.GetError()), "Not a git repository")
+	assert.Contains(t, strings.ToLower(string(c.GetError())), "not a git repository")
 }
 
 func TestFsckFailureSlightlyBrokenRepo(t *testing.T) {
