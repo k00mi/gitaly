@@ -43,6 +43,12 @@ const (
 	DefaultStorageName  = "default"
 )
 
+func init() {
+	config.Config.Storages = []config.Storage{
+		{Name: "default", Path: GitlabTestStoragePath()},
+	}
+}
+
 // MustReadFile returns the content of a file or fails at once.
 func MustReadFile(t *testing.T, filename string) []byte {
 	content, err := ioutil.ReadFile(filename)
@@ -71,14 +77,6 @@ func GitlabTestStoragePath() string {
 		log.Fatal("Could not get caller info")
 	}
 	return path.Join(path.Dir(currentFile), "testdata/data")
-}
-
-// ConfigureTestStorage adds a storage entry to Config pointing to
-// the path of the gitlab-test repo.
-func ConfigureTestStorage() {
-	config.Config.Storages = []config.Storage{
-		{Name: "default", Path: GitlabTestStoragePath()},
-	}
 }
 
 // GitalyServersMetadata returns a metadata pair for gitaly-servers to be used in
@@ -113,7 +111,6 @@ func testRepoValid(repo *pb.Repository) bool {
 // Tests that involve modifications to the repo should copy/clone the repo
 // via the `Repository` returned from this function.
 func TestRepository() *pb.Repository {
-	ConfigureTestStorage()
 	repo := &pb.Repository{
 		StorageName:  "default",
 		RelativePath: TestRelativePath,
@@ -121,7 +118,7 @@ func TestRepository() *pb.Repository {
 	}
 
 	if !testRepoValid(repo) {
-		log.Fatalf("Test repo not found, did you run `make prepare-tests`?")
+		panic("Test repo not found, did you run `make prepare-tests`?")
 	}
 
 	return repo
@@ -361,8 +358,6 @@ func InitRepoWithWorktree(t *testing.T) (*pb.Repository, string, func()) {
 }
 
 func initRepo(t *testing.T, bare bool) (*pb.Repository, string, func()) {
-	ConfigureTestStorage()
-
 	repo, repoPath, _ := createRepo(t, GitlabTestStoragePath())
 	args := []string{"init"}
 	if bare {

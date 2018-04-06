@@ -121,20 +121,22 @@ func TestGetRepoPath(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		config.Config.Storages = tc.storages
-		path, err := GetRepoPath(tc.repo)
+		t.Run(tc.desc, func(t *testing.T) {
+			config.Config.Storages = tc.storages
+			path, err := GetRepoPath(tc.repo)
 
-		if tc.err != codes.OK {
-			testhelper.AssertGrpcError(t, err, tc.err, "")
-			continue
-		}
+			if tc.err != codes.OK {
+				testhelper.AssertGrpcError(t, err, tc.err, "")
+				return
+			}
 
-		if err != nil {
-			assert.NoError(t, err, tc.desc)
-			continue
-		}
+			if err != nil {
+				assert.NoError(t, err)
+				return
+			}
 
-		assert.Equal(t, tc.path, path, tc.desc)
+			assert.Equal(t, tc.path, path)
+		})
 	}
 }
 
