@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.94.0
 
 - Send gitaly-ruby exceptions to their own DSN
   https://gitlab.com/gitlab-org/gitaly/merge_requests/656
