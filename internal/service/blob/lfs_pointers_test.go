@@ -2,7 +2,6 @@ package blob
 
 import (
 	"io"
-	"os/exec"
 	"testing"
 
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -136,8 +135,6 @@ func TestSuccessfulGetNewLFSPointersRequest(t *testing.T) {
 	defer cleanupFn()
 
 	revision := []byte("46abbb087fcc0fd02c340f0f2f052bd2c7708da3")
-	cmd := exec.Command("git", "-C", testRepoPath, "cherry-pick", string(revision))
-	altDirsCommit, altDirs := testhelper.CreateCommitInAlternateObjectDirectory(t, testRepoPath, cmd)
 
 	// Create a commit not pointed at by any ref to emulate being in the
 	// pre-receive hook so that `--not --all` returns some objects
@@ -154,30 +151,6 @@ func TestSuccessfulGetNewLFSPointersRequest(t *testing.T) {
 			request: &pb.GetNewLFSPointersRequest{
 				Repository: testRepo,
 				Revision:   revision,
-			},
-			expectedLFSPointers: []*pb.LFSPointer{
-				{
-					Size: 133,
-					Data: []byte("version https://git-lfs.github.com/spec/v1\noid sha256:91eff75a492a3ed0dfcb544d7f31326bc4014c8551849c192fd1e48d4dd2c897\nsize 1575078\n\n"),
-					Oid:  "0c304a93cb8430108629bbbcaa27db3343299bc0",
-				},
-				{
-					Size: 127,
-					Data: []byte("version https://git-lfs.github.com/spec/v1\noid sha256:f2b0a1e7550e9b718dafc9b525a04879a766de62e4fbdfc46593d47f7ab74636\nsize 20\n"),
-					Oid:  "f78df813119a79bfbe0442ab92540a61d3ab7ff3",
-				},
-				{
-					Size: 127,
-					Data: []byte("version https://git-lfs.github.com/spec/v1\noid sha256:bad71f905b60729f502ca339f7c9f001281a3d12c68a5da7f15de8009f4bd63d\nsize 18\n"),
-					Oid:  "bab31d249f78fba464d1b75799aad496cc07fa3b",
-				},
-			},
-		},
-		{
-			desc: "request with revision in alternate directory",
-			request: &pb.GetNewLFSPointersRequest{
-				Repository: testRepo,
-				Revision:   altDirsCommit,
 			},
 			expectedLFSPointers: []*pb.LFSPointer{
 				{
@@ -265,7 +238,6 @@ func TestSuccessfulGetNewLFSPointersRequest(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			tc.request.Repository.GitAlternateObjectDirectories = []string{altDirs}
 			stream, err := client.GetNewLFSPointers(ctx, tc.request)
 			require.NoError(t, err)
 
