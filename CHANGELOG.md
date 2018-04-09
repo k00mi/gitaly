@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.95.0
 
 - Fix fragile checksum test
   https://gitlab.com/gitlab-org/gitaly/merge_requests/661
