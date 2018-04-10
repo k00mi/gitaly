@@ -2,11 +2,13 @@
 
 UNRELEASED
 
+- Make it a fatal error if gitaly-ruby can't start
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/667
 - Tag log entries with repo.GlRepository
   https://gitlab.com/gitlab-org/gitaly/merge_requests/663
 
-v0.95.0
 
+v0.95.0
 - Fix fragile checksum test
   https://gitlab.com/gitlab-org/gitaly/merge_requests/661
 - Use rugged 0.27.0
