@@ -119,7 +119,7 @@ test: test-go rspec
 
 .PHONY: test-go
 test-go: prepare-tests
-	@go test $(LOCAL_PACKAGES)
+	@go test -count=1 $(LOCAL_PACKAGES) # count=1 bypasses go 1.10 test caching
 
 .PHONY: race-go
 race-go: prepare-tests
