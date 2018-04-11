@@ -4,7 +4,7 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -29,19 +29,30 @@ const (
 // repository. The directory is removed with os.RemoveAll when ctx
 // expires.
 func New(ctx context.Context, repo *pb.Repository) (string, error) {
-	storageDir, err := helper.GetStorageByName(repo.StorageName)
+	_, path, err := NewAsRepository(ctx, repo)
 	if err != nil {
 		return "", err
+	}
+
+	return path, nil
+}
+
+// NewAsRepository is the same as New, but it returns a *pb.Repository for the
+// created directory as well as the bare path as a string
+func NewAsRepository(ctx context.Context, repo *pb.Repository) (*pb.Repository, string, error) {
+	storageDir, err := helper.GetStorageByName(repo.StorageName)
+	if err != nil {
+		return nil, "", err
 	}
 
 	root := tmpRoot(storageDir)
 	if err := os.MkdirAll(root, 0700); err != nil {
-		return "", err
+		return nil, "", err
 	}
 
 	tempDir, err := ioutil.TempDir(root, "repo")
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
 
 	go func() {
@@ -49,11 +60,13 @@ func New(ctx context.Context, repo *pb.Repository) (string, error) {
 		os.RemoveAll(tempDir)
 	}()
 
-	return tempDir, nil
+	newAsRepo := &pb.Repository{StorageName: repo.StorageName}
+	newAsRepo.RelativePath, err = filepath.Rel(storageDir, tempDir)
+	return newAsRepo, tempDir, err
 }
 
 func tmpRoot(storageRoot string) string {
-	return path.Join(storageRoot, tmpRootPrefix)
+	return filepath.Join(storageRoot, tmpRootPrefix)
 }
 
 // StartCleaning starts tempdir cleanup goroutines.
@@ -100,7 +113,7 @@ func clean(dir string) error {
 			continue
 		}
 
-		fullPath := path.Join(dir, info.Name())
+		fullPath := filepath.Join(dir, info.Name())
 		if err := housekeeping.FixDirectoryPermissions(fullPath); err != nil {
 			return err
 		}

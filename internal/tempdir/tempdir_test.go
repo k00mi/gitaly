@@ -8,18 +8,26 @@ import (
 	"time"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewSuccess(t *testing.T) {
+func TestNewAsRepositorySuccess(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 	repo := testhelper.TestRepository()
 
-	tempDir, err := New(ctx, repo)
+	tempRepo, tempDir, err := NewAsRepository(ctx, repo)
 	require.NoError(t, err)
+	require.NotEqual(t, repo, tempRepo)
+	require.Equal(t, repo.StorageName, tempRepo.StorageName)
+	require.NotEqual(t, repo.RelativePath, tempRepo.RelativePath)
+
+	calculatedPath, err := helper.GetPath(tempRepo)
+	require.NoError(t, err)
+	require.Equal(t, tempDir, calculatedPath)
 
 	err = ioutil.WriteFile(path.Join(tempDir, "test"), []byte("hello"), 0644)
 	require.NoError(t, err, "write file in tempdir")
@@ -38,7 +46,7 @@ func TestNewSuccess(t *testing.T) {
 	require.True(t, os.IsNotExist(err), "expected directory to have been removed, got error %v", err)
 }
 
-func TestNewFailStorageUnknown(t *testing.T) {
+func TestNewAsRepositoryFailStorageUnknown(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 	_, err := New(ctx, &pb.Repository{StorageName: "does-not-exist", RelativePath: "foobar.git"})
