@@ -9,6 +9,10 @@ v0.96.1
 - Add {Get,CreateRepositoryFrom}Snapshot RPCs
   https://gitlab.com/gitlab-org/gitaly/merge_requests/644
 
+v0.96.0
+
+Skipped. We cut and pushed the wrong tag.
+
 v0.95.0
 - Fix fragile checksum test
   https://gitlab.com/gitlab-org/gitaly/merge_requests/661
