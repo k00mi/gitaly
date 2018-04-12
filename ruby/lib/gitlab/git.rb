@@ -58,7 +58,7 @@ module Gitlab
       def initialize(gitaly_repository, path, gl_repository, gitlab_projects, combined_alt_dirs="")
         @gitaly_repository = gitaly_repository
 
-        @absolute_object_directories = combined_alt_dirs
+        @alternate_object_directories = combined_alt_dirs
           .split(File::PATH_SEPARATOR)
           .map { |d| File.join(path, d) }
 
@@ -78,12 +78,12 @@ module Gitlab
         @gitaly_repository
       end
 
-      def absolute_object_directories
-        @absolute_object_directories
+      def alternate_object_directories
+        @alternate_object_directories
       end
 
       def relative_object_directories
-        []
+        raise "don't use relative object directories in gitaly-ruby"
       end
 
       # This method was prematurely deleted from gitlab-ce. TODO: implement it in Go.
@@ -103,6 +103,24 @@ module Gitlab
           global_hooks_path: Gitlab.config.gitlab_shell.hooks_path,
           logger: Rails.logger
         )
+      end
+
+      def initialize(shard_path, repository_relative_path, global_hooks_path:, logger:)
+        @shard_path = shard_path
+        @repository_relative_path = repository_relative_path
+
+        @logger = logger
+        @global_hooks_path = global_hooks_path
+        @output = StringIO.new
+      end
+
+
+      def shard_name
+        raise "don't use shard_name in gitaly-ruby"
+      end
+
+      def shard_path
+        @shard_path
       end
     end
   end
@@ -143,6 +161,17 @@ module Gitlab
   module GlId
     def self.gl_id(user)
       user.gl_id
+    end
+  end
+end
+
+module Gitlab
+  module Utils
+    # TODO remove this monkey-patch after
+    # https://gitlab.com/gitlab-org/gitlab-ce/merge_requests/18335 is merged
+    # and vendored.
+    def self.nlbr(str)
+      str.gsub(/\R/, "<br>").html_safe
     end
   end
 end
