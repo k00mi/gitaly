@@ -6,7 +6,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/667
 - Tag log entries with repo.GlRepository
   https://gitlab.com/gitlab-org/gitaly/merge_requests/663
-
+- Add {Get,CreateRepositoryFrom}Snapshot RPCs
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/644
 
 v0.95.0
 - Fix fragile checksum test
