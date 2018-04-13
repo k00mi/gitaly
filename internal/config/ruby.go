@@ -14,6 +14,7 @@ type Ruby struct {
 	RestartDelay               time.Duration
 	RestartDelayToml           duration `toml:"restart_delay"`
 	NumWorkers                 int      `toml:"num_workers"`
+	LinguistLanguagesPath      string   `toml:"linguist_languages_path"`
 }
 
 // This type is a trick to let our TOML library parse durations from strings.
