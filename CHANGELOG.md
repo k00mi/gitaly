@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Catch CommitErrors while rebasing
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/680
+
 v0.97.0
 
 - Use gitaly-proto 0.97.0
