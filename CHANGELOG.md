@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.97.0
 
 - Use gitaly-proto 0.97.0
   https://gitlab.com/gitlab-org/gitaly/merge_requests/683
