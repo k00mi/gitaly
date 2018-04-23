@@ -18,7 +18,7 @@ func TestPingSuccess(t *testing.T) {
 	w := s.workers[0]
 
 	var pingErr error
-	for start := time.Now(); time.Since(start) < 5*time.Second; time.Sleep(100 * time.Millisecond) {
+	for start := time.Now(); time.Since(start) < ConnectTimeout; time.Sleep(100 * time.Millisecond) {
 		pingErr = ping(w.address)
 		if pingErr == nil {
 			break
