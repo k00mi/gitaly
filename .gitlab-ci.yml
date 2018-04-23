@@ -14,6 +14,13 @@ verify:
   script:
     - make verify
 
+danger-review:
+  stage: build
+  script:
+    - git version
+    - gem install danger-gitlab --no-document
+    - danger
+
 .ruby_template: &ruby_definition
   before_script:
     # Override gemfile config (for some reasong `config --delete` doesn't do it)
