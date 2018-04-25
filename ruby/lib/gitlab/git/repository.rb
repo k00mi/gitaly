@@ -50,6 +50,10 @@ module Gitlab
         msg, status = run_git(%W[--git-dir=#{path} fsck], nice: true)
         raise GitError.new("Could not fsck repository: #{msg}") unless status.zero?
       end
+
+      def exists?
+        File.exist?(File.join(path, 'refs'))
+      end
     end
   end
 end
