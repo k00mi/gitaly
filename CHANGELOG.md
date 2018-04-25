@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Limit concurrent gitaly-ruby requests from the client side
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/695
 - Allow configuration of the log level in `config.toml`
   https://gitlab.com/gitlab-org/gitaly/merge_requests/696
 - Copy Gitlab::Git::Repository#exists? implementation for internal method calls

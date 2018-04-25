@@ -104,7 +104,7 @@ func createLimiterConfig() map[string]*ConcurrencyLimiter {
 	result := make(map[string]*ConcurrencyLimiter)
 
 	for fullMethodName, max := range maxConcurrencyPerRepoPerRPC {
-		result[fullMethodName] = NewLimiter(max, newPromMonitor(fullMethodName))
+		result[fullMethodName] = NewLimiter(max, NewPromMonitor("gitaly", fullMethodName))
 	}
 
 	return result

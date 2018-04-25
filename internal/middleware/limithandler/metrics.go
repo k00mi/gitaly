@@ -22,7 +22,7 @@ var (
 			Name:      "in_progress",
 			Help:      "Gauge of number of number of concurrent invocations currently in progress for this endpoint",
 		},
-		[]string{"grpc_service", "grpc_method"},
+		[]string{"system", "grpc_service", "grpc_method"},
 	)
 
 	queuedGaugeVec = prom.NewGaugeVec(
@@ -32,7 +32,7 @@ var (
 			Name:      "queued",
 			Help:      "Gauge of number of number of invocations currently queued for this endpoint",
 		},
-		[]string{"grpc_service", "grpc_method"},
+		[]string{"system", "grpc_service", "grpc_method"},
 	)
 )
 
@@ -67,7 +67,7 @@ func EnableAcquireTimeHistogram(buckets []float64) {
 
 	histogramVec = prom.NewHistogramVec(
 		histogramOpts,
-		[]string{"grpc_service", "grpc_method"},
+		[]string{"system", "grpc_service", "grpc_method"},
 	)
 
 	prom.Register(histogramVec)
@@ -98,15 +98,17 @@ func (c *promMonitor) Exit(ctx context.Context) {
 	c.inprogressGauge.Dec()
 }
 
-func newPromMonitor(fullMethod string) ConcurrencyMonitor {
+// NewPromMonitor creates a new ConcurrencyMonitor that tracks limiter
+// activity in Prometheus.
+func NewPromMonitor(system string, fullMethod string) ConcurrencyMonitor {
 	serviceName, methodName := splitMethodName(fullMethod)
 
-	queuedGauge := queuedGaugeVec.WithLabelValues(serviceName, methodName)
-	inprogressGauge := inprogressGaugeVec.WithLabelValues(serviceName, methodName)
+	queuedGauge := queuedGaugeVec.WithLabelValues(serviceName, methodName, system)
+	inprogressGauge := inprogressGaugeVec.WithLabelValues(serviceName, methodName, system)
 
 	var histogram prom.Histogram
 	if histogramVec != nil {
-		histogram = histogramVec.WithLabelValues(serviceName, methodName)
+		histogram = histogramVec.WithLabelValues(system, serviceName, methodName)
 	}
 
 	return &promMonitor{queuedGauge, inprogressGauge, histogram}
