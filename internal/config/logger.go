@@ -32,10 +32,15 @@ func configureLoggingFormat() {
 
 // ConfigureLogging uses the global conf and environmental vars to configure the logged
 func ConfigureLogging() {
+	if level, err := log.ParseLevel(Config.Logging.Level); err != nil {
+		log.SetLevel(log.InfoLevel)
+	} else {
+		log.SetLevel(level)
+	}
+
+	// Allow override based on environment variable
 	if debugLoggingEnabled {
 		log.SetLevel(log.DebugLevel)
-	} else {
-		log.SetLevel(log.InfoLevel)
 	}
 
 	configureLoggingFormat()

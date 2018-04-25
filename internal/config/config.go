@@ -54,6 +54,7 @@ type Logging struct {
 	Format        string
 	SentryDSN     string `toml:"sentry_dsn"`
 	RubySentryDSN string `toml:"ruby_sentry_dsn"`
+	Level         string `toml:"level"`
 }
 
 // Prometheus contains additional configuration data for prometheus

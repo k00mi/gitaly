@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Allow configuration of the log level in `config.toml`
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/696
 - Copy Gitlab::Git::Repository#exists? implementation for internal method calls
   https://gitlab.com/gitlab-org/gitaly/merge_requests/693
 - Upgrade Licensee gem to match the CE gem

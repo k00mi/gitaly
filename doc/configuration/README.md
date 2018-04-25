@@ -118,6 +118,7 @@ max\_rss limit.
 |name|type|required|notes|
 |----|----|--------|-----|
 |format|string|no|Log format: "text" or "json". Default: "text"|
+|level|string|no| Log level: "debug", "info", "warn", "error", "fatal", or "panic". Default: "info"|
 |sentry_dsn|string|no|Sentry DSN for exception monitoring|
 |ruby_sentry_dsn|string|no|Sentry DSN for gitaly-ruby exception monitoring|
 
