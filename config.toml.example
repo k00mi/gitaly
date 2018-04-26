@@ -11,7 +11,6 @@ bin_dir = "/home/git/gitaly"
 
 # # Optional: export metrics via Prometheus
 # prometheus_listen_addr = "localhost:9236"
-#
 
 # # Git executable settings
 # [git]
@@ -31,6 +30,11 @@ path = "/home/git/repositories"
 # # You can optionally configure Gitaly to output JSON-formatted log messages to stdout
 # [logging]
 # format = "json"
+# # Optional: Set log level to only log entries with that severity or above
+# # One of, in order: debug, info, warn, errror, fatal, panic
+# # Defaults to "info"
+# level = "warn"
+#
 # # Additionally exceptions from the Go server can be reported to Sentry
 # sentry_dsn = "https://<key>:<secret>@sentry.io/<project>"
 # # Exceptions from gitaly-ruby can also be reported to Sentry
@@ -46,10 +50,10 @@ dir = "/home/git/gitaly/ruby"
 
 # # Gitaly-ruby resident set size (RSS) that triggers a memory restart (bytes)
 # max_rss = 300000000
-# 
+#
 # # Grace period before a gitaly-ruby process is forcibly terminated after exceeding max_rss (seconds)
 # graceful_restart_timeout = "10m"
-# 
+#
 # # Time that gitaly-ruby memory must remain high before a restart (seconds)
 # restart_delay = "5m"
 
