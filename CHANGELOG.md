@@ -8,6 +8,8 @@ UNRELEASED
   https://gitlab.com/gitlab-org/gitaly/merge_requests/677
 - Introduce feature flag package based on gRPC metadata
   https://gitlab.com/gitlab-org/gitaly/merge_requests/704
+- Return DataLoss error for non-valid git repositories when calculating the checksum
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/697
 
 v0.98.0
 
