@@ -2,12 +2,18 @@ package repository
 
 import (
 	"fmt"
+	"strings"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
+
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+)
+
+const (
+	squashWorktreePrefix = "squash"
 )
 
 func (s *server) IsSquashInProgress(ctx context.Context, req *pb.IsSquashInProgressRequest) (*pb.IsSquashInProgressResponse, error) {
@@ -15,17 +21,16 @@ func (s *server) IsSquashInProgress(ctx context.Context, req *pb.IsSquashInProgr
 		return nil, status.Errorf(codes.InvalidArgument, "IsSquashInProgress: %v", err)
 	}
 
-	client, err := s.RepositoryServiceClient(ctx)
+	repoPath, err := helper.GetRepoPath(req.GetRepository())
 	if err != nil {
 		return nil, err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, req.GetRepository())
+	inProg, err := freshWorktree(repoPath, squashWorktreePrefix, req.GetSquashId())
 	if err != nil {
 		return nil, err
 	}
-
-	return client.IsSquashInProgress(clientCtx, req)
+	return &pb.IsSquashInProgressResponse{InProgress: inProg}, nil
 }
 
 func validateIsSquashInProgressRequest(req *pb.IsSquashInProgressRequest) error {
@@ -35,6 +40,10 @@ func validateIsSquashInProgressRequest(req *pb.IsSquashInProgressRequest) error 
 
 	if req.GetSquashId() == "" {
 		return fmt.Errorf("empty SquashId")
+	}
+
+	if strings.Contains(req.GetSquashId(), "/") {
+		return fmt.Errorf("SquashId contains '/'")
 	}
 
 	return nil
