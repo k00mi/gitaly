@@ -15,6 +15,7 @@ type Ruby struct {
 	RestartDelayToml           duration `toml:"restart_delay"`
 	NumWorkers                 int      `toml:"num_workers"`
 	LinguistLanguagesPath      string   `toml:"linguist_languages_path"`
+	Concurrency                int      `toml:"concurrency"`
 }
 
 // This type is a trick to let our TOML library parse durations from strings.
@@ -51,6 +52,13 @@ func ConfigureRuby() error {
 	minWorkers := 2
 	if Config.Ruby.NumWorkers < minWorkers {
 		Config.Ruby.NumWorkers = minWorkers
+	}
+
+	if Config.Ruby.Concurrency == 0 {
+		// You can benchmark this number with:
+		//
+		// go test -bench BenchmarkConcurrency -run '^$' ./internal/rubyserver/
+		Config.Ruby.Concurrency = 20
 	}
 
 	return validateIsDirectory(Config.Ruby.Dir, "gitaly-ruby.dir")

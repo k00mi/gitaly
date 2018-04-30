@@ -83,6 +83,11 @@ func (*builder) Scheme() string { return Scheme }
 // care what "address" the caller wants to resolve. We always resolve to
 // the current list of address for local gitaly-ruby processes.
 func (b *builder) Build(_ resolver.Target, cc resolver.ClientConn, _ resolver.BuildOption) (resolver.Resolver, error) {
+	// JV: Normally I would delete this but this is very poorly documented,
+	// and I don't want to have to look up the magic words again. In case we
+	// ever want to do round-robin.
+	// cc.NewServiceConfig(`{"LoadBalancingPolicy":"round_robin"}`)
+
 	return newGitalyResolver(cc, b.addressUpdates), nil
 }
 

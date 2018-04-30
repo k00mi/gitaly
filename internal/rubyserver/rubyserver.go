@@ -14,6 +14,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/middleware/limithandler"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver/balancer"
 	"gitlab.com/gitlab-org/gitaly/internal/supervisor"
 	"gitlab.com/gitlab-org/gitaly/internal/version"
@@ -67,15 +68,16 @@ func socketPath(id int) string {
 // Server represents a gitaly-ruby helper process.
 type Server struct {
 	workers      []*worker
-	clientConnMu sync.RWMutex
+	clientConnMu sync.Mutex
 	clientConn   *grpc.ClientConn
+	limiter      *limithandler.ConcurrencyLimiter
 }
 
 // Stop shuts down the gitaly-ruby helper process and cleans up resources.
 func (s *Server) Stop() {
 	if s != nil {
-		s.clientConnMu.RLock()
-		defer s.clientConnMu.RUnlock()
+		s.clientConnMu.Lock()
+		defer s.clientConnMu.Unlock()
 		if s.clientConn != nil {
 			s.clientConn.Close()
 		}
@@ -101,6 +103,19 @@ func Start() (*Server, error) {
 	}
 
 	cfg := config.Config
+
+	// We need a wide margin between the concurrency limit enforced on the
+	// client side and the thread pool size in the gitaly-ruby grpc server.
+	// If the client side limit is too close to the server thread pool size,
+	// or if the client does not limit at all, we can get ResourceExhausted
+	// errors from gitaly-ruby when it runs out of threads in its pool.
+	//
+	// Our choice of 2 * cfg.Ruby.Concurrency is probably not the optimal
+	// formula but it is good enough. Ruby threads are not that expensive,
+	// and it is pointless to set up large thread pools (e.g. 100 threads) in
+	// a single Ruby process anyway because of its Global Interpreter Lock.
+	rubyThreadPoolSize := 2 * cfg.Ruby.Concurrency
+
 	env := append(
 		os.Environ(),
 		"GITALY_RUBY_GIT_BIN_PATH="+command.GitPath(),
@@ -109,6 +124,7 @@ func Start() (*Server, error) {
 		"GITALY_RUBY_GITLAB_SHELL_PATH="+cfg.GitlabShell.Dir,
 		"GITALY_RUBY_GITALY_BIN_DIR="+cfg.BinDir,
 		"GITALY_VERSION="+version.GetVersion(),
+		fmt.Sprintf("GITALY_RUBY_THREAD_POOL_SIZE=%d", rubyThreadPoolSize),
 	)
 	if dsn := cfg.Logging.RubySentryDSN; dsn != "" {
 		env = append(env, "SENTRY_DSN="+dsn)
@@ -116,7 +132,9 @@ func Start() (*Server, error) {
 
 	gitalyRuby := path.Join(cfg.Ruby.Dir, "bin/gitaly-ruby")
 
-	s := &Server{}
+	s := &Server{
+		limiter: limithandler.NewLimiter(cfg.Ruby.Concurrency, limithandler.NewPromMonitor("gitaly-ruby", "")),
+	}
 	for i := 0; i < cfg.Ruby.NumWorkers; i++ {
 		name := fmt.Sprintf("gitaly-ruby.%d", i)
 		socketPath := socketPath(i)
@@ -212,9 +230,22 @@ func (s *Server) BlobServiceClient(ctx context.Context) (pb.BlobServiceClient, e
 }
 
 func (s *Server) getConnection(ctx context.Context) (*grpc.ClientConn, error) {
-	s.clientConnMu.RLock()
+	ourTurn := make(chan struct{})
+	go s.limiter.Limit(ctx, "gitaly-ruby", func() (interface{}, error) {
+		close(ourTurn)
+		<-ctx.Done()
+		return nil, nil
+	})
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-ourTurn:
+	}
+
+	s.clientConnMu.Lock()
 	conn := s.clientConn
-	s.clientConnMu.RUnlock()
+	s.clientConnMu.Unlock()
 
 	if conn != nil {
 		return conn, nil
