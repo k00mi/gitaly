@@ -1,5 +1,5 @@
 unless git.modified_files.include?("CHANGELOG.md")
-  warn("This MR is missing a CHANGLOG entry")
+  warn("This MR is missing a CHANGELOG entry")
 end
 
 fail("Please provide a MR description") if gitlab.mr_body.empty?
