@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Vendor gitlab_git at gitlab-org/gitlab-ce@3fcb9c115d776feb
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/702
 - Limit concurrent gitaly-ruby requests from the client side
   https://gitlab.com/gitlab-org/gitaly/merge_requests/695
 - Allow configuration of the log level in `config.toml`
