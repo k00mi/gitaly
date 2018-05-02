@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.98.0
 
 - Server implementation for repository raw_changes
   https://gitlab.com/gitlab-org/gitaly/merge_requests/699
