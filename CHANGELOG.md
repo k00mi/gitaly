@@ -1,5 +1,10 @@
 # Gitaly changelog
 
+UNRELEASED
+
+- Introduce feature flag package based on gRPC metadata
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/704
+
 v0.98.0
 
 - Server implementation for repository raw_changes
