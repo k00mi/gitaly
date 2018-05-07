@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.99.0
 
 - Improve changelog entry checks using Danger
   https://gitlab.com/gitlab-org/gitaly/merge_requests/705
