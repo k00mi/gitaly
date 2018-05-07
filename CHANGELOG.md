@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Add danger container to the Gitaly project
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/711
 - Remove ruby concurrency limiter
   https://gitlab.com/gitlab-org/gitaly/merge_requests/708
 - Introduce src-d/go-git as dependency
