@@ -12,6 +12,8 @@ v0.100.0
   https://gitlab.com/gitlab-org/gitaly/merge_requests/715
 - Introduce src-d/go-git as dependency
   https://gitlab.com/gitlab-org/gitaly/merge_requests/709
+- Lower spawn log level to 'debug'
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/714
 
 v0.99.0
 
