@@ -1,6 +1,6 @@
 # Gitaly changelog
 
-UNRELEASED
+v0.100.0
 
 - Fix WikiFindPage when the page has invalidly-encoded content
   https://gitlab.com/gitlab-org/gitaly/merge_requests/712
