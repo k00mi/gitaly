@@ -4,6 +4,8 @@ UNRELEASED
 
 - Remove ruby concurrency limiter
   https://gitlab.com/gitlab-org/gitaly/merge_requests/708
+- Drop support for Golang 1.8
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/715
 - Introduce src-d/go-git as dependency
   https://gitlab.com/gitlab-org/gitaly/merge_requests/709
 
