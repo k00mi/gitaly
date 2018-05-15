@@ -1,30 +1,35 @@
-CHANGELOG_FILE = "CHANGELOG.md"
+require 'yaml'
+require 'json'
 
-def check_changelog
-  unless git.modified_files.include?(CHANGELOG_FILE)
-    warn("This MR is missing a CHANGELOG entry")
+fail("Please provide a MR description") if gitlab.mr_body.empty?
+
+def check_changelog(path)
+  if git.modified_files.include?("CHANGELOG.md")
+    fail("CHANGELOG.md was edited. Please remove the additions and create an entry with _support/changelog")
     return
   end
 
-  patch = git.diff_for_file(CHANGELOG_FILE).patch
-  unless patch.match?(/^\+- #{Regexp.quote(gitlab.mr_title)}\n/)
-    fail('Changelog entry should match the MR title')
-  end
+  if git.added_files.include?(path)
+    warn("No changelog entry was generated, please do so by executing _support/changelog")
+  else
+    yaml = YAML.safe_load(yaml)
 
-  unless patch.match?(/^\+\s+#{Regexp.quote(gitlab.mr_json['web_url'])}\n/)
-    fail('Changelog entry URL does not match the web url')
+    unless yaml['merge_request'] == gitlab.mr["iid"]
+      fail("Merge request ID was set to #{yaml['merge_request']}, expected #{gitlab.mr['iid']}")
+    end
+
+    unless yaml['title'] == gitlab.mr_title
+      fail('Changelog entry should match the MR title')
+    end
   end
 end
 
-check_changelog
-
-fail("Please provide a MR description") if gitlab.mr_body.empty?
+check_changelog(File.join('changelogs', 'unreleased', "#{gitlab.branch_for_base}.yml}"))
 
 VENDOR_JSON = 'vendor/vendor.json'
 fail("Expected #{VENDOR_JSON} to exist") unless File.exist?(VENDOR_JSON)
 
 if git.modified_files.include?(VENDOR_JSON)
-  require 'json'
   parsed_json = JSON.parse(File.read(VENDOR_JSON))
 
   proto = parsed_json["package"]&.find { |h| h["path"].start_with?("gitlab.com/gitlab-org/gitaly-proto") }

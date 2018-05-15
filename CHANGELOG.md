@@ -1,14 +1,5 @@
 # Gitaly changelog
 
-UNRELEASED
-
-- Use round robin load balancing instead of 'pick first' for gitaly-ruby
-  https://gitlab.com/gitlab-org/gitaly/merge_requests/700
-- Unvendor Repository#create implementation
-  https://gitlab.com/gitlab-org/gitaly/merge_requests/713
-- Add gitaly-ruby installation debug log messages
-  https://gitlab.com/gitlab-org/gitaly/merge_requests/710
-
 v0.100.0
 
 - Fix WikiFindPage when the page has invalidly-encoded content
