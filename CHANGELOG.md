@@ -2,6 +2,8 @@
 
 UNRELEASED
 
+- Unvendor Repository#create implementation
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/713
 - Add gitaly-ruby installation debug log messages
   https://gitlab.com/gitlab-org/gitaly/merge_requests/710
 
