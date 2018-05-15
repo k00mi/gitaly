@@ -37,6 +37,8 @@ module GitalyServer
             # Send leftover data, if any
             y.yield(Gitaly::ListConflictFilesResponse.new(files: files)) if files.any?
           end
+        rescue Gitlab::Git::Conflict::File::UnsupportedEncoding => e
+          raise GRPC::FailedPrecondition.new(e.message)
         rescue Gitlab::Git::Conflict::Resolver::ConflictSideMissing => e
           raise GRPC::FailedPrecondition.new(e.message)
         end
