@@ -1,14 +1,16 @@
 # Gitaly changelog
 
-v0.101.0
+## v0.101.0
 
-Changed
+#### Changed
 - Add gitaly-ruby installation debug log messages
   https://gitlab.com/gitlab-org/gitaly/merge_requests/710
-Fixed
+
+#### Fixed
 - Use round robin load balancing instead of 'pick first' for gitaly-ruby
   https://gitlab.com/gitlab-org/gitaly/merge_requests/700
-Other
+
+#### Other
 - Generate changelog when releasing a tag to prevent merge conflicts
   https://gitlab.com/gitlab-org/gitaly/merge_requests/719
 - Unvendor Repository#create implementation
