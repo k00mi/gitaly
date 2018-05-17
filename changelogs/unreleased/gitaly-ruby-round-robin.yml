@@ -1,5 +1,5 @@
 ---
 title: Use round robin load balancing instead of 'pick first' for gitaly-ruby
-merge_request:
+merge_request: 700
 author:
 type: fixed
