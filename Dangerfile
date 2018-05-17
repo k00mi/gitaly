@@ -9,7 +9,7 @@ def check_changelog(path)
     return
   end
 
-  if git.added_files.include?(path)
+  if !git.added_files.include?(path)
     warn("No changelog entry was generated, please do so by executing _support/changelog")
   else
     yaml = YAML.safe_load(yaml)
