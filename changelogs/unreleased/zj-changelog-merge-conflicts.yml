@@ -1,5 +1,0 @@
----
-title: Generate changelog when releasing a tag to prevent merge conflicts
-merge_request: 719
-author:
-type: other
