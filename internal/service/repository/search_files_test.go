@@ -54,6 +54,22 @@ var (
 			[]byte(""),
 		}, []byte{'\n'}),
 	}
+	contentCoffeeLines = [][]byte{
+		bytes.Join([][]byte{
+			[]byte("many_files:CONTRIBUTING.md\x0092\x001. [Ruby style guide](https://github.com/bbatsov/ruby-style-guide)"),
+			[]byte("many_files:CONTRIBUTING.md\x0093\x001. [Rails style guide](https://github.com/bbatsov/rails-style-guide)"),
+			[]byte("many_files:CONTRIBUTING.md\x0094\x001. [CoffeeScript style guide](https://github.com/polarmobile/coffeescript-style-guide)"),
+			[]byte("many_files:CONTRIBUTING.md\x0095\x001. [Shell command guidelines](doc/development/shell_commands.md)"),
+			[]byte(""),
+		}, []byte{'\n'}),
+		bytes.Join([][]byte{
+			[]byte("many_files:files/js/application.js\x001\x00// This is a manifest file that'll be compiled into including all the files listed below."),
+			[]byte("many_files:files/js/application.js\x002\x00// Add new JavaScript/Coffee code in separate files in this directory and they'll automatically"),
+			[]byte("many_files:files/js/application.js\x003\x00// be included in the compiled file accessible from http://example.com/assets/application.js"),
+			[]byte("many_files:files/js/application.js\x004\x00// It's not advisable to add code directly here, but if you do, it'll appear at the bottom of the"),
+			[]byte(""),
+		}, []byte{'\n'}),
+	}
 )
 
 func TestSearchFilesByContentSuccessful(t *testing.T) {
@@ -82,10 +98,16 @@ func TestSearchFilesByContentSuccessful(t *testing.T) {
 			output: contentOutputLines,
 		},
 		{
-			desc:   "multi file in many_files",
+			desc:   "single files, multiple matches",
 			query:  "backup",
 			ref:    "many_files",
 			output: contentMultiLines,
+		},
+		{
+			desc:   "multiple files, multiple matches",
+			query:  "coffee",
+			ref:    "many_files",
+			output: contentCoffeeLines,
 		},
 	}
 
