@@ -1,0 +1,5 @@
+---
+title: Fix matching bug in SearchFilesByContent
+merge_request: 722
+author:
+type: fixed
