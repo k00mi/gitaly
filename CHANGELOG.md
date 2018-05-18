@@ -1,5 +1,14 @@
 # Gitaly changelog
 
+v0.102.0
+
+Changed
+- Unvendor Repository#add_branch
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/717
+Fixed
+- Fix matching bug in SearchFilesByContent
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/722
+
 v0.101.0
 
 Changed
