@@ -67,6 +67,16 @@ module Gitlab
         @gitlab_projects = gitlab_projects
       end
 
+      def add_branch(branch_name, user:, target:)
+        target_object = Ref.dereference_object(lookup(target))
+        raise InvalidRef.new("target not found: #{target}") unless target_object
+
+        OperationService.new(user, self).add_branch(branch_name, target_object.oid)
+        find_branch(branch_name)
+      rescue Rugged::ReferenceError => ex
+        raise InvalidRef, ex
+      end
+
       def circuit_breaker
         FakeCircuitBreaker
       end
