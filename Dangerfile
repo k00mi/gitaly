@@ -24,7 +24,7 @@ def check_changelog(path)
   end
 end
 
-check_changelog(File.join('changelogs', 'unreleased', "#{gitlab.branch_for_base}.yml}"))
+check_changelog(File.join('changelogs', 'unreleased', "#{gitlab.branch_for_head}.yml}"))
 
 VENDOR_JSON = 'vendor/vendor.json'
 fail("Expected #{VENDOR_JSON} to exist") unless File.exist?(VENDOR_JSON)
