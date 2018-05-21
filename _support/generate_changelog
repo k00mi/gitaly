@@ -40,7 +40,7 @@ def main(version)
   lines = []
   types = entries.map(&:type).uniq.sort
   types.each do |type|
-    lines << "#{type.capitalize}\n"
+    lines << "#### #{type.capitalize}\n"
 
     entries.each do |e|
       next unless e.type == type
@@ -52,7 +52,7 @@ def main(version)
   current_changelog = File.read(CHANGELOG_FILE).lines
   header = current_changelog.shift(2)
 
-  new_changelog = [header, "v#{version}\n\n", lines, "\n", current_changelog].flatten.join
+  new_changelog = [header, "## v#{version}\n\n", lines, "\n", current_changelog].flatten.join
 
   File.write(CHANGELOG_FILE, new_changelog)
 end

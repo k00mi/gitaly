@@ -1,29 +1,32 @@
 # Gitaly changelog
 
-v0.102.0
+## v0.102.0
 
-Changed
+#### Changed
 - Unvendor Repository#add_branch
   https://gitlab.com/gitlab-org/gitaly/merge_requests/717
-Fixed
+
+#### Fixed
 - Fix matching bug in SearchFilesByContent
   https://gitlab.com/gitlab-org/gitaly/merge_requests/722
 
-v0.101.0
+## v0.101.0
 
-Changed
+#### Changed
 - Add gitaly-ruby installation debug log messages
   https://gitlab.com/gitlab-org/gitaly/merge_requests/710
-Fixed
+
+#### Fixed
 - Use round robin load balancing instead of 'pick first' for gitaly-ruby
   https://gitlab.com/gitlab-org/gitaly/merge_requests/700
-Other
+
+#### Other
 - Generate changelog when releasing a tag to prevent merge conflicts
   https://gitlab.com/gitlab-org/gitaly/merge_requests/719
 - Unvendor Repository#create implementation
   https://gitlab.com/gitlab-org/gitaly/merge_requests/713
 
-v0.100.0
+## v0.100.0
 
 - Fix WikiFindPage when the page has invalidly-encoded content
   https://gitlab.com/gitlab-org/gitaly/merge_requests/712
@@ -38,7 +41,7 @@ v0.100.0
 - Lower spawn log level to 'debug'
   https://gitlab.com/gitlab-org/gitaly/merge_requests/714
 
-v0.99.0
+## v0.99.0
 
 - Improve changelog entry checks using Danger
   https://gitlab.com/gitlab-org/gitaly/merge_requests/705
@@ -51,7 +54,7 @@ v0.99.0
 - Return DataLoss error for non-valid git repositories when calculating the checksum
   https://gitlab.com/gitlab-org/gitaly/merge_requests/697
 
-v0.98.0
+## v0.98.0
 
 - Server implementation for repository raw_changes
   https://gitlab.com/gitlab-org/gitaly/merge_requests/699
@@ -74,7 +77,7 @@ v0.98.0
 - Catch CommitErrors while rebasing
   https://gitlab.com/gitlab-org/gitaly/merge_requests/680
 
-v0.97.0
+## v0.97.0
 
 - Use gitaly-proto 0.97.0
   https://gitlab.com/gitlab-org/gitaly/merge_requests/683
@@ -85,7 +88,7 @@ v0.97.0
 - Add config option to point to languages.json
   https://gitlab.com/gitlab-org/gitaly/merge_requests/652
 
-v0.96.1
+## v0.96.1
 
 - Vendor gitlab_git at 7e3bb679a92156304
   https://gitlab.com/gitlab-org/gitaly/merge_requests/669
@@ -96,17 +99,17 @@ v0.96.1
 - Add {Get,CreateRepositoryFrom}Snapshot RPCs
   https://gitlab.com/gitlab-org/gitaly/merge_requests/644
 
-v0.96.0
+## v0.96.0
 
 Skipped. We cut and pushed the wrong tag.
 
-v0.95.0
+## v0.95.0
 - Fix fragile checksum test
   https://gitlab.com/gitlab-org/gitaly/merge_requests/661
 - Use rugged 0.27.0
   https://gitlab.com/gitlab-org/gitaly/merge_requests/660
 
-v0.94.0
+## v0.94.0
 
 - Send gitaly-ruby exceptions to their own DSN
   https://gitlab.com/gitlab-org/gitaly/merge_requests/656
@@ -119,7 +122,7 @@ v0.94.0
 - Fix directory permission walker for Go 1.10
   https://gitlab.com/gitlab-org/gitaly/merge_requests/650
 
-v0.93.0
+## v0.93.0
 
 - Fix concurrency limit handler stream interceptor
   https://gitlab.com/gitlab-org/gitaly/merge_requests/640
@@ -130,7 +133,7 @@ v0.93.0
 - Update gitaly-proto to v0.91.0
   https://gitlab.com/gitlab-org/gitaly/merge_requests/643
 
-v0.92.0
+## v0.92.0
 
 - Server Implementation GetInfoAttributes
   https://gitlab.com/gitlab-org/gitaly/merge_requests/641
@@ -145,7 +148,7 @@ v0.92.0
 - Vendor gitlab_git at 79aa00321063da
   https://gitlab.com/gitlab-org/gitaly/merge_requests/633
 
-v0.91.0
+## v0.91.0
 
 - Rewrite RepositoryService.HasLocalBranches in Go
   https://gitlab.com/gitlab-org/gitaly/merge_requests/629
@@ -158,7 +161,7 @@ v0.91.0
 - Sanitize URLs before sending gitaly-ruby exceptions to Sentry
   https://gitlab.com/gitlab-org/gitaly/merge_requests/625
 
-v0.90.0
+## v0.90.0
 
 - Implement SSHService.SSHUploadArchive RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/621
@@ -167,7 +170,7 @@ v0.90.0
 - Clean stale worktrees before performing garbage collection
   https://gitlab.com/gitlab-org/gitaly/merge_requests/622
 
-v0.89.0
+## v0.89.0
 
 - Report original exceptions to Sentry instead of wrapped ones by the exception bridge
   https://gitlab.com/gitlab-org/gitaly/merge_requests/623
@@ -180,19 +183,19 @@ v0.89.0
 - Bump github-linguist to 5.3.3
   https://gitlab.com/gitlab-org/gitaly/merge_requests/613
 
-v0.88.0
+## v0.88.0
 
 - Add support for all field to {Find,Count}Commits RPCs
   https://gitlab.com/gitlab-org/gitaly/merge_requests/611
 - Vendor gitlab_git at de454de9b10f
   https://gitlab.com/gitlab-org/gitaly/merge_requests/611
 
-v0.87.0
+## v0.87.0
 
 - Implement GetCommitSignatures RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/609
 
-v0.86.0
+## v0.86.0
 
 - Implement BlobService.GetAllLfsPointers
   https://gitlab.com/gitlab-org/gitaly/merge_requests/562
@@ -201,24 +204,24 @@ v0.86.0
 - Use gitaly-proto v0.86.0
   https://gitlab.com/gitlab-org/gitaly/merge_requests/606
 
-v0.85.0
+## v0.85.0
 
 - Implement recursive tree entries fetching
   https://gitlab.com/gitlab-org/gitaly/merge_requests/600
 
-v0.84.0
+## v0.84.0
 
 - Send gitaly-ruby exceptions to Sentry
   https://gitlab.com/gitlab-org/gitaly/merge_requests/598
 - Detect License type for repositories
   https://gitlab.com/gitlab-org/gitaly/merge_requests/601
 
-v0.83.0
+## v0.83.0
 
 - Delete old lock files before performing Garbage Collection
   https://gitlab.com/gitlab-org/gitaly/merge_requests/587
 
-v0.82.0
+## v0.82.0
 
 - Implement RepositoryService.IsSquashInProgress RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/593
@@ -227,19 +230,19 @@ v0.82.0
 - Fixed bug in wiki_find_page method
   https://gitlab.com/gitlab-org/gitaly/merge_requests/590
 
-v0.81.0
+## v0.81.0
 
 - Vendor gitlab_git at 7095c2bf4064911
   https://gitlab.com/gitlab-org/gitaly/merge_requests/591
 - Vendor gitlab_git at 9483cbab26ad239
   https://gitlab.com/gitlab-org/gitaly/merge_requests/588
 
-v0.80.0
+## v0.80.0
 
 - Lock protobuf to 3.5.1
   https://gitlab.com/gitlab-org/gitaly/merge_requests/589
 
-v0.79.0
+## v0.79.0
 
 - Update the activesupport gem
   https://gitlab.com/gitlab-org/gitaly/merge_requests/584
@@ -250,7 +253,7 @@ v0.79.0
 - Check info split size in catfile parser
   https://gitlab.com/gitlab-org/gitaly/merge_requests/583
 
-v0.78.0
+## v0.78.0
 
 - Vendor gitlab_git at 498d32363aa61d679ff749b
   https://gitlab.com/gitlab-org/gitaly/merge_requests/579
@@ -265,12 +268,12 @@ v0.78.0
 - Vendor gitlab_git at a03ea19332736c36ecb9
   https://gitlab.com/gitlab-org/gitaly/merge_requests/574
 
-v0.77.0
+## v0.77.0
 
 - Implement RepositoryService.WriteConfig RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/554
 
-v0.76.0
+## v0.76.0
 
 - Add support for PreReceiveError in UserMergeBranch
   https://gitlab.com/gitlab-org/gitaly/merge_requests/573
@@ -285,7 +288,7 @@ v0.76.0
 - Vendor gitlab_git at 4376be84ce18cde22febc50
   https://gitlab.com/gitlab-org/gitaly/merge_requests/570
 
-v0.75.0
+## v0.75.0
 
 - Implement WikiGetFormattedData RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/564
@@ -298,7 +301,7 @@ v0.75.0
 - ListTagNamesContainingCommit server implementation
   https://gitlab.com/gitlab-org/gitaly/merge_requests/537
 
-v0.74.0
+## v0.74.0
 
 - Implement CreateRepositoryFromBundle RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/557
@@ -309,12 +312,12 @@ v0.74.0
 - Add automatic tempdir cleaner
   https://gitlab.com/gitlab-org/gitaly/merge_requests/540
 
-v0.73.0
+## v0.73.0
 
 - Implement CreateBundle RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/546
 
-v0.72.0
+## v0.72.0
 
 - Implement RemoteService.UpdateRemoteMirror RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/544
@@ -323,7 +326,7 @@ v0.72.0
 - Use grpc-go 1.9.1
   https://gitlab.com/gitlab-org/gitaly/merge_requests/547
 
-v0.71.0
+## v0.71.0
 
 - Implement GetLfsPointers RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/543
@@ -332,21 +335,21 @@ v0.71.0
 - Fix validation for Repositoryservice::WriteRef
   https://gitlab.com/gitlab-org/gitaly/merge_requests/542
 
-v0.70.0
+## v0.70.0
 
 - Handle non-existent commits in ExtractCommitSignature
   https://gitlab.com/gitlab-org/gitaly/merge_requests/535
 - Implement RepositoryService::WriteRef
   https://gitlab.com/gitlab-org/gitaly/merge_requests/526
 
-v0.69.0
+## v0.69.0
 
 - Fix handling of paths ending with slashes in TreeEntry
   https://gitlab.com/gitlab-org/gitaly/merge_requests/532
 - Implement CreateRepositoryFromURL RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/529
 
-v0.68.0
+## v0.68.0
 
 - Check repo existence before passing to gitaly-ruby
   https://gitlab.com/gitlab-org/gitaly/merge_requests/528
@@ -361,7 +364,7 @@ v0.68.0
 - Use gitaly-proto 0.70.0
   https://gitlab.com/gitlab-org/gitaly/merge_requests/522
 
-v0.67.0
+## v0.67.0
 
 - Implement UserRebase RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/511
@@ -382,29 +385,29 @@ v0.67.0
 - Add support for MergedBranches in FindAllBranches RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/510
 
-v0.66.0
+## v0.66.0
 
 - Implement RemoteService.FetchInternalRemote RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/508
 
-v0.65.0
+## v0.65.0
 
 - Add support for MaxCount in CountCommits RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/507
 - Implement CreateFork RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/497
 
-v0.64.0
+## v0.64.0
 
 - Update vendored gitlab_git to b98c69470f52185117fcdb5e28096826b32363ca
   https://gitlab.com/gitlab-org/gitaly/merge_requests/506
 
-v0.63.0
+## v0.63.0
 
 - Handle failed merge when branch gets updated
   https://gitlab.com/gitlab-org/gitaly/merge_requests/505
 
-v0.62.0
+## v0.62.0
 
 - Implement ConflictsService.ResolveConflicts RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/470
@@ -415,14 +418,14 @@ v0.62.0
 - Implement RemoteService.AddRemote RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/490
 
-v0.61.1
+## v0.61.1
 
 - gitaly-ruby shutdown improvements
   https://gitlab.com/gitlab-org/gitaly/merge_requests/500
 - Use go 1.9
   https://gitlab.com/gitlab-org/gitaly/merge_requests/496
 
-v0.61.0
+## v0.61.0
 
 - Add rdoc to gitaly-ruby's Gemfile
   https://gitlab.com/gitlab-org/gitaly/merge_requests/487
@@ -437,19 +440,19 @@ v0.61.0
 - Update vendored gitlab_git to 31fa9313991881258b4697cb507cfc8ab205b7dc
   https://gitlab.com/gitlab-org/gitaly/merge_requests/486
 
-v0.60.0
+## v0.60.0
 
 - Implement FindMergeBase RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/477
 - Update vendored gitlab_git to 359b65beac43e009b715c2db048e06b6f96b0ee8
   https://gitlab.com/gitlab-org/gitaly/merge_requests/481
 
-v0.59.0
+## v0.59.0
 
 - Restart gitaly-ruby when it uses too much memory
   https://gitlab.com/gitlab-org/gitaly/merge_requests/465
 
-v0.58.0
+## v0.58.0
 
 - Implement RepostoryService::Fsck
   https://gitlab.com/gitlab-org/gitaly/merge_requests/475
@@ -458,7 +461,7 @@ v0.58.0
 - Update vendored gitlab_git to f3a3bd50eafdcfcaeea21d6cfa0b8bbae7720fec
   https://gitlab.com/gitlab-org/gitaly/merge_requests/478
 
-v0.57.0
+## v0.57.0
 
 - Implement UserRevert RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/471
@@ -471,7 +474,7 @@ v0.57.0
 - More logging in housekeeping
   https://gitlab.com/gitlab-org/gitaly/merge_requests/435
 
-v0.56.0
+## v0.56.0
 
 - Implement UserCherryPick RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/457
@@ -484,14 +487,14 @@ v0.56.0
 - Implement CommitService::ListCommitsByOid
   https://gitlab.com/gitlab-org/gitaly/merge_requests/438
 
-v0.55.0
+## v0.55.0
 
 - Include pprof debug access in the Prometheus listener
   https://gitlab.com/gitlab-org/gitaly/merge_requests/442
 - Run gitaly-ruby in the same directory as gitaly
   https://gitlab.com/gitlab-org/gitaly/merge_requests/458
 
-v0.54.0
+## v0.54.0
 
 - Implement RefService.DeleteRefs
   https://gitlab.com/gitlab-org/gitaly/merge_requests/453
@@ -501,7 +504,7 @@ v0.54.0
 - Implement RepositoryService::FetchSourceBranch
   https://gitlab.com/gitlab-org/gitaly/merge_requests/434
 
-v0.53.0
+## v0.53.0
 
 - Update vendored gitlab_git to f7537ce03a29b
   https://gitlab.com/gitlab-org/gitaly/merge_requests/449
@@ -510,17 +513,17 @@ v0.53.0
 - Implement WikiGetPageVersions RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/430
 
-v0.52.1
+## v0.52.1
 
 - Include pprof debug access in the Prometheus listener
   https://gitlab.com/gitlab-org/gitaly/merge_requests/442
 
-v0.52.0
+## v0.52.0
 
 - Implement WikiUpdatePage RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/422
 
-v0.51.0
+## v0.51.0
 
 - Implement OperationService.UserFFMerge
   https://gitlab.com/gitlab-org/gitaly/merge_requests/426
@@ -536,26 +539,26 @@ v0.51.0
 - Enable logging in client-streamed and bidi GRPC requests
   https://gitlab.com/gitlab-org/gitaly/merge_requests/429
 
-v0.50.0
+## v0.50.0
 
 - Pass repo git alternate dirs to gitaly-ruby
   https://gitlab.com/gitlab-org/gitaly/merge_requests/421
 - Remove old temporary files from repositories after GC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/411
 
-v0.49.0
+## v0.49.0
 
 - Use sentry fingerprinting to group exceptions
   https://gitlab.com/gitlab-org/gitaly/merge_requests/417
 - Use gitlab_git c23c09366db610c1
   https://gitlab.com/gitlab-org/gitaly/merge_requests/415
 
-v0.48.0
+## v0.48.0
 
 - Implement WikiWritePage RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/410
 
-v0.47.0
+## v0.47.0
 
 - Pass full BranchUpdate result on successful merge
   https://gitlab.com/gitlab-org/gitaly/merge_requests/406
@@ -565,7 +568,7 @@ v0.47.0
   https://gitlab.com/gitlab-org/gitaly/merge_requests/407
 
 
-v0.46.0
+## v0.46.0
 
 - Add a Rails logger to ruby-git
   https://gitlab.com/gitlab-org/gitaly/merge_requests/405
@@ -574,7 +577,7 @@ v0.46.0
 - Use relative paths for git object dir attributes
   https://gitlab.com/gitlab-org/gitaly/merge_requests/393
 
-v0.45.1
+## v0.45.1
 
 - Implement OperationService::UserMergeBranch
   https://gitlab.com/gitlab-org/gitaly/merge_requests/394
@@ -585,11 +588,11 @@ v0.45.1
 - Fix Commit Subject parsing in rubyserver
   https://gitlab.com/gitlab-org/gitaly/merge_requests/388
 
-v0.45.0
+## v0.45.0
 
 Skipped. We cut and pushed the wrong tag.
 
-v0.44.0
+## v0.44.0
 
 - Update gitlab_git to 4a0f720a502ac02423
   https://gitlab.com/gitlab-org/gitaly/merge_requests/389
@@ -598,7 +601,7 @@ v0.44.0
 - Implement Raw{Diff,Patch} RPCs
   https://gitlab.com/gitlab-org/gitaly/merge_requests/381
 
-v0.43.0
+## v0.43.0
 
 - Pass details of Gitaly-Ruby's Ruby exceptions back to
   callers in the request trailers
@@ -616,7 +619,7 @@ v0.43.0
 - Add `gitaly-ssh` command
   https://gitlab.com/gitlab-org/gitaly/merge_requests/368
 
-v0.42.0
+## v0.42.0
 
 - Implement UserCreateTag RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/374
@@ -625,7 +628,7 @@ v0.42.0
 - Check if we don't overwrite a namespace moved to gitaly
   https://gitlab.com/gitlab-org/gitaly/merge_requests/375
 
-v0.41.0
+## v0.41.0
 
 - Wait for monitor goroutine to return during supervisor shutdown
   https://gitlab.com/gitlab-org/gitaly/merge_requests/341
@@ -646,7 +649,7 @@ v0.41.0
 - Make gitaly-ruby config mandatory
   https://gitlab.com/gitlab-org/gitaly/merge_requests/373
 
-v0.40.0
+## v0.40.0
 - Use context cancellation instead of command.Close
   https://gitlab.com/gitlab-org/gitaly/merge_requests/332
 - Fix LastCommitForPath handling of tree root
@@ -660,7 +663,7 @@ v0.40.0
 - Handle git dates larger than golang's and protobuf's limits
   https://gitlab.com/gitlab-org/gitaly/merge_requests/353
 
-v0.39.0
+## v0.39.0
 - Reimplement FindAllTags RPC in Ruby
   https://gitlab.com/gitlab-org/gitaly/merge_requests/334
 - Re-use gitaly-ruby client connection
@@ -668,7 +671,7 @@ v0.39.0
 - Fix encoding-bug in GitalyServer#gitaly_commit_from_rugged
   https://gitlab.com/gitlab-org/gitaly/merge_requests/337
 
-v0.38.0
+## v0.38.0
 
 - Update vendor/gitlab_git to b58c4f436abaf646703bdd80f266fa4c0bab2dd2
   https://gitlab.com/gitlab-org/gitaly/merge_requests/324
@@ -677,12 +680,12 @@ v0.38.0
 - Populate `flat_path` field of `TreeEntry`s
   https://gitlab.com/gitlab-org/gitaly/merge_requests/328
 
-v0.37.0
+## v0.37.0
 
 - Implement FindBranch RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/315
 
-v0.36.0
+## v0.36.0
 
 - Terminate commands when their context cancels
   https://gitlab.com/gitlab-org/gitaly/merge_requests/318
@@ -691,7 +694,7 @@ v0.36.0
 - Use git-linguist to implement CommitLanguages
   https://gitlab.com/gitlab-org/gitaly/merge_requests/316
 
-v0.35.0
+## v0.35.0
 
 - Implement CommitService.CommitStats
   https://gitlab.com/gitlab-org/gitaly/merge_requests/312
@@ -700,7 +703,7 @@ v0.35.0
 - Restore support for custom environment variables
   https://gitlab.com/gitlab-org/gitaly/merge_requests/319
 
-v0.34.0
+## v0.34.0
 
 - Export environment variables for git debugging
   https://gitlab.com/gitlab-org/gitaly/merge_requests/306
@@ -717,19 +720,19 @@ v0.34.0
 - Monitor gitaly-ruby RSS via Prometheus
   https://gitlab.com/gitlab-org/gitaly/merge_requests/310
 
-v0.33.0
+## v0.33.0
 
 - Implement DiffService.CommitPatch RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/279
 - Use 'bundle config' for gitaly-ruby in source production installations
   https://gitlab.com/gitlab-org/gitaly/merge_requests/298
 
-v0.32.0
+## v0.32.0
 
 - RefService::RefExists endpoint
   https://gitlab.com/gitlab-org/gitaly/merge_requests/275
 
-v0.31.0
+## v0.31.0
 
 - Implement CommitService.FindCommits
   https://gitlab.com/gitlab-org/gitaly/merge_requests/266
@@ -740,12 +743,12 @@ v0.31.0
 - Implement RepositoryService.FetchRemote RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/276
 
-v0.30.0
+## v0.30.0
 
 - Add a middleware for handling Git object dir attributes
   https://gitlab.com/gitlab-org/gitaly/merge_requests/273
 
-v0.29.0
+## v0.29.0
 
 - Use BUNDLE_PATH instead of --path for gitaly-ruby
   https://gitlab.com/gitlab-org/gitaly/merge_requests/271
@@ -756,7 +759,7 @@ v0.29.0
 - Log top level project group for easier analysis
   https://gitlab.com/gitlab-org/gitaly/merge_requests/272
 
-v0.28.0
+## v0.28.0
 
 - Increase gitaly-ruby connection timeout to 20s
   https://gitlab.com/gitlab-org/gitaly/merge_requests/265
@@ -765,7 +768,7 @@ v0.28.0
 - Implement CommitsByMessage RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/263
 
-v0.27.0
+## v0.27.0
 
 - Support `git -c` options in SSH upload-pack
   https://gitlab.com/gitlab-org/gitaly/merge_requests/242
@@ -780,7 +783,7 @@ v0.27.0
 - Install gems into vendor/bundle
   https://gitlab.com/gitlab-org/gitaly/merge_requests/264
 
-v0.26.0
+## v0.26.0
 
 - Implement CommitService.CommitLanguages, add gitaly-ruby
   https://gitlab.com/gitlab-org/gitaly/merge_requests/210
@@ -789,24 +792,24 @@ v0.26.0
 - Fix a bug in FindAllTags parsing lightweight tags
   https://gitlab.com/gitlab-org/gitaly/merge_requests/256
 
-v0.25.0
+## v0.25.0
 
 - Implement FindAllTags RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/246
 
-v0.24.1
+## v0.24.1
 
 - Return an empty array on field `ParentIds` of `GitCommit`s if it has none
   https://gitlab.com/gitlab-org/gitaly/merge_requests/237
 
-v0.24.0
+## v0.24.0
 
 - Consume stdout during repack/gc
   https://gitlab.com/gitlab-org/gitaly/merge_requests/249
 - Implement RefService.FindAllBranches RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/239
 
-v0.23.0
+## v0.23.0
 
 - Version without Build Time
   https://gitlab.com/gitlab-org/gitaly/merge_requests/231
@@ -821,7 +824,7 @@ v0.23.0
 - Correctly handle a non-tree path on CommitService.TreeEntries
   https://gitlab.com/gitlab-org/gitaly/merge_requests/234
 
-v0.22.0
+## v0.22.0
 
 - Various build file improvements
   https://gitlab.com/gitlab-org/gitaly/merge_requests/229
@@ -830,31 +833,31 @@ v0.22.0
 - Send full repository path instead of filename on field `path` of TreeEntry
   https://gitlab.com/gitlab-org/gitaly/merge_requests/232
 
-v0.21.2
+## v0.21.2
 
 - Config: do not start Gitaly without at least one storage
   https://gitlab.com/gitlab-org/gitaly/merge_requests/227
 - Implement CommitService.GarbageCollect/Repack{Incremental,Full}
   https://gitlab.com/gitlab-org/gitaly/merge_requests/218
 
-v0.21.1
+## v0.21.1
 
 - Make sure stdout.Read has enough bytes buffered to read from
   https://gitlab.com/gitlab-org/gitaly/merge_requests/224
 
-v0.21.0
+## v0.21.0
 
 - Send an empty response for TreeEntry instead of nil
   https://gitlab.com/gitlab-org/gitaly/merge_requests/223
 
-v0.20.0
+## v0.20.0
 
 - Implement commit diff limiting logic
   https://gitlab.com/gitlab-org/gitaly/merge_requests/211
 - Increase message size to 5 KB for Diff service
   https://gitlab.com/gitlab-org/gitaly/merge_requests/221
 
-v0.19.0
+## v0.19.0
 
 - Send parent ids and raw body on CommitService.CommitsBetween
   https://gitlab.com/gitlab-org/gitaly/merge_requests/216
@@ -863,7 +866,7 @@ v0.19.0
 - Implement CommitService.GetTreeEntries
   https://gitlab.com/gitlab-org/gitaly/merge_requests/208
 
-v0.18.0
+## v0.18.0
 
 - Add config to specify a git binary path
   https://gitlab.com/gitlab-org/gitaly/merge_requests/177
@@ -871,19 +874,19 @@ v0.18.0
   message bodies, reject suspicious revisions
   https://gitlab.com/gitlab-org/gitaly/merge_requests/204
 
-v0.17.0
+## v0.17.0
 
 - Rename auth 'unenforced' to 'transitioning'
   https://gitlab.com/gitlab-org/gitaly/merge_requests/209
 - Also check for "refs" folder for repo existence
   https://gitlab.com/gitlab-org/gitaly/merge_requests/207
 
-v0.16.0
+## v0.16.0
 
 - Implement BlobService.GetBlob
   https://gitlab.com/gitlab-org/gitaly/merge_requests/202
 
-v0.15.0
+## v0.15.0
 
 - Ensure that sub-processes inherit TZ environment variable
   https://gitlab.com/gitlab-org/gitaly/merge_requests/201
@@ -892,7 +895,7 @@ v0.15.0
 - Implement CountCommits RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/203
 
-v0.14.0
+## v0.14.0
 
 - Added integration test for SSH, and a client package
   https://gitlab.com/gitlab-org/gitaly/merge_requests/178/
@@ -902,21 +905,21 @@ v0.14.0
 - Add RepositoryExists Implementation
   https://gitlab.com/gitlab-org/gitaly/merge_requests/200
 
-v0.13.0
+## v0.13.0
 
 - Added usage and version flags to the command line interface
   https://gitlab.com/gitlab-org/gitaly/merge_requests/193
 - Optional token authentication
   https://gitlab.com/gitlab-org/gitaly/merge_requests/191
 
-v0.12.0
+## v0.12.0
 
 - Stop using deprecated field `path` in Repository messages
   https://gitlab.com/gitlab-org/gitaly/merge_requests/179
 - Implement TreeEntry RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/187
 
-v0.11.2
+## v0.11.2
 
 Skipping 0.11.1 intentionally, we messed up the tag.
 
@@ -925,7 +928,7 @@ Skipping 0.11.1 intentionally, we messed up the tag.
 - Fix incorrect dependency in Makefile
   https://gitlab.com/gitlab-org/gitaly/merge_requests/189
 
-v0.11.0
+## v0.11.0
 
 - FindDefaultBranchName: decorate error
   https://gitlab.com/gitlab-org/gitaly/merge_requests/148
@@ -956,7 +959,7 @@ v0.11.0
 - Upgrade gRPC and its dependencies
   https://gitlab.com/gitlab-org/gitaly/merge_requests/180
 
-v0.10.0
+## v0.10.0
 
 - CommitDiff: Parse a typechange diff correctly
   https://gitlab.com/gitlab-org/gitaly/merge_requests/136
@@ -967,14 +970,14 @@ v0.10.0
 - Add SSHUpload/ReceivePack Implementation
   https://gitlab.com/gitlab-org/gitaly/merge_requests/132
 
-v0.9.0
+## v0.9.0
 
 - Add support ignoring whitespace diffs in CommitDiff
   https://gitlab.com/gitlab-org/gitaly/merge_requests/126
 - Add support for path filtering in CommitDiff
   https://gitlab.com/gitlab-org/gitaly/merge_requests/126
 
-v0.8.0
+## v0.8.0
 
 - Don't error on invalid ref in CommitIsAncestor
   https://gitlab.com/gitlab-org/gitaly/merge_requests/129
@@ -983,7 +986,7 @@ v0.8.0
 - Return 'Not Found' gRPC code when repository is not found
   https://gitlab.com/gitlab-org/gitaly/merge_requests/120
 
-v0.7.0
+## v0.7.0
 
 - Use storage configuration data from config.toml, if possible, when
   resolving repository paths.
