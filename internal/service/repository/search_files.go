@@ -57,7 +57,7 @@ func (s *server) SearchFilesByContent(req *pb.SearchFilesByContentRequest, strea
 				buf = append(buf, obj...)
 			}
 		}
-		if len(matches) > 1 {
+		if len(matches) > 0 {
 			err = stream.Send(&pb.SearchFilesByContentResponse{Matches: matches})
 			matches = nil
 			return err
@@ -69,8 +69,11 @@ func (s *server) SearchFilesByContent(req *pb.SearchFilesByContentRequest, strea
 	if err != nil {
 		return helper.DecorateError(codes.Internal, err)
 	}
-	if len(buf) > 1 {
-		return stream.Send(&pb.SearchFilesByContentResponse{Matches: [][]byte{buf}})
+	if len(buf) > 0 {
+		matches = append(matches, buf)
+	}
+	if len(matches) > 0 {
+		return stream.Send(&pb.SearchFilesByContentResponse{Matches: matches})
 	}
 	return nil
 }

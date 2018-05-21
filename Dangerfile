@@ -12,10 +12,10 @@ def check_changelog(path)
   if !git.added_files.include?(path)
     warn("No changelog entry was generated, please do so by executing _support/changelog")
   else
-    yaml = YAML.safe_load(yaml)
+    yaml = YAML.safe_load(File.read(path))
 
-    unless yaml['merge_request'] == gitlab.mr["iid"]
-      fail("Merge request ID was set to #{yaml['merge_request']}, expected #{gitlab.mr['iid']}")
+    unless yaml['merge_request'] == gitlab.mr_json["iid"]
+      fail("Merge request ID was not set to #{gitlab.mr_json['iid']}")
     end
 
     unless yaml['title'] == gitlab.mr_title
@@ -24,7 +24,7 @@ def check_changelog(path)
   end
 end
 
-check_changelog(File.join('changelogs', 'unreleased', "#{gitlab.branch_for_base}.yml}"))
+check_changelog(File.join('changelogs', 'unreleased', "#{gitlab.branch_for_head}.yml"))
 
 VENDOR_JSON = 'vendor/vendor.json'
 fail("Expected #{VENDOR_JSON} to exist") unless File.exist?(VENDOR_JSON)
@@ -38,3 +38,5 @@ if git.modified_files.include?(VENDOR_JSON)
     fail("gitaly-proto version is incorrect")
   end
 end
+
+# vim: ft=ruby
