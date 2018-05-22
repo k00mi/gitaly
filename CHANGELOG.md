@@ -5,6 +5,7 @@
 #### Added
 - Add StorageService::DeleteAllRepositories RPC
   https://gitlab.com/gitlab-org/gitaly/merge_requests/726
+
 #### Other
 - Fix Dangerfile bad changelog detection
   https://gitlab.com/gitlab-org/gitaly/merge_requests/724

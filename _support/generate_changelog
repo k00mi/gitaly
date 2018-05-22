@@ -37,24 +37,29 @@ def main(version)
     FileUtils.rm(yml)
   end
 
-  lines = []
+  sections = []
   types = entries.map(&:type).uniq.sort
   types.each do |type|
-    lines << "#### #{type.capitalize}\n"
+    text = ''
+    text << "#### #{type.capitalize}\n"
 
     entries.each do |e|
       next unless e.type == type
 
-      lines << e.to_s
+      text << e.to_s
     end
+
+    sections << text
   end
+
+  new_version_entry = ["## v#{version}\n\n", sections.join("\n"), "\n"].join
 
   current_changelog = File.read(CHANGELOG_FILE).lines
   header = current_changelog.shift(2)
 
-  new_changelog = [header, "## v#{version}\n\n", lines, "\n", current_changelog].flatten.join
+  new_changelog = [header, new_version_entry, current_changelog.join]
 
-  File.write(CHANGELOG_FILE, new_changelog)
+  File.write(CHANGELOG_FILE, new_changelog.join)
 end
 
 unless ARGV.count == 1
