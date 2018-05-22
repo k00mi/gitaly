@@ -1,5 +1,14 @@
 # Gitaly changelog
 
+## v0.103.0
+
+#### Added
+- Add StorageService::DeleteAllRepositories RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/726
+#### Other
+- Fix Dangerfile bad changelog detection
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/724
+
 ## v0.102.0
 
 #### Changed
