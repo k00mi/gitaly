@@ -50,7 +50,7 @@ func (s *server) SearchFilesByContent(req *pb.SearchFilesByContentRequest, strea
 	reader := func(objs [][]byte) error {
 		for _, obj := range objs {
 			obj = append(obj, '\n')
-			if bytes.Compare(obj, contentDelimiter) == 0 {
+			if bytes.Equal(obj, contentDelimiter) {
 				matches = append(matches, buf)
 				buf = nil
 			} else {
