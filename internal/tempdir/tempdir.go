@@ -2,6 +2,7 @@ package tempdir
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -17,13 +18,29 @@ import (
 )
 
 const (
-	// We need to be careful that this path does not clash with any
-	// directory name that could be provided by a user. The '+' character is
-	// not allowed in GitLab namespaces or repositories.
-	tmpRootPrefix = "+gitaly/tmp"
+	// GitalyDataPrefix is the top-level directory we use to store system
+	// (non-user) data. We need to be careful that this path does not clash
+	// with any directory name that could be provided by a user. The '+'
+	// character is not allowed in GitLab namespaces or repositories.
+	GitalyDataPrefix = "+gitaly"
 
-	maxAge = 7 * 24 * time.Hour
+	// TmpRootPrefix is the directory in which we store temporary
+	// directories.
+	TmpRootPrefix = GitalyDataPrefix + "/tmp"
+
+	// MaxAge is used by ForDeleteAllRepositories. It is also a fallback
+	// for the context-scoped temporary directories, to ensure they get
+	// cleaned up if the cleanup at the end of the context failed to run.
+	MaxAge = 7 * 24 * time.Hour
 )
+
+// ForDeleteAllRepositories returns a temporary directory for the given storage. It is not context-scoped but it will get removed eventuall (after MaxAge).
+func ForDeleteAllRepositories(storageName string) (string, error) {
+	prefix := fmt.Sprintf("%s-repositories.old.%d.", storageName, time.Now().Unix())
+	_, path, err := newAsRepository(context.Background(), storageName, prefix)
+
+	return path, err
+}
 
 // New returns the path of a new temporary directory for use with the
 // repository. The directory is removed with os.RemoveAll when ctx
@@ -40,7 +57,11 @@ func New(ctx context.Context, repo *pb.Repository) (string, error) {
 // NewAsRepository is the same as New, but it returns a *pb.Repository for the
 // created directory as well as the bare path as a string
 func NewAsRepository(ctx context.Context, repo *pb.Repository) (*pb.Repository, string, error) {
-	storageDir, err := helper.GetStorageByName(repo.StorageName)
+	return newAsRepository(ctx, repo.StorageName, "repo")
+}
+
+func newAsRepository(ctx context.Context, storageName string, prefix string) (*pb.Repository, string, error) {
+	storageDir, err := helper.GetStorageByName(storageName)
 	if err != nil {
 		return nil, "", err
 	}
@@ -50,7 +71,7 @@ func NewAsRepository(ctx context.Context, repo *pb.Repository) (*pb.Repository, 
 		return nil, "", err
 	}
 
-	tempDir, err := ioutil.TempDir(root, "repo")
+	tempDir, err := ioutil.TempDir(root, prefix)
 	if err != nil {
 		return nil, "", err
 	}
@@ -60,13 +81,13 @@ func NewAsRepository(ctx context.Context, repo *pb.Repository) (*pb.Repository, 
 		os.RemoveAll(tempDir)
 	}()
 
-	newAsRepo := &pb.Repository{StorageName: repo.StorageName}
+	newAsRepo := &pb.Repository{StorageName: storageName}
 	newAsRepo.RelativePath, err = filepath.Rel(storageDir, tempDir)
 	return newAsRepo, tempDir, err
 }
 
 func tmpRoot(storageRoot string) string {
-	return filepath.Join(storageRoot, tmpRootPrefix)
+	return filepath.Join(storageRoot, TmpRootPrefix)
 }
 
 // StartCleaning starts tempdir cleanup goroutines.
@@ -95,7 +116,7 @@ type invalidCleanRoot string
 func clean(dir string) error {
 	// If we start "cleaning up" the wrong directory we may delete user data
 	// which is Really Bad.
-	if !strings.HasSuffix(dir, tmpRootPrefix) {
+	if !strings.HasSuffix(dir, TmpRootPrefix) {
 		log.Print(dir)
 		panic(invalidCleanRoot("invalid tempdir clean root: panicking to prevent data loss"))
 	}
@@ -109,7 +130,7 @@ func clean(dir string) error {
 	}
 
 	for _, info := range entries {
-		if time.Since(info.ModTime()) < maxAge {
+		if time.Since(info.ModTime()) < MaxAge {
 			continue
 		}
 
