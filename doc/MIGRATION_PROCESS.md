@@ -94,13 +94,7 @@ As the maintainer of Gitaly, Jacob to review:
 
 The feature flag will be enabled on dev.gitlab.org, staging and GitLab.com, but the feature flag will be disabled by default. On-premise installations can enable the feature if they wish, but it will be disabled by default.
 
-For a feature toggle `GITALY_EXAMPLE_FEATURE`, the toggle would be enabled by setting the environment variable:  
-
-```shell
-GITALY_EXAMPLE_FEATURE=1 # "One" to enable
-```
-
-Or by running this command in a Rails Console:
+For a feature toggle `gitaly_example_feature`, the toggle would be enabled by running this command in a Rails Console:
 
 ```ruby
 Feature.enable("gitaly_example_feature")
@@ -118,13 +112,7 @@ This gives on-premise installations a month to test a feature and disable it if 
 
 Disabling a feature is done by:
 
-For a feature toggle `GITALY_EXAMPLE_FEATURE`, the toggle would be enabled by setting the environment variable:  
-
-```shell
-GITALY_EXAMPLE_FEATURE=0 # "Zero" to disable
-```
-
-Or by running this command in a Rails Console:
+For a feature toggle `GITALY_EXAMPLE_FEATURE`, the toggle would be enabled by running this command in a Rails Console:
 
 ```ruby
 Feature.disable("gitaly_example_feature")
@@ -140,5 +128,5 @@ In the next GitLab release following the change to Opt-Out feature status, the f
 
 The change will be made by:
 
-* Removing the references to the feature flag in Omnibus, Chef repo, etc
-* Remove the feature flag switching code from the client application (GitLab-CE, Workhorse, GitLab-Shell) code
+* Move the old rugged/shell method from gitlab-ce repository into [Gitalys own Gitlab::Git](ruby/lib/gitlab/git).
+* Remove the feature flag switching code from the client application (GitLab-CE, Workhorse, GitLab-Shell) code, and it's underlying rugged/shell method
