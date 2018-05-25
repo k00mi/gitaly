@@ -17,6 +17,7 @@ verify:
 danger-review:
   image: registry.gitlab.com/gitlab-org/gitaly/dangercontainer:latest
   stage: build
+  allow_failure: true
   except:
     - tags
     - master
@@ -202,6 +203,7 @@ create-dangercontainer:
 # Ensure that gitlab-git vendoring from gitlab-ce is functioning
 test-vendor-gitaly-ruby:
   stage: test
+  allow_failure: true
   only:
    - schedules
   before_script:
