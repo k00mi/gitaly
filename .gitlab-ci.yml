@@ -112,6 +112,14 @@ test:go1.10-git2.16:
   <<: *test_definition
   image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.10-git-2.16
 
+test:go1.9-git2.17:
+  <<: *test_definition
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.9-git-2.17
+
+test:go1.10-git2.17:
+  <<: *test_definition
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.10-git-2.17
+
 race:
   <<: *go_test_definition
   script:
