@@ -1,5 +1,0 @@
----
-title: Rewrite IsRebase/SquashInProgress in Go
-merge_request: 698
-author:
-type: performance

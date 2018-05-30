@@ -1,5 +1,37 @@
 # Gitaly changelog
 
+## v0.104.0
+
+#### Added
+- Use Go-Git for the FindCommit RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/691
+
+#### Fixed
+- Ignore ENOENT when cleaning up lock files
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/740
+- Fix rename similarity in CommitDiff
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/727
+- Use grpc 1.11.0 in gitaly-ruby
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/732
+
+#### Other
+- Tests: only match error strings we create
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/743
+- Use gitaly-proto 0.101.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/745
+- Upgrade to Ruby 2.4.4
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/725
+- Use the same faraday gem version as gitlab-ce
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/733
+
+#### Performance
+- Rewrite IsRebase/SquashInProgress in Go
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/698
+
+#### Security
+- Use rugged 0.27.1 for security fixes
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/744
+
 ## v0.103.0
 
 #### Added
