@@ -8,11 +8,13 @@ import (
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/require"
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly/internal/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 )
 
 func TestSuccessfulFindCommitRequest(t *testing.T) {
@@ -206,6 +208,7 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 		},
 	}
 
+	allCommits := []*pb.GitCommit{}
 	for _, testCase := range testCases {
 		t.Run(testCase.description, func(t *testing.T) {
 			request := &pb.FindCommitRequest{
@@ -216,12 +219,27 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			response, err := client.FindCommit(ctx, request)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
 			require.Equal(t, testCase.commit, response.Commit, "mismatched commits")
+			allCommits = append(allCommits, response.Commit)
 		})
+	}
+
+	ctx = metadata.NewOutgoingContext(
+		ctx,
+		metadata.New(map[string]string{featureflag.HeaderKey("gogit-findcommit"): "true"}),
+	)
+
+	for i, testCase := range testCases {
+		request := &pb.FindCommitRequest{
+			Repository: testRepo,
+			Revision:   []byte(testCase.revision),
+		}
+
+		response, err := client.FindCommit(ctx, request)
+		require.NoError(t, err)
+		require.Equal(t, allCommits[i], response.Commit)
 	}
 }
 

@@ -19,8 +19,7 @@ func IsEnabled(ctx context.Context, flag string) bool {
 		return false
 	}
 
-	headerKey := fmt.Sprintf("gitaly-feature-%s", flag)
-	val, ok := md[headerKey]
+	val, ok := md[HeaderKey(flag)]
 	if !ok {
 		return false
 	}
@@ -31,4 +30,9 @@ func IsEnabled(ctx context.Context, flag string) bool {
 // IsDisabled is the inverse operation of IsEnabled
 func IsDisabled(ctx context.Context, flag string) bool {
 	return !IsEnabled(ctx, flag)
+}
+
+// HeaderKey returns the feature flag key to be used in the metadata map
+func HeaderKey(flag string) string {
+	return fmt.Sprintf("gitaly-feature-%s", flag)
 }
