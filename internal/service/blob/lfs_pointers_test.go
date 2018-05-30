@@ -304,7 +304,8 @@ func TestFailedGetNewLFSPointersRequestDueToValidations(t *testing.T) {
 			require.NoError(t, err)
 
 			err = drainNewPointers(c)
-			testhelper.AssertGrpcError(t, err, codes.InvalidArgument, tc.desc)
+			testhelper.AssertGrpcError(t, err, codes.InvalidArgument, "")
+			require.Contains(t, err.Error(), tc.desc)
 		})
 	}
 }
@@ -420,7 +421,8 @@ func TestFailedGetAllLFSPointersRequestDueToValidations(t *testing.T) {
 			require.NoError(t, err)
 
 			err = drainAllPointers(c)
-			testhelper.AssertGrpcError(t, err, codes.InvalidArgument, tc.desc)
+			testhelper.AssertGrpcError(t, err, codes.InvalidArgument, "")
+			require.Contains(t, err.Error(), tc.desc)
 		})
 	}
 }
