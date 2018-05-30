@@ -1,0 +1,5 @@
+---
+title: Fix rename similarity in CommitDiff
+merge_request: 727
+author:
+type: fixed

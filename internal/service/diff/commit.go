@@ -41,7 +41,7 @@ func (s *server) CommitDiff(in *pb.CommitDiffRequest, stream pb.DiffService_Comm
 		"--raw",
 		"--abbrev=40",
 		"--full-index",
-		"--find-renames",
+		"--find-renames=30%",
 	}
 	if ignoreWhitespaceChange {
 		cmdArgs = append(cmdArgs, "--ignore-space-change")
