@@ -1,0 +1,5 @@
+---
+title: Use rugged 0.27.1 for security fixes
+merge_request: 744
+author:
+type: security
