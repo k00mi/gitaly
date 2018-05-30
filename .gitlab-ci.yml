@@ -1,4 +1,4 @@
-image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.9-git-2.14
+image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.4-golang-1.9-git-2.17
 
 stages:
   - build
@@ -7,7 +7,7 @@ stages:
 
 variables:
   DOCKER_DRIVER: overlay
-  CUSTOM_IMAGE_VERSION: ruby-2.3-golang-1.9-git-2.14
+  CUSTOM_IMAGE_VERSION: ruby-2.4-golang-1.9-git-2.17
 
 verify:
   stage: test
@@ -29,7 +29,7 @@ danger-review:
     # Override gemfile config (for some reasong `config --delete` doesn't do it)
     - bundle config --local gemfile Gemfile
   cache:
-    key: gems
+    key: gems-ruby-2.4
     paths:
       - ruby/vendor/bundle
 
@@ -61,7 +61,7 @@ danger-review:
   stage: test
   # Override the ruby_definition cache definition for pull
   cache:
-    key: gems
+    key: gems-ruby-2.4
     paths:
       - ruby/vendor/bundle
     policy: pull
@@ -75,48 +75,52 @@ danger-review:
 
 build:go1.10:
   <<: *build_definition
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.10-git-2.16
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.4-golang-1.10-git-2.16
 
 build:go1.9:
   <<: *build_definition
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.9-git-2.16
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.4-golang-1.9-git-2.16
 
 binaries_go1.10:
   <<: *assemble_definition
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.10-git-2.16
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.4-golang-1.10-git-2.16
 
 binaries_go1.9:
   <<: *assemble_definition
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.9-git-2.16
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.4-golang-1.9-git-2.16
 
 test:default:
   <<: *test_definition
 
-test:go1.9-git2.9:
+test:go1.9-git2.9-ruby-2.4:
   <<: *test_definition
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.9-git-2.9
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.4-golang-1.9-git-2.9
 
-test:go1.9-git2.14:
+test:go1.9-git2.14-ruby-2.4:
   <<: *test_definition
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.9-git-2.14
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.4-golang-1.9-git-2.14
 
-test:go1.10-git2.14:
+test:go1.10-git2.14-ruby-2.4:
   <<: *test_definition
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.10-git-2.14
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.4-golang-1.10-git-2.14
 
-test:go1.9-git2.16:
+test:go1.9-git2.16-ruby-2.4:
   <<: *test_definition
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.9-git-2.16
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.4-golang-1.9-git-2.16
 
-test:go1.10-git2.16:
+test:go1.10-git2.16-ruby-2.4:
   <<: *test_definition
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.10-git-2.16
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.4-golang-1.10-git-2.16
 
-test:go1.9-git2.17:
+test:go1.9-git2.17-ruby-2.4:
   <<: *test_definition
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.9-git-2.17
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.4-golang-1.9-git-2.17
 
-test:go1.10-git2.17:
+test:go1.10-git2.17-ruby.2-4:
+  <<: *test_definition
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.4-golang-1.10-git-2.17
+
+test:go1.10-git2.17-ruby-2.3:
   <<: *test_definition
   image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.3-golang-1.10-git-2.17
 
