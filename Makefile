@@ -196,14 +196,7 @@ $(GOVENDOR): $(TARGET_SETUP)
 
 # Install golint
 $(GOLINT): $(TARGET_SETUP)
-	# We should run only this: go get -v golang.org/x/lint/golint
-	# But that is currently (2018-04-23) broken so we have this clunky workaround.
-	mkdir -p $(GOPATH)/src/golang.org/x
-	rm -rf $(GOPATH)/src/golang.org/x/lint
-	git clone --quiet https://github.com/golang/lint $(GOPATH)/src/golang.org/x/lint
-	rm -rf $(GOPATH)/src/golang.org/x/tools
-	git clone --quiet https://github.com/golang/tools $(GOPATH)/src/golang.org/x/tools
-	go install golang.org/x/lint/golint
+	go get -v golang.org/x/lint/golint
 
 # Install gocovmerge
 $(GOCOVMERGE): $(TARGET_SETUP)
