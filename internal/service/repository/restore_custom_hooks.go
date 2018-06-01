@@ -1,10 +1,60 @@
 package repository
 
 import (
+	"os/exec"
+
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/streamio"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
-func (*server) RestoreCustomHooks(pb.RepositoryService_RestoreCustomHooksServer) error {
-	return helper.Unimplemented
+func (s *server) RestoreCustomHooks(stream pb.RepositoryService_RestoreCustomHooksServer) error {
+	firstRequest, err := stream.Recv()
+	if err != nil {
+		return status.Errorf(codes.Internal, "RestoreCustomHooks: first request failed %v", err)
+	}
+
+	repo := firstRequest.GetRepository()
+	if repo == nil {
+		return status.Errorf(codes.InvalidArgument, "RestoreCustomHooks: empty Repository")
+	}
+
+	reader := streamio.NewReader(func() ([]byte, error) {
+		if firstRequest != nil {
+			data := firstRequest.GetData()
+			firstRequest = nil
+			return data, nil
+		}
+
+		request, err := stream.Recv()
+		return request.GetData(), err
+	})
+
+	repoPath, err := helper.GetPath(repo)
+	if err != nil {
+		return status.Errorf(codes.Internal, "RestoreCustomHooks: getting repo path failed %v", err)
+	}
+
+	cmdArgs := []string{
+		"-xf",
+		"-",
+		"-C",
+		repoPath,
+		"custom_hooks",
+	}
+
+	ctx := stream.Context()
+	cmd, err := command.New(ctx, exec.Command("tar", cmdArgs...), reader, nil, nil)
+	if err != nil {
+		return status.Errorf(codes.Internal, "RestoreCustomHooks: Could not untar custom hooks tar %v", err)
+	}
+
+	if err := cmd.Wait(); err != nil {
+		return status.Errorf(codes.Internal, "RestoreCustomHooks: cmd wait failed: %v", err)
+	}
+
+	return stream.SendAndClose(&pb.RestoreCustomHooksResponse{})
 }
