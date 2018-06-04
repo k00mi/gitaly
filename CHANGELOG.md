@@ -1,5 +1,19 @@
 # Gitaly changelog
 
+## v0.105.0
+
+#### Added
+- RestoreCustomHooks
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/741
+
+#### Changed
+- Rewrite Repository::Fsck in Go
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/738
+
+#### Fixed
+- Fix committer bug in go-git adapter
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/748
+
 ## v0.104.0
 
 #### Added
