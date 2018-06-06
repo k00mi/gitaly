@@ -116,6 +116,32 @@ func TestFailedListConflictFilesRequestDueToConflictSideMissing(t *testing.T) {
 	testhelper.RequireGrpcError(t, drainListConflictFilesResponse(c), codes.FailedPrecondition)
 }
 
+func TestFailedListConflictFilesFailedPrecondition(t *testing.T) {
+	server, serverSocketPath := runConflictsServer(t)
+	defer server.Stop()
+
+	client, conn := NewConflictsClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	ourCommitOid := "f05a98786e4274708e1fa118c7ad3a29d1d1b9a3"
+	theirCommitOid := "816c271cd6398818b04f974780a2b87162718c80"
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	request := &pb.ListConflictFilesRequest{
+		Repository:     testRepo,
+		OurCommitOid:   ourCommitOid,
+		TheirCommitOid: theirCommitOid,
+	}
+
+	c, _ := client.ListConflictFiles(ctx, request)
+	testhelper.AssertGrpcError(t, drainListConflictFilesResponse(c), codes.FailedPrecondition, "")
+}
+
 func TestFailedListConflictFilesRequestDueToValidation(t *testing.T) {
 	server, serverSocketPath := runConflictsServer(t)
 	defer server.Stop()
