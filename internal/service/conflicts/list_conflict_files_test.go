@@ -112,7 +112,8 @@ func TestFailedListConflictFilesRequestDueToConflictSideMissing(t *testing.T) {
 		TheirCommitOid: theirCommitOid,
 	}
 
-	c, _ := client.ListConflictFiles(ctx, request)
+	c, err := client.ListConflictFiles(ctx, request)
+	require.NoError(t, err)
 	testhelper.RequireGrpcError(t, drainListConflictFilesResponse(c), codes.FailedPrecondition)
 }
 
@@ -126,8 +127,10 @@ func TestFailedListConflictFilesFailedPrecondition(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	ourCommitOid := "f05a98786e4274708e1fa118c7ad3a29d1d1b9a3"
-	theirCommitOid := "816c271cd6398818b04f974780a2b87162718c80"
+	// These commits have a conflict on the 'VERSION' file in the test repo.
+	// The conflict is expected to raise an encoding error.
+	ourCommitOid := "bd493d44ae3c4dd84ce89cb75be78c4708cbd548"
+	theirCommitOid := "7df99c9ad5b8c9bfc5ae4fb7a91cc87adcce02ef"
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
@@ -138,8 +141,10 @@ func TestFailedListConflictFilesFailedPrecondition(t *testing.T) {
 		TheirCommitOid: theirCommitOid,
 	}
 
-	c, _ := client.ListConflictFiles(ctx, request)
-	testhelper.AssertGrpcError(t, drainListConflictFilesResponse(c), codes.FailedPrecondition, "")
+	c, err := client.ListConflictFiles(ctx, request)
+	require.NoError(t, err)
+
+	testhelper.RequireGrpcError(t, drainListConflictFilesResponse(c), codes.FailedPrecondition)
 }
 
 func TestFailedListConflictFilesRequestDueToValidation(t *testing.T) {

@@ -14,7 +14,7 @@ module GitalyServer
           msg_size = 0
 
           Enumerator.new do |y|
-            conflicts.each do |file|
+            enumerate_conflicts(conflicts) do |file|
               files << Gitaly::ConflictFile.new(header: conflict_file_header(file))
 
               strio = StringIO.new(file.content)
@@ -37,8 +37,6 @@ module GitalyServer
             # Send leftover data, if any
             y.yield(Gitaly::ListConflictFilesResponse.new(files: files)) if files.any?
           end
-        rescue Gitlab::Git::Conflict::File::UnsupportedEncoding => e
-          raise GRPC::FailedPrecondition.new(e.message)
         rescue Gitlab::Git::Conflict::Resolver::ConflictSideMissing => e
           raise GRPC::FailedPrecondition.new(e.message)
         end
@@ -89,6 +87,14 @@ module GitalyServer
         our_path: file.our_path.b,
         our_mode: file.our_mode
       )
+    end
+
+    def enumerate_conflicts(conflicts)
+      conflicts.each do |file|
+        yield file
+      end
+    rescue Gitlab::Git::Conflict::File::UnsupportedEncoding => e
+      raise GRPC::FailedPrecondition.new(e.message)
     end
   end
 end
