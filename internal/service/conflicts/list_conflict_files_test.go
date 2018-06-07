@@ -112,7 +112,38 @@ func TestFailedListConflictFilesRequestDueToConflictSideMissing(t *testing.T) {
 		TheirCommitOid: theirCommitOid,
 	}
 
-	c, _ := client.ListConflictFiles(ctx, request)
+	c, err := client.ListConflictFiles(ctx, request)
+	require.NoError(t, err)
+	testhelper.RequireGrpcError(t, drainListConflictFilesResponse(c), codes.FailedPrecondition)
+}
+
+func TestFailedListConflictFilesFailedPrecondition(t *testing.T) {
+	server, serverSocketPath := runConflictsServer(t)
+	defer server.Stop()
+
+	client, conn := NewConflictsClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	// These commits have a conflict on the 'VERSION' file in the test repo.
+	// The conflict is expected to raise an encoding error.
+	ourCommitOid := "bd493d44ae3c4dd84ce89cb75be78c4708cbd548"
+	theirCommitOid := "7df99c9ad5b8c9bfc5ae4fb7a91cc87adcce02ef"
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	request := &pb.ListConflictFilesRequest{
+		Repository:     testRepo,
+		OurCommitOid:   ourCommitOid,
+		TheirCommitOid: theirCommitOid,
+	}
+
+	c, err := client.ListConflictFiles(ctx, request)
+	require.NoError(t, err)
+
 	testhelper.RequireGrpcError(t, drainListConflictFilesResponse(c), codes.FailedPrecondition)
 }
 
