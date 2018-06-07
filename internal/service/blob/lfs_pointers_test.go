@@ -136,7 +136,9 @@ func TestSuccessfulGetNewLFSPointersRequest(t *testing.T) {
 	defer cleanupFn()
 
 	revision := []byte("46abbb087fcc0fd02c340f0f2f052bd2c7708da3")
-	cmd := exec.Command("git", "-C", testRepoPath, "cherry-pick", string(revision))
+	commiterArgs := []string{"-c", "user.name=Scrooge McDuck", "-c", "user.email=scrooge@mcduck.com"}
+	cmdArgs := append(commiterArgs, "-C", testRepoPath, "cherry-pick", string(revision))
+	cmd := exec.Command("git", cmdArgs...)
 	altDirsCommit, altDirs := testhelper.CreateCommitInAlternateObjectDirectory(t, testRepoPath, cmd)
 
 	// Create a commit not pointed at by any ref to emulate being in the
