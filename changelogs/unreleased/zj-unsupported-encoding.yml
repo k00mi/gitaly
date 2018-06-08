@@ -1,5 +1,0 @@
----
-title: Reraise UnsupportedEncodingError as FailedPrecondition
-merge_request: 718
-author:
-type: fixed

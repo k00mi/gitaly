@@ -1,5 +1,21 @@
 # Gitaly changelog
 
+## v0.106.0
+
+#### Changed
+- Colons are not allowed in refs
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/747
+
+#### Fixed
+- Reraise UnsupportedEncodingError as FailedPrecondition
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/718
+
+#### Other
+- Vendor gitlab_git at 930ad88a87b0814173989
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/752
+- Upgrade vendor to d2aa3e3d5fae1017373cc047a9403cfa111b2031
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/
+
 ## v0.105.0
 
 #### Added
