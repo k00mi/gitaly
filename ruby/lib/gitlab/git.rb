@@ -29,7 +29,6 @@ vendor_gitlab_git = '../../vendor/gitlab_git/'
 require_relative File.join(vendor_gitlab_git, 'lib/gitlab/encoding_helper.rb')
 require_relative File.join(vendor_gitlab_git, 'lib/gitlab/utils/strong_memoize.rb')
 require_relative File.join(vendor_gitlab_git, 'lib/gitlab/version_info.rb')
-require_relative File.join(vendor_gitlab_git, 'lib/gitlab/popen.rb')
 require_relative File.join(vendor_gitlab_git, 'lib/gitlab/git.rb')
 require_relative File.join(vendor_gitlab_git, 'lib/gitlab/git/popen.rb')
 require_relative File.join(vendor_gitlab_git, 'lib/gitlab/git/ref.rb')
@@ -76,6 +75,19 @@ module Gitlab
       def self.all
         raise NotAvailableInGitalyRuby
       end
+    end
+
+    # This needs to be back-ported to gitlab-ce
+    module Version
+      extend Gitlab::Git::Popen
+
+      def self.version
+        Gitlab::VersionInfo.parse(popen(%W(#{Gitlab.config.git.bin_path} --version), nil).first)
+      end
+    end
+
+    def self.version
+      Version.version
     end
   end
 end
