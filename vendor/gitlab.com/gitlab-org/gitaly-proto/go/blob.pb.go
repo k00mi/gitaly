@@ -214,6 +214,8 @@ It has these top-level messages:
 	WriteConfigResponse
 	RestoreCustomHooksRequest
 	RestoreCustomHooksResponse
+	BackupCustomHooksRequest
+	BackupCustomHooksResponse
 	CreateRepositoryFromBundleRequest
 	CreateRepositoryFromBundleResponse
 	FindLicenseRequest
