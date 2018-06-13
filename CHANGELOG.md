@@ -1,5 +1,19 @@
 # Gitaly changelog
 
+## v0.107.0
+
+#### Added
+- Add BackupCustomHooks
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/760
+
+#### Other
+- Try to fix flaky rubyserver.TestRemovals test
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/759
+- Vendor gitlab_git at a20d3ff2b004e8ab62c037
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/761
+- Bumping gitlab-gollum-rugged-adapter to version 0.4.4.1 and gitlab-gollum-lib to 4.2.7.4
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/762
+
 ## v0.106.0
 
 #### Changed
