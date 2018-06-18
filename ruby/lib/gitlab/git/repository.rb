@@ -110,48 +110,26 @@ module Gitlab
       end
 
       def root_ref
-        @root_ref ||= gitaly_migrate(:root_ref) do |is_enabled|
-          if is_enabled
-            gitaly_ref_client.default_branch_name
-          else
-            discover_default_branch
-          end
-        end
+        @root_ref ||= discover_default_branch
       end
 
       def branch_names
-        gitaly_migrate(:branch_names) do |is_enabled|
-          if is_enabled
-            gitaly_ref_client.branch_names
-          else
-            branches.map(&:name)
-          end
-        end
+        branches.map(&:name)
       end
 
       def branches
-        gitaly_migrate(:branches) do |is_enabled|
-          if is_enabled
-            gitaly_ref_client.branches
-          else
-            branches_filter
-          end
-        end
+        branches_filter
       end
 
       def local_branches(sort_by: nil)
         branches_filter(filter: :local, sort_by: sort_by)
       end
 
-      def has_local_branches?
-        local_branches.any?
-      end
-
-       def has_local_branches_rugged?
-        rugged.branches.each(:local).any? do |ref|
+      def has_local_branches_rugged?
+        branches_filter(filter: :local).any? do |ref|
           begin
             ref.name && ref.target # ensures the branch is valid
- 
+
             true
           rescue Rugged::ReferenceError
             false
@@ -160,42 +138,29 @@ module Gitlab
       end
 
       def tag_names
-        gitaly_migrate(:tag_names) do |is_enabled|
-          if is_enabled
-            gitaly_ref_client.tag_names
-          else
-            rugged.tags.map { |t| t.name }
-          end
-        end
+        rugged.tags.map { |t| t.name }
       end
 
       def tags
-        gitaly_migrate(:tags) do |is_enabled|
-          if is_enabled
-            tags_from_gitaly
-          else
+        rugged.references.each("refs/tags/*").map do |ref|
+          message = nil
 
-            rugged.references.each("refs/tags/*").map do |ref|
-              message = nil
+          if ref.target.is_a?(Rugged::Tag::Annotation)
+            tag_message = ref.target.message
 
-              if ref.target.is_a?(Rugged::Tag::Annotation)
-                tag_message = ref.target.message
-
-                if tag_message.respond_to?(:chomp)
-                  message = tag_message.chomp
-                end
-              end
-
-              target_commit = Gitlab::Git::Commit.find(self, ref.target)
-              Gitlab::Git::Tag.new(self, {
-                name: ref.name,
-                target: ref.target,
-                target_commit: target_commit,
-                message: message
-              })
-            end.sort_by(&:name)
+            if tag_message.respond_to?(:chomp)
+              message = tag_message.chomp
+            end
           end
-        end
+
+          target_commit = Gitlab::Git::Commit.find(self, ref.target)
+          Gitlab::Git::Tag.new(self, {
+            name: ref.name,
+            target: ref.target,
+            target_commit: target_commit,
+            message: message
+          })
+        end.sort_by(&:name)
       end
 
       # Discovers the default branch based on the repository's available branches
@@ -226,16 +191,9 @@ module Gitlab
       private
 
       def uncached_has_local_branches?
-        gitaly_migrate(:has_local_branches, status: Gitlab::GitalyClient::MigrationStatus::OPT_OUT) do |is_enabled|
-          if is_enabled
-            gitaly_repository_client.has_local_branches?
-          else
-            has_local_branches_rugged?
-          end
-        end
+        has_local_branches_rugged?
       end
 
-      # Gitaly note: JV: Trying to get rid of the 'filter' option so we can implement this with 'git'.
       def branches_filter(filter: nil, sort_by: nil)
         branches = rugged.branches.each(filter).map do |rugged_ref|
           begin
