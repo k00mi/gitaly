@@ -7,6 +7,7 @@ import (
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/server/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -27,6 +28,16 @@ func TestGitalyServerInfo(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	// Setup storage paths
+	testStorages := []config.Storage{
+		{Name: "default", Path: testhelper.GitlabTestStoragePath()},
+		{Name: "broken", Path: "/does/not/exist"},
+	}
+	defer func(oldStorages []config.Storage) {
+		config.Config.Storages = oldStorages
+	}(config.Config.Storages)
+	config.Config.Storages = testStorages
+
 	c, err := client.ServerInfo(ctx, &pb.ServerInfoRequest{})
 	require.NoError(t, err)
 
@@ -35,6 +46,13 @@ func TestGitalyServerInfo(t *testing.T) {
 	gitVersion, err := git.Version()
 	require.NoError(t, err)
 	require.Equal(t, gitVersion, c.GetGitVersion())
+
+	require.Len(t, c.GetStorageStatuses(), len(testStorages))
+	require.True(t, c.GetStorageStatuses()[0].Readable)
+	require.True(t, c.GetStorageStatuses()[0].Writeable)
+
+	require.False(t, c.GetStorageStatuses()[1].Readable)
+	require.False(t, c.GetStorageStatuses()[1].Writeable)
 }
 
 func runServer(t *testing.T) (*grpc.Server, string) {
