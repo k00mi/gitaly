@@ -77,6 +77,11 @@ module Gitlab
         raise InvalidRef, ex
       end
 
+      # Fake implementation, so we wrap correctly on the client side
+      def wrapped_gitaly_errors
+        yield
+      end
+
       def circuit_breaker
         FakeCircuitBreaker
       end
@@ -93,7 +98,6 @@ module Gitlab
         raise "don't use relative object directories in gitaly-ruby"
       end
 
-      # This method is mandatory and no longer exists in gitlab-ce.
       # TODO: Can be removed once https://gitlab.com/gitlab-org/gitaly/merge_requests/738
       #       is well and truly out in the wild.
       def fsck
@@ -104,7 +108,104 @@ module Gitlab
       def exists?
         File.exist?(File.join(path, 'refs'))
       end
+
+      def root_ref
+        @root_ref ||= discover_default_branch
+      end
+
+      def branch_names
+        branches.map(&:name)
+      end
+
+      def branches
+        branches_filter
+      end
+
+      def local_branches(sort_by: nil)
+        branches_filter(filter: :local, sort_by: sort_by)
+      end
+
+      def has_local_branches_rugged?
+        branches_filter(filter: :local).any? do |ref|
+          begin
+            ref.name && ref.target # ensures the branch is valid
+
+            true
+          rescue Rugged::ReferenceError
+            false
+          end
+        end
+      end
+
+      def tag_names
+        rugged.tags.map { |t| t.name }
+      end
+
+      def tags
+        rugged.references.each("refs/tags/*").map do |ref|
+          message = nil
+
+          if ref.target.is_a?(Rugged::Tag::Annotation)
+            tag_message = ref.target.message
+
+            if tag_message.respond_to?(:chomp)
+              message = tag_message.chomp
+            end
+          end
+
+          target_commit = Gitlab::Git::Commit.find(self, ref.target)
+          Gitlab::Git::Tag.new(self, {
+            name: ref.name,
+            target: ref.target,
+            target_commit: target_commit,
+            message: message
+          })
+        end.sort_by(&:name)
+      end
+
+      # Discovers the default branch based on the repository's available branches
+      #
+      # - If no branches are present, returns nil
+      # - If one branch is present, returns its name
+      # - If two or more branches are present, returns current HEAD or master or first branch
+      def discover_default_branch
+        names = branch_names
+
+        return if names.empty?
+
+        return names[0] if names.length == 1
+
+        if rugged_head
+          extracted_name = Ref.extract_branch_name(rugged_head.name)
+
+          return extracted_name if names.include?(extracted_name)
+        end
+
+        if names.include?('master')
+          'master'
+        else
+          names[0]
+        end
+      end
+
+      private
+
+      def uncached_has_local_branches?
+        has_local_branches_rugged?
+      end
+
+      def branches_filter(filter: nil, sort_by: nil)
+        branches = rugged.branches.each(filter).map do |rugged_ref|
+          begin
+            target_commit = Gitlab::Git::Commit.find(self, rugged_ref.target)
+            Gitlab::Git::Branch.new(self, rugged_ref.name, rugged_ref.target, target_commit)
+          rescue Rugged::ReferenceError
+            # Omit invalid branch
+          end
+        end.compact
+
+        sort_branches(branches, sort_by)
+      end
     end
   end
 end
-
