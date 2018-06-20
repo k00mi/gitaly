@@ -1,5 +1,21 @@
 # Gitaly changelog
 
+## v0.108.0
+
+#### Added
+- Server info performs read and write checks
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/767
+
+#### Changed
+- Remove GoGit
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/764
+
+#### Other
+- Use custom log levels for grpc-go
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/765
+- Vendor Gitlab::Git at 2a82179e102159b8416f4a20d3349ef208c58738
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/766
+
 ## v0.107.0
 
 #### Added
