@@ -48,6 +48,7 @@ require_relative 'git/repository.rb'
 require_relative 'git/wiki.rb'
 require_relative 'git/gitlab_projects.rb'
 require_relative 'git/commit.rb'
+require_relative 'git/lfs_changes.rb'
 require_relative 'git/pre_receive_error.rb'
 
 class String
@@ -76,6 +77,14 @@ module Gitlab
 
       def self.all
         raise NotAvailableInGitalyRuby
+      end
+    end
+
+    module Version
+      extend Gitlab::Git::Popen
+
+      def self.git_version
+        Gitlab::VersionInfo.parse(popen(%W(#{Gitlab.config.git.bin_path} --version), nil).first)
       end
     end
   end
