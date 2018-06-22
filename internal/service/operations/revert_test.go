@@ -33,7 +33,7 @@ func TestSuccessfulUserRevertRequest(t *testing.T) {
 	destinationBranch := "revert-dst"
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", destinationBranch, "master")
 
-	masterHeadCommit, err := log.GetCommit(ctxOuter, testRepo, "master", "")
+	masterHeadCommit, err := log.GetCommit(ctxOuter, testRepo, "master")
 	require.NoError(t, err)
 
 	user := &pb.User{
@@ -42,7 +42,7 @@ func TestSuccessfulUserRevertRequest(t *testing.T) {
 		GlId:  "user-123",
 	}
 
-	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, "d59c60028b053793cecfb4022de34602e1a9218e", "")
+	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, "d59c60028b053793cecfb4022de34602e1a9218e")
 	require.NoError(t, err)
 
 	testRepoCopy, _, cleanup := testhelper.NewTestRepo(t)
@@ -111,7 +111,7 @@ func TestSuccessfulUserRevertRequest(t *testing.T) {
 			response, err := client.UserRevert(ctx, testCase.request)
 			require.NoError(t, err)
 
-			headCommit, err := log.GetCommit(ctx, testRepo, string(testCase.request.BranchName), "")
+			headCommit, err := log.GetCommit(ctx, testRepo, string(testCase.request.BranchName))
 			require.NoError(t, err)
 
 			expectedBranchUpdate := testCase.branchUpdate
@@ -146,7 +146,7 @@ func TestSuccessfulGitHooksForUserRevertRequest(t *testing.T) {
 		GlId:  "user-123",
 	}
 
-	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, "d59c60028b053793cecfb4022de34602e1a9218e", "")
+	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, "d59c60028b053793cecfb4022de34602e1a9218e")
 	require.NoError(t, err)
 
 	request := &pb.UserRevertRequest{
@@ -190,7 +190,7 @@ func TestFailedUserRevertRequestDueToValidations(t *testing.T) {
 	testRepo, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, "d59c60028b053793cecfb4022de34602e1a9218e", "")
+	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, "d59c60028b053793cecfb4022de34602e1a9218e")
 	require.NoError(t, err)
 
 	destinationBranch := "revert-dst"
@@ -285,7 +285,7 @@ func TestFailedUserRevertRequestDueToPreReceiveError(t *testing.T) {
 		GlId:  "user-123",
 	}
 
-	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, "d59c60028b053793cecfb4022de34602e1a9218e", "")
+	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, "d59c60028b053793cecfb4022de34602e1a9218e")
 	require.NoError(t, err)
 
 	request := &pb.UserRevertRequest{
@@ -337,7 +337,7 @@ func TestFailedUserRevertRequestDueToCreateTreeError(t *testing.T) {
 	}
 
 	// This revert patch of the following commit cannot be applied to the destinationBranch above
-	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, "372ab6950519549b14d220271ee2322caa44d4eb", "")
+	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, "372ab6950519549b14d220271ee2322caa44d4eb")
 	require.NoError(t, err)
 
 	request := &pb.UserRevertRequest{
@@ -380,7 +380,7 @@ func TestFailedUserRevertRequestDueToCommitError(t *testing.T) {
 		GlId:  "user-123",
 	}
 
-	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, sourceBranch, "")
+	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, sourceBranch)
 	require.NoError(t, err)
 
 	request := &pb.UserRevertRequest{

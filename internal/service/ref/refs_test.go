@@ -407,7 +407,7 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 		Message:  "An empty commit with REALLY BIG message\n\n" + strings.Repeat("a", helper.MaxCommitOrTagMessageSize+1),
 		ParentID: "60ecb67744cb56576c30214ff52294f8ce2def98",
 	})
-	bigCommit, err := log.GetCommit(ctx, testRepoCopy, bigCommitID, "")
+	bigCommit, err := log.GetCommit(ctx, testRepoCopy, bigCommitID)
 	require.NoError(t, err)
 
 	annotatedTagID := testhelper.CreateTag(t, testRepoCopyPath, "v1.2.0", blobID, &testhelper.CreateTagOpts{Message: "Blob tag"})
@@ -830,7 +830,7 @@ func TestSuccessfulFindAllBranchesRequestWithMergedBranches(t *testing.T) {
 		expectedBranches = append(expectedBranches, branch)
 	}
 
-	masterCommit, err := log.GetCommit(ctx, testRepo, "master", "")
+	masterCommit, err := log.GetCommit(ctx, testRepo, "master")
 	require.NoError(t, err)
 	expectedBranches = append(expectedBranches, &pb.FindAllBranchesResponse_Branch{
 		Name:   []byte("refs/heads/master"),

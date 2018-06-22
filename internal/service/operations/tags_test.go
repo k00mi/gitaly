@@ -116,7 +116,7 @@ func TestSuccessfulUserCreateTagRequest(t *testing.T) {
 	defer cleanupFn()
 
 	targetRevision := "c7fbe50c7c7419d9701eebe64b1fdacc3df5b9dd"
-	targetRevisionCommit, err := log.GetCommit(ctx, testRepo, targetRevision, "")
+	targetRevisionCommit, err := log.GetCommit(ctx, testRepo, targetRevision)
 	require.NoError(t, err)
 
 	user := &pb.User{

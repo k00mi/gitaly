@@ -27,11 +27,11 @@ func TestSuccessfulCreateBranchRequest(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	headCommit, err := log.GetCommit(ctx, testRepo, "HEAD", "")
+	headCommit, err := log.GetCommit(ctx, testRepo, "HEAD")
 	require.NoError(t, err)
 
 	startPoint := "c7fbe50c7c7419d9701eebe64b1fdacc3df5b9dd"
-	startPointCommit, err := log.GetCommit(ctx, testRepo, startPoint, "")
+	startPointCommit, err := log.GetCommit(ctx, testRepo, startPoint)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -238,7 +238,7 @@ func TestSuccessfulFindBranchRequest(t *testing.T) {
 	defer cleanupFn()
 
 	branchNameInput := "master"
-	branchTarget, err := log.GetCommit(ctx, testRepo, branchNameInput, "")
+	branchTarget, err := log.GetCommit(ctx, testRepo, branchNameInput)
 	require.NoError(t, err)
 
 	branch := &pb.Branch{

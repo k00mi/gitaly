@@ -54,7 +54,7 @@ func TestSuccessfulUserSquashRequest(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, response.GetGitError())
 
-	commit, err := log.GetCommit(ctx, testRepo, response.SquashSha, "")
+	commit, err := log.GetCommit(ctx, testRepo, response.SquashSha)
 	require.NoError(t, err)
 	require.Equal(t, commit.ParentIds, []string{startSha})
 	require.Equal(t, string(commit.Author.Email), "johndoe@gitlab.com")

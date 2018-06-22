@@ -22,7 +22,7 @@ func (s *server) LastCommitForPath(ctx context.Context, in *pb.LastCommitForPath
 		path = "."
 	}
 
-	commit, err := log.GetCommit(ctx, in.GetRepository(), string(in.GetRevision()), path)
+	commit, err := log.LastCommitForPath(ctx, in.GetRepository(), string(in.GetRevision()), path)
 	if err != nil {
 		return nil, err
 	}
