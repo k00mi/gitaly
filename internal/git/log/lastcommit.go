@@ -2,6 +2,7 @@ package log
 
 import (
 	"context"
+	"io/ioutil"
 	"strings"
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
@@ -28,26 +29,17 @@ const fieldDelimiterGitFormatString = "%x1f"
 
 // LastCommitForPath returns the last commit which modified path.
 func LastCommitForPath(ctx context.Context, repo *pb.Repository, revision string, path string) (*pb.GitCommit, error) {
-	paths := []string{}
-	if len(path) > 0 {
-		paths = append(paths, path)
-	}
-
-	cmd, err := GitLogCommand(ctx, repo, []string{revision}, paths, "--max-count=1")
+	cmd, err := git.Command(ctx, repo, "log", "--format=%H", "--max-count=1", revision, "--", path)
 	if err != nil {
 		return nil, err
 	}
 
-	logParser, err := NewLogParser(ctx, repo, cmd)
+	commitId, err := ioutil.ReadAll(cmd)
 	if err != nil {
 		return nil, err
 	}
 
-	if ok := logParser.Parse(); !ok {
-		return nil, logParser.Err()
-	}
-
-	return logParser.Commit(), nil
+	return GetCommit(ctx, repo, strings.TrimSpace(string(commitId)))
 }
 
 // GitLogCommand returns a Command that executes git log with the given the arguments
