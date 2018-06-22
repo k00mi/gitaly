@@ -66,7 +66,8 @@ func parseRawCommit(raw []byte, info *catfile.ObjectInfo) (*pb.GitCommit, error)
 		return nil, fmt.Errorf("commit %q has no message", info.Oid)
 	}
 
-	body := split[1]
+	header, body := split[0], split[1]
+
 	commit := &pb.GitCommit{
 		Id:       info.Oid,
 		Body:     body,
@@ -77,7 +78,7 @@ func parseRawCommit(raw []byte, info *catfile.ObjectInfo) (*pb.GitCommit, error)
 		commit.Body = commit.Body[:max]
 	}
 
-	scanner := bufio.NewScanner(bytes.NewReader(split[0]))
+	scanner := bufio.NewScanner(bytes.NewReader(header))
 	for scanner.Scan() {
 		line := scanner.Text()
 		if len(line) == 0 || line[0] == ' ' {

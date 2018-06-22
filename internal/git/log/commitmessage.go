@@ -118,7 +118,6 @@ func getCommitMessage(c *catfile.Batch, commitID string) (string, string, error)
 	if split := bytes.SplitN(rawCommit, []byte("\n\n"), 2); len(split) == 2 {
 		body = split[1]
 	}
-	//	subject := strings.TrimRight(strings.SplitN(body, "\n", 2)[0], "\r\n")
 
 	return string(subjectFromBody(body)), string(body), nil
 }
