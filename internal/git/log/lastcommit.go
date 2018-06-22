@@ -14,19 +14,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var commitLogFormatFields = []string{
-	"%H",  // commit hash
-	"%an", // author name
-	"%ae", // author email
-	"%aI", // author date, strict ISO 8601 format
-	"%cn", // committer name
-	"%ce", // committer email
-	"%cI", // committer date, strict ISO 8601 format
-	"%P",  // parent hashes
-}
-
-const fieldDelimiterGitFormatString = "%x1f"
-
 // LastCommitForPath returns the last commit which modified path.
 func LastCommitForPath(ctx context.Context, repo *pb.Repository, revision string, path string) (*pb.GitCommit, error) {
 	cmd, err := git.Command(ctx, repo, "log", "--format=%H", "--max-count=1", revision, "--", path)
@@ -48,11 +35,10 @@ func GitLogCommand(ctx context.Context, repo *pb.Repository, revisions []string,
 		"Revisions": revisions,
 	}).Debug("GitLog")
 
-	formatFlag := "--pretty=format:" + strings.Join(commitLogFormatFields, fieldDelimiterGitFormatString)
+	formatFlag := "--pretty=%H"
 
 	args := []string{
 		"log",
-		"-z", // use 0x00 as the entry terminator (instead of \n)
 		formatFlag,
 	}
 	args = append(args, extraArgs...)

@@ -25,6 +25,10 @@ func GetCommit(ctx context.Context, repo *pb.Repository, revision string) (*pb.G
 		return nil, err
 	}
 
+	return getCommitCatfile(c, revision)
+}
+
+func getCommitCatfile(c *catfile.Batch, revision string) (*pb.GitCommit, error) {
 	info, err := c.Info(revision)
 	if err != nil {
 		if catfile.IsNotFound(err) {
@@ -113,6 +117,8 @@ func parseRawCommit(raw []byte, info *catfile.ObjectInfo) (*pb.GitCommit, error)
 	return commit, nil
 }
 
+const maxUnixCommitDate = 1 << 53
+
 func parseCommitAuthor(line string) (*pb.CommitAuthor, error) {
 	author := &pb.CommitAuthor{}
 
@@ -132,9 +138,10 @@ func parseCommitAuthor(line string) (*pb.CommitAuthor, error) {
 	author.Email = []byte(splitEmail[0])
 
 	sec, err := strconv.ParseInt(strings.Fields(splitEmail[1])[0], 10, 64)
-	if err != nil {
+	if err != nil || sec > maxUnixCommitDate {
 		sec = git.FallbackTimeValue.Unix()
 	}
+
 	author.Date = &timestamp.Timestamp{Seconds: sec}
 
 	return author, nil
