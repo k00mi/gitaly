@@ -19,6 +19,6 @@ func (s *server) FindCommit(ctx context.Context, in *pb.FindCommitRequest) (*pb.
 
 	repo := in.GetRepository()
 
-	commit, err := log.GetCommit(ctx, repo, string(revision), "")
+	commit, err := log.GetCommit2(ctx, repo, string(revision))
 	return &pb.FindCommitResponse{Commit: commit}, err
 }

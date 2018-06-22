@@ -1,10 +1,10 @@
 package log
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
-	"strings"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
@@ -114,11 +114,15 @@ func getCommitMessage(c *catfile.Batch, commitID string) (string, string, error)
 		return "", "", err
 	}
 
-	var body string
-	if split := strings.SplitN(string(rawCommit), "\n\n", 2); len(split) == 2 {
+	var body []byte
+	if split := bytes.SplitN(rawCommit, []byte("\n\n"), 2); len(split) == 2 {
 		body = split[1]
 	}
-	subject := strings.TrimRight(strings.SplitN(body, "\n", 2)[0], "\r\n")
+	//	subject := strings.TrimRight(strings.SplitN(body, "\n", 2)[0], "\r\n")
 
-	return subject, body, nil
+	return string(subjectFromBody(body)), string(body), nil
+}
+
+func subjectFromBody(body []byte) []byte {
+	return bytes.TrimRight(bytes.SplitN(body, []byte("\n"), 2)[0], "\r\n")
 }

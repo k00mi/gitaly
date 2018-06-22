@@ -247,6 +247,7 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 			allCommits = append(allCommits, response.Commit)
 		})
 	}
+	require.Equal(t, len(testCases), len(allCommits), "length of allCommits")
 
 	gogitCtx := metadata.NewOutgoingContext(
 		ctx,
