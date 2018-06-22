@@ -1,0 +1,5 @@
+---
+title: Avoid 'git log -1' during FindCommit
+merge_request: 771
+author:
+type: performance
