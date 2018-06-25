@@ -4,7 +4,6 @@ import (
 	"bytes"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
@@ -12,23 +11,14 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var localBranchFormatFields = []string{
-	"%(refname)", "%(objectname)", "%(contents:subject)", "%(authorname)",
-	"%(authoremail)", "%(authordate:iso-strict)", "%(committername)",
-	"%(committeremail)", "%(committerdate:iso-strict)",
-}
+var localBranchFormatFields = []string{"%(refname)", "%(objectname)"}
 
 func parseRef(ref []byte) ([][]byte, error) {
 	elements := bytes.Split(ref, []byte("\x00"))
-	if len(elements) != 9 {
+	if len(elements) != len(localBranchFormatFields) {
 		return nil, status.Errorf(codes.Internal, "error parsing ref %q", ref)
 	}
 	return elements, nil
-}
-
-func buildCommitFromBranchInfo(elements [][]byte) (*pb.GitCommit, error) {
-	return git.NewCommit(elements[0], elements[1], nil, elements[2],
-		elements[3], elements[4], elements[5], elements[6], elements[7])
 }
 
 func buildLocalBranch(c *catfile.Batch, elements [][]byte) (*pb.FindLocalBranchResponse, error) {
