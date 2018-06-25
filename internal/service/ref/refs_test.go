@@ -748,16 +748,19 @@ func TestSuccessfulFindAllBranchesRequest(t *testing.T) {
 	remoteBranch := &pb.FindAllBranchesResponse_Branch{
 		Name: []byte("refs/remotes/origin/fake-remote-branch"),
 		Target: &pb.GitCommit{
-			Id:      "913c66a37b4a45b9769037c55c2d238bd0942d2e",
-			Subject: []byte("Files, encoding and much more"),
+			Id:        "913c66a37b4a45b9769037c55c2d238bd0942d2e",
+			Subject:   []byte("Files, encoding and much more"),
+			Body:      []byte("Files, encoding and much more\n\nSigned-off-by: Dmitriy Zaporozhets <dmitriy.zaporozhets@gmail.com>\n"),
+			BodySize:  98,
+			ParentIds: []string{"cfe32cf61b73a0d5e9f13e774abde7ff789b1660"},
 			Author: &pb.CommitAuthor{
 				Name:  []byte("Dmitriy Zaporozhets"),
-				Email: []byte("<dmitriy.zaporozhets@gmail.com>"),
+				Email: []byte("dmitriy.zaporozhets@gmail.com"),
 				Date:  &timestamp.Timestamp{Seconds: 1393488896},
 			},
 			Committer: &pb.CommitAuthor{
 				Name:  []byte("Dmitriy Zaporozhets"),
-				Email: []byte("<dmitriy.zaporozhets@gmail.com>"),
+				Email: []byte("dmitriy.zaporozhets@gmail.com"),
 				Date:  &timestamp.Timestamp{Seconds: 1393488896},
 			},
 		},

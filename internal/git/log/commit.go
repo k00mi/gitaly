@@ -25,10 +25,11 @@ func GetCommit(ctx context.Context, repo *pb.Repository, revision string) (*pb.G
 		return nil, err
 	}
 
-	return getCommitCatfile(c, revision)
+	return GetCommitCatfile(c, revision)
 }
 
-func getCommitCatfile(c *catfile.Batch, revision string) (*pb.GitCommit, error) {
+// GetCommitCatfile looks up a commit by revision using an existing *catfile.Batch instance.
+func GetCommitCatfile(c *catfile.Batch, revision string) (*pb.GitCommit, error) {
 	info, err := c.Info(revision)
 	if err != nil {
 		if catfile.IsNotFound(err) {

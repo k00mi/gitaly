@@ -43,7 +43,7 @@ func (parser *Parser) Parse() bool {
 
 	commitId := parser.scanner.Text()
 
-	commit, err := getCommitCatfile(parser.c, commitId)
+	commit, err := GetCommitCatfile(parser.c, commitId)
 	if err != nil {
 		parser.err = err
 		return false

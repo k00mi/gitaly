@@ -15,6 +15,7 @@ import (
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"golang.org/x/net/context"
@@ -222,7 +223,13 @@ func parseSortKey(sortKey pb.FindLocalBranchesRequest_SortBy) string {
 
 // FindLocalBranches creates a stream of branches for all local branches in the given repository
 func (s *server) FindLocalBranches(in *pb.FindLocalBranchesRequest, stream pb.RefService_FindLocalBranchesServer) error {
-	writer := newFindLocalBranchesWriter(stream)
+	ctx := stream.Context()
+	c, err := catfile.New(ctx, in.Repository)
+	if err != nil {
+		return err
+	}
+
+	writer := newFindLocalBranchesWriter(stream, c)
 	opts := &findRefsOpts{
 		cmdArgs: []string{
 			// %00 inserts the null character into the output (see for-each-ref docs)
@@ -231,7 +238,7 @@ func (s *server) FindLocalBranches(in *pb.FindLocalBranchesRequest, stream pb.Re
 		},
 	}
 
-	return findRefs(stream.Context(), writer, in.Repository, []string{"refs/heads"}, opts)
+	return findRefs(ctx, writer, in.Repository, []string{"refs/heads"}, opts)
 }
 
 func (s *server) FindAllBranches(in *pb.FindAllBranchesRequest, stream pb.RefService_FindAllBranchesServer) error {
@@ -262,12 +269,18 @@ func (s *server) FindAllBranches(in *pb.FindAllBranchesRequest, stream pb.RefSer
 		}
 	}
 
+	ctx := stream.Context()
+	c, err := catfile.New(ctx, in.Repository)
+	if err != nil {
+		return err
+	}
+
 	opts := &findRefsOpts{
 		cmdArgs: args,
 	}
-	writer := newFindAllBranchesWriter(stream)
+	writer := newFindAllBranchesWriter(stream, c)
 
-	return findRefs(stream.Context(), writer, in.Repository, patterns, opts)
+	return findRefs(ctx, writer, in.Repository, patterns, opts)
 }
 
 // ListBranchNamesContainingCommit returns a maximum of in.GetLimit() Branch names
