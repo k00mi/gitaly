@@ -67,11 +67,12 @@ func GetCommitCatfile(c *catfile.Batch, revision string) (*pb.GitCommit, error) 
 
 func parseRawCommit(raw []byte, info *catfile.ObjectInfo) (*pb.GitCommit, error) {
 	split := bytes.SplitN(raw, []byte("\n\n"), 2)
-	if len(split) != 2 {
-		return nil, fmt.Errorf("commit %q has no message", info.Oid)
-	}
 
-	header, body := split[0], split[1]
+	header := split[0]
+	var body []byte
+	if len(split) == 2 {
+		body = split[1]
+	}
 
 	commit := &pb.GitCommit{
 		Id:       info.Oid,
@@ -95,20 +96,13 @@ func parseRawCommit(raw []byte, info *catfile.ObjectInfo) (*pb.GitCommit, error)
 			continue
 		}
 
-		var err error
 		switch headerSplit[0] {
 		case "parent":
 			commit.ParentIds = append(commit.ParentIds, headerSplit[1])
 		case "author":
-			commit.Author, err = parseCommitAuthor(headerSplit[1])
-			if err != nil {
-				return nil, err
-			}
+			commit.Author = parseCommitAuthor(headerSplit[1])
 		case "committer":
-			commit.Committer, err = parseCommitAuthor(headerSplit[1])
-			if err != nil {
-				return nil, err
-			}
+			commit.Committer = parseCommitAuthor(headerSplit[1])
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -120,32 +114,37 @@ func parseRawCommit(raw []byte, info *catfile.ObjectInfo) (*pb.GitCommit, error)
 
 const maxUnixCommitDate = 1 << 53
 
-func parseCommitAuthor(line string) (*pb.CommitAuthor, error) {
+func parseCommitAuthor(line string) *pb.CommitAuthor {
 	author := &pb.CommitAuthor{}
 
 	splitName := strings.SplitN(line, "<", 2)
-	if len(splitName) < 2 {
-		return nil, fmt.Errorf("missing '<' in %q", line)
-	}
-
 	author.Name = []byte(strings.TrimSuffix(splitName[0], " "))
+
+	if len(splitName) < 2 {
+		return author
+	}
 
 	line = splitName[1]
 	splitEmail := strings.SplitN(line, ">", 2)
-	if len(splitName) < 2 {
-		return nil, fmt.Errorf("missing '>' in %q", line)
+	if len(splitEmail) < 2 {
+		return author
 	}
 
 	author.Email = []byte(splitEmail[0])
 
-	sec, err := strconv.ParseInt(strings.Fields(splitEmail[1])[0], 10, 64)
+	secSplit := strings.Fields(splitEmail[1])
+	if len(secSplit) < 1 {
+		return author
+	}
+
+	sec, err := strconv.ParseInt(secSplit[0], 10, 64)
 	if err != nil || sec > maxUnixCommitDate {
 		sec = git.FallbackTimeValue.Unix()
 	}
 
 	author.Date = &timestamp.Timestamp{Seconds: sec}
 
-	return author, nil
+	return author
 }
 
 func subjectFromBody(body []byte) []byte {
