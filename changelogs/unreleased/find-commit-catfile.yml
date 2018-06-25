@@ -1,5 +1,5 @@
 ---
-title: Avoid 'git log -1' during FindCommit
+title: Use 'git cat-file' to retrieve commits
 merge_request: 771
 author:
 type: performance
