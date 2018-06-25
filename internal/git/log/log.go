@@ -41,16 +41,16 @@ func (parser *Parser) Parse() bool {
 		return false
 	}
 
-	commitId := parser.scanner.Text()
+	commitID := parser.scanner.Text()
 
-	commit, err := GetCommitCatfile(parser.c, commitId)
+	commit, err := GetCommitCatfile(parser.c, commitID)
 	if err != nil {
 		parser.err = err
 		return false
 	}
 
 	if commit == nil {
-		parser.err = fmt.Errorf("could not retrieve commit %q", commitId)
+		parser.err = fmt.Errorf("could not retrieve commit %q", commitID)
 		return false
 	}
 

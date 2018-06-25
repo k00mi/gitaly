@@ -21,12 +21,12 @@ func LastCommitForPath(ctx context.Context, repo *pb.Repository, revision string
 		return nil, err
 	}
 
-	commitId, err := ioutil.ReadAll(cmd)
+	commitID, err := ioutil.ReadAll(cmd)
 	if err != nil {
 		return nil, err
 	}
 
-	return GetCommit(ctx, repo, strings.TrimSpace(string(commitId)))
+	return GetCommit(ctx, repo, strings.TrimSpace(string(commitID)))
 }
 
 // GitLogCommand returns a Command that executes git log with the given the arguments

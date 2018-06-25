@@ -147,3 +147,7 @@ func parseCommitAuthor(line string) (*pb.CommitAuthor, error) {
 
 	return author, nil
 }
+
+func subjectFromBody(body []byte) []byte {
+	return bytes.TrimRight(bytes.SplitN(body, []byte("\n"), 2)[0], "\r\n")
+}
