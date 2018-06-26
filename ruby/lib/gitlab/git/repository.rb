@@ -188,6 +188,49 @@ module Gitlab
         end
       end
 
+      def write_config(full_path:)
+        return unless full_path.present?
+
+        raise NoRepository, 'repository does not exist' unless exists?
+
+        rugged.config['gitlab.fullpath'] = full_path
+      end
+
+      def ancestor?(from, to)
+        return false if from.nil? || to.nil?
+
+        rugged_merge_base(from, to) == from
+      rescue Rugged::OdbError
+        false
+      end
+
+      # old_rev and new_rev are commit ID's
+      # the result of this method is an array of Gitlab::Git::RawDiffChange
+      def raw_changes_between(old_rev, new_rev)
+        @raw_changes_between ||= {}
+
+        @raw_changes_between[[old_rev, new_rev]] ||=
+          begin
+            return [] if new_rev.blank? || new_rev == Gitlab::Git::BLANK_SHA
+
+            result = []
+
+            circuit_breaker.perform do
+              Open3.pipeline_r(git_diff_cmd(old_rev, new_rev), format_git_cat_file_script, git_cat_file_cmd) do |last_stdout, wait_threads|
+                last_stdout.each_line { |line| result << ::Gitlab::Git::RawDiffChange.new(line.chomp!) }
+
+                if wait_threads.any? { |waiter| !waiter.value&.success? }
+                  raise ::Gitlab::Git::Repository::GitError, "Unabled to obtain changes between #{old_rev} and #{new_rev}"
+                end
+              end
+            end
+
+            result
+          end
+      rescue ArgumentError => e
+        raise Gitlab::Git::Repository::GitError.new(e)
+      end
+
       private
 
       def uncached_has_local_branches?
