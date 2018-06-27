@@ -138,7 +138,7 @@ func parseCommitAuthor(line string) *pb.CommitAuthor {
 	}
 
 	sec, err := strconv.ParseInt(secSplit[0], 10, 64)
-	if err != nil || sec > maxUnixCommitDate {
+	if err != nil || sec > maxUnixCommitDate || sec < 0 {
 		sec = git.FallbackTimeValue.Unix()
 	}
 

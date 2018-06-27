@@ -65,8 +65,20 @@ func TestParseRawCommit(t *testing.T) {
 			},
 		},
 		{
-			desc: "date too high ",
+			desc: "date too high",
 			in:   []byte("author Jane Doe <janedoe@example.com> 9007199254740993 +0200"),
+			out: &pb.GitCommit{
+				Id: info.Oid,
+				Author: &pb.CommitAuthor{
+					Name:  []byte("Jane Doe"),
+					Email: []byte("janedoe@example.com"),
+					Date:  &timestamp.Timestamp{Seconds: 9223371974719179007},
+				},
+			},
+		},
+		{
+			desc: "date negative",
+			in:   []byte("author Jane Doe <janedoe@example.com> -1 +0200"),
 			out: &pb.GitCommit{
 				Id: info.Oid,
 				Author: &pb.CommitAuthor{
