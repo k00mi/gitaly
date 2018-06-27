@@ -403,13 +403,7 @@ module Gitlab
 
       # Return repo size in megabytes
       def size
-        size = gitaly_migrate(:repository_size) do |is_enabled|
-          if is_enabled
-            size_by_gitaly
-          else
-            size_by_shelling_out
-          end
-        end
+        size = gitaly_repository_client.repository_size
 
         (size.to_f / 1024).round(2)
       end
@@ -529,32 +523,17 @@ module Gitlab
       def raw_changes_between(old_rev, new_rev)
         @raw_changes_between ||= {}
 
-        @raw_changes_between[[old_rev, new_rev]] ||= begin
-          return [] if new_rev.blank? || new_rev == Gitlab::Git::BLANK_SHA
+        @raw_changes_between[[old_rev, new_rev]] ||=
+          begin
+            return [] if new_rev.blank? || new_rev == Gitlab::Git::BLANK_SHA
 
-          gitaly_migrate(:raw_changes_between) do |is_enabled|
-            if is_enabled
+            wrapped_gitaly_errors do
               gitaly_repository_client.raw_changes_between(old_rev, new_rev)
                 .each_with_object([]) do |msg, arr|
                 msg.raw_changes.each { |change| arr << ::Gitlab::Git::RawDiffChange.new(change) }
               end
-            else
-              result = []
-
-              circuit_breaker.perform do
-                Open3.pipeline_r(git_diff_cmd(old_rev, new_rev), format_git_cat_file_script, git_cat_file_cmd) do |last_stdout, wait_threads|
-                  last_stdout.each_line { |line| result << ::Gitlab::Git::RawDiffChange.new(line.chomp!) }
-
-                  if wait_threads.any? { |waiter| !waiter.value&.success? }
-                    raise ::Gitlab::Git::Repository::GitError, "Unabled to obtain changes between #{old_rev} and #{new_rev}"
-                  end
-                end
-              end
-
-              result
             end
           end
-        end
       rescue ArgumentError => e
         raise Gitlab::Git::Repository::GitError.new(e)
       end
@@ -570,24 +549,9 @@ module Gitlab
         end
       end
 
-      # Gitaly note: JV: check gitlab-ee before removing this method.
-      def rugged_is_ancestor?(ancestor_id, descendant_id)
-        return false if ancestor_id.nil? || descendant_id.nil?
-
-        rugged_merge_base(ancestor_id, descendant_id) == ancestor_id
-      rescue Rugged::OdbError
-        false
-      end
-
       # Returns true is +from+ is direct ancestor to +to+, otherwise false
       def ancestor?(from, to)
-        Gitlab::GitalyClient.migrate(:is_ancestor) do |is_enabled|
-          if is_enabled
-            gitaly_commit_client.ancestor?(from, to)
-          else
-            rugged_is_ancestor?(from, to)
-          end
-        end
+        gitaly_commit_client.ancestor?(from, to)
       end
 
       def merged_branch_names(branch_names = [])
@@ -628,17 +592,7 @@ module Gitlab
       def ref_name_for_sha(ref_path, sha)
         raise ArgumentError, "sha can't be empty" unless sha.present?
 
-        gitaly_migrate(:find_ref_name) do |is_enabled|
-          if is_enabled
-            gitaly_ref_client.find_ref_name(sha, ref_path)
-          else
-            args = %W(for-each-ref --count=1 #{ref_path} --contains #{sha})
-
-            # Not found -> ["", 0]
-            # Found -> ["b8d95eb4969eefacb0a58f6a28f6803f8070e7b9 commit\trefs/environments/production/77\n", 0]
-            run_git(args).first.split.last
-          end
-        end
+        gitaly_ref_client.find_ref_name(sha, ref_path)
       end
 
       # Get refs hash which key is is the commit id
@@ -728,6 +682,10 @@ module Gitlab
             rugged_add_tag(tag_name, user: user, target: target, message: message)
           end
         end
+      end
+
+      def update_branch(branch_name, user:, newrev:, oldrev:)
+        OperationService.new(user, self).update_branch(branch_name, newrev, oldrev)
       end
 
       def rm_branch(branch_name, user:)
@@ -961,13 +919,7 @@ module Gitlab
       #
       # Gitaly migration: https://gitlab.com/gitlab-org/gitaly/issues/327
       def ls_files(ref)
-        gitaly_migrate(:ls_files) do |is_enabled|
-          if is_enabled
-            gitaly_ls_files(ref)
-          else
-            git_ls_files(ref)
-          end
-        end
+        gitaly_commit_client.ls_files(ref)
       end
 
       # Gitaly migration: https://gitlab.com/gitlab-org/gitaly/issues/328
@@ -1015,29 +967,8 @@ module Gitlab
       end
 
       def languages(ref = nil)
-        gitaly_migrate(:commit_languages, status: Gitlab::GitalyClient::MigrationStatus::OPT_OUT) do |is_enabled|
-          if is_enabled
-            gitaly_commit_client.languages(ref)
-          else
-            ref ||= rugged.head.target_id
-            languages = Linguist::Repository.new(rugged, ref).languages
-            total = languages.map(&:last).sum
-
-            languages = languages.map do |language|
-              name, share = language
-              color = Linguist::Language[name].color || "##{Digest::SHA256.hexdigest(name)[0...6]}"
-              {
-                value: (share.to_f * 100 / total).round(2),
-                label: name,
-                color: color,
-                highlight: color
-              }
-            end
-
-            languages.sort do |x, y|
-              y[:value] <=> x[:value]
-            end
-          end
+        wrapped_gitaly_errors do
+          gitaly_commit_client.languages(ref)
         end
       end
 
@@ -1195,16 +1126,7 @@ module Gitlab
       end
 
       def create_from_bundle(bundle_path)
-        gitaly_migrate(:create_repo_from_bundle) do |is_enabled|
-          if is_enabled
-            gitaly_repository_client.create_from_bundle(bundle_path)
-          else
-            run_git!(%W(clone --bare -- #{bundle_path} #{path}), chdir: nil)
-            self.class.create_hooks(path, File.expand_path(Gitlab.config.gitlab_shell.hooks_path))
-          end
-        end
-
-        true
+        gitaly_repository_client.create_from_bundle(bundle_path)
       end
 
       def create_from_snapshot(url, auth)
@@ -1305,16 +1227,10 @@ module Gitlab
         return unless full_path.present?
 
         # This guard avoids Gitaly log/error spam
-        unless exists?
-          raise NoRepository, 'repository does not exist'
-        end
+        raise NoRepository, 'repository does not exist' unless exists?
 
-        gitaly_migrate(:write_config) do |is_enabled|
-          if is_enabled
-            gitaly_repository_client.write_config(full_path: full_path)
-          else
-            rugged_write_config(full_path: full_path)
-          end
+        wrapped_gitaly_errors do
+          gitaly_repository_client.write_config(full_path: full_path)
         end
       end
 
@@ -1843,41 +1759,6 @@ module Gitlab
         commit(sha)
       end
 
-      def size_by_shelling_out
-        popen(%w(du -sk), path).first.strip.to_i
-      end
-
-      def size_by_gitaly
-        gitaly_repository_client.repository_size
-      end
-
-      def gitaly_ls_files(ref)
-        gitaly_commit_client.ls_files(ref)
-      end
-
-      def git_ls_files(ref)
-        actual_ref = ref || root_ref
-
-        begin
-          sha_from_ref(actual_ref)
-        rescue Rugged::OdbError, Rugged::InvalidError, Rugged::ReferenceError
-          # Return an empty array if the ref wasn't found
-          return []
-        end
-
-        cmd = %W(ls-tree -r --full-tree --full-name -- #{actual_ref})
-        raw_output, _status = run_git(cmd)
-
-        lines = raw_output.split("\n").map do |f|
-          stuff, path = f.split("\t")
-          _mode, type, _sha = stuff.split(" ")
-          path if type == "blob"
-          # Contain only blob type
-        end
-
-        lines.compact
-      end
-
       # Returns true if the given ref name exists
       #
       # Ref names must start with `refs/`.
@@ -2076,8 +1957,7 @@ module Gitlab
 
           rebase_sha = run_git!(%w(rev-parse HEAD), chdir: rebase_path, env: env).strip
 
-          Gitlab::Git::OperationService.new(user, self)
-            .update_branch(branch, rebase_sha, branch_sha)
+          update_branch(branch, user: user, newrev: rebase_sha, oldrev: branch_sha)
 
           rebase_sha
         end

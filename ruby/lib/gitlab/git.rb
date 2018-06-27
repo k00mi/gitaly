@@ -43,13 +43,11 @@ Dir["#{dir}/git/**/*.rb"].sort.each do |ruby_file|
   require_relative ruby_file.sub(dir, File.join(vendor_gitlab_git, 'lib/gitlab/')).sub(%r{^/*}, '')
 end
 
-require_relative 'git/gitaly_remote_repository.rb'
-require_relative 'git/repository.rb'
-require_relative 'git/wiki.rb'
-require_relative 'git/gitlab_projects.rb'
-require_relative 'git/commit.rb'
-require_relative 'git/lfs_changes.rb'
-require_relative 'git/pre_receive_error.rb'
+# Require all .rb files we can find in the local gitlab/git directory
+dir = __dir__
+Dir["#{dir}/git/**/*.rb"].sort.each do |ruby_file|
+  require_relative ruby_file.sub(dir, '').sub(%r{^/*}, '')
+end
 
 class String
   # Because we are not rendering HTML, this is a no-op in gitaly-ruby.
