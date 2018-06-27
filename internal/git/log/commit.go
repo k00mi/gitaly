@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"strconv"
 	"strings"
@@ -30,26 +29,13 @@ func GetCommit(ctx context.Context, repo *pb.Repository, revision string) (*pb.G
 
 // GetCommitCatfile looks up a commit by revision using an existing *catfile.Batch instance.
 func GetCommitCatfile(c *catfile.Batch, revision string) (*pb.GitCommit, error) {
-	info, err := c.Info(revision)
+	info, err := c.Info(revision + "^{commit}")
 	if err != nil {
 		if catfile.IsNotFound(err) {
 			return nil, nil
 		}
 
 		return nil, err
-	}
-
-	// If we found a tag object, resolve it to a commit. Repeat if needed but
-	// not in an infinite loop.
-	for i := 0; info.Type == "tag" && i < 100; i++ {
-		info, err = c.Info(info.Oid + "^{commit}")
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if info.Type != "commit" {
-		return nil, fmt.Errorf("expected %s to resolve to commit, got %s", revision, info.Type)
 	}
 
 	r, err := c.Commit(info.Oid)
