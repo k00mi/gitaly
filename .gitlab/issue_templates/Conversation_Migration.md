@@ -2,11 +2,11 @@
 
 **Stages**:
 
-- [ ] ~"RPC Design": [Create Issue](https://gitlab.com/gitlab-org/gitaly/issues/new?issuable_template=Migration_RPC_Design)
+- [ ] ~"RPC Design": [Link to MR]
 
-- [ ] ~"Client Implementation": [Create Issue](https://gitlab.com/gitlab-org/gitaly/issues/new?issuable_template=Migration_Client_Implementation)
+- [ ] ~"Server Implementation": [Link to MR]
 
-- [ ] ~"Server Implementation": [Create Issue](https://gitlab.com/gitlab-org/gitaly/issues/new?issuable_template=Migration_Server_Implementation)
+- [ ] ~"Client Implementation": [Link to MR]
 
 - [ ] ~"Acceptance Testing": [Create Issue](https://gitlab.com/gitlab-org/gitaly/issues/new?issuable_template=Migration_Acceptance_Testing)
 
