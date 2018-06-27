@@ -1,5 +1,25 @@
 # Gitaly changelog
 
+## v0.109.0
+
+#### Added
+- Reject nested storage paths
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/773
+
+#### Fixed
+- Bump rugged to 0.27.2
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/769
+- Fix TreeEntry relative path bug
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/776
+
+#### Other
+- Vendor Gitlab::Git at 292cf668
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/777
+- Vendor Gitlab::Git at f7b59b9f14
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/768
+- Vendor Gitlab::Git at 7c11ed8c
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/770
+
 ## v0.108.0
 
 #### Added
