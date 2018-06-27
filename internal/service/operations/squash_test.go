@@ -11,11 +11,6 @@ import (
 )
 
 var (
-	user = &pb.User{
-		Name:  []byte("Jane Doe"),
-		Email: []byte("janedoe@gitlab.com"),
-		GlId:  "user-123",
-	}
 	author = &pb.User{
 		Name:  []byte("John Doe"),
 		Email: []byte("johndoe@gitlab.com"),

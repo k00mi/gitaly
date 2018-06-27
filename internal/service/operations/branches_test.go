@@ -33,11 +33,6 @@ func TestSuccessfulUserCreateBranchRequest(t *testing.T) {
 	startPoint := "c7fbe50c7c7419d9701eebe64b1fdacc3df5b9dd"
 	startPointCommit, err := log.GetCommit(ctx, testRepo, startPoint)
 	require.NoError(t, err)
-	user := &pb.User{
-		Name:  []byte("Alejandro Rodríguez"),
-		Email: []byte("alejandro@gitlab.com"),
-		GlId:  "user-1",
-	}
 
 	testCases := []struct {
 		desc           string
@@ -95,12 +90,6 @@ func TestSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T) {
 	defer conn.Close()
 
 	branchName := "new-branch"
-	user := &pb.User{
-		Name:       []byte("Alejandro Rodríguez"),
-		Email:      []byte("alejandro@gitlab.com"),
-		GlId:       "user-1",
-		GlUsername: "johndoe",
-	}
 	request := &pb.UserCreateBranchRequest{
 		Repository: testRepo,
 		BranchName: []byte(branchName),
@@ -140,12 +129,6 @@ func TestFailedUserCreateBranchDueToHooks(t *testing.T) {
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
 
-	user := &pb.User{
-		Name:       []byte("Alejandro Rodríguez"),
-		Email:      []byte("alejandro@gitlab.com"),
-		GlId:       "user-1",
-		GlUsername: "johndoe",
-	}
 	request := &pb.UserCreateBranchRequest{
 		Repository: testRepo,
 		BranchName: []byte("new-branch"),
@@ -184,10 +167,6 @@ func TestFailedUserCreateBranchRequest(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	user := &pb.User{
-		Name:  []byte("Alejandro Rodríguez"),
-		Email: []byte("alejandro@gitlab.com"),
-	}
 	testCases := []struct {
 		desc       string
 		branchName string
