@@ -99,7 +99,7 @@ func TestSuccessfulUserCommitFilesRequest(t *testing.T) {
 			require.Equal(t, tc.repoCreated, r.GetBranchUpdate().GetRepoCreated())
 			require.Equal(t, tc.branchCreated, r.GetBranchUpdate().GetBranchCreated())
 
-			headCommit, err := log.GetCommit(ctxOuter, tc.repo, tc.branchName, "")
+			headCommit, err := log.GetCommit(ctxOuter, tc.repo, tc.branchName)
 			require.NoError(t, err)
 			require.Equal(t, authorName, headCommit.Author.Name)
 			require.Equal(t, user.Name, headCommit.Committer.Name)

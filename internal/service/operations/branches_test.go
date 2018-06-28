@@ -31,7 +31,7 @@ func TestSuccessfulUserCreateBranchRequest(t *testing.T) {
 	defer conn.Close()
 
 	startPoint := "c7fbe50c7c7419d9701eebe64b1fdacc3df5b9dd"
-	startPointCommit, err := log.GetCommit(ctx, testRepo, startPoint, "")
+	startPointCommit, err := log.GetCommit(ctx, testRepo, startPoint)
 	require.NoError(t, err)
 	user := &pb.User{
 		Name:  []byte("Alejandro Rodríguez"),

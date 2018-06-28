@@ -1,77 +1,138 @@
 package log
 
 import (
+	"bufio"
+	"bytes"
 	"context"
+	"io/ioutil"
+	"strconv"
 	"strings"
 
-	"gitlab.com/gitlab-org/gitaly/internal/command"
-	"gitlab.com/gitlab-org/gitaly/internal/git"
-
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 
-	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
-	log "github.com/sirupsen/logrus"
+	"github.com/golang/protobuf/ptypes/timestamp"
 )
 
-var commitLogFormatFields = []string{
-	"%H",  // commit hash
-	"%an", // author name
-	"%ae", // author email
-	"%aI", // author date, strict ISO 8601 format
-	"%cn", // committer name
-	"%ce", // committer email
-	"%cI", // committer date, strict ISO 8601 format
-	"%P",  // parent hashes
+// GetCommit tries to resolve revision to a Git commit. Returns nil if
+// no object is found at revision.
+func GetCommit(ctx context.Context, repo *pb.Repository, revision string) (*pb.GitCommit, error) {
+	c, err := catfile.New(ctx, repo)
+	if err != nil {
+		return nil, err
+	}
+
+	return GetCommitCatfile(c, revision)
 }
 
-const fieldDelimiterGitFormatString = "%x1f"
+// GetCommitCatfile looks up a commit by revision using an existing *catfile.Batch instance.
+func GetCommitCatfile(c *catfile.Batch, revision string) (*pb.GitCommit, error) {
+	info, err := c.Info(revision + "^{commit}")
+	if err != nil {
+		if catfile.IsNotFound(err) {
+			return nil, nil
+		}
 
-// GetCommit returns a single GitCommit
-func GetCommit(ctx context.Context, repo *pb.Repository, revision string, path string) (*pb.GitCommit, error) {
-	paths := []string{}
-	if len(path) > 0 {
-		paths = append(paths, path)
+		return nil, err
 	}
 
-	cmd, err := GitLogCommand(ctx, repo, []string{revision}, paths, "--max-count=1")
+	r, err := c.Commit(info.Oid)
 	if err != nil {
 		return nil, err
 	}
 
-	logParser, err := NewLogParser(ctx, repo, cmd)
+	raw, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
 
-	if ok := logParser.Parse(); !ok {
-		return nil, logParser.Err()
-	}
-
-	return logParser.Commit(), nil
+	return parseRawCommit(raw, info)
 }
 
-// GitLogCommand returns a Command that executes git log with the given the arguments
-func GitLogCommand(ctx context.Context, repo *pb.Repository, revisions []string, paths []string, extraArgs ...string) (*command.Command, error) {
-	grpc_logrus.Extract(ctx).WithFields(log.Fields{
-		"Revisions": revisions,
-	}).Debug("GitLog")
+func parseRawCommit(raw []byte, info *catfile.ObjectInfo) (*pb.GitCommit, error) {
+	split := bytes.SplitN(raw, []byte("\n\n"), 2)
 
-	formatFlag := "--pretty=format:" + strings.Join(commitLogFormatFields, fieldDelimiterGitFormatString)
-
-	args := []string{
-		"log",
-		"-z", // use 0x00 as the entry terminator (instead of \n)
-		formatFlag,
+	header := split[0]
+	var body []byte
+	if len(split) == 2 {
+		body = split[1]
 	}
-	args = append(args, extraArgs...)
-	args = append(args, revisions...)
-	args = append(args, "--")
-	args = append(args, paths...)
 
-	cmd, err := git.Command(ctx, repo, args...)
-	if err != nil {
+	commit := &pb.GitCommit{
+		Id:       info.Oid,
+		Body:     body,
+		Subject:  subjectFromBody(body),
+		BodySize: int64(len(body)),
+	}
+	if max := helper.MaxCommitOrTagMessageSize; len(commit.Body) > max {
+		commit.Body = commit.Body[:max]
+	}
+
+	scanner := bufio.NewScanner(bytes.NewReader(header))
+	for scanner.Scan() {
+		line := scanner.Text()
+		if len(line) == 0 || line[0] == ' ' {
+			continue
+		}
+
+		headerSplit := strings.SplitN(line, " ", 2)
+		if len(headerSplit) != 2 {
+			continue
+		}
+
+		switch headerSplit[0] {
+		case "parent":
+			commit.ParentIds = append(commit.ParentIds, headerSplit[1])
+		case "author":
+			commit.Author = parseCommitAuthor(headerSplit[1])
+		case "committer":
+			commit.Committer = parseCommitAuthor(headerSplit[1])
+		}
+	}
+	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
 
-	return cmd, nil
+	return commit, nil
+}
+
+const maxUnixCommitDate = 1 << 53
+
+func parseCommitAuthor(line string) *pb.CommitAuthor {
+	author := &pb.CommitAuthor{}
+
+	splitName := strings.SplitN(line, "<", 2)
+	author.Name = []byte(strings.TrimSuffix(splitName[0], " "))
+
+	if len(splitName) < 2 {
+		return author
+	}
+
+	line = splitName[1]
+	splitEmail := strings.SplitN(line, ">", 2)
+	if len(splitEmail) < 2 {
+		return author
+	}
+
+	author.Email = []byte(splitEmail[0])
+
+	secSplit := strings.Fields(splitEmail[1])
+	if len(secSplit) < 1 {
+		return author
+	}
+
+	sec, err := strconv.ParseInt(secSplit[0], 10, 64)
+	if err != nil || sec > maxUnixCommitDate || sec < 0 {
+		sec = git.FallbackTimeValue.Unix()
+	}
+
+	author.Date = &timestamp.Timestamp{Seconds: sec}
+
+	return author
+}
+
+func subjectFromBody(body []byte) []byte {
+	return bytes.TrimRight(bytes.SplitN(body, []byte("\n"), 2)[0], "\r\n")
 }

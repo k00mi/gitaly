@@ -8,10 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/protobuf/ptypes/timestamp"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
 // FallbackTimeValue is the value returned by `SafeTimeParse` in case it
@@ -37,54 +34,6 @@ func ValidateRevision(revision []byte) error {
 		return fmt.Errorf("revision can't contain ':'")
 	}
 	return nil
-}
-
-// SafeTimeParse parses a git date string with the RFC3339 format. If the date
-// is invalid (possibly because the date is larger than golang's largest value)
-// it returns the maximum date possible.
-func SafeTimeParse(timeStr string) time.Time {
-	t, err := time.Parse(time.RFC3339, timeStr)
-	if err != nil {
-		return FallbackTimeValue
-	}
-
-	return t
-}
-
-// NewCommit creates a commit based on the given elements
-func NewCommit(id, subject, body, authorName, authorEmail, authorDate,
-	committerName, committerEmail, committerDate []byte, parentIds ...string) (*pb.GitCommit, error) {
-	authorDateTime := SafeTimeParse(string(authorDate))
-	committerDateTime := SafeTimeParse(string(committerDate))
-
-	author := pb.CommitAuthor{
-		Name:  authorName,
-		Email: authorEmail,
-		Date:  &timestamp.Timestamp{Seconds: authorDateTime.Unix()},
-	}
-	committer := pb.CommitAuthor{
-		Name:  committerName,
-		Email: committerEmail,
-		Date:  &timestamp.Timestamp{Seconds: committerDateTime.Unix()},
-	}
-
-	commit := &pb.GitCommit{
-		Id:        string(id),
-		Subject:   subject,
-		Author:    &author,
-		Committer: &committer,
-		ParentIds: parentIds,
-		BodySize:  int64(len(body)),
-	}
-
-	bodyLengthToSend := len(body)
-	if threshold := helper.MaxCommitOrTagMessageSize; bodyLengthToSend > threshold {
-		bodyLengthToSend = threshold
-	}
-
-	commit.Body = body[:bodyLengthToSend]
-
-	return commit, nil
 }
 
 // Version returns the used git version.

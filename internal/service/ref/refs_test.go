@@ -407,7 +407,7 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 		Message:  "An empty commit with REALLY BIG message\n\n" + strings.Repeat("a", helper.MaxCommitOrTagMessageSize+1),
 		ParentID: "60ecb67744cb56576c30214ff52294f8ce2def98",
 	})
-	bigCommit, err := log.GetCommit(ctx, testRepoCopy, bigCommitID, "")
+	bigCommit, err := log.GetCommit(ctx, testRepoCopy, bigCommitID)
 	require.NoError(t, err)
 
 	annotatedTagID := testhelper.CreateTag(t, testRepoCopyPath, "v1.2.0", blobID, &testhelper.CreateTagOpts{Message: "Blob tag"})
@@ -748,16 +748,19 @@ func TestSuccessfulFindAllBranchesRequest(t *testing.T) {
 	remoteBranch := &pb.FindAllBranchesResponse_Branch{
 		Name: []byte("refs/remotes/origin/fake-remote-branch"),
 		Target: &pb.GitCommit{
-			Id:      "913c66a37b4a45b9769037c55c2d238bd0942d2e",
-			Subject: []byte("Files, encoding and much more"),
+			Id:        "913c66a37b4a45b9769037c55c2d238bd0942d2e",
+			Subject:   []byte("Files, encoding and much more"),
+			Body:      []byte("Files, encoding and much more\n\nSigned-off-by: Dmitriy Zaporozhets <dmitriy.zaporozhets@gmail.com>\n"),
+			BodySize:  98,
+			ParentIds: []string{"cfe32cf61b73a0d5e9f13e774abde7ff789b1660"},
 			Author: &pb.CommitAuthor{
 				Name:  []byte("Dmitriy Zaporozhets"),
-				Email: []byte("<dmitriy.zaporozhets@gmail.com>"),
+				Email: []byte("dmitriy.zaporozhets@gmail.com"),
 				Date:  &timestamp.Timestamp{Seconds: 1393488896},
 			},
 			Committer: &pb.CommitAuthor{
 				Name:  []byte("Dmitriy Zaporozhets"),
-				Email: []byte("<dmitriy.zaporozhets@gmail.com>"),
+				Email: []byte("dmitriy.zaporozhets@gmail.com"),
 				Date:  &timestamp.Timestamp{Seconds: 1393488896},
 			},
 		},
@@ -830,7 +833,7 @@ func TestSuccessfulFindAllBranchesRequestWithMergedBranches(t *testing.T) {
 		expectedBranches = append(expectedBranches, branch)
 	}
 
-	masterCommit, err := log.GetCommit(ctx, testRepo, "master", "")
+	masterCommit, err := log.GetCommit(ctx, testRepo, "master")
 	require.NoError(t, err)
 	expectedBranches = append(expectedBranches, &pb.FindAllBranchesResponse_Branch{
 		Name:   []byte("refs/heads/master"),

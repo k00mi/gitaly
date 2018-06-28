@@ -1,0 +1,5 @@
+---
+title: Use 'git cat-file' to retrieve commits
+merge_request: 771
+author:
+type: performance

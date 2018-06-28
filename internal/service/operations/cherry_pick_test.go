@@ -36,7 +36,7 @@ func TestSuccessfulUserCherryPickRequest(t *testing.T) {
 	destinationBranch := "cherry-picking-dst"
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", destinationBranch, "master")
 
-	masterHeadCommit, err := log.GetCommit(ctxOuter, testRepo, "master", "")
+	masterHeadCommit, err := log.GetCommit(ctxOuter, testRepo, "master")
 	require.NoError(t, err)
 
 	user := &pb.User{
@@ -45,7 +45,7 @@ func TestSuccessfulUserCherryPickRequest(t *testing.T) {
 		GlId:  "user-123",
 	}
 
-	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab", "")
+	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab")
 	require.NoError(t, err)
 
 	testRepoCopy, _, cleanup := testhelper.NewTestRepo(t)
@@ -114,7 +114,7 @@ func TestSuccessfulUserCherryPickRequest(t *testing.T) {
 			response, err := client.UserCherryPick(ctx, testCase.request)
 			require.NoError(t, err)
 
-			headCommit, err := log.GetCommit(ctx, testRepo, string(testCase.request.BranchName), "")
+			headCommit, err := log.GetCommit(ctx, testRepo, string(testCase.request.BranchName))
 			require.NoError(t, err)
 
 			expectedBranchUpdate := testCase.branchUpdate
@@ -149,7 +149,7 @@ func TestSuccessfulGitHooksForUserCherryPickRequest(t *testing.T) {
 		GlId:  "user-123",
 	}
 
-	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab", "")
+	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab")
 	require.NoError(t, err)
 
 	request := &pb.UserCherryPickRequest{
@@ -193,7 +193,7 @@ func TestFailedUserCherryPickRequestDueToValidations(t *testing.T) {
 	testRepo, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab", "")
+	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab")
 	require.NoError(t, err)
 
 	destinationBranch := "cherry-picking-dst"
@@ -288,7 +288,7 @@ func TestFailedUserCherryPickRequestDueToPreReceiveError(t *testing.T) {
 		GlId:  "user-123",
 	}
 
-	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab", "")
+	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab")
 	require.NoError(t, err)
 
 	request := &pb.UserCherryPickRequest{
@@ -340,7 +340,7 @@ func TestFailedUserCherryPickRequestDueToCreateTreeError(t *testing.T) {
 	}
 
 	// This commit already exists in master
-	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "4a24d82dbca5c11c61556f3b35ca472b7463187e", "")
+	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "4a24d82dbca5c11c61556f3b35ca472b7463187e")
 	require.NoError(t, err)
 
 	request := &pb.UserCherryPickRequest{
@@ -383,7 +383,7 @@ func TestFailedUserCherryPickRequestDueToCommitError(t *testing.T) {
 		GlId:  "user-123",
 	}
 
-	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, sourceBranch, "")
+	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, sourceBranch)
 	require.NoError(t, err)
 
 	request := &pb.UserCherryPickRequest{

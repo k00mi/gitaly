@@ -197,7 +197,7 @@ func createTestWikiPage(t *testing.T, client pb.WikiServiceClient, wikiRepo *pb.
 
 	writeWikiPage(t, client, wikiRepo, opts)
 	head1ID := testhelper.MustRunCommand(t, nil, "git", "-C", wikiRepoPath, "show", "--format=format:%H", "--no-patch", "HEAD")
-	pageCommit, err := gitlog.GetCommit(ctx, wikiRepo, string(head1ID), "")
+	pageCommit, err := gitlog.GetCommit(ctx, wikiRepo, string(head1ID))
 	require.NoError(t, err, "look up git commit after writing a wiki page")
 
 	return pageCommit

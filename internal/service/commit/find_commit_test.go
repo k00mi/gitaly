@@ -39,7 +39,7 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 		Message:  bigMessage,
 		ParentID: "60ecb67744cb56576c30214ff52294f8ce2def98",
 	})
-	bigCommit, err := log.GetCommit(ctx, testRepo, bigCommitID, "")
+	bigCommit, err := log.GetCommit(ctx, testRepo, bigCommitID)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -247,6 +247,7 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 			allCommits = append(allCommits, response.Commit)
 		})
 	}
+	require.Equal(t, len(testCases), len(allCommits), "length of allCommits")
 
 	gogitCtx := metadata.NewOutgoingContext(
 		ctx,

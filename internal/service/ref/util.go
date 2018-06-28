@@ -4,33 +4,25 @@ import (
 	"bytes"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
+	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-var localBranchFormatFields = []string{
-	"%(refname)", "%(objectname)", "%(contents:subject)", "%(authorname)",
-	"%(authoremail)", "%(authordate:iso-strict)", "%(committername)",
-	"%(committeremail)", "%(committerdate:iso-strict)",
-}
+var localBranchFormatFields = []string{"%(refname)", "%(objectname)"}
 
 func parseRef(ref []byte) ([][]byte, error) {
 	elements := bytes.Split(ref, []byte("\x00"))
-	if len(elements) != 9 {
+	if len(elements) != len(localBranchFormatFields) {
 		return nil, status.Errorf(codes.Internal, "error parsing ref %q", ref)
 	}
 	return elements, nil
 }
 
-func buildCommitFromBranchInfo(elements [][]byte) (*pb.GitCommit, error) {
-	return git.NewCommit(elements[0], elements[1], nil, elements[2],
-		elements[3], elements[4], elements[5], elements[6], elements[7])
-}
-
-func buildLocalBranch(elements [][]byte) (*pb.FindLocalBranchResponse, error) {
-	target, err := buildCommitFromBranchInfo(elements[1:])
+func buildLocalBranch(c *catfile.Batch, elements [][]byte) (*pb.FindLocalBranchResponse, error) {
+	target, err := log.GetCommitCatfile(c, string(elements[1]))
 	if err != nil {
 		return nil, err
 	}
@@ -54,8 +46,8 @@ func buildLocalBranch(elements [][]byte) (*pb.FindLocalBranchResponse, error) {
 	}, nil
 }
 
-func buildBranch(elements [][]byte) (*pb.FindAllBranchesResponse_Branch, error) {
-	target, err := buildCommitFromBranchInfo(elements[1:])
+func buildBranch(c *catfile.Batch, elements [][]byte) (*pb.FindAllBranchesResponse_Branch, error) {
+	target, err := log.GetCommitCatfile(c, string(elements[1]))
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +70,7 @@ func newFindAllTagNamesWriter(stream pb.Ref_FindAllTagNamesServer) lines.Sender 
 	}
 }
 
-func newFindLocalBranchesWriter(stream pb.Ref_FindLocalBranchesServer) lines.Sender {
+func newFindLocalBranchesWriter(stream pb.Ref_FindLocalBranchesServer, c *catfile.Batch) lines.Sender {
 	return func(refs [][]byte) error {
 		var branches []*pb.FindLocalBranchResponse
 
@@ -87,7 +79,7 @@ func newFindLocalBranchesWriter(stream pb.Ref_FindLocalBranchesServer) lines.Sen
 			if err != nil {
 				return err
 			}
-			branch, err := buildLocalBranch(elements)
+			branch, err := buildLocalBranch(c, elements)
 			if err != nil {
 				return err
 			}
@@ -97,7 +89,7 @@ func newFindLocalBranchesWriter(stream pb.Ref_FindLocalBranchesServer) lines.Sen
 	}
 }
 
-func newFindAllBranchesWriter(stream pb.RefService_FindAllBranchesServer) lines.Sender {
+func newFindAllBranchesWriter(stream pb.RefService_FindAllBranchesServer, c *catfile.Batch) lines.Sender {
 	return func(refs [][]byte) error {
 		var branches []*pb.FindAllBranchesResponse_Branch
 
@@ -106,7 +98,7 @@ func newFindAllBranchesWriter(stream pb.RefService_FindAllBranchesServer) lines.
 			if err != nil {
 				return err
 			}
-			branch, err := buildBranch(elements)
+			branch, err := buildBranch(c, elements)
 			if err != nil {
 				return err
 			}
