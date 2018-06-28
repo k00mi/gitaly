@@ -1,0 +1,5 @@
+---
+title: Sanitize paths when importing repositories
+merge_request: 780
+author:
+type: security
