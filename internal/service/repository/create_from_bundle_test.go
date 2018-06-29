@@ -13,6 +13,7 @@ import (
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 )
@@ -95,4 +96,30 @@ func TestFailedCreateRepositoryFromBundleRequestDueToValidations(t *testing.T) {
 
 	_, err = stream.CloseAndRecv()
 	testhelper.RequireGrpcError(t, err, codes.InvalidArgument)
+}
+
+func TestSanitizedError(t *testing.T) {
+	testCases := []struct {
+		path     string
+		format   string
+		a        []interface{}
+		expected string
+	}{
+		{
+			path:     "/home/git/storage",
+			format:   "failed to create from bundle in /home/git/storage/my-project",
+			expected: "failed to create from bundle in [REPO PATH]/my-project",
+		},
+		{
+			path:     "/home/git/storage",
+			format:   "failed to %s in [REPO PATH]/my-project",
+			a:        []interface{}{"create from bundle"},
+			expected: "failed to create from bundle in [REPO PATH]/my-project",
+		},
+	}
+
+	for _, tc := range testCases {
+		str := sanitizedError(tc.path, tc.format, tc.a...)
+		assert.Equal(t, tc.expected, str)
+	}
 }

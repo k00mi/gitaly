@@ -1,10 +1,12 @@
 package repository
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -43,18 +45,21 @@ func (s *server) CreateRepositoryFromBundle(stream pb.RepositoryService_CreateRe
 
 	tmpDir, err := tempdir.New(ctx, repo)
 	if err != nil {
-		return status.Errorf(codes.Internal, "CreateRepositoryFromBundle: tmp dir failed: %v", err)
+		cleanError := sanitizedError(tmpDir, "CreateRepositoryFromBundle: tmp dir failed: %v", err)
+		return status.Error(codes.Internal, cleanError)
 	}
 
 	bundlePath := path.Join(tmpDir, "repo.bundle")
 	file, err := os.Create(bundlePath)
 	if err != nil {
-		return status.Errorf(codes.Internal, "CreateRepositoryFromBundle: new bundle file failed: %v", err)
+		cleanError := sanitizedError(tmpDir, "CreateRepositoryFromBundle: new bundle file failed: %v", err)
+		return status.Error(codes.Internal, cleanError)
 	}
 
 	_, err = io.Copy(file, reader)
 	if err != nil {
-		return status.Errorf(codes.Internal, "CreateRepositoryFromBundle: bundle write failed: %v", err)
+		cleanError := sanitizedError(tmpDir, "CreateRepositoryFromBundle: new bundle file failed: %v", err)
+		return status.Error(codes.Internal, cleanError)
 	}
 
 	repoPath, err := helper.GetPath(repo)
@@ -71,16 +76,24 @@ func (s *server) CreateRepositoryFromBundle(stream pb.RepositoryService_CreateRe
 	}
 	cmd, err := command.New(ctx, exec.Command(command.GitPath(), args...), nil, nil, nil)
 	if err != nil {
-		return status.Errorf(codes.Internal, "CreateRepositoryFromBundle: cmd start failed: %v", err)
+		cleanError := sanitizedError(repoPath, "CreateRepositoryFromBundle: cmd start failed: %v", err)
+		return status.Error(codes.Internal, cleanError)
 	}
 	if err := cmd.Wait(); err != nil {
-		return status.Errorf(codes.Internal, "CreateRepositoryFromBundle: cmd wait failed: %v", err)
+		cleanError := sanitizedError(repoPath, "CreateRepositoryFromBundle: cmd wait failed: %v", err)
+		return status.Error(codes.Internal, cleanError)
 	}
 
 	// CreateRepository is harmless on existing repositories with the side effect that it creates the hook symlink.
 	if _, err := s.CreateRepository(ctx, &pb.CreateRepositoryRequest{Repository: repo}); err != nil {
-		return status.Errorf(codes.Internal, "CreateRepositoryFromBundle: create hooks failed: %v", err)
+		cleanError := sanitizedError(repoPath, "CreateRepositoryFromBundle: create hooks failed: %v", err)
+		return status.Error(codes.Internal, cleanError)
 	}
 
 	return stream.SendAndClose(&pb.CreateRepositoryFromBundleResponse{})
+}
+
+func sanitizedError(path, format string, a ...interface{}) string {
+	str := fmt.Sprintf(format, a...)
+	return strings.Replace(str, path, "[REPO PATH]", -1)
 }
