@@ -1,5 +1,27 @@
 # Gitaly changelog
 
+## v0.110.0
+
+#### Added
+- Server implementation ListNewCommits
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/779
+
+#### Fixed
+- Fix encoding bug in UserCommitFiles
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/782
+
+#### Other
+- Tweak spawn token defaults and add logging
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/781
+
+#### Performance
+- Use 'git cat-file' to retrieve commits
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/771
+
+#### Security
+- Sanitize paths when importing repositories
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/780
+
 ## v0.109.0
 
 #### Added
