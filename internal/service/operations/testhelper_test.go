@@ -26,6 +26,12 @@ var (
 	GitlabPreHooks  = gitlabPreHooks
 	GitlabHooks     []string
 	RubyServer      *rubyserver.Server
+	user            = &pb.User{
+		Name:       []byte("Jane Doe"),
+		Email:      []byte("janedoe@gitlab.com"),
+		GlId:       "user-123",
+		GlUsername: "janedoe",
+	}
 )
 
 func init() {

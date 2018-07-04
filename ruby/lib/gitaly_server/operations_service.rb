@@ -7,15 +7,12 @@ module GitalyServer
         begin
           repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
 
-          gitaly_user = request.user
-          raise GRPC::InvalidArgument.new('empty user') unless gitaly_user
+          gitaly_user = get_param!(request, :user)
           user = Gitlab::Git::User.from_gitaly(gitaly_user)
 
-          tag_name = request.tag_name
-          raise GRPC::InvalidArgument.new('empty tag name') unless tag_name.present?
+          tag_name = get_param!(request, :tag_name)
 
-          target_revision = request.target_revision
-          raise GRPC::InvalidArgument.new('empty target revision') unless target_revision.present?
+          target_revision = get_param!(request, :target_revision)
 
           created_tag = repo.add_tag(tag_name, user: user, target: target_revision, message: request.message.presence)
           return Gitaly::UserCreateTagResponse.new unless created_tag
@@ -40,12 +37,10 @@ module GitalyServer
         begin
           repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
 
-          gitaly_user = request.user
-          raise GRPC::InvalidArgument.new('empty user') unless gitaly_user
+          gitaly_user = get_param!(request, :user)
           user = Gitlab::Git::User.from_gitaly(gitaly_user)
 
-          tag_name = request.tag_name
-          raise GRPC::InvalidArgument.new('empty tag name') if tag_name.blank?
+          tag_name = get_param!(request, :tag_name)
 
           repo.rm_tag(tag_name, user: user)
 
@@ -62,10 +57,8 @@ module GitalyServer
       bridge_exceptions do
         begin
           repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
-          target = request.start_point
-          raise GRPC::InvalidArgument.new('empty start_point') if target.empty?
-          gitaly_user = request.user
-          raise GRPC::InvalidArgument.new('empty user') unless gitaly_user
+          target = get_param!(request, :start_point)
+          gitaly_user = get_param!(request, :user)
 
           branch_name = request.branch_name
           user = Gitlab::Git::User.from_gitaly(gitaly_user)
@@ -80,6 +73,27 @@ module GitalyServer
           raise GRPC::FailedPrecondition.new(ex.message)
         rescue Gitlab::Git::PreReceiveError => ex
           return Gitaly::UserCreateBranchResponse.new(pre_receive_error: set_utf8!(ex.message))
+        end
+      end
+    end
+
+    def user_update_branch(request, call)
+      bridge_exceptions do
+        begin
+          repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
+          branch_name = get_param!(request, :branch_name)
+          newrev = get_param!(request, :newrev)
+          oldrev = get_param!(request, :oldrev)
+          gitaly_user = get_param!(request, :user)
+
+          user = Gitlab::Git::User.from_gitaly(gitaly_user)
+          repo.update_branch(branch_name, user: user, newrev: newrev, oldrev: oldrev)
+
+          Gitaly::UserUpdateBranchResponse.new
+        rescue Gitlab::Git::Repository::InvalidRef, Gitlab::Git::CommitError => ex
+          raise GRPC::FailedPrecondition.new(ex.message)
+        rescue Gitlab::Git::PreReceiveError => ex
+          return Gitaly::UserUpdateBranchResponse.new(pre_receive_error: set_utf8!(ex.message))
         end
       end
     end
@@ -330,6 +344,15 @@ module GitalyServer
         repo_created: gitlab_update_result.repo_created,
         branch_created: gitlab_update_result.branch_created
       )
+    end
+
+    def get_param!(request, name)
+      value = request[name.to_s]
+
+      return value if value.present?
+
+      field_name = name.to_s.tr('_', ' ')
+      raise GRPC::InvalidArgument.new("empty #{field_name}")
     end
   end
 end
