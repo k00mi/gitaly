@@ -85,6 +85,7 @@ func TestDeleteConfig(t *testing.T) {
 				require.NoError(t, err)
 			} else {
 				require.Equal(t, tc.code, status.Code(err), "expected grpc error code")
+				return
 			}
 
 			actualConfig := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "config", "-l")
