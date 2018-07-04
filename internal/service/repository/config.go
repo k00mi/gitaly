@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"regexp"
+
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
@@ -11,8 +13,17 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+var (
+	// invalidConfigKey is currently not an exhaustive validation, we can improve it over time
+	invalidConfigKey = regexp.MustCompile(`,`)
+)
+
 func (*server) DeleteConfig(ctx context.Context, req *pb.DeleteConfigRequest) (*pb.DeleteConfigResponse, error) {
 	for _, k := range req.Keys {
+		if invalidConfigKey.MatchString(k) {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid config key: %q", k)
+		}
+
 		// We assume k does not contain any secrets; it is leaked via 'ps'.
 		cmd, err := git.Command(ctx, req.Repository, "config", "--unset-all", k)
 		if err != nil {

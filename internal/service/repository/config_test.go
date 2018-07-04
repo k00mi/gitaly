@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestDeleteConfig(t *testing.T) {
@@ -22,6 +24,7 @@ func TestDeleteConfig(t *testing.T) {
 		desc    string
 		addKeys []string
 		reqKeys []string
+		code    codes.Code
 	}{
 		{
 			desc: "empty request",
@@ -34,6 +37,11 @@ func TestDeleteConfig(t *testing.T) {
 			desc:    "mix of keys that do and do not exist",
 			addKeys: []string{"test.bar"},
 			reqKeys: []string{"test.foo", "test.bar", "test.baz"},
+		},
+		{
+			desc:    "key with comma",
+			reqKeys: []string{"test.foo,"},
+			code:    codes.InvalidArgument,
 		},
 	}
 
@@ -50,7 +58,11 @@ func TestDeleteConfig(t *testing.T) {
 			}
 
 			_, err := client.DeleteConfig(ctx, &pb.DeleteConfigRequest{Repository: testRepo, Keys: tc.reqKeys})
-			require.NoError(t, err)
+			if tc.code == codes.OK {
+				require.NoError(t, err)
+			} else {
+				require.Equal(t, tc.code, status.Code(err))
+			}
 
 			actualConfig := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "config", "-l")
 			scanner := bufio.NewScanner(bytes.NewReader(actualConfig))
