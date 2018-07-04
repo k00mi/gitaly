@@ -1,5 +1,21 @@
 # Gitaly changelog
 
+## v0.111.0
+
+#### Added
+- Implement DeleteConfig and SetConfig
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/786
+- Add OperationService.UserUpdateBranch RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/778
+
+#### Other
+- Vendor gitlab-git at 7e9f46d0dc1ed34d7
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/783
+- Vendor gitlab-git at bdb64ac0a1396a7624
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/784
+- Remove unnecessary existence check in AddNamespace
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/785
+
 ## v0.110.0
 
 #### Added
