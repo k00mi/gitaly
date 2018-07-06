@@ -9,6 +9,12 @@ FILE_LIST = %w[
   lib/gitlab/version_info.rb
 ].freeze
 
+# We have (already) stopped vendoring these files.
+EXCLUDE = %w[
+  lib/gitlab/git/commit_stats.rb
+  lib/gitlab/git/conflict/resolver.rb
+].freeze
+
 REMOTE = 'https://gitlab.com/gitlab-org/gitlab-ce'.freeze
 
 # This directory in Gitaly will be the 'root' of gitlab-ce
@@ -32,7 +38,11 @@ def main
 
     FileUtils.rm_rf(VENDOR_DIR)
     FileUtils.mkdir_p(VENDOR_DIR)
-    run!(%w[rsync -avR] + FILE_LIST + %W[#{File.join(Dir.pwd, VENDOR_DIR)}/], gitlab_dir)
+    args = %w[rsync -avR]
+    args += EXCLUDE.map { |e| "--exclude=#{e}" }
+    args += FILE_LIST
+    args += %W[#{File.join(Dir.pwd, VENDOR_DIR)}/]
+    run!(args, gitlab_dir)
   end
 
   File.write(File.join(VENDOR_DIR, 'REVISION'), "#{revision_sha}\n")
