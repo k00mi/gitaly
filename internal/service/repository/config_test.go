@@ -13,29 +13,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func TestInvalidConfigKey(t *testing.T) {
-	testCases := []struct {
-		key string
-		ok  bool
-	}{
-		{key: "foo.abC-123", ok: true},
-		{key: "foo.abC 123"},
-		{key: "foo.abC,123"},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.key, func(t *testing.T) {
-			match := validConfigKey.MatchString(tc.key)
-
-			if tc.ok {
-				require.True(t, match, "key %q must be valid", tc.key)
-			} else {
-				require.False(t, match, "key %q must be invalid", tc.key)
-			}
-		})
-	}
-}
-
 func TestDeleteConfig(t *testing.T) {
 	server, serverSocketPath := runRepoServer(t)
 	defer server.Stop()
@@ -60,11 +37,6 @@ func TestDeleteConfig(t *testing.T) {
 			desc:    "mix of keys that do and do not exist",
 			addKeys: []string{"test.bar"},
 			reqKeys: []string{"test.foo", "test.bar", "test.baz"},
-		},
-		{
-			desc:    "key with comma",
-			reqKeys: []string{"test.foo,"},
-			code:    codes.InvalidArgument,
 		},
 	}
 
@@ -129,13 +101,6 @@ func TestSetConfig(t *testing.T) {
 				"test.foo2=1234",
 				"test.foo3=true",
 			},
-		},
-		{
-			desc: "invalid key",
-			entries: []*pb.SetConfigRequest_Entry{
-				&pb.SetConfigRequest_Entry{Key: "test.foo1,", Value: &pb.SetConfigRequest_Entry_ValueStr{"hello world"}},
-			},
-			code: codes.InvalidArgument,
 		},
 	}
 
