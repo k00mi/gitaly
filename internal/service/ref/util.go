@@ -47,7 +47,7 @@ func buildLocalBranch(name []byte, target *pb.GitCommit) *pb.FindLocalBranchResp
 	return response
 }
 
-func buildBranch(c *catfile.Batch, elements [][]byte) (*pb.FindAllBranchesResponse_Branch, error) {
+func buildAllBranchesBranch(c *catfile.Batch, elements [][]byte) (*pb.FindAllBranchesResponse_Branch, error) {
 	target, err := log.GetCommitCatfile(c, string(elements[1]))
 	if err != nil {
 		return nil, err
@@ -56,6 +56,18 @@ func buildBranch(c *catfile.Batch, elements [][]byte) (*pb.FindAllBranchesRespon
 	return &pb.FindAllBranchesResponse_Branch{
 		Name:   elements[0],
 		Target: target,
+	}, nil
+}
+
+func buildBranch(c *catfile.Batch, elements [][]byte) (*pb.Branch, error) {
+	target, err := log.GetCommitCatfile(c, string(elements[1]))
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.Branch{
+		Name:         elements[0],
+		TargetCommit: target,
 	}, nil
 }
 
@@ -101,12 +113,32 @@ func newFindAllBranchesWriter(stream pb.RefService_FindAllBranchesServer, c *cat
 			if err != nil {
 				return err
 			}
-			branch, err := buildBranch(c, elements)
+			branch, err := buildAllBranchesBranch(c, elements)
 			if err != nil {
 				return err
 			}
 			branches = append(branches, branch)
 		}
 		return stream.Send(&pb.FindAllBranchesResponse{Branches: branches})
+	}
+}
+
+func newFindAllRemoteBranchesWriter(stream pb.RefService_FindAllRemoteBranchesServer, c *catfile.Batch) lines.Sender {
+	return func(refs [][]byte) error {
+		var branches []*pb.Branch
+
+		for _, ref := range refs {
+			elements, err := parseRef(ref)
+			if err != nil {
+				return err
+			}
+			branch, err := buildBranch(c, elements)
+			if err != nil {
+				return err
+			}
+			branches = append(branches, branch)
+		}
+
+		return stream.Send(&pb.FindAllRemoteBranchesResponse{Branches: branches})
 	}
 }

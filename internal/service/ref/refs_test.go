@@ -736,11 +736,6 @@ func TestEmptyFindLocalBranchesRequest(t *testing.T) {
 	}
 }
 
-func createRemoteBranch(t *testing.T, repoPath, remoteName, branchName, ref string) {
-	testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "update-ref",
-		"refs/remotes/"+remoteName+"/"+branchName, ref)
-}
-
 func TestSuccessfulFindAllBranchesRequest(t *testing.T) {
 	server, serverSocketPath := runRefServiceServer(t)
 	defer server.Stop()
@@ -769,8 +764,8 @@ func TestSuccessfulFindAllBranchesRequest(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	createRemoteBranch(t, testRepoPath, "origin", "fake-remote-branch",
-		remoteBranch.Target.Id)
+	testhelper.CreateRemoteBranch(t, testRepoPath, "origin",
+		"fake-remote-branch", remoteBranch.Target.Id)
 
 	request := &pb.FindAllBranchesRequest{Repository: testRepo}
 	client, conn := newRefServiceClient(t, serverSocketPath)
