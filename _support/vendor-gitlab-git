@@ -22,6 +22,10 @@ EXCLUDE = %w[
   lib/gitlab/git/storage/
   lib/gitlab/git/storage.rb
   lib/gitlab/git/tree.rb
+  lib/gitlab/git/wiki.rb
+  lib/gitlab/git/wiki_file.rb
+  lib/gitlab/git/wiki_page.rb
+  lib/gitlab/git/wiki_page_version.rb
 ].freeze
 
 REMOTE = 'https://gitlab.com/gitlab-org/gitlab-ce'.freeze
