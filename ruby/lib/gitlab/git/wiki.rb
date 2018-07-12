@@ -216,7 +216,6 @@ module Gitlab
       def gollum_get_all_pages(limit: nil)
         gollum_wiki.pages(limit: limit).map { |gollum_page| new_page(gollum_page) }
       end
-
     end
   end
 end
