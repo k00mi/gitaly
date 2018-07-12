@@ -20,6 +20,14 @@
 - Rewrite ListCommitsByOid in Go
   https://gitlab.com/gitlab-org/gitaly/merge_requests/787
 
+## v0.111.1
+
+#### Fixed
+- Fix nil commit author dereference
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/800
+- Remove unnecessary commit size calculations
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/791
+
 ## v0.111.0
 
 #### Added
