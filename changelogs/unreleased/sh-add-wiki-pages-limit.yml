@@ -1,0 +1,5 @@
+---
+title: Add limit parameter for WikiGetAllPagesRequest
+merge_request: 807
+author:
+type: performance
