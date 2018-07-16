@@ -92,9 +92,10 @@ module GitalyServer
       bridge_exceptions do
         repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
         wiki = Gitlab::Git::Wiki.new(repo)
+        pages_limit = request.limit.zero? ? nil : request.limit
 
         Enumerator.new do |y|
-          wiki.pages.each do |page|
+          wiki.pages(limit: pages_limit).each do |page|
             version = Gitaly::WikiPageVersion.new(
               commit: gitaly_commit_from_rugged(page.version.commit.raw_commit),
               format: page.version.format.to_s

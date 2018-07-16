@@ -50,15 +50,46 @@ func TestSuccessfulWikiGetAllPagesRequest(t *testing.T) {
 		Historical: false,
 	}
 
-	request := &pb.WikiGetAllPagesRequest{Repository: wikiRepo}
-	c, err := client.WikiGetAllPages(ctx, request)
-	require.NoError(t, err)
+	testcases := []struct {
+		desc          string
+		limit         uint32
+		expectedCount int
+	}{
+		{
+			desc:          "No limit",
+			limit:         0,
+			expectedCount: 2,
+		},
+		{
+			desc:          "Limit of 1",
+			limit:         1,
+			expectedCount: 1,
+		},
+		{
+			desc:          "Limit of 2",
+			limit:         1,
+			expectedCount: 1,
+		},
+	}
 
-	receivedPages := readWikiPagesFromWikiGetAllPagesClient(t, c)
+	expectedPages := []*pb.WikiPage{expectedPage1, expectedPage2}
 
-	require.Len(t, receivedPages, 2)
-	requireWikiPagesEqual(t, receivedPages[0], expectedPage1)
-	requireWikiPagesEqual(t, receivedPages[1], expectedPage2)
+	for _, tc := range testcases {
+		t.Run(tc.desc, func(t *testing.T) {
+			rpcRequest := pb.WikiGetAllPagesRequest{Repository: wikiRepo, Limit: tc.limit}
+
+			c, err := client.WikiGetAllPages(ctx, &rpcRequest)
+			require.NoError(t, err)
+
+			receivedPages := readWikiPagesFromWikiGetAllPagesClient(t, c)
+
+			require.Len(t, receivedPages, tc.expectedCount)
+
+			for i := 0; i < tc.expectedCount; i++ {
+				requireWikiPagesEqual(t, expectedPages[i], receivedPages[i])
+			}
+		})
+	}
 }
 
 func TestFailedWikiGetAllPagesDueToValidation(t *testing.T) {
