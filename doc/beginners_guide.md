@@ -20,6 +20,9 @@ send with the request. For each request the response is defined too.
 You can find a clone of the [gitaly-proto repository][gitaly-proto] in
 `/path/to/gdk/gitaly/src/gitlab.com/gitlab-org/gitaly-proto`.
 
+For running a custom gitaly-proto when developing, please consult the
+[contributing documentation](./CONTRIBUTING.md#development-and-testing-with-a-custom-gitaly-proto)
+
 #### Gitaly
 
 Gitaly is a component that calls procedure on the Git data when it's requested
