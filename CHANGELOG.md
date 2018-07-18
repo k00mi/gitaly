@@ -1,5 +1,53 @@
 # Gitaly changelog
 
+## v0.113.0
+
+#### Added
+- Update Git to 2.18.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/795
+- Implement RefService.FindAllRemoteBranches RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/799
+
+#### Fixed
+- Fix lines.Sender message chunking
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/817
+- Fix nil commit author dereference
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/800
+
+#### Other
+- Vendor gitlab_git at 740ae2d194f3833e224
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/819
+- Vendor gitlab-git at 49d7f92fd7476b4fb10e44f
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/798
+- Vendor gitlab_git at 555afe8971c9ab6f9
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/803
+- Move git/wiki*.rb out of vendor
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/804
+- Clean up CI matrix
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/811
+- Stop vendoring some gitlab_git files we don't need
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/801
+- Vendor gitlab_git at 16b867d8ce6246ad8
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/810
+- Vendor gitlab-git at e661896b54da82c0327b1
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/814
+- Catch SIGINT in gitaly-ruby
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/818
+- Fix diff path logging
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/812
+- Exclude more gitlab_git files from vendoring
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/815
+- Improve ListError message
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/809
+
+#### Performance
+- Add limit parameter for WikiGetAllPagesRequest
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/807
+
+#### Removed
+- Remove implementation of Notifications::PostReceive
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/806
+
 ## v0.112.0
 
 #### Fixed
