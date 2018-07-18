@@ -261,6 +261,9 @@ govendor fetch gitlab.com/gitlab-org/gitaly-proto/go::gitlab.com/my-user/gitaly-
 
 # for a gitlab-org branch:
 govendor fetch gitlab.com/gitlab-org/gitaly-proto/go@my-branch
+
+# if the gitaly-proto version you want to use was already released:
+govendor fetch gitlab.com/gitlab-org/gitaly-proto/go@v<tag-version>
 ```
 
 - Include the new proto Go code in your next commit with `git add vendor`
