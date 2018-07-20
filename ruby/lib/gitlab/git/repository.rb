@@ -255,7 +255,11 @@ module Gitlab
       end
 
       def rm_branch(branch_name, user:)
-        OperationService.new(user, self).rm_branch(find_branch(branch_name))
+        branch = find_branch(branch_name)
+
+        raise InvalidRef.new("branch not found: #{branch_name}") unless branch
+
+        OperationService.new(user, self).rm_branch(branch)
       end
 
       def rm_tag(tag_name, user:)
