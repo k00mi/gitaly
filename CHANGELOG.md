@@ -68,6 +68,12 @@
 - Rewrite ListCommitsByOid in Go
   https://gitlab.com/gitlab-org/gitaly/merge_requests/787
 
+## v0.111.2
+
+#### Fixed
+- Handle nil commit in buildLocalBranch
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/822
+
 ## v0.111.1
 
 #### Fixed
