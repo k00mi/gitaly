@@ -1,0 +1,5 @@
+---
+title: Stop vendoring gitlab/git/index.rb
+merge_request: 824
+author:
+type: other
