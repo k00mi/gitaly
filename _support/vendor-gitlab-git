@@ -22,6 +22,7 @@ EXCLUDE = %w[
   lib/gitlab/git/diff_collection.rb
   lib/gitlab/git/gitmodules_parser.rb
   lib/gitlab/git/hook_env.rb
+  lib/gitlab/git/index.rb
   lib/gitlab/git/lfs_changes.rb
   lib/gitlab/git/lfs_pointer_file.rb
   lib/gitlab/git/rev_list.rb
