@@ -47,8 +47,8 @@ module GitalyServer
           Gitaly::UserDeleteTagResponse.new
         rescue Gitlab::Git::PreReceiveError => e
           Gitaly::UserDeleteTagResponse.new(pre_receive_error: set_utf8!(e.message))
-        rescue Gitlab::Git::CommitError => e
-          raise GRPC::FailedPrecondition.new(e)
+        rescue Gitlab::Git::Repository::InvalidRef, Gitlab::Git::CommitError => e
+          raise GRPC::FailedPrecondition.new(e.message)
         end
       end
     end

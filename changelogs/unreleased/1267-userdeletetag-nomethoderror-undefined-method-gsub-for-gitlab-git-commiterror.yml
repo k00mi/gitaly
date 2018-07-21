@@ -1,0 +1,5 @@
+---
+title: Handle non-existing tags on UserDeleteTag
+merge_request: 827
+author:
+type: fixed

@@ -259,7 +259,11 @@ module Gitlab
       end
 
       def rm_tag(tag_name, user:)
-        Gitlab::Git::OperationService.new(user, self).rm_tag(find_tag(tag_name))
+        tag = find_tag(tag_name)
+
+        raise InvalidRef.new("tag not found: #{tag_name}") unless tag
+
+        Gitlab::Git::OperationService.new(user, self).rm_tag(tag)
       end
 
       def merge(user, source_sha, target_branch, message, &block)
