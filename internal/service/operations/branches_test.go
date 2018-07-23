@@ -352,7 +352,7 @@ func TestFailedUserDeleteBranchDueToValidation(t *testing.T) {
 				User:       user,
 				BranchName: []byte("i-do-not-exist"),
 			},
-			code: codes.Unknown,
+			code: codes.FailedPrecondition,
 		},
 	}
 
