@@ -275,7 +275,7 @@ func TestFailedUserDeleteTagRequestDueToValidation(t *testing.T) {
 				User:       user,
 				TagName:    []byte("i-do-not-exist"),
 			},
-			code: codes.Unknown,
+			code: codes.FailedPrecondition,
 		},
 	}
 
