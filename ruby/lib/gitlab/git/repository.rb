@@ -543,6 +543,53 @@ module Gitlab
         Ref.dereference_object(obj)
       end
 
+      def add_remote(remote_name, url, mirror_refmap: nil)
+        rugged.remotes.create(remote_name, url)
+
+        set_remote_as_mirror(remote_name, refmap: mirror_refmap) if mirror_refmap
+      rescue Rugged::ConfigError
+        remote_update(remote_name, url: url)
+      end
+
+      def remove_remote(remote_name)
+        # When a remote is deleted all its remote refs are deleted too, but in
+        # the case of mirrors we map its refs (that would usualy go under
+        # [remote_name]/) to the top level namespace. We clean the mapping so
+        # those don't get deleted.
+        if rugged.config["remote.#{remote_name}.mirror"]
+          rugged.config.delete("remote.#{remote_name}.fetch")
+        end
+
+        rugged.remotes.delete(remote_name)
+        true
+      rescue Rugged::ConfigError
+        false
+      end
+
+      # Update the specified remote using the values in the +options+ hash
+      #
+      # Example
+      # repo.update_remote("origin", url: "path/to/repo")
+      def remote_update(remote_name, url:)
+        # TODO: Implement other remote options
+        rugged.remotes.set_url(remote_name, url)
+        nil
+      end
+
+      def fetch_repository_as_mirror(repository)
+        remote_name = "tmp-#{SecureRandom.hex}"
+        repository = RemoteRepository.new(repository) unless repository.is_a?(RemoteRepository)
+
+        add_remote(remote_name, GITALY_INTERNAL_URL, mirror_refmap: :all_refs)
+        fetch_remote(remote_name, env: repository.fetch_env)
+      ensure
+        remove_remote(remote_name)
+      end
+
+      def fetch_remote(remote_name = 'origin', env: nil)
+        run_git(['fetch', remote_name], env: env).last.zero?
+      end
+
       private
 
       def uncached_has_local_branches?
