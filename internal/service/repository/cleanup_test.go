@@ -185,3 +185,36 @@ func TestCleanupDeletesStaleWorktrees(t *testing.T) {
 		})
 	}
 }
+
+func TestCleanupConfigLocks(t *testing.T) {
+	server, serverSocketPath := runRepoServer(t)
+	defer server.Stop()
+
+	client, conn := newRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	req := &pb.CleanupRequest{Repository: testRepo}
+	lockPath := filepath.Join(testRepoPath, "config.lock")
+
+	// No file on the lock path
+	_, err := client.Cleanup(ctx, req)
+	assert.NoError(t, err)
+
+	// Fresh lock should remain
+	createFileWithTimes(lockPath, freshTime)
+	_, err = client.Cleanup(ctx, req)
+	assert.NoError(t, err)
+	assert.FileExists(t, lockPath)
+
+	// Old lock should be removed
+	createFileWithTimes(lockPath, oldTime)
+	_, err = client.Cleanup(ctx, req)
+	assert.NoError(t, err)
+	testhelper.AssertFileNotExists(t, lockPath)
+}

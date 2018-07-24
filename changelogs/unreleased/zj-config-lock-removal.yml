@@ -1,0 +1,5 @@
+---
+title: Remove stale config.lock files
+merge_request: 832
+author:
+type: added

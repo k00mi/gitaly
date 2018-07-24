@@ -42,6 +42,11 @@ func cleanupRepo(repoPath string) error {
 		return status.Errorf(codes.Internal, "Cleanup: cleanStaleWorktrees: %v", err)
 	}
 
+	configLockThreshod := time.Now().Add(-15 * time.Minute)
+	if err := cleanupConfigLock(repoPath, configLockThreshod); err != nil {
+		return status.Errorf(codes.Internal, "Cleanup: cleanupConfigLock: %v", err)
+	}
+
 	return nil
 }
 
@@ -116,6 +121,26 @@ func cleanStaleWorktrees(repoPath string, threshold time.Time) error {
 			if err := os.RemoveAll(path); err != nil && !os.IsNotExist(err) {
 				return err
 			}
+		}
+	}
+
+	return nil
+}
+
+func cleanupConfigLock(repoPath string, threshold time.Time) error {
+	configLockPath := filepath.Join(repoPath, "config.lock")
+
+	fi, err := os.Stat(configLockPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+
+	if fi.ModTime().Before(threshold) {
+		if err := os.Remove(configLockPath); err != nil && !os.IsNotExist(err) {
+			return err
 		}
 	}
 
