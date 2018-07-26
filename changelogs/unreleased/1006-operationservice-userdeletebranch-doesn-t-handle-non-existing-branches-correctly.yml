@@ -1,5 +1,0 @@
----
-title: Handle non-existing branch on UserDeleteBranch
-merge_request: 826
-author:
-type: fixed

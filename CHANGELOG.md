@@ -1,5 +1,39 @@
 # Gitaly changelog
 
+## v0.114.0
+
+#### Added
+- Remove stale config.lock files
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/832
+
+#### Fixed
+- Handle nil commit in buildLocalBranch
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/822
+- Handle non-existing branch on UserDeleteBranch
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/826
+- Handle non-existing tags on UserDeleteTag
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/827
+
+#### Other
+- Lower gitaly-ruby default max_rss to 200MB
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/833
+- Vendor gitlab-git at 92802e51
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/825
+- Bump Linguist version to match Rails
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/821
+- Stop vendoring gitlab/git/index.rb
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/824
+- Bump rspec from 3.6.0 to 3.7.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/830
+
+#### Performance
+- Bump nokogiri to 1.8.4 and sanitize to 4.6.6
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/831
+
+#### Security
+- Update to gitlab-gollum-lib v4.2.7.5 and make Gemfile consistent with GitLab versions
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/828
+
 ## v0.113.0
 
 #### Added
