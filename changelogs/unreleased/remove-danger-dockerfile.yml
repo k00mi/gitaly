@@ -1,0 +1,5 @@
+---
+title: Remove the Dockerfile for Danger since the image is now built by https://gitlab.com/gitlab-org/gitlab-build-images
+merge_request: 836
+author:
+type: other
