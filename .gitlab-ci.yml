@@ -175,22 +175,6 @@ update-downstream-server-version:
     - ruby _support/update-downstream-server-version
   allow_failure: true
 
-create-dangercontainer:
-  stage: publish
-  image: docker:git
-  services:
-    - docker:dind
-  only:
-    - master@gitlab-org/gitaly
-  variables:
-    IMAGE_TAG: "${CI_REGISTRY_IMAGE}/dangercontainer:latest"
-  script:
-    - cd _support/dangercontainer
-    - docker build -t $IMAGE_TAG ./
-    - docker login --username gitlab-ci-token --password $CI_JOB_TOKEN $CI_REGISTRY
-    - docker push $IMAGE_TAG
-    - docker logout $CI_REGISTRY
-
 # Ensure that gitlab-git vendoring from gitlab-ce is functioning
 test-vendor-gitaly-ruby:
   stage: test
