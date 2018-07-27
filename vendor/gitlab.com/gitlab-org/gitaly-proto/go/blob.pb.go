@@ -92,6 +92,9 @@ It has these top-level messages:
 	RawDiffResponse
 	RawPatchRequest
 	RawPatchResponse
+	DiffStatsRequest
+	DiffStats
+	DiffStatsResponse
 	AddNamespaceRequest
 	RemoveNamespaceRequest
 	RenameNamespaceRequest
