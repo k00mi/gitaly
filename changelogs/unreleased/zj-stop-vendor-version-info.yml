@@ -1,0 +1,5 @@
+---
+title: Stop vendoring Gitlab::VersionInfo
+merge_request: 840
+author:
+type: changed
