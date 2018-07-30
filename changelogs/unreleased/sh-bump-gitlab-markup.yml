@@ -1,0 +1,5 @@
+---
+title: Fix reStructuredText not working on Gitaly nodes
+merge_request: 838
+author:
+type: fixed
