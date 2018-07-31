@@ -6,7 +6,6 @@ FILE_LIST = %w[
   lib/gitlab/git
   lib/gitlab/encoding_helper.rb
   lib/gitlab/utils/strong_memoize.rb
-  lib/gitlab/version_info.rb
 ].freeze
 
 # We have (already) stopped vendoring these files.
@@ -33,6 +32,7 @@ EXCLUDE = %w[
   lib/gitlab/git/wiki_file.rb
   lib/gitlab/git/wiki_page.rb
   lib/gitlab/git/wiki_page_version.rb
+  lib/gitlab/version_info.rb
 ].freeze
 
 REMOTE = 'https://gitlab.com/gitlab-org/gitlab-ce'.freeze
