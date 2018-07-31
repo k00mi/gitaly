@@ -3,7 +3,10 @@ package ssh
 import (
 	"os/exec"
 
+	"gitlab.com/gitlab-org/gitaly/internal/git"
+
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -19,6 +22,11 @@ func (s *server) SSHUploadPack(stream gitalypb.SSHService_SSHUploadPackServer) e
 	if err != nil {
 		return err
 	}
+
+	grpc_logrus.Extract(stream.Context()).WithFields(log.Fields{
+		"GitProtocol": req.GitProtocol,
+	}).Debug("SSHUploadPack")
+
 	if err = validateFirstUploadPackRequest(req); err != nil {
 		return err
 	}
@@ -33,6 +41,9 @@ func (s *server) SSHUploadPack(stream gitalypb.SSHService_SSHUploadPackServer) e
 	stderr := streamio.NewWriter(func(p []byte) error {
 		return stream.Send(&gitalypb.SSHUploadPackResponse{Stderr: p})
 	})
+
+	env := git.AddGitProtocolEnv(req, []string{})
+
 	repoPath, err := helper.GetRepoPath(req.Repository)
 	if err != nil {
 		return err
@@ -48,7 +59,7 @@ func (s *server) SSHUploadPack(stream gitalypb.SSHService_SSHUploadPackServer) e
 
 	osCommand := exec.Command(command.GitPath(), args...)
 
-	cmd, err := command.New(stream.Context(), osCommand, stdin, stdout, stderr)
+	cmd, err := command.New(stream.Context(), osCommand, stdin, stdout, stderr, env...)
 
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "SSHUploadPack: cmd: %v", err)

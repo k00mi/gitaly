@@ -1,11 +1,15 @@
 package smarthttp
 
 import (
+	"fmt"
+	"io"
 	"io/ioutil"
 	"strings"
 	"testing"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 
@@ -50,7 +54,46 @@ func TestSuccessfulInfoRefsUploadPackWithGitConfigOptions(t *testing.T) {
 	assertGitRefAdvertisement(t, "InfoRefsUploadPack", string(response), "001e# service=git-upload-pack", "0000", []string{})
 }
 
-func makeInfoRefsUploadPackRequest(t *testing.T, serverSocketPath string, rpcRequest *gitalypb.InfoRefsRequest) ([]byte, error) {
+func TestSuccessfulInfoRefsUploadPackWithGitProtocol(t *testing.T) {
+	defer func(old string) {
+		config.Config.Git.BinPath = old
+	}(config.Config.Git.BinPath)
+	config.Config.Git.BinPath = "../../testhelper/env_git"
+
+	server, serverSocketPath := runSmartHTTPServer(t)
+	defer server.Stop()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	rpcRequest := &pb.InfoRefsRequest{
+		Repository:  testRepo,
+		GitProtocol: git.ProtocolV2,
+	}
+
+	client, _ := newSmartHTTPClient(t, serverSocketPath)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	c, err := client.InfoRefsUploadPack(ctx, rpcRequest)
+
+	for {
+		_, err := c.Recv()
+		if err != nil {
+			require.Equal(t, io.EOF, err)
+			break
+		}
+	}
+
+	require.NoError(t, err)
+
+	envData, err := testhelper.GetGitEnvData()
+
+	require.NoError(t, err)
+	require.Equal(t, fmt.Sprintf("GIT_PROTOCOL=%s\n", git.ProtocolV2), envData)
+}
+
+func makeInfoRefsUploadPackRequest(t *testing.T, serverSocketPath string, rpcRequest *pb.InfoRefsRequest) ([]byte, error) {
 	client, conn := newSmartHTTPClient(t, serverSocketPath)
 	defer conn.Close()
 

@@ -4,7 +4,10 @@ import (
 	"io"
 	"os/exec"
 
+	"gitlab.com/gitlab-org/gitaly/internal/git"
+
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -36,6 +39,11 @@ func (s *server) PostUploadPack(stream gitalypb.SmartHTTPService_PostUploadPackS
 	if err != nil {
 		return err
 	}
+
+	grpc_logrus.Extract(stream.Context()).WithFields(log.Fields{
+		"GitProtocol": req.GitProtocol,
+	}).Debug("PostUploadPack")
+
 	if err := validateUploadPackRequest(req); err != nil {
 		return err
 	}
@@ -55,6 +63,9 @@ func (s *server) PostUploadPack(stream gitalypb.SmartHTTPService_PostUploadPackS
 	stdout := streamio.NewWriter(func(p []byte) error {
 		return stream.Send(&gitalypb.PostUploadPackResponse{Data: p})
 	})
+
+	env := git.AddGitProtocolEnv(req, []string{})
+
 	repoPath, err := helper.GetRepoPath(req.Repository)
 	if err != nil {
 		return err
@@ -68,7 +79,7 @@ func (s *server) PostUploadPack(stream gitalypb.SmartHTTPService_PostUploadPackS
 	args = append(args, "upload-pack", "--stateless-rpc", repoPath)
 
 	osCommand := exec.Command(command.GitPath(), args...)
-	cmd, err := command.New(stream.Context(), osCommand, stdin, stdout, nil)
+	cmd, err := command.New(stream.Context(), osCommand, stdin, stdout, nil, env...)
 
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "PostUploadPack: cmd: %v", err)

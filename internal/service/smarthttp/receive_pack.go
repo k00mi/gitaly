@@ -27,6 +27,7 @@ func (s *server) PostReceivePack(stream gitalypb.SmartHTTPService_PostReceivePac
 		"GlRepository":     req.GlRepository,
 		"GlUsername":       req.GlUsername,
 		"GitConfigOptions": req.GitConfigOptions,
+		"GitProtocol":      req.GitProtocol,
 	}).Debug("PostReceivePack")
 
 	if err := validateReceivePackRequest(req); err != nil {
@@ -50,6 +51,9 @@ func (s *server) PostReceivePack(stream gitalypb.SmartHTTPService_PostReceivePac
 	if req.GlUsername != "" {
 		env = append(env, fmt.Sprintf("GL_USERNAME=%s", req.GlUsername))
 	}
+
+	env = git.AddGitProtocolEnv(req, env)
+
 	repoPath, err := helper.GetRepoPath(req.Repository)
 	if err != nil {
 		return err

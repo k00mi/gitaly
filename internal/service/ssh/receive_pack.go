@@ -27,6 +27,7 @@ func (s *server) SSHReceivePack(stream gitalypb.SSHService_SSHReceivePackServer)
 		"GlRepository":     req.GlRepository,
 		"GlUsername":       req.GlUsername,
 		"GitConfigOptions": req.GitConfigOptions,
+		"GitProtocol":      req.GitProtocol,
 	}).Debug("SSHReceivePack")
 
 	if err = validateFirstReceivePackRequest(req); err != nil {
@@ -51,6 +52,7 @@ func (s *server) SSHReceivePack(stream gitalypb.SSHService_SSHReceivePackServer)
 	if req.GlRepository != "" {
 		env = append(env, fmt.Sprintf("GL_REPOSITORY=%s", req.GlRepository))
 	}
+	env = git.AddGitProtocolEnv(req, env)
 
 	repoPath, err := helper.GetRepoPath(req.Repository)
 	if err != nil {
