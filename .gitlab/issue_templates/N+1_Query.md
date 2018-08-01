@@ -33,3 +33,4 @@ If the answer to both questions is 'no' then downgrade the priority of this issu
 ------------------------------------------------------------
 
 /label ~"v1.0" 
+/label ~Gitaly
