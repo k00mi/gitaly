@@ -22,3 +22,4 @@
 /label ~Migration
 /label ~"Migration:Ready-for-Development"
 /label ~"To Do"
+/label ~Gitaly

@@ -145,3 +145,4 @@ Then leave running while monitoring for at least **1 week**.
 - [ ] Close this issue and mark the ~Conversation as ~"Migration:Opt-In"
 
 /label ~"Acceptance Testing"
+/label ~Gitaly

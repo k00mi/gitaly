@@ -17,3 +17,4 @@ for more information on the analysis stage of the process.
 
 
 /label ~"Migration Analysis"
+/label ~Gitaly

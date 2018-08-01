@@ -9,3 +9,4 @@ Conversation (if applicable): [Create Issue](https://gitlab.com/gitlab-org/gital
 ------
 
 /label ~"Potential Endpoint"
+/label ~Gitaly
