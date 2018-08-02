@@ -7,7 +7,11 @@ bin_dir = "/home/git/gitaly"
 
 # # Optional: listen on a TCP socket. This is insecure (no authentication)
 # listen_addr = "localhost:9999"
-#
+
+# # Optional: authenticate Gitaly requests using a shared secret
+# [auth]
+# token = 'abc123secret'
+# transitioning = false # Set `transitioning` to true to temporarily allow unauthenticated while rolling out authentication.
 
 # # Optional: export metrics via Prometheus
 # prometheus_listen_addr = "localhost:9236"
