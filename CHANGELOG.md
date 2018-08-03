@@ -1,5 +1,33 @@
 # Gitaly changelog
 
+## v0.115.0
+
+#### Added
+- Implement DiffService.DiffStats RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/808
+- Update gitaly-proto to 0.109.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/843
+
+#### Changed
+- Stop vendoring Gitlab::VersionInfo
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/840
+
+#### Fixed
+- Check errors and fix chunking in ListNewCommits
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/852
+- Fix reStructuredText not working on Gitaly nodes
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/838
+
+#### Other
+- Add auth to the config.toml.example file
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/851
+- Remove the Dockerfile for Danger since the image is now built by https://gitlab.com/gitlab-org/gitlab-build-images
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/836
+- Vendor Gitlab::Git at 2ca8219a20f16
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/841
+- Move diff parser test to own package
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/837
+
 ## v0.114.0
 
 #### Added

@@ -1,5 +1,0 @@
----
-title: Check errors and fix chunking in ListNewCommits
-merge_request: 852
-author:
-type: fixed
