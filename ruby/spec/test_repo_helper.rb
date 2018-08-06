@@ -27,6 +27,12 @@ module TestRepo
     Gitaly::Repository.new(storage_name: DEFAULT_STORAGE_NAME, relative_path: relative_path)
   end
 
+  def new_empty_test_repo
+    relative_path = "mutable-#{SecureRandom.hex(6)}.git"
+    TestRepo.init_new_repo!(File.join(DEFAULT_STORAGE_DIR, relative_path))
+    Gitaly::Repository.new(storage_name: DEFAULT_STORAGE_NAME, relative_path: relative_path)
+  end
+
   def rugged_from_gitaly(gitaly_repo)
     Rugged::Repository.new(repo_path_from_gitaly(gitaly_repo))
   end
@@ -50,6 +56,12 @@ module TestRepo
   def self.clone_new_repo!(destination)
     return if system(*%W[git clone --quiet --bare #{TEST_REPO_ORIGIN} #{destination}])
     abort "Failed to clone test repo. Try running 'make prepare-tests' and try again."
+  end
+
+  def self.init_new_repo!(destination)
+    return if system(*%W[git init --quiet --bare #{destination}])
+
+    abort "Failed to init test repo."
   end
 end
 

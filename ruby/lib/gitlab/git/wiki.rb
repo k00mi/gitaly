@@ -79,14 +79,6 @@ module Gitlab
         page.url_path
       end
 
-      def page_formatted_data(title:, dir: nil, version: nil)
-        version = version&.id
-
-        # We don't use #page because if wiki_find_page feature is enabled, we would
-        # get a page without formatted_data.
-        gollum_find_page(title: title, dir: dir, version: version)&.formatted_data
-      end
-
       def gollum_wiki
         @gollum_wiki ||= Gollum::Wiki.new(@repository.path)
       end
@@ -152,10 +144,6 @@ module Gitlab
         page_dir = File.split(page_path).first
 
         gollum_wiki.paged(page_name, page_dir)
-      end
-
-      def new_page(gollum_page)
-        Gitlab::Git::WikiPage.new(gollum_page, new_version(gollum_page, gollum_page.version.id))
       end
 
       def gollum_write_page(name, format, content, commit_details)

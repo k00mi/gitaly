@@ -1,0 +1,5 @@
+---
+title: Only load Wiki formatted data upon request
+merge_request: 839
+author:
+type: performance
