@@ -23,6 +23,11 @@ func IsNotFound(err error) bool {
 	return ok
 }
 
+// IsBlob returns true if object type is "blob"
+func (o *ObjectInfo) IsBlob() bool {
+	return o.Type == "blob"
+}
+
 func parseObjectInfo(stdout *bufio.Reader) (*ObjectInfo, error) {
 	infoLine, err := stdout.ReadString('\n')
 	if err != nil {

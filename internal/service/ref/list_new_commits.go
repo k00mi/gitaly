@@ -2,7 +2,6 @@ package ref
 
 import (
 	"bufio"
-	"regexp"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
@@ -14,8 +13,8 @@ import (
 
 func (s *server) ListNewCommits(in *pb.ListNewCommitsRequest, stream pb.RefService_ListNewCommitsServer) error {
 	oid := in.GetCommitId()
-	if match, err := regexp.MatchString(`\A[0-9a-f]{40}\z`, oid); !match || err != nil {
-		return status.Errorf(codes.InvalidArgument, "commit id shoud have 40 hexidecimal characters")
+	if err := validateCommitID(oid); err != nil {
+		return err
 	}
 
 	ctx := stream.Context()
