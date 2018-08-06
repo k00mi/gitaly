@@ -1,5 +1,11 @@
 # Gitaly changelog
 
+## v0.116.0
+
+#### Added
+- Add ListNewBlobs RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/849
+
 ## v0.115.0
 
 #### Added
