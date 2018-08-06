@@ -1,5 +1,11 @@
 # Gitaly changelog
 
+## v0.117.0
+
+#### Performance
+- Only load Wiki formatted data upon request
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/839
+
 ## v0.116.0
 
 #### Added
