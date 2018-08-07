@@ -1,5 +1,11 @@
 # Gitaly changelog
 
+## v0.118.0
+
+#### Added
+- Add ability to support custom options for git-receive-pack
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/834
+
 ## v0.117.0
 
 #### Performance
