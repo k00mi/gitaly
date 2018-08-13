@@ -21,7 +21,7 @@ for more information on the Acceptance Testing stage of the process.
 ## 2. Development Trial
 
 #### Check Dev Server Versions
-- [ ] Gitaly: [Gitaly Dev Version Tracker Dashboard](https://performance.gitlab.net/dashboard/db/gitaly-version-tracker?orgId=1&var-job=gitaly-dev)
+- [ ] Gitaly: [Gitaly Dev Version Tracker Dashboard](https://dashboards.gitlab.net/dashboard/db/gitaly-version-tracker?orgId=1&var-job=gitaly-dev)
 - [ ] GitLab: https://dev.gitlab.org/help
 
 #### Enable on `dev.gitlab.org`:
@@ -31,7 +31,7 @@ Then leave running while monitoring and performing some testing through web, api
 
 #### Monitor (initially )
 
-- [ ] **Monitor Grafana** feature dashboard on dev: [Gitaly Feature Status Dashboard](https://performance.gitlab.net/dashboard/db/gitaly-feature-status?from=now-12h&to=now&orgId=1&var-method=GRPC_METHOD_NAME&var-job=gitaly-dev&refresh=5m)
+- [ ] **Monitor Grafana** feature dashboard on dev: [Gitaly Feature Status Dashboard](https://dashboards.gitlab.net/dashboard/db/gitaly-feature-status?from=now-12h&to=now&orgId=1&var-method=GRPC_METHOD_NAME&var-job=gitaly-dev&refresh=5m)
 - [ ] **Inspect logs** in ELK:
   - [GRPC_METHOD_NAME invocations, last hour](https://kibana.gprd.gitlab.com/app/kibana#/discover?_a=%28index%3A'gitaly-*'%2Cquery%3A%28query_string%3A%28query%3A'grpc.method:GRPC_METHOD_NAME%20AND%20hostname:dev'%29%29%29&_g=%28refreshInterval:%28display:Off,pause:!f,value:0%29,time:%28from:now-1h,mode:quick,to:now%29%29) for unusual activity
   - [GRPC_METHOD_NAME errors, last hour](https://kibana.gprd.gitlab.com/app/kibana#/discover?_a=%28index%3A'gitaly-*'%2Cquery%3A%28query_string%3A%28query%3A'grpc.method:GRPC_METHOD_NAME%20AND%20hostname:dev%20AND%20NOT%20grpc.code:OK%20AND%20message:finished'%29%29%29&_g=%28refreshInterval:%28display:Off,pause:!f,value:0%29,time:%28from:now-1h,mode:quick,to:now%29%29) for unusual activity
@@ -45,7 +45,7 @@ Then leave running while monitoring and performing some testing through web, api
 ## 3. Staging Trial
 
 #### Check Staging Server Versions
-- [ ] Gitaly: [Gitaly Staging Version Tracker Dashboard](https://performance.gitlab.net/dashboard/db/gitaly-version-tracker?orgId=1&var-job=gitaly-staging)
+- [ ] Gitaly: [Gitaly Staging Version Tracker Dashboard](https://dashboards.gitlab.net/dashboard/db/gitaly-version-tracker?orgId=1&var-job=gitaly-staging)
 - [ ] GitLab: https://staging.gitlab.com/help
 
 #### Enable on `staging.gitlab.com`
@@ -55,7 +55,7 @@ Then leave running while monitoring for at least **15 minutes** while performing
 
 #### Monitor (at least every 5 minutes, preferably real-time)
 
-- [ ] **Monitor Grafana** feature dashboard on staging: [Gitaly Feature Status Dashboard](https://performance.gitlab.net/dashboard/db/gitaly-feature-status?from=now-12h&to=now&orgId=1&var-method=GRPC_METHOD_NAME&var-job=gitaly-nfs-staging&refresh=5m)
+- [ ] **Monitor Grafana** feature dashboard on staging: [Gitaly Feature Status Dashboard](https://dashboards.gitlab.net/dashboard/db/gitaly-feature-status?from=now-12h&to=now&orgId=1&var-method=GRPC_METHOD_NAME&var-job=gitaly-nfs-staging&refresh=5m)
 - [ ] **Inspect logs** in ELK:
   - [GRPC_METHOD_NAME invocations, last hour](https://kibana.gprd.gitlab.com/app/kibana#/discover?_a=%28index%3A'gitaly-*'%2Cquery%3A%28query_string%3A%28query%3A'grpc.method:GRPC_METHOD_NAME%20AND%20hostname:nfs5'%29%29%29&_g=%28refreshInterval:%28display:Off,pause:!f,value:0%29,time:%28from:now-1h,mode:quick,to:now%29%29) for unusual activity
   - [GRPC_METHOD_NAME errors, last hour](https://kibana.gprd.gitlab.com/app/kibana#/discover?_a=%28index%3A'gitaly-*'%2Cquery%3A%28query_string%3A%28query%3A'grpc.method:GRPC_METHOD_NAME%20AND%20hostname:nfs5%20AND%20NOT%20grpc.code:OK%20AND%20message:finished'%29%29%29&_g=%28refreshInterval:%28display:Off,pause:!f,value:0%29,time:%28from:now-1h,mode:quick,to:now%29%29) for unusual activity
@@ -68,7 +68,7 @@ Then leave running while monitoring for at least **15 minutes** while performing
 
 ## 4. Production Server Version Check
 
-- [ ] Gitaly: [Gitaly Production Version Tracker Dashboard](https://performance.gitlab.net/dashboard/db/gitaly-version-tracker?orgId=1&var-job=gitaly-production)
+- [ ] Gitaly: [Gitaly Production Version Tracker Dashboard](https://dashboards.gitlab.net/dashboard/db/gitaly-version-tracker?orgId=1&var-job=gitaly-production)
 - [ ] GitLab: https://gitlab.com/help
 
 ## 5. Initial Impact Check
@@ -79,7 +79,7 @@ Then leave running while monitoring for at least **15 minutes** while performing
 Then leave running while monitoring for at least **15 minutes** while performing some testing through web, api or SSH.
 
 #### Monitor (at least every 5 minutes, preferably real-time)
-- [ ] **Monitor Grafana** feature dashboard on production: [Gitaly Feature Status Dashboard](https://performance.gitlab.net/dashboard/db/gitaly-feature-status?from=now-12h&to=now&orgId=1&var-method=GRPC_METHOD_NAME&var-job=gitaly-production&refresh=5m)
+- [ ] **Monitor Grafana** feature dashboard on production: [Gitaly Feature Status Dashboard](https://dashboards.gitlab.net/dashboard/db/gitaly-feature-status?from=now-12h&to=now&orgId=1&var-method=GRPC_METHOD_NAME&var-job=gitaly-production&refresh=5m)
 - [ ] **Inspect logs** in ELK:
   - [GRPC_METHOD_NAME invocations, last hour](https://kibana.gprd.gitlab.com/app/kibana#/discover?_a=%28index%3A'gitaly-*'%2Cquery%3A%28query_string%3A%28query%3A'grpc.method:GRPC_METHOD_NAME%20AND%20NOT%20hostname:dev'%29%29%29&_g=%28refreshInterval:%28display:Off,pause:!f,value:0%29,time:%28from:now-1h,mode:quick,to:now%29%29) for unusual activity
   - [GRPC_METHOD_NAME errors, last hour](https://kibana.gprd.gitlab.com/app/kibana#/discover?_a=%28index%3A'gitaly-*'%2Cquery%3A%28query_string%3A%28query%3A'grpc.method:GRPC_METHOD_NAME%20AND%20NOT%20hostname:dev%20AND%20NOT%20grpc.code:OK%20AND%20message:finished'%29%29%29&_g=%28refreshInterval:%28display:Off,pause:!f,value:0%29,time:%28from:now-1h,mode:quick,to:now%29%29) for unusual activity
@@ -97,7 +97,7 @@ Then leave running while monitoring for at least **15 minutes** while performing
 Then leave running while monitoring for at least **2 hours**.
 
 #### Monitor (at least every 20 minutes)
-- [ ] **Monitor Grafana** feature dashboard on production: [Gitaly Feature Status Dashboard](https://performance.gitlab.net/dashboard/db/gitaly-feature-status?from=now-12h&to=now&orgId=1&var-method=GRPC_METHOD_NAME&var-job=gitaly-production&refresh=5m)
+- [ ] **Monitor Grafana** feature dashboard on production: [Gitaly Feature Status Dashboard](https://dashboards.gitlab.net/dashboard/db/gitaly-feature-status?from=now-12h&to=now&orgId=1&var-method=GRPC_METHOD_NAME&var-job=gitaly-production&refresh=5m)
 - [ ] **Inspect logs** in ELK:
   - [GRPC_METHOD_NAME invocations, last 2 hours](https://kibana.gprd.gitlab.com/app/kibana#/discover?_a=%28index%3A'gitaly-*'%2Cquery%3A%28query_string%3A%28query%3A'grpc.method:GRPC_METHOD_NAME%20AND%20NOT%20hostname:dev'%29%29%29&_g=%28refreshInterval:%28display:Off,pause:!f,value:0%29,time:%28from:now-2h,mode:quick,to:now%29%29) for unusual activity
   - [GRPC_METHOD_NAME errors, last 2 hours](https://kibana.gprd.gitlab.com/app/kibana#/discover?_a=%28index%3A'gitaly-*'%2Cquery%3A%28query_string%3A%28query%3A'grpc.method:GRPC_METHOD_NAME%20AND%20NOT%20hostname:dev%20AND%20NOT%20grpc.code:OK%20AND%20message:finished'%29%29%29&_g=%28refreshInterval:%28display:Off,pause:!f,value:0%29,time:%28from:now-2h,mode:quick,to:now%29%29) for unusual activity
@@ -115,7 +115,7 @@ Then leave running while monitoring for at least **2 hours**.
 Then leave running while monitoring for at least **24 hours**.
 
 #### Monitor (at least every few hours)
-- [ ] **Monitor Grafana** feature dashboard on production: [Gitaly Feature Status Dashboard](https://performance.gitlab.net/dashboard/db/gitaly-feature-status?from=now-12h&to=now&orgId=1&var-method=GRPC_METHOD_NAME&var-job=gitaly-production&refresh=5m)
+- [ ] **Monitor Grafana** feature dashboard on production: [Gitaly Feature Status Dashboard](https://dashboards.gitlab.net/dashboard/db/gitaly-feature-status?from=now-12h&to=now&orgId=1&var-method=GRPC_METHOD_NAME&var-job=gitaly-production&refresh=5m)
 - [ ] **Inspect logs** in ELK:
   - [GRPC_METHOD_NAME invocations, last 24 hours](https://kibana.gprd.gitlab.com/app/kibana#/discover?_a=%28index%3A'gitaly-*'%2Cquery%3A%28query_string%3A%28query%3A'grpc.method:GRPC_METHOD_NAME%20AND%20NOT%20hostname:dev'%29%29%29&_g=%28refreshInterval:%28display:Off,pause:!f,value:0%29,time:%28from:now-24h,mode:quick,to:now%29%29) for unusual activity
   - [GRPC_METHOD_NAME errors, last 24 hours](https://kibana.gprd.gitlab.com/app/kibana#/discover?_a=%28index%3A'gitaly-*'%2Cquery%3A%28query_string%3A%28query%3A'grpc.method:GRPC_METHOD_NAME%20AND%20NOT%20hostname:dev%20AND%20NOT%20grpc.code:OK%20AND%20message:finished'%29%29%29&_g=%28refreshInterval:%28display:Off,pause:!f,value:0%29,time:%28from:now-24h,mode:quick,to:now%29%29) for unusual activity
@@ -133,7 +133,7 @@ Then leave running while monitoring for at least **24 hours**.
 Then leave running while monitoring for at least **1 week**.
 
 #### Monitor (at least every day)
-- [ ] **Monitor Grafana** feature dashboard on production: [Gitaly Feature Status Dashboard](https://performance.gitlab.net/dashboard/db/gitaly-feature-status?from=now-12h&to=now&orgId=1&var-method=GRPC_METHOD_NAME&var-job=gitaly-production&refresh=5m)
+- [ ] **Monitor Grafana** feature dashboard on production: [Gitaly Feature Status Dashboard](https://dashboards.gitlab.net/dashboard/db/gitaly-feature-status?from=now-12h&to=now&orgId=1&var-method=GRPC_METHOD_NAME&var-job=gitaly-production&refresh=5m)
 - [ ] **Inspect logs** in ELK:
   - [GRPC_METHOD_NAME invocations, last 7 days](https://kibana.gprd.gitlab.com/app/kibana#/discover?_a=%28index%3A'gitaly-*'%2Cquery%3A%28query_string%3A%28query%3A'grpc.method:GRPC_METHOD_NAME%20AND%20NOT%20hostname:dev'%29%29%29&_g=%28refreshInterval:%28display:Off,pause:!f,value:0%29,time:%28from:now-7d,mode:quick,to:now%29%29) for unusual activity
   - [GRPC_METHOD_NAME errors, last 7 days](https://kibana.gprd.gitlab.com/app/kibana#/discover?_a=%28index%3A'gitaly-*'%2Cquery%3A%28query_string%3A%28query%3A'grpc.method:GRPC_METHOD_NAME%20AND%20NOT%20hostname:dev%20AND%20NOT%20grpc.code:OK%20AND%20message:finished'%29%29%29&_g=%28refreshInterval:%28display:Off,pause:!f,value:0%29,time:%28from:now-7d,mode:quick,to:now%29%29) for unusual activity
