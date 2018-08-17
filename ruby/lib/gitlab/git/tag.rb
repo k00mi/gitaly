@@ -1,3 +1,5 @@
+require_relative 'ref'
+
 module Gitlab
   module Git
     class Tag < Ref

@@ -12,6 +12,7 @@ FILE_LIST = %w[
 EXCLUDE = %w[
   lib/gitlab/git/blame.rb
   lib/gitlab/git/blob.rb
+  lib/gitlab/git/branch.rb
   lib/gitlab/git/blob_snippet.rb
   lib/gitlab/git/commit.rb
   lib/gitlab/git/commit_stats.rb
@@ -25,9 +26,11 @@ EXCLUDE = %w[
   lib/gitlab/git/lfs_changes.rb
   lib/gitlab/git/lfs_pointer_file.rb
   lib/gitlab/git/merge_base.rb
+  lib/gitlab/git/ref.rb
   lib/gitlab/git/rev_list.rb
   lib/gitlab/git/storage/
   lib/gitlab/git/storage.rb
+  lib/gitlab/git/tag.rb
   lib/gitlab/git/tree.rb
   lib/gitlab/git/wiki.rb
   lib/gitlab/git/wiki_file.rb
