@@ -32,6 +32,7 @@ EXCLUDE = %w[
   lib/gitlab/git/storage.rb
   lib/gitlab/git/tag.rb
   lib/gitlab/git/tree.rb
+  lib/gitlab/git/version.rb
   lib/gitlab/git/wiki.rb
   lib/gitlab/git/wiki_file.rb
   lib/gitlab/git/wiki_page.rb
