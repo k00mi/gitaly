@@ -1,8 +1,8 @@
+require_relative 'ref'
+
 module Gitlab
   module Git
     class Branch < Ref
-      STALE_BRANCH_THRESHOLD = 3.months
-
       def self.find(repo, branch_name)
         if branch_name.is_a?(Gitlab::Git::Branch)
           branch_name
@@ -13,18 +13,6 @@ module Gitlab
 
       def initialize(repository, name, target, target_commit)
         super(repository, name, target, target_commit)
-      end
-
-      def active?
-        self.dereferenced_target.committed_date >= STALE_BRANCH_THRESHOLD.ago
-      end
-
-      def stale?
-        !active?
-      end
-
-      def state
-        active? ? :active : :stale
       end
     end
   end

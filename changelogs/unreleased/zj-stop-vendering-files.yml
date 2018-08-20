@@ -1,0 +1,5 @@
+---
+title: Stop vendoring some Gitlab::Git::* classes
+merge_request: 865
+author:
+type: changed
