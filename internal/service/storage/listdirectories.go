@@ -2,7 +2,8 @@ package storage
 
 import (
 	"os"
-	"path"
+	"path/filepath"
+	"strings"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -10,67 +11,52 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// This function won't scale, as it walks the dir structure in lexical order,
-// which means that it first will
 func (s *server) ListDirectories(req *pb.ListDirectoriesRequest, stream pb.StorageService_ListDirectoriesServer) error {
-	if helper.ContainsPathTraversal(req.GetPath()) {
-		return status.Error(codes.InvalidArgument, "ListDirectories: path traversal is not allowed")
-	}
-
 	storageDir, err := helper.GetStorageByName(req.StorageName)
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "storage lookup failed: %v", err)
 	}
 
-	fullPath := path.Join(storageDir, req.GetPath())
-	fi, err := os.Stat(fullPath)
-	if os.IsNotExist(err) || !fi.IsDir() {
-		return status.Errorf(codes.NotFound, "ListDirectories: %v", err)
-	}
+	storageDir = storageDir + "/"
 
 	maxDepth := dirDepth(storageDir) + req.GetDepth()
-	for _, dir := range directoriesInPath(fullPath) {
-		stream.Send(&pb.ListDirectoriesResponse{Paths: recursiveDirs(dir, maxDepth)})
-	}
 
-	return nil
-}
-
-// Depends on the fact that input is always a path to a dir, not a file
-func dirDepth(dir string) uint32 {
-	dirs, _ := path.Split(dir)
-
-	return uint32(len(dirs) + 1)
-}
-
-func recursiveDirs(dir string, maxDepth uint32) []string {
-	var queue, dirs []string
-
-	for len(queue) > 0 {
-		dir := queue[0]
-		queue = queue[1:]
-
-		subDirs := directoriesInPath(dir)
-
-		if dirDepth(dir)+1 <= maxDepth {
-			queue = append(queue, subDirs...)
+	var dirs []string
+	err = filepath.Walk(storageDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
 		}
 
-		dirs = append(dirs, subDirs...)
+		if info.IsDir() {
+			relPath := strings.TrimPrefix(path, storageDir)
+			if relPath == "" {
+				return nil
+			}
+
+			dirs = append(dirs, relPath)
+
+			if len(dirs) > 100 {
+				stream.Send(&pb.ListDirectoriesResponse{Paths: dirs})
+				dirs = dirs[:]
+			}
+
+			if dirDepth(path)+1 > maxDepth {
+				return filepath.SkipDir
+			}
+
+			return nil
+		}
+
+		return nil
+	})
+
+	if len(dirs) > 0 {
+		stream.Send(&pb.ListDirectoriesResponse{Paths: dirs})
 	}
 
-	return dirs
+	return err
 }
 
-func directoriesInPath(path string) []string {
-	fi, err := os.Open(path)
-	if os.IsNotExist(err) || err != nil {
-		return []string{}
-	}
-
-	// Readdirnames returns an empty slice if an error occurs. Given we can't
-	// recover, we ignore possible errors here
-	dirs, _ := fi.Readdirnames(0)
-
-	return dirs
+func dirDepth(dir string) uint32 {
+	return uint32(len(strings.Split(dir, string(os.PathSeparator)))) + 1
 }

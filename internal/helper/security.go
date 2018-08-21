@@ -9,11 +9,7 @@ import (
 func ContainsPathTraversal(path string) bool {
 	// Disallow directory traversal for security
 	separator := string(os.PathSeparator)
-	if strings.HasPrefix(path, ".."+separator) ||
+	return strings.HasPrefix(path, ".."+separator) ||
 		strings.Contains(path, separator+".."+separator) ||
-		strings.HasSuffix(path, separator+"..") {
-		return true
-	}
-
-	return false
+		strings.HasSuffix(path, separator+"..")
 }

@@ -2,34 +2,40 @@ package storage
 
 import (
 	"io"
+	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
 func TestListDirectories(t *testing.T) {
 	testDir := path.Join(testStorage.Path, t.Name())
 	require.NoError(t, os.MkdirAll(path.Dir(testDir), 0755))
+	defer os.RemoveAll(testDir)
 
-	repoPaths := []string{
-		"foo/bar1.git",
-		"foo/bar2.git",
-		"baz/foo/qux3.git",
-		"baz/foo/bar1.git",
-	}
+	// Mock the storage dir being our test dir, so results aren't influenced
+	// by other tests.
+	testStorages := []config.Storage{{Name: "default", Path: testDir}}
 
+	defer func(oldStorages []config.Storage) {
+		config.Config.Storages = oldStorages
+	}(config.Config.Storages)
+	config.Config.Storages = testStorages
+
+	repoPaths := []string{"foo", "bar", "bar/baz", "bar/baz/foo/buz"}
 	for _, p := range repoPaths {
-		fullPath := path.Join(testStorage.Path, p)
-		require.NoError(t, os.MkdirAll(fullPath, 0755))
-		require.NoError(t, exec.Command("git", "init", "--bare", fullPath).Run())
+		dirPath := filepath.Join(testDir, p)
+		require.NoError(t, os.MkdirAll(dirPath, 0755))
+		require.NoError(t, ioutil.WriteFile(filepath.Join(dirPath, "file"), []byte("Hello"), 0644))
 	}
-	defer os.RemoveAll(testStorage.Path)
 
 	server, socketPath := runStorageServer(t)
 	defer server.Stop()
@@ -41,34 +47,25 @@ func TestListDirectories(t *testing.T) {
 	defer cancel()
 
 	testCases := []struct {
-		path   string
-		depth  uint32
-		subset []string
+		depth uint32
+		dirs  []string
 	}{
 		{
-			path:   "",
-			depth:  1,
-			subset: []string{"foo", "baz"},
+			depth: 0,
+			dirs:  []string{"bar", "foo"},
 		},
 		{
-			path:   "",
-			depth:  0,
-			subset: []string{"foo", "baz"},
+			depth: 1,
+			dirs:  []string{"bar", "bar/baz", "foo"},
 		},
 		{
-			path:   "foo",
-			depth:  0,
-			subset: []string{"bar1.git", "foo/bar2.git"},
-		},
-		{
-			path:   "",
-			depth:  5,
-			subset: repoPaths,
+			depth: 3,
+			dirs:  []string{"bar", "bar/baz", "bar/baz/foo", "bar/baz/foo/buz", "foo"},
 		},
 	}
 
 	for _, tc := range testCases {
-		stream, err := client.ListDirectories(ctx, &pb.ListDirectoriesRequest{StorageName: testStorage.Name, Path: tc.path, Depth: tc.depth})
+		stream, err := client.ListDirectories(ctx, &pb.ListDirectoriesRequest{StorageName: "default", Depth: tc.depth})
 
 		var dirs []string
 		for {
@@ -82,7 +79,11 @@ func TestListDirectories(t *testing.T) {
 		}
 
 		require.NoError(t, err)
-		assert.NotContains(t, dirs, "HEAD")
-		assert.Subset(t, tc.subset, dirs)
+		require.NotEmpty(t, dirs)
+		assert.Equal(t, tc.dirs, dirs)
+
+		for _, dir := range dirs {
+			assert.False(t, strings.HasSuffix(dir, "file"))
+		}
 	}
 }
