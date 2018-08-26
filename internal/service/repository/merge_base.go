@@ -14,8 +14,8 @@ import (
 
 func (s *server) FindMergeBase(ctx context.Context, req *pb.FindMergeBaseRequest) (*pb.FindMergeBaseResponse, error) {
 	revisions := req.GetRevisions()
-	if len(revisions) != 2 {
-		return nil, status.Errorf(codes.InvalidArgument, "FindMergeBase: 2 revisions are required")
+	if len(revisions) < 2 {
+		return nil, status.Errorf(codes.InvalidArgument, "FindMergeBase: at least 2 revisions are required")
 	}
 
 	args := []string{"merge-base"}

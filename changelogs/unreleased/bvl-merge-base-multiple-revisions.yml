@@ -1,0 +1,5 @@
+---
+title: Allow merge base to receive more than 2 revisions
+merge_request: 869
+author:
+type: changed
