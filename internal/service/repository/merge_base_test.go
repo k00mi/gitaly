@@ -58,6 +58,15 @@ func TestSuccessfulFindFindMergeBaseRequest(t *testing.T) {
 			},
 			base: "",
 		},
+		{
+			desc: "2+ revisions",
+			revisions: [][]byte{
+				[]byte("few-commits"),
+				[]byte("master"),
+				[]byte("570e7b2abdd848b95f2f578043fc23bd6f6fd24d"),
+			},
+			base: "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -88,41 +97,16 @@ func TestFailedFindMergeBaseRequestDueToValidations(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	testCases := []struct {
-		desc      string
-		revisions [][]byte
-		code      codes.Code
-	}{
-		{
-			desc: "1 revision",
-			revisions: [][]byte{
-				[]byte("372ab6950519549b14d220271ee2322caa44d4eb"),
-			},
-			code: codes.InvalidArgument,
-		},
-		{
-			desc: "2+ revisions",
-			revisions: [][]byte{
-				[]byte("master"),
-				[]byte("gitaly-stuff"),
-				[]byte("spooky-stuff"),
-			},
-			code: codes.InvalidArgument,
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	request := &pb.FindMergeBaseRequest{
+		Repository: testRepo,
+		Revisions: [][]byte{
+			[]byte("372ab6950519549b14d220271ee2322caa44d4eb"),
 		},
 	}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.desc, func(t *testing.T) {
-			ctx, cancel := testhelper.Context()
-			defer cancel()
-
-			request := &pb.FindMergeBaseRequest{
-				Repository: testRepo,
-				Revisions:  testCase.revisions,
-			}
-
-			_, err := client.FindMergeBase(ctx, request)
-			testhelper.RequireGrpcError(t, err, testCase.code)
-		})
-	}
+	_, err := client.FindMergeBase(ctx, request)
+	testhelper.RequireGrpcError(t, err, codes.InvalidArgument)
 }
