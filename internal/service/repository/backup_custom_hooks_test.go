@@ -68,6 +68,45 @@ func TestSuccessfullBackupCustomHooksRequest(t *testing.T) {
 	require.Equal(t, fileLength, len(expectedTarResponse))
 }
 
+func TestSuccessfullBackupCustomHooksSymlink(t *testing.T) {
+	server, serverSocketPath := runRepoServer(t)
+	defer server.Stop()
+
+	client, conn := newRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	repoPath, err := helper.GetPath(testRepo)
+	require.NoError(t, err)
+
+	linkTarget := "/var/empty"
+	require.NoError(t, os.Symlink(linkTarget, path.Join(repoPath, "custom_hooks")), "Could not create custom_hooks symlink")
+
+	backupRequest := &pb.BackupCustomHooksRequest{Repository: testRepo}
+	backupStream, err := client.BackupCustomHooks(ctx, backupRequest)
+	require.NoError(t, err)
+
+	reader := tar.NewReader(streamio.NewReader(func() ([]byte, error) {
+		response, err := backupStream.Recv()
+		return response.GetData(), err
+	}))
+
+	file, err := reader.Next()
+	require.NoError(t, err)
+
+	require.Equal(t, "custom_hooks", file.Name, "tar entry name")
+	require.Equal(t, byte(tar.TypeSymlink), file.Typeflag, "tar entry type")
+	require.Equal(t, linkTarget, file.Linkname, "link target")
+
+	_, err = reader.Next()
+	require.Equal(t, io.EOF, err, "custom_hooks should have been the only entry")
+}
+
 func TestSuccessfullBackupCustomHooksRequestWithNoHooks(t *testing.T) {
 	server, serverSocketPath := runRepoServer(t)
 	defer server.Stop()

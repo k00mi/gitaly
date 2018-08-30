@@ -1,0 +1,5 @@
+---
+title: Support custom_hooks being a symlink
+merge_request: 871
+author:
+type: fixed

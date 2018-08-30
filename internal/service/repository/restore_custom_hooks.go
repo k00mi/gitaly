@@ -43,7 +43,7 @@ func (s *server) RestoreCustomHooks(stream pb.RepositoryService_RestoreCustomHoo
 		"-",
 		"-C",
 		repoPath,
-		"custom_hooks",
+		customHooksDir,
 	}
 
 	ctx := stream.Context()
