@@ -182,6 +182,8 @@ It has these top-level messages:
 	UpdateRemoteMirrorResponse
 	FindRemoteRepositoryRequest
 	FindRemoteRepositoryResponse
+	FindRemoteRootRefRequest
+	FindRemoteRootRefResponse
 	RepositoryExistsRequest
 	RepositoryExistsResponse
 	RepackIncrementalRequest
@@ -271,6 +273,8 @@ It has these top-level messages:
 	SSHReceivePackResponse
 	SSHUploadArchiveRequest
 	SSHUploadArchiveResponse
+	ListDirectoriesRequest
+	ListDirectoriesResponse
 	DeleteAllRepositoriesRequest
 	DeleteAllRepositoriesResponse
 	WikiCommitDetails
