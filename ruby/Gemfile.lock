@@ -33,7 +33,7 @@ GEM
       gollum-grit_adapter (~> 1.0)
       nokogiri (>= 1.6.1, < 2.0)
       rouge (~> 3.1)
-      sanitize (~> 4.6.4)
+      sanitize (~> 4.6.6)
       stringex (~> 2.6)
     gitlab-gollum-rugged_adapter (0.4.4.1)
       mime-types (>= 1.15)
@@ -75,9 +75,9 @@ GEM
       little-plugger (~> 1.1)
       multi_json (~> 1.10)
     memoist (0.16.0)
-    mime-types (3.1)
+    mime-types (3.2.2)
       mime-types-data (~> 3.2015)
-    mime-types-data (3.2016.0521)
+    mime-types-data (3.2018.0812)
     mini_portile2 (2.3.0)
     minitest (5.9.1)
     multi_json (1.13.1)
@@ -162,4 +162,4 @@ DEPENDENCIES
   sentry-raven (~> 2.7.2)
 
 BUNDLED WITH
-   1.16.3
+   1.16.4
