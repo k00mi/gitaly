@@ -20,19 +20,73 @@ func TestGetRawChanges(t *testing.T) {
 	defer cleanupFn()
 
 	testCases := []struct {
-		oldRev string
-		newRev string
-		size   int
+		oldRev  string
+		newRev  string
+		changes []*pb.GetRawChangesResponse_RawChange
 	}{
 		{
 			oldRev: "55bc176024cfa3baaceb71db584c7e5df900ea65",
 			newRev: "7975be0116940bf2ad4321f79d02a55c5f7779aa",
-			size:   2,
+			changes: []*pb.GetRawChangesResponse_RawChange{
+				{
+					BlobId:    "c60514b6d3d6bf4bec1030f70026e34dfbd69ad5",
+					Size:      824,
+					NewPath:   "README.md",
+					OldPath:   "README.md",
+					Operation: pb.GetRawChangesResponse_RawChange_MODIFIED,
+					OldMode:   0100644,
+					NewMode:   0100644,
+				},
+				{
+					BlobId:    "723c2c3f4c8a2a1e957f878c8813acfc08cda2b6",
+					Size:      1219696,
+					NewPath:   "files/images/emoji.png",
+					Operation: pb.GetRawChangesResponse_RawChange_ADDED,
+					NewMode:   0100644,
+				},
+			},
 		},
 		{
 			oldRev: "0000000000000000000000000000000000000000",
 			newRev: "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
-			size:   3,
+			changes: []*pb.GetRawChangesResponse_RawChange{
+				{
+					BlobId:    "470ad2fcf1e33798f1afc5781d08e60c40f51e7a",
+					Size:      231,
+					NewPath:   ".gitignore",
+					Operation: pb.GetRawChangesResponse_RawChange_ADDED,
+					NewMode:   0100644,
+				},
+				{
+					BlobId:    "50b27c6518be44c42c4d87966ae2481ce895624c",
+					Size:      1075,
+					NewPath:   "LICENSE",
+					Operation: pb.GetRawChangesResponse_RawChange_ADDED,
+					NewMode:   0100644,
+				},
+				{
+					BlobId:    "faaf198af3a36dbf41961466703cc1d47c61d051",
+					Size:      55,
+					NewPath:   "README.md",
+					Operation: pb.GetRawChangesResponse_RawChange_ADDED,
+					NewMode:   0100644,
+				},
+			},
+		},
+		{
+			oldRev: "6b8dc4a827797aa025ff6b8f425e583858a10d4f",
+			newRev: "06041ab2037429d243a38abb55957818dd9f948d",
+			changes: []*pb.GetRawChangesResponse_RawChange{
+				{
+					BlobId:    "c84acd1ff0b844201312052f9bb3b7259eb2e177",
+					Size:      23,
+					NewPath:   "files/executables/ls",
+					OldPath:   "files/executables/ls",
+					Operation: pb.GetRawChangesResponse_RawChange_MODIFIED,
+					OldMode:   0100755,
+					NewMode:   0100644,
+				},
+			},
 		},
 	}
 
@@ -49,7 +103,7 @@ func TestGetRawChanges(t *testing.T) {
 		require.NoError(t, err)
 
 		changes := msg.GetRawChanges()
-		require.Len(t, changes, tc.size)
+		require.Equal(t, changes, tc.changes)
 	}
 }
 
@@ -170,6 +224,8 @@ func TestGetRawChangesMappingOperations(t *testing.T) {
 		NewPath:   "CHANGELOG.md",
 		OldPath:   "CHANGELOG",
 		Operation: pb.GetRawChangesResponse_RawChange_RENAMED,
+		OldMode:   0100644,
+		NewMode:   0100644,
 	}
 
 	require.Equal(t, firstChange, msg.GetRawChanges()[0])

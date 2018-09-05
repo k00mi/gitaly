@@ -215,20 +215,44 @@ module Gitlab
 
             result = []
 
-            circuit_breaker.perform do
-              Open3.pipeline_r(git_diff_cmd(old_rev, new_rev), format_git_cat_file_script, git_cat_file_cmd) do |last_stdout, wait_threads|
-                last_stdout.each_line { |line| result << ::Gitlab::Git::RawDiffChange.new(line.chomp!) }
+            Open3.popen3(*git_diff_cmd(old_rev, new_rev)) do |stdin, stdout, _stderr, wait_thr|
+              cat_stdin, cat_stdout, cat_stderr, cat_wait_thr = Open3.popen3(*git_cat_file_cmd)
 
-                if wait_threads.any? { |waiter| !waiter.value&.success? }
-                  raise ::Gitlab::Git::Repository::GitError, "Unabled to obtain changes between #{old_rev} and #{new_rev}"
-                end
+              stdout.each_line do |line|
+                old_mode, new_mode, blob_id, rest = parse_raw_diff_line(line)
+                cat_stdin.puts("#{blob_id} #{rest}")
+                result << ::Gitlab::Git::RawDiffChange.new(cat_stdout.gets.chomp, old_mode, new_mode)
+              end
+
+              cat_stdin.close
+              cat_stdout.close
+              cat_stderr.close
+
+              unless [cat_wait_thr, wait_thr].all? { |waiter| waiter.value&.success? }
+                raise ::Gitlab::Git::Repository::GitError, "Unabled to obtain changes between #{old_rev} and #{new_rev}"
               end
             end
 
             result
           end
       rescue ArgumentError => e
-        raise Gitlab::Git::Repository::GitError.new(e)
+        raise Gitlab::Git::Repository::GitError.new(e.to_s)
+      end
+
+      def parse_raw_diff_line(line)
+        old_mode, new_mode, old_blob_id, new_blob_id, rest = line.split(/\s/, 5)
+
+        # If the last element got a value we should be good
+        raise ArgumentError, "Invalid diff line: #{line}" unless rest
+
+        old_mode.gsub!(/\A:/, '')
+        old_blob_id.gsub!(/[^\h]/, '')
+        new_blob_id.gsub!(/[^\h]/, '')
+
+        # We can't pass '0000000...' to `git cat-file` given it will not return info about the deleted file
+        blob_id = new_blob_id =~ /\A0+\z/ ? old_blob_id : new_blob_id
+
+        [old_mode, new_mode, blob_id, rest]
       end
 
       def add_tag(tag_name, user:, target:, message: nil)
@@ -669,10 +693,6 @@ module Gitlab
       def git_cat_file_cmd
         format = '%(objectname) %(objectsize) %(rest)'
         build_git_cmd('cat-file', "--batch-check=#{format}")
-      end
-
-      def format_git_cat_file_script
-        File.expand_path('../support/format-git-cat-file-input', __FILE__)
       end
 
       def git_delete_refs(*ref_names)
