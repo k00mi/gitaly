@@ -30,6 +30,7 @@ EXCLUDE = %w[
   lib/gitlab/git/merge_base.rb
   lib/gitlab/git/ref.rb
   lib/gitlab/git/rev_list.rb
+  lib/gitlab/git/raw_diff_change.rb
   lib/gitlab/git/storage/
   lib/gitlab/git/storage.rb
   lib/gitlab/git/tag.rb

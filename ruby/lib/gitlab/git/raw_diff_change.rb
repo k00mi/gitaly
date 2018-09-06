@@ -1,20 +1,13 @@
 module Gitlab
   module Git
-    # This class behaves like a struct with fields :blob_id, :blob_size, :operation, :old_path, :new_path
-    # All those fields are (binary) strings or integers
     class RawDiffChange
-      attr_reader :blob_id, :blob_size, :old_path, :new_path, :operation
+      attr_reader :blob_id, :blob_size, :old_path, :new_path, :operation, :old_mode, :new_mode
 
-      def initialize(raw_change)
-        if raw_change.is_a?(Gitaly::GetRawChangesResponse::RawChange)
-          @blob_id = raw_change.blob_id
-          @blob_size = raw_change.size
-          @old_path = raw_change.old_path.presence
-          @new_path = raw_change.new_path.presence
-          @operation = raw_change.operation&.downcase || :unknown
-        else
-          parse(raw_change)
-        end
+      def initialize(raw_change, old_mode, new_mode)
+        parse(raw_change)
+
+        @old_mode = old_mode
+        @new_mode = new_mode
       end
 
       private

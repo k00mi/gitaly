@@ -151,8 +151,8 @@ module GitalyServer
                     repo
                       .raw_changes_between(request.from_revision, request.to_revision)
                       .map { |c| to_proto_raw_change(c) }
-                  rescue ::Gitlab::Git::Repository::GitError
-                    raise GRPC::InvalidArgument.new("revisions could not be found")
+                  rescue ::Gitlab::Git::Repository::GitError => e
+                    raise GRPC::InvalidArgument.new(e.message)
                   end
 
         Enumerator.new do |y|
@@ -183,7 +183,9 @@ module GitalyServer
         size: change.blob_size.to_i,
         new_path: change.new_path.to_s,
         old_path: change.old_path.to_s,
-        operation: operation
+        operation: operation,
+        old_mode: change.old_mode.to_i(8),
+        new_mode: change.new_mode.to_i(8)
       )
     end
   end
