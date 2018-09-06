@@ -53,6 +53,11 @@ func TestAuthFailures(t *testing.T) {
 			opts: []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials("foobar"))},
 			code: codes.PermissionDenied,
 		},
+		{
+			desc: "wrong secret new auth",
+			opts: []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2("foobar"))},
+			code: codes.PermissionDenied,
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -73,6 +78,8 @@ func TestAuthSuccess(t *testing.T) {
 		config.Config.Auth = oldAuth
 	}(config.Config.Auth)
 
+	token := "foobar"
+
 	testCases := []struct {
 		desc     string
 		opts     []grpc.DialOption
@@ -81,19 +88,35 @@ func TestAuthSuccess(t *testing.T) {
 	}{
 		{desc: "no auth, not required"},
 		{
-			desc:  "incorrect auth, not required",
+			desc:  "v1 incorrect auth, not required",
 			opts:  []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials("incorrect"))},
-			token: "foobar",
+			token: token,
 		},
 		{
-			desc:  "correct auth, not required",
-			opts:  []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials("foobar"))},
-			token: "foobar",
+			desc:  "v1 correct auth, not required",
+			opts:  []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials(token))},
+			token: token,
 		},
 		{
-			desc:     "correct auth, required",
-			opts:     []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials("foobar"))},
-			token:    "foobar",
+			desc:     "v1 correct auth, required",
+			opts:     []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials(token))},
+			token:    token,
+			required: true,
+		},
+		{
+			desc:  "v2 correct new auth, not required",
+			opts:  []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(token))},
+			token: token,
+		},
+		{
+			desc:  "v2 incorrect auth, not required",
+			opts:  []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2("incorrect"))},
+			token: token,
+		},
+		{
+			desc:     "v2 correct new auth, required",
+			opts:     []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(token))},
+			token:    token,
 			required: true,
 		},
 	}
