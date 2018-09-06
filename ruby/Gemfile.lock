@@ -33,7 +33,7 @@ GEM
       gollum-grit_adapter (~> 1.0)
       nokogiri (>= 1.6.1, < 2.0)
       rouge (~> 3.1)
-      sanitize (~> 4.6.6)
+      sanitize (~> 4.6.4)
       stringex (~> 2.6)
     gitlab-gollum-rugged_adapter (0.4.4.1)
       mime-types (>= 1.15)
