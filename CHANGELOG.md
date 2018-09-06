@@ -1,5 +1,43 @@
 # Gitaly changelog
 
+## v0.119.0
+
+#### Added
+- Add server implementation for FindRemoteRootRef
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/874
+
+#### Changed
+- Allow merge base to receive more than 2 revisions
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/869
+- Stop vendoring some Gitlab::Git::* classes
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/865
+
+#### Fixed
+- Support custom_hooks being a symlink
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/871
+- Prune large patches by default when enforcing limits
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/858
+- Fix diffs being collapsed unnecessarily
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/854
+- Remove stale HEAD.lock if it exists
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/861
+- Fix patch size calculations to not include headers
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/859
+
+#### Other
+- Vendor Gitlab::Git at c87ca832263
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/860
+- Bump gitaly-proto to 0.112.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/857
+
+#### Security
+- Bump rugged to 0.27.4 for security fixes
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/856
+- Update the sanitize gem to at least 4.6.6
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/876
+- Bump rouge to 3.2.1
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/862
+
 ## v0.118.0
 
 #### Added

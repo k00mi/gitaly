@@ -1,5 +1,0 @@
----
-title: Remove stale HEAD.lock if it exists
-merge_request: 861
-author:
-type: fixed
