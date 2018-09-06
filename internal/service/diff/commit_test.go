@@ -436,8 +436,8 @@ func TestSuccessfulCommitDiffRequestWithLimits(t *testing.T) {
 	leftCommit := "184a47d38677e2e439964859b877ae9bc424ab11"
 
 	type diffAttributes struct {
-		path                      string
-		collapsed, overflowMarker bool
+		path                                string
+		collapsed, overflowMarker, tooLarge bool
 	}
 
 	requestsAndResults := []struct {
@@ -465,6 +465,7 @@ func TestSuccessfulCommitDiffRequestWithLimits(t *testing.T) {
 				MaxFiles:      3,
 				MaxLines:      1000,
 				MaxBytes:      3 * 5 * 1024,
+				MaxPatchBytes: 100000,
 			},
 			result: []diffAttributes{
 				{path: "CHANGELOG"},
@@ -480,6 +481,7 @@ func TestSuccessfulCommitDiffRequestWithLimits(t *testing.T) {
 				MaxFiles:      5,
 				MaxLines:      90,
 				MaxBytes:      5 * 5 * 1024,
+				MaxPatchBytes: 100000,
 			},
 			result: []diffAttributes{
 				{path: "CHANGELOG"},
@@ -494,6 +496,7 @@ func TestSuccessfulCommitDiffRequestWithLimits(t *testing.T) {
 				MaxFiles:      5,
 				MaxLines:      1000,
 				MaxBytes:      6900,
+				MaxPatchBytes: 100000,
 			},
 			result: []diffAttributes{
 				{path: "CHANGELOG"},
@@ -514,12 +517,34 @@ func TestSuccessfulCommitDiffRequestWithLimits(t *testing.T) {
 				SafeMaxFiles:  1,
 				SafeMaxLines:  1000,
 				SafeMaxBytes:  1 * 5 * 1024,
+				MaxPatchBytes: 100000,
 			},
 			result: []diffAttributes{
 				{path: "CHANGELOG"},
 				{path: "CONTRIBUTING.md"},
 				{path: "LICENSE"},
 				{overflowMarker: true},
+			},
+		},
+		{
+			desc: "set as too large when exceeding single patch limit",
+			request: pb.CommitDiffRequest{
+				EnforceLimits: true,
+				CollapseDiffs: false,
+				MaxFiles:      5,
+				MaxLines:      1000,
+				MaxBytes:      3 * 5 * 1024,
+				SafeMaxFiles:  3,
+				SafeMaxLines:  1000,
+				SafeMaxBytes:  1 * 5 * 1024,
+				MaxPatchBytes: 1200,
+			},
+			result: []diffAttributes{
+				{path: "CHANGELOG", tooLarge: true},
+				{path: "CONTRIBUTING.md", tooLarge: true},
+				{path: "LICENSE", tooLarge: false},
+				{path: "PROCESS.md", tooLarge: true},
+				{path: "VERSION", tooLarge: false},
 			},
 		},
 		{
@@ -533,6 +558,7 @@ func TestSuccessfulCommitDiffRequestWithLimits(t *testing.T) {
 				SafeMaxFiles:  1,
 				SafeMaxLines:  1000,
 				SafeMaxBytes:  1 * 5 * 1024,
+				MaxPatchBytes: 100000,
 			},
 			result: []diffAttributes{
 				{path: "CHANGELOG"},
@@ -552,6 +578,7 @@ func TestSuccessfulCommitDiffRequestWithLimits(t *testing.T) {
 				SafeMaxFiles:  5,
 				SafeMaxLines:  40,
 				SafeMaxBytes:  5 * 5 * 1024,
+				MaxPatchBytes: 100000,
 			},
 			result: []diffAttributes{
 				{path: "CHANGELOG", collapsed: true},
@@ -572,6 +599,7 @@ func TestSuccessfulCommitDiffRequestWithLimits(t *testing.T) {
 				SafeMaxFiles:  4,
 				SafeMaxLines:  1000,
 				SafeMaxBytes:  4830,
+				MaxPatchBytes: 100000,
 			},
 			result: []diffAttributes{
 				{path: "CHANGELOG"},
@@ -602,16 +630,14 @@ func TestSuccessfulCommitDiffRequestWithLimits(t *testing.T) {
 
 			require.Equal(t, len(requestAndResult.result), len(receivedDiffs), "number of diffs received")
 			for i, diff := range receivedDiffs {
-				if overflowMarker := requestAndResult.result[i].overflowMarker; overflowMarker {
-					require.Equal(t, overflowMarker, diff.OverflowMarker, "overflow marker")
-					continue
-				}
+				expectedDiff := requestAndResult.result[i]
 
-				require.Equal(t, requestAndResult.result[i].path, string(diff.FromPath), "path")
+				require.Equal(t, expectedDiff.overflowMarker, diff.OverflowMarker, "%s overflow marker", diff.FromPath)
+				require.Equal(t, expectedDiff.tooLarge, diff.TooLarge, "%s too large", diff.FromPath)
+				require.Equal(t, expectedDiff.path, string(diff.FromPath), "%s path", diff.FromPath)
+				require.Equal(t, expectedDiff.collapsed, diff.Collapsed, "%s collapsed", diff.FromPath)
 
-				collapsed := requestAndResult.result[i].collapsed
-				require.Equal(t, collapsed, diff.Collapsed, "%s collapsed", requestAndResult.result[i].path)
-				if collapsed {
+				if expectedDiff.collapsed {
 					require.Empty(t, diff.Patch, "patch")
 				}
 			}
@@ -975,6 +1001,7 @@ func getDiffsFromCommitDiffClient(t *testing.T, client pb.DiffService_CommitDiff
 				Collapsed:      fetchedDiff.Collapsed,
 				OverflowMarker: fetchedDiff.OverflowMarker,
 				Patch:          fetchedDiff.RawPatchData,
+				TooLarge:       fetchedDiff.TooLarge,
 			}
 		} else {
 			currentDiff.Patch = append(currentDiff.Patch, fetchedDiff.RawPatchData...)
