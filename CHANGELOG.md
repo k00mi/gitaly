@@ -1,5 +1,19 @@
 # Gitaly changelog
 
+## v0.120.0
+
+#### Added
+- Server implementation ListDirectories
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/868
+
+#### Changed
+- Return old and new modes on RawChanges
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/878
+
+#### Other
+- Allow server to receive an hmac token with the client timestamp for auth
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/872
+
 ## v0.119.0
 
 #### Added
