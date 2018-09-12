@@ -1,0 +1,5 @@
+---
+title: Stop vendoring Gitlab::Git
+merge_request: 883
+author:
+type: other
