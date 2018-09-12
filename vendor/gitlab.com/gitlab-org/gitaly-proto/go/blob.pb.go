@@ -65,6 +65,8 @@ It has these top-level messages:
 	RawBlameResponse
 	LastCommitForPathRequest
 	LastCommitForPathResponse
+	ListLastCommitsForTreeRequest
+	ListLastCommitsForTreeResponse
 	CommitsByMessageRequest
 	CommitsByMessageResponse
 	FilterShasWithSignaturesRequest
