@@ -8,6 +8,23 @@ module Gitlab
         tags: '+refs/tags/*:refs/tags/*'
       }.freeze
 
+      def remote_branches(remote_name)
+        branches = []
+
+        rugged.references.each("refs/remotes/#{remote_name}/*").map do |ref|
+          name = ref.name.sub(%r{\Arefs/remotes/#{remote_name}/}, '')
+
+          begin
+            target_commit = Gitlab::Git::Commit.find(self, ref.target.oid)
+            branches << Gitlab::Git::Branch.new(self, name, ref.target, target_commit)
+          rescue Rugged::ReferenceError
+            # Omit invalid branch
+          end
+        end
+
+        branches
+      end
+
       def set_remote_as_mirror(remote_name, refmap: :all_refs)
         set_remote_refmap(remote_name, refmap)
 
