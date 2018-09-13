@@ -1,5 +1,15 @@
 # Gitaly changelog
 
+## v0.121.0
+
+#### Changed
+- CalculateChecksum: Include keep-around and other references in the checksum calculation
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/731
+
+#### Other
+- Stop vendoring Gitlab::Git
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/883
+
 ## v0.120.0
 
 #### Added

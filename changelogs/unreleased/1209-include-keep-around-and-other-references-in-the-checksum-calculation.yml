@@ -1,6 +1,0 @@
----
-title: 'CalculateChecksum: Include keep-around and other references in the checksum
-  calculation'
-merge_request: 731
-author:
-type: changed
