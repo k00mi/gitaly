@@ -116,6 +116,8 @@ govendor-tagged: $(TARGET_SETUP) $(GOVENDOR)
 
 $(TEST_REPO):
 	git clone --bare https://gitlab.com/gitlab-org/gitlab-test.git $@
+	# Git notes aren't fetched by default with git clone
+	git -C $@ fetch origin refs/notes/*:refs/notes/*
 
 .PHONY: prepare-tests
 prepare-tests: $(TARGET_SETUP) $(TEST_REPO) .ruby-bundle

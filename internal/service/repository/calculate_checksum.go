@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"math/big"
 	"os/exec"
+	"regexp"
 	"strings"
 
 	pb "gitlab.com/gitlab-org/gitaly-proto/go"
@@ -22,6 +23,8 @@ import (
 
 const blankChecksum = "0000000000000000000000000000000000000000"
 
+var refWhitelist = regexp.MustCompile(`HEAD|(refs/(heads|tags|keep-around|merge-requests|environments|notes)/)`)
+
 func (s *server) CalculateChecksum(ctx context.Context, in *pb.CalculateChecksumRequest) (*pb.CalculateChecksumResponse, error) {
 	repo := in.GetRepository()
 
@@ -32,8 +35,7 @@ func (s *server) CalculateChecksum(ctx context.Context, in *pb.CalculateChecksum
 
 	args := []string{
 		"show-ref",
-		"--heads",
-		"--tags",
+		"--head",
 	}
 
 	cmd, err := git.Command(ctx, repo, args...)
@@ -49,10 +51,14 @@ func (s *server) CalculateChecksum(ctx context.Context, in *pb.CalculateChecksum
 
 	scanner := bufio.NewScanner(cmd)
 	for scanner.Scan() {
-		ref := scanner.Text()
+		ref := scanner.Bytes()
+
+		if !refWhitelist.Match(ref) {
+			continue
+		}
 
 		h := sha1.New()
-		h.Write([]byte(ref))
+		h.Write(ref)
 
 		hash := hex.EncodeToString(h.Sum(nil))
 		hashIntBase16, _ := new(big.Int).SetString(hash, 16)
