@@ -1,0 +1,5 @@
+---
+title: Export HTTP proxy environment variables to Gitaly
+merge_request: 885
+author:
+type: fixed
