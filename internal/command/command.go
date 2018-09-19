@@ -31,6 +31,15 @@ var exportedEnvVars = []string{
 	"GIT_TRACE_PACKET",
 	"GIT_TRACE_PERFORMANCE",
 	"GIT_TRACE_SETUP",
+
+	// Git HTTP proxy settings: https://git-scm.com/docs/git-config#git-config-httpproxy
+	"all_proxy",
+	"http_proxy",
+	"HTTP_PROXY",
+	"https_proxy",
+	"HTTPS_PROXY",
+	// libcurl settings: https://curl.haxx.se/libcurl/c/CURLOPT_NOPROXY.html
+	"no_proxy",
 }
 
 // Command encapsulates a running exec.Cmd. The embedded exec.Cmd is

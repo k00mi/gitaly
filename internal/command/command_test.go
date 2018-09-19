@@ -3,6 +3,7 @@ package command
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -42,6 +43,54 @@ func TestNewCommandExtraEnv(t *testing.T) {
 	require.NoError(t, cmd.Wait())
 
 	require.Contains(t, strings.Split(buff.String(), "\n"), extraVar)
+}
+
+func TestNewCommandProxyEnv(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	testCases := []struct {
+		key   string
+		value string
+	}{
+		{
+			key:   "all_proxy",
+			value: "http://localhost:4000",
+		},
+		{
+			key:   "http_proxy",
+			value: "http://localhost:5000",
+		},
+		{
+			key:   "HTTP_PROXY",
+			value: "http://localhost:6000",
+		},
+		{
+			key:   "https_proxy",
+			value: "https://localhost:5000",
+		},
+		{
+			key:   "HTTPS_PROXY",
+			value: "https://localhost:6000",
+		},
+		{
+			key:   "no_proxy",
+			value: "https://excluded:5000",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.key, func(t *testing.T) {
+			extraVar := fmt.Sprintf("%s=%s", tc.key, tc.value)
+			buff := &bytes.Buffer{}
+			cmd, err := New(ctx, exec.Command("/usr/bin/env"), nil, buff, nil, extraVar)
+
+			require.NoError(t, err)
+			require.NoError(t, cmd.Wait())
+
+			require.Contains(t, strings.Split(buff.String(), "\n"), extraVar)
+		})
+	}
 }
 
 func TestRejectEmptyContextDone(t *testing.T) {
