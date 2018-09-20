@@ -60,6 +60,7 @@ func (s *server) CommitDiff(in *pb.CommitDiffRequest, stream pb.DiffService_Comm
 		limits.MaxFiles = int(in.MaxFiles)
 		limits.MaxLines = int(in.MaxLines)
 		limits.MaxBytes = int(in.MaxBytes)
+		limits.MaxPatchBytes = int(in.MaxPatchBytes)
 	}
 	limits.CollapseDiffs = in.CollapseDiffs
 	limits.SafeMaxFiles = int(in.SafeMaxFiles)

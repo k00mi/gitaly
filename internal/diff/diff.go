@@ -14,10 +14,6 @@ import (
 
 const blankID = "0000000000000000000000000000000000000000"
 
-// MaxPatchBytes is a limitation of a single diff patch,
-// patches surpassing this limit are pruned by default.
-const MaxPatchBytes = 100000
-
 // Diff represents a single parsed diff entry
 type Diff struct {
 	FromID         string
@@ -69,7 +65,26 @@ type Limits struct {
 	SafeMaxLines int
 	// Number of bytes to parse (including lines preceded with --- or +++), after which all subsequent files are collapsed.
 	SafeMaxBytes int
+	// Number of bytes a single patch can have. Patches surpassing this limit are pruned / nullified.
+	MaxPatchBytes int
 }
+
+const (
+	// maxFilesUpperBound controls how much MaxFiles limit can reach
+	maxFilesUpperBound = 5000
+	// maxLinesUpperBound controls how much MaxLines limit can reach
+	maxLinesUpperBound = 250000
+	// maxBytesUpperBound controls how much MaxBytes limit can reach
+	maxBytesUpperBound = 5000 * 5120 // 24MB
+	// safeMaxFilesUpperBound controls how much SafeMaxBytes limit can reach
+	safeMaxFilesUpperBound = 500
+	// safeMaxLinesUpperBound controls how much SafeMaxLines limit can reach
+	safeMaxLinesUpperBound = 25000
+	// safeMaxBytesUpperBound controls how much SafeMaxBytes limit can reach
+	safeMaxBytesUpperBound = 500 * 5120 // 2.4MB
+	// maxPatchBytesUpperBound controls how much MaxPatchBytes limit can reach
+	maxPatchBytesUpperBound = 512000 // 500KB
+)
 
 var (
 	rawLineRegexp    = regexp.MustCompile(`(?m)^:(\d+) (\d+) ([[:xdigit:]]{40}) ([[:xdigit:]]{40}) ([ADTUXMRC]\d*)\t(.*?)(?:\t(.*?))?$`)
@@ -78,6 +93,8 @@ var (
 
 // NewDiffParser returns a new Parser
 func NewDiffParser(src io.Reader, limits Limits) *Parser {
+	limits.enforceUpperBound()
+
 	parser := &Parser{}
 	reader := bufio.NewReader(src)
 
@@ -158,7 +175,7 @@ func (parser *Parser) Parse() bool {
 
 	if parser.limits.EnforceLimits {
 		// Apply single-file size limit
-		if len(parser.currentDiff.Patch) >= MaxPatchBytes {
+		if len(parser.currentDiff.Patch) >= parser.limits.MaxPatchBytes {
 			parser.prunePatch()
 			parser.currentDiff.TooLarge = true
 		}
@@ -173,6 +190,17 @@ func (parser *Parser) Parse() bool {
 	}
 
 	return true
+}
+
+// enforceUpperBound ensures every limit value is within its corresponding upperbound
+func (limit *Limits) enforceUpperBound() {
+	limit.MaxFiles = min(limit.MaxFiles, maxFilesUpperBound)
+	limit.MaxLines = min(limit.MaxLines, maxLinesUpperBound)
+	limit.MaxBytes = min(limit.MaxBytes, maxBytesUpperBound)
+	limit.SafeMaxFiles = min(limit.SafeMaxFiles, safeMaxFilesUpperBound)
+	limit.SafeMaxLines = min(limit.SafeMaxLines, safeMaxLinesUpperBound)
+	limit.SafeMaxBytes = min(limit.SafeMaxBytes, safeMaxBytesUpperBound)
+	limit.MaxPatchBytes = min(limit.MaxPatchBytes, maxPatchBytesUpperBound)
 }
 
 // prunePatch nullifies the current diff patch and reduce lines and bytes processed
@@ -199,6 +227,13 @@ func (parser *Parser) isOverSafeLimits() bool {
 	return parser.filesProcessed > parser.limits.SafeMaxFiles ||
 		parser.linesProcessed > parser.limits.SafeMaxLines ||
 		parser.bytesProcessed > parser.limits.SafeMaxBytes
+}
+
+func min(x, y int) int {
+	if x < y {
+		return x
+	}
+	return y
 }
 
 func (parser *Parser) cacheRawLines(reader *bufio.Reader) {
