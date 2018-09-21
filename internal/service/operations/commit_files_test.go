@@ -1,6 +1,7 @@
 package operations_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -46,12 +47,13 @@ func TestSuccessfulUserCommitFilesRequest(t *testing.T) {
 	authorName := []byte("Jane Doe")
 	authorEmail := []byte("janedoe@gitlab.com")
 	testCases := []struct {
-		desc          string
-		repo          *pb.Repository
-		repoPath      string
-		branchName    string
-		repoCreated   bool
-		branchCreated bool
+		desc            string
+		repo            *pb.Repository
+		repoPath        string
+		branchName      string
+		repoCreated     bool
+		branchCreated   bool
+		executeFilemode bool
 	}{
 		{
 			desc:          "existing repo and branch",
@@ -77,6 +79,15 @@ func TestSuccessfulUserCommitFilesRequest(t *testing.T) {
 			repoCreated:   true,
 			branchCreated: true,
 		},
+		{
+			desc:            "create executable file",
+			repo:            testRepo,
+			repoPath:        testRepoPath,
+			branchName:      "feature-executable",
+			repoCreated:     false,
+			branchCreated:   true,
+			executeFilemode: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -86,6 +97,7 @@ func TestSuccessfulUserCommitFilesRequest(t *testing.T) {
 			actionsRequest1 := createFileHeaderRequest(filePath)
 			actionsRequest2 := actionContentRequest("My")
 			actionsRequest3 := actionContentRequest(" content")
+			actionsRequest4 := chmodFileHeaderRequest(filePath, tc.executeFilemode)
 
 			stream, err := client.UserCommitFiles(ctx)
 			require.NoError(t, err)
@@ -93,6 +105,7 @@ func TestSuccessfulUserCommitFilesRequest(t *testing.T) {
 			require.NoError(t, stream.Send(actionsRequest1))
 			require.NoError(t, stream.Send(actionsRequest2))
 			require.NoError(t, stream.Send(actionsRequest3))
+			require.NoError(t, stream.Send(actionsRequest4))
 
 			r, err := stream.CloseAndRecv()
 			require.NoError(t, err)
@@ -109,6 +122,13 @@ func TestSuccessfulUserCommitFilesRequest(t *testing.T) {
 
 			fileContent := testhelper.MustRunCommand(t, nil, "git", "-C", tc.repoPath, "show", headCommit.GetId()+":"+filePath)
 			require.Equal(t, "My content", string(fileContent))
+
+			commitInfo := testhelper.MustRunCommand(t, nil, "git", "-C", tc.repoPath, "show", headCommit.GetId())
+			expectedFilemode := "100644"
+			if tc.executeFilemode {
+				expectedFilemode = "100755"
+			}
+			require.Contains(t, string(commitInfo), fmt.Sprint("new file mode ", expectedFilemode))
 		})
 	}
 }
@@ -184,6 +204,14 @@ func TestFailedUserCommitFilesRequestDueToIndexError(t *testing.T) {
 				actionContentRequest("This file already exists"),
 			},
 			indexError: "A file with this name already exists",
+		},
+		{
+			desc: "file doesn't exists",
+			requests: []*pb.UserCommitFilesRequest{
+				headerRequest(testRepo, user, "feature", commitFilesMessage, nil, nil),
+				chmodFileHeaderRequest("documents/story.txt", true),
+			},
+			indexError: "A file with this name doesn't exist",
 		},
 		{
 			desc: "dir already exists",
@@ -296,6 +324,18 @@ func createFileHeaderRequest(filePath string) *pb.UserCommitFilesRequest {
 				Action:        pb.UserCommitFilesActionHeader_CREATE,
 				Base64Content: false,
 				FilePath:      []byte(filePath),
+			},
+		},
+	})
+}
+
+func chmodFileHeaderRequest(filePath string, executeFilemode bool) *pb.UserCommitFilesRequest {
+	return actionRequest(&pb.UserCommitFilesAction{
+		UserCommitFilesActionPayload: &pb.UserCommitFilesAction_Header{
+			Header: &pb.UserCommitFilesActionHeader{
+				Action:          pb.UserCommitFilesActionHeader_CHMOD,
+				FilePath:        []byte(filePath),
+				ExecuteFilemode: executeFilemode,
 			},
 		},
 	})
