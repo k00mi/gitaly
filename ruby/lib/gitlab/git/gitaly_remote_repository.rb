@@ -56,19 +56,25 @@ module Gitlab
       end
 
       def token
-        gitaly_client.token(storage)
+        gitaly_client.token(storage).to_s
       end
 
       def request_kwargs
         @request_kwargs ||= begin
-          encoded_token = Base64.strict_encode64(token.to_s)
           metadata = {
-            'authorization' => "Bearer #{encoded_token}",
+            'authorization' => "Bearer #{auhtorization_token}",
             'client_name' => CLIENT_NAME
           }
 
           { metadata: metadata }
         end
+      end
+
+      def auhtorization_token
+        issued_at = Time.now.to_i.to_s
+        hmac = OpenSSL::HMAC.hexdigest(OpenSSL::Digest::SHA256.new, token, issued_at)
+
+        "v2.#{hmac}.#{issued_at}"
       end
     end
   end
