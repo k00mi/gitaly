@@ -1,5 +1,26 @@
 # Gitaly changelog
 
+## v0.122.0
+
+#### Added
+- Implements CHMOD action of UserCommitFiles API
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/884
+  Contributed by Jacopo Beschi @jacopo-beschi
+
+#### Changed
+- Use CommitDiffRequest.MaxPatchBytes instead of hardcoded limit for single diff patches
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/880
+- Implement new credentials scheme on gitaly-ruby
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/873
+
+#### Fixed
+- Export HTTP proxy environment variables to Gitaly
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/885
+
+#### Security
+- Sanitize sentry events' logentry messages
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/
+
 ## v0.121.0
 
 #### Changed

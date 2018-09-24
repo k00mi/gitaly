@@ -1,5 +1,0 @@
----
-title: Use CommitDiffRequest.MaxPatchBytes instead of hardcoded limit for single diff patches
-merge_request: 880
-author:
-type: changed
