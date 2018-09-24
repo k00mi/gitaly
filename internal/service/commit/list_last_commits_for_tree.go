@@ -3,6 +3,7 @@ package commit
 import (
 	"fmt"
 	"io"
+	"sort"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -29,17 +30,22 @@ func (s *server) ListLastCommitsForTree(in *pb.ListLastCommitsForTreeRequest, st
 	}
 
 	var batch []*pb.ListLastCommitsForTreeResponse_CommitForTree
+	entries, err := getLSTreeEntries(parser)
+	if err != nil {
+		return err
+	}
 
-	for {
-		entry, err := parser.NextEntry()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
+	offset := int(in.GetOffset())
+	if offset > len(entries) {
+		entries = lstree.Entries{}
+	}
 
-			return err
-		}
+	limit := offset + int(in.GetLimit())
+	if limit > len(entries) {
+		limit = len(entries) - offset
+	}
 
+	for _, entry := range entries[offset:limit] {
 		commit, err := log.LastCommitForPath(stream.Context(), in.GetRepository(), string(in.GetRevision()), entry.Path)
 		if err != nil {
 			return err
@@ -65,6 +71,27 @@ func (s *server) ListLastCommitsForTree(in *pb.ListLastCommitsForTreeRequest, st
 	}
 
 	return sendCommitsForTree(batch, stream)
+}
+
+func getLSTreeEntries(parser *lstree.Parser) (lstree.Entries, error) {
+	entries := lstree.Entries{}
+
+	for {
+		entry, err := parser.NextEntry()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+
+			return nil, err
+		}
+
+		entries = append(entries, *entry)
+	}
+
+	sort.Stable(entries)
+
+	return entries, nil
 }
 
 func newLSTreeParser(in *pb.ListLastCommitsForTreeRequest, stream pb.CommitService_ListLastCommitsForTreeServer) (*command.Command, *lstree.Parser, error) {
