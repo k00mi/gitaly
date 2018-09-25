@@ -3,18 +3,20 @@ package lstree
 import (
 	"bufio"
 	"bytes"
-	"fmt"
+	"errors"
 	"io"
 )
 
-type objectType int
+// Enum for the type of object in an ls-tree entry
+// can be tree, blob or commit
+type ObjectType int
 
 // Entry represents a single ls-tree entry
 type Entry struct {
-	Mode   []byte
-	Type   objectType
-	Object string
-	Path   string
+	Mode []byte
+	Type ObjectType
+	Oid  string
+	Path string
 }
 
 // Entries holds every ls-tree Entry
@@ -26,11 +28,13 @@ type Parser struct {
 }
 
 const (
-	delimiter            = 0
-	tree      objectType = iota + 1
+	tree ObjectType = iota
 	blob
 	submodule
 )
+
+// ErrParse is returned when the parse of an entry was unsuccessful
+var ErrParse = errors.New("Failed to parse git ls-tree response")
 
 func (e Entries) Len() int {
 	return len(e)
@@ -55,39 +59,40 @@ func NewParser(src io.Reader) *Parser {
 // NextEntry reads from git ls-tree --z --full-name command
 // parses the tree entry and returns a *Entry.
 func (p *Parser) NextEntry() (*Entry, error) {
-	result := &Entry{}
-
-	data, err := p.reader.ReadBytes(delimiter)
+	data, err := p.reader.ReadBytes(0x00)
 	if err != nil {
 		return nil, err
 	}
 
 	// We expect each `data` to be <mode> SP <type> SP <object> TAB <path>\0.
 	split := bytes.SplitN(data, []byte(" "), 3)
-	objectAndFile := bytes.SplitN(split[len(split)-1], []byte(" \t"), 2)
-	split = append(split[:len(split)-1], objectAndFile...)
-
-	if len(split) != 4 {
-		return nil, fmt.Errorf("error parsing %q", data)
+	if len(split) != 3 {
+		return nil, ErrParse
 	}
 
-	objectType, err := toEnum(string(split[1]))
+	objectAndFile := bytes.SplitN(split[len(split)-1], []byte("\t"), 2)
+	parsedEntry := append(split[:len(split)-1], objectAndFile...)
+	if len(parsedEntry) != 4 {
+		return nil, ErrParse
+	}
+
+	objectType, err := toEnum(string(parsedEntry[1]))
 	if err != nil {
 		return nil, err
 	}
 
-	result.Mode = split[0]
+	result := &Entry{}
+	result.Mode = parsedEntry[0]
 	result.Type = objectType
-	result.Object = string(split[2])
+	result.Oid = string(parsedEntry[2])
 
 	// We know that the last byte in 'path' will be a zero byte.
-	path := split[3]
-	result.Path = string(path[:len(path)-1])
+	result.Path = string(bytes.TrimRight(parsedEntry[3], "\x00"))
 
 	return result, nil
 }
 
-func toEnum(s string) (objectType, error) {
+func toEnum(s string) (ObjectType, error) {
 	switch s {
 	case "tree":
 		return tree, nil
@@ -96,6 +101,6 @@ func toEnum(s string) (objectType, error) {
 	case "commit":
 		return submodule, nil
 	default:
-		return -1, fmt.Errorf("Error in objectType conversion %q", s)
+		return -1, ErrParse
 	}
 }
