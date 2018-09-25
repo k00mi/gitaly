@@ -93,7 +93,7 @@ func toEnum(s string) (objectType, error) {
 		return tree, nil
 	case "blob":
 		return blob, nil
-	case "submodule":
+	case "commit":
 		return submodule, nil
 	default:
 		return -1, fmt.Errorf("Error in objectType conversion %q", s)
