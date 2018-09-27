@@ -1,0 +1,6 @@
+---
+title: Add ListLastCommitsForTree to retrieve the last commits for every entry in
+  the current path
+merge_request: 881
+author:
+type: added

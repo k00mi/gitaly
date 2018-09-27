@@ -9,54 +9,101 @@ import (
 )
 
 func TestParser(t *testing.T) {
-	file, err := os.Open("testdata/z-lstree.txt")
-
-	require.NoError(t, err)
-	defer file.Close()
-
-	var parsedEntries Entries
-
-	parser := NewParser(file)
-
-	for {
-		entry, err := parser.NextEntry()
-		if err == io.EOF {
-			break
-		}
-
-		require.NoError(t, err)
-		parsedEntries = append(parsedEntries, entry)
+	testCases := []struct {
+		desc     string
+		filename string
+		entries  Entries
+	}{
+		{
+			desc:     "regular entries",
+			filename: "testdata/z-lstree.txt",
+			entries: Entries{
+				{
+					Mode: []byte("100644"),
+					Type: Blob,
+					Oid:  "dfaa3f97ca337e20154a98ac9d0be76ddd1fcc82",
+					Path: ".gitignore",
+				},
+				{
+					Mode: []byte("100644"),
+					Type: Blob,
+					Oid:  "0792c58905eff3432b721f8c4a64363d8e28d9ae",
+					Path: ".gitmodules",
+				},
+				{
+					Mode: []byte("040000"),
+					Type: Tree,
+					Oid:  "3c122d2b7830eca25235131070602575cf8b41a1",
+					Path: "encoding",
+				},
+				{
+					Mode: []byte("160000"),
+					Type: Submodule,
+					Oid:  "79bceae69cb5750d6567b223597999bfa91cb3b9",
+					Path: "gitlab-shell",
+				},
+			},
+		},
+		{
+			desc:     "irregular path",
+			filename: "testdata/z-lstree-irregular.txt",
+			entries: Entries{
+				{
+					Mode: []byte("100644"),
+					Type: Blob,
+					Oid:  "dfaa3f97ca337e20154a98ac9d0be76ddd1fcc82",
+					Path: ".gitignore",
+				},
+				{
+					Mode: []byte("100644"),
+					Type: Blob,
+					Oid:  "0792c58905eff3432b721f8c4a64363d8e28d9ae",
+					Path: ".gitmodules",
+				},
+				{
+					Mode: []byte("040000"),
+					Type: Tree,
+					Oid:  "3c122d2b7830eca25235131070602575cf8b41a1",
+					Path: "some encoding",
+				},
+				{
+					Mode: []byte("160000"),
+					Type: Submodule,
+					Oid:  "79bceae69cb5750d6567b223597999bfa91cb3b9",
+					Path: "gitlab-shell",
+				},
+			},
+		},
 	}
 
-	expectedEntries := Entries{
-		{
-			Mode:   []byte("100644"),
-			Type:   1,
-			Object: "b78f2bdd90e85de463bd091622efcc70489de893",
-			Path:   ".gitmodules",
-		},
-		{
-			Mode:   []byte("040000"),
-			Type:   0,
-			Object: "85ecfbd13807e6374407ba97d252bfe0cf2403fe",
-			Path:   "_locales",
-		},
-		{
-			Mode:   []byte("160000"),
-			Type:   2,
-			Object: "b2291647b9346873501cedf482270495cd85b7b9",
-			Path:   "bar",
-		},
-	}
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			file, err := os.Open(testCase.filename)
 
-	require.Equal(t, len(expectedEntries), len(parsedEntries))
+			require.NoError(t, err)
+			defer file.Close()
 
-	for index, parsedEntry := range parsedEntries {
-		expectedEntry := expectedEntries[index]
+			parsedEntries := Entries{}
 
-		require.Equal(t, expectedEntry.Mode, parsedEntry.Mode)
-		require.Equal(t, expectedEntry.Type, parsedEntry.Type)
-		require.Equal(t, expectedEntry.Object, parsedEntry.Object)
-		require.Equal(t, expectedEntry.Path, parsedEntry.Path)
+			parser := NewParser(file)
+			for {
+				entry, err := parser.NextEntry()
+				if err == io.EOF {
+					break
+				}
+
+				require.NoError(t, err)
+				parsedEntries = append(parsedEntries, *entry)
+			}
+
+			expectedEntries := testCase.entries
+			require.Len(t, expectedEntries, len(parsedEntries))
+
+			for index, parsedEntry := range parsedEntries {
+				expectedEntry := expectedEntries[index]
+
+				require.Equal(t, expectedEntry, parsedEntry)
+			}
+		})
 	}
 }

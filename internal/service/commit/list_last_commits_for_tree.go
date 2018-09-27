@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	maxNumStatBatchSize = 25
+	maxNumStatBatchSize = 10
 )
 
 func (s *server) ListLastCommitsForTree(in *pb.ListLastCommitsForTreeRequest, stream pb.CommitService_ListLastCommitsForTreeServer) error {
@@ -26,23 +26,28 @@ func (s *server) ListLastCommitsForTree(in *pb.ListLastCommitsForTreeRequest, st
 
 	cmd, parser, err := newLSTreeParser(in, stream)
 	if err != nil {
-		return err
+		if _, ok := status.FromError(err); ok {
+			return err
+		}
+
+		return status.Errorf(codes.Internal, "ListLastCommitsForTree: gitCommand: %v", err)
 	}
 
-	var batch []*pb.ListLastCommitsForTreeResponse_CommitForTree
+	batch := make([]*pb.ListLastCommitsForTreeResponse_CommitForTree, 0, maxNumStatBatchSize)
 	entries, err := getLSTreeEntries(parser)
 	if err != nil {
 		return err
 	}
 
 	offset := int(in.GetOffset())
-	if offset > len(entries) {
+	if offset >= len(entries) {
+		offset = 0
 		entries = lstree.Entries{}
 	}
 
 	limit := offset + int(in.GetLimit())
 	if limit > len(entries) {
-		limit = len(entries) - offset
+		limit = len(entries)
 	}
 
 	for _, entry := range entries[offset:limit] {
@@ -62,12 +67,12 @@ func (s *server) ListLastCommitsForTree(in *pb.ListLastCommitsForTreeRequest, st
 				return err
 			}
 
-			batch = nil
+			batch = batch[0:0]
 		}
 	}
 
 	if err := cmd.Wait(); err != nil {
-		return status.Errorf(codes.Unavailable, "%s: %v", "ListLastCommitsForTree", err)
+		return status.Errorf(codes.Internal, "ListLastCommitsForTree: %v", err)
 	}
 
 	return sendCommitsForTree(batch, stream)
@@ -115,7 +120,7 @@ func sendCommitsForTree(batch []*pb.ListLastCommitsForTreeResponse_CommitForTree
 	}
 
 	if err := stream.Send(&pb.ListLastCommitsForTreeResponse{Commits: batch}); err != nil {
-		return status.Errorf(codes.Unavailable, "ListLastCommitsForTree: send: %v", err)
+		return err
 	}
 
 	return nil
