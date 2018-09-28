@@ -1,5 +1,15 @@
 # Gitaly changelog
 
+## v0.123.0
+
+#### Added
+- Add ListLastCommitsForTree to retrieve the last commits for every entry in the current path
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/881
+
+#### Other
+- Wait for gitaly to boot in rspec integration tests
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/890
+
 ## v0.122.0
 
 #### Added

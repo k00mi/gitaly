@@ -1,5 +1,0 @@
----
-title: Wait for gitaly to boot in rspec integration tests
-merge_request: 890
-author:
-type: other
