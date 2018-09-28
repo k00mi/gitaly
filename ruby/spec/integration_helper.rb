@@ -1,5 +1,7 @@
+require 'socket'
+
 require 'gitaly'
-require 'test_repo_helper'
+require 'spec_helper'
 
 SOCKET_PATH = 'gitaly.socket'.freeze
 TMP_DIR = File.expand_path('../../tmp', __FILE__)
@@ -42,6 +44,27 @@ def start_gitaly
   options = { out: test_log, err: test_log, chdir: TMP_DIR }
   gitaly_pid = spawn(File.join(build_dir, 'bin/gitaly'), config_path, options)
   at_exit { Process.kill('KILL', gitaly_pid) }
+  wait_ready!(File.join('tmp', SOCKET_PATH))
+end
+
+def wait_ready!(socket)
+  last_exception = StandardError.new('wait_ready! has not made any connection attempts')
+
+  print('Booting gitaly for integration tests')
+  100.times do |i|
+    sleep 0.1
+    printf('.')
+    begin
+      UNIXSocket.new(socket).close
+      puts ' ok'
+      return
+    rescue => ex
+      last_exception = ex
+    end
+  end
+
+  puts
+  raise last_exception
 end
 
 start_gitaly
