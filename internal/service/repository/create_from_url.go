@@ -5,17 +5,16 @@ import (
 	"os"
 	"os/exec"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) CreateRepositoryFromURL(ctx context.Context, req *pb.CreateRepositoryFromURLRequest) (*pb.CreateRepositoryFromURLResponse, error) {
+func (s *server) CreateRepositoryFromURL(ctx context.Context, req *gitalypb.CreateRepositoryFromURLRequest) (*gitalypb.CreateRepositoryFromURLResponse, error) {
 	if err := validateCreateRepositoryFromURLRequest(req); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "CreateRepositoryFromURL: %v", err)
 	}
@@ -48,7 +47,7 @@ func (s *server) CreateRepositoryFromURL(ctx context.Context, req *pb.CreateRepo
 	}
 
 	// CreateRepository is harmless on existing repositories with the side effect that it creates the hook symlink.
-	if _, err := s.CreateRepository(ctx, &pb.CreateRepositoryRequest{Repository: repository}); err != nil {
+	if _, err := s.CreateRepository(ctx, &gitalypb.CreateRepositoryRequest{Repository: repository}); err != nil {
 		return nil, status.Errorf(codes.Internal, "CreateRepositoryFromURL: create hooks failed: %v", err)
 	}
 
@@ -56,10 +55,10 @@ func (s *server) CreateRepositoryFromURL(ctx context.Context, req *pb.CreateRepo
 		return nil, status.Errorf(codes.Internal, "CreateRepositoryFromURL: %v", err)
 	}
 
-	return &pb.CreateRepositoryFromURLResponse{}, nil
+	return &gitalypb.CreateRepositoryFromURLResponse{}, nil
 }
 
-func validateCreateRepositoryFromURLRequest(req *pb.CreateRepositoryFromURLRequest) error {
+func validateCreateRepositoryFromURLRequest(req *gitalypb.CreateRepositoryFromURLRequest) error {
 	if req.GetRepository() == nil {
 		return fmt.Errorf("empty Repository")
 	}

@@ -3,15 +3,14 @@ package operations
 import (
 	"fmt"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) UserMergeBranch(bidi pb.OperationService_UserMergeBranchServer) error {
+func (s *server) UserMergeBranch(bidi gitalypb.OperationService_UserMergeBranchServer) error {
 	firstRequest, err := bidi.Recv()
 	if err != nil {
 		return err
@@ -58,7 +57,7 @@ func (s *server) UserMergeBranch(bidi pb.OperationService_UserMergeBranchServer)
 	)
 }
 
-func validateFFRequest(in *pb.UserFFBranchRequest) error {
+func validateFFRequest(in *gitalypb.UserFFBranchRequest) error {
 	if len(in.Branch) == 0 {
 		return fmt.Errorf("empty branch name")
 	}
@@ -74,7 +73,7 @@ func validateFFRequest(in *pb.UserFFBranchRequest) error {
 	return nil
 }
 
-func (s *server) UserFFBranch(ctx context.Context, in *pb.UserFFBranchRequest) (*pb.UserFFBranchResponse, error) {
+func (s *server) UserFFBranch(ctx context.Context, in *gitalypb.UserFFBranchRequest) (*gitalypb.UserFFBranchResponse, error) {
 	if err := validateFFRequest(in); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "UserFFBranch: %v", err)
 	}

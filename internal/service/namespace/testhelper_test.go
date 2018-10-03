@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	"google.golang.org/grpc"
@@ -21,7 +21,7 @@ func runNamespaceServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	pb.RegisterNamespaceServiceServer(server, NewServer())
+	gitalypb.RegisterNamespaceServiceServer(server, NewServer())
 	reflection.Register(server)
 
 	go server.Serve(listener)
@@ -29,7 +29,7 @@ func runNamespaceServer(t *testing.T) (*grpc.Server, string) {
 	return server, serverSocketPath
 }
 
-func newNamespaceClient(t *testing.T, serverSocketPath string) (pb.NamespaceServiceClient, *grpc.ClientConn) {
+func newNamespaceClient(t *testing.T, serverSocketPath string) (gitalypb.NamespaceServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
@@ -41,5 +41,5 @@ func newNamespaceClient(t *testing.T, serverSocketPath string) (pb.NamespaceServ
 		t.Fatal(err)
 	}
 
-	return pb.NewNamespaceServiceClient(conn), conn
+	return gitalypb.NewNamespaceServiceClient(conn), conn
 }

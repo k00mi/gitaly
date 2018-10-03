@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -36,17 +35,17 @@ func TestSuccessfulWikiUpdatePageRequest(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		req     *pb.WikiUpdatePageRequest
+		req     *gitalypb.WikiUpdatePageRequest
 		content []byte
 	}{
 		{
 			desc: "with user id and username",
-			req: &pb.WikiUpdatePageRequest{
+			req: &gitalypb.WikiUpdatePageRequest{
 				Repository: wikiRepo,
 				PagePath:   []byte("//Instálling Gitaly"),
 				Title:      []byte("Instálling Gitaly"),
 				Format:     "markdown",
-				CommitDetails: &pb.WikiCommitDetails{
+				CommitDetails: &gitalypb.WikiCommitDetails{
 					Name:     authorName,
 					Email:    authorEmail,
 					Message:  message,
@@ -58,12 +57,12 @@ func TestSuccessfulWikiUpdatePageRequest(t *testing.T) {
 		},
 		{
 			desc: "without user id and username", // deprecate in gitlab 11.0 https://gitlab.com/gitlab-org/gitaly/issues/1154
-			req: &pb.WikiUpdatePageRequest{
+			req: &gitalypb.WikiUpdatePageRequest{
 				Repository: wikiRepo,
 				PagePath:   []byte("//Instálling Gitaly"),
 				Title:      []byte("Instálling Gitaly"),
 				Format:     "markdown",
-				CommitDetails: &pb.WikiCommitDetails{
+				CommitDetails: &gitalypb.WikiCommitDetails{
 					Name:    authorName,
 					Email:   authorEmail,
 					Message: message,
@@ -87,7 +86,7 @@ func TestSuccessfulWikiUpdatePageRequest(t *testing.T) {
 				}
 
 				// Use a new response so we don't send other fields (Repository, ...) over and over
-				request = &pb.WikiUpdatePageRequest{}
+				request = &gitalypb.WikiUpdatePageRequest{}
 
 				return nil
 			})
@@ -124,7 +123,7 @@ func TestFailedWikiUpdatePageDueToValidations(t *testing.T) {
 
 	writeWikiPage(t, client, wikiRepo, createWikiPageOpts{title: "Installing Gitaly", content: []byte("foobar")})
 
-	commitDetails := &pb.WikiCommitDetails{
+	commitDetails := &gitalypb.WikiCommitDetails{
 		Name:     []byte("Ahmad Sherif"),
 		Email:    []byte("ahmad@gitlab.com"),
 		Message:  []byte("Add installation instructions"),
@@ -134,12 +133,12 @@ func TestFailedWikiUpdatePageDueToValidations(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.WikiUpdatePageRequest
+		request *gitalypb.WikiUpdatePageRequest
 		code    codes.Code
 	}{
 		{
 			desc: "empty page_path",
-			request: &pb.WikiUpdatePageRequest{
+			request: &gitalypb.WikiUpdatePageRequest{
 				Repository:    wikiRepo,
 				Title:         []byte("Installing Gitaly"),
 				Format:        "markdown",
@@ -150,7 +149,7 @@ func TestFailedWikiUpdatePageDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty title",
-			request: &pb.WikiUpdatePageRequest{
+			request: &gitalypb.WikiUpdatePageRequest{
 				Repository:    wikiRepo,
 				PagePath:      []byte("//Installing Gitaly"),
 				Format:        "markdown",
@@ -161,7 +160,7 @@ func TestFailedWikiUpdatePageDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty format",
-			request: &pb.WikiUpdatePageRequest{
+			request: &gitalypb.WikiUpdatePageRequest{
 				Repository:    wikiRepo,
 				PagePath:      []byte("//Installing Gitaly.md"),
 				Title:         []byte("Installing Gitaly"),
@@ -172,7 +171,7 @@ func TestFailedWikiUpdatePageDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty commit details",
-			request: &pb.WikiUpdatePageRequest{
+			request: &gitalypb.WikiUpdatePageRequest{
 				Repository: wikiRepo,
 				PagePath:   []byte("//Installing Gitaly.md"),
 				Title:      []byte("Installing Gitaly"),
@@ -183,12 +182,12 @@ func TestFailedWikiUpdatePageDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty commit details' name",
-			request: &pb.WikiUpdatePageRequest{
+			request: &gitalypb.WikiUpdatePageRequest{
 				Repository: wikiRepo,
 				PagePath:   []byte("//Installing Gitaly.md"),
 				Title:      []byte("Installing Gitaly"),
 				Format:     "markdown",
-				CommitDetails: &pb.WikiCommitDetails{
+				CommitDetails: &gitalypb.WikiCommitDetails{
 					Email:    []byte("a@b.com"),
 					Message:  []byte("A message"),
 					UserId:   int32(1),
@@ -200,12 +199,12 @@ func TestFailedWikiUpdatePageDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty commit details' email",
-			request: &pb.WikiUpdatePageRequest{
+			request: &gitalypb.WikiUpdatePageRequest{
 				Repository: wikiRepo,
 				PagePath:   []byte("//Installing Gitaly.md"),
 				Title:      []byte("Installing Gitaly"),
 				Format:     "markdown",
-				CommitDetails: &pb.WikiCommitDetails{
+				CommitDetails: &gitalypb.WikiCommitDetails{
 					Name:     []byte("A name"),
 					Message:  []byte("A message"),
 					UserId:   int32(1),
@@ -217,12 +216,12 @@ func TestFailedWikiUpdatePageDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty commit details' message",
-			request: &pb.WikiUpdatePageRequest{
+			request: &gitalypb.WikiUpdatePageRequest{
 				Repository: wikiRepo,
 				PagePath:   []byte("//Installing Gitaly.md"),
 				Title:      []byte("Installing Gitaly"),
 				Format:     "markdown",
-				CommitDetails: &pb.WikiCommitDetails{
+				CommitDetails: &gitalypb.WikiCommitDetails{
 					Name:     []byte("A name"),
 					Email:    []byte("a@b.com"),
 					UserId:   int32(1),

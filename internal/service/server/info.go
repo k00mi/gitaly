@@ -5,7 +5,7 @@ import (
 	"os"
 	"path"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/version"
@@ -13,13 +13,13 @@ import (
 	"golang.org/x/net/context"
 )
 
-func (s *server) ServerInfo(ctx context.Context, in *pb.ServerInfoRequest) (*pb.ServerInfoResponse, error) {
+func (s *server) ServerInfo(ctx context.Context, in *gitalypb.ServerInfoRequest) (*gitalypb.ServerInfoResponse, error) {
 	gitVersion, err := git.Version()
 
-	var storageStatuses []*pb.ServerInfoResponse_StorageStatus
+	var storageStatuses []*gitalypb.ServerInfoResponse_StorageStatus
 	for _, shard := range config.Config.Storages {
 		readable, writeable := shardCheck(shard.Path)
-		storageStatuses = append(storageStatuses, &pb.ServerInfoResponse_StorageStatus{
+		storageStatuses = append(storageStatuses, &gitalypb.ServerInfoResponse_StorageStatus{
 			StorageName: shard.Name,
 			Readable:    readable,
 			Writeable:   writeable,
@@ -27,7 +27,7 @@ func (s *server) ServerInfo(ctx context.Context, in *pb.ServerInfoRequest) (*pb.
 
 	}
 
-	return &pb.ServerInfoResponse{
+	return &gitalypb.ServerInfoResponse{
 		ServerVersion:   version.GetVersion(),
 		GitVersion:      gitVersion,
 		StorageStatuses: storageStatuses,

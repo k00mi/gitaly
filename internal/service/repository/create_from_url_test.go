@@ -6,10 +6,9 @@ import (
 	"path"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -25,12 +24,12 @@ func TestSuccessfulCreateRepositoryFromURLRequest(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	importedRepo := &pb.Repository{
+	importedRepo := &gitalypb.Repository{
 		RelativePath: "imports/test-repo-imported.git",
 		StorageName:  testhelper.DefaultStorageName,
 	}
 
-	req := &pb.CreateRepositoryFromURLRequest{
+	req := &gitalypb.CreateRepositoryFromURLRequest{
 		Repository: importedRepo,
 		Url:        "https://gitlab.com/gitlab-org/gitlab-test.git",
 	}
@@ -81,7 +80,7 @@ func TestFailedCreateRepositoryFromURLRequestDueToExistingTarget(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			importedRepo := &pb.Repository{
+			importedRepo := &gitalypb.Repository{
 				RelativePath: "imports/test-repo-imported.git",
 				StorageName:  testhelper.DefaultStorageName,
 			}
@@ -96,7 +95,7 @@ func TestFailedCreateRepositoryFromURLRequestDueToExistingTarget(t *testing.T) {
 			}
 			defer os.RemoveAll(importedRepoPath)
 
-			req := &pb.CreateRepositoryFromURLRequest{
+			req := &gitalypb.CreateRepositoryFromURLRequest{
 				Repository: importedRepo,
 				Url:        "https://gitlab.com/gitlab-org/gitlab-test.git",
 			}

@@ -4,17 +4,17 @@ import (
 	"fmt"
 	"io"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) GetBlob(in *pb.GetBlobRequest, stream pb.BlobService_GetBlobServer) error {
+func (s *server) GetBlob(in *gitalypb.GetBlobRequest, stream gitalypb.BlobService_GetBlobServer) error {
 	if err := validateRequest(in); err != nil {
 		return status.Errorf(codes.InvalidArgument, "GetBlob: %v", err)
 	}
@@ -29,14 +29,14 @@ func (s *server) GetBlob(in *pb.GetBlobRequest, stream pb.BlobService_GetBlobSer
 		return status.Errorf(codes.Internal, "GetBlob: %v", err)
 	}
 	if catfile.IsNotFound(err) || objectInfo.Type != "blob" {
-		return helper.DecorateError(codes.Unavailable, stream.Send(&pb.GetBlobResponse{}))
+		return helper.DecorateError(codes.Unavailable, stream.Send(&gitalypb.GetBlobResponse{}))
 	}
 
 	readLimit := objectInfo.Size
 	if in.Limit >= 0 && in.Limit < readLimit {
 		readLimit = in.Limit
 	}
-	firstMessage := &pb.GetBlobResponse{
+	firstMessage := &gitalypb.GetBlobResponse{
 		Size: objectInfo.Size,
 		Oid:  objectInfo.Oid,
 	}
@@ -51,7 +51,7 @@ func (s *server) GetBlob(in *pb.GetBlobRequest, stream pb.BlobService_GetBlobSer
 	}
 
 	sw := streamio.NewWriter(func(p []byte) error {
-		msg := &pb.GetBlobResponse{}
+		msg := &gitalypb.GetBlobResponse{}
 		if firstMessage != nil {
 			msg = firstMessage
 			firstMessage = nil
@@ -68,7 +68,7 @@ func (s *server) GetBlob(in *pb.GetBlobRequest, stream pb.BlobService_GetBlobSer
 	return nil
 }
 
-func validateRequest(in *pb.GetBlobRequest) error {
+func validateRequest(in *gitalypb.GetBlobRequest) error {
 	if len(in.GetOid()) == 0 {
 		return fmt.Errorf("empty Oid")
 	}

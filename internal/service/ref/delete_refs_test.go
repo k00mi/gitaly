@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
@@ -20,17 +20,17 @@ func TestSuccessfulDeleteRefs(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.DeleteRefsRequest
+		request *gitalypb.DeleteRefsRequest
 	}{
 		{
 			desc: "delete all except refs with certain prefixes",
-			request: &pb.DeleteRefsRequest{
+			request: &gitalypb.DeleteRefsRequest{
 				ExceptWithPrefix: [][]byte{[]byte("refs/keep"), []byte("refs/also-keep"), []byte("refs/heads/")},
 			},
 		},
 		{
 			desc: "delete certain refs",
-			request: &pb.DeleteRefsRequest{
+			request: &gitalypb.DeleteRefsRequest{
 				Refs: [][]byte{[]byte("refs/delete/a"), []byte("refs/also-delete/b")},
 			},
 		},
@@ -77,7 +77,7 @@ func TestFailedDeleteRefsRequestDueToGitError(t *testing.T) {
 	repo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	request := &pb.DeleteRefsRequest{
+	request := &gitalypb.DeleteRefsRequest{
 		Repository: repo,
 		Refs:       [][]byte{[]byte(`refs\tails\invalid-ref-format`)},
 	}
@@ -100,22 +100,22 @@ func TestFailedDeleteRefsDueToValidation(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.DeleteRefsRequest
-		// repo     *pb.Repository
+		request *gitalypb.DeleteRefsRequest
+		// repo     *gitalypb.Repository
 		// prefixes [][]byte
 		code codes.Code
 	}{
 		{
 			desc: "Invalid repository",
-			request: &pb.DeleteRefsRequest{
-				Repository:       &pb.Repository{StorageName: "fake", RelativePath: "path"},
+			request: &gitalypb.DeleteRefsRequest{
+				Repository:       &gitalypb.Repository{StorageName: "fake", RelativePath: "path"},
 				ExceptWithPrefix: [][]byte{[]byte("exclude-this")},
 			},
 			code: codes.InvalidArgument,
 		},
 		{
 			desc: "Repository is nil",
-			request: &pb.DeleteRefsRequest{
+			request: &gitalypb.DeleteRefsRequest{
 				Repository:       nil,
 				ExceptWithPrefix: [][]byte{[]byte("exclude-this")},
 			},
@@ -123,14 +123,14 @@ func TestFailedDeleteRefsDueToValidation(t *testing.T) {
 		},
 		{
 			desc: "No prefixes nor refs",
-			request: &pb.DeleteRefsRequest{
+			request: &gitalypb.DeleteRefsRequest{
 				Repository: testRepo,
 			},
 			code: codes.InvalidArgument,
 		},
 		{
 			desc: "prefixes with refs",
-			request: &pb.DeleteRefsRequest{
+			request: &gitalypb.DeleteRefsRequest{
 				Repository:       testRepo,
 				ExceptWithPrefix: [][]byte{[]byte("exclude-this")},
 				Refs:             [][]byte{[]byte("delete-this")},
@@ -139,7 +139,7 @@ func TestFailedDeleteRefsDueToValidation(t *testing.T) {
 		},
 		{
 			desc: "Empty prefix",
-			request: &pb.DeleteRefsRequest{
+			request: &gitalypb.DeleteRefsRequest{
 				Repository:       testRepo,
 				ExceptWithPrefix: [][]byte{[]byte("exclude-this"), []byte{}},
 			},
@@ -147,7 +147,7 @@ func TestFailedDeleteRefsDueToValidation(t *testing.T) {
 		},
 		{
 			desc: "Empty ref",
-			request: &pb.DeleteRefsRequest{
+			request: &gitalypb.DeleteRefsRequest{
 				Repository: testRepo,
 				Refs:       [][]byte{[]byte("delete-this"), []byte{}},
 			},

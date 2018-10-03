@@ -14,10 +14,9 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
@@ -32,27 +31,27 @@ func TestFailedReceivePackRequestDueToValidationError(t *testing.T) {
 
 	tests := []struct {
 		Desc string
-		Req  *pb.SSHReceivePackRequest
+		Req  *gitalypb.SSHReceivePackRequest
 		Code codes.Code
 	}{
 		{
 			Desc: "Repository.RelativePath is empty",
-			Req:  &pb.SSHReceivePackRequest{Repository: &pb.Repository{StorageName: "default", RelativePath: ""}, GlId: "user-123"},
+			Req:  &gitalypb.SSHReceivePackRequest{Repository: &gitalypb.Repository{StorageName: "default", RelativePath: ""}, GlId: "user-123"},
 			Code: codes.InvalidArgument,
 		},
 		{
 			Desc: "Repository is nil",
-			Req:  &pb.SSHReceivePackRequest{Repository: nil, GlId: "user-123"},
+			Req:  &gitalypb.SSHReceivePackRequest{Repository: nil, GlId: "user-123"},
 			Code: codes.InvalidArgument,
 		},
 		{
 			Desc: "Empty GlId",
-			Req:  &pb.SSHReceivePackRequest{Repository: &pb.Repository{StorageName: "default", RelativePath: testRepo.GetRelativePath()}, GlId: ""},
+			Req:  &gitalypb.SSHReceivePackRequest{Repository: &gitalypb.Repository{StorageName: "default", RelativePath: testRepo.GetRelativePath()}, GlId: ""},
 			Code: codes.InvalidArgument,
 		},
 		{
 			Desc: "Data exists on first request",
-			Req:  &pb.SSHReceivePackRequest{Repository: &pb.Repository{StorageName: "default", RelativePath: testRepo.GetRelativePath()}, GlId: "user-123", Stdin: []byte("Fail")},
+			Req:  &gitalypb.SSHReceivePackRequest{Repository: &gitalypb.Repository{StorageName: "default", RelativePath: testRepo.GetRelativePath()}, GlId: "user-123", Stdin: []byte("Fail")},
 			Code: codes.InvalidArgument,
 		},
 	}
@@ -146,9 +145,9 @@ func testCloneAndPush(t *testing.T, serverSocketPath string, params pushParams) 
 
 	makeCommit(t, localRepoPath)
 
-	pbTempRepo := &pb.Repository{StorageName: params.storageName, RelativePath: tempRepo}
+	pbTempRepo := &gitalypb.Repository{StorageName: params.storageName, RelativePath: tempRepo}
 	pbMarshaler := &jsonpb.Marshaler{}
-	payload, err := pbMarshaler.MarshalToString(&pb.SSHReceivePackRequest{
+	payload, err := pbMarshaler.MarshalToString(&gitalypb.SSHReceivePackRequest{
 		Repository:       pbTempRepo,
 		GlRepository:     pbTempRepo.GetRelativePath(),
 		GlId:             params.glID,
@@ -205,7 +204,7 @@ func makeCommit(t *testing.T, localRepoPath string) ([]byte, []byte, bool) {
 	return oldHead, newHead, t.Failed()
 }
 
-func drainPostReceivePackResponse(stream pb.SSH_SSHReceivePackClient) error {
+func drainPostReceivePackResponse(stream gitalypb.SSH_SSHReceivePackClient) error {
 	var err error
 	for err == nil {
 		_, err = stream.Recv()

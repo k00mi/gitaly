@@ -6,11 +6,10 @@ import (
 	"path"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/service/repository"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -33,12 +32,12 @@ func TestSuccessfulCreateForkRequest(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	forkedRepo := &pb.Repository{
+	forkedRepo := &gitalypb.Repository{
 		RelativePath: "forks/test-repo-fork.git",
 		StorageName:  testRepo.StorageName,
 	}
 
-	req := &pb.CreateForkRequest{
+	req := &gitalypb.CreateForkRequest{
 		Repository:       forkedRepo,
 		SourceRepository: testRepo,
 	}
@@ -95,7 +94,7 @@ func TestFailedCreateForkRequestDueToExistingTarget(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			forkedRepo := &pb.Repository{
+			forkedRepo := &gitalypb.Repository{
 				RelativePath: testCase.repoPath,
 				StorageName:  testRepo.StorageName,
 			}
@@ -110,7 +109,7 @@ func TestFailedCreateForkRequestDueToExistingTarget(t *testing.T) {
 			}
 			defer os.RemoveAll(forkedRepoPath)
 
-			req := &pb.CreateForkRequest{
+			req := &gitalypb.CreateForkRequest{
 				Repository:       forkedRepo,
 				SourceRepository: testRepo,
 			}

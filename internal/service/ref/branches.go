@@ -1,14 +1,13 @@
 package ref
 
 import (
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"golang.org/x/net/context"
 )
 
-func (s *server) CreateBranch(ctx context.Context, req *pb.CreateBranchRequest) (*pb.CreateBranchResponse, error) {
+func (s *server) CreateBranch(ctx context.Context, req *gitalypb.CreateBranchRequest) (*gitalypb.CreateBranchResponse, error) {
 	client, err := s.RefServiceClient(ctx)
 	if err != nil {
 		return nil, err
@@ -22,7 +21,7 @@ func (s *server) CreateBranch(ctx context.Context, req *pb.CreateBranchRequest) 
 	return client.CreateBranch(clientCtx, req)
 }
 
-func (s *server) DeleteBranch(ctx context.Context, req *pb.DeleteBranchRequest) (*pb.DeleteBranchResponse, error) {
+func (s *server) DeleteBranch(ctx context.Context, req *gitalypb.DeleteBranchRequest) (*gitalypb.DeleteBranchResponse, error) {
 	client, err := s.RefServiceClient(ctx)
 	if err != nil {
 		return nil, err
@@ -36,7 +35,7 @@ func (s *server) DeleteBranch(ctx context.Context, req *pb.DeleteBranchRequest) 
 	return client.DeleteBranch(clientCtx, req)
 }
 
-func (s *server) FindBranch(ctx context.Context, req *pb.FindBranchRequest) (*pb.FindBranchResponse, error) {
+func (s *server) FindBranch(ctx context.Context, req *gitalypb.FindBranchRequest) (*gitalypb.FindBranchResponse, error) {
 	client, err := s.RefServiceClient(ctx)
 	if err != nil {
 		return nil, err

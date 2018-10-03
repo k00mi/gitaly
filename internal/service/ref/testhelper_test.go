@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -20,19 +20,19 @@ import (
 )
 
 var (
-	localBranches = map[string]*pb.GitCommit{
+	localBranches = map[string]*gitalypb.GitCommit{
 		"refs/heads/100%branch": {
 			Id:        "1b12f15a11fc6e62177bef08f47bc7b5ce50b141",
 			Body:      []byte("Merge branch 'add-directory-with-space' into 'master'\r\n\r\nAdd a directory containing a space in its name\r\n\r\nneeded for verifying the fix of `https://gitlab.com/gitlab-com/support-forum/issues/952` \r\n\r\nSee merge request !11"),
 			BodySize:  221,
 			ParentIds: []string{"6907208d755b60ebeacb2e9dfea74c92c3449a1f", "38008cb17ce1466d8fec2dfa6f6ab8dcfe5cf49e"},
 			Subject:   []byte("Merge branch 'add-directory-with-space' into 'master'"),
-			Author: &pb.CommitAuthor{
+			Author: &gitalypb.CommitAuthor{
 				Name:  []byte("Stan Hu"),
 				Email: []byte("stanhu@gmail.com"),
 				Date:  &timestamp.Timestamp{Seconds: 1471558878},
 			},
-			Committer: &pb.CommitAuthor{
+			Committer: &gitalypb.CommitAuthor{
 				Name:  []byte("Stan Hu"),
 				Email: []byte("stanhu@gmail.com"),
 				Date:  &timestamp.Timestamp{Seconds: 1471558878},
@@ -44,12 +44,12 @@ var (
 			Body:      []byte("Add submodule from gitlab.com\n\nSigned-off-by: Dmitriy Zaporozhets <dmitriy.zaporozhets@gmail.com>\n"),
 			BodySize:  98,
 			ParentIds: []string{"570e7b2abdd848b95f2f578043fc23bd6f6fd24d"},
-			Author: &pb.CommitAuthor{
+			Author: &gitalypb.CommitAuthor{
 				Name:  []byte("Dmitriy Zaporozhets"),
 				Email: []byte("dmitriy.zaporozhets@gmail.com"),
 				Date:  &timestamp.Timestamp{Seconds: 1393491698},
 			},
-			Committer: &pb.CommitAuthor{
+			Committer: &gitalypb.CommitAuthor{
 				Name:  []byte("Dmitriy Zaporozhets"),
 				Email: []byte("dmitriy.zaporozhets@gmail.com"),
 				Date:  &timestamp.Timestamp{Seconds: 1393491698},
@@ -61,12 +61,12 @@ var (
 			Body:      []byte("Merge branch 'tree_helper_spec' into 'master'\n\nAdd directory structure for tree_helper spec\n\nThis directory structure is needed for a testing the method flatten_tree(tree) in the TreeHelper module\n\nSee [merge request #275](https://gitlab.com/gitlab-org/gitlab-ce/merge_requests/275#note_732774)\n\nSee merge request !2\n"),
 			BodySize:  317,
 			ParentIds: []string{"5937ac0a7beb003549fc5fd26fc247adbce4a52e", "4cd80ccab63c82b4bad16faa5193fbd2aa06df40"},
-			Author: &pb.CommitAuthor{
+			Author: &gitalypb.CommitAuthor{
 				Name:  []byte("Sytse Sijbrandij"),
 				Email: []byte("sytse@gitlab.com"),
 				Date:  &timestamp.Timestamp{Seconds: 1420925009},
 			},
-			Committer: &pb.CommitAuthor{
+			Committer: &gitalypb.CommitAuthor{
 				Name:  []byte("Sytse Sijbrandij"),
 				Email: []byte("sytse@gitlab.com"),
 				Date:  &timestamp.Timestamp{Seconds: 1420925009},
@@ -109,7 +109,7 @@ func runRefServiceServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	pb.RegisterRefServiceServer(grpcServer, &server{rubyServer})
+	gitalypb.RegisterRefServiceServer(grpcServer, &server{rubyServer})
 	reflection.Register(grpcServer)
 
 	go grpcServer.Serve(listener)
@@ -117,7 +117,7 @@ func runRefServiceServer(t *testing.T) (*grpc.Server, string) {
 	return grpcServer, serverSocketPath
 }
 
-func newRefServiceClient(t *testing.T, serverSocketPath string) (pb.RefServiceClient, *grpc.ClientConn) {
+func newRefServiceClient(t *testing.T, serverSocketPath string) (gitalypb.RefServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
@@ -129,10 +129,10 @@ func newRefServiceClient(t *testing.T, serverSocketPath string) (pb.RefServiceCl
 		t.Fatal(err)
 	}
 
-	return pb.NewRefServiceClient(conn), conn
+	return gitalypb.NewRefServiceClient(conn), conn
 }
 
-func assertContainsLocalBranch(t *testing.T, branches []*pb.FindLocalBranchResponse, branch *pb.FindLocalBranchResponse) {
+func assertContainsLocalBranch(t *testing.T, branches []*gitalypb.FindLocalBranchResponse, branch *gitalypb.FindLocalBranchResponse) {
 	for _, b := range branches {
 		if bytes.Equal(branch.Name, b.Name) {
 			if !testhelper.FindLocalBranchResponsesEqual(branch, b) {
@@ -144,7 +144,7 @@ func assertContainsLocalBranch(t *testing.T, branches []*pb.FindLocalBranchRespo
 	t.Errorf("Expected to find branch %q in local branches", branch.Name)
 }
 
-func assertContainsBranch(t *testing.T, branches []*pb.FindAllBranchesResponse_Branch, branch *pb.FindAllBranchesResponse_Branch) {
+func assertContainsBranch(t *testing.T, branches []*gitalypb.FindAllBranchesResponse_Branch, branch *gitalypb.FindAllBranchesResponse_Branch) {
 	var branchNames [][]byte
 
 	for _, b := range branches {

@@ -3,13 +3,13 @@ package remote
 import (
 	"fmt"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) UpdateRemoteMirror(stream pb.RemoteService_UpdateRemoteMirrorServer) error {
+func (s *server) UpdateRemoteMirror(stream gitalypb.RemoteService_UpdateRemoteMirrorServer) error {
 	firstRequest, err := stream.Recv()
 	if err != nil {
 		return err
@@ -59,7 +59,7 @@ func (s *server) UpdateRemoteMirror(stream pb.RemoteService_UpdateRemoteMirrorSe
 	return stream.SendAndClose(response)
 }
 
-func validateUpdateRemoteMirrorRequest(req *pb.UpdateRemoteMirrorRequest) error {
+func validateUpdateRemoteMirrorRequest(req *gitalypb.UpdateRemoteMirrorRequest) error {
 	if req.GetRepository() == nil {
 		return fmt.Errorf("empty Repository")
 	}

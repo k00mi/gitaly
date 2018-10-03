@@ -7,11 +7,11 @@ import (
 	"os/exec"
 	"time"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/tempdir"
@@ -45,7 +45,7 @@ var httpClient = &http.Client{
 	},
 }
 
-func untar(ctx context.Context, path string, in *pb.CreateRepositoryFromSnapshotRequest) error {
+func untar(ctx context.Context, path string, in *gitalypb.CreateRepositoryFromSnapshotRequest) error {
 	req, err := http.NewRequest("GET", in.HttpUrl, nil)
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Bad HTTP URL: %v", err)
@@ -73,7 +73,7 @@ func untar(ctx context.Context, path string, in *pb.CreateRepositoryFromSnapshot
 	return cmd.Wait()
 }
 
-func (s *server) CreateRepositoryFromSnapshot(ctx context.Context, in *pb.CreateRepositoryFromSnapshotRequest) (*pb.CreateRepositoryFromSnapshotResponse, error) {
+func (s *server) CreateRepositoryFromSnapshot(ctx context.Context, in *gitalypb.CreateRepositoryFromSnapshotRequest) (*gitalypb.CreateRepositoryFromSnapshotResponse, error) {
 	realPath, err := helper.GetPath(in.Repository)
 	if err != nil {
 		return nil, err
@@ -98,7 +98,7 @@ func (s *server) CreateRepositoryFromSnapshot(ctx context.Context, in *pb.Create
 	//
 	// NOTE: The received archive is trusted *a lot*. Before pointing this RPC
 	// at endpoints not under our control, it should undergo a lot of hardning.
-	crr := &pb.CreateRepositoryRequest{Repository: tempRepo}
+	crr := &gitalypb.CreateRepositoryRequest{Repository: tempRepo}
 	if _, err := s.CreateRepository(ctx, crr); err != nil {
 		return nil, status.Errorf(codes.Internal, "couldn't create empty bare repository: %v", err)
 	}
@@ -111,5 +111,5 @@ func (s *server) CreateRepositoryFromSnapshot(ctx context.Context, in *pb.Create
 		return nil, status.Errorf(codes.Internal, "Promoting temporary directory failed: %v", err)
 	}
 
-	return &pb.CreateRepositoryFromSnapshotResponse{}, nil
+	return &gitalypb.CreateRepositoryFromSnapshotResponse{}, nil
 }

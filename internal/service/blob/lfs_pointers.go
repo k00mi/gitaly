@@ -3,21 +3,20 @@ package blob
 import (
 	"fmt"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 type getLFSPointerByRevisionRequest interface {
-	GetRepository() *pb.Repository
+	GetRepository() *gitalypb.Repository
 	GetRevision() []byte
 }
 
-func (s *server) GetLFSPointers(req *pb.GetLFSPointersRequest, stream pb.BlobService_GetLFSPointersServer) error {
+func (s *server) GetLFSPointers(req *gitalypb.GetLFSPointersRequest, stream gitalypb.BlobService_GetLFSPointersServer) error {
 	ctx := stream.Context()
 
 	if err := validateGetLFSPointersRequest(req); err != nil {
@@ -50,7 +49,7 @@ func (s *server) GetLFSPointers(req *pb.GetLFSPointersRequest, stream pb.BlobSer
 	})
 }
 
-func validateGetLFSPointersRequest(req *pb.GetLFSPointersRequest) error {
+func validateGetLFSPointersRequest(req *gitalypb.GetLFSPointersRequest) error {
 	if req.GetRepository() == nil {
 		return fmt.Errorf("empty Repository")
 	}
@@ -62,7 +61,7 @@ func validateGetLFSPointersRequest(req *pb.GetLFSPointersRequest) error {
 	return nil
 }
 
-func (s *server) GetNewLFSPointers(in *pb.GetNewLFSPointersRequest, stream pb.BlobService_GetNewLFSPointersServer) error {
+func (s *server) GetNewLFSPointers(in *gitalypb.GetNewLFSPointersRequest, stream gitalypb.BlobService_GetNewLFSPointersServer) error {
 	ctx := stream.Context()
 
 	if err := validateGetLfsPointersByRevisionRequest(in); err != nil {
@@ -95,7 +94,7 @@ func (s *server) GetNewLFSPointers(in *pb.GetNewLFSPointersRequest, stream pb.Bl
 	})
 }
 
-func (s *server) GetAllLFSPointers(in *pb.GetAllLFSPointersRequest, stream pb.BlobService_GetAllLFSPointersServer) error {
+func (s *server) GetAllLFSPointers(in *gitalypb.GetAllLFSPointersRequest, stream gitalypb.BlobService_GetAllLFSPointersServer) error {
 	ctx := stream.Context()
 
 	if err := validateGetLfsPointersByRevisionRequest(in); err != nil {

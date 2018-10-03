@@ -1,9 +1,8 @@
 package repository
 
 import (
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
 
 type server struct {
@@ -11,6 +10,6 @@ type server struct {
 }
 
 // NewServer creates a new instance of a gRPC repo server
-func NewServer(rs *rubyserver.Server) pb.RepositoryServiceServer {
+func NewServer(rs *rubyserver.Server) gitalypb.RepositoryServiceServer {
 	return &server{rs}
 }

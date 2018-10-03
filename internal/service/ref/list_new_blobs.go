@@ -6,14 +6,14 @@ import (
 	"regexp"
 	"strings"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) ListNewBlobs(in *pb.ListNewBlobsRequest, stream pb.RefService_ListNewBlobsServer) error {
+func (s *server) ListNewBlobs(in *gitalypb.ListNewBlobsRequest, stream gitalypb.RefService_ListNewBlobsServer) error {
 	oid := in.GetCommitId()
 	if err := validateCommitID(oid); err != nil {
 		return err
@@ -39,7 +39,7 @@ func (s *server) ListNewBlobs(in *pb.ListNewBlobsRequest, stream pb.RefService_L
 		return status.Errorf(codes.Internal, "ListNewBlobs: catfile: %v", err)
 	}
 
-	var newBlobs []*pb.NewBlobObject
+	var newBlobs []*gitalypb.NewBlobObject
 	scanner := bufio.NewScanner(revList)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -58,15 +58,15 @@ func (s *server) ListNewBlobs(in *pb.ListNewBlobsRequest, stream pb.RefService_L
 			continue
 		}
 
-		newBlobs = append(newBlobs, &pb.NewBlobObject{Oid: info.Oid, Size: info.Size, Path: []byte(parts[1])})
+		newBlobs = append(newBlobs, &gitalypb.NewBlobObject{Oid: info.Oid, Size: info.Size, Path: []byte(parts[1])})
 		if len(newBlobs) >= 1000 {
-			response := &pb.ListNewBlobsResponse{NewBlobObjects: newBlobs}
+			response := &gitalypb.ListNewBlobsResponse{NewBlobObjects: newBlobs}
 			stream.Send(response)
 			newBlobs = newBlobs[:0]
 		}
 	}
 
-	response := &pb.ListNewBlobsResponse{NewBlobObjects: newBlobs}
+	response := &gitalypb.ListNewBlobsResponse{NewBlobObjects: newBlobs}
 	stream.Send(response)
 
 	return revList.Wait()

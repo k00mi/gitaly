@@ -8,18 +8,17 @@ import (
 	"path"
 	"strings"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/tempdir"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) CreateRepositoryFromBundle(stream pb.RepositoryService_CreateRepositoryFromBundleServer) error {
+func (s *server) CreateRepositoryFromBundle(stream gitalypb.RepositoryService_CreateRepositoryFromBundleServer) error {
 	firstRequest, err := stream.Recv()
 	if err != nil {
 		return status.Errorf(codes.Internal, "CreateRepositoryFromBundle: first request failed: %v", err)
@@ -104,12 +103,12 @@ func (s *server) CreateRepositoryFromBundle(stream pb.RepositoryService_CreateRe
 	}
 
 	// CreateRepository is harmless on existing repositories with the side effect that it creates the hook symlink.
-	if _, err := s.CreateRepository(ctx, &pb.CreateRepositoryRequest{Repository: repo}); err != nil {
+	if _, err := s.CreateRepository(ctx, &gitalypb.CreateRepositoryRequest{Repository: repo}); err != nil {
 		cleanError := sanitizedError(repoPath, "CreateRepositoryFromBundle: create hooks failed: %v", err)
 		return status.Error(codes.Internal, cleanError)
 	}
 
-	return stream.SendAndClose(&pb.CreateRepositoryFromBundleResponse{})
+	return stream.SendAndClose(&gitalypb.CreateRepositoryFromBundleResponse{})
 }
 
 func sanitizedError(path, format string, a ...interface{}) string {

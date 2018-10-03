@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/alternates"
 )
 
@@ -52,7 +52,7 @@ func (c *Batch) Blob(revspec string) (io.Reader, error) {
 // New returns a new Batch instance. It is important that ctx gets canceled
 // somewhere, because if it doesn't the cat-file processes spawned by
 // New() never terminate.
-func New(ctx context.Context, repo *pb.Repository) (*Batch, error) {
+func New(ctx context.Context, repo *gitalypb.Repository) (*Batch, error) {
 	if ctx.Done() == nil {
 		panic("empty ctx.Done() in catfile.Batch.New()")
 	}

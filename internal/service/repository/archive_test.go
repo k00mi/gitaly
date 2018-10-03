@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 )
@@ -25,11 +25,11 @@ func TestGetArchiveSuccess(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	formats := []pb.GetArchiveRequest_Format{
-		pb.GetArchiveRequest_ZIP,
-		pb.GetArchiveRequest_TAR,
-		pb.GetArchiveRequest_TAR_GZ,
-		pb.GetArchiveRequest_TAR_BZ2,
+	formats := []gitalypb.GetArchiveRequest_Format{
+		gitalypb.GetArchiveRequest_ZIP,
+		gitalypb.GetArchiveRequest_TAR,
+		gitalypb.GetArchiveRequest_TAR_GZ,
+		gitalypb.GetArchiveRequest_TAR_BZ2,
 	}
 
 	testCases := []struct {
@@ -57,7 +57,7 @@ func TestGetArchiveSuccess(t *testing.T) {
 				ctx, cancel := testhelper.Context()
 				defer cancel()
 
-				req := &pb.GetArchiveRequest{
+				req := &gitalypb.GetArchiveRequest{
 					Repository: testRepo,
 					CommitId:   tc.commitID,
 					Prefix:     tc.prefix,
@@ -100,18 +100,18 @@ func TestGetArchiveFailure(t *testing.T) {
 
 	testCases := []struct {
 		desc     string
-		repo     *pb.Repository
+		repo     *gitalypb.Repository
 		prefix   string
 		commitID string
-		format   pb.GetArchiveRequest_Format
+		format   gitalypb.GetArchiveRequest_Format
 		code     codes.Code
 	}{
 		{
 			desc:     "Repository doesn't exist",
-			repo:     &pb.Repository{StorageName: "fake", RelativePath: "path"},
+			repo:     &gitalypb.Repository{StorageName: "fake", RelativePath: "path"},
 			prefix:   "",
 			commitID: commitID,
-			format:   pb.GetArchiveRequest_ZIP,
+			format:   gitalypb.GetArchiveRequest_ZIP,
 			code:     codes.InvalidArgument,
 		},
 		{
@@ -119,7 +119,7 @@ func TestGetArchiveFailure(t *testing.T) {
 			repo:     nil,
 			prefix:   "",
 			commitID: commitID,
-			format:   pb.GetArchiveRequest_ZIP,
+			format:   gitalypb.GetArchiveRequest_ZIP,
 			code:     codes.InvalidArgument,
 		},
 		{
@@ -127,7 +127,7 @@ func TestGetArchiveFailure(t *testing.T) {
 			repo:     testRepo,
 			prefix:   "",
 			commitID: "",
-			format:   pb.GetArchiveRequest_ZIP,
+			format:   gitalypb.GetArchiveRequest_ZIP,
 			code:     codes.InvalidArgument,
 		},
 		{
@@ -135,7 +135,7 @@ func TestGetArchiveFailure(t *testing.T) {
 			repo:     testRepo,
 			prefix:   "",
 			commitID: "",
-			format:   pb.GetArchiveRequest_Format(-1),
+			format:   gitalypb.GetArchiveRequest_Format(-1),
 			code:     codes.InvalidArgument,
 		},
 	}
@@ -145,7 +145,7 @@ func TestGetArchiveFailure(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			req := &pb.GetArchiveRequest{
+			req := &gitalypb.GetArchiveRequest{
 				Repository: tc.repo,
 				CommitId:   tc.commitID,
 				Prefix:     tc.prefix,
@@ -160,22 +160,22 @@ func TestGetArchiveFailure(t *testing.T) {
 	}
 }
 
-func compressedFileContents(t *testing.T, format pb.GetArchiveRequest_Format, name string) []byte {
+func compressedFileContents(t *testing.T, format gitalypb.GetArchiveRequest_Format, name string) []byte {
 	switch format {
-	case pb.GetArchiveRequest_TAR:
+	case gitalypb.GetArchiveRequest_TAR:
 		return testhelper.MustRunCommand(t, nil, "tar", "tf", name)
-	case pb.GetArchiveRequest_TAR_GZ:
+	case gitalypb.GetArchiveRequest_TAR_GZ:
 		return testhelper.MustRunCommand(t, nil, "tar", "ztf", name)
-	case pb.GetArchiveRequest_TAR_BZ2:
+	case gitalypb.GetArchiveRequest_TAR_BZ2:
 		return testhelper.MustRunCommand(t, nil, "tar", "jtf", name)
-	case pb.GetArchiveRequest_ZIP:
+	case gitalypb.GetArchiveRequest_ZIP:
 		return testhelper.MustRunCommand(t, nil, "unzip", "-l", name)
 	}
 
 	return nil
 }
 
-func consumeArchive(stream pb.RepositoryService_GetArchiveClient) ([]byte, error) {
+func consumeArchive(stream gitalypb.RepositoryService_GetArchiveClient) ([]byte, error) {
 	reader := streamio.NewReader(func() ([]byte, error) {
 		response, err := stream.Recv()
 		return response.GetData(), err

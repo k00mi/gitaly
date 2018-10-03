@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc"
@@ -46,7 +46,7 @@ func runRemoteServiceServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	pb.RegisterRemoteServiceServer(grpcServer, &server{RubyServer})
+	gitalypb.RegisterRemoteServiceServer(grpcServer, &server{RubyServer})
 	reflection.Register(grpcServer)
 
 	go grpcServer.Serve(listener)
@@ -54,7 +54,7 @@ func runRemoteServiceServer(t *testing.T) (*grpc.Server, string) {
 	return grpcServer, serverSocketPath
 }
 
-func NewRemoteClient(t *testing.T, serverSocketPath string) (pb.RemoteServiceClient, *grpc.ClientConn) {
+func NewRemoteClient(t *testing.T, serverSocketPath string) (gitalypb.RemoteServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
@@ -66,5 +66,5 @@ func NewRemoteClient(t *testing.T, serverSocketPath string) (pb.RemoteServiceCli
 		t.Fatal(err)
 	}
 
-	return pb.NewRemoteServiceClient(conn), conn
+	return gitalypb.NewRemoteServiceClient(conn), conn
 }

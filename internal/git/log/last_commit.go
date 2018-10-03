@@ -5,17 +5,16 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
 // LastCommitForPath returns the last commit which modified path.
-func LastCommitForPath(ctx context.Context, repo *pb.Repository, revision string, path string) (*pb.GitCommit, error) {
+func LastCommitForPath(ctx context.Context, repo *gitalypb.Repository, revision string, path string) (*gitalypb.GitCommit, error) {
 	cmd, err := git.Command(ctx, repo, "log", "--format=%H", "--max-count=1", revision, "--", path)
 	if err != nil {
 		return nil, err
@@ -30,7 +29,7 @@ func LastCommitForPath(ctx context.Context, repo *pb.Repository, revision string
 }
 
 // GitLogCommand returns a Command that executes git log with the given the arguments
-func GitLogCommand(ctx context.Context, repo *pb.Repository, revisions []string, paths []string, extraArgs ...string) (*command.Command, error) {
+func GitLogCommand(ctx context.Context, repo *gitalypb.Repository, revisions []string, paths []string, extraArgs ...string) (*command.Command, error) {
 	grpc_logrus.Extract(ctx).WithFields(log.Fields{
 		"Revisions": revisions,
 	}).Debug("GitLog")

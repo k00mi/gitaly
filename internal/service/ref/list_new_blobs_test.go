@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -29,14 +29,14 @@ func TestListNewBlobs(t *testing.T) {
 
 	testCases := []struct {
 		revision     string
-		blobs        []pb.NewBlobObject
+		blobs        []gitalypb.NewBlobObject
 		responseCode codes.Code
 	}{
 		{
 			revision: oid,
-			blobs: []pb.NewBlobObject{
-				pb.NewBlobObject{Oid: "389c7a36a6e133268b0d36b00e7ffc0f3a5b6651", Path: []byte("gitaly/file-with-pluses.txt"), Size: 20},
-				pb.NewBlobObject{Oid: "b1e67221afe8461efd244b487afca22d46b95eb8", Path: []byte("z-short-diff"), Size: 6},
+			blobs: []gitalypb.NewBlobObject{
+				gitalypb.NewBlobObject{Oid: "389c7a36a6e133268b0d36b00e7ffc0f3a5b6651", Path: []byte("gitaly/file-with-pluses.txt"), Size: 20},
+				gitalypb.NewBlobObject{Oid: "b1e67221afe8461efd244b487afca22d46b95eb8", Path: []byte("z-short-diff"), Size: 6},
 			},
 		},
 		{
@@ -53,12 +53,12 @@ func TestListNewBlobs(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		request := &pb.ListNewBlobsRequest{Repository: testRepo, CommitId: tc.revision, Limit: 0}
+		request := &gitalypb.ListNewBlobsRequest{Repository: testRepo, CommitId: tc.revision, Limit: 0}
 
 		stream, err := client.ListNewBlobs(ctx, request)
 		require.NoError(t, err)
 
-		var blobs []*pb.NewBlobObject
+		var blobs []*gitalypb.NewBlobObject
 		for {
 			msg, err := stream.Recv()
 

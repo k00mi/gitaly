@@ -6,13 +6,12 @@ import (
 	"path"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/tempdir"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -44,7 +43,7 @@ func TestSuccessfulCreateRepositoryFromBundleRequest(t *testing.T) {
 	stream, err := client.CreateRepositoryFromBundle(ctx)
 	require.NoError(t, err)
 
-	importedRepo := &pb.Repository{
+	importedRepo := &gitalypb.Repository{
 		StorageName:  testhelper.DefaultStorageName,
 		RelativePath: "a-repo-from-bundle",
 	}
@@ -52,7 +51,7 @@ func TestSuccessfulCreateRepositoryFromBundleRequest(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(importedRepoPath)
 
-	request := &pb.CreateRepositoryFromBundleRequest{Repository: importedRepo}
+	request := &gitalypb.CreateRepositoryFromBundleRequest{Repository: importedRepo}
 	writer := streamio.NewWriter(func(p []byte) error {
 		request.Data = p
 
@@ -60,7 +59,7 @@ func TestSuccessfulCreateRepositoryFromBundleRequest(t *testing.T) {
 			return err
 		}
 
-		request = &pb.CreateRepositoryFromBundleRequest{}
+		request = &gitalypb.CreateRepositoryFromBundleRequest{}
 
 		return nil
 	})
@@ -99,7 +98,7 @@ func TestFailedCreateRepositoryFromBundleRequestDueToValidations(t *testing.T) {
 	stream, err := client.CreateRepositoryFromBundle(ctx)
 	require.NoError(t, err)
 
-	require.NoError(t, stream.Send(&pb.CreateRepositoryFromBundleRequest{}))
+	require.NoError(t, stream.Send(&gitalypb.CreateRepositoryFromBundleRequest{}))
 
 	_, err = stream.CloseAndRecv()
 	testhelper.RequireGrpcError(t, err, codes.InvalidArgument)

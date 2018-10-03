@@ -5,11 +5,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 )
 
-func (s *server) FetchRemote(ctx context.Context, in *pb.FetchRemoteRequest) (*pb.FetchRemoteResponse, error) {
+func (s *server) FetchRemote(ctx context.Context, in *gitalypb.FetchRemoteRequest) (*gitalypb.FetchRemoteResponse, error) {
 	grpc_logrus.Extract(ctx).WithFields(log.Fields{
 		"Remote":     in.GetRemote(),
 		"Force":      in.GetForce(),

@@ -2,7 +2,7 @@
 // source: blob.proto
 
 /*
-Package gitaly is a generated protocol buffer package.
+Package gitalypb is a generated protocol buffer package.
 
 It is generated from these files:
 	blob.proto
@@ -299,7 +299,7 @@ It has these top-level messages:
 	WikiGetFormattedDataRequest
 	WikiGetFormattedDataResponse
 */
-package gitaly
+package gitalypb
 
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"

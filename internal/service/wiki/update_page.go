@@ -3,15 +3,14 @@ package wiki
 import (
 	"fmt"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) WikiUpdatePage(stream pb.WikiService_WikiUpdatePageServer) error {
+func (s *server) WikiUpdatePage(stream gitalypb.WikiService_WikiUpdatePageServer) error {
 	firstRequest, err := stream.Recv()
 	if err != nil {
 		return err
@@ -62,7 +61,7 @@ func (s *server) WikiUpdatePage(stream pb.WikiService_WikiUpdatePageServer) erro
 	return stream.SendAndClose(response)
 }
 
-func validateWikiUpdatePageRequest(request *pb.WikiUpdatePageRequest) error {
+func validateWikiUpdatePageRequest(request *gitalypb.WikiUpdatePageRequest) error {
 	if len(request.GetPagePath()) == 0 {
 		return fmt.Errorf("empty Page Path")
 	}

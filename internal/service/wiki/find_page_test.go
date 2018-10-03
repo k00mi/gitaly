@@ -4,9 +4,8 @@ import (
 	"io"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -34,18 +33,18 @@ func TestSuccessfulWikiFindPageRequest(t *testing.T) {
 
 	testCases := []struct {
 		desc            string
-		request         *pb.WikiFindPageRequest
-		expectedPage    *pb.WikiPage
+		request         *gitalypb.WikiFindPageRequest
+		expectedPage    *gitalypb.WikiPage
 		expectedContent []byte
 	}{
 		{
 			desc: "title only",
-			request: &pb.WikiFindPageRequest{
+			request: &gitalypb.WikiFindPageRequest{
 				Repository: wikiRepo,
 				Title:      []byte(page1Name),
 			},
-			expectedPage: &pb.WikiPage{
-				Version: &pb.WikiPageVersion{
+			expectedPage: &gitalypb.WikiPage{
+				Version: &gitalypb.WikiPageVersion{
 					Commit: latestCommit,
 					Format: "markdown",
 				},
@@ -60,13 +59,13 @@ func TestSuccessfulWikiFindPageRequest(t *testing.T) {
 		},
 		{
 			desc: "title + revision that includes the page",
-			request: &pb.WikiFindPageRequest{
+			request: &gitalypb.WikiFindPageRequest{
 				Repository: wikiRepo,
 				Title:      []byte(page1Name),
 				Revision:   []byte(page1Commit.Id),
 			},
-			expectedPage: &pb.WikiPage{
-				Version: &pb.WikiPageVersion{
+			expectedPage: &gitalypb.WikiPage{
+				Version: &gitalypb.WikiPageVersion{
 					Commit: page1Commit,
 					Format: "markdown",
 				},
@@ -81,7 +80,7 @@ func TestSuccessfulWikiFindPageRequest(t *testing.T) {
 		},
 		{
 			desc: "title + revision that does not include the page",
-			request: &pb.WikiFindPageRequest{
+			request: &gitalypb.WikiFindPageRequest{
 				Repository: wikiRepo,
 				Title:      []byte(page2Name),
 				Revision:   []byte(page1Commit.Id),
@@ -90,13 +89,13 @@ func TestSuccessfulWikiFindPageRequest(t *testing.T) {
 		},
 		{
 			desc: "title + directory that includes the page",
-			request: &pb.WikiFindPageRequest{
+			request: &gitalypb.WikiFindPageRequest{
 				Repository: wikiRepo,
 				Title:      []byte("Step 133-b"),
 				Directory:  []byte("Instálling"),
 			},
-			expectedPage: &pb.WikiPage{
-				Version: &pb.WikiPageVersion{
+			expectedPage: &gitalypb.WikiPage{
+				Version: &gitalypb.WikiPageVersion{
 					Commit: latestCommit,
 					Format: "markdown",
 				},
@@ -111,7 +110,7 @@ func TestSuccessfulWikiFindPageRequest(t *testing.T) {
 		},
 		{
 			desc: "title + directory that does not include the page",
-			request: &pb.WikiFindPageRequest{
+			request: &gitalypb.WikiFindPageRequest{
 				Repository: wikiRepo,
 				Title:      []byte("Step 133-b"),
 				Directory:  []byte("Installation"),
@@ -120,12 +119,12 @@ func TestSuccessfulWikiFindPageRequest(t *testing.T) {
 		},
 		{
 			desc: "title for invalidly-encoded page",
-			request: &pb.WikiFindPageRequest{
+			request: &gitalypb.WikiFindPageRequest{
 				Repository: wikiRepo,
 				Title:      []byte("Encoding is fun"),
 			},
-			expectedPage: &pb.WikiPage{
-				Version: &pb.WikiPageVersion{
+			expectedPage: &gitalypb.WikiPage{
+				Version: &gitalypb.WikiPageVersion{
 					Commit: latestCommit,
 					Format: "markdown",
 				},
@@ -188,18 +187,18 @@ func TestSuccessfulWikiFindPageSameTitleDifferentPathRequest(t *testing.T) {
 
 	testCases := []struct {
 		desc         string
-		request      *pb.WikiFindPageRequest
-		expectedPage *pb.WikiPage
+		request      *gitalypb.WikiFindPageRequest
+		expectedPage *gitalypb.WikiPage
 		content      []byte
 	}{
 		{
 			desc: "finding page in root directory by title only",
-			request: &pb.WikiFindPageRequest{
+			request: &gitalypb.WikiFindPageRequest{
 				Repository: wikiRepo,
 				Title:      []byte(page1Name),
 			},
-			expectedPage: &pb.WikiPage{
-				Version: &pb.WikiPageVersion{
+			expectedPage: &gitalypb.WikiPage{
+				Version: &gitalypb.WikiPageVersion{
 					Commit: page2Commit,
 					Format: "markdown",
 				},
@@ -214,13 +213,13 @@ func TestSuccessfulWikiFindPageSameTitleDifferentPathRequest(t *testing.T) {
 		},
 		{
 			desc: "finding page in root directory by title + directory that includes the page",
-			request: &pb.WikiFindPageRequest{
+			request: &gitalypb.WikiFindPageRequest{
 				Repository: wikiRepo,
 				Title:      []byte(page1Name),
 				Directory:  []byte(""),
 			},
-			expectedPage: &pb.WikiPage{
-				Version: &pb.WikiPageVersion{
+			expectedPage: &gitalypb.WikiPage{
+				Version: &gitalypb.WikiPageVersion{
 					Commit: page2Commit,
 					Format: "markdown",
 				},
@@ -235,13 +234,13 @@ func TestSuccessfulWikiFindPageSameTitleDifferentPathRequest(t *testing.T) {
 		},
 		{
 			desc: "finding page inside a directory by title + directory that includes the page",
-			request: &pb.WikiFindPageRequest{
+			request: &gitalypb.WikiFindPageRequest{
 				Repository: wikiRepo,
 				Title:      []byte(page2Name),
 				Directory:  []byte("foo"),
 			},
-			expectedPage: &pb.WikiPage{
-				Version: &pb.WikiPageVersion{
+			expectedPage: &gitalypb.WikiPage{
+				Version: &gitalypb.WikiPageVersion{
 					Commit: page2Commit,
 					Format: "markdown",
 				},
@@ -309,7 +308,7 @@ func TestFailedWikiFindPageDueToValidation(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			request := &pb.WikiFindPageRequest{
+			request := &gitalypb.WikiFindPageRequest{
 				Repository: wikiRepo,
 				Title:      []byte(testCase.title),
 			}
@@ -323,7 +322,7 @@ func TestFailedWikiFindPageDueToValidation(t *testing.T) {
 	}
 }
 
-func drainWikiFindPageResponse(c pb.WikiService_WikiFindPageClient) error {
+func drainWikiFindPageResponse(c gitalypb.WikiService_WikiFindPageClient) error {
 	for {
 		_, err := c.Recv()
 		if err != nil {
@@ -332,7 +331,7 @@ func drainWikiFindPageResponse(c pb.WikiService_WikiFindPageClient) error {
 	}
 }
 
-func readFullWikiPageFromWikiFindPageClient(t *testing.T, c pb.WikiService_WikiFindPageClient) (wikiPage *pb.WikiPage) {
+func readFullWikiPageFromWikiFindPageClient(t *testing.T, c gitalypb.WikiService_WikiFindPageClient) (wikiPage *gitalypb.WikiPage) {
 	for {
 		resp, err := c.Recv()
 		if err == io.EOF {

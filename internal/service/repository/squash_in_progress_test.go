@@ -4,9 +4,8 @@ import (
 	"path"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -29,12 +28,12 @@ func TestSuccessfulIsSquashInProgressRequest(t *testing.T) {
 
 	testCases := []struct {
 		desc       string
-		request    *pb.IsSquashInProgressRequest
+		request    *gitalypb.IsSquashInProgressRequest
 		inProgress bool
 	}{
 		{
 			desc: "Squash in progress",
-			request: &pb.IsSquashInProgressRequest{
+			request: &gitalypb.IsSquashInProgressRequest{
 				Repository: testRepo1,
 				SquashId:   "1",
 			},
@@ -42,7 +41,7 @@ func TestSuccessfulIsSquashInProgressRequest(t *testing.T) {
 		},
 		{
 			desc: "no Squash in progress",
-			request: &pb.IsSquashInProgressRequest{
+			request: &gitalypb.IsSquashInProgressRequest{
 				Repository: testRepo2,
 				SquashId:   "2",
 			},
@@ -72,17 +71,17 @@ func TestFailedIsSquashInProgressRequestDueToValidations(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.IsSquashInProgressRequest
+		request *gitalypb.IsSquashInProgressRequest
 		code    codes.Code
 	}{
 		{
 			desc:    "empty repository",
-			request: &pb.IsSquashInProgressRequest{SquashId: "1"},
+			request: &gitalypb.IsSquashInProgressRequest{SquashId: "1"},
 			code:    codes.InvalidArgument,
 		},
 		{
 			desc:    "empty Squash id",
-			request: &pb.IsSquashInProgressRequest{Repository: &pb.Repository{}},
+			request: &gitalypb.IsSquashInProgressRequest{Repository: &gitalypb.Repository{}},
 			code:    codes.InvalidArgument,
 		},
 	}

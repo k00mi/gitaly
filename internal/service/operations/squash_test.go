@@ -4,14 +4,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
 )
 
 var (
-	author = &pb.User{
+	author = &gitalypb.User{
 		Name:  []byte("John Doe"),
 		Email: []byte("johndoe@gitlab.com"),
 	}
@@ -34,7 +34,7 @@ func TestSuccessfulUserSquashRequest(t *testing.T) {
 	testRepo, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	request := &pb.UserSquashRequest{
+	request := &gitalypb.UserSquashRequest{
 		Repository:    testRepo,
 		User:          user,
 		SquashId:      "1",
@@ -73,7 +73,7 @@ func TestFailedUserSquashRequestDueToGitError(t *testing.T) {
 	conflictingStartSha := "bbd36ad238d14e1c03ece0f3358f545092dc9ca3"
 	branchName := "gitaly-stuff"
 
-	request := &pb.UserSquashRequest{
+	request := &gitalypb.UserSquashRequest{
 		Repository:    testRepo,
 		User:          user,
 		SquashId:      "1",
@@ -101,12 +101,12 @@ func TestFailedUserSquashRequestDueToValidations(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.UserSquashRequest
+		request *gitalypb.UserSquashRequest
 		code    codes.Code
 	}{
 		{
 			desc: "empty Repository",
-			request: &pb.UserSquashRequest{
+			request: &gitalypb.UserSquashRequest{
 				Repository:    nil,
 				User:          user,
 				SquashId:      "1",
@@ -120,7 +120,7 @@ func TestFailedUserSquashRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty User",
-			request: &pb.UserSquashRequest{
+			request: &gitalypb.UserSquashRequest{
 				Repository:    testRepo,
 				User:          nil,
 				SquashId:      "1",
@@ -134,7 +134,7 @@ func TestFailedUserSquashRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty SquashId",
-			request: &pb.UserSquashRequest{
+			request: &gitalypb.UserSquashRequest{
 				Repository:    testRepo,
 				User:          user,
 				SquashId:      "",
@@ -148,7 +148,7 @@ func TestFailedUserSquashRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty Branch",
-			request: &pb.UserSquashRequest{
+			request: &gitalypb.UserSquashRequest{
 				Repository:    testRepo,
 				User:          user,
 				SquashId:      "1",
@@ -162,7 +162,7 @@ func TestFailedUserSquashRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty StartSha",
-			request: &pb.UserSquashRequest{
+			request: &gitalypb.UserSquashRequest{
 				Repository:    testRepo,
 				User:          user,
 				SquashId:      "1",
@@ -176,7 +176,7 @@ func TestFailedUserSquashRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty EndSha",
-			request: &pb.UserSquashRequest{
+			request: &gitalypb.UserSquashRequest{
 				Repository:    testRepo,
 				User:          user,
 				SquashId:      "1",
@@ -190,7 +190,7 @@ func TestFailedUserSquashRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty Author",
-			request: &pb.UserSquashRequest{
+			request: &gitalypb.UserSquashRequest{
 				Repository:    testRepo,
 				User:          user,
 				SquashId:      "1",
@@ -204,7 +204,7 @@ func TestFailedUserSquashRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty CommitMessage",
-			request: &pb.UserSquashRequest{
+			request: &gitalypb.UserSquashRequest{
 				Repository:    testRepo,
 				User:          user,
 				SquashId:      "1",

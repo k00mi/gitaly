@@ -11,9 +11,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"google.golang.org/grpc/codes"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/archive"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
@@ -54,7 +54,7 @@ func generateTarFile(t *testing.T, path string) ([]byte, []string) {
 	return data, entries
 }
 
-func createFromSnapshot(t *testing.T, req *pb.CreateRepositoryFromSnapshotRequest) (*pb.CreateRepositoryFromSnapshotResponse, error) {
+func createFromSnapshot(t *testing.T, req *gitalypb.CreateRepositoryFromSnapshotRequest) (*gitalypb.CreateRepositoryFromSnapshotResponse, error) {
 	server, serverSocketPath := runRepoServer(t)
 	defer server.Stop()
 
@@ -84,7 +84,7 @@ func TestCreateRepositoryFromSnapshotSuccess(t *testing.T) {
 	// Delete the repository so we can re-use the path
 	require.NoError(t, os.RemoveAll(repoPath))
 
-	req := &pb.CreateRepositoryFromSnapshotRequest{
+	req := &gitalypb.CreateRepositoryFromSnapshotRequest{
 		Repository: testRepo,
 		HttpUrl:    srv.URL + tarPath,
 		HttpAuth:   secret,
@@ -93,7 +93,7 @@ func TestCreateRepositoryFromSnapshotSuccess(t *testing.T) {
 	rsp, err := createFromSnapshot(t, req)
 
 	require.NoError(t, err)
-	require.Equal(t, rsp, &pb.CreateRepositoryFromSnapshotResponse{})
+	require.Equal(t, rsp, &gitalypb.CreateRepositoryFromSnapshotResponse{})
 
 	require.DirExists(t, repoPath)
 	for _, entry := range entries {
@@ -116,7 +116,7 @@ func TestCreateRepositoryFromSnapshotFailsIfRepositoryExists(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	req := &pb.CreateRepositoryFromSnapshotRequest{Repository: testRepo}
+	req := &gitalypb.CreateRepositoryFromSnapshotRequest{Repository: testRepo}
 	rsp, err := createFromSnapshot(t, req)
 	testhelper.RequireGrpcError(t, err, codes.InvalidArgument)
 	require.Contains(t, err.Error(), "destination directory exists")
@@ -127,7 +127,7 @@ func TestCreateRepositoryFromSnapshotFailsIfBadURL(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	cleanupFn() // free up the destination dir for use
 
-	req := &pb.CreateRepositoryFromSnapshotRequest{
+	req := &gitalypb.CreateRepositoryFromSnapshotRequest{
 		Repository: testRepo,
 		HttpUrl:    "invalid!scheme://invalid.invalid",
 	}
@@ -177,7 +177,7 @@ func TestCreateRepositoryFromSnapshotBadRequests(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			req := &pb.CreateRepositoryFromSnapshotRequest{
+			req := &gitalypb.CreateRepositoryFromSnapshotRequest{
 				Repository: testRepo,
 				HttpUrl:    srv.URL + tc.url,
 				HttpAuth:   tc.auth,
@@ -209,7 +209,7 @@ func TestCreateRepositoryFromSnapshotHandlesMalformedResponse(t *testing.T) {
 	// Delete the repository so we can re-use the path
 	require.NoError(t, os.RemoveAll(repoPath))
 
-	req := &pb.CreateRepositoryFromSnapshotRequest{
+	req := &gitalypb.CreateRepositoryFromSnapshotRequest{
 		Repository: testRepo,
 		HttpUrl:    srv.URL + tarPath,
 		HttpAuth:   secret,

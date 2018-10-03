@@ -7,9 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -45,12 +44,12 @@ func TestSuccessfulIsRebaseInProgressRequest(t *testing.T) {
 
 	testCases := []struct {
 		desc       string
-		request    *pb.IsRebaseInProgressRequest
+		request    *gitalypb.IsRebaseInProgressRequest
 		inProgress bool
 	}{
 		{
 			desc: "rebase in progress",
-			request: &pb.IsRebaseInProgressRequest{
+			request: &gitalypb.IsRebaseInProgressRequest{
 				Repository: testRepo1,
 				RebaseId:   "1",
 			},
@@ -58,7 +57,7 @@ func TestSuccessfulIsRebaseInProgressRequest(t *testing.T) {
 		},
 		{
 			desc: "broken rebase in progress",
-			request: &pb.IsRebaseInProgressRequest{
+			request: &gitalypb.IsRebaseInProgressRequest{
 				Repository: testRepo1,
 				RebaseId:   "2",
 			},
@@ -66,7 +65,7 @@ func TestSuccessfulIsRebaseInProgressRequest(t *testing.T) {
 		},
 		{
 			desc: "expired rebase in progress",
-			request: &pb.IsRebaseInProgressRequest{
+			request: &gitalypb.IsRebaseInProgressRequest{
 				Repository: testRepo1,
 				RebaseId:   "3",
 			},
@@ -74,7 +73,7 @@ func TestSuccessfulIsRebaseInProgressRequest(t *testing.T) {
 		},
 		{
 			desc: "no rebase in progress",
-			request: &pb.IsRebaseInProgressRequest{
+			request: &gitalypb.IsRebaseInProgressRequest{
 				Repository: testRepo2,
 				RebaseId:   "2",
 			},
@@ -104,17 +103,17 @@ func TestFailedIsRebaseInProgressRequestDueToValidations(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.IsRebaseInProgressRequest
+		request *gitalypb.IsRebaseInProgressRequest
 		code    codes.Code
 	}{
 		{
 			desc:    "empty repository",
-			request: &pb.IsRebaseInProgressRequest{RebaseId: "1"},
+			request: &gitalypb.IsRebaseInProgressRequest{RebaseId: "1"},
 			code:    codes.InvalidArgument,
 		},
 		{
 			desc:    "empty rebase id",
-			request: &pb.IsRebaseInProgressRequest{Repository: &pb.Repository{}},
+			request: &gitalypb.IsRebaseInProgressRequest{Repository: &gitalypb.Repository{}},
 			code:    codes.InvalidArgument,
 		},
 	}

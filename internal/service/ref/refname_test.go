@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
@@ -22,7 +22,7 @@ func TestFindRefNameSuccess(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	rpcRequest := &pb.FindRefNameRequest{
+	rpcRequest := &gitalypb.FindRefNameRequest{
 		Repository: testRepo,
 		CommitId:   "0b4bc9a49b562e85de7cc9e834518ea6828729b9",
 		Prefix:     []byte(`refs/heads/`),
@@ -52,7 +52,7 @@ func TestFindRefNameEmptyCommit(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	rpcRequest := &pb.FindRefNameRequest{
+	rpcRequest := &gitalypb.FindRefNameRequest{
 		Repository: testRepo,
 		CommitId:   "",
 		Prefix:     []byte(`refs/heads/`),
@@ -80,8 +80,8 @@ func TestFindRefNameInvalidRepo(t *testing.T) {
 
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
-	repo := &pb.Repository{StorageName: "fake", RelativePath: "path"}
-	rpcRequest := &pb.FindRefNameRequest{
+	repo := &gitalypb.Repository{StorageName: "fake", RelativePath: "path"}
+	rpcRequest := &gitalypb.FindRefNameRequest{
 		Repository: repo,
 		CommitId:   "0b4bc9a49b562e85de7cc9e834518ea6828729b9",
 		Prefix:     []byte(`refs/heads/`),
@@ -113,7 +113,7 @@ func TestFindRefNameInvalidPrefix(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	rpcRequest := &pb.FindRefNameRequest{
+	rpcRequest := &gitalypb.FindRefNameRequest{
 		Repository: testRepo,
 		CommitId:   "0b4bc9a49b562e85de7cc9e834518ea6828729b9",
 		Prefix:     []byte(`refs/nonexistant/`),
@@ -140,7 +140,7 @@ func TestFindRefNameInvalidObject(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	rpcRequest := &pb.FindRefNameRequest{
+	rpcRequest := &gitalypb.FindRefNameRequest{
 		Repository: testRepo,
 		CommitId:   "dead1234dead1234dead1234dead1234dead1234",
 	}

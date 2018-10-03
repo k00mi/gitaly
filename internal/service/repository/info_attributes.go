@@ -5,7 +5,7 @@ import (
 	"os"
 	"path"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 
@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) GetInfoAttributes(in *pb.GetInfoAttributesRequest, stream pb.RepositoryService_GetInfoAttributesServer) error {
+func (s *server) GetInfoAttributes(in *gitalypb.GetInfoAttributesRequest, stream gitalypb.RepositoryService_GetInfoAttributesServer) error {
 	repoPath, err := helper.GetRepoPath(in.GetRepository())
 	if err != nil {
 		return err
@@ -23,7 +23,7 @@ func (s *server) GetInfoAttributes(in *pb.GetInfoAttributesRequest, stream pb.Re
 	f, err := os.Open(attrFile)
 	if err != nil {
 		if os.IsNotExist(err) {
-			stream.Send(&pb.GetInfoAttributesResponse{})
+			stream.Send(&gitalypb.GetInfoAttributesResponse{})
 			return nil
 		}
 
@@ -31,7 +31,7 @@ func (s *server) GetInfoAttributes(in *pb.GetInfoAttributesRequest, stream pb.Re
 	}
 
 	sw := streamio.NewWriter(func(p []byte) error {
-		return stream.Send(&pb.GetInfoAttributesResponse{
+		return stream.Send(&gitalypb.GetInfoAttributesResponse{
 			Attributes: p,
 		})
 	})

@@ -7,9 +7,8 @@ import (
 	"strconv"
 	"time"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	"golang.org/x/net/context"
@@ -17,7 +16,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) CountCommits(ctx context.Context, in *pb.CountCommitsRequest) (*pb.CountCommitsResponse, error) {
+func (s *server) CountCommits(ctx context.Context, in *gitalypb.CountCommitsRequest) (*gitalypb.CountCommitsResponse, error) {
 	if err := validateCountCommitsRequest(in); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "CountCommits: %v", err)
 	}
@@ -70,10 +69,10 @@ func (s *server) CountCommits(ctx context.Context, in *pb.CountCommitsRequest) (
 		}
 	}
 
-	return &pb.CountCommitsResponse{Count: int32(count)}, nil
+	return &gitalypb.CountCommitsResponse{Count: int32(count)}, nil
 }
 
-func validateCountCommitsRequest(in *pb.CountCommitsRequest) error {
+func validateCountCommitsRequest(in *gitalypb.CountCommitsRequest) error {
 	if len(in.GetRevision()) == 0 && !in.GetAll() {
 		return fmt.Errorf("empty Revision and false All")
 	}

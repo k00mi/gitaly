@@ -11,8 +11,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
@@ -47,7 +46,7 @@ func runDiffServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	pb.RegisterDiffServiceServer(server, NewServer(rubyServer))
+	gitalypb.RegisterDiffServiceServer(server, NewServer(rubyServer))
 	reflection.Register(server)
 
 	go server.Serve(listener)
@@ -55,7 +54,7 @@ func runDiffServer(t *testing.T) (*grpc.Server, string) {
 	return server, serverSocketPath
 }
 
-func newDiffClient(t *testing.T, serverSocketPath string) (pb.DiffServiceClient, *grpc.ClientConn) {
+func newDiffClient(t *testing.T, serverSocketPath string) (gitalypb.DiffServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
@@ -68,5 +67,5 @@ func newDiffClient(t *testing.T, serverSocketPath string) (pb.DiffServiceClient,
 		t.Fatal(err)
 	}
 
-	return pb.NewDiffServiceClient(conn), conn
+	return gitalypb.NewDiffServiceClient(conn), conn
 }

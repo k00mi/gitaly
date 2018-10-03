@@ -11,13 +11,13 @@ import (
 
 	"golang.org/x/net/context"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 )
 
 // AddRemote adds a remote to the repository
-func (s *server) AddRemote(ctx context.Context, req *pb.AddRemoteRequest) (*pb.AddRemoteResponse, error) {
+func (s *server) AddRemote(ctx context.Context, req *gitalypb.AddRemoteRequest) (*gitalypb.AddRemoteResponse, error) {
 	if err := validateAddRemoteRequest(req); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "AddRemote: %v", err)
 	}
@@ -35,7 +35,7 @@ func (s *server) AddRemote(ctx context.Context, req *pb.AddRemoteRequest) (*pb.A
 	return client.AddRemote(clientCtx, req)
 }
 
-func validateAddRemoteRequest(req *pb.AddRemoteRequest) error {
+func validateAddRemoteRequest(req *gitalypb.AddRemoteRequest) error {
 	if strings.TrimSpace(req.GetName()) == "" {
 		return fmt.Errorf("empty remote name")
 	}
@@ -47,7 +47,7 @@ func validateAddRemoteRequest(req *pb.AddRemoteRequest) error {
 }
 
 // RemoveRemote removes the given remote
-func (s *server) RemoveRemote(ctx context.Context, req *pb.RemoveRemoteRequest) (*pb.RemoveRemoteResponse, error) {
+func (s *server) RemoveRemote(ctx context.Context, req *gitalypb.RemoveRemoteRequest) (*gitalypb.RemoveRemoteResponse, error) {
 	if err := validateRemoveRemoteRequest(req); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "AddRemote: %v", err)
 	}
@@ -65,7 +65,7 @@ func (s *server) RemoveRemote(ctx context.Context, req *pb.RemoveRemoteRequest) 
 	return client.RemoveRemote(clientCtx, req)
 }
 
-func (s *server) FindRemoteRepository(ctx context.Context, req *pb.FindRemoteRepositoryRequest) (*pb.FindRemoteRepositoryResponse, error) {
+func (s *server) FindRemoteRepository(ctx context.Context, req *gitalypb.FindRemoteRepositoryRequest) (*gitalypb.FindRemoteRepositoryResponse, error) {
 	if req.GetRemote() == "" {
 		return nil, status.Error(codes.InvalidArgument, "FindRemoteRepository: empty remote can't be checked.")
 	}
@@ -81,7 +81,7 @@ func (s *server) FindRemoteRepository(ctx context.Context, req *pb.FindRemoteRep
 		return nil, status.Errorf(codes.Internal, "unable to read stdout: %s", err)
 	}
 	if err := cmd.Wait(); err != nil {
-		return &pb.FindRemoteRepositoryResponse{Exists: false}, nil
+		return &gitalypb.FindRemoteRepositoryResponse{Exists: false}, nil
 	}
 
 	// The output of a successful command is structured like
@@ -90,10 +90,10 @@ func (s *server) FindRemoteRepository(ctx context.Context, req *pb.FindRemoteRep
 	fields := bytes.Fields(output)
 	match := len(fields) == 2 && len(fields[0]) == 40 && string(fields[1]) == "HEAD"
 
-	return &pb.FindRemoteRepositoryResponse{Exists: match}, nil
+	return &gitalypb.FindRemoteRepositoryResponse{Exists: match}, nil
 }
 
-func validateRemoveRemoteRequest(req *pb.RemoveRemoteRequest) error {
+func validateRemoveRemoteRequest(req *gitalypb.RemoveRemoteRequest) error {
 	if req.GetName() == "" {
 		return fmt.Errorf("empty remote name")
 	}

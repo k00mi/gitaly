@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"path"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
@@ -15,14 +15,14 @@ import (
 
 const customHooksDir = "custom_hooks"
 
-func (s *server) BackupCustomHooks(in *pb.BackupCustomHooksRequest, stream pb.RepositoryService_BackupCustomHooksServer) error {
+func (s *server) BackupCustomHooks(in *gitalypb.BackupCustomHooksRequest, stream gitalypb.RepositoryService_BackupCustomHooksServer) error {
 	repoPath, err := helper.GetPath(in.Repository)
 	if err != nil {
 		return status.Errorf(codes.Internal, "BackupCustomHooks: getting repo path failed %v", err)
 	}
 
 	writer := streamio.NewWriter(func(p []byte) error {
-		return stream.Send(&pb.BackupCustomHooksResponse{Data: p})
+		return stream.Send(&gitalypb.BackupCustomHooksResponse{Data: p})
 	})
 
 	if _, err := os.Lstat(path.Join(repoPath, customHooksDir)); os.IsNotExist(err) {

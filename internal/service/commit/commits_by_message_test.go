@@ -4,9 +4,8 @@ import (
 	"io"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/require"
@@ -24,7 +23,7 @@ func TestSuccessfulCommitsByMessageRequest(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	commits := []*pb.GitCommit{
+	commits := []*gitalypb.GitCommit{
 		{
 			Id:        "bf6e164cac2dc32b1f391ca4290badcbe4ffc5fb",
 			Subject:   []byte("Commit #10"),
@@ -47,12 +46,12 @@ func TestSuccessfulCommitsByMessageRequest(t *testing.T) {
 
 	testCases := []struct {
 		desc            string
-		request         *pb.CommitsByMessageRequest
-		expectedCommits []*pb.GitCommit
+		request         *gitalypb.CommitsByMessageRequest
+		expectedCommits []*gitalypb.GitCommit
 	}{
 		{
 			desc: "revision + query",
-			request: &pb.CommitsByMessageRequest{
+			request: &gitalypb.CommitsByMessageRequest{
 				Revision: []byte("few-commits"),
 				Query:    "commit #1",
 			},
@@ -60,7 +59,7 @@ func TestSuccessfulCommitsByMessageRequest(t *testing.T) {
 		},
 		{
 			desc: "revision + query + limit",
-			request: &pb.CommitsByMessageRequest{
+			request: &gitalypb.CommitsByMessageRequest{
 				Revision: []byte("few-commits"),
 				Query:    "commit #1",
 				Limit:    1,
@@ -69,7 +68,7 @@ func TestSuccessfulCommitsByMessageRequest(t *testing.T) {
 		},
 		{
 			desc: "revision + query + offset",
-			request: &pb.CommitsByMessageRequest{
+			request: &gitalypb.CommitsByMessageRequest{
 				Revision: []byte("few-commits"),
 				Query:    "commit #1",
 				Offset:   1,
@@ -78,21 +77,21 @@ func TestSuccessfulCommitsByMessageRequest(t *testing.T) {
 		},
 		{
 			desc: "query + empty revision + path",
-			request: &pb.CommitsByMessageRequest{
+			request: &gitalypb.CommitsByMessageRequest{
 				Query: "much more",
 				Path:  []byte("files/ruby"),
 			},
-			expectedCommits: []*pb.GitCommit{
+			expectedCommits: []*gitalypb.GitCommit{
 				{
 					Id:      "913c66a37b4a45b9769037c55c2d238bd0942d2e",
 					Subject: []byte("Files, encoding and much more"),
 					Body:    []byte("Files, encoding and much more\n\nSigned-off-by: Dmitriy Zaporozhets <dmitriy.zaporozhets@gmail.com>\n"),
-					Author: &pb.CommitAuthor{
+					Author: &gitalypb.CommitAuthor{
 						Name:  []byte("Dmitriy Zaporozhets"),
 						Email: []byte("dmitriy.zaporozhets@gmail.com"),
 						Date:  &timestamp.Timestamp{Seconds: 1393488896},
 					},
-					Committer: &pb.CommitAuthor{
+					Committer: &gitalypb.CommitAuthor{
 						Name:  []byte("Dmitriy Zaporozhets"),
 						Email: []byte("dmitriy.zaporozhets@gmail.com"),
 						Date:  &timestamp.Timestamp{Seconds: 1393488896},
@@ -104,19 +103,19 @@ func TestSuccessfulCommitsByMessageRequest(t *testing.T) {
 		},
 		{
 			desc: "query + empty revision + path not in the commits",
-			request: &pb.CommitsByMessageRequest{
+			request: &gitalypb.CommitsByMessageRequest{
 				Query: "much more",
 				Path:  []byte("bar"),
 			},
-			expectedCommits: []*pb.GitCommit{},
+			expectedCommits: []*gitalypb.GitCommit{},
 		},
 		{
 			desc: "query + bad revision",
-			request: &pb.CommitsByMessageRequest{
+			request: &gitalypb.CommitsByMessageRequest{
 				Revision: []byte("maaaaasterrrrr"),
 				Query:    "much more",
 			},
-			expectedCommits: []*pb.GitCommit{},
+			expectedCommits: []*gitalypb.GitCommit{},
 		},
 	}
 
@@ -133,7 +132,7 @@ func TestSuccessfulCommitsByMessageRequest(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			receivedCommits := []*pb.GitCommit{}
+			receivedCommits := []*gitalypb.GitCommit{}
 			for {
 				resp, err := c.Recv()
 				if err == io.EOF {
@@ -164,26 +163,26 @@ func TestFailedCommitsByMessageRequest(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	invalidRepo := &pb.Repository{StorageName: "fake", RelativePath: "path"}
+	invalidRepo := &gitalypb.Repository{StorageName: "fake", RelativePath: "path"}
 
 	testCases := []struct {
 		desc    string
-		request *pb.CommitsByMessageRequest
+		request *gitalypb.CommitsByMessageRequest
 		code    codes.Code
 	}{
 		{
 			desc:    "Invalid repository",
-			request: &pb.CommitsByMessageRequest{Repository: invalidRepo, Query: "foo"},
+			request: &gitalypb.CommitsByMessageRequest{Repository: invalidRepo, Query: "foo"},
 			code:    codes.InvalidArgument,
 		},
 		{
 			desc:    "Repository is nil",
-			request: &pb.CommitsByMessageRequest{Query: "foo"},
+			request: &gitalypb.CommitsByMessageRequest{Query: "foo"},
 			code:    codes.InvalidArgument,
 		},
 		{
 			desc:    "Query is missing",
-			request: &pb.CommitsByMessageRequest{Repository: testRepo},
+			request: &gitalypb.CommitsByMessageRequest{Repository: testRepo},
 			code:    codes.InvalidArgument,
 		},
 	}
@@ -203,7 +202,7 @@ func TestFailedCommitsByMessageRequest(t *testing.T) {
 	}
 }
 
-func drainCommitsByMessageResponse(c pb.CommitService_CommitsByMessageClient) error {
+func drainCommitsByMessageResponse(c gitalypb.CommitService_CommitsByMessageClient) error {
 	var err error
 	for err == nil {
 		_, err = c.Recv()

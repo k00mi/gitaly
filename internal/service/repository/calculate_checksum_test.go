@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
 )
@@ -30,7 +30,7 @@ func TestSuccessfulCalculateChecksum(t *testing.T) {
 	require.NoError(t, exec.Command("cp", "testdata/checksum-test-packed-refs", path.Join(testRepoPath, "packed-refs")).Run())
 	require.NoError(t, exec.Command("git", "-C", testRepoPath, "symbolic-ref", "HEAD", "refs/heads/feature").Run())
 
-	request := &pb.CalculateChecksumRequest{Repository: testRepo}
+	request := &gitalypb.CalculateChecksumRequest{Repository: testRepo}
 	testCtx, cancelCtx := testhelper.Context()
 	defer cancelCtx()
 
@@ -79,7 +79,7 @@ func TestEmptyRepositoryCalculateChecksum(t *testing.T) {
 	repo, _, cleanupFn := testhelper.InitBareRepo(t)
 	defer cleanupFn()
 
-	request := &pb.CalculateChecksumRequest{Repository: repo}
+	request := &gitalypb.CalculateChecksumRequest{Repository: repo}
 	testCtx, cancelCtx := testhelper.Context()
 	defer cancelCtx()
 
@@ -101,7 +101,7 @@ func TestBrokenRepositoryCalculateChecksum(t *testing.T) {
 	// Force an empty HEAD file
 	require.NoError(t, os.Truncate(path.Join(testRepoPath, "HEAD"), 0))
 
-	request := &pb.CalculateChecksumRequest{Repository: repo}
+	request := &gitalypb.CalculateChecksumRequest{Repository: repo}
 	testCtx, cancelCtx := testhelper.Context()
 	defer cancelCtx()
 
@@ -116,21 +116,21 @@ func TestFailedCalculateChecksum(t *testing.T) {
 	client, conn := newRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
 
-	invalidRepo := &pb.Repository{StorageName: "fake", RelativePath: "path"}
+	invalidRepo := &gitalypb.Repository{StorageName: "fake", RelativePath: "path"}
 
 	testCases := []struct {
 		desc    string
-		request *pb.CalculateChecksumRequest
+		request *gitalypb.CalculateChecksumRequest
 		code    codes.Code
 	}{
 		{
 			desc:    "Invalid repository",
-			request: &pb.CalculateChecksumRequest{Repository: invalidRepo},
+			request: &gitalypb.CalculateChecksumRequest{Repository: invalidRepo},
 			code:    codes.InvalidArgument,
 		},
 		{
 			desc:    "Repository is nil",
-			request: &pb.CalculateChecksumRequest{},
+			request: &gitalypb.CalculateChecksumRequest{},
 			code:    codes.InvalidArgument,
 		},
 	}

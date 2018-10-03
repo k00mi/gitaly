@@ -3,7 +3,7 @@ package diff
 import (
 	"io"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/diff"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -15,12 +15,12 @@ var (
 	maxNumStatBatchSize = 1000
 )
 
-func (s *server) DiffStats(in *pb.DiffStatsRequest, stream pb.DiffService_DiffStatsServer) error {
+func (s *server) DiffStats(in *gitalypb.DiffStatsRequest, stream gitalypb.DiffService_DiffStatsServer) error {
 	if err := validateDiffStatsRequestParams(in); err != nil {
 		return err
 	}
 
-	var batch []*pb.DiffStats
+	var batch []*gitalypb.DiffStats
 	cmdArgs := []string{"diff", "--numstat", "-z", in.LeftCommitId, in.RightCommitId}
 	cmd, err := git.Command(stream.Context(), in.Repository, cmdArgs...)
 
@@ -43,7 +43,7 @@ func (s *server) DiffStats(in *pb.DiffStatsRequest, stream pb.DiffService_DiffSt
 			return err
 		}
 
-		numStat := &pb.DiffStats{
+		numStat := &gitalypb.DiffStats{
 			Additions: stat.Additions,
 			Deletions: stat.Deletions,
 			Path:      stat.Path,
@@ -67,19 +67,19 @@ func (s *server) DiffStats(in *pb.DiffStatsRequest, stream pb.DiffService_DiffSt
 	return sendStats(batch, stream)
 }
 
-func sendStats(batch []*pb.DiffStats, stream pb.DiffService_DiffStatsServer) error {
+func sendStats(batch []*gitalypb.DiffStats, stream gitalypb.DiffService_DiffStatsServer) error {
 	if len(batch) == 0 {
 		return nil
 	}
 
-	if err := stream.Send(&pb.DiffStatsResponse{Stats: batch}); err != nil {
+	if err := stream.Send(&gitalypb.DiffStatsResponse{Stats: batch}); err != nil {
 		return status.Errorf(codes.Unavailable, "DiffStats: send: %v", err)
 	}
 
 	return nil
 }
 
-func validateDiffStatsRequestParams(in *pb.DiffStatsRequest) error {
+func validateDiffStatsRequestParams(in *gitalypb.DiffStatsRequest) error {
 	repo := in.GetRepository()
 	if _, err := helper.GetRepoPath(repo); err != nil {
 		return err

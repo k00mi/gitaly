@@ -7,13 +7,12 @@ import (
 	"testing"
 	"time"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
 
 var rubyServer *rubyserver.Server
@@ -46,7 +45,7 @@ func runBlobServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	pb.RegisterBlobServiceServer(grpcServer, &server{rubyServer})
+	gitalypb.RegisterBlobServiceServer(grpcServer, &server{rubyServer})
 	reflection.Register(grpcServer)
 
 	go grpcServer.Serve(listener)
@@ -54,7 +53,7 @@ func runBlobServer(t *testing.T) (*grpc.Server, string) {
 	return grpcServer, serverSocketPath
 }
 
-func newBlobClient(t *testing.T, serverSocketPath string) (pb.BlobServiceClient, *grpc.ClientConn) {
+func newBlobClient(t *testing.T, serverSocketPath string) (gitalypb.BlobServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
@@ -66,5 +65,5 @@ func newBlobClient(t *testing.T, serverSocketPath string) (pb.BlobServiceClient,
 		t.Fatal(err)
 	}
 
-	return pb.NewBlobServiceClient(conn), conn
+	return gitalypb.NewBlobServiceClient(conn), conn
 }

@@ -10,7 +10,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -32,20 +32,20 @@ func TestFindCommitsFields(t *testing.T) {
 
 	testCases := []struct {
 		id     string
-		commit *pb.GitCommit
+		commit *gitalypb.GitCommit
 	}{
 		{
 			id: "b83d6e391c22777fca1ed3012fce84f633d7fed0",
-			commit: &pb.GitCommit{
+			commit: &gitalypb.GitCommit{
 				Id:      "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 				Subject: []byte("Merge branch 'branch-merged' into 'master'"),
 				Body:    []byte("Merge branch 'branch-merged' into 'master'\r\n\r\nadds bar folder and branch-test text file to check Repository merged_to_root_ref method\r\n\r\n\r\n\r\nSee merge request !12"),
-				Author: &pb.CommitAuthor{
+				Author: &gitalypb.CommitAuthor{
 					Name:  []byte("Job van der Voort"),
 					Email: []byte("job@gitlab.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1474987066},
 				},
-				Committer: &pb.CommitAuthor{
+				Committer: &gitalypb.CommitAuthor{
 					Name:  []byte("Job van der Voort"),
 					Email: []byte("job@gitlab.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1474987066},
@@ -59,16 +59,16 @@ func TestFindCommitsFields(t *testing.T) {
 		},
 		{
 			id: "c809470461118b7bcab850f6e9a7ca97ac42f8ea",
-			commit: &pb.GitCommit{
+			commit: &gitalypb.GitCommit{
 				Id:      "c809470461118b7bcab850f6e9a7ca97ac42f8ea",
 				Subject: windows1251Message[:len(windows1251Message)-1],
 				Body:    windows1251Message,
-				Author: &pb.CommitAuthor{
+				Author: &gitalypb.CommitAuthor{
 					Name:  []byte("Jacob Vosmaer"),
 					Email: []byte("jacob@gitlab.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1512132977},
 				},
-				Committer: &pb.CommitAuthor{
+				Committer: &gitalypb.CommitAuthor{
 					Name:  []byte("Jacob Vosmaer"),
 					Email: []byte("jacob@gitlab.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1512132977},
@@ -79,16 +79,16 @@ func TestFindCommitsFields(t *testing.T) {
 		},
 		{
 			id: "0999bb770f8dc92ab5581cc0b474b3e31a96bf5c",
-			commit: &pb.GitCommit{
+			commit: &gitalypb.GitCommit{
 				Id:      "0999bb770f8dc92ab5581cc0b474b3e31a96bf5c",
 				Subject: []byte("Hello\xf0world"),
 				Body:    []byte("Hello\xf0world\n"),
-				Author: &pb.CommitAuthor{
+				Author: &gitalypb.CommitAuthor{
 					Name:  []byte("Jacob Vosmaer"),
 					Email: []byte("jacob@gitlab.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1517328273},
 				},
-				Committer: &pb.CommitAuthor{
+				Committer: &gitalypb.CommitAuthor{
 					Name:  []byte("Jacob Vosmaer"),
 					Email: []byte("jacob@gitlab.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1517328273},
@@ -99,16 +99,16 @@ func TestFindCommitsFields(t *testing.T) {
 		},
 		{
 			id: "77e835ef0856f33c4f0982f84d10bdb0567fe440",
-			commit: &pb.GitCommit{
+			commit: &gitalypb.GitCommit{
 				Id:      "77e835ef0856f33c4f0982f84d10bdb0567fe440",
 				Subject: []byte("Add file larger than 1 mb"),
 				Body:    []byte("Add file larger than 1 mb\n\nIn order to test Max File Size push rule we need a file larger than 1 MB\n"),
-				Author: &pb.CommitAuthor{
+				Author: &gitalypb.CommitAuthor{
 					Name:  []byte("Ruben Davila"),
 					Email: []byte("rdavila84@gmail.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1523247267},
 				},
-				Committer: &pb.CommitAuthor{
+				Committer: &gitalypb.CommitAuthor{
 					Name:  []byte("Jacob Vosmaer"),
 					Email: []byte("jacob@gitlab.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1527855450},
@@ -121,7 +121,7 @@ func TestFindCommitsFields(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.id, func(t *testing.T) {
-			request := &pb.FindCommitsRequest{
+			request := &gitalypb.FindCommitsRequest{
 				Repository: testRepo,
 				Revision:   []byte(tc.id),
 				Limit:      1,
@@ -158,7 +158,7 @@ func TestSuccessfulFindCommitsRequest(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.FindCommitsRequest
+		request *gitalypb.FindCommitsRequest
 		// Use 'ids' if you know the exact commits id's that should be returned
 		ids []string
 		// Use minCommits if you don't know the exact commit id's
@@ -166,7 +166,7 @@ func TestSuccessfulFindCommitsRequest(t *testing.T) {
 	}{
 		{
 			desc: "only revision, limit commits",
-			request: &pb.FindCommitsRequest{
+			request: &gitalypb.FindCommitsRequest{
 				Repository: testRepo,
 				Revision:   []byte("0031876facac3f2b2702a0e53a26e89939a42209"),
 				Limit:      3,
@@ -179,21 +179,21 @@ func TestSuccessfulFindCommitsRequest(t *testing.T) {
 		},
 		{
 			desc: "revision, default commit limit",
-			request: &pb.FindCommitsRequest{
+			request: &gitalypb.FindCommitsRequest{
 				Repository: testRepo,
 				Revision:   []byte("0031876facac3f2b2702a0e53a26e89939a42209"),
 			},
 		},
 		{
 			desc: "revision, default commit limit, bypassing rugged walk",
-			request: &pb.FindCommitsRequest{
+			request: &gitalypb.FindCommitsRequest{
 				Repository:  testRepo,
 				Revision:    []byte("0031876facac3f2b2702a0e53a26e89939a42209"),
 				DisableWalk: true,
 			},
 		}, {
 			desc: "revision and paths",
-			request: &pb.FindCommitsRequest{
+			request: &gitalypb.FindCommitsRequest{
 				Repository: testRepo,
 				Revision:   []byte("0031876facac3f2b2702a0e53a26e89939a42209"),
 				Paths:      [][]byte{[]byte("LICENSE")},
@@ -203,7 +203,7 @@ func TestSuccessfulFindCommitsRequest(t *testing.T) {
 		},
 		{
 			desc: "empty revision",
-			request: &pb.FindCommitsRequest{
+			request: &gitalypb.FindCommitsRequest{
 				Repository: testRepo,
 				Limit:      35,
 			},
@@ -211,7 +211,7 @@ func TestSuccessfulFindCommitsRequest(t *testing.T) {
 		},
 		{
 			desc: "before and after",
-			request: &pb.FindCommitsRequest{
+			request: &gitalypb.FindCommitsRequest{
 				Repository: testRepo,
 				Before:     &timestamp.Timestamp{Seconds: 1483225200},
 				After:      &timestamp.Timestamp{Seconds: 1472680800},
@@ -224,7 +224,7 @@ func TestSuccessfulFindCommitsRequest(t *testing.T) {
 		},
 		{
 			desc: "no merges",
-			request: &pb.FindCommitsRequest{
+			request: &gitalypb.FindCommitsRequest{
 				Repository: testRepo,
 				Revision:   []byte("e63f41fe459e62e1228fcef60d7189127aeba95a"),
 				SkipMerges: true,
@@ -245,7 +245,7 @@ func TestSuccessfulFindCommitsRequest(t *testing.T) {
 		},
 		{
 			desc: "following renames",
-			request: &pb.FindCommitsRequest{
+			request: &gitalypb.FindCommitsRequest{
 				Repository: testRepo,
 				Revision:   []byte("94bb47ca1297b7b3731ff2a36923640991e9236f"),
 				Paths:      [][]byte{[]byte("CHANGELOG.md")},
@@ -260,7 +260,7 @@ func TestSuccessfulFindCommitsRequest(t *testing.T) {
 		},
 		{
 			desc: "all refs",
-			request: &pb.FindCommitsRequest{
+			request: &gitalypb.FindCommitsRequest{
 				Repository: testRepo,
 				All:        true,
 				Limit:      90,
@@ -279,7 +279,7 @@ func TestSuccessfulFindCommitsRequest(t *testing.T) {
 
 			var ids []string
 			for err == nil {
-				var resp *pb.FindCommitsResponse
+				var resp *gitalypb.FindCommitsResponse
 				resp, err = stream.Recv()
 				for _, c := range resp.GetCommits() {
 					ids = append(ids, c.Id)
@@ -339,7 +339,7 @@ func TestSuccessfulFindCommitsRequestWithAltGitObjectDirs(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
 			testRepoCopy.GitAlternateObjectDirectories = testCase.altDirs
-			request := &pb.FindCommitsRequest{
+			request := &gitalypb.FindCommitsRequest{
 				Repository: testRepoCopy,
 				Revision:   currentHead,
 				Limit:      1,
@@ -351,7 +351,7 @@ func TestSuccessfulFindCommitsRequestWithAltGitObjectDirs(t *testing.T) {
 			c, err := client.FindCommits(ctx, request)
 			require.NoError(t, err)
 
-			receivedCommits := []*pb.GitCommit{}
+			receivedCommits := []*gitalypb.GitCommit{}
 
 			for {
 				resp, err := c.Recv()
@@ -381,12 +381,12 @@ func TestFailureFindCommitsRequest(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.FindCommitsRequest
+		request *gitalypb.FindCommitsRequest
 		code    codes.Code
 	}{
 		{
 			desc: "empty path string",
-			request: &pb.FindCommitsRequest{
+			request: &gitalypb.FindCommitsRequest{
 				Repository: testRepo,
 				Paths:      [][]byte{[]byte("")},
 			},

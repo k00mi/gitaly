@@ -5,27 +5,27 @@ import (
 
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 )
 
 func TestBuildLocalBranch(t *testing.T) {
 	testCases := []struct {
 		desc string
-		in   *pb.GitCommit
-		out  *pb.FindLocalBranchResponse
+		in   *gitalypb.GitCommit
+		out  *gitalypb.FindLocalBranchResponse
 	}{
 		{
 			desc: "all required fields present",
-			in: &pb.GitCommit{
+			in: &gitalypb.GitCommit{
 				Id:      "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 				Subject: []byte("Merge branch 'branch-merged' into 'master'"),
 				Body:    []byte("Merge branch 'branch-merged' into 'master'\r\n\r\nadds bar folder and branch-test text file to check Repository merged_to_root_ref method\r\n\r\n\r\n\r\nSee merge request !12"),
-				Author: &pb.CommitAuthor{
+				Author: &gitalypb.CommitAuthor{
 					Name:  []byte("Job van der Voort"),
 					Email: []byte("job@gitlab.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1474987066},
 				},
-				Committer: &pb.CommitAuthor{
+				Committer: &gitalypb.CommitAuthor{
 					Name:  []byte("Job van der Voort"),
 					Email: []byte("job@gitlab.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1474987066},
@@ -36,16 +36,16 @@ func TestBuildLocalBranch(t *testing.T) {
 				},
 				BodySize: 162,
 			},
-			out: &pb.FindLocalBranchResponse{
+			out: &gitalypb.FindLocalBranchResponse{
 				Name:          []byte("my-branch"),
 				CommitId:      "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 				CommitSubject: []byte("Merge branch 'branch-merged' into 'master'"),
-				CommitAuthor: &pb.FindLocalBranchCommitAuthor{
+				CommitAuthor: &gitalypb.FindLocalBranchCommitAuthor{
 					Name:  []byte("Job van der Voort"),
 					Email: []byte("job@gitlab.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1474987066},
 				},
-				CommitCommitter: &pb.FindLocalBranchCommitAuthor{
+				CommitCommitter: &gitalypb.FindLocalBranchCommitAuthor{
 					Name:  []byte("Job van der Voort"),
 					Email: []byte("job@gitlab.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1474987066},
@@ -54,11 +54,11 @@ func TestBuildLocalBranch(t *testing.T) {
 		},
 		{
 			desc: "missing author",
-			in: &pb.GitCommit{
+			in: &gitalypb.GitCommit{
 				Id:      "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 				Subject: []byte("Merge branch 'branch-merged' into 'master'"),
 				Body:    []byte("Merge branch 'branch-merged' into 'master'\r\n\r\nadds bar folder and branch-test text file to check Repository merged_to_root_ref method\r\n\r\n\r\n\r\nSee merge request !12"),
-				Committer: &pb.CommitAuthor{
+				Committer: &gitalypb.CommitAuthor{
 					Name:  []byte("Job van der Voort"),
 					Email: []byte("job@gitlab.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1474987066},
@@ -69,12 +69,12 @@ func TestBuildLocalBranch(t *testing.T) {
 				},
 				BodySize: 162,
 			},
-			out: &pb.FindLocalBranchResponse{
+			out: &gitalypb.FindLocalBranchResponse{
 				Name:          []byte("my-branch"),
 				CommitId:      "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 				CommitSubject: []byte("Merge branch 'branch-merged' into 'master'"),
 				CommitAuthor:  nil,
-				CommitCommitter: &pb.FindLocalBranchCommitAuthor{
+				CommitCommitter: &gitalypb.FindLocalBranchCommitAuthor{
 					Name:  []byte("Job van der Voort"),
 					Email: []byte("job@gitlab.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1474987066},
@@ -83,11 +83,11 @@ func TestBuildLocalBranch(t *testing.T) {
 		},
 		{
 			desc: "missing committer",
-			in: &pb.GitCommit{
+			in: &gitalypb.GitCommit{
 				Id:      "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 				Subject: []byte("Merge branch 'branch-merged' into 'master'"),
 				Body:    []byte("Merge branch 'branch-merged' into 'master'\r\n\r\nadds bar folder and branch-test text file to check Repository merged_to_root_ref method\r\n\r\n\r\n\r\nSee merge request !12"),
-				Author: &pb.CommitAuthor{
+				Author: &gitalypb.CommitAuthor{
 					Name:  []byte("Job van der Voort"),
 					Email: []byte("job@gitlab.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1474987066},
@@ -98,11 +98,11 @@ func TestBuildLocalBranch(t *testing.T) {
 				},
 				BodySize: 162,
 			},
-			out: &pb.FindLocalBranchResponse{
+			out: &gitalypb.FindLocalBranchResponse{
 				Name:          []byte("my-branch"),
 				CommitId:      "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 				CommitSubject: []byte("Merge branch 'branch-merged' into 'master'"),
-				CommitAuthor: &pb.FindLocalBranchCommitAuthor{
+				CommitAuthor: &gitalypb.FindLocalBranchCommitAuthor{
 					Name:  []byte("Job van der Voort"),
 					Email: []byte("job@gitlab.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1474987066},
@@ -113,7 +113,7 @@ func TestBuildLocalBranch(t *testing.T) {
 		{
 			desc: "nil commit",
 			in:   nil,
-			out: &pb.FindLocalBranchResponse{
+			out: &gitalypb.FindLocalBranchResponse{
 				Name: []byte("my-branch"),
 			},
 		},

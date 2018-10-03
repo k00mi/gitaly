@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	gitLog "gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	serverPkg "gitlab.com/gitlab-org/gitaly/internal/server"
@@ -40,7 +40,7 @@ func TestFetchSourceBranchSourceRepositorySuccess(t *testing.T) {
 	newCommitID := testhelper.CreateCommit(t, sourcePath, sourceBranch, nil)
 
 	targetRef := "refs/tmp/fetch-source-branch-test"
-	req := &pb.FetchSourceBranchRequest{
+	req := &gitalypb.FetchSourceBranchRequest{
 		Repository:       targetRepo,
 		SourceRepository: sourceRepo,
 		SourceBranch:     []byte(sourceBranch),
@@ -75,7 +75,7 @@ func TestFetchSourceBranchSameRepositorySuccess(t *testing.T) {
 	newCommitID := testhelper.CreateCommit(t, repoPath, sourceBranch, nil)
 
 	targetRef := "refs/tmp/fetch-source-branch-test"
-	req := &pb.FetchSourceBranchRequest{
+	req := &gitalypb.FetchSourceBranchRequest{
 		Repository:       repo,
 		SourceRepository: repo,
 		SourceBranch:     []byte(sourceBranch),
@@ -111,12 +111,12 @@ func TestFetchSourceBranchBranchNotFound(t *testing.T) {
 	targetRef := "refs/tmp/fetch-source-branch-test"
 
 	testCases := []struct {
-		req  *pb.FetchSourceBranchRequest
+		req  *gitalypb.FetchSourceBranchRequest
 		desc string
 	}{
 		{
 			desc: "target different from source",
-			req: &pb.FetchSourceBranchRequest{
+			req: &gitalypb.FetchSourceBranchRequest{
 				Repository:       targetRepo,
 				SourceRepository: sourceRepo,
 				SourceBranch:     []byte(sourceBranch),
@@ -125,7 +125,7 @@ func TestFetchSourceBranchBranchNotFound(t *testing.T) {
 		},
 		{
 			desc: "target same as source",
-			req: &pb.FetchSourceBranchRequest{
+			req: &gitalypb.FetchSourceBranchRequest{
 				Repository:       sourceRepo,
 				SourceRepository: sourceRepo,
 				SourceBranch:     []byte(sourceBranch),
@@ -172,11 +172,11 @@ func TestFetchFullServerRequiresAuthentication(t *testing.T) {
 	testhelper.RequireGrpcError(t, err, codes.Unauthenticated)
 }
 
-func newTestRepo(t *testing.T, relativePath string) (*pb.Repository, string) {
+func newTestRepo(t *testing.T, relativePath string) (*gitalypb.Repository, string) {
 	_, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	repo := &pb.Repository{StorageName: "default", RelativePath: relativePath}
+	repo := &gitalypb.Repository{StorageName: "default", RelativePath: relativePath}
 
 	repoPath, err := helper.GetPath(repo)
 	require.NoError(t, err)

@@ -3,15 +3,14 @@ package commit
 import (
 	"fmt"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) GetCommitMessages(request *pb.GetCommitMessagesRequest, stream pb.CommitService_GetCommitMessagesServer) error {
+func (s *server) GetCommitMessages(request *gitalypb.GetCommitMessagesRequest, stream gitalypb.CommitService_GetCommitMessagesServer) error {
 	if err := validateGetCommitMessagesRequest(request); err != nil {
 		return status.Errorf(codes.InvalidArgument, "GetCommitMessages: %v", err)
 	}
@@ -44,7 +43,7 @@ func (s *server) GetCommitMessages(request *pb.GetCommitMessagesRequest, stream 
 	})
 }
 
-func validateGetCommitMessagesRequest(request *pb.GetCommitMessagesRequest) error {
+func validateGetCommitMessagesRequest(request *gitalypb.GetCommitMessagesRequest) error {
 	if request.GetRepository() == nil {
 		return fmt.Errorf("empty Repository")
 	}

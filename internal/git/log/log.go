@@ -6,20 +6,20 @@ import (
 	"fmt"
 	"io"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 )
 
 // Parser holds necessary state for parsing a git log stream
 type Parser struct {
 	scanner       *bufio.Scanner
-	currentCommit *pb.GitCommit
+	currentCommit *gitalypb.GitCommit
 	err           error
 	c             *catfile.Batch
 }
 
 // NewLogParser returns a new Parser
-func NewLogParser(ctx context.Context, repo *pb.Repository, src io.Reader) (*Parser, error) {
+func NewLogParser(ctx context.Context, repo *gitalypb.Repository, src io.Reader) (*Parser, error) {
 	c, err := catfile.New(ctx, repo)
 	if err != nil {
 		return nil, err
@@ -60,7 +60,7 @@ func (parser *Parser) Parse() bool {
 
 // Commit returns a successfully parsed git log line. It should be called only when Parser.Parse()
 // returns true.
-func (parser *Parser) Commit() *pb.GitCommit {
+func (parser *Parser) Commit() *gitalypb.GitCommit {
 	return parser.currentCommit
 }
 

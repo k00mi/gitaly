@@ -5,10 +5,9 @@ import (
 	"path"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
@@ -35,8 +34,8 @@ func TestSuccessfulRepositorySizeRequest(t *testing.T) {
 	testhelper.MustRunCommand(t, nil, "sync")
 	defer os.RemoveAll(repoCopyPath)
 
-	request := &pb.RepositorySizeRequest{
-		Repository: &pb.Repository{
+	request := &gitalypb.RepositorySizeRequest{
+		Repository: &gitalypb.Repository{
 			StorageName:  storageName,
 			RelativePath: "fixed-size-repo.git",
 		},
@@ -58,11 +57,11 @@ func TestFailedRepositorySizeRequest(t *testing.T) {
 	client, conn := newRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
 
-	invalidRepo := &pb.Repository{StorageName: "fake", RelativePath: "path"}
+	invalidRepo := &gitalypb.Repository{StorageName: "fake", RelativePath: "path"}
 
 	testCases := []struct {
 		description string
-		repo        *pb.Repository
+		repo        *gitalypb.Repository
 	}{
 		{repo: invalidRepo, description: "Invalid repo"},
 	}
@@ -70,7 +69,7 @@ func TestFailedRepositorySizeRequest(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.description, func(t *testing.T) {
 
-			request := &pb.RepositorySizeRequest{
+			request := &gitalypb.RepositorySizeRequest{
 				Repository: testCase.repo,
 			}
 

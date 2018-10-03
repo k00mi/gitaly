@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"golang.org/x/net/context"
@@ -43,7 +43,7 @@ func TestSuccessfulFindAllRemoteBranchesRequest(t *testing.T) {
 		testhelper.CreateRemoteBranch(t, testRepoPath, excludedRemote, branchName, commitID)
 	}
 
-	request := &pb.FindAllRemoteBranchesRequest{Repository: testRepo, RemoteName: remoteName}
+	request := &gitalypb.FindAllRemoteBranchesRequest{Repository: testRepo, RemoteName: remoteName}
 
 	c, err := client.FindAllRemoteBranches(ctx, request)
 	if err != nil {
@@ -57,7 +57,7 @@ func TestSuccessfulFindAllRemoteBranchesRequest(t *testing.T) {
 		targetCommit, err := log.GetCommit(ctx, testRepo, commitID)
 		require.NoError(t, err)
 
-		expectedBranch := &pb.Branch{
+		expectedBranch := &gitalypb.Branch{
 			Name:         []byte("refs/remotes/" + remoteName + "/" + branchName),
 			TargetCommit: targetCommit,
 		}
@@ -69,7 +69,7 @@ func TestSuccessfulFindAllRemoteBranchesRequest(t *testing.T) {
 		targetCommit, err := log.GetCommit(ctx, testRepo, commitID)
 		require.NoError(t, err)
 
-		excludedBranch := &pb.Branch{
+		excludedBranch := &gitalypb.Branch{
 			Name:         []byte("refs/remotes/" + excludedRemote + "/" + branchName),
 			TargetCommit: targetCommit,
 		}
@@ -90,12 +90,12 @@ func TestInvalidFindAllRemoteBranchesRequest(t *testing.T) {
 
 	testCases := []struct {
 		description string
-		request     pb.FindAllRemoteBranchesRequest
+		request     gitalypb.FindAllRemoteBranchesRequest
 	}{
 		{
 			description: "Invalid repo",
-			request: pb.FindAllRemoteBranchesRequest{
-				Repository: &pb.Repository{
+			request: gitalypb.FindAllRemoteBranchesRequest{
+				Repository: &gitalypb.Repository{
 					StorageName:  "fake",
 					RelativePath: "repo",
 				},
@@ -103,11 +103,11 @@ func TestInvalidFindAllRemoteBranchesRequest(t *testing.T) {
 		},
 		{
 			description: "Empty repo",
-			request:     pb.FindAllRemoteBranchesRequest{RemoteName: "myRemote"},
+			request:     gitalypb.FindAllRemoteBranchesRequest{RemoteName: "myRemote"},
 		},
 		{
 			description: "Empty remote name",
-			request:     pb.FindAllRemoteBranchesRequest{Repository: testRepo},
+			request:     gitalypb.FindAllRemoteBranchesRequest{Repository: testRepo},
 		},
 	}
 
@@ -130,8 +130,8 @@ func TestInvalidFindAllRemoteBranchesRequest(t *testing.T) {
 	}
 }
 
-func readFindAllRemoteBranchesResponsesFromClient(t *testing.T, c pb.RefService_FindAllRemoteBranchesClient) []*pb.Branch {
-	var branches []*pb.Branch
+func readFindAllRemoteBranchesResponsesFromClient(t *testing.T, c gitalypb.RefService_FindAllRemoteBranchesClient) []*gitalypb.Branch {
+	var branches []*gitalypb.Branch
 
 	for {
 		r, err := c.Recv()

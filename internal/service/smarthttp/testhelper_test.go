@@ -5,9 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -26,7 +25,7 @@ func runSmartHTTPServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	pb.RegisterSmartHTTPServiceServer(server, NewServer())
+	gitalypb.RegisterSmartHTTPServiceServer(server, NewServer())
 	reflection.Register(server)
 
 	go server.Serve(listener)
@@ -34,7 +33,7 @@ func runSmartHTTPServer(t *testing.T) (*grpc.Server, string) {
 	return server, serverSocketPath
 }
 
-func newSmartHTTPClient(t *testing.T, serverSocketPath string) (pb.SmartHTTPServiceClient, *grpc.ClientConn) {
+func newSmartHTTPClient(t *testing.T, serverSocketPath string) (gitalypb.SmartHTTPServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
@@ -46,5 +45,5 @@ func newSmartHTTPClient(t *testing.T, serverSocketPath string) (pb.SmartHTTPServ
 		t.Fatal(err)
 	}
 
-	return pb.NewSmartHTTPServiceClient(conn), conn
+	return gitalypb.NewSmartHTTPServiceClient(conn), conn
 }

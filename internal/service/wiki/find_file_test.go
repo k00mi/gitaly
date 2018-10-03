@@ -8,9 +8,8 @@ import (
 	"path"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -34,7 +33,7 @@ func TestSuccessfulWikiFindFileRequest(t *testing.T) {
 	testhelper.MustRunCommand(t, nil, "git", "clone", wikiRepoPath, sandboxWikiPath)
 	defer os.RemoveAll(sandboxWikiPath)
 
-	sandboxWiki := &pb.Repository{
+	sandboxWiki := &gitalypb.Repository{
 		StorageName:  "default",
 		RelativePath: "find-file-sandbox/.git",
 	}
@@ -60,7 +59,7 @@ func TestSuccessfulWikiFindFileRequest(t *testing.T) {
 
 	newHeadID := testhelper.MustRunCommand(t, nil, "git", "-C", sandboxWikiPath, "show", "--format=format:%H", "--no-patch", "HEAD")
 
-	response := &pb.WikiFindFileResponse{
+	response := &gitalypb.WikiFindFileResponse{
 		Name:     []byte("cloúds.png"),
 		MimeType: "image/png",
 		Path:     []byte("cloúds.png"),
@@ -68,12 +67,12 @@ func TestSuccessfulWikiFindFileRequest(t *testing.T) {
 
 	testCases := []struct {
 		desc     string
-		request  *pb.WikiFindFileRequest
-		response *pb.WikiFindFileResponse
+		request  *gitalypb.WikiFindFileRequest
+		response *gitalypb.WikiFindFileResponse
 	}{
 		{
 			desc: "name only",
-			request: &pb.WikiFindFileRequest{
+			request: &gitalypb.WikiFindFileRequest{
 				Repository: sandboxWiki,
 				Name:       []byte("cloúds.png"),
 			},
@@ -81,7 +80,7 @@ func TestSuccessfulWikiFindFileRequest(t *testing.T) {
 		},
 		{
 			desc: "name + revision that includes the file",
-			request: &pb.WikiFindFileRequest{
+			request: &gitalypb.WikiFindFileRequest{
 				Repository: sandboxWiki,
 				Name:       []byte("cloúds.png"),
 				Revision:   newHeadID,
@@ -90,20 +89,20 @@ func TestSuccessfulWikiFindFileRequest(t *testing.T) {
 		},
 		{
 			desc: "name + revision that does not include the file",
-			request: &pb.WikiFindFileRequest{
+			request: &gitalypb.WikiFindFileRequest{
 				Repository: sandboxWiki,
 				Name:       []byte("cloúds.png"),
 				Revision:   oldHeadID,
 			},
-			response: &pb.WikiFindFileResponse{},
+			response: &gitalypb.WikiFindFileResponse{},
 		},
 		{
 			desc: "non-existent name",
-			request: &pb.WikiFindFileRequest{
+			request: &gitalypb.WikiFindFileRequest{
 				Repository: sandboxWiki,
 				Name:       []byte("moar-clouds.png"),
 			},
-			response: &pb.WikiFindFileResponse{},
+			response: &gitalypb.WikiFindFileResponse{},
 		},
 	}
 
@@ -168,7 +167,7 @@ func TestFailedWikiFindFileDueToValidation(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			request := &pb.WikiFindFileRequest{
+			request := &gitalypb.WikiFindFileRequest{
 				Repository: wikiRepo,
 				Name:       []byte(testCase.name),
 				Revision:   []byte(testCase.revision),
@@ -183,7 +182,7 @@ func TestFailedWikiFindFileDueToValidation(t *testing.T) {
 	}
 }
 
-func drainWikiFindFileResponse(c pb.WikiService_WikiFindFileClient) error {
+func drainWikiFindFileResponse(c gitalypb.WikiService_WikiFindFileClient) error {
 	for {
 		_, err := c.Recv()
 		if err != nil {
@@ -192,7 +191,7 @@ func drainWikiFindFileResponse(c pb.WikiService_WikiFindFileClient) error {
 	}
 }
 
-func readFullResponseFromWikiFindFileClient(t *testing.T, c pb.WikiService_WikiFindFileClient) (fullResponse *pb.WikiFindFileResponse) {
+func readFullResponseFromWikiFindFileClient(t *testing.T, c gitalypb.WikiService_WikiFindFileClient) (fullResponse *gitalypb.WikiFindFileResponse) {
 	for {
 		resp, err := c.Recv()
 		if err == io.EOF {

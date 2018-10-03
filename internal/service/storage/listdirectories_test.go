@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
@@ -65,7 +65,7 @@ func TestListDirectories(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		stream, err := client.ListDirectories(ctx, &pb.ListDirectoriesRequest{StorageName: "default", Depth: tc.depth})
+		stream, err := client.ListDirectories(ctx, &gitalypb.ListDirectoriesRequest{StorageName: "default", Depth: tc.depth})
 
 		var dirs []string
 		for {

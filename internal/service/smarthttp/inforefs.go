@@ -7,7 +7,7 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	log "github.com/sirupsen/logrus"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/pktline"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -17,21 +17,21 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) InfoRefsUploadPack(in *pb.InfoRefsRequest, stream pb.SmartHTTPService_InfoRefsUploadPackServer) error {
+func (s *server) InfoRefsUploadPack(in *gitalypb.InfoRefsRequest, stream gitalypb.SmartHTTPService_InfoRefsUploadPackServer) error {
 	w := streamio.NewWriter(func(p []byte) error {
-		return stream.Send(&pb.InfoRefsResponse{Data: p})
+		return stream.Send(&gitalypb.InfoRefsResponse{Data: p})
 	})
 	return handleInfoRefs(stream.Context(), "upload-pack", in, w)
 }
 
-func (s *server) InfoRefsReceivePack(in *pb.InfoRefsRequest, stream pb.SmartHTTPService_InfoRefsReceivePackServer) error {
+func (s *server) InfoRefsReceivePack(in *gitalypb.InfoRefsRequest, stream gitalypb.SmartHTTPService_InfoRefsReceivePackServer) error {
 	w := streamio.NewWriter(func(p []byte) error {
-		return stream.Send(&pb.InfoRefsResponse{Data: p})
+		return stream.Send(&gitalypb.InfoRefsResponse{Data: p})
 	})
 	return handleInfoRefs(stream.Context(), "receive-pack", in, w)
 }
 
-func handleInfoRefs(ctx context.Context, service string, req *pb.InfoRefsRequest, w io.Writer) error {
+func handleInfoRefs(ctx context.Context, service string, req *gitalypb.InfoRefsRequest, w io.Writer) error {
 	grpc_logrus.Extract(ctx).WithFields(log.Fields{
 		"service": service,
 	}).Debug("handleInfoRefs")

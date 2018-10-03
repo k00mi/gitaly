@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
@@ -50,7 +50,7 @@ func runStorageServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	pb.RegisterStorageServiceServer(server, NewServer())
+	gitalypb.RegisterStorageServiceServer(server, NewServer())
 	reflection.Register(server)
 
 	go server.Serve(listener)
@@ -58,7 +58,7 @@ func runStorageServer(t *testing.T) (*grpc.Server, string) {
 	return server, serverSocketPath
 }
 
-func newStorageClient(t *testing.T, serverSocketPath string) (pb.StorageServiceClient, *grpc.ClientConn) {
+func newStorageClient(t *testing.T, serverSocketPath string) (gitalypb.StorageServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
@@ -70,5 +70,5 @@ func newStorageClient(t *testing.T, serverSocketPath string) (pb.StorageServiceC
 		t.Fatal(err)
 	}
 
-	return pb.NewStorageServiceClient(conn), conn
+	return gitalypb.NewStorageServiceClient(conn), conn
 }

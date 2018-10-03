@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 
 	"golang.org/x/net/context"
@@ -16,7 +16,7 @@ const (
 	squashWorktreePrefix = "squash"
 )
 
-func (s *server) IsSquashInProgress(ctx context.Context, req *pb.IsSquashInProgressRequest) (*pb.IsSquashInProgressResponse, error) {
+func (s *server) IsSquashInProgress(ctx context.Context, req *gitalypb.IsSquashInProgressRequest) (*gitalypb.IsSquashInProgressResponse, error) {
 	if err := validateIsSquashInProgressRequest(req); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "IsSquashInProgress: %v", err)
 	}
@@ -30,10 +30,10 @@ func (s *server) IsSquashInProgress(ctx context.Context, req *pb.IsSquashInProgr
 	if err != nil {
 		return nil, err
 	}
-	return &pb.IsSquashInProgressResponse{InProgress: inProg}, nil
+	return &gitalypb.IsSquashInProgressResponse{InProgress: inProg}, nil
 }
 
-func validateIsSquashInProgressRequest(req *pb.IsSquashInProgressRequest) error {
+func validateIsSquashInProgressRequest(req *gitalypb.IsSquashInProgressRequest) error {
 	if req.GetRepository() == nil {
 		return fmt.Errorf("empty Repository")
 	}

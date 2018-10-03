@@ -3,10 +3,9 @@ package wiki
 import (
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -35,14 +34,14 @@ func TestSuccessfulWikiDeletePageRequest(t *testing.T) {
 
 	testCases := []struct {
 		desc string
-		req  *pb.WikiDeletePageRequest
+		req  *gitalypb.WikiDeletePageRequest
 	}{
 		{
 			desc: "with user id and username",
-			req: &pb.WikiDeletePageRequest{
+			req: &gitalypb.WikiDeletePageRequest{
 				Repository: wikiRepo,
 				PagePath:   []byte("a-talé-of-two-wikis"),
-				CommitDetails: &pb.WikiCommitDetails{
+				CommitDetails: &gitalypb.WikiCommitDetails{
 					Name:     authorName,
 					Email:    authorEmail,
 					Message:  message,
@@ -53,10 +52,10 @@ func TestSuccessfulWikiDeletePageRequest(t *testing.T) {
 		},
 		{
 			desc: "without user id and username", // deprecate in GitLab 11.0 https://gitlab.com/gitlab-org/gitaly/issues/1154
-			req: &pb.WikiDeletePageRequest{
+			req: &gitalypb.WikiDeletePageRequest{
 				Repository: wikiRepo,
 				PagePath:   []byte("a-talé-of-two-wikis"),
-				CommitDetails: &pb.WikiCommitDetails{
+				CommitDetails: &gitalypb.WikiCommitDetails{
 					Name:    authorName,
 					Email:   authorEmail,
 					Message: message,
@@ -93,7 +92,7 @@ func TestFailedWikiDeletePageDueToValidations(t *testing.T) {
 	client, conn := newWikiClient(t, serverSocketPath)
 	defer conn.Close()
 
-	commitDetails := &pb.WikiCommitDetails{
+	commitDetails := &gitalypb.WikiCommitDetails{
 		Name:     []byte("Ahmad Sherif"),
 		Email:    []byte("ahmad@gitlab.com"),
 		Message:  []byte("Delete a wiki page"),
@@ -103,12 +102,12 @@ func TestFailedWikiDeletePageDueToValidations(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.WikiDeletePageRequest
+		request *gitalypb.WikiDeletePageRequest
 		code    codes.Code
 	}{
 		{
 			desc: "non existent  page path",
-			request: &pb.WikiDeletePageRequest{
+			request: &gitalypb.WikiDeletePageRequest{
 				Repository:    wikiRepo,
 				PagePath:      []byte("does-not-exist"),
 				CommitDetails: commitDetails,
@@ -117,7 +116,7 @@ func TestFailedWikiDeletePageDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty page path",
-			request: &pb.WikiDeletePageRequest{
+			request: &gitalypb.WikiDeletePageRequest{
 				Repository:    wikiRepo,
 				CommitDetails: commitDetails,
 			},
@@ -125,7 +124,7 @@ func TestFailedWikiDeletePageDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty commit details",
-			request: &pb.WikiDeletePageRequest{
+			request: &gitalypb.WikiDeletePageRequest{
 				Repository: wikiRepo,
 				PagePath:   []byte("does-not-matter"),
 			},
@@ -133,10 +132,10 @@ func TestFailedWikiDeletePageDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty commit details' name",
-			request: &pb.WikiDeletePageRequest{
+			request: &gitalypb.WikiDeletePageRequest{
 				Repository: wikiRepo,
 				PagePath:   []byte("does-not-matter"),
-				CommitDetails: &pb.WikiCommitDetails{
+				CommitDetails: &gitalypb.WikiCommitDetails{
 					Email:    []byte("a@b.com"),
 					Message:  []byte("A message"),
 					UserId:   int32(1),
@@ -147,10 +146,10 @@ func TestFailedWikiDeletePageDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty commit details' email",
-			request: &pb.WikiDeletePageRequest{
+			request: &gitalypb.WikiDeletePageRequest{
 				Repository: wikiRepo,
 				PagePath:   []byte("does-not-matter"),
-				CommitDetails: &pb.WikiCommitDetails{
+				CommitDetails: &gitalypb.WikiCommitDetails{
 					Name:     []byte("A name"),
 					Message:  []byte("A message"),
 					UserId:   int32(1),
@@ -161,10 +160,10 @@ func TestFailedWikiDeletePageDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty commit details' message",
-			request: &pb.WikiDeletePageRequest{
+			request: &gitalypb.WikiDeletePageRequest{
 				Repository: wikiRepo,
 				PagePath:   []byte("does-not-matter"),
-				CommitDetails: &pb.WikiCommitDetails{
+				CommitDetails: &gitalypb.WikiCommitDetails{
 					Name:     []byte("A name"),
 					Email:    []byte("a@b.com"),
 					UserId:   int32(1),

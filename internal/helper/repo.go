@@ -4,9 +4,8 @@ import (
 	"os"
 	"path"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -16,7 +15,7 @@ import (
 // RPC Repository message. The errors returned are gRPC errors with
 // relevant error codes and should be passed back to gRPC without further
 // decoration.
-func GetRepoPath(repo *pb.Repository) (string, error) {
+func GetRepoPath(repo *gitalypb.Repository) (string, error) {
 	repoPath, err := GetPath(repo)
 	if err != nil {
 		return "", err
@@ -36,7 +35,7 @@ func GetRepoPath(repo *pb.Repository) (string, error) {
 // GetPath returns the path of the repo passed as first argument. An error is
 // returned when either the storage can't be found or the path includes
 // constructs trying to perform directory traversal.
-func GetPath(repo *pb.Repository) (string, error) {
+func GetPath(repo *gitalypb.Repository) (string, error) {
 	storagePath, err := GetStorageByName(repo.GetStorageName())
 	if err != nil {
 		return "", err

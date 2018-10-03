@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 
 	"google.golang.org/grpc/metadata"
@@ -27,16 +27,16 @@ const (
 // path to the repository. It is not an error if the repository does not
 // yet exist. This can be used on RPC calls that will create a
 // repository.
-func SetHeadersWithoutRepoCheck(ctx context.Context, repo *pb.Repository) (context.Context, error) {
+func SetHeadersWithoutRepoCheck(ctx context.Context, repo *gitalypb.Repository) (context.Context, error) {
 	return setHeaders(ctx, repo, false)
 }
 
 // SetHeaders adds headers that tell gitaly-ruby the full path to the repository.
-func SetHeaders(ctx context.Context, repo *pb.Repository) (context.Context, error) {
+func SetHeaders(ctx context.Context, repo *gitalypb.Repository) (context.Context, error) {
 	return setHeaders(ctx, repo, true)
 }
 
-func setHeaders(ctx context.Context, repo *pb.Repository, mustExist bool) (context.Context, error) {
+func setHeaders(ctx context.Context, repo *gitalypb.Repository, mustExist bool) (context.Context, error) {
 	storagePath, err := helper.GetStorageByName(repo.GetStorageName())
 	if err != nil {
 		return nil, err

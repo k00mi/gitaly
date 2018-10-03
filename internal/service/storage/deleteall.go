@@ -7,7 +7,7 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	log "github.com/sirupsen/logrus"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/tempdir"
 	"golang.org/x/net/context"
@@ -15,7 +15,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) DeleteAllRepositories(ctx context.Context, req *pb.DeleteAllRepositoriesRequest) (*pb.DeleteAllRepositoriesResponse, error) {
+func (s *server) DeleteAllRepositories(ctx context.Context, req *gitalypb.DeleteAllRepositoriesRequest) (*gitalypb.DeleteAllRepositoriesResponse, error) {
 	storageDir, err := helper.GetStorageByName(req.StorageName)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "storage lookup failed: %v", err)
@@ -65,5 +65,5 @@ func (s *server) DeleteAllRepositories(ctx context.Context, req *pb.DeleteAllRep
 		"numDirectories": count,
 	}).Warn("directories moved to trash")
 
-	return &pb.DeleteAllRepositoriesResponse{}, nil
+	return &gitalypb.DeleteAllRepositoriesResponse{}, nil
 }

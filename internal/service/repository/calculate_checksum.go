@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/alternates"
@@ -25,7 +25,7 @@ const blankChecksum = "0000000000000000000000000000000000000000"
 
 var refWhitelist = regexp.MustCompile(`HEAD|(refs/(heads|tags|keep-around|merge-requests|environments|notes)/)`)
 
-func (s *server) CalculateChecksum(ctx context.Context, in *pb.CalculateChecksumRequest) (*pb.CalculateChecksumResponse, error) {
+func (s *server) CalculateChecksum(ctx context.Context, in *gitalypb.CalculateChecksumRequest) (*gitalypb.CalculateChecksumResponse, error) {
 	repo := in.GetRepository()
 
 	repoPath, err := helper.GetRepoPath(repo)
@@ -76,16 +76,16 @@ func (s *server) CalculateChecksum(ctx context.Context, in *pb.CalculateChecksum
 
 	if err := cmd.Wait(); err != nil {
 		if isValidRepo(ctx, repo) {
-			return &pb.CalculateChecksumResponse{Checksum: blankChecksum}, nil
+			return &gitalypb.CalculateChecksumResponse{Checksum: blankChecksum}, nil
 		}
 
 		return nil, status.Errorf(codes.DataLoss, "CalculateChecksum: not a git repository '%s'", repoPath)
 	}
 
-	return &pb.CalculateChecksumResponse{Checksum: hex.EncodeToString(checksum.Bytes())}, nil
+	return &gitalypb.CalculateChecksumResponse{Checksum: hex.EncodeToString(checksum.Bytes())}, nil
 }
 
-func isValidRepo(ctx context.Context, repo *pb.Repository) bool {
+func isValidRepo(ctx context.Context, repo *gitalypb.Repository) bool {
 	repoPath, env, err := alternates.PathAndEnv(repo)
 	if err != nil {
 		return false

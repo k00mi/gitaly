@@ -9,12 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -61,7 +60,7 @@ func runWikiServiceServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	pb.RegisterWikiServiceServer(grpcServer, &server{rubyServer})
+	gitalypb.RegisterWikiServiceServer(grpcServer, &server{rubyServer})
 	reflection.Register(grpcServer)
 
 	go grpcServer.Serve(listener)
@@ -69,7 +68,7 @@ func runWikiServiceServer(t *testing.T) (*grpc.Server, string) {
 	return grpcServer, serverSocketPath
 }
 
-func newWikiClient(t *testing.T, serverSocketPath string) (pb.WikiServiceClient, *grpc.ClientConn) {
+func newWikiClient(t *testing.T, serverSocketPath string) (gitalypb.WikiServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
@@ -81,10 +80,10 @@ func newWikiClient(t *testing.T, serverSocketPath string) (pb.WikiServiceClient,
 		t.Fatal(err)
 	}
 
-	return pb.NewWikiServiceClient(conn), conn
+	return gitalypb.NewWikiServiceClient(conn), conn
 }
 
-func writeWikiPage(t *testing.T, client pb.WikiServiceClient, wikiRepo *pb.Repository, opts createWikiPageOpts) {
+func writeWikiPage(t *testing.T, client gitalypb.WikiServiceClient, wikiRepo *gitalypb.Repository, opts createWikiPageOpts) {
 	var content []byte
 	if len(opts.content) == 0 {
 		content = mockPageContent
@@ -99,7 +98,7 @@ func writeWikiPage(t *testing.T, client pb.WikiServiceClient, wikiRepo *pb.Repos
 		format = opts.format
 	}
 
-	commitDetails := &pb.WikiCommitDetails{
+	commitDetails := &gitalypb.WikiCommitDetails{
 		Name:     []byte("Ahmad Sherif"),
 		Email:    []byte("ahmad@gitlab.com"),
 		Message:  []byte("Add " + opts.title),
@@ -107,7 +106,7 @@ func writeWikiPage(t *testing.T, client pb.WikiServiceClient, wikiRepo *pb.Repos
 		UserName: []byte("ahmad"),
 	}
 
-	request := &pb.WikiWritePageRequest{
+	request := &gitalypb.WikiWritePageRequest{
 		Repository:    wikiRepo,
 		Name:          []byte(opts.title),
 		Format:        format,
@@ -127,8 +126,8 @@ func writeWikiPage(t *testing.T, client pb.WikiServiceClient, wikiRepo *pb.Repos
 	require.NoError(t, err)
 }
 
-func updateWikiPage(t *testing.T, client pb.WikiServiceClient, wikiRepo *pb.Repository, name string, content []byte) {
-	commitDetails := &pb.WikiCommitDetails{
+func updateWikiPage(t *testing.T, client gitalypb.WikiServiceClient, wikiRepo *gitalypb.Repository, name string, content []byte) {
+	commitDetails := &gitalypb.WikiCommitDetails{
 		Name:     []byte("Ahmad Sherif"),
 		Email:    []byte("ahmad@gitlab.com"),
 		Message:  []byte("Update " + name),
@@ -136,7 +135,7 @@ func updateWikiPage(t *testing.T, client pb.WikiServiceClient, wikiRepo *pb.Repo
 		UserName: []byte("ahmad"),
 	}
 
-	request := &pb.WikiUpdatePageRequest{
+	request := &gitalypb.WikiUpdatePageRequest{
 		Repository:    wikiRepo,
 		PagePath:      []byte(name),
 		Title:         []byte(name),
@@ -156,14 +155,14 @@ func updateWikiPage(t *testing.T, client pb.WikiServiceClient, wikiRepo *pb.Repo
 	require.NoError(t, err)
 }
 
-func setupWikiRepo(t *testing.T) (*pb.Repository, string, func()) {
+func setupWikiRepo(t *testing.T) (*gitalypb.Repository, string, func()) {
 	relPath := strings.Join([]string{t.Name(), "wiki-test.git"}, "-")
 	storagePath := testhelper.GitlabTestStoragePath()
 	wikiRepoPath := path.Join(storagePath, relPath)
 
 	testhelper.MustRunCommand(nil, nil, "git", "init", "--bare", wikiRepoPath)
 
-	wikiRepo := &pb.Repository{
+	wikiRepo := &gitalypb.Repository{
 		StorageName:  "default",
 		RelativePath: relPath,
 	}
@@ -188,7 +187,7 @@ func sendBytes(data []byte, chunkSize int, sender func([]byte) error) (int, erro
 	return i, nil
 }
 
-func createTestWikiPage(t *testing.T, client pb.WikiServiceClient, wikiRepo *pb.Repository, opts createWikiPageOpts) *pb.GitCommit {
+func createTestWikiPage(t *testing.T, client gitalypb.WikiServiceClient, wikiRepo *gitalypb.Repository, opts createWikiPageOpts) *gitalypb.GitCommit {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
@@ -203,7 +202,7 @@ func createTestWikiPage(t *testing.T, client pb.WikiServiceClient, wikiRepo *pb.
 	return pageCommit
 }
 
-func requireWikiPagesEqual(t *testing.T, expectedPage *pb.WikiPage, actualPage *pb.WikiPage) {
+func requireWikiPagesEqual(t *testing.T, expectedPage *gitalypb.WikiPage, actualPage *gitalypb.WikiPage) {
 	// require.Equal doesn't display a proper diff when either expected/actual has a field
 	// with large data (RawData in our case), so we compare file attributes and content separately.
 	expectedContent := expectedPage.GetRawData()

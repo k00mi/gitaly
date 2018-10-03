@@ -1,12 +1,10 @@
 package storage
 
-import (
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-)
+import "gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 
 type server struct{}
 
 // NewServer creates a new instance of a gRPC storage server
-func NewServer() pb.StorageServiceServer {
+func NewServer() gitalypb.StorageServiceServer {
 	return &server{}
 }

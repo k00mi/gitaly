@@ -5,10 +5,10 @@ import (
 	"os/exec"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -29,7 +29,7 @@ func init() {
 	prometheus.MustRegister(deepenCount)
 }
 
-func (s *server) PostUploadPack(stream pb.SmartHTTPService_PostUploadPackServer) error {
+func (s *server) PostUploadPack(stream gitalypb.SmartHTTPService_PostUploadPackServer) error {
 	grpc_logrus.Extract(stream.Context()).Debug("PostUploadPack")
 
 	req, err := stream.Recv() // First request contains Repository only
@@ -53,7 +53,7 @@ func (s *server) PostUploadPack(stream pb.SmartHTTPService_PostUploadPackServer)
 	}()
 
 	stdout := streamio.NewWriter(func(p []byte) error {
-		return stream.Send(&pb.PostUploadPackResponse{Data: p})
+		return stream.Send(&gitalypb.PostUploadPackResponse{Data: p})
 	})
 	repoPath, err := helper.GetRepoPath(req.Repository)
 	if err != nil {
@@ -89,7 +89,7 @@ func (s *server) PostUploadPack(stream pb.SmartHTTPService_PostUploadPackServer)
 	return nil
 }
 
-func validateUploadPackRequest(req *pb.PostUploadPackRequest) error {
+func validateUploadPackRequest(req *gitalypb.PostUploadPackRequest) error {
 	if req.Data != nil {
 		return status.Errorf(codes.InvalidArgument, "PostUploadPack: non-empty Data")
 	}

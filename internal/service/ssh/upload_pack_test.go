@@ -12,9 +12,8 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
@@ -29,22 +28,22 @@ func TestFailedUploadPackRequestDueToValidationError(t *testing.T) {
 
 	tests := []struct {
 		Desc string
-		Req  *pb.SSHUploadPackRequest
+		Req  *gitalypb.SSHUploadPackRequest
 		Code codes.Code
 	}{
 		{
 			Desc: "Repository.RelativePath is empty",
-			Req:  &pb.SSHUploadPackRequest{Repository: &pb.Repository{StorageName: "default", RelativePath: ""}},
+			Req:  &gitalypb.SSHUploadPackRequest{Repository: &gitalypb.Repository{StorageName: "default", RelativePath: ""}},
 			Code: codes.InvalidArgument,
 		},
 		{
 			Desc: "Repository is nil",
-			Req:  &pb.SSHUploadPackRequest{Repository: nil},
+			Req:  &gitalypb.SSHUploadPackRequest{Repository: nil},
 			Code: codes.InvalidArgument,
 		},
 		{
 			Desc: "Data exists on first request",
-			Req:  &pb.SSHUploadPackRequest{Repository: &pb.Repository{StorageName: "default", RelativePath: "path/to/repo"}, Stdin: []byte("Fail")},
+			Req:  &gitalypb.SSHUploadPackRequest{Repository: &gitalypb.Repository{StorageName: "default", RelativePath: "path/to/repo"}, Stdin: []byte("Fail")},
 			Code: codes.InvalidArgument,
 		},
 	}
@@ -136,8 +135,8 @@ func TestUploadPackCloneFailure(t *testing.T) {
 func testClone(t *testing.T, serverSocketPath, storageName, relativePath, localRepoPath string, gitConfig string, cmd *exec.Cmd) (string, string, string, string, error) {
 	defer os.RemoveAll(localRepoPath)
 
-	pbTempRepo := &pb.Repository{StorageName: storageName, RelativePath: relativePath}
-	req := &pb.SSHUploadPackRequest{
+	pbTempRepo := &gitalypb.Repository{StorageName: storageName, RelativePath: relativePath}
+	req := &gitalypb.SSHUploadPackRequest{
 		Repository: pbTempRepo,
 	}
 	if gitConfig != "" {
@@ -175,7 +174,7 @@ func testClone(t *testing.T, serverSocketPath, storageName, relativePath, localR
 	return string(localHead), string(remoteHead), string(localTags), string(remoteTags), nil
 }
 
-func drainPostUploadPackResponse(stream pb.SSH_SSHUploadPackClient) error {
+func drainPostUploadPackResponse(stream gitalypb.SSH_SSHUploadPackClient) error {
 	var err error
 	for err == nil {
 		_, err = stream.Recv()

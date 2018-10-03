@@ -4,17 +4,16 @@ import (
 	"io"
 	"io/ioutil"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"gitlab.com/gitlab-org/gitaly/internal/service/commit"
 	"gitlab.com/gitlab-org/gitaly/streamio"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func sendGetBlobsResponse(req *pb.GetBlobsRequest, stream pb.BlobService_GetBlobsServer, c *catfile.Batch) error {
+func sendGetBlobsResponse(req *gitalypb.GetBlobsRequest, stream gitalypb.BlobService_GetBlobsServer, c *catfile.Batch) error {
 	for _, revisionPath := range req.RevisionPaths {
 		revision := revisionPath.Revision
 		path := revisionPath.Path
@@ -24,7 +23,7 @@ func sendGetBlobsResponse(req *pb.GetBlobsRequest, stream pb.BlobService_GetBlob
 			return err
 		}
 
-		response := &pb.GetBlobsResponse{Revision: revision, Path: path}
+		response := &gitalypb.GetBlobsResponse{Revision: revision, Path: path}
 
 		if treeEntry == nil || len(treeEntry.Oid) == 0 {
 			if err := stream.Send(response); err != nil {
@@ -37,7 +36,7 @@ func sendGetBlobsResponse(req *pb.GetBlobsRequest, stream pb.BlobService_GetBlob
 		response.Mode = treeEntry.Mode
 		response.Oid = treeEntry.Oid
 
-		if treeEntry.Type == pb.TreeEntry_COMMIT {
+		if treeEntry.Type == gitalypb.TreeEntry_COMMIT {
 			response.IsSubmodule = true
 
 			if err := stream.Send(response); err != nil {
@@ -80,7 +79,7 @@ func sendGetBlobsResponse(req *pb.GetBlobsRequest, stream pb.BlobService_GetBlob
 		}
 
 		sw := streamio.NewWriter(func(p []byte) error {
-			msg := &pb.GetBlobsResponse{}
+			msg := &gitalypb.GetBlobsResponse{}
 			if response != nil {
 				msg = response
 				response = nil
@@ -104,7 +103,7 @@ func sendGetBlobsResponse(req *pb.GetBlobsRequest, stream pb.BlobService_GetBlob
 	return nil
 }
 
-func (*server) GetBlobs(req *pb.GetBlobsRequest, stream pb.BlobService_GetBlobsServer) error {
+func (*server) GetBlobs(req *gitalypb.GetBlobsRequest, stream gitalypb.BlobService_GetBlobsServer) error {
 	if req.Repository == nil {
 		return status.Errorf(codes.InvalidArgument, "GetBlobs: empty Repository")
 	}

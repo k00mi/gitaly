@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"golang.org/x/net/context"
@@ -33,7 +33,7 @@ func TestSuccessfulUserUpdateBranchRequest(t *testing.T) {
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
 
-	request := &pb.UserUpdateBranchRequest{
+	request := &gitalypb.UserUpdateBranchRequest{
 		Repository: testRepo,
 		BranchName: []byte(updateBranchName),
 		Newrev:     newrev,
@@ -71,7 +71,7 @@ func TestSuccessfulGitHooksForUserUpdateBranchRequest(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			request := &pb.UserUpdateBranchRequest{
+			request := &gitalypb.UserUpdateBranchRequest{
 				Repository: testRepo,
 				BranchName: []byte(updateBranchName),
 				Newrev:     newrev,
@@ -100,7 +100,7 @@ func TestFailedUserUpdateBranchDueToHooks(t *testing.T) {
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
 
-	request := &pb.UserUpdateBranchRequest{
+	request := &gitalypb.UserUpdateBranchRequest{
 		Repository: testRepo,
 		BranchName: []byte(updateBranchName),
 		Newrev:     newrev,
@@ -144,7 +144,7 @@ func TestFailedUserUpdateBranchRequest(t *testing.T) {
 		branchName string
 		newrev     []byte
 		oldrev     []byte
-		user       *pb.User
+		user       *gitalypb.User
 		code       codes.Code
 	}{
 		{
@@ -207,7 +207,7 @@ func TestFailedUserUpdateBranchRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			request := &pb.UserUpdateBranchRequest{
+			request := &gitalypb.UserUpdateBranchRequest{
 				Repository: testRepo,
 				BranchName: []byte(testCase.branchName),
 				Newrev:     testCase.newrev,

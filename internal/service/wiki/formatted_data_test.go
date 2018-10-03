@@ -5,9 +5,8 @@ import (
 	"io"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -35,18 +34,18 @@ func TestSuccessfulWikiGetFormattedDataRequest(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.WikiGetFormattedDataRequest
+		request *gitalypb.WikiGetFormattedDataRequest
 	}{
 		{
 			desc: "title only",
-			request: &pb.WikiGetFormattedDataRequest{
+			request: &gitalypb.WikiGetFormattedDataRequest{
 				Repository: wikiRepo,
 				Title:      []byte(page1Name),
 			},
 		},
 		{
 			desc: "title + revision that includes the page",
-			request: &pb.WikiGetFormattedDataRequest{
+			request: &gitalypb.WikiGetFormattedDataRequest{
 				Repository: wikiRepo,
 				Title:      []byte(page1Name),
 				Revision:   []byte(page1Commit.Id),
@@ -54,7 +53,7 @@ func TestSuccessfulWikiGetFormattedDataRequest(t *testing.T) {
 		},
 		{
 			desc: "title + directory that includes the page",
-			request: &pb.WikiGetFormattedDataRequest{
+			request: &gitalypb.WikiGetFormattedDataRequest{
 				Repository: wikiRepo,
 				Title:      []byte("Step 133-b"),
 				Directory:  []byte("Instálling"),
@@ -108,7 +107,7 @@ func TestFailedWikiGetFormattedDataDueToValidation(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			request := &pb.WikiGetFormattedDataRequest{
+			request := &gitalypb.WikiGetFormattedDataRequest{
 				Repository: wikiRepo,
 				Title:      []byte(testCase.title),
 			}
@@ -122,7 +121,7 @@ func TestFailedWikiGetFormattedDataDueToValidation(t *testing.T) {
 	}
 }
 
-func drainWikiGetFormattedDataResponse(c pb.WikiService_WikiGetFormattedDataClient) error {
+func drainWikiGetFormattedDataResponse(c gitalypb.WikiService_WikiGetFormattedDataClient) error {
 	for {
 		_, err := c.Recv()
 		if err != nil {
@@ -131,7 +130,7 @@ func drainWikiGetFormattedDataResponse(c pb.WikiService_WikiGetFormattedDataClie
 	}
 }
 
-func readFullDataFromWikiGetFormattedDataClient(t *testing.T, c pb.WikiService_WikiGetFormattedDataClient) (data []byte) {
+func readFullDataFromWikiGetFormattedDataClient(t *testing.T, c gitalypb.WikiService_WikiGetFormattedDataClient) (data []byte) {
 	for {
 		resp, err := c.Recv()
 		if err == io.EOF {

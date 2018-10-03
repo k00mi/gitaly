@@ -5,9 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/require"
@@ -48,7 +47,7 @@ func TestSuccessfulCountCommitsRequest(t *testing.T) {
 	}
 
 	testCases := []struct {
-		repo                *pb.Repository
+		repo                *gitalypb.Repository
 		revision, path      []byte
 		all                 bool
 		before, after, desc string
@@ -121,7 +120,7 @@ func TestSuccessfulCountCommitsRequest(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
 
-			request := &pb.CountCommitsRequest{Repository: testCase.repo}
+			request := &gitalypb.CountCommitsRequest{Repository: testCase.repo}
 
 			if testCase.all {
 				request.All = true
@@ -177,10 +176,10 @@ func TestFailedCountCommitsRequestDueToValidationError(t *testing.T) {
 
 	revision := []byte("d42783470dc29fde2cf459eb3199ee1d7e3f3a72")
 
-	rpcRequests := []pb.CountCommitsRequest{
-		{Repository: &pb.Repository{StorageName: "fake", RelativePath: "path"}, Revision: revision}, // Repository doesn't exist
-		{Repository: nil, Revision: revision},                                                       // Repository is nil
-		{Repository: testRepo, Revision: nil, All: false},                                           // Revision is empty and All is false
+	rpcRequests := []gitalypb.CountCommitsRequest{
+		{Repository: &gitalypb.Repository{StorageName: "fake", RelativePath: "path"}, Revision: revision}, // Repository doesn't exist
+		{Repository: nil, Revision: revision},             // Repository is nil
+		{Repository: testRepo, Revision: nil, All: false}, // Revision is empty and All is false
 	}
 
 	for _, rpcRequest := range rpcRequests {

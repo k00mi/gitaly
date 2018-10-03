@@ -5,10 +5,9 @@ import (
 	"path"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
@@ -34,19 +33,19 @@ func TestGetRepoPath(t *testing.T) {
 	testCases := []struct {
 		desc     string
 		storages []config.Storage
-		repo     *pb.Repository
+		repo     *gitalypb.Repository
 		path     string
 		err      codes.Code
 	}{
 		{
 			desc:     "storages configured",
 			storages: exampleStorages,
-			repo:     &pb.Repository{StorageName: "default", RelativePath: testhelper.TestRelativePath},
+			repo:     &gitalypb.Repository{StorageName: "default", RelativePath: testhelper.TestRelativePath},
 			path:     repoPath,
 		},
 		{
 			desc: "no storage config, storage name provided",
-			repo: &pb.Repository{StorageName: "does not exist", RelativePath: testhelper.TestRelativePath},
+			repo: &gitalypb.Repository{StorageName: "does not exist", RelativePath: testhelper.TestRelativePath},
 			err:  codes.InvalidArgument,
 		},
 		{
@@ -56,66 +55,66 @@ func TestGetRepoPath(t *testing.T) {
 		{
 			desc:     "storage config provided, empty repo",
 			storages: exampleStorages,
-			repo:     &pb.Repository{},
+			repo:     &gitalypb.Repository{},
 			err:      codes.InvalidArgument,
 		},
 		{
 			desc: "no storage config, empty repo",
-			repo: &pb.Repository{},
+			repo: &gitalypb.Repository{},
 			err:  codes.InvalidArgument,
 		},
 		{
 			desc:     "non existing repo",
 			storages: exampleStorages,
-			repo:     &pb.Repository{StorageName: "default", RelativePath: "made/up/path.git"},
+			repo:     &gitalypb.Repository{StorageName: "default", RelativePath: "made/up/path.git"},
 			err:      codes.NotFound,
 		},
 		{
 			desc:     "non existing storage",
 			storages: exampleStorages,
-			repo:     &pb.Repository{StorageName: "does not exists", RelativePath: testhelper.TestRelativePath},
+			repo:     &gitalypb.Repository{StorageName: "does not exists", RelativePath: testhelper.TestRelativePath},
 			err:      codes.InvalidArgument,
 		},
 		{
 			desc:     "storage defined but storage dir does not exist",
 			storages: []config.Storage{{Name: "default", Path: "/does/not/exist"}},
-			repo:     &pb.Repository{StorageName: "default", RelativePath: "foobar.git"},
+			repo:     &gitalypb.Repository{StorageName: "default", RelativePath: "foobar.git"},
 			err:      codes.Internal,
 		},
 		{
 			desc:     "relative path with directory traversal",
 			storages: exampleStorages,
-			repo:     &pb.Repository{StorageName: "default", RelativePath: "../bazqux.git"},
+			repo:     &gitalypb.Repository{StorageName: "default", RelativePath: "../bazqux.git"},
 			err:      codes.InvalidArgument,
 		},
 		{
 			desc:     "valid path with ..",
 			storages: exampleStorages,
-			repo:     &pb.Repository{StorageName: "default", RelativePath: "foo../bazqux.git"},
+			repo:     &gitalypb.Repository{StorageName: "default", RelativePath: "foo../bazqux.git"},
 			err:      codes.NotFound, // Because the directory doesn't exist
 		},
 		{
 			desc:     "relative path with sneaky directory traversal",
 			storages: exampleStorages,
-			repo:     &pb.Repository{StorageName: "default", RelativePath: "/../bazqux.git"},
+			repo:     &gitalypb.Repository{StorageName: "default", RelativePath: "/../bazqux.git"},
 			err:      codes.InvalidArgument,
 		},
 		{
 			desc:     "relative path with one level traversal at the end",
 			storages: exampleStorages,
-			repo:     &pb.Repository{StorageName: "default", RelativePath: testhelper.TestRelativePath + "/.."},
+			repo:     &gitalypb.Repository{StorageName: "default", RelativePath: testhelper.TestRelativePath + "/.."},
 			err:      codes.InvalidArgument,
 		},
 		{
 			desc:     "relative path with one level dashed traversal at the end",
 			storages: exampleStorages,
-			repo:     &pb.Repository{StorageName: "default", RelativePath: testhelper.TestRelativePath + "/../"},
+			repo:     &gitalypb.Repository{StorageName: "default", RelativePath: testhelper.TestRelativePath + "/../"},
 			err:      codes.InvalidArgument,
 		},
 		{
 			desc:     "relative path with deep traversal at the end",
 			storages: exampleStorages,
-			repo:     &pb.Repository{StorageName: "default", RelativePath: "bazqux.git/../.."},
+			repo:     &gitalypb.Repository{StorageName: "default", RelativePath: "bazqux.git/../.."},
 			err:      codes.InvalidArgument,
 		},
 	}
@@ -140,7 +139,7 @@ func TestGetRepoPath(t *testing.T) {
 	}
 }
 
-func assertInvalidRepoWithoutFile(t *testing.T, repo *pb.Repository, repoPath, file string) {
+func assertInvalidRepoWithoutFile(t *testing.T, repo *gitalypb.Repository, repoPath, file string) {
 	oldRoute := path.Join(repoPath, file)
 	renamedRoute := path.Join(repoPath, file+"moved")
 	os.Rename(oldRoute, renamedRoute)

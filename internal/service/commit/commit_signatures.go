@@ -3,15 +3,14 @@ package commit
 import (
 	"fmt"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) GetCommitSignatures(request *pb.GetCommitSignaturesRequest, stream pb.CommitService_GetCommitSignaturesServer) error {
+func (s *server) GetCommitSignatures(request *gitalypb.GetCommitSignaturesRequest, stream gitalypb.CommitService_GetCommitSignaturesServer) error {
 	if err := validateGetCommitSignaturesRequest(request); err != nil {
 		return status.Errorf(codes.InvalidArgument, "GetCommitSignatures: %v", err)
 	}
@@ -44,7 +43,7 @@ func (s *server) GetCommitSignatures(request *pb.GetCommitSignaturesRequest, str
 	})
 }
 
-func validateGetCommitSignaturesRequest(request *pb.GetCommitSignaturesRequest) error {
+func validateGetCommitSignaturesRequest(request *gitalypb.GetCommitSignaturesRequest) error {
 	if request.GetRepository() == nil {
 		return fmt.Errorf("empty Repository")
 	}

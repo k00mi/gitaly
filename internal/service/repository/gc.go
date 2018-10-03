@@ -3,17 +3,17 @@ package repository
 import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	log "github.com/sirupsen/logrus"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/housekeeping"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
-func (server) GarbageCollect(ctx context.Context, in *pb.GarbageCollectRequest) (*pb.GarbageCollectResponse, error) {
+func (server) GarbageCollect(ctx context.Context, in *gitalypb.GarbageCollectRequest) (*gitalypb.GarbageCollectResponse, error) {
 	ctxlogger := grpc_logrus.Extract(ctx)
 	ctxlogger.WithFields(log.Fields{
 		"WriteBitmaps": in.GetCreateBitmap(),
@@ -53,5 +53,5 @@ func (server) GarbageCollect(ctx context.Context, in *pb.GarbageCollectRequest) 
 		ctxlogger.WithError(err).Warn("Post gc housekeeping failed")
 	}
 
-	return &pb.GarbageCollectResponse{}, nil
+	return &gitalypb.GarbageCollectResponse{}, nil
 }

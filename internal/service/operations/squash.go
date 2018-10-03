@@ -3,14 +3,14 @@ package operations
 import (
 	"fmt"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) UserSquash(ctx context.Context, req *pb.UserSquashRequest) (*pb.UserSquashResponse, error) {
+func (s *server) UserSquash(ctx context.Context, req *gitalypb.UserSquashRequest) (*gitalypb.UserSquashResponse, error) {
 	if err := validateUserSquashRequest(req); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "UserSquash: %v", err)
 	}
@@ -28,7 +28,7 @@ func (s *server) UserSquash(ctx context.Context, req *pb.UserSquashRequest) (*pb
 	return client.UserSquash(clientCtx, req)
 }
 
-func validateUserSquashRequest(req *pb.UserSquashRequest) error {
+func validateUserSquashRequest(req *gitalypb.UserSquashRequest) error {
 	if req.GetRepository() == nil {
 		return fmt.Errorf("empty Repository")
 	}

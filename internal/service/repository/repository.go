@@ -7,26 +7,26 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
 // Deprecated
-func (s *server) Exists(ctx context.Context, in *pb.RepositoryExistsRequest) (*pb.RepositoryExistsResponse, error) {
+func (s *server) Exists(ctx context.Context, in *gitalypb.RepositoryExistsRequest) (*gitalypb.RepositoryExistsResponse, error) {
 	return nil, helper.Unimplemented
 }
 
-func (s *server) RepositoryExists(ctx context.Context, in *pb.RepositoryExistsRequest) (*pb.RepositoryExistsResponse, error) {
+func (s *server) RepositoryExists(ctx context.Context, in *gitalypb.RepositoryExistsRequest) (*gitalypb.RepositoryExistsResponse, error) {
 	path, err := helper.GetPath(in.Repository)
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.RepositoryExistsResponse{Exists: helper.IsGitDirectory(path)}, nil
+	return &gitalypb.RepositoryExistsResponse{Exists: helper.IsGitDirectory(path)}, nil
 }
 
-func (s *server) HasLocalBranches(ctx context.Context, in *pb.HasLocalBranchesRequest) (*pb.HasLocalBranchesResponse, error) {
+func (s *server) HasLocalBranches(ctx context.Context, in *gitalypb.HasLocalBranchesRequest) (*gitalypb.HasLocalBranchesResponse, error) {
 	args := []string{"for-each-ref", "--count=1", "refs/heads"}
 	cmd, err := git.Command(ctx, in.GetRepository(), args...)
 	if err != nil {
@@ -45,5 +45,5 @@ func (s *server) HasLocalBranches(ctx context.Context, in *pb.HasLocalBranchesRe
 		return nil, status.Errorf(codes.Internal, "HasLocalBranches: cmd wait: %v", err)
 	}
 
-	return &pb.HasLocalBranchesResponse{Value: len(buff) > 0}, nil
+	return &gitalypb.HasLocalBranchesResponse{Value: len(buff) > 0}, nil
 }

@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -18,8 +19,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/supervisor"
 	"gitlab.com/gitlab-org/gitaly/internal/version"
 	"gitlab.com/gitlab-org/gitaly/streamio"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	log "github.com/sirupsen/logrus"
@@ -145,73 +144,73 @@ func Start() (*Server, error) {
 // CommitServiceClient returns a CommitServiceClient instance that is
 // configured to connect to the running Ruby server. This assumes Start()
 // has been called already.
-func (s *Server) CommitServiceClient(ctx context.Context) (pb.CommitServiceClient, error) {
+func (s *Server) CommitServiceClient(ctx context.Context) (gitalypb.CommitServiceClient, error) {
 	conn, err := s.getConnection(ctx)
-	return pb.NewCommitServiceClient(conn), err
+	return gitalypb.NewCommitServiceClient(conn), err
 }
 
 // DiffServiceClient returns a DiffServiceClient instance that is
 // configured to connect to the running Ruby server. This assumes Start()
 // has been called already.
-func (s *Server) DiffServiceClient(ctx context.Context) (pb.DiffServiceClient, error) {
+func (s *Server) DiffServiceClient(ctx context.Context) (gitalypb.DiffServiceClient, error) {
 	conn, err := s.getConnection(ctx)
-	return pb.NewDiffServiceClient(conn), err
+	return gitalypb.NewDiffServiceClient(conn), err
 }
 
 // RefServiceClient returns a RefServiceClient instance that is
 // configured to connect to the running Ruby server. This assumes Start()
 // has been called already.
-func (s *Server) RefServiceClient(ctx context.Context) (pb.RefServiceClient, error) {
+func (s *Server) RefServiceClient(ctx context.Context) (gitalypb.RefServiceClient, error) {
 	conn, err := s.getConnection(ctx)
-	return pb.NewRefServiceClient(conn), err
+	return gitalypb.NewRefServiceClient(conn), err
 }
 
 // OperationServiceClient returns a OperationServiceClient instance that is
 // configured to connect to the running Ruby server. This assumes Start()
 // has been called already.
-func (s *Server) OperationServiceClient(ctx context.Context) (pb.OperationServiceClient, error) {
+func (s *Server) OperationServiceClient(ctx context.Context) (gitalypb.OperationServiceClient, error) {
 	conn, err := s.getConnection(ctx)
-	return pb.NewOperationServiceClient(conn), err
+	return gitalypb.NewOperationServiceClient(conn), err
 }
 
 // RepositoryServiceClient returns a RefServiceClient instance that is
 // configured to connect to the running Ruby server. This assumes Start()
 // has been called already.
-func (s *Server) RepositoryServiceClient(ctx context.Context) (pb.RepositoryServiceClient, error) {
+func (s *Server) RepositoryServiceClient(ctx context.Context) (gitalypb.RepositoryServiceClient, error) {
 	conn, err := s.getConnection(ctx)
-	return pb.NewRepositoryServiceClient(conn), err
+	return gitalypb.NewRepositoryServiceClient(conn), err
 }
 
 // WikiServiceClient returns a WikiServiceClient instance that is
 // configured to connect to the running Ruby server. This assumes Start()
 // has been called already.
-func (s *Server) WikiServiceClient(ctx context.Context) (pb.WikiServiceClient, error) {
+func (s *Server) WikiServiceClient(ctx context.Context) (gitalypb.WikiServiceClient, error) {
 	conn, err := s.getConnection(ctx)
-	return pb.NewWikiServiceClient(conn), err
+	return gitalypb.NewWikiServiceClient(conn), err
 }
 
 // ConflictsServiceClient returns a ConflictsServiceClient instance that is
 // configured to connect to the running Ruby server. This assumes Start()
 // has been called already.
-func (s *Server) ConflictsServiceClient(ctx context.Context) (pb.ConflictsServiceClient, error) {
+func (s *Server) ConflictsServiceClient(ctx context.Context) (gitalypb.ConflictsServiceClient, error) {
 	conn, err := s.getConnection(ctx)
-	return pb.NewConflictsServiceClient(conn), err
+	return gitalypb.NewConflictsServiceClient(conn), err
 }
 
 // RemoteServiceClient returns a RemoteServiceClient instance that is
 // configured to connect to the running Ruby server. This assumes Start()
 // has been called already.
-func (s *Server) RemoteServiceClient(ctx context.Context) (pb.RemoteServiceClient, error) {
+func (s *Server) RemoteServiceClient(ctx context.Context) (gitalypb.RemoteServiceClient, error) {
 	conn, err := s.getConnection(ctx)
-	return pb.NewRemoteServiceClient(conn), err
+	return gitalypb.NewRemoteServiceClient(conn), err
 }
 
 // BlobServiceClient returns a BlobServiceClient instance that is
 // configured to connect to the running Ruby server. This assumes Start()
 // has been called already.
-func (s *Server) BlobServiceClient(ctx context.Context) (pb.BlobServiceClient, error) {
+func (s *Server) BlobServiceClient(ctx context.Context) (gitalypb.BlobServiceClient, error) {
 	conn, err := s.getConnection(ctx)
-	return pb.NewBlobServiceClient(conn), err
+	return gitalypb.NewBlobServiceClient(conn), err
 }
 
 func (s *Server) getConnection(ctx context.Context) (*grpc.ClientConn, error) {

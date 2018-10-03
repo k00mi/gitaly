@@ -7,12 +7,11 @@ import (
 	"path"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	serverPkg "gitlab.com/gitlab-org/gitaly/internal/server"
 	"gitlab.com/gitlab-org/gitaly/internal/service/operations"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -39,7 +38,7 @@ func TestSuccessfulUserCherryPickRequest(t *testing.T) {
 	masterHeadCommit, err := log.GetCommit(ctxOuter, testRepo, "master")
 	require.NoError(t, err)
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
@@ -53,23 +52,23 @@ func TestSuccessfulUserCherryPickRequest(t *testing.T) {
 
 	testCases := []struct {
 		desc         string
-		request      *pb.UserCherryPickRequest
-		branchUpdate *pb.OperationBranchUpdate
+		request      *gitalypb.UserCherryPickRequest
+		branchUpdate *gitalypb.OperationBranchUpdate
 	}{
 		{
 			desc: "branch exists",
-			request: &pb.UserCherryPickRequest{
+			request: &gitalypb.UserCherryPickRequest{
 				Repository: testRepo,
 				User:       user,
 				Commit:     cherryPickedCommit,
 				BranchName: []byte(destinationBranch),
 				Message:    []byte("Cherry-picking " + cherryPickedCommit.Id),
 			},
-			branchUpdate: &pb.OperationBranchUpdate{},
+			branchUpdate: &gitalypb.OperationBranchUpdate{},
 		},
 		{
 			desc: "nonexistent branch + start_repository == repository",
-			request: &pb.UserCherryPickRequest{
+			request: &gitalypb.UserCherryPickRequest{
 				Repository:      testRepo,
 				User:            user,
 				Commit:          cherryPickedCommit,
@@ -77,11 +76,11 @@ func TestSuccessfulUserCherryPickRequest(t *testing.T) {
 				Message:         []byte("Cherry-picking " + cherryPickedCommit.Id),
 				StartBranchName: []byte("master"),
 			},
-			branchUpdate: &pb.OperationBranchUpdate{BranchCreated: true},
+			branchUpdate: &gitalypb.OperationBranchUpdate{BranchCreated: true},
 		},
 		{
 			desc: "nonexistent branch + start_repository != repository",
-			request: &pb.UserCherryPickRequest{
+			request: &gitalypb.UserCherryPickRequest{
 				Repository:      testRepo,
 				User:            user,
 				Commit:          cherryPickedCommit,
@@ -90,11 +89,11 @@ func TestSuccessfulUserCherryPickRequest(t *testing.T) {
 				StartRepository: testRepoCopy,
 				StartBranchName: []byte("master"),
 			},
-			branchUpdate: &pb.OperationBranchUpdate{BranchCreated: true},
+			branchUpdate: &gitalypb.OperationBranchUpdate{BranchCreated: true},
 		},
 		{
 			desc: "nonexistent branch + empty start_repository",
-			request: &pb.UserCherryPickRequest{
+			request: &gitalypb.UserCherryPickRequest{
 				Repository:      testRepo,
 				User:            user,
 				Commit:          cherryPickedCommit,
@@ -102,7 +101,7 @@ func TestSuccessfulUserCherryPickRequest(t *testing.T) {
 				Message:         []byte("Cherry-picking " + cherryPickedCommit.Id),
 				StartBranchName: []byte("master"),
 			},
-			branchUpdate: &pb.OperationBranchUpdate{BranchCreated: true},
+			branchUpdate: &gitalypb.OperationBranchUpdate{BranchCreated: true},
 		},
 	}
 
@@ -143,7 +142,7 @@ func TestSuccessfulGitHooksForUserCherryPickRequest(t *testing.T) {
 	destinationBranch := "cherry-picking-dst"
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", destinationBranch, "master")
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
@@ -152,7 +151,7 @@ func TestSuccessfulGitHooksForUserCherryPickRequest(t *testing.T) {
 	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab")
 	require.NoError(t, err)
 
-	request := &pb.UserCherryPickRequest{
+	request := &gitalypb.UserCherryPickRequest{
 		Repository: testRepo,
 		User:       user,
 		Commit:     cherryPickedCommit,
@@ -198,7 +197,7 @@ func TestFailedUserCherryPickRequestDueToValidations(t *testing.T) {
 
 	destinationBranch := "cherry-picking-dst"
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
@@ -206,12 +205,12 @@ func TestFailedUserCherryPickRequestDueToValidations(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.UserCherryPickRequest
+		request *gitalypb.UserCherryPickRequest
 		code    codes.Code
 	}{
 		{
 			desc: "empty user",
-			request: &pb.UserCherryPickRequest{
+			request: &gitalypb.UserCherryPickRequest{
 				Repository: testRepo,
 				User:       nil,
 				Commit:     cherryPickedCommit,
@@ -222,7 +221,7 @@ func TestFailedUserCherryPickRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty commit",
-			request: &pb.UserCherryPickRequest{
+			request: &gitalypb.UserCherryPickRequest{
 				Repository: testRepo,
 				User:       user,
 				Commit:     nil,
@@ -233,7 +232,7 @@ func TestFailedUserCherryPickRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty branch name",
-			request: &pb.UserCherryPickRequest{
+			request: &gitalypb.UserCherryPickRequest{
 				Repository: testRepo,
 				User:       user,
 				Commit:     cherryPickedCommit,
@@ -244,7 +243,7 @@ func TestFailedUserCherryPickRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty message",
-			request: &pb.UserCherryPickRequest{
+			request: &gitalypb.UserCherryPickRequest{
 				Repository: testRepo,
 				User:       user,
 				Commit:     cherryPickedCommit,
@@ -282,7 +281,7 @@ func TestFailedUserCherryPickRequestDueToPreReceiveError(t *testing.T) {
 	destinationBranch := "cherry-picking-dst"
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", destinationBranch, "master")
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
@@ -291,7 +290,7 @@ func TestFailedUserCherryPickRequestDueToPreReceiveError(t *testing.T) {
 	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab")
 	require.NoError(t, err)
 
-	request := &pb.UserCherryPickRequest{
+	request := &gitalypb.UserCherryPickRequest{
 		Repository: testRepo,
 		User:       user,
 		Commit:     cherryPickedCommit,
@@ -333,7 +332,7 @@ func TestFailedUserCherryPickRequestDueToCreateTreeError(t *testing.T) {
 	destinationBranch := "cherry-picking-dst"
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", destinationBranch, "master")
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
@@ -343,7 +342,7 @@ func TestFailedUserCherryPickRequestDueToCreateTreeError(t *testing.T) {
 	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "4a24d82dbca5c11c61556f3b35ca472b7463187e")
 	require.NoError(t, err)
 
-	request := &pb.UserCherryPickRequest{
+	request := &gitalypb.UserCherryPickRequest{
 		Repository: testRepo,
 		User:       user,
 		Commit:     cherryPickedCommit,
@@ -377,7 +376,7 @@ func TestFailedUserCherryPickRequestDueToCommitError(t *testing.T) {
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", destinationBranch, "master")
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", sourceBranch, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab")
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
@@ -386,7 +385,7 @@ func TestFailedUserCherryPickRequestDueToCommitError(t *testing.T) {
 	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, sourceBranch)
 	require.NoError(t, err)
 
-	request := &pb.UserCherryPickRequest{
+	request := &gitalypb.UserCherryPickRequest{
 		Repository:      testRepo,
 		User:            user,
 		Commit:          cherryPickedCommit,

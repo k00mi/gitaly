@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
@@ -47,15 +47,15 @@ func TestSuccessfulUpdateRemoteMirrorRequest(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	firstRequest := &pb.UpdateRemoteMirrorRequest{
+	firstRequest := &gitalypb.UpdateRemoteMirrorRequest{
 		Repository:           testRepo,
 		RefName:              remoteName,
 		OnlyBranchesMatching: nil,
 	}
-	matchingRequest1 := &pb.UpdateRemoteMirrorRequest{
+	matchingRequest1 := &gitalypb.UpdateRemoteMirrorRequest{
 		OnlyBranchesMatching: [][]byte{[]byte("new-branch"), []byte("empty-branch")},
 	}
-	matchingRequest2 := &pb.UpdateRemoteMirrorRequest{
+	matchingRequest2 := &gitalypb.UpdateRemoteMirrorRequest{
 		OnlyBranchesMatching: [][]byte{[]byte("not-merged-branch"), []byte("matcher-without-matches")},
 	}
 
@@ -91,18 +91,18 @@ func TestFailedUpdateRemoteMirrorRequestDueToValidation(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.UpdateRemoteMirrorRequest
+		request *gitalypb.UpdateRemoteMirrorRequest
 	}{
 		{
 			desc: "empty Repository",
-			request: &pb.UpdateRemoteMirrorRequest{
+			request: &gitalypb.UpdateRemoteMirrorRequest{
 				Repository: nil,
 				RefName:    "remote_mirror_1",
 			},
 		},
 		{
 			desc: "empty RefName",
-			request: &pb.UpdateRemoteMirrorRequest{
+			request: &gitalypb.UpdateRemoteMirrorRequest{
 				Repository: testRepo,
 				RefName:    "",
 			},

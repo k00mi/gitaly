@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"os/exec"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git/alternates"
 
 	"golang.org/x/net/context"
 )
 
-func (s *server) Fsck(ctx context.Context, req *pb.FsckRequest) (*pb.FsckResponse, error) {
+func (s *server) Fsck(ctx context.Context, req *gitalypb.FsckRequest) (*gitalypb.FsckResponse, error) {
 	var stdout, stderr bytes.Buffer
 
 	repoPath, env, err := alternates.PathAndEnv(req.GetRepository())
@@ -27,8 +27,8 @@ func (s *server) Fsck(ctx context.Context, req *pb.FsckRequest) (*pb.FsckRespons
 	}
 
 	if err = cmd.Wait(); err != nil {
-		return &pb.FsckResponse{Error: append(stdout.Bytes(), stderr.Bytes()...)}, nil
+		return &gitalypb.FsckResponse{Error: append(stdout.Bytes(), stderr.Bytes()...)}, nil
 	}
 
-	return &pb.FsckResponse{}, nil
+	return &gitalypb.FsckResponse{}, nil
 }

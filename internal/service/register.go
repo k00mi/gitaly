@@ -1,7 +1,7 @@
 package service
 
 import (
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/service/blob"
 	"gitlab.com/gitlab-org/gitaly/internal/service/commit"
@@ -26,20 +26,20 @@ import (
 // RegisterAll will register all the known grpc services with
 // the specified grpc service instance
 func RegisterAll(grpcServer *grpc.Server, rubyServer *rubyserver.Server) {
-	pb.RegisterBlobServiceServer(grpcServer, blob.NewServer(rubyServer))
-	pb.RegisterCommitServiceServer(grpcServer, commit.NewServer(rubyServer))
-	pb.RegisterDiffServiceServer(grpcServer, diff.NewServer(rubyServer))
-	pb.RegisterNamespaceServiceServer(grpcServer, namespace.NewServer())
-	pb.RegisterOperationServiceServer(grpcServer, operations.NewServer(rubyServer))
-	pb.RegisterRefServiceServer(grpcServer, ref.NewServer(rubyServer))
-	pb.RegisterRepositoryServiceServer(grpcServer, repository.NewServer(rubyServer))
-	pb.RegisterSSHServiceServer(grpcServer, ssh.NewServer())
-	pb.RegisterSmartHTTPServiceServer(grpcServer, smarthttp.NewServer())
-	pb.RegisterWikiServiceServer(grpcServer, wiki.NewServer(rubyServer))
-	pb.RegisterConflictsServiceServer(grpcServer, conflicts.NewServer(rubyServer))
-	pb.RegisterRemoteServiceServer(grpcServer, remote.NewServer(rubyServer))
-	pb.RegisterServerServiceServer(grpcServer, server.NewServer())
-	pb.RegisterStorageServiceServer(grpcServer, storage.NewServer())
+	gitalypb.RegisterBlobServiceServer(grpcServer, blob.NewServer(rubyServer))
+	gitalypb.RegisterCommitServiceServer(grpcServer, commit.NewServer(rubyServer))
+	gitalypb.RegisterDiffServiceServer(grpcServer, diff.NewServer(rubyServer))
+	gitalypb.RegisterNamespaceServiceServer(grpcServer, namespace.NewServer())
+	gitalypb.RegisterOperationServiceServer(grpcServer, operations.NewServer(rubyServer))
+	gitalypb.RegisterRefServiceServer(grpcServer, ref.NewServer(rubyServer))
+	gitalypb.RegisterRepositoryServiceServer(grpcServer, repository.NewServer(rubyServer))
+	gitalypb.RegisterSSHServiceServer(grpcServer, ssh.NewServer())
+	gitalypb.RegisterSmartHTTPServiceServer(grpcServer, smarthttp.NewServer())
+	gitalypb.RegisterWikiServiceServer(grpcServer, wiki.NewServer(rubyServer))
+	gitalypb.RegisterConflictsServiceServer(grpcServer, conflicts.NewServer(rubyServer))
+	gitalypb.RegisterRemoteServiceServer(grpcServer, remote.NewServer(rubyServer))
+	gitalypb.RegisterServerServiceServer(grpcServer, server.NewServer())
+	gitalypb.RegisterStorageServiceServer(grpcServer, storage.NewServer())
 
 	healthpb.RegisterHealthServer(grpcServer, health.NewServer())
 }

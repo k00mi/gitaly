@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
@@ -28,7 +28,7 @@ var (
 	RubyServer *rubyserver.Server
 )
 
-func newRepositoryClient(t *testing.T, serverSocketPath string) (pb.RepositoryServiceClient, *grpc.ClientConn) {
+func newRepositoryClient(t *testing.T, serverSocketPath string) (gitalypb.RepositoryServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
@@ -41,7 +41,7 @@ func newRepositoryClient(t *testing.T, serverSocketPath string) (pb.RepositorySe
 		t.Fatal(err)
 	}
 
-	return pb.NewRepositoryServiceClient(conn), conn
+	return gitalypb.NewRepositoryServiceClient(conn), conn
 }
 
 var NewRepositoryClient = newRepositoryClient
@@ -58,7 +58,7 @@ func runRepoServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	pb.RegisterRepositoryServiceServer(server, NewServer(RubyServer))
+	gitalypb.RegisterRepositoryServiceServer(server, NewServer(RubyServer))
 	reflection.Register(server)
 
 	go server.Serve(listener)

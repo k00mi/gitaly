@@ -6,7 +6,7 @@ import (
 	"path"
 	"testing"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -31,8 +31,8 @@ func TestCreateRepositorySuccess(t *testing.T) {
 	repoDir := path.Join(storageDir, relativePath)
 	require.NoError(t, os.RemoveAll(repoDir))
 
-	repo := &pb.Repository{StorageName: "default", RelativePath: relativePath}
-	req := &pb.CreateRepositoryRequest{Repository: repo}
+	repo := &gitalypb.Repository{StorageName: "default", RelativePath: relativePath}
+	req := &gitalypb.CreateRepositoryRequest{Repository: repo}
 	_, err = client.CreateRepository(ctx, req)
 	require.NoError(t, err)
 
@@ -71,8 +71,8 @@ func TestCreateRepositoryFailure(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(fullPath)
 
-	_, err = client.CreateRepository(ctx, &pb.CreateRepositoryRequest{
-		Repository: &pb.Repository{StorageName: "default", RelativePath: "foo.git"},
+	_, err = client.CreateRepository(ctx, &gitalypb.CreateRepositoryRequest{
+		Repository: &gitalypb.Repository{StorageName: "default", RelativePath: "foo.git"},
 	})
 
 	testhelper.RequireGrpcError(t, err, codes.Unknown)
@@ -89,18 +89,18 @@ func TestCreateRepositoryFailureInvalidArgs(t *testing.T) {
 	defer cancel()
 
 	testCases := []struct {
-		repo *pb.Repository
+		repo *gitalypb.Repository
 		code codes.Code
 	}{
 		{
-			repo: &pb.Repository{StorageName: "does not exist", RelativePath: "foobar.git"},
+			repo: &gitalypb.Repository{StorageName: "does not exist", RelativePath: "foobar.git"},
 			code: codes.InvalidArgument,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%+v", tc.repo), func(t *testing.T) {
-			_, err := client.CreateRepository(ctx, &pb.CreateRepositoryRequest{Repository: tc.repo})
+			_, err := client.CreateRepository(ctx, &gitalypb.CreateRepositoryRequest{Repository: tc.repo})
 
 			require.Error(t, err)
 			testhelper.RequireGrpcError(t, err, tc.code)

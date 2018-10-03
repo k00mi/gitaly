@@ -4,9 +4,8 @@ import (
 	"io"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -25,7 +24,7 @@ func TestSuccessfulGetCommitSignaturesRequest(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	request := &pb.GetCommitSignaturesRequest{
+	request := &gitalypb.GetCommitSignaturesRequest{
 		Repository: testRepo,
 		CommitIds: []string{
 			"5937ac0a7beb003549fc5fd26fc247adbce4a52e", // has signature
@@ -38,7 +37,7 @@ func TestSuccessfulGetCommitSignaturesRequest(t *testing.T) {
 	c, err := client.GetCommitSignatures(ctx, request)
 	require.NoError(t, err)
 
-	expectedSignautes := []*pb.GetCommitSignaturesResponse{
+	expectedSignautes := []*gitalypb.GetCommitSignaturesResponse{
 		{
 			CommitId:   "5937ac0a7beb003549fc5fd26fc247adbce4a52e",
 			Signature:  testhelper.MustReadFile(t, "testdata/commit-5937ac0a7beb003549fc5fd26fc247adbce4a52e-signature"),
@@ -67,12 +66,12 @@ func TestFailedGetCommitSignaturesRequest(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.GetCommitSignaturesRequest
+		request *gitalypb.GetCommitSignaturesRequest
 		code    codes.Code
 	}{
 		{
 			desc: "empty Repository",
-			request: &pb.GetCommitSignaturesRequest{
+			request: &gitalypb.GetCommitSignaturesRequest{
 				Repository: nil,
 				CommitIds:  []string{"5937ac0a7beb003549fc5fd26fc247adbce4a52e"},
 			},
@@ -80,7 +79,7 @@ func TestFailedGetCommitSignaturesRequest(t *testing.T) {
 		},
 		{
 			desc: "empty CommitIds",
-			request: &pb.GetCommitSignaturesRequest{
+			request: &gitalypb.GetCommitSignaturesRequest{
 				Repository: testRepo,
 				CommitIds:  []string{},
 			},
@@ -108,7 +107,7 @@ func TestFailedGetCommitSignaturesRequest(t *testing.T) {
 	}
 }
 
-func readAllSignaturesFromClient(t *testing.T, c pb.CommitService_GetCommitSignaturesClient) (signatures []*pb.GetCommitSignaturesResponse) {
+func readAllSignaturesFromClient(t *testing.T, c gitalypb.CommitService_GetCommitSignaturesClient) (signatures []*gitalypb.GetCommitSignaturesResponse) {
 	for {
 		resp, err := c.Recv()
 		if err == io.EOF {

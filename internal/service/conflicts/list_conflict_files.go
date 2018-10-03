@@ -3,13 +3,13 @@ package conflicts
 import (
 	"fmt"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) ListConflictFiles(in *pb.ListConflictFilesRequest, stream pb.ConflictsService_ListConflictFilesServer) error {
+func (s *server) ListConflictFiles(in *gitalypb.ListConflictFilesRequest, stream gitalypb.ConflictsService_ListConflictFilesServer) error {
 	ctx := stream.Context()
 
 	if err := validateListConflictFilesRequest(in); err != nil {
@@ -42,7 +42,7 @@ func (s *server) ListConflictFiles(in *pb.ListConflictFilesRequest, stream pb.Co
 	})
 }
 
-func validateListConflictFilesRequest(in *pb.ListConflictFilesRequest) error {
+func validateListConflictFilesRequest(in *gitalypb.ListConflictFilesRequest) error {
 	if in.GetRepository() == nil {
 		return fmt.Errorf("empty Repository")
 	}

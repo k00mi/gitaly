@@ -1,15 +1,14 @@
 package operations
 
 import (
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) UserRevert(ctx context.Context, req *pb.UserRevertRequest) (*pb.UserRevertResponse, error) {
+func (s *server) UserRevert(ctx context.Context, req *gitalypb.UserRevertRequest) (*gitalypb.UserRevertResponse, error) {
 	if err := validateCherryPickOrRevertRequest(req); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "UserRevert: %v", err)
 	}

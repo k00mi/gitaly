@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
@@ -56,7 +56,7 @@ func TestFilterShasWithSignaturesSuccessful(t *testing.T) {
 		t.Run(testCase.desc, func(t *testing.T) {
 			stream, err := client.FilterShasWithSignatures(ctx)
 			require.NoError(t, err)
-			require.NoError(t, stream.Send(&pb.FilterShasWithSignaturesRequest{Repository: testRepo, Shas: testCase.in}))
+			require.NoError(t, stream.Send(&gitalypb.FilterShasWithSignaturesRequest{Repository: testRepo, Shas: testCase.in}))
 			require.NoError(t, stream.CloseSend())
 			recvOut, err := recvFSWS(stream)
 			require.NoError(t, err)
@@ -78,7 +78,7 @@ func TestFilterShasWithSignaturesValidationError(t *testing.T) {
 	stream, err := client.FilterShasWithSignatures(ctx)
 	require.NoError(t, err)
 
-	require.NoError(t, stream.Send(&pb.FilterShasWithSignaturesRequest{}))
+	require.NoError(t, stream.Send(&gitalypb.FilterShasWithSignaturesRequest{}))
 	require.NoError(t, stream.CloseSend())
 
 	_, err = recvFSWS(stream)
@@ -86,7 +86,7 @@ func TestFilterShasWithSignaturesValidationError(t *testing.T) {
 	require.Contains(t, err.Error(), "no repository given")
 }
 
-func recvFSWS(stream pb.CommitService_FilterShasWithSignaturesClient) ([][]byte, error) {
+func recvFSWS(stream gitalypb.CommitService_FilterShasWithSignaturesClient) ([][]byte, error) {
 	var ret [][]byte
 	resp, err := stream.Recv()
 	for ; err == nil; resp, err = stream.Recv() {

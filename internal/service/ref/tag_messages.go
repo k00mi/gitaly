@@ -3,15 +3,14 @@ package ref
 import (
 	"fmt"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) GetTagMessages(request *pb.GetTagMessagesRequest, stream pb.RefService_GetTagMessagesServer) error {
+func (s *server) GetTagMessages(request *gitalypb.GetTagMessagesRequest, stream gitalypb.RefService_GetTagMessagesServer) error {
 	if err := validateGetTagMessagesRequest(request); err != nil {
 		return status.Errorf(codes.InvalidArgument, "GetTagMessages: %v", err)
 	}
@@ -44,7 +43,7 @@ func (s *server) GetTagMessages(request *pb.GetTagMessagesRequest, stream pb.Ref
 	})
 }
 
-func validateGetTagMessagesRequest(request *pb.GetTagMessagesRequest) error {
+func validateGetTagMessagesRequest(request *gitalypb.GetTagMessagesRequest) error {
 	if request.GetRepository() == nil {
 		return fmt.Errorf("empty Repository")
 	}

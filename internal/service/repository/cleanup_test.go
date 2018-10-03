@@ -8,9 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
 
 func TestCleanupDeletesRefsLocks(t *testing.T) {
@@ -26,7 +25,7 @@ func TestCleanupDeletesRefsLocks(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	req := &pb.CleanupRequest{Repository: testRepo}
+	req := &gitalypb.CleanupRequest{Repository: testRepo}
 	refsPath := filepath.Join(testRepoPath, "refs")
 
 	keepRefPath := filepath.Join(refsPath, "heads", "keepthis")
@@ -95,7 +94,7 @@ func TestCleanupDeletesPackedRefsLock(t *testing.T) {
 			packedRefsPath := filepath.Join(testRepoPath, "packed-refs")
 			os.Chtimes(packedRefsPath, oldTime, oldTime)
 
-			req := &pb.CleanupRequest{Repository: testRepo}
+			req := &gitalypb.CleanupRequest{Repository: testRepo}
 			lockPath := filepath.Join(testRepoPath, "packed-refs.lock")
 
 			if tc.lockTime != nil {
@@ -157,7 +156,7 @@ func TestCleanupDeletesStaleWorktrees(t *testing.T) {
 			testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 			defer cleanupFn()
 
-			req := &pb.CleanupRequest{Repository: testRepo}
+			req := &gitalypb.CleanupRequest{Repository: testRepo}
 
 			testhelper.AddWorktree(t, testRepoPath, "test-worktree")
 			basePath := filepath.Join(testRepoPath, "worktrees")
@@ -199,7 +198,7 @@ func TestCleanupFileLocks(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	req := &pb.CleanupRequest{Repository: testRepo}
+	req := &gitalypb.CleanupRequest{Repository: testRepo}
 
 	for _, fileName := range lockFiles {
 		lockPath := filepath.Join(testRepoPath, fileName)

@@ -4,7 +4,7 @@ import (
 	"os/exec"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) SSHUploadArchive(stream pb.SSHService_SSHUploadArchiveServer) error {
+func (s *server) SSHUploadArchive(stream gitalypb.SSHService_SSHUploadArchiveServer) error {
 	grpc_logrus.Extract(stream.Context()).Debug("SSHUploadArchive")
 
 	req, err := stream.Recv() // First request contains Repository only
@@ -32,10 +32,10 @@ func (s *server) SSHUploadArchive(stream pb.SSHService_SSHUploadArchiveServer) e
 		return request.GetStdin(), err
 	})
 	stdout := streamio.NewWriter(func(p []byte) error {
-		return stream.Send(&pb.SSHUploadArchiveResponse{Stdout: p})
+		return stream.Send(&gitalypb.SSHUploadArchiveResponse{Stdout: p})
 	})
 	stderr := streamio.NewWriter(func(p []byte) error {
-		return stream.Send(&pb.SSHUploadArchiveResponse{Stderr: p})
+		return stream.Send(&gitalypb.SSHUploadArchiveResponse{Stderr: p})
 	})
 
 	osCommand := exec.Command(command.GitPath(), "upload-archive", repoPath)
@@ -50,7 +50,7 @@ func (s *server) SSHUploadArchive(stream pb.SSHService_SSHUploadArchiveServer) e
 		if status, ok := command.ExitStatus(err); ok {
 			return helper.DecorateError(
 				codes.Internal,
-				stream.Send(&pb.SSHUploadArchiveResponse{ExitStatus: &pb.ExitStatus{Value: int32(status)}}),
+				stream.Send(&gitalypb.SSHUploadArchiveResponse{ExitStatus: &gitalypb.ExitStatus{Value: int32(status)}}),
 			)
 		}
 		return status.Errorf(codes.Unavailable, "SSHUploadArchive: %v", err)
@@ -58,11 +58,11 @@ func (s *server) SSHUploadArchive(stream pb.SSHService_SSHUploadArchiveServer) e
 
 	return helper.DecorateError(
 		codes.Internal,
-		stream.Send(&pb.SSHUploadArchiveResponse{ExitStatus: &pb.ExitStatus{Value: 0}}),
+		stream.Send(&gitalypb.SSHUploadArchiveResponse{ExitStatus: &gitalypb.ExitStatus{Value: 0}}),
 	)
 }
 
-func validateFirstUploadArchiveRequest(req *pb.SSHUploadArchiveRequest) error {
+func validateFirstUploadArchiveRequest(req *gitalypb.SSHUploadArchiveRequest) error {
 	if req.Stdin != nil {
 		return status.Errorf(codes.InvalidArgument, "SSHUploadArchive: non-empty stdin")
 	}

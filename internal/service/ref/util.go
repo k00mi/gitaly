@@ -3,7 +3,7 @@ package ref
 import (
 	"bytes"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
@@ -21,8 +21,8 @@ func parseRef(ref []byte) ([][]byte, error) {
 	return elements, nil
 }
 
-func buildLocalBranch(name []byte, target *pb.GitCommit) *pb.FindLocalBranchResponse {
-	response := &pb.FindLocalBranchResponse{
+func buildLocalBranch(name []byte, target *gitalypb.GitCommit) *gitalypb.FindLocalBranchResponse {
+	response := &gitalypb.FindLocalBranchResponse{
 		Name: name,
 	}
 
@@ -34,7 +34,7 @@ func buildLocalBranch(name []byte, target *pb.GitCommit) *pb.FindLocalBranchResp
 	response.CommitSubject = target.Subject
 
 	if author := target.Author; author != nil {
-		response.CommitAuthor = &pb.FindLocalBranchCommitAuthor{
+		response.CommitAuthor = &gitalypb.FindLocalBranchCommitAuthor{
 			Name:  author.Name,
 			Email: author.Email,
 			Date:  author.Date,
@@ -42,7 +42,7 @@ func buildLocalBranch(name []byte, target *pb.GitCommit) *pb.FindLocalBranchResp
 	}
 
 	if committer := target.Committer; committer != nil {
-		response.CommitCommitter = &pb.FindLocalBranchCommitAuthor{
+		response.CommitCommitter = &gitalypb.FindLocalBranchCommitAuthor{
 			Name:  committer.Name,
 			Email: committer.Email,
 			Date:  committer.Date,
@@ -52,45 +52,45 @@ func buildLocalBranch(name []byte, target *pb.GitCommit) *pb.FindLocalBranchResp
 	return response
 }
 
-func buildAllBranchesBranch(c *catfile.Batch, elements [][]byte) (*pb.FindAllBranchesResponse_Branch, error) {
+func buildAllBranchesBranch(c *catfile.Batch, elements [][]byte) (*gitalypb.FindAllBranchesResponse_Branch, error) {
 	target, err := log.GetCommitCatfile(c, string(elements[1]))
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.FindAllBranchesResponse_Branch{
+	return &gitalypb.FindAllBranchesResponse_Branch{
 		Name:   elements[0],
 		Target: target,
 	}, nil
 }
 
-func buildBranch(c *catfile.Batch, elements [][]byte) (*pb.Branch, error) {
+func buildBranch(c *catfile.Batch, elements [][]byte) (*gitalypb.Branch, error) {
 	target, err := log.GetCommitCatfile(c, string(elements[1]))
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.Branch{
+	return &gitalypb.Branch{
 		Name:         elements[0],
 		TargetCommit: target,
 	}, nil
 }
 
-func newFindAllBranchNamesWriter(stream pb.Ref_FindAllBranchNamesServer) lines.Sender {
+func newFindAllBranchNamesWriter(stream gitalypb.Ref_FindAllBranchNamesServer) lines.Sender {
 	return func(refs [][]byte) error {
-		return stream.Send(&pb.FindAllBranchNamesResponse{Names: refs})
+		return stream.Send(&gitalypb.FindAllBranchNamesResponse{Names: refs})
 	}
 }
 
-func newFindAllTagNamesWriter(stream pb.Ref_FindAllTagNamesServer) lines.Sender {
+func newFindAllTagNamesWriter(stream gitalypb.Ref_FindAllTagNamesServer) lines.Sender {
 	return func(refs [][]byte) error {
-		return stream.Send(&pb.FindAllTagNamesResponse{Names: refs})
+		return stream.Send(&gitalypb.FindAllTagNamesResponse{Names: refs})
 	}
 }
 
-func newFindLocalBranchesWriter(stream pb.Ref_FindLocalBranchesServer, c *catfile.Batch) lines.Sender {
+func newFindLocalBranchesWriter(stream gitalypb.Ref_FindLocalBranchesServer, c *catfile.Batch) lines.Sender {
 	return func(refs [][]byte) error {
-		var branches []*pb.FindLocalBranchResponse
+		var branches []*gitalypb.FindLocalBranchResponse
 
 		for _, ref := range refs {
 			elements, err := parseRef(ref)
@@ -105,13 +105,13 @@ func newFindLocalBranchesWriter(stream pb.Ref_FindLocalBranchesServer, c *catfil
 
 			branches = append(branches, buildLocalBranch(elements[0], target))
 		}
-		return stream.Send(&pb.FindLocalBranchesResponse{Branches: branches})
+		return stream.Send(&gitalypb.FindLocalBranchesResponse{Branches: branches})
 	}
 }
 
-func newFindAllBranchesWriter(stream pb.RefService_FindAllBranchesServer, c *catfile.Batch) lines.Sender {
+func newFindAllBranchesWriter(stream gitalypb.RefService_FindAllBranchesServer, c *catfile.Batch) lines.Sender {
 	return func(refs [][]byte) error {
-		var branches []*pb.FindAllBranchesResponse_Branch
+		var branches []*gitalypb.FindAllBranchesResponse_Branch
 
 		for _, ref := range refs {
 			elements, err := parseRef(ref)
@@ -124,13 +124,13 @@ func newFindAllBranchesWriter(stream pb.RefService_FindAllBranchesServer, c *cat
 			}
 			branches = append(branches, branch)
 		}
-		return stream.Send(&pb.FindAllBranchesResponse{Branches: branches})
+		return stream.Send(&gitalypb.FindAllBranchesResponse{Branches: branches})
 	}
 }
 
-func newFindAllRemoteBranchesWriter(stream pb.RefService_FindAllRemoteBranchesServer, c *catfile.Batch) lines.Sender {
+func newFindAllRemoteBranchesWriter(stream gitalypb.RefService_FindAllRemoteBranchesServer, c *catfile.Batch) lines.Sender {
 	return func(refs [][]byte) error {
-		var branches []*pb.Branch
+		var branches []*gitalypb.Branch
 
 		for _, ref := range refs {
 			elements, err := parseRef(ref)
@@ -144,6 +144,6 @@ func newFindAllRemoteBranchesWriter(stream pb.RefService_FindAllRemoteBranchesSe
 			branches = append(branches, branch)
 		}
 
-		return stream.Send(&pb.FindAllRemoteBranchesResponse{Branches: branches})
+		return stream.Send(&gitalypb.FindAllRemoteBranchesResponse{Branches: branches})
 	}
 }

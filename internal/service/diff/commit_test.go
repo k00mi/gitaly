@@ -6,7 +6,7 @@ import (
 	"io"
 	"testing"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/diff"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
@@ -27,7 +27,7 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 
 	rightCommit := "ab2c9622c02288a2bbaaf35d96088cfdff31d9d9"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
-	rpcRequest := &pb.CommitDiffRequest{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: leftCommit, IgnoreWhitespaceChange: false}
+	rpcRequest := &gitalypb.CommitDiffRequest{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: leftCommit, IgnoreWhitespaceChange: false}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -191,7 +191,7 @@ func TestSuccessfulCommitDiffRequestWithPaths(t *testing.T) {
 
 	rightCommit := "e4003da16c1c2c3fc4567700121b17bf8e591c6c"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
-	rpcRequest := &pb.CommitDiffRequest{
+	rpcRequest := &gitalypb.CommitDiffRequest{
 		Repository:             testRepo,
 		RightCommitId:          rightCommit,
 		LeftCommitId:           leftCommit,
@@ -269,7 +269,7 @@ func TestSuccessfulCommitDiffRequestWithTypeChangeDiff(t *testing.T) {
 
 	rightCommit := "184a47d38677e2e439964859b877ae9bc424ab11"
 	leftCommit := "80d56eb72ba5d77fd8af857eced17a7d0640cb82"
-	rpcRequest := &pb.CommitDiffRequest{
+	rpcRequest := &gitalypb.CommitDiffRequest{
 		Repository:    testRepo,
 		RightCommitId: rightCommit,
 		LeftCommitId:  leftCommit,
@@ -402,7 +402,7 @@ func TestSuccessfulCommitDiffRequestWithIgnoreWhitespaceChange(t *testing.T) {
 
 	for _, entry := range pathsAndDiffs {
 		t.Run(entry.desc, func(t *testing.T) {
-			rpcRequest := &pb.CommitDiffRequest{
+			rpcRequest := &gitalypb.CommitDiffRequest{
 				Repository:             testRepo,
 				RightCommitId:          rightCommit,
 				LeftCommitId:           leftCommit,
@@ -442,12 +442,12 @@ func TestSuccessfulCommitDiffRequestWithLimits(t *testing.T) {
 
 	requestsAndResults := []struct {
 		desc    string
-		request pb.CommitDiffRequest
+		request gitalypb.CommitDiffRequest
 		result  []diffAttributes
 	}{
 		{
 			desc: "no enforcement",
-			request: pb.CommitDiffRequest{
+			request: gitalypb.CommitDiffRequest{
 				EnforceLimits: false,
 			},
 			result: []diffAttributes{
@@ -460,7 +460,7 @@ func TestSuccessfulCommitDiffRequestWithLimits(t *testing.T) {
 		},
 		{
 			desc: "max file count enforcement",
-			request: pb.CommitDiffRequest{
+			request: gitalypb.CommitDiffRequest{
 				EnforceLimits: true,
 				MaxFiles:      3,
 				MaxLines:      1000,
@@ -476,7 +476,7 @@ func TestSuccessfulCommitDiffRequestWithLimits(t *testing.T) {
 		},
 		{
 			desc: "max line count enforcement",
-			request: pb.CommitDiffRequest{
+			request: gitalypb.CommitDiffRequest{
 				EnforceLimits: true,
 				MaxFiles:      5,
 				MaxLines:      90,
@@ -491,7 +491,7 @@ func TestSuccessfulCommitDiffRequestWithLimits(t *testing.T) {
 		},
 		{
 			desc: "max byte count enforcement",
-			request: pb.CommitDiffRequest{
+			request: gitalypb.CommitDiffRequest{
 				EnforceLimits: true,
 				MaxFiles:      5,
 				MaxLines:      1000,
@@ -508,7 +508,7 @@ func TestSuccessfulCommitDiffRequestWithLimits(t *testing.T) {
 		},
 		{
 			desc: "no collapse",
-			request: pb.CommitDiffRequest{
+			request: gitalypb.CommitDiffRequest{
 				EnforceLimits: true,
 				CollapseDiffs: false,
 				MaxFiles:      3,
@@ -528,7 +528,7 @@ func TestSuccessfulCommitDiffRequestWithLimits(t *testing.T) {
 		},
 		{
 			desc: "set as too large when exceeding single patch limit",
-			request: pb.CommitDiffRequest{
+			request: gitalypb.CommitDiffRequest{
 				EnforceLimits: true,
 				CollapseDiffs: false,
 				MaxFiles:      5,
@@ -549,7 +549,7 @@ func TestSuccessfulCommitDiffRequestWithLimits(t *testing.T) {
 		},
 		{
 			desc: "collapse after safe max file count is exceeded",
-			request: pb.CommitDiffRequest{
+			request: gitalypb.CommitDiffRequest{
 				EnforceLimits: true,
 				CollapseDiffs: true,
 				MaxFiles:      3,
@@ -569,7 +569,7 @@ func TestSuccessfulCommitDiffRequestWithLimits(t *testing.T) {
 		},
 		{
 			desc: "collapse after safe max line count is exceeded",
-			request: pb.CommitDiffRequest{
+			request: gitalypb.CommitDiffRequest{
 				EnforceLimits: true,
 				CollapseDiffs: true,
 				MaxFiles:      5,
@@ -590,7 +590,7 @@ func TestSuccessfulCommitDiffRequestWithLimits(t *testing.T) {
 		},
 		{
 			desc: "collapse after safe max byte count is exceeded",
-			request: pb.CommitDiffRequest{
+			request: gitalypb.CommitDiffRequest{
 				EnforceLimits: true,
 				CollapseDiffs: true,
 				MaxFiles:      4,
@@ -658,11 +658,11 @@ func TestFailedCommitDiffRequestDueToValidationError(t *testing.T) {
 	rightCommit := "d42783470dc29fde2cf459eb3199ee1d7e3f3a72"
 	leftCommit := rightCommit + "~" // Parent of rightCommit
 
-	rpcRequests := []pb.CommitDiffRequest{
-		{Repository: &pb.Repository{StorageName: "fake", RelativePath: "path"}, RightCommitId: rightCommit, LeftCommitId: leftCommit}, // Repository doesn't exist
-		{Repository: nil, RightCommitId: rightCommit, LeftCommitId: leftCommit},                                                       // Repository is nil
-		{Repository: testRepo, RightCommitId: "", LeftCommitId: leftCommit},                                                           // RightCommitId is empty
-		{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: ""},                                                          // LeftCommitId is empty
+	rpcRequests := []gitalypb.CommitDiffRequest{
+		{Repository: &gitalypb.Repository{StorageName: "fake", RelativePath: "path"}, RightCommitId: rightCommit, LeftCommitId: leftCommit}, // Repository doesn't exist
+		{Repository: nil, RightCommitId: rightCommit, LeftCommitId: leftCommit},                                                             // Repository is nil
+		{Repository: testRepo, RightCommitId: "", LeftCommitId: leftCommit},                                                                 // RightCommitId is empty
+		{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: ""},                                                                // LeftCommitId is empty
 	}
 
 	for _, rpcRequest := range rpcRequests {
@@ -693,7 +693,7 @@ func TestFailedCommitDiffRequestWithNonExistentCommit(t *testing.T) {
 
 	nonExistentCommitID := "deadfacedeadfacedeadfacedeadfacedeadface"
 	leftCommit := nonExistentCommitID + "~" // Parent of rightCommit
-	rpcRequest := &pb.CommitDiffRequest{Repository: testRepo, RightCommitId: nonExistentCommitID, LeftCommitId: leftCommit}
+	rpcRequest := &gitalypb.CommitDiffRequest{Repository: testRepo, RightCommitId: nonExistentCommitID, LeftCommitId: leftCommit}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -718,7 +718,7 @@ func TestSuccessfulCommitDeltaRequest(t *testing.T) {
 
 	rightCommit := "742518b2be68fc750bb4c357c0df821a88113286"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
-	rpcRequest := &pb.CommitDeltaRequest{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
+	rpcRequest := &gitalypb.CommitDeltaRequest{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -841,7 +841,7 @@ func TestSuccessfulCommitDeltaRequestWithPaths(t *testing.T) {
 
 	rightCommit := "e4003da16c1c2c3fc4567700121b17bf8e591c6c"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
-	rpcRequest := &pb.CommitDeltaRequest{
+	rpcRequest := &gitalypb.CommitDeltaRequest{
 		Repository:    testRepo,
 		RightCommitId: rightCommit,
 		LeftCommitId:  leftCommit,
@@ -911,11 +911,11 @@ func TestFailedCommitDeltaRequestDueToValidationError(t *testing.T) {
 	rightCommit := "d42783470dc29fde2cf459eb3199ee1d7e3f3a72"
 	leftCommit := rightCommit + "~" // Parent of rightCommit
 
-	rpcRequests := []pb.CommitDeltaRequest{
-		{Repository: &pb.Repository{StorageName: "fake", RelativePath: "path"}, RightCommitId: rightCommit, LeftCommitId: leftCommit}, // Repository doesn't exist
-		{Repository: nil, RightCommitId: rightCommit, LeftCommitId: leftCommit},                                                       // Repository is nil
-		{Repository: testRepo, RightCommitId: "", LeftCommitId: leftCommit},                                                           // RightCommitId is empty
-		{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: ""},                                                          // LeftCommitId is empty
+	rpcRequests := []gitalypb.CommitDeltaRequest{
+		{Repository: &gitalypb.Repository{StorageName: "fake", RelativePath: "path"}, RightCommitId: rightCommit, LeftCommitId: leftCommit}, // Repository doesn't exist
+		{Repository: nil, RightCommitId: rightCommit, LeftCommitId: leftCommit},                                                             // Repository is nil
+		{Repository: testRepo, RightCommitId: "", LeftCommitId: leftCommit},                                                                 // RightCommitId is empty
+		{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: ""},                                                                // LeftCommitId is empty
 	}
 
 	for _, rpcRequest := range rpcRequests {
@@ -946,7 +946,7 @@ func TestFailedCommitDeltaRequestWithNonExistentCommit(t *testing.T) {
 
 	nonExistentCommitID := "deadfacedeadfacedeadfacedeadfacedeadface"
 	leftCommit := nonExistentCommitID + "~" // Parent of rightCommit
-	rpcRequest := &pb.CommitDeltaRequest{Repository: testRepo, RightCommitId: nonExistentCommitID, LeftCommitId: leftCommit}
+	rpcRequest := &gitalypb.CommitDeltaRequest{Repository: testRepo, RightCommitId: nonExistentCommitID, LeftCommitId: leftCommit}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -959,7 +959,7 @@ func TestFailedCommitDeltaRequestWithNonExistentCommit(t *testing.T) {
 	testhelper.RequireGrpcError(t, err, codes.Unavailable)
 }
 
-func drainCommitDiffResponse(c pb.Diff_CommitDiffClient) error {
+func drainCommitDiffResponse(c gitalypb.Diff_CommitDiffClient) error {
 	for {
 		_, err := c.Recv()
 		if err != nil {
@@ -968,7 +968,7 @@ func drainCommitDiffResponse(c pb.Diff_CommitDiffClient) error {
 	}
 }
 
-func drainCommitDeltaResponse(c pb.Diff_CommitDeltaClient) error {
+func drainCommitDeltaResponse(c gitalypb.Diff_CommitDeltaClient) error {
 	for {
 		_, err := c.Recv()
 		if err != nil {
@@ -977,7 +977,7 @@ func drainCommitDeltaResponse(c pb.Diff_CommitDeltaClient) error {
 	}
 }
 
-func getDiffsFromCommitDiffClient(t *testing.T, client pb.DiffService_CommitDiffClient) []*diff.Diff {
+func getDiffsFromCommitDiffClient(t *testing.T, client gitalypb.DiffService_CommitDiffClient) []*diff.Diff {
 	var diffs []*diff.Diff
 	var currentDiff *diff.Diff
 
@@ -1016,7 +1016,7 @@ func getDiffsFromCommitDiffClient(t *testing.T, client pb.DiffService_CommitDiff
 	return diffs
 }
 
-func assertExactReceivedDiffs(t *testing.T, client pb.DiffService_CommitDiffClient, expectedDiffs []diff.Diff) {
+func assertExactReceivedDiffs(t *testing.T, client gitalypb.DiffService_CommitDiffClient, expectedDiffs []diff.Diff) {
 	fetchedDiffs := getDiffsFromCommitDiffClient(t, client)
 
 	var i int
@@ -1068,7 +1068,7 @@ func assertExactReceivedDiffs(t *testing.T, client pb.DiffService_CommitDiffClie
 	}
 }
 
-func assertExactReceivedDeltas(t *testing.T, client pb.Diff_CommitDeltaClient, expectedDeltas []diff.Diff) {
+func assertExactReceivedDeltas(t *testing.T, client gitalypb.Diff_CommitDeltaClient, expectedDeltas []diff.Diff) {
 	i := 0
 	for {
 		fetchedDeltas, err := client.Recv()

@@ -1,12 +1,11 @@
 package diff
 
 import (
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
 
-func (s *server) CommitPatch(in *pb.CommitPatchRequest, stream pb.DiffService_CommitPatchServer) error {
+func (s *server) CommitPatch(in *gitalypb.CommitPatchRequest, stream gitalypb.DiffService_CommitPatchServer) error {
 	ctx := stream.Context()
 
 	client, err := s.DiffServiceClient(ctx)

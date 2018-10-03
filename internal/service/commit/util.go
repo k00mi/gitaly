@@ -5,11 +5,11 @@ import (
 	"path"
 	"strconv"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 )
 
-func newTreeEntry(commitOid, rootOid, rootPath string, filename, oidBytes, modeBytes []byte) (*pb.TreeEntry, error) {
-	var objectType pb.TreeEntry_EntryType
+func newTreeEntry(commitOid, rootOid, rootPath string, filename, oidBytes, modeBytes []byte) (*gitalypb.TreeEntry, error) {
+	var objectType gitalypb.TreeEntry_EntryType
 
 	mode, err := strconv.ParseInt(string(modeBytes), 8, 32)
 	if err != nil {
@@ -21,14 +21,14 @@ func newTreeEntry(commitOid, rootOid, rootPath string, filename, oidBytes, modeB
 	// Based on https://github.com/git/git/blob/v2.13.1/builtin/ls-tree.c#L67-L87
 	switch mode & 0xf000 {
 	case 0160000:
-		objectType = pb.TreeEntry_COMMIT
+		objectType = gitalypb.TreeEntry_COMMIT
 	case 040000:
-		objectType = pb.TreeEntry_TREE
+		objectType = gitalypb.TreeEntry_TREE
 	default:
-		objectType = pb.TreeEntry_BLOB
+		objectType = gitalypb.TreeEntry_BLOB
 	}
 
-	return &pb.TreeEntry{
+	return &gitalypb.TreeEntry{
 		CommitOid: commitOid,
 		RootOid:   rootOid,
 		Oid:       oid,

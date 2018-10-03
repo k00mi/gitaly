@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
@@ -38,7 +38,7 @@ func TestGitalyServerInfo(t *testing.T) {
 	}(config.Config.Storages)
 	config.Config.Storages = testStorages
 
-	c, err := client.ServerInfo(ctx, &pb.ServerInfoRequest{})
+	c, err := client.ServerInfo(ctx, &gitalypb.ServerInfoRequest{})
 	require.NoError(t, err)
 
 	require.Equal(t, version.GetVersion(), c.GetServerVersion())
@@ -67,7 +67,7 @@ func runServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	pb.RegisterServerServiceServer(server, NewServer())
+	gitalypb.RegisterServerServiceServer(server, NewServer())
 	reflection.Register(server)
 
 	go server.Serve(listener)
@@ -75,7 +75,7 @@ func runServer(t *testing.T) (*grpc.Server, string) {
 	return server, serverSocketPath
 }
 
-func newServerClient(t *testing.T, serverSocketPath string) (pb.ServerServiceClient, *grpc.ClientConn) {
+func newServerClient(t *testing.T, serverSocketPath string) (gitalypb.ServerServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
@@ -88,5 +88,5 @@ func newServerClient(t *testing.T, serverSocketPath string) (pb.ServerServiceCli
 		t.Fatal(err)
 	}
 
-	return pb.NewServerServiceClient(conn), conn
+	return gitalypb.NewServerServiceClient(conn), conn
 }

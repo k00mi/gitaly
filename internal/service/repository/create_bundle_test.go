@@ -6,11 +6,10 @@ import (
 	"os"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/tempdir"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -29,7 +28,7 @@ func TestSuccessfulCreateBundleRequest(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	request := &pb.CreateBundleRequest{Repository: testRepo}
+	request := &gitalypb.CreateBundleRequest{Repository: testRepo}
 
 	c, err := client.CreateBundle(ctx, request)
 	require.NoError(t, err)
@@ -63,12 +62,12 @@ func TestFailedCreateBundleRequestDueToValidations(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.CreateBundleRequest
+		request *gitalypb.CreateBundleRequest
 		code    codes.Code
 	}{
 		{
 			desc:    "empty repository",
-			request: &pb.CreateBundleRequest{},
+			request: &gitalypb.CreateBundleRequest{},
 			code:    codes.InvalidArgument,
 		},
 	}

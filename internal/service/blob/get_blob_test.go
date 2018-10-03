@@ -6,7 +6,7 @@ import (
 	"io"
 	"testing"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 
@@ -67,7 +67,7 @@ func TestSuccessfulGetBlob(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			request := &pb.GetBlobRequest{
+			request := &gitalypb.GetBlobRequest{
 				Repository: testRepo,
 				Oid:        tc.oid,
 				Limit:      int64(tc.limit),
@@ -100,7 +100,7 @@ func TestGetBlobNotFound(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	request := &pb.GetBlobRequest{
+	request := &gitalypb.GetBlobRequest{
 		Repository: testRepo,
 		Oid:        "doesnotexist",
 	}
@@ -119,7 +119,7 @@ func TestGetBlobNotFound(t *testing.T) {
 	require.Zero(t, len(data))
 }
 
-func getBlob(stream pb.BlobService_GetBlobClient) (int64, string, []byte, error) {
+func getBlob(stream gitalypb.BlobService_GetBlobClient) (int64, string, []byte, error) {
 	firstResponse, err := stream.Recv()
 	if err != nil {
 		return 0, "", nil, err
@@ -157,8 +157,8 @@ func TestFailedGetBlobRequestDueToValidationError(t *testing.T) {
 	defer conn.Close()
 	oid := "d42783470dc29fde2cf459eb3199ee1d7e3f3a72"
 
-	rpcRequests := []pb.GetBlobRequest{
-		{Repository: &pb.Repository{StorageName: "fake", RelativePath: "path"}, Oid: oid}, // Repository doesn't exist
+	rpcRequests := []gitalypb.GetBlobRequest{
+		{Repository: &gitalypb.Repository{StorageName: "fake", RelativePath: "path"}, Oid: oid}, // Repository doesn't exist
 		{Repository: nil, Oid: oid}, // Repository is nil
 		{Repository: testRepo},      // Oid is empty
 	}

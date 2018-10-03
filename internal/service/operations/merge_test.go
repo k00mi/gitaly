@@ -13,15 +13,15 @@ import (
 
 	"google.golang.org/grpc/codes"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
 
 var (
-	mergeUser = &pb.User{
+	mergeUser = &gitalypb.User{
 		Name:  []byte("Jane Doe"),
 		Email: []byte("janedoe@example.com"),
 		GlId:  "user-1",
@@ -60,7 +60,7 @@ func TestSuccessfulMerge(t *testing.T) {
 	}
 
 	mergeCommitMessage := "Merged by Gitaly"
-	firstRequest := &pb.UserMergeBranchRequest{
+	firstRequest := &gitalypb.UserMergeBranchRequest{
 		Repository: testRepo,
 		User:       mergeUser,
 		CommitId:   commitToMerge,
@@ -76,7 +76,7 @@ func TestSuccessfulMerge(t *testing.T) {
 	_, err = gitlog.GetCommit(ctx, testRepo, firstResponse.CommitId)
 	require.NoError(t, err, "look up git commit before merge is applied")
 
-	require.NoError(t, mergeBidi.Send(&pb.UserMergeBranchRequest{Apply: true}), "apply merge")
+	require.NoError(t, mergeBidi.Send(&gitalypb.UserMergeBranchRequest{Apply: true}), "apply merge")
 
 	secondResponse, err := mergeBidi.Recv()
 	require.NoError(t, err, "receive second response")
@@ -90,7 +90,7 @@ func TestSuccessfulMerge(t *testing.T) {
 	commit, err := gitlog.GetCommit(ctx, testRepo, mergeBranchName)
 	require.NoError(t, err, "look up git commit after call has finished")
 
-	require.Equal(t, pb.OperationBranchUpdate{CommitId: commit.Id}, *(secondResponse.BranchUpdate))
+	require.Equal(t, gitalypb.OperationBranchUpdate{CommitId: commit.Id}, *(secondResponse.BranchUpdate))
 
 	require.Contains(t, commit.ParentIds, mergeBranchHeadBefore, "merge parents must include previous HEAD of branch")
 	require.Contains(t, commit.ParentIds, commitToMerge, "merge parents must include commit to merge")
@@ -124,7 +124,7 @@ func TestAbortedMerge(t *testing.T) {
 
 	prepareMergeBranch(t, testRepoPath)
 
-	firstRequest := &pb.UserMergeBranchRequest{
+	firstRequest := &gitalypb.UserMergeBranchRequest{
 		Repository: testRepo,
 		User:       mergeUser,
 		CommitId:   commitToMerge,
@@ -133,12 +133,12 @@ func TestAbortedMerge(t *testing.T) {
 	}
 
 	testCases := []struct {
-		req       *pb.UserMergeBranchRequest
+		req       *gitalypb.UserMergeBranchRequest
 		closeSend bool
 		desc      string
 	}{
-		{req: &pb.UserMergeBranchRequest{}, desc: "empty request, don't close"},
-		{req: &pb.UserMergeBranchRequest{}, closeSend: true, desc: "empty request and close"},
+		{req: &gitalypb.UserMergeBranchRequest{}, desc: "empty request, don't close"},
+		{req: &gitalypb.UserMergeBranchRequest{}, closeSend: true, desc: "empty request and close"},
 		{closeSend: true, desc: "no request just close"},
 	}
 
@@ -196,7 +196,7 @@ func TestFailedMergeConcurrentUpdate(t *testing.T) {
 	prepareMergeBranch(t, testRepoPath)
 
 	mergeCommitMessage := "Merged by Gitaly"
-	firstRequest := &pb.UserMergeBranchRequest{
+	firstRequest := &gitalypb.UserMergeBranchRequest{
 		Repository: testRepo,
 		User:       mergeUser,
 		CommitId:   commitToMerge,
@@ -212,12 +212,12 @@ func TestFailedMergeConcurrentUpdate(t *testing.T) {
 	concurrentCommitID := testhelper.CreateCommit(t, testRepoPath, mergeBranchName, nil)
 	require.NotEqual(t, firstResponse.CommitId, concurrentCommitID)
 
-	require.NoError(t, mergeBidi.Send(&pb.UserMergeBranchRequest{Apply: true}), "apply merge")
+	require.NoError(t, mergeBidi.Send(&gitalypb.UserMergeBranchRequest{Apply: true}), "apply merge")
 	require.NoError(t, mergeBidi.CloseSend(), "close send")
 
 	secondResponse, err := mergeBidi.Recv()
 	require.NoError(t, err, "receive second response")
-	require.Equal(t, *secondResponse, pb.UserMergeBranchResponse{}, "response should be empty")
+	require.Equal(t, *secondResponse, gitalypb.UserMergeBranchResponse{}, "response should be empty")
 
 	commit, err := gitlog.GetCommit(ctx, testRepo, mergeBranchName)
 	require.NoError(t, err, "get commit after RPC finished")
@@ -252,7 +252,7 @@ func TestFailedMergeDueToHooks(t *testing.T) {
 			require.NoError(t, err)
 
 			mergeCommitMessage := "Merged by Gitaly"
-			firstRequest := &pb.UserMergeBranchRequest{
+			firstRequest := &gitalypb.UserMergeBranchRequest{
 				Repository: testRepo,
 				User:       mergeUser,
 				CommitId:   commitToMerge,
@@ -265,7 +265,7 @@ func TestFailedMergeDueToHooks(t *testing.T) {
 			_, err = mergeBidi.Recv()
 			require.NoError(t, err, "receive first response")
 
-			require.NoError(t, mergeBidi.Send(&pb.UserMergeBranchRequest{Apply: true}), "apply merge")
+			require.NoError(t, mergeBidi.Send(&gitalypb.UserMergeBranchRequest{Apply: true}), "apply merge")
 			require.NoError(t, mergeBidi.CloseSend(), "close send")
 
 			secondResponse, err := mergeBidi.Recv()
@@ -300,14 +300,14 @@ func TestSuccessfulUserFFBranchRequest(t *testing.T) {
 
 	commitID := "cfe32cf61b73a0d5e9f13e774abde7ff789b1660"
 	branchName := "test-ff-target-branch"
-	request := &pb.UserFFBranchRequest{
+	request := &gitalypb.UserFFBranchRequest{
 		Repository: testRepo,
 		CommitId:   commitID,
 		Branch:     []byte(branchName),
 		User:       mergeUser,
 	}
-	expectedResponse := &pb.UserFFBranchResponse{
-		BranchUpdate: &pb.OperationBranchUpdate{
+	expectedResponse := &gitalypb.UserFFBranchResponse{
+		BranchUpdate: &gitalypb.OperationBranchUpdate{
 			RepoCreated:   false,
 			BranchCreated: false,
 			CommitId:      commitID,
@@ -342,10 +342,10 @@ func TestFailedUserFFBranchRequest(t *testing.T) {
 
 	testCases := []struct {
 		desc     string
-		user     *pb.User
+		user     *gitalypb.User
 		branch   []byte
 		commitID string
-		repo     *pb.Repository
+		repo     *gitalypb.Repository
 		code     codes.Code
 	}{
 		{
@@ -407,7 +407,7 @@ func TestFailedUserFFBranchRequest(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			request := &pb.UserFFBranchRequest{
+			request := &gitalypb.UserFFBranchRequest{
 				Repository: testCase.repo,
 				User:       testCase.user,
 				Branch:     testCase.branch,
@@ -431,7 +431,7 @@ func TestFailedUserFFBranchDueToHooks(t *testing.T) {
 
 	commitID := "cfe32cf61b73a0d5e9f13e774abde7ff789b1660"
 	branchName := "test-ff-target-branch"
-	request := &pb.UserFFBranchRequest{
+	request := &gitalypb.UserFFBranchRequest{
 		Repository: testRepo,
 		CommitId:   commitID,
 		Branch:     []byte(branchName),
@@ -492,9 +492,9 @@ func deleteBranch(testRepoPath, branchName string) {
 // This error is used as a sentinel value
 var errRecvTimeout = fmt.Errorf("timeout waiting for response")
 
-func recvTimeout(bidi pb.OperationService_UserMergeBranchClient, timeout time.Duration) (*pb.UserMergeBranchResponse, error) {
+func recvTimeout(bidi gitalypb.OperationService_UserMergeBranchClient, timeout time.Duration) (*gitalypb.UserMergeBranchResponse, error) {
 	type responseError struct {
-		response *pb.UserMergeBranchResponse
+		response *gitalypb.UserMergeBranchResponse
 		err      error
 	}
 	responseCh := make(chan responseError, 1)

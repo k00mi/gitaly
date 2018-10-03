@@ -11,13 +11,13 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
 var lockFiles = []string{"config.lock", "HEAD.lock"}
 
-func (server) Cleanup(_ctx context.Context, in *pb.CleanupRequest) (*pb.CleanupResponse, error) {
+func (server) Cleanup(_ctx context.Context, in *gitalypb.CleanupRequest) (*gitalypb.CleanupResponse, error) {
 	repoPath, err := helper.GetRepoPath(in.GetRepository())
 	if err != nil {
 		return nil, err
@@ -27,7 +27,7 @@ func (server) Cleanup(_ctx context.Context, in *pb.CleanupRequest) (*pb.CleanupR
 		return nil, err
 	}
 
-	return &pb.CleanupResponse{}, nil
+	return &gitalypb.CleanupResponse{}, nil
 }
 
 func cleanupRepo(repoPath string) error {

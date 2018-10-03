@@ -7,7 +7,7 @@ USAGE = "Usage: #{PROGNAME} [--fork GITALY_PROTO_FORK_REPO] REVISION"
 ORIGIN = 'gitlab.com/gitlab-org/gitaly-proto'
 
 def main(revision, repo:)
-  run!(%W[govendor fetch #{ORIGIN}/go::#{repo}/go@#{revision}])
+  run!(%W[govendor fetch #{ORIGIN}/go/gitalypb::#{repo}/go/gitalypb@#{revision}])
 end
 
 options = ARGV.getopts(nil, 'fork:')

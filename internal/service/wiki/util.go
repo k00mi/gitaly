@@ -3,11 +3,11 @@ package wiki
 import (
 	"fmt"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 )
 
 type requestWithCommitDetails interface {
-	GetCommitDetails() *pb.WikiCommitDetails
+	GetCommitDetails() *gitalypb.WikiCommitDetails
 }
 
 func validateRequestCommitDetails(request requestWithCommitDetails) error {

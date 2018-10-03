@@ -3,10 +3,10 @@ package repository
 import (
 	"regexp"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/archive"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
@@ -17,14 +17,14 @@ var objectFiles = []*regexp.Regexp{
 	regexp.MustCompile(`/pack/pack\-[[:xdigit:]]{40}\.(pack|idx)\z`),
 }
 
-func (s *server) GetSnapshot(in *pb.GetSnapshotRequest, stream pb.RepositoryService_GetSnapshotServer) error {
+func (s *server) GetSnapshot(in *gitalypb.GetSnapshotRequest, stream gitalypb.RepositoryService_GetSnapshotServer) error {
 	path, err := helper.GetRepoPath(in.Repository)
 	if err != nil {
 		return err
 	}
 
 	writer := streamio.NewWriter(func(p []byte) error {
-		return stream.Send(&pb.GetSnapshotResponse{Data: p})
+		return stream.Send(&gitalypb.GetSnapshotResponse{Data: p})
 	})
 
 	// Building a raw archive may race with `git push`, but GitLab can enforce

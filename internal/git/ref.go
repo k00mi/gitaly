@@ -3,11 +3,11 @@ package git
 import (
 	"context"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 )
 
 // IsValidRef checks if a ref in a repo is valid
-func IsValidRef(ctx context.Context, repo *pb.Repository, ref string) bool {
+func IsValidRef(ctx context.Context, repo *gitalypb.Repository, ref string) bool {
 	if ref == "" {
 		return false
 	}

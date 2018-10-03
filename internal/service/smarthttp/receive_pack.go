@@ -6,17 +6,17 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	log "github.com/sirupsen/logrus"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) PostReceivePack(stream pb.SmartHTTPService_PostReceivePackServer) error {
+func (s *server) PostReceivePack(stream gitalypb.SmartHTTPService_PostReceivePackServer) error {
 	req, err := stream.Recv() // First request contains only Repository and GlId
 	if err != nil {
 		return err
@@ -38,7 +38,7 @@ func (s *server) PostReceivePack(stream pb.SmartHTTPService_PostReceivePackServe
 		return resp.GetData(), err
 	})
 	stdout := streamio.NewWriter(func(p []byte) error {
-		return stream.Send(&pb.PostReceivePackResponse{Data: p})
+		return stream.Send(&gitalypb.PostReceivePackResponse{Data: p})
 	})
 	env := []string{
 		fmt.Sprintf("GL_ID=%s", req.GlId),
@@ -70,7 +70,7 @@ func (s *server) PostReceivePack(stream pb.SmartHTTPService_PostReceivePackServe
 	return nil
 }
 
-func validateReceivePackRequest(req *pb.PostReceivePackRequest) error {
+func validateReceivePackRequest(req *gitalypb.PostReceivePackRequest) error {
 	if req.GlId == "" {
 		return status.Errorf(codes.InvalidArgument, "PostReceivePack: empty GlId")
 	}

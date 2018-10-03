@@ -11,8 +11,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
@@ -47,7 +46,7 @@ func runConflictsServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	pb.RegisterConflictsServiceServer(server, NewServer(RubyServer))
+	gitalypb.RegisterConflictsServiceServer(server, NewServer(RubyServer))
 	reflection.Register(server)
 
 	go server.Serve(listener)
@@ -55,7 +54,7 @@ func runConflictsServer(t *testing.T) (*grpc.Server, string) {
 	return server, serverSocketPath
 }
 
-func NewConflictsClient(t *testing.T, serverSocketPath string) (pb.ConflictsServiceClient, *grpc.ClientConn) {
+func NewConflictsClient(t *testing.T, serverSocketPath string) (gitalypb.ConflictsServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
@@ -68,5 +67,5 @@ func NewConflictsClient(t *testing.T, serverSocketPath string) (pb.ConflictsServ
 		t.Fatal(err)
 	}
 
-	return pb.NewConflictsServiceClient(conn), conn
+	return gitalypb.NewConflictsServiceClient(conn), conn
 }

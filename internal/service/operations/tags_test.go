@@ -8,10 +8,9 @@ import (
 	"strings"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -34,7 +33,7 @@ func TestSuccessfulUserDeleteTagRequest(t *testing.T) {
 
 	defer exec.Command("git", "-C", testRepoPath, "tag", "-d", tagNameInput).Run()
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
@@ -42,7 +41,7 @@ func TestSuccessfulUserDeleteTagRequest(t *testing.T) {
 
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", tagNameInput)
 
-	request := &pb.UserDeleteTagRequest{
+	request := &gitalypb.UserDeleteTagRequest{
 		Repository: testRepo,
 		TagName:    []byte(tagNameInput),
 		User:       user,
@@ -68,14 +67,14 @@ func TestSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T) {
 	tagNameInput := "to-be-deleted-soon-tag"
 	defer exec.Command("git", "-C", testRepoPath, "tag", "-d", tagNameInput).Run()
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:       []byte("Ahmad Sherif"),
 		Email:      []byte("ahmad@gitlab.com"),
 		GlId:       "user-123",
 		GlUsername: "johndoe",
 	}
 
-	request := &pb.UserDeleteTagRequest{
+	request := &gitalypb.UserDeleteTagRequest{
 		Repository: testRepo,
 		TagName:    []byte(tagNameInput),
 		User:       user,
@@ -119,7 +118,7 @@ func TestSuccessfulUserCreateTagRequest(t *testing.T) {
 	targetRevisionCommit, err := log.GetCommit(ctx, testRepo, targetRevision)
 	require.NoError(t, err)
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
@@ -131,13 +130,13 @@ func TestSuccessfulUserCreateTagRequest(t *testing.T) {
 		tagName        string
 		message        string
 		targetRevision string
-		expectedTag    *pb.Tag
+		expectedTag    *gitalypb.Tag
 	}{
 		{
 			desc:           "lightweight tag",
 			tagName:        inputTagName,
 			targetRevision: targetRevision,
-			expectedTag: &pb.Tag{
+			expectedTag: &gitalypb.Tag{
 				Name:         []byte(inputTagName),
 				TargetCommit: targetRevisionCommit,
 			},
@@ -147,7 +146,7 @@ func TestSuccessfulUserCreateTagRequest(t *testing.T) {
 			tagName:        inputTagName,
 			targetRevision: targetRevision,
 			message:        "This is an annotated tag",
-			expectedTag: &pb.Tag{
+			expectedTag: &gitalypb.Tag{
 				Name:         []byte(inputTagName),
 				TargetCommit: targetRevisionCommit,
 				Message:      []byte("This is an annotated tag"),
@@ -158,7 +157,7 @@ func TestSuccessfulUserCreateTagRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			request := &pb.UserCreateTagRequest{
+			request := &gitalypb.UserCreateTagRequest{
 				Repository:     testRepo,
 				TagName:        []byte(inputTagName),
 				TargetRevision: []byte(testCase.targetRevision),
@@ -196,13 +195,13 @@ func TestSuccessfulGitHooksForUserCreateTagRequest(t *testing.T) {
 	defer cleanupFn()
 
 	tagName := "new-tag"
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:       []byte("Ahmad Sherif"),
 		Email:      []byte("ahmad@gitlab.com"),
 		GlId:       "user-123",
 		GlUsername: "johndoe",
 	}
-	request := &pb.UserCreateTagRequest{
+	request := &gitalypb.UserCreateTagRequest{
 		Repository:     testRepo,
 		TagName:        []byte(tagName),
 		TargetRevision: []byte("c7fbe50c7c7419d9701eebe64b1fdacc3df5b9dd"),
@@ -241,7 +240,7 @@ func TestFailedUserDeleteTagRequestDueToValidation(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
@@ -249,12 +248,12 @@ func TestFailedUserDeleteTagRequestDueToValidation(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.UserDeleteTagRequest
+		request *gitalypb.UserDeleteTagRequest
 		code    codes.Code
 	}{
 		{
 			desc: "empty user",
-			request: &pb.UserDeleteTagRequest{
+			request: &gitalypb.UserDeleteTagRequest{
 				Repository: testRepo,
 				TagName:    []byte("does-matter-the-name-if-user-is-empty"),
 			},
@@ -262,7 +261,7 @@ func TestFailedUserDeleteTagRequestDueToValidation(t *testing.T) {
 		},
 		{
 			desc: "empty tag name",
-			request: &pb.UserDeleteTagRequest{
+			request: &gitalypb.UserDeleteTagRequest{
 				Repository: testRepo,
 				User:       user,
 			},
@@ -270,7 +269,7 @@ func TestFailedUserDeleteTagRequestDueToValidation(t *testing.T) {
 		},
 		{
 			desc: "non-existent tag name",
-			request: &pb.UserDeleteTagRequest{
+			request: &gitalypb.UserDeleteTagRequest{
 				Repository: testRepo,
 				User:       user,
 				TagName:    []byte("i-do-not-exist"),
@@ -304,13 +303,13 @@ func TestFailedUserDeleteTagDueToHooks(t *testing.T) {
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", tagNameInput)
 	defer exec.Command("git", "-C", testRepoPath, "tag", "-d", tagNameInput).Run()
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
 	}
 
-	request := &pb.UserDeleteTagRequest{
+	request := &gitalypb.UserDeleteTagRequest{
 		Repository: testRepo,
 		TagName:    []byte(tagNameInput),
 		User:       user,
@@ -347,13 +346,13 @@ func TestFailedUserCreateTagDueToHooks(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:       []byte("Ahmad Sherif"),
 		Email:      []byte("ahmad@gitlab.com"),
 		GlId:       "user-123",
 		GlUsername: "johndoe",
 	}
-	request := &pb.UserCreateTagRequest{
+	request := &gitalypb.UserCreateTagRequest{
 		Repository:     testRepo,
 		TagName:        []byte("new-tag"),
 		TargetRevision: []byte("c7fbe50c7c7419d9701eebe64b1fdacc3df5b9dd"),
@@ -386,7 +385,7 @@ func TestFailedUserCreateTagRequestDueToTagExistence(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
@@ -395,14 +394,14 @@ func TestFailedUserCreateTagRequestDueToTagExistence(t *testing.T) {
 	testCase := struct {
 		tagName        string
 		targetRevision string
-		user           *pb.User
+		user           *gitalypb.User
 	}{
 		tagName:        "v1.1.0",
 		targetRevision: "master",
 		user:           user,
 	}
 
-	request := &pb.UserCreateTagRequest{
+	request := &gitalypb.UserCreateTagRequest{
 		Repository:     testRepo,
 		TagName:        []byte(testCase.tagName),
 		TargetRevision: []byte(testCase.targetRevision),
@@ -427,7 +426,7 @@ func TestFailedUserCreateTagRequestDueToValidation(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
@@ -437,7 +436,7 @@ func TestFailedUserCreateTagRequestDueToValidation(t *testing.T) {
 		desc           string
 		tagName        string
 		targetRevision string
-		user           *pb.User
+		user           *gitalypb.User
 		code           codes.Code
 	}{
 		{
@@ -465,7 +464,7 @@ func TestFailedUserCreateTagRequestDueToValidation(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			request := &pb.UserCreateTagRequest{
+			request := &gitalypb.UserCreateTagRequest{
 				Repository:     testRepo,
 				TagName:        []byte(testCase.tagName),
 				TargetRevision: []byte(testCase.targetRevision),

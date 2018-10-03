@@ -5,13 +5,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) ListDirectories(req *pb.ListDirectoriesRequest, stream pb.StorageService_ListDirectoriesServer) error {
+func (s *server) ListDirectories(req *gitalypb.ListDirectoriesRequest, stream gitalypb.StorageService_ListDirectoriesServer) error {
 	storageDir, err := helper.GetStorageByName(req.StorageName)
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "storage lookup failed: %v", err)
@@ -36,7 +36,7 @@ func (s *server) ListDirectories(req *pb.ListDirectoriesRequest, stream pb.Stora
 			dirs = append(dirs, relPath)
 
 			if len(dirs) > 100 {
-				stream.Send(&pb.ListDirectoriesResponse{Paths: dirs})
+				stream.Send(&gitalypb.ListDirectoriesResponse{Paths: dirs})
 				dirs = dirs[:]
 			}
 
@@ -51,7 +51,7 @@ func (s *server) ListDirectories(req *pb.ListDirectoriesRequest, stream pb.Stora
 	})
 
 	if len(dirs) > 0 {
-		stream.Send(&pb.ListDirectoriesResponse{Paths: dirs})
+		stream.Send(&gitalypb.ListDirectoriesResponse{Paths: dirs})
 	}
 
 	return err

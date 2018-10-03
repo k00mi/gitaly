@@ -4,7 +4,7 @@ import (
 	"os"
 	"path"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
@@ -13,7 +13,7 @@ import (
 
 var noNameError = status.Errorf(codes.InvalidArgument, "Name: cannot be empty")
 
-func (s *server) NamespaceExists(ctx context.Context, in *pb.NamespaceExistsRequest) (*pb.NamespaceExistsResponse, error) {
+func (s *server) NamespaceExists(ctx context.Context, in *gitalypb.NamespaceExistsRequest) (*gitalypb.NamespaceExistsResponse, error) {
 	storagePath, err := helper.GetStorageByName(in.GetStorageName())
 	if err != nil {
 		return nil, err
@@ -26,15 +26,15 @@ func (s *server) NamespaceExists(ctx context.Context, in *pb.NamespaceExistsRequ
 	}
 
 	if fi, err := os.Stat(namespacePath(storagePath, in.GetName())); os.IsNotExist(err) {
-		return &pb.NamespaceExistsResponse{Exists: false}, nil
+		return &gitalypb.NamespaceExistsResponse{Exists: false}, nil
 	} else if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not stat the directory: %v", err)
 	} else {
-		return &pb.NamespaceExistsResponse{Exists: fi.IsDir()}, nil
+		return &gitalypb.NamespaceExistsResponse{Exists: fi.IsDir()}, nil
 	}
 }
 
-func (s *server) AddNamespace(ctx context.Context, in *pb.AddNamespaceRequest) (*pb.AddNamespaceResponse, error) {
+func (s *server) AddNamespace(ctx context.Context, in *gitalypb.AddNamespaceRequest) (*gitalypb.AddNamespaceResponse, error) {
 	storagePath, err := helper.GetStorageByName(in.GetStorageName())
 	if err != nil {
 		return nil, err
@@ -49,10 +49,10 @@ func (s *server) AddNamespace(ctx context.Context, in *pb.AddNamespaceRequest) (
 		return nil, status.Errorf(codes.Internal, "create directory: %v", err)
 	}
 
-	return &pb.AddNamespaceResponse{}, nil
+	return &gitalypb.AddNamespaceResponse{}, nil
 }
 
-func (s *server) RenameNamespace(ctx context.Context, in *pb.RenameNamespaceRequest) (*pb.RenameNamespaceResponse, error) {
+func (s *server) RenameNamespace(ctx context.Context, in *gitalypb.RenameNamespaceRequest) (*gitalypb.RenameNamespaceResponse, error) {
 	storagePath, err := helper.GetStorageByName(in.GetStorageName())
 	if err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func (s *server) RenameNamespace(ctx context.Context, in *pb.RenameNamespaceRequ
 
 	// No need to check if the from path exists, if it doesn't, we'd later get an
 	// os.LinkError
-	toExistsCheck := &pb.NamespaceExistsRequest{StorageName: in.StorageName, Name: in.GetTo()}
+	toExistsCheck := &gitalypb.NamespaceExistsRequest{StorageName: in.StorageName, Name: in.GetTo()}
 	if exists, err := s.NamespaceExists(ctx, toExistsCheck); err != nil {
 		return nil, err
 	} else if exists.Exists {
@@ -78,10 +78,10 @@ func (s *server) RenameNamespace(ctx context.Context, in *pb.RenameNamespaceRequ
 		return nil, status.Errorf(codes.Internal, "rename: %v", err)
 	}
 
-	return &pb.RenameNamespaceResponse{}, nil
+	return &gitalypb.RenameNamespaceResponse{}, nil
 }
 
-func (s *server) RemoveNamespace(ctx context.Context, in *pb.RemoveNamespaceRequest) (*pb.RemoveNamespaceResponse, error) {
+func (s *server) RemoveNamespace(ctx context.Context, in *gitalypb.RemoveNamespaceRequest) (*gitalypb.RemoveNamespaceResponse, error) {
 	storagePath, err := helper.GetStorageByName(in.GetStorageName())
 	if err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func (s *server) RemoveNamespace(ctx context.Context, in *pb.RemoveNamespaceRequ
 	if err = os.RemoveAll(namespacePath(storagePath, in.GetName())); err != nil {
 		return nil, status.Errorf(codes.Internal, "removal: %v", err)
 	}
-	return &pb.RemoveNamespaceResponse{}, nil
+	return &gitalypb.RemoveNamespaceResponse{}, nil
 }
 
 func namespacePath(storage, ns string) string {

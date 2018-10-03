@@ -1,15 +1,14 @@
 package wiki
 
 import (
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) WikiGetPageVersions(request *pb.WikiGetPageVersionsRequest, stream pb.WikiService_WikiGetPageVersionsServer) error {
+func (s *server) WikiGetPageVersions(request *gitalypb.WikiGetPageVersionsRequest, stream gitalypb.WikiService_WikiGetPageVersionsServer) error {
 	ctx := stream.Context()
 
 	if len(request.GetPagePath()) == 0 {

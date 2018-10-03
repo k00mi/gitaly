@@ -5,7 +5,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
@@ -14,13 +14,13 @@ func TestRefExists(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	badRepo := &pb.Repository{StorageName: "invalid", RelativePath: "/etc/"}
+	badRepo := &gitalypb.Repository{StorageName: "invalid", RelativePath: "/etc/"}
 
 	tests := []struct {
 		name    string
 		ref     string
 		want    bool
-		repo    *pb.Repository
+		repo    *gitalypb.Repository
 		wantErr codes.Code
 	}{
 		{"master", "refs/heads/master", true, testRepo, codes.OK},
@@ -48,7 +48,7 @@ func TestRefExists(t *testing.T) {
 			client, conn := newRefServiceClient(t, serverSocketPath)
 			defer conn.Close()
 
-			req := &pb.RefExistsRequest{Repository: tt.repo, Ref: []byte(tt.ref)}
+			req := &gitalypb.RefExistsRequest{Repository: tt.repo, Ref: []byte(tt.ref)}
 
 			got, err := client.RefExists(ctx, req)
 

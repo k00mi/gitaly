@@ -1,15 +1,14 @@
 package wiki
 
 import (
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) WikiGetFormattedData(request *pb.WikiGetFormattedDataRequest, stream pb.WikiService_WikiGetFormattedDataServer) error {
+func (s *server) WikiGetFormattedData(request *gitalypb.WikiGetFormattedDataRequest, stream gitalypb.WikiService_WikiGetFormattedDataServer) error {
 	ctx := stream.Context()
 
 	if len(request.GetTitle()) == 0 {
