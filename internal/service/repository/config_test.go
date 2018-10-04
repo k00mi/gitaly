@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -52,7 +52,7 @@ func TestDeleteConfig(t *testing.T) {
 				testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "config", k, "blabla")
 			}
 
-			_, err := client.DeleteConfig(ctx, &pb.DeleteConfigRequest{Repository: testRepo, Keys: tc.reqKeys})
+			_, err := client.DeleteConfig(ctx, &gitalypb.DeleteConfigRequest{Repository: testRepo, Keys: tc.reqKeys})
 			if tc.code == codes.OK {
 				require.NoError(t, err)
 			} else {
@@ -82,7 +82,7 @@ func TestSetConfig(t *testing.T) {
 
 	testcases := []struct {
 		desc     string
-		entries  []*pb.SetConfigRequest_Entry
+		entries  []*gitalypb.SetConfigRequest_Entry
 		expected []string
 		code     codes.Code
 	}{
@@ -91,10 +91,10 @@ func TestSetConfig(t *testing.T) {
 		},
 		{
 			desc: "mix of different types",
-			entries: []*pb.SetConfigRequest_Entry{
-				&pb.SetConfigRequest_Entry{Key: "test.foo1", Value: &pb.SetConfigRequest_Entry_ValueStr{"hello world"}},
-				&pb.SetConfigRequest_Entry{Key: "test.foo2", Value: &pb.SetConfigRequest_Entry_ValueInt32{1234}},
-				&pb.SetConfigRequest_Entry{Key: "test.foo3", Value: &pb.SetConfigRequest_Entry_ValueBool{true}},
+			entries: []*gitalypb.SetConfigRequest_Entry{
+				&gitalypb.SetConfigRequest_Entry{Key: "test.foo1", Value: &gitalypb.SetConfigRequest_Entry_ValueStr{"hello world"}},
+				&gitalypb.SetConfigRequest_Entry{Key: "test.foo2", Value: &gitalypb.SetConfigRequest_Entry_ValueInt32{1234}},
+				&gitalypb.SetConfigRequest_Entry{Key: "test.foo3", Value: &gitalypb.SetConfigRequest_Entry_ValueBool{true}},
 			},
 			expected: []string{
 				"test.foo1=hello world",
@@ -112,7 +112,7 @@ func TestSetConfig(t *testing.T) {
 			testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 			defer cleanupFn()
 
-			_, err := client.SetConfig(ctx, &pb.SetConfigRequest{Repository: testRepo, Entries: tc.entries})
+			_, err := client.SetConfig(ctx, &gitalypb.SetConfigRequest{Repository: testRepo, Entries: tc.entries})
 			if tc.code == codes.OK {
 				require.NoError(t, err)
 			} else {

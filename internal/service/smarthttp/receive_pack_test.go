@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 
 	"github.com/stretchr/testify/require"
@@ -38,7 +38,7 @@ func TestSuccessfulReceivePackRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	push := newTestPush(t, nil)
-	firstRequest := &pb.PostReceivePackRequest{Repository: repo, GlId: "user-123", GlRepository: "project-123"}
+	firstRequest := &gitalypb.PostReceivePackRequest{Repository: repo, GlId: "user-123", GlRepository: "project-123"}
 	response := doPush(t, stream, firstRequest, push.body)
 
 	expectedResponse := "0030\x01000eunpack ok\n0019ok refs/heads/master\n00000000"
@@ -65,7 +65,7 @@ func TestSuccessfulReceivePackRequestWithGitOpts(t *testing.T) {
 	require.NoError(t, err)
 
 	push := newTestPush(t, nil)
-	firstRequest := &pb.PostReceivePackRequest{Repository: repo, GlId: "user-123", GlRepository: "project-123", GitConfigOptions: []string{"receive.MaxInputSize=10000"}}
+	firstRequest := &gitalypb.PostReceivePackRequest{Repository: repo, GlId: "user-123", GlRepository: "project-123", GitConfigOptions: []string{"receive.MaxInputSize=10000"}}
 	response := doPush(t, stream, firstRequest, push.body)
 
 	expectedResponse := "0030\x01000eunpack ok\n0019ok refs/heads/master\n00000000"
@@ -97,18 +97,18 @@ func TestFailedReceivePackRequestWithGitOpts(t *testing.T) {
 	require.NoError(t, err)
 
 	push := newTestPush(t, nil)
-	firstRequest := &pb.PostReceivePackRequest{Repository: repo, GlId: "user-123", GlRepository: "project-123", GitConfigOptions: []string{"receive.MaxInputSize=1"}}
+	firstRequest := &gitalypb.PostReceivePackRequest{Repository: repo, GlId: "user-123", GlRepository: "project-123", GitConfigOptions: []string{"receive.MaxInputSize=1"}}
 	response := doPush(t, stream, firstRequest, push.body)
 
 	expectedResponse := "002e\x02fatal: pack exceeds maximum allowed size\n0059\x010028unpack unpack-objects abnormal exit\n0028ng refs/heads/master unpacker error\n00000000"
 	require.Equal(t, expectedResponse, string(response), "Expected response to be %q, got %q", expectedResponse, response)
 }
 
-func doPush(t *testing.T, stream pb.SmartHTTPService_PostReceivePackClient, firstRequest *pb.PostReceivePackRequest, body io.Reader) []byte {
+func doPush(t *testing.T, stream gitalypb.SmartHTTPService_PostReceivePackClient, firstRequest *gitalypb.PostReceivePackRequest, body io.Reader) []byte {
 	require.NoError(t, stream.Send(firstRequest))
 
 	sw := streamio.NewWriter(func(p []byte) error {
-		return stream.Send(&pb.PostReceivePackRequest{Data: p})
+		return stream.Send(&gitalypb.PostReceivePackRequest{Data: p})
 	})
 	_, err := io.Copy(sw, body)
 	require.NoError(t, err)
@@ -193,11 +193,11 @@ func TestFailedReceivePackRequestDueToValidationError(t *testing.T) {
 	client, conn := newSmartHTTPClient(t, serverSocketPath)
 	defer conn.Close()
 
-	rpcRequests := []pb.PostReceivePackRequest{
-		{Repository: &pb.Repository{StorageName: "fake", RelativePath: "path"}, GlId: "user-123"}, // Repository doesn't exist
+	rpcRequests := []gitalypb.PostReceivePackRequest{
+		{Repository: &gitalypb.Repository{StorageName: "fake", RelativePath: "path"}, GlId: "user-123"}, // Repository doesn't exist
 		{Repository: nil, GlId: "user-123"}, // Repository is nil
-		{Repository: &pb.Repository{StorageName: "default", RelativePath: "path/to/repo"}, GlId: ""},                               // Empty GlId
-		{Repository: &pb.Repository{StorageName: "default", RelativePath: "path/to/repo"}, GlId: "user-123", Data: []byte("Fail")}, // Data exists on first request
+		{Repository: &gitalypb.Repository{StorageName: "default", RelativePath: "path/to/repo"}, GlId: ""},                               // Empty GlId
+		{Repository: &gitalypb.Repository{StorageName: "default", RelativePath: "path/to/repo"}, GlId: "user-123", Data: []byte("Fail")}, // Data exists on first request
 	}
 
 	for _, rpcRequest := range rpcRequests {
@@ -216,7 +216,7 @@ func TestFailedReceivePackRequestDueToValidationError(t *testing.T) {
 	}
 }
 
-func drainPostReceivePackResponse(stream pb.SmartHTTP_PostReceivePackClient) error {
+func drainPostReceivePackResponse(stream gitalypb.SmartHTTP_PostReceivePackClient) error {
 	var err error
 	for err == nil {
 		_, err = stream.Recv()

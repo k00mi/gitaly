@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -65,12 +65,12 @@ func TestListNewCommits(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		request := &pb.ListNewCommitsRequest{Repository: testRepo, CommitId: tc.revision}
+		request := &gitalypb.ListNewCommitsRequest{Repository: testRepo, CommitId: tc.revision}
 
 		stream, err := client.ListNewCommits(ctx, request)
 		require.NoError(t, err)
 
-		var commits []*pb.GitCommit
+		var commits []*gitalypb.GitCommit
 		for {
 			msg, err := stream.Recv()
 

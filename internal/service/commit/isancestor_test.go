@@ -5,14 +5,13 @@ import (
 	"os/exec"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
 
 func TestCommitIsAncestorFailure(t *testing.T) {
@@ -26,12 +25,12 @@ func TestCommitIsAncestorFailure(t *testing.T) {
 	defer cleanupFn()
 
 	queries := []struct {
-		Request   *pb.CommitIsAncestorRequest
+		Request   *gitalypb.CommitIsAncestorRequest
 		ErrorCode codes.Code
 		ErrMsg    string
 	}{
 		{
-			Request: &pb.CommitIsAncestorRequest{
+			Request: &gitalypb.CommitIsAncestorRequest{
 				Repository: nil,
 				AncestorId: "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 				ChildId:    "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab",
@@ -40,7 +39,7 @@ func TestCommitIsAncestorFailure(t *testing.T) {
 			ErrMsg:    "Expected to throw invalid argument got: %s",
 		},
 		{
-			Request: &pb.CommitIsAncestorRequest{
+			Request: &gitalypb.CommitIsAncestorRequest{
 				Repository: testRepo,
 				AncestorId: "",
 				ChildId:    "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab",
@@ -49,7 +48,7 @@ func TestCommitIsAncestorFailure(t *testing.T) {
 			ErrMsg:    "Expected to throw invalid argument got: %s",
 		},
 		{
-			Request: &pb.CommitIsAncestorRequest{
+			Request: &gitalypb.CommitIsAncestorRequest{
 				Repository: testRepo,
 				AncestorId: "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 				ChildId:    "",
@@ -58,8 +57,8 @@ func TestCommitIsAncestorFailure(t *testing.T) {
 			ErrMsg:    "Expected to throw invalid argument got: %s",
 		},
 		{
-			Request: &pb.CommitIsAncestorRequest{
-				Repository: &pb.Repository{StorageName: "default", RelativePath: "fake-path"},
+			Request: &gitalypb.CommitIsAncestorRequest{
+				Repository: &gitalypb.Repository{StorageName: "default", RelativePath: "fake-path"},
 				AncestorId: "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 				ChildId:    "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab",
 			},
@@ -92,12 +91,12 @@ func TestCommitIsAncestorSuccess(t *testing.T) {
 	defer cleanupFn()
 
 	queries := []struct {
-		Request  *pb.CommitIsAncestorRequest
+		Request  *gitalypb.CommitIsAncestorRequest
 		Response bool
 		ErrMsg   string
 	}{
 		{
-			Request: &pb.CommitIsAncestorRequest{
+			Request: &gitalypb.CommitIsAncestorRequest{
 				Repository: testRepo,
 				AncestorId: "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab",
 				ChildId:    "372ab6950519549b14d220271ee2322caa44d4eb",
@@ -106,7 +105,7 @@ func TestCommitIsAncestorSuccess(t *testing.T) {
 			ErrMsg:   "Expected commit to be ancestor",
 		},
 		{
-			Request: &pb.CommitIsAncestorRequest{
+			Request: &gitalypb.CommitIsAncestorRequest{
 				Repository: testRepo,
 				AncestorId: "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 				ChildId:    "38008cb17ce1466d8fec2dfa6f6ab8dcfe5cf49e",
@@ -115,7 +114,7 @@ func TestCommitIsAncestorSuccess(t *testing.T) {
 			ErrMsg:   "Expected commit not to be ancestor",
 		},
 		{
-			Request: &pb.CommitIsAncestorRequest{
+			Request: &gitalypb.CommitIsAncestorRequest{
 				Repository: testRepo,
 				AncestorId: "1234123412341234123412341234123412341234",
 				ChildId:    "b83d6e391c22777fca1ed3012fce84f633d7fed0",
@@ -124,7 +123,7 @@ func TestCommitIsAncestorSuccess(t *testing.T) {
 			ErrMsg:   "Expected invalid commit to not be ancestor",
 		},
 		{
-			Request: &pb.CommitIsAncestorRequest{
+			Request: &gitalypb.CommitIsAncestorRequest{
 				Repository: testRepo,
 				AncestorId: "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 				ChildId:    "gitaly-stuff",
@@ -133,7 +132,7 @@ func TestCommitIsAncestorSuccess(t *testing.T) {
 			ErrMsg:   "Expected `b83d6e391c22777fca1ed3012fce84f633d7fed0` to be ancestor of `gitaly-stuff`",
 		},
 		{
-			Request: &pb.CommitIsAncestorRequest{
+			Request: &gitalypb.CommitIsAncestorRequest{
 				Repository: testRepo,
 				AncestorId: "gitaly-stuff",
 				ChildId:    "master",
@@ -142,7 +141,7 @@ func TestCommitIsAncestorSuccess(t *testing.T) {
 			ErrMsg:   "Expected branch `gitaly-stuff` not to be ancestor of `master`",
 		},
 		{
-			Request: &pb.CommitIsAncestorRequest{
+			Request: &gitalypb.CommitIsAncestorRequest{
 				Repository: testRepo,
 				AncestorId: "refs/tags/v1.0.0",
 				ChildId:    "refs/tags/v1.1.0",
@@ -151,7 +150,7 @@ func TestCommitIsAncestorSuccess(t *testing.T) {
 			ErrMsg:   "Expected tag `v1.0.0` to be ancestor of `v1.1.0`",
 		},
 		{
-			Request: &pb.CommitIsAncestorRequest{
+			Request: &gitalypb.CommitIsAncestorRequest{
 				Repository: testRepo,
 				AncestorId: "refs/tags/v1.1.0",
 				ChildId:    "refs/tags/v1.0.0",
@@ -219,7 +218,7 @@ func TestSuccessfulIsAncestorRequestWithAltGitObjectDirs(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
 			testRepoCopy.GitAlternateObjectDirectories = testCase.altDirs
-			request := &pb.CommitIsAncestorRequest{
+			request := &gitalypb.CommitIsAncestorRequest{
 				Repository: testRepoCopy,
 				AncestorId: string(previousHead),
 				ChildId:    string(currentHead),

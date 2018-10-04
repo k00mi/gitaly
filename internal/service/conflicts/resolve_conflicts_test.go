@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	serverPkg "gitlab.com/gitlab-org/gitaly/internal/server"
 	"gitlab.com/gitlab-org/gitaly/internal/service/conflicts"
@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	user = &pb.User{
+	user = &gitalypb.User{
 		Name:  []byte("John Doe"),
 		Email: []byte("johndoe@gitlab.com"),
 		GlId:  "user-1",
@@ -63,9 +63,9 @@ func TestSuccessfulResolveConflictsRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	sourceBranch := "conflict-resolvable"
-	headerRequest := &pb.ResolveConflictsRequest{
-		ResolveConflictsRequestPayload: &pb.ResolveConflictsRequest_Header{
-			Header: &pb.ResolveConflictsRequestHeader{
+	headerRequest := &gitalypb.ResolveConflictsRequest{
+		ResolveConflictsRequestPayload: &gitalypb.ResolveConflictsRequest_Header{
+			Header: &gitalypb.ResolveConflictsRequestHeader{
 				Repository:       testRepo,
 				TargetRepository: testRepo,
 				CommitMessage:    []byte(conflictResolutionCommitMessage),
@@ -77,13 +77,13 @@ func TestSuccessfulResolveConflictsRequest(t *testing.T) {
 			},
 		},
 	}
-	filesRequest1 := &pb.ResolveConflictsRequest{
-		ResolveConflictsRequestPayload: &pb.ResolveConflictsRequest_FilesJson{
+	filesRequest1 := &gitalypb.ResolveConflictsRequest{
+		ResolveConflictsRequestPayload: &gitalypb.ResolveConflictsRequest_FilesJson{
 			FilesJson: filesJSON[:50],
 		},
 	}
-	filesRequest2 := &pb.ResolveConflictsRequest{
-		ResolveConflictsRequestPayload: &pb.ResolveConflictsRequest_FilesJson{
+	filesRequest2 := &gitalypb.ResolveConflictsRequest{
+		ResolveConflictsRequestPayload: &gitalypb.ResolveConflictsRequest_FilesJson{
 			FilesJson: filesJSON[50:],
 		},
 	}
@@ -140,9 +140,9 @@ func TestFailedResolveConflictsRequestDueToResolutionError(t *testing.T) {
 	filesJSON, err := json.Marshal(files)
 	require.NoError(t, err)
 
-	headerRequest := &pb.ResolveConflictsRequest{
-		ResolveConflictsRequestPayload: &pb.ResolveConflictsRequest_Header{
-			Header: &pb.ResolveConflictsRequestHeader{
+	headerRequest := &gitalypb.ResolveConflictsRequest{
+		ResolveConflictsRequestPayload: &gitalypb.ResolveConflictsRequest_Header{
+			Header: &gitalypb.ResolveConflictsRequestHeader{
 				Repository:       testRepo,
 				TargetRepository: testRepo,
 				CommitMessage:    []byte(conflictResolutionCommitMessage),
@@ -154,8 +154,8 @@ func TestFailedResolveConflictsRequestDueToResolutionError(t *testing.T) {
 			},
 		},
 	}
-	filesRequest := &pb.ResolveConflictsRequest{
-		ResolveConflictsRequestPayload: &pb.ResolveConflictsRequest_FilesJson{
+	filesRequest := &gitalypb.ResolveConflictsRequest{
+		ResolveConflictsRequestPayload: &gitalypb.ResolveConflictsRequest_FilesJson{
 			FilesJson: filesJSON,
 		},
 	}
@@ -189,12 +189,12 @@ func TestFailedResolveConflictsRequestDueToValidation(t *testing.T) {
 
 	testCases := []struct {
 		desc   string
-		header *pb.ResolveConflictsRequestHeader
+		header *gitalypb.ResolveConflictsRequestHeader
 		code   codes.Code
 	}{
 		{
 			desc: "empty repo",
-			header: &pb.ResolveConflictsRequestHeader{
+			header: &gitalypb.ResolveConflictsRequestHeader{
 				Repository:       nil,
 				OurCommitOid:     ourCommitOid,
 				TargetRepository: testRepo,
@@ -207,7 +207,7 @@ func TestFailedResolveConflictsRequestDueToValidation(t *testing.T) {
 		},
 		{
 			desc: "empty target repo",
-			header: &pb.ResolveConflictsRequestHeader{
+			header: &gitalypb.ResolveConflictsRequestHeader{
 				Repository:       testRepo,
 				OurCommitOid:     ourCommitOid,
 				TargetRepository: nil,
@@ -220,7 +220,7 @@ func TestFailedResolveConflictsRequestDueToValidation(t *testing.T) {
 		},
 		{
 			desc: "empty OurCommitId repo",
-			header: &pb.ResolveConflictsRequestHeader{
+			header: &gitalypb.ResolveConflictsRequestHeader{
 				Repository:       testRepo,
 				OurCommitOid:     "",
 				TargetRepository: testRepo,
@@ -233,7 +233,7 @@ func TestFailedResolveConflictsRequestDueToValidation(t *testing.T) {
 		},
 		{
 			desc: "empty TheirCommitId repo",
-			header: &pb.ResolveConflictsRequestHeader{
+			header: &gitalypb.ResolveConflictsRequestHeader{
 				Repository:       testRepo,
 				OurCommitOid:     ourCommitOid,
 				TargetRepository: testRepo,
@@ -246,7 +246,7 @@ func TestFailedResolveConflictsRequestDueToValidation(t *testing.T) {
 		},
 		{
 			desc: "empty CommitMessage repo",
-			header: &pb.ResolveConflictsRequestHeader{
+			header: &gitalypb.ResolveConflictsRequestHeader{
 				Repository:       testRepo,
 				OurCommitOid:     ourCommitOid,
 				TargetRepository: testRepo,
@@ -259,7 +259,7 @@ func TestFailedResolveConflictsRequestDueToValidation(t *testing.T) {
 		},
 		{
 			desc: "empty SourceBranch repo",
-			header: &pb.ResolveConflictsRequestHeader{
+			header: &gitalypb.ResolveConflictsRequestHeader{
 				Repository:       testRepo,
 				OurCommitOid:     ourCommitOid,
 				TargetRepository: testRepo,
@@ -272,7 +272,7 @@ func TestFailedResolveConflictsRequestDueToValidation(t *testing.T) {
 		},
 		{
 			desc: "empty TargetBranch repo",
-			header: &pb.ResolveConflictsRequestHeader{
+			header: &gitalypb.ResolveConflictsRequestHeader{
 				Repository:       testRepo,
 				OurCommitOid:     ourCommitOid,
 				TargetRepository: testRepo,
@@ -294,8 +294,8 @@ func TestFailedResolveConflictsRequestDueToValidation(t *testing.T) {
 			stream, err := client.ResolveConflicts(ctx)
 			require.NoError(t, err)
 
-			headerRequest := &pb.ResolveConflictsRequest{
-				ResolveConflictsRequestPayload: &pb.ResolveConflictsRequest_Header{
+			headerRequest := &gitalypb.ResolveConflictsRequest{
+				ResolveConflictsRequestPayload: &gitalypb.ResolveConflictsRequest_Header{
 					Header: testCase.header,
 				},
 			}

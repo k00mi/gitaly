@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 
 	"golang.org/x/net/context"
@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) FindMergeBase(ctx context.Context, req *pb.FindMergeBaseRequest) (*pb.FindMergeBaseResponse, error) {
+func (s *server) FindMergeBase(ctx context.Context, req *gitalypb.FindMergeBaseRequest) (*gitalypb.FindMergeBaseResponse, error) {
 	revisions := req.GetRevisions()
 	if len(revisions) < 2 {
 		return nil, status.Errorf(codes.InvalidArgument, "FindMergeBase: at least 2 revisions are required")
@@ -40,8 +40,8 @@ func (s *server) FindMergeBase(ctx context.Context, req *pb.FindMergeBaseRequest
 
 	if err := cmd.Wait(); err != nil {
 		// On error just return an empty merge base
-		return &pb.FindMergeBaseResponse{Base: ""}, nil
+		return &gitalypb.FindMergeBaseResponse{Base: ""}, nil
 	}
 
-	return &pb.FindMergeBaseResponse{Base: mergeBaseStr}, nil
+	return &gitalypb.FindMergeBaseResponse{Base: mergeBaseStr}, nil
 }

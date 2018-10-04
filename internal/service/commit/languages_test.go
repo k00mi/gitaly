@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	"github.com/stretchr/testify/require"
@@ -20,7 +20,7 @@ func TestLanguages(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	request := &pb.CommitLanguagesRequest{
+	request := &gitalypb.CommitLanguagesRequest{
 		Repository: testRepo,
 		Revision:   []byte("cb19058ecc02d01f8e4290b7e79cafd16a8839b6"),
 	}
@@ -32,7 +32,7 @@ func TestLanguages(t *testing.T) {
 
 	require.NotZero(t, len(resp.Languages), "number of languages in response")
 
-	expectedLanguages := []pb.CommitLanguagesResponse_Language{
+	expectedLanguages := []gitalypb.CommitLanguagesResponse_Language{
 		{Name: "Ruby", Share: 66, Color: "#701516"},
 		{Name: "JavaScript", Share: 22, Color: "#f1e05a"},
 		{Name: "HTML", Share: 7, Color: "#e34c26"},
@@ -50,7 +50,7 @@ func TestLanguages(t *testing.T) {
 	}
 }
 
-func languageEqual(expected, actual *pb.CommitLanguagesResponse_Language) bool {
+func languageEqual(expected, actual *gitalypb.CommitLanguagesResponse_Language) bool {
 	if expected.Name != actual.Name {
 		return false
 	}
@@ -73,7 +73,7 @@ func TestLanguagesEmptyRevision(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	request := &pb.CommitLanguagesRequest{
+	request := &gitalypb.CommitLanguagesRequest{
 		Repository: testRepo,
 	}
 

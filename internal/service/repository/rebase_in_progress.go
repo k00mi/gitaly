@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/housekeeping"
 
@@ -22,7 +22,7 @@ const (
 	freshTimeout         = 15 * time.Minute
 )
 
-func (s *server) IsRebaseInProgress(ctx context.Context, req *pb.IsRebaseInProgressRequest) (*pb.IsRebaseInProgressResponse, error) {
+func (s *server) IsRebaseInProgress(ctx context.Context, req *gitalypb.IsRebaseInProgressRequest) (*gitalypb.IsRebaseInProgressResponse, error) {
 	if err := validateIsRebaseInProgressRequest(req); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "IsRebaseInProgress: %v", err)
 	}
@@ -36,7 +36,7 @@ func (s *server) IsRebaseInProgress(ctx context.Context, req *pb.IsRebaseInProgr
 	if err != nil {
 		return nil, err
 	}
-	return &pb.IsRebaseInProgressResponse{InProgress: inProg}, nil
+	return &gitalypb.IsRebaseInProgressResponse{InProgress: inProg}, nil
 }
 
 func freshWorktree(repoPath, prefix, id string) (bool, error) {
@@ -60,7 +60,7 @@ func freshWorktree(repoPath, prefix, id string) (bool, error) {
 	return true, nil
 }
 
-func validateIsRebaseInProgressRequest(req *pb.IsRebaseInProgressRequest) error {
+func validateIsRebaseInProgressRequest(req *gitalypb.IsRebaseInProgressRequest) error {
 	if req.GetRepository() == nil {
 		return fmt.Errorf("empty Repository")
 	}

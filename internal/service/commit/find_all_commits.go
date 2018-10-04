@@ -3,9 +3,8 @@ package commit
 import (
 	"fmt"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/service/ref"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -15,10 +14,10 @@ import (
 var _findBranchNamesFunc = ref.FindBranchNames
 
 type findAllCommitsSender struct {
-	stream pb.CommitService_FindAllCommitsServer
+	stream gitalypb.CommitService_FindAllCommitsServer
 }
 
-func (s *server) FindAllCommits(in *pb.FindAllCommitsRequest, stream pb.CommitService_FindAllCommitsServer) error {
+func (s *server) FindAllCommits(in *gitalypb.FindAllCommitsRequest, stream gitalypb.CommitService_FindAllCommitsServer) error {
 	sender := &findAllCommitsSender{stream}
 
 	var gitLogExtraOptions []string
@@ -29,11 +28,11 @@ func (s *server) FindAllCommits(in *pb.FindAllCommitsRequest, stream pb.CommitSe
 		gitLogExtraOptions = append(gitLogExtraOptions, fmt.Sprintf("--skip=%d", skip))
 	}
 	switch in.GetOrder() {
-	case pb.FindAllCommitsRequest_NONE:
+	case gitalypb.FindAllCommitsRequest_NONE:
 		// Do nothing
-	case pb.FindAllCommitsRequest_DATE:
+	case gitalypb.FindAllCommitsRequest_DATE:
 		gitLogExtraOptions = append(gitLogExtraOptions, "--date-order")
-	case pb.FindAllCommitsRequest_TOPO:
+	case gitalypb.FindAllCommitsRequest_TOPO:
 		gitLogExtraOptions = append(gitLogExtraOptions, "--topo-order")
 	}
 
@@ -54,6 +53,6 @@ func (s *server) FindAllCommits(in *pb.FindAllCommitsRequest, stream pb.CommitSe
 	return sendCommits(stream.Context(), sender, in.GetRepository(), revisions, nil, gitLogExtraOptions...)
 }
 
-func (sender *findAllCommitsSender) Send(commits []*pb.GitCommit) error {
-	return sender.stream.Send(&pb.FindAllCommitsResponse{Commits: commits})
+func (sender *findAllCommitsSender) Send(commits []*gitalypb.GitCommit) error {
+	return sender.stream.Send(&gitalypb.FindAllCommitsResponse{Commits: commits})
 }

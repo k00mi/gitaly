@@ -1,12 +1,11 @@
 package wiki
 
 import (
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
 
-func (s *server) WikiGetAllPages(request *pb.WikiGetAllPagesRequest, stream pb.WikiService_WikiGetAllPagesServer) error {
+func (s *server) WikiGetAllPages(request *gitalypb.WikiGetAllPagesRequest, stream gitalypb.WikiService_WikiGetAllPagesServer) error {
 	ctx := stream.Context()
 
 	client, err := s.WikiServiceClient(ctx)

@@ -1,13 +1,13 @@
 package commit
 
 import (
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) FilterShasWithSignatures(bidi pb.CommitService_FilterShasWithSignaturesServer) error {
+func (s *server) FilterShasWithSignatures(bidi gitalypb.CommitService_FilterShasWithSignaturesServer) error {
 	firstRequest, err := bidi.Recv()
 	if err != nil {
 		return err
@@ -58,7 +58,7 @@ func (s *server) FilterShasWithSignatures(bidi pb.CommitService_FilterShasWithSi
 	)
 }
 
-func verifyFirstFilterShasWithSignaturesRequest(in *pb.FilterShasWithSignaturesRequest) error {
+func verifyFirstFilterShasWithSignaturesRequest(in *gitalypb.FilterShasWithSignaturesRequest) error {
 	if in.Repository == nil {
 		return status.Errorf(codes.InvalidArgument, "no repository given")
 	}

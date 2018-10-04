@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
 )
@@ -19,7 +19,7 @@ func TestFindRemoteRootRefSuccess(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	request := &pb.FindRemoteRootRefRequest{Repository: testRepo, Remote: "origin"}
+	request := &gitalypb.FindRemoteRootRefRequest{Repository: testRepo, Remote: "origin"}
 	testCtx, cancelCtx := testhelper.Context()
 	defer cancelCtx()
 
@@ -35,34 +35,34 @@ func TestFindRemoteRootRefFailedDueToValidation(t *testing.T) {
 	client, conn := NewRemoteClient(t, serverSocketPath)
 	defer conn.Close()
 
-	invalidRepo := &pb.Repository{StorageName: "fake", RelativePath: "path"}
+	invalidRepo := &gitalypb.Repository{StorageName: "fake", RelativePath: "path"}
 
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
 	testCases := []struct {
 		desc    string
-		request *pb.FindRemoteRootRefRequest
+		request *gitalypb.FindRemoteRootRefRequest
 		code    codes.Code
 	}{
 		{
 			desc:    "Invalid repository",
-			request: &pb.FindRemoteRootRefRequest{Repository: invalidRepo},
+			request: &gitalypb.FindRemoteRootRefRequest{Repository: invalidRepo},
 			code:    codes.InvalidArgument,
 		},
 		{
 			desc:    "Repository is nil",
-			request: &pb.FindRemoteRootRefRequest{},
+			request: &gitalypb.FindRemoteRootRefRequest{},
 			code:    codes.InvalidArgument,
 		},
 		{
 			desc:    "Remote is nil",
-			request: &pb.FindRemoteRootRefRequest{Repository: testRepo},
+			request: &gitalypb.FindRemoteRootRefRequest{Repository: testRepo},
 			code:    codes.InvalidArgument,
 		},
 		{
 			desc:    "Remote is empty",
-			request: &pb.FindRemoteRootRefRequest{Repository: testRepo, Remote: ""},
+			request: &gitalypb.FindRemoteRootRefRequest{Repository: testRepo, Remote: ""},
 			code:    codes.InvalidArgument,
 		},
 	}
@@ -86,7 +86,7 @@ func TestFindRemoteRootRefFailedDueToInvalidRemote(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	request := &pb.FindRemoteRootRefRequest{Repository: testRepo, Remote: "invalid"}
+	request := &gitalypb.FindRemoteRootRefRequest{Repository: testRepo, Remote: "invalid"}
 	testCtx, cancelCtx := testhelper.Context()
 	defer cancelCtx()
 

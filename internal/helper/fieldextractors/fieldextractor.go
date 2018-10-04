@@ -3,11 +3,11 @@ package fieldextractors
 import (
 	"strings"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 )
 
 type repositoryBasedRequest interface {
-	GetRepository() *pb.Repository
+	GetRepository() *gitalypb.Repository
 }
 
 type namespaceBasedRequest interface {
@@ -19,7 +19,7 @@ type storageBasedRequest interface {
 	GetStorageName() string
 }
 
-func formatRepoRequest(repo *pb.Repository) map[string]interface{} {
+func formatRepoRequest(repo *gitalypb.Repository) map[string]interface{} {
 	if repo == nil {
 		// Signals that the client did not send a repo through, which
 		// will be useful for logging
@@ -63,7 +63,7 @@ func formatNamespaceRequest(namespaceReq namespaceBasedRequest) map[string]inter
 	}
 }
 
-func formatRenameNamespaceRequest(renameReq pb.RenameNamespaceRequest) map[string]interface{} {
+func formatRenameNamespaceRequest(renameReq gitalypb.RenameNamespaceRequest) map[string]interface{} {
 	return map[string]interface{}{
 		"StorageName": renameReq.GetStorageName(),
 		"From":        renameReq.GetFrom(),
@@ -78,8 +78,8 @@ func FieldExtractor(fullMethod string, req interface{}) map[string]interface{} {
 	}
 
 	switch req.(type) {
-	case pb.RenameNamespaceRequest:
-		return formatRenameNamespaceRequest(req.(pb.RenameNamespaceRequest))
+	case gitalypb.RenameNamespaceRequest:
+		return formatRenameNamespaceRequest(req.(gitalypb.RenameNamespaceRequest))
 	case repositoryBasedRequest:
 		return formatRepoRequest(req.(repositoryBasedRequest).GetRepository())
 	case namespaceBasedRequest:

@@ -4,17 +4,16 @@ import (
 	"fmt"
 	"io"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/streamio"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) RawBlame(in *pb.RawBlameRequest, stream pb.CommitService_RawBlameServer) error {
+func (s *server) RawBlame(in *gitalypb.RawBlameRequest, stream gitalypb.CommitService_RawBlameServer) error {
 	if err := validateRawBlameRequest(in); err != nil {
 		return status.Errorf(codes.InvalidArgument, "RawBlame: %v", err)
 	}
@@ -32,7 +31,7 @@ func (s *server) RawBlame(in *pb.RawBlameRequest, stream pb.CommitService_RawBla
 	}
 
 	sw := streamio.NewWriter(func(p []byte) error {
-		return stream.Send(&pb.RawBlameResponse{Data: p})
+		return stream.Send(&gitalypb.RawBlameResponse{Data: p})
 	})
 
 	_, err = io.Copy(sw, cmd)
@@ -47,7 +46,7 @@ func (s *server) RawBlame(in *pb.RawBlameRequest, stream pb.CommitService_RawBla
 	return nil
 }
 
-func validateRawBlameRequest(in *pb.RawBlameRequest) error {
+func validateRawBlameRequest(in *gitalypb.RawBlameRequest) error {
 	if len(in.GetRevision()) == 0 {
 		return fmt.Errorf("empty Revision")
 	}

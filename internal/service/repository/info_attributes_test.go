@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 )
@@ -32,7 +32,7 @@ func TestGetInfoAttributesExisting(t *testing.T) {
 	err := ioutil.WriteFile(attrsPath, data, 0644)
 	require.NoError(t, err)
 
-	request := &pb.GetInfoAttributesRequest{Repository: testRepo}
+	request := &gitalypb.GetInfoAttributesRequest{Repository: testRepo}
 	testCtx, cancelCtx := testhelper.Context()
 	defer cancelCtx()
 
@@ -58,7 +58,7 @@ func TestGetInfoAttributesNonExisting(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	request := &pb.GetInfoAttributesRequest{Repository: testRepo}
+	request := &gitalypb.GetInfoAttributesRequest{Repository: testRepo}
 	testCtx, cancelCtx := testhelper.Context()
 	defer cancelCtx()
 

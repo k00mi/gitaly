@@ -3,7 +3,7 @@ package repository
 import (
 	"os/exec"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) RestoreCustomHooks(stream pb.RepositoryService_RestoreCustomHooksServer) error {
+func (s *server) RestoreCustomHooks(stream gitalypb.RepositoryService_RestoreCustomHooksServer) error {
 	firstRequest, err := stream.Recv()
 	if err != nil {
 		return status.Errorf(codes.Internal, "RestoreCustomHooks: first request failed %v", err)
@@ -56,5 +56,5 @@ func (s *server) RestoreCustomHooks(stream pb.RepositoryService_RestoreCustomHoo
 		return status.Errorf(codes.Internal, "RestoreCustomHooks: cmd wait failed: %v", err)
 	}
 
-	return stream.SendAndClose(&pb.RestoreCustomHooksResponse{})
+	return stream.SendAndClose(&gitalypb.RestoreCustomHooksResponse{})
 }

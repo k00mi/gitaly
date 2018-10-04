@@ -6,9 +6,8 @@ import (
 	"io"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
@@ -16,7 +15,7 @@ import (
 
 type treeEntry struct {
 	oid        string
-	objectType pb.TreeEntryResponse_ObjectType
+	objectType gitalypb.TreeEntryResponse_ObjectType
 	data       []byte
 	mode       int32
 	size       int64
@@ -42,7 +41,7 @@ func TestSuccessfulTreeEntry(t *testing.T) {
 			revision: []byte("913c66a37b4a45b9769037c55c2d238bd0942d2e"),
 			path:     []byte("MAINTENANCE.md"),
 			expectedTreeEntry: treeEntry{
-				objectType: pb.TreeEntryResponse_BLOB,
+				objectType: gitalypb.TreeEntryResponse_BLOB,
 				oid:        "95d9f0a5e7bb054e9dd3975589b8dfc689e20e88",
 				size:       1367,
 				mode:       0100644,
@@ -54,7 +53,7 @@ func TestSuccessfulTreeEntry(t *testing.T) {
 			path:     []byte("MAINTENANCE.md"),
 			limit:    40 * 1024,
 			expectedTreeEntry: treeEntry{
-				objectType: pb.TreeEntryResponse_BLOB,
+				objectType: gitalypb.TreeEntryResponse_BLOB,
 				oid:        "95d9f0a5e7bb054e9dd3975589b8dfc689e20e88",
 				size:       1367,
 				mode:       0100644,
@@ -65,7 +64,7 @@ func TestSuccessfulTreeEntry(t *testing.T) {
 			revision: []byte("38008cb17ce1466d8fec2dfa6f6ab8dcfe5cf49e"),
 			path:     []byte("with space/README.md"),
 			expectedTreeEntry: treeEntry{
-				objectType: pb.TreeEntryResponse_BLOB,
+				objectType: gitalypb.TreeEntryResponse_BLOB,
 				oid:        "8c3014aceae45386c3c026a7ea4a1f68660d51d6",
 				size:       36,
 				mode:       0100644,
@@ -77,7 +76,7 @@ func TestSuccessfulTreeEntry(t *testing.T) {
 			path:     []byte("gitaly/file-with-multiple-chunks"),
 			limit:    30 * 1024,
 			expectedTreeEntry: treeEntry{
-				objectType: pb.TreeEntryResponse_BLOB,
+				objectType: gitalypb.TreeEntryResponse_BLOB,
 				oid:        "1c69c4d2a65ad05c24ac3b6780b5748b97ffd3aa",
 				size:       42220,
 				mode:       0100644,
@@ -98,7 +97,7 @@ func TestSuccessfulTreeEntry(t *testing.T) {
 			revision: []byte("e63f41fe459e62e1228fcef60d7189127aeba95a"),
 			path:     []byte("gitlab-grack"),
 			expectedTreeEntry: treeEntry{
-				objectType: pb.TreeEntryResponse_COMMIT,
+				objectType: gitalypb.TreeEntryResponse_COMMIT,
 				oid:        "645f6c4c82fd3f5e06f67134450a570b795e55a6",
 				mode:       0160000,
 			},
@@ -107,7 +106,7 @@ func TestSuccessfulTreeEntry(t *testing.T) {
 			revision: []byte("c347ca2e140aa667b968e51ed0ffe055501fe4f4"),
 			path:     []byte("files/js"),
 			expectedTreeEntry: treeEntry{
-				objectType: pb.TreeEntryResponse_TREE,
+				objectType: gitalypb.TreeEntryResponse_TREE,
 				oid:        "31405c5ddef582c5a9b7a85230413ff90e2fe720",
 				size:       83,
 				mode:       040000,
@@ -117,7 +116,7 @@ func TestSuccessfulTreeEntry(t *testing.T) {
 			revision: []byte("c347ca2e140aa667b968e51ed0ffe055501fe4f4"),
 			path:     []byte("files/js/"),
 			expectedTreeEntry: treeEntry{
-				objectType: pb.TreeEntryResponse_TREE,
+				objectType: gitalypb.TreeEntryResponse_TREE,
 				oid:        "31405c5ddef582c5a9b7a85230413ff90e2fe720",
 				size:       83,
 				mode:       040000,
@@ -127,7 +126,7 @@ func TestSuccessfulTreeEntry(t *testing.T) {
 			revision: []byte("b83d6e391c22777fca1ed3012fce84f633d7fed0"),
 			path:     []byte("foo/bar/.gitkeep"),
 			expectedTreeEntry: treeEntry{
-				objectType: pb.TreeEntryResponse_BLOB,
+				objectType: gitalypb.TreeEntryResponse_BLOB,
 				oid:        "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
 				size:       0,
 				mode:       0100644,
@@ -143,7 +142,7 @@ func TestSuccessfulTreeEntry(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(fmt.Sprintf("test case: revision=%q path=%q", testCase.revision, testCase.path), func(t *testing.T) {
 
-			request := &pb.TreeEntryRequest{
+			request := &gitalypb.TreeEntryRequest{
 				Repository: testRepo,
 				Revision:   testCase.revision,
 				Path:       testCase.path,
@@ -175,11 +174,11 @@ func TestFailedTreeEntryRequestDueToValidationError(t *testing.T) {
 	revision := []byte("d42783470dc29fde2cf459eb3199ee1d7e3f3a72")
 	path := []byte("a/b/c")
 
-	rpcRequests := []pb.TreeEntryRequest{
-		{Repository: &pb.Repository{StorageName: "fake", RelativePath: "path"}, Revision: revision, Path: path}, // Repository doesn't exist
-		{Repository: nil, Revision: revision, Path: path},                                                       // Repository is nil
-		{Repository: testRepo, Revision: nil, Path: path},                                                       // Revision is empty
-		{Repository: testRepo, Revision: revision},                                                              // Path is empty
+	rpcRequests := []gitalypb.TreeEntryRequest{
+		{Repository: &gitalypb.Repository{StorageName: "fake", RelativePath: "path"}, Revision: revision, Path: path}, // Repository doesn't exist
+		{Repository: nil, Revision: revision, Path: path},                                                             // Repository is nil
+		{Repository: testRepo, Revision: nil, Path: path},                                                             // Revision is empty
+		{Repository: testRepo, Revision: revision},                                                                    // Path is empty
 	}
 
 	for _, rpcRequest := range rpcRequests {
@@ -198,7 +197,7 @@ func TestFailedTreeEntryRequestDueToValidationError(t *testing.T) {
 	}
 }
 
-func getTreeEntryFromTreeEntryClient(t *testing.T, client pb.Commit_TreeEntryClient) *treeEntry {
+func getTreeEntryFromTreeEntryClient(t *testing.T, client gitalypb.Commit_TreeEntryClient) *treeEntry {
 	fetchedTreeEntry := &treeEntry{}
 	firstResponseReceived := false
 
@@ -223,7 +222,7 @@ func getTreeEntryFromTreeEntryClient(t *testing.T, client pb.Commit_TreeEntryCli
 	return fetchedTreeEntry
 }
 
-func assertExactReceivedTreeEntry(t *testing.T, client pb.Commit_TreeEntryClient, expectedTreeEntry *treeEntry) {
+func assertExactReceivedTreeEntry(t *testing.T, client gitalypb.Commit_TreeEntryClient, expectedTreeEntry *treeEntry) {
 	fetchedTreeEntry := getTreeEntryFromTreeEntryClient(t, client)
 
 	if fetchedTreeEntry.oid != expectedTreeEntry.oid {
@@ -247,7 +246,7 @@ func assertExactReceivedTreeEntry(t *testing.T, client pb.Commit_TreeEntryClient
 	}
 }
 
-func drainTreeEntryResponse(c pb.Commit_TreeEntryClient) error {
+func drainTreeEntryResponse(c gitalypb.Commit_TreeEntryClient) error {
 	var err error
 	for err == nil {
 		_, err = c.Recv()

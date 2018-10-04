@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/pktline"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 
 	"github.com/stretchr/testify/assert"
@@ -70,8 +70,8 @@ func TestSuccessfulUploadPackRequest(t *testing.T) {
 	pktline.WriteString(requestBuffer, fmt.Sprintf("have %s\n", oldHead))
 	pktline.WriteFlush(requestBuffer)
 
-	req := &pb.PostUploadPackRequest{
-		Repository: &pb.Repository{
+	req := &gitalypb.PostUploadPackRequest{
+		Repository: &gitalypb.Repository{
 			StorageName:  "default",
 			RelativePath: path.Join(remoteRepoRelativePath, ".git"),
 		},
@@ -125,8 +125,8 @@ func TestUploadPackRequestWithGitConfigOptions(t *testing.T) {
 	pktline.WriteString(tee, fmt.Sprintf("have %s\n", have))
 	pktline.WriteFlush(tee)
 
-	rpcRequest := &pb.PostUploadPackRequest{
-		Repository: &pb.Repository{
+	rpcRequest := &gitalypb.PostUploadPackRequest{
+		Repository: &gitalypb.Repository{
 			StorageName:  "default",
 			RelativePath: ourRepoRelativePath,
 		},
@@ -161,7 +161,7 @@ func TestSuccessfulUploadPackDeepenRequest(t *testing.T) {
 	pktline.WriteString(requestBody, "deepen 1")
 	pktline.WriteFlush(requestBody)
 
-	rpcRequest := &pb.PostUploadPackRequest{Repository: testRepo}
+	rpcRequest := &gitalypb.PostUploadPackRequest{Repository: testRepo}
 	response, err := makePostUploadPackRequest(t, serverSocketPath, rpcRequest, requestBody)
 
 	// This assertion is the main reason this test exists.
@@ -173,10 +173,10 @@ func TestFailedUploadPackRequestDueToValidationError(t *testing.T) {
 	server, serverSocketPath := runSmartHTTPServer(t)
 	defer server.Stop()
 
-	rpcRequests := []pb.PostUploadPackRequest{
-		{Repository: &pb.Repository{StorageName: "fake", RelativePath: "path"}}, // Repository doesn't exist
+	rpcRequests := []gitalypb.PostUploadPackRequest{
+		{Repository: &gitalypb.Repository{StorageName: "fake", RelativePath: "path"}}, // Repository doesn't exist
 		{Repository: nil}, // Repository is nil
-		{Repository: &pb.Repository{StorageName: "default", RelativePath: "path/to/repo"}, Data: []byte("Fail")}, // Data exists on first request
+		{Repository: &gitalypb.Repository{StorageName: "default", RelativePath: "path/to/repo"}, Data: []byte("Fail")}, // Data exists on first request
 	}
 
 	for _, rpcRequest := range rpcRequests {
@@ -187,7 +187,7 @@ func TestFailedUploadPackRequestDueToValidationError(t *testing.T) {
 	}
 }
 
-func makePostUploadPackRequest(t *testing.T, serverSocketPath string, in *pb.PostUploadPackRequest, body io.Reader) (*bytes.Buffer, error) {
+func makePostUploadPackRequest(t *testing.T, serverSocketPath string, in *gitalypb.PostUploadPackRequest, body io.Reader) (*bytes.Buffer, error) {
 	client, conn := newSmartHTTPClient(t, serverSocketPath)
 	defer conn.Close()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -199,7 +199,7 @@ func makePostUploadPackRequest(t *testing.T, serverSocketPath string, in *pb.Pos
 
 	if body != nil {
 		sw := streamio.NewWriter(func(p []byte) error {
-			return stream.Send(&pb.PostUploadPackRequest{Data: p})
+			return stream.Send(&gitalypb.PostUploadPackRequest{Data: p})
 		})
 
 		_, err = io.Copy(sw, body)

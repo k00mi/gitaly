@@ -6,17 +6,17 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	log "github.com/sirupsen/logrus"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) SSHReceivePack(stream pb.SSHService_SSHReceivePackServer) error {
+func (s *server) SSHReceivePack(stream gitalypb.SSHService_SSHReceivePackServer) error {
 	req, err := stream.Recv() // First request contains only Repository, GlId, and GlUsername
 	if err != nil {
 		return err
@@ -38,10 +38,10 @@ func (s *server) SSHReceivePack(stream pb.SSHService_SSHReceivePackServer) error
 		return request.GetStdin(), err
 	})
 	stdout := streamio.NewWriter(func(p []byte) error {
-		return stream.Send(&pb.SSHReceivePackResponse{Stdout: p})
+		return stream.Send(&gitalypb.SSHReceivePackResponse{Stdout: p})
 	})
 	stderr := streamio.NewWriter(func(p []byte) error {
-		return stream.Send(&pb.SSHReceivePackResponse{Stderr: p})
+		return stream.Send(&gitalypb.SSHReceivePackResponse{Stderr: p})
 	})
 	env := []string{
 		fmt.Sprintf("GL_ID=%s", req.GlId),
@@ -69,7 +69,7 @@ func (s *server) SSHReceivePack(stream pb.SSHService_SSHReceivePackServer) error
 		if status, ok := command.ExitStatus(err); ok {
 			return helper.DecorateError(
 				codes.Internal,
-				stream.Send(&pb.SSHReceivePackResponse{ExitStatus: &pb.ExitStatus{Value: int32(status)}}),
+				stream.Send(&gitalypb.SSHReceivePackResponse{ExitStatus: &gitalypb.ExitStatus{Value: int32(status)}}),
 			)
 		}
 		return status.Errorf(codes.Unavailable, "SSHReceivePack: %v", err)
@@ -78,7 +78,7 @@ func (s *server) SSHReceivePack(stream pb.SSHService_SSHReceivePackServer) error
 	return nil
 }
 
-func validateFirstReceivePackRequest(req *pb.SSHReceivePackRequest) error {
+func validateFirstReceivePackRequest(req *gitalypb.SSHReceivePackRequest) error {
 	if req.GlId == "" {
 		return status.Errorf(codes.InvalidArgument, "SSHReceivePack: empty GlId")
 	}

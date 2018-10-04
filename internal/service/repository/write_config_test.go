@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
 )
@@ -22,7 +22,7 @@ func TestWriteConfigSuccessful(t *testing.T) {
 
 	testcases := []struct {
 		desc    string
-		repo    *pb.Repository
+		repo    *gitalypb.Repository
 		path    string
 		setPath string
 	}{
@@ -44,7 +44,7 @@ func TestWriteConfigSuccessful(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			c, err := client.WriteConfig(ctx, &pb.WriteConfigRequest{Repository: tc.repo, FullPath: tc.path})
+			c, err := client.WriteConfig(ctx, &gitalypb.WriteConfigRequest{Repository: tc.repo, FullPath: tc.path})
 			require.NoError(t, err)
 			require.NotNil(t, c)
 			require.Empty(t, string(c.GetError()))
@@ -64,12 +64,12 @@ func TestWriteConfigFailure(t *testing.T) {
 
 	testcases := []struct {
 		desc string
-		repo *pb.Repository
+		repo *gitalypb.Repository
 		path string
 	}{
 		{
 			desc: "invalid repo",
-			repo: &pb.Repository{StorageName: testhelper.DefaultStorageName, RelativePath: "non-existing.git"},
+			repo: &gitalypb.Repository{StorageName: testhelper.DefaultStorageName, RelativePath: "non-existing.git"},
 			path: "non-existing.git",
 		},
 	}
@@ -79,7 +79,7 @@ func TestWriteConfigFailure(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			c, err := client.WriteConfig(ctx, &pb.WriteConfigRequest{Repository: tc.repo, FullPath: tc.path})
+			c, err := client.WriteConfig(ctx, &gitalypb.WriteConfigRequest{Repository: tc.repo, FullPath: tc.path})
 			testhelper.RequireGrpcError(t, err, codes.NotFound)
 			require.Nil(t, c)
 			require.Empty(t, c.GetError())

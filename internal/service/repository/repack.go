@@ -7,25 +7,25 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 )
 
-func (server) RepackFull(ctx context.Context, in *pb.RepackFullRequest) (*pb.RepackFullResponse, error) {
+func (server) RepackFull(ctx context.Context, in *gitalypb.RepackFullRequest) (*gitalypb.RepackFullResponse, error) {
 	if err := repackCommand(ctx, "RepackFull", in.GetRepository(), in.GetCreateBitmap(), "-A", "--pack-kept-objects"); err != nil {
 		return nil, err
 	}
-	return &pb.RepackFullResponse{}, nil
+	return &gitalypb.RepackFullResponse{}, nil
 }
 
-func (server) RepackIncremental(ctx context.Context, in *pb.RepackIncrementalRequest) (*pb.RepackIncrementalResponse, error) {
+func (server) RepackIncremental(ctx context.Context, in *gitalypb.RepackIncrementalRequest) (*gitalypb.RepackIncrementalResponse, error) {
 	if err := repackCommand(ctx, "RepackIncremental", in.GetRepository(), false); err != nil {
 		return nil, err
 	}
-	return &pb.RepackIncrementalResponse{}, nil
+	return &gitalypb.RepackIncrementalResponse{}, nil
 }
 
-func repackCommand(ctx context.Context, rpcName string, repo *pb.Repository, bitmap bool, args ...string) error {
+func repackCommand(ctx context.Context, rpcName string, repo *gitalypb.Repository, bitmap bool, args ...string) error {
 	grpc_logrus.Extract(ctx).WithFields(log.Fields{
 		"WriteBitmaps": bitmap,
 	}).Debug(rpcName)

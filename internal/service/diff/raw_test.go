@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -28,7 +27,7 @@ func TestSuccessfulRawDiffRequest(t *testing.T) {
 
 	rightCommit := "e395f646b1499e8e0279445fc99a0596a65fab7e"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
-	rpcRequest := &pb.RawDiffRequest{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
+	rpcRequest := &gitalypb.RawDiffRequest{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
 
 	c, err := client.RawDiff(ctx, rpcRequest)
 	require.NoError(t, err)
@@ -69,12 +68,12 @@ func TestFailedRawDiffRequestDueToValidations(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.RawDiffRequest
+		request *gitalypb.RawDiffRequest
 		code    codes.Code
 	}{
 		{
 			desc: "empty left commit",
-			request: &pb.RawDiffRequest{
+			request: &gitalypb.RawDiffRequest{
 				Repository:    testRepo,
 				LeftCommitId:  "",
 				RightCommitId: "e395f646b1499e8e0279445fc99a0596a65fab7e",
@@ -83,7 +82,7 @@ func TestFailedRawDiffRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty right commit",
-			request: &pb.RawDiffRequest{
+			request: &gitalypb.RawDiffRequest{
 				Repository:    testRepo,
 				RightCommitId: "",
 				LeftCommitId:  "e395f646b1499e8e0279445fc99a0596a65fab7e",
@@ -92,7 +91,7 @@ func TestFailedRawDiffRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty repo",
-			request: &pb.RawDiffRequest{
+			request: &gitalypb.RawDiffRequest{
 				Repository:    nil,
 				RightCommitId: "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab",
 				LeftCommitId:  "e395f646b1499e8e0279445fc99a0596a65fab7e",
@@ -127,7 +126,7 @@ func TestSuccessfulRawPatchRequest(t *testing.T) {
 
 	rightCommit := "e395f646b1499e8e0279445fc99a0596a65fab7e"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
-	rpcRequest := &pb.RawPatchRequest{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
+	rpcRequest := &gitalypb.RawPatchRequest{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
 
 	c, err := client.RawPatch(ctx, rpcRequest)
 	require.NoError(t, err)
@@ -161,12 +160,12 @@ func TestFailedRawPatchRequestDueToValidations(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.RawPatchRequest
+		request *gitalypb.RawPatchRequest
 		code    codes.Code
 	}{
 		{
 			desc: "empty left commit",
-			request: &pb.RawPatchRequest{
+			request: &gitalypb.RawPatchRequest{
 				Repository:    testRepo,
 				LeftCommitId:  "",
 				RightCommitId: "e395f646b1499e8e0279445fc99a0596a65fab7e",
@@ -175,7 +174,7 @@ func TestFailedRawPatchRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty right commit",
-			request: &pb.RawPatchRequest{
+			request: &gitalypb.RawPatchRequest{
 				Repository:    testRepo,
 				RightCommitId: "",
 				LeftCommitId:  "e395f646b1499e8e0279445fc99a0596a65fab7e",
@@ -184,7 +183,7 @@ func TestFailedRawPatchRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty repo",
-			request: &pb.RawPatchRequest{
+			request: &gitalypb.RawPatchRequest{
 				Repository:    nil,
 				RightCommitId: "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab",
 				LeftCommitId:  "e395f646b1499e8e0279445fc99a0596a65fab7e",
@@ -204,7 +203,7 @@ func TestFailedRawPatchRequestDueToValidations(t *testing.T) {
 	}
 }
 
-func drainRawDiffResponse(c pb.DiffService_RawDiffClient) error {
+func drainRawDiffResponse(c gitalypb.DiffService_RawDiffClient) error {
 	var err error
 	for err == nil {
 		_, err = c.Recv()
@@ -212,7 +211,7 @@ func drainRawDiffResponse(c pb.DiffService_RawDiffClient) error {
 	return err
 }
 
-func drainRawPatchResponse(c pb.DiffService_RawPatchClient) error {
+func drainRawPatchResponse(c gitalypb.DiffService_RawPatchClient) error {
 	var err error
 	for err == nil {
 		_, err = c.Recv()

@@ -9,7 +9,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -36,7 +36,7 @@ func TestSuccessfulFindAllBranchNames(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	rpcRequest := &pb.FindAllBranchNamesRequest{Repository: testRepo}
+	rpcRequest := &gitalypb.FindAllBranchNamesRequest{Repository: testRepo}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -69,7 +69,7 @@ func TestEmptyFindAllBranchNamesRequest(t *testing.T) {
 
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
-	rpcRequest := &pb.FindAllBranchNamesRequest{}
+	rpcRequest := &gitalypb.FindAllBranchNamesRequest{}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -94,8 +94,8 @@ func TestInvalidRepoFindAllBranchNamesRequest(t *testing.T) {
 
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
-	repo := &pb.Repository{StorageName: "default", RelativePath: "made/up/path"}
-	rpcRequest := &pb.FindAllBranchNamesRequest{Repository: repo}
+	repo := &gitalypb.Repository{StorageName: "default", RelativePath: "made/up/path"}
+	rpcRequest := &gitalypb.FindAllBranchNamesRequest{Repository: repo}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -124,7 +124,7 @@ func TestSuccessfulFindAllTagNames(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	rpcRequest := &pb.FindAllTagNamesRequest{Repository: testRepo}
+	rpcRequest := &gitalypb.FindAllTagNamesRequest{Repository: testRepo}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -158,7 +158,7 @@ func TestEmptyFindAllTagNamesRequest(t *testing.T) {
 
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
-	rpcRequest := &pb.FindAllTagNamesRequest{}
+	rpcRequest := &gitalypb.FindAllTagNamesRequest{}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -183,8 +183,8 @@ func TestInvalidRepoFindAllTagNamesRequest(t *testing.T) {
 
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
-	repo := &pb.Repository{StorageName: "default", RelativePath: "made/up/path"}
-	rpcRequest := &pb.FindAllTagNamesRequest{Repository: repo}
+	repo := &gitalypb.Repository{StorageName: "default", RelativePath: "made/up/path"}
+	rpcRequest := &gitalypb.FindAllTagNamesRequest{Repository: repo}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -253,47 +253,47 @@ func TestDefaultBranchName(t *testing.T) {
 
 	testCases := []struct {
 		desc            string
-		findBranchNames func(context.Context, *pb.Repository) ([][]byte, error)
-		headReference   func(context.Context, *pb.Repository) ([]byte, error)
+		findBranchNames func(context.Context, *gitalypb.Repository) ([][]byte, error)
+		headReference   func(context.Context, *gitalypb.Repository) ([]byte, error)
 		expected        []byte
 	}{
 		{
 			desc:     "Get first branch when only one branch exists",
 			expected: []byte("refs/heads/foo"),
-			findBranchNames: func(context.Context, *pb.Repository) ([][]byte, error) {
+			findBranchNames: func(context.Context, *gitalypb.Repository) ([][]byte, error) {
 				return [][]byte{[]byte("refs/heads/foo")}, nil
 			},
-			headReference: func(context.Context, *pb.Repository) ([]byte, error) { return nil, nil },
+			headReference: func(context.Context, *gitalypb.Repository) ([]byte, error) { return nil, nil },
 		},
 		{
 			desc:            "Get empy ref if no branches exists",
 			expected:        nil,
-			findBranchNames: func(context.Context, *pb.Repository) ([][]byte, error) { return [][]byte{}, nil },
-			headReference:   func(context.Context, *pb.Repository) ([]byte, error) { return nil, nil },
+			findBranchNames: func(context.Context, *gitalypb.Repository) ([][]byte, error) { return [][]byte{}, nil },
+			headReference:   func(context.Context, *gitalypb.Repository) ([]byte, error) { return nil, nil },
 		},
 		{
 			desc:     "Get the name of the head reference when more than one branch exists",
 			expected: []byte("refs/heads/bar"),
-			findBranchNames: func(context.Context, *pb.Repository) ([][]byte, error) {
+			findBranchNames: func(context.Context, *gitalypb.Repository) ([][]byte, error) {
 				return [][]byte{[]byte("refs/heads/foo"), []byte("refs/heads/bar")}, nil
 			},
-			headReference: func(context.Context, *pb.Repository) ([]byte, error) { return []byte("refs/heads/bar"), nil },
+			headReference: func(context.Context, *gitalypb.Repository) ([]byte, error) { return []byte("refs/heads/bar"), nil },
 		},
 		{
 			desc:     "Get `ref/heads/master` when several branches exist",
 			expected: []byte("refs/heads/master"),
-			findBranchNames: func(context.Context, *pb.Repository) ([][]byte, error) {
+			findBranchNames: func(context.Context, *gitalypb.Repository) ([][]byte, error) {
 				return [][]byte{[]byte("refs/heads/foo"), []byte("refs/heads/master"), []byte("refs/heads/bar")}, nil
 			},
-			headReference: func(context.Context, *pb.Repository) ([]byte, error) { return nil, nil },
+			headReference: func(context.Context, *gitalypb.Repository) ([]byte, error) { return nil, nil },
 		},
 		{
 			desc:     "Get the name of the first branch when several branches exists and no other conditions are met",
 			expected: []byte("refs/heads/foo"),
-			findBranchNames: func(context.Context, *pb.Repository) ([][]byte, error) {
+			findBranchNames: func(context.Context, *gitalypb.Repository) ([][]byte, error) {
 				return [][]byte{[]byte("refs/heads/foo"), []byte("refs/heads/bar"), []byte("refs/heads/baz")}, nil
 			},
-			headReference: func(context.Context, *pb.Repository) ([]byte, error) { return nil, nil },
+			headReference: func(context.Context, *gitalypb.Repository) ([]byte, error) { return nil, nil },
 		},
 	}
 
@@ -323,7 +323,7 @@ func TestSuccessfulFindDefaultBranchName(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	rpcRequest := &pb.FindDefaultBranchNameRequest{Repository: testRepo}
+	rpcRequest := &gitalypb.FindDefaultBranchNameRequest{Repository: testRepo}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -343,7 +343,7 @@ func TestEmptyFindDefaultBranchNameRequest(t *testing.T) {
 
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
-	rpcRequest := &pb.FindDefaultBranchNameRequest{}
+	rpcRequest := &gitalypb.FindDefaultBranchNameRequest{}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -360,8 +360,8 @@ func TestInvalidRepoFindDefaultBranchNameRequest(t *testing.T) {
 
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
-	repo := &pb.Repository{StorageName: "default", RelativePath: "/made/up/path"}
-	rpcRequest := &pb.FindDefaultBranchNameRequest{Repository: repo}
+	repo := &gitalypb.Repository{StorageName: "default", RelativePath: "/made/up/path"}
+	rpcRequest := &gitalypb.FindDefaultBranchNameRequest{Repository: repo}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -382,16 +382,16 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 	blobID := "faaf198af3a36dbf41961466703cc1d47c61d051"
 	commitID := "6f6d7e7ed97bb5f0054f2b1df789b39ca89b6ff9"
 
-	gitCommit := &pb.GitCommit{
+	gitCommit := &gitalypb.GitCommit{
 		Id:      commitID,
 		Subject: []byte("More submodules"),
 		Body:    []byte("More submodules\n\nSigned-off-by: Dmitriy Zaporozhets <dmitriy.zaporozhets@gmail.com>\n"),
-		Author: &pb.CommitAuthor{
+		Author: &gitalypb.CommitAuthor{
 			Name:  []byte("Dmitriy Zaporozhets"),
 			Email: []byte("dmitriy.zaporozhets@gmail.com"),
 			Date:  &timestamp.Timestamp{Seconds: 1393491261},
 		},
-		Committer: &pb.CommitAuthor{
+		Committer: &gitalypb.CommitAuthor{
 			Name:  []byte("Dmitriy Zaporozhets"),
 			Email: []byte("dmitriy.zaporozhets@gmail.com"),
 			Date:  &timestamp.Timestamp{Seconds: 1393491261},
@@ -428,14 +428,14 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
-	rpcRequest := &pb.FindAllTagsRequest{Repository: testRepoCopy}
+	rpcRequest := &gitalypb.FindAllTagsRequest{Repository: testRepoCopy}
 
 	c, err := client.FindAllTags(ctx, rpcRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	var receivedTags []*pb.Tag
+	var receivedTags []*gitalypb.Tag
 	for {
 		r, err := c.Recv()
 		if err == io.EOF {
@@ -447,7 +447,7 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 		receivedTags = append(receivedTags, r.GetTags()...)
 	}
 
-	expectedTags := []*pb.Tag{
+	expectedTags := []*gitalypb.Tag{
 		{
 			Name:         []byte("v1.0.0"),
 			Id:           "f4e6814c3e4e7a0de82a9e7cd20c626cc963a2f8",
@@ -458,16 +458,16 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 		{
 			Name: []byte("v1.1.0"),
 			Id:   "8a2a6eb295bb170b34c24c76c49ed0e9b2eaf34b",
-			TargetCommit: &pb.GitCommit{
+			TargetCommit: &gitalypb.GitCommit{
 				Id:      "5937ac0a7beb003549fc5fd26fc247adbce4a52e",
 				Subject: []byte("Add submodule from gitlab.com"),
 				Body:    []byte("Add submodule from gitlab.com\n\nSigned-off-by: Dmitriy Zaporozhets <dmitriy.zaporozhets@gmail.com>\n"),
-				Author: &pb.CommitAuthor{
+				Author: &gitalypb.CommitAuthor{
 					Name:  []byte("Dmitriy Zaporozhets"),
 					Email: []byte("dmitriy.zaporozhets@gmail.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1393491698},
 				},
-				Committer: &pb.CommitAuthor{
+				Committer: &gitalypb.CommitAuthor{
 					Name:  []byte("Dmitriy Zaporozhets"),
 					Email: []byte("dmitriy.zaporozhets@gmail.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1393491698},
@@ -525,7 +525,7 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 	}
 }
 
-func findTag(tags []*pb.Tag, tagName []byte) *pb.Tag {
+func findTag(tags []*gitalypb.Tag, tagName []byte) *gitalypb.Tag {
 	for _, t := range tags {
 		if bytes.Equal(t.Name, tagName) {
 			return t
@@ -542,16 +542,16 @@ func TestInvalidFindAllTagsRequest(t *testing.T) {
 	defer conn.Close()
 	testCases := []struct {
 		desc    string
-		request *pb.FindAllTagsRequest
+		request *gitalypb.FindAllTagsRequest
 	}{
 		{
 			desc:    "empty request",
-			request: &pb.FindAllTagsRequest{},
+			request: &gitalypb.FindAllTagsRequest{},
 		},
 		{
 			desc: "invalid repo",
-			request: &pb.FindAllTagsRequest{
-				Repository: &pb.Repository{
+			request: &gitalypb.FindAllTagsRequest{
+				Repository: &gitalypb.Repository{
 					StorageName:  "fake",
 					RelativePath: "repo",
 				},
@@ -588,7 +588,7 @@ func TestSuccessfulFindLocalBranches(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	rpcRequest := &pb.FindLocalBranchesRequest{Repository: testRepo}
+	rpcRequest := &gitalypb.FindLocalBranchesRequest{Repository: testRepo}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -597,7 +597,7 @@ func TestSuccessfulFindLocalBranches(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var branches []*pb.FindLocalBranchResponse
+	var branches []*gitalypb.FindLocalBranchResponse
 	for {
 		r, err := c.Recv()
 		if err == io.EOF {
@@ -610,16 +610,16 @@ func TestSuccessfulFindLocalBranches(t *testing.T) {
 	}
 
 	for name, target := range localBranches {
-		localBranch := &pb.FindLocalBranchResponse{
+		localBranch := &gitalypb.FindLocalBranchResponse{
 			Name:          []byte(name),
 			CommitId:      target.Id,
 			CommitSubject: target.Subject,
-			CommitAuthor: &pb.FindLocalBranchCommitAuthor{
+			CommitAuthor: &gitalypb.FindLocalBranchCommitAuthor{
 				Name:  target.Author.Name,
 				Email: target.Author.Email,
 				Date:  target.Author.Date,
 			},
-			CommitCommitter: &pb.FindLocalBranchCommitAuthor{
+			CommitCommitter: &gitalypb.FindLocalBranchCommitAuthor{
 				Name:  target.Committer.Name,
 				Email: target.Committer.Email,
 				Date:  target.Committer.Date,
@@ -651,22 +651,22 @@ func TestFindLocalBranchesSort(t *testing.T) {
 	testCases := []struct {
 		desc          string
 		relativeOrder []string
-		sortBy        pb.FindLocalBranchesRequest_SortBy
+		sortBy        gitalypb.FindLocalBranchesRequest_SortBy
 	}{
 		{
 			desc:          "In ascending order by name",
 			relativeOrder: []string{"refs/heads/'test'", "refs/heads/100%branch", "refs/heads/improve/awesome", "refs/heads/master"},
-			sortBy:        pb.FindLocalBranchesRequest_NAME,
+			sortBy:        gitalypb.FindLocalBranchesRequest_NAME,
 		},
 		{
 			desc:          "In ascending order by commiter date",
 			relativeOrder: []string{"refs/heads/improve/awesome", "refs/heads/'test'", "refs/heads/100%branch", "refs/heads/master"},
-			sortBy:        pb.FindLocalBranchesRequest_UPDATED_ASC,
+			sortBy:        gitalypb.FindLocalBranchesRequest_UPDATED_ASC,
 		},
 		{
 			desc:          "In descending order by commiter date",
 			relativeOrder: []string{"refs/heads/master", "refs/heads/100%branch", "refs/heads/'test'", "refs/heads/improve/awesome"},
-			sortBy:        pb.FindLocalBranchesRequest_UPDATED_DESC,
+			sortBy:        gitalypb.FindLocalBranchesRequest_UPDATED_DESC,
 		},
 	}
 
@@ -681,7 +681,7 @@ func TestFindLocalBranchesSort(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			rpcRequest := &pb.FindLocalBranchesRequest{Repository: testRepo, SortBy: testCase.sortBy}
+			rpcRequest := &gitalypb.FindLocalBranchesRequest{Repository: testRepo, SortBy: testCase.sortBy}
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
@@ -717,7 +717,7 @@ func TestEmptyFindLocalBranchesRequest(t *testing.T) {
 
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
-	rpcRequest := &pb.FindLocalBranchesRequest{}
+	rpcRequest := &gitalypb.FindLocalBranchesRequest{}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -740,20 +740,20 @@ func TestSuccessfulFindAllBranchesRequest(t *testing.T) {
 	server, serverSocketPath := runRefServiceServer(t)
 	defer server.Stop()
 
-	remoteBranch := &pb.FindAllBranchesResponse_Branch{
+	remoteBranch := &gitalypb.FindAllBranchesResponse_Branch{
 		Name: []byte("refs/remotes/origin/fake-remote-branch"),
-		Target: &pb.GitCommit{
+		Target: &gitalypb.GitCommit{
 			Id:        "913c66a37b4a45b9769037c55c2d238bd0942d2e",
 			Subject:   []byte("Files, encoding and much more"),
 			Body:      []byte("Files, encoding and much more\n\nSigned-off-by: Dmitriy Zaporozhets <dmitriy.zaporozhets@gmail.com>\n"),
 			BodySize:  98,
 			ParentIds: []string{"cfe32cf61b73a0d5e9f13e774abde7ff789b1660"},
-			Author: &pb.CommitAuthor{
+			Author: &gitalypb.CommitAuthor{
 				Name:  []byte("Dmitriy Zaporozhets"),
 				Email: []byte("dmitriy.zaporozhets@gmail.com"),
 				Date:  &timestamp.Timestamp{Seconds: 1393488896},
 			},
-			Committer: &pb.CommitAuthor{
+			Committer: &gitalypb.CommitAuthor{
 				Name:  []byte("Dmitriy Zaporozhets"),
 				Email: []byte("dmitriy.zaporozhets@gmail.com"),
 				Date:  &timestamp.Timestamp{Seconds: 1393488896},
@@ -767,7 +767,7 @@ func TestSuccessfulFindAllBranchesRequest(t *testing.T) {
 	testhelper.CreateRemoteBranch(t, testRepoPath, "origin",
 		"fake-remote-branch", remoteBranch.Target.Id)
 
-	request := &pb.FindAllBranchesRequest{Repository: testRepo}
+	request := &gitalypb.FindAllBranchesRequest{Repository: testRepo}
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -781,7 +781,7 @@ func TestSuccessfulFindAllBranchesRequest(t *testing.T) {
 
 	// It contains local branches
 	for name, target := range localBranches {
-		branch := &pb.FindAllBranchesResponse_Branch{
+		branch := &gitalypb.FindAllBranchesResponse_Branch{
 			Name:   []byte(name),
 			Target: target,
 		}
@@ -816,12 +816,12 @@ func TestSuccessfulFindAllBranchesRequestWithMergedBranches(t *testing.T) {
 
 	expectedRefs := []string{"refs/heads/100%branch", "refs/heads/improve/awesome", "refs/heads/'test'"}
 
-	var expectedBranches []*pb.FindAllBranchesResponse_Branch
+	var expectedBranches []*gitalypb.FindAllBranchesResponse_Branch
 	for _, name := range expectedRefs {
 		target, ok := localBranches[name]
 		require.True(t, ok)
 
-		branch := &pb.FindAllBranchesResponse_Branch{
+		branch := &gitalypb.FindAllBranchesResponse_Branch{
 			Name:   []byte(name),
 			Target: target,
 		}
@@ -830,19 +830,19 @@ func TestSuccessfulFindAllBranchesRequestWithMergedBranches(t *testing.T) {
 
 	masterCommit, err := log.GetCommit(ctx, testRepo, "master")
 	require.NoError(t, err)
-	expectedBranches = append(expectedBranches, &pb.FindAllBranchesResponse_Branch{
+	expectedBranches = append(expectedBranches, &gitalypb.FindAllBranchesResponse_Branch{
 		Name:   []byte("refs/heads/master"),
 		Target: masterCommit,
 	})
 
 	testCases := []struct {
 		desc             string
-		request          *pb.FindAllBranchesRequest
-		expectedBranches []*pb.FindAllBranchesResponse_Branch
+		request          *gitalypb.FindAllBranchesRequest
+		expectedBranches []*gitalypb.FindAllBranchesResponse_Branch
 	}{
 		{
 			desc: "all merged branches",
-			request: &pb.FindAllBranchesRequest{
+			request: &gitalypb.FindAllBranchesRequest{
 				Repository: testRepo,
 				MergedOnly: true,
 			},
@@ -850,7 +850,7 @@ func TestSuccessfulFindAllBranchesRequestWithMergedBranches(t *testing.T) {
 		},
 		{
 			desc: "all merged from a list of branches",
-			request: &pb.FindAllBranchesRequest{
+			request: &gitalypb.FindAllBranchesRequest{
 				Repository: testRepo,
 				MergedOnly: true,
 				MergedBranches: [][]byte{
@@ -893,16 +893,16 @@ func TestInvalidFindAllBranchesRequest(t *testing.T) {
 	defer conn.Close()
 	testCases := []struct {
 		description string
-		request     pb.FindAllBranchesRequest
+		request     gitalypb.FindAllBranchesRequest
 	}{
 		{
 			description: "Empty request",
-			request:     pb.FindAllBranchesRequest{},
+			request:     gitalypb.FindAllBranchesRequest{},
 		},
 		{
 			description: "Invalid repo",
-			request: pb.FindAllBranchesRequest{
-				Repository: &pb.Repository{
+			request: gitalypb.FindAllBranchesRequest{
+				Repository: &gitalypb.Repository{
 					StorageName:  "fake",
 					RelativePath: "repo",
 				},
@@ -930,7 +930,7 @@ func TestInvalidFindAllBranchesRequest(t *testing.T) {
 	}
 }
 
-func readFindAllBranchesResponsesFromClient(t *testing.T, c pb.RefService_FindAllBranchesClient) (branches []*pb.FindAllBranchesResponse_Branch) {
+func readFindAllBranchesResponsesFromClient(t *testing.T, c gitalypb.RefService_FindAllBranchesClient) (branches []*gitalypb.FindAllBranchesResponse_Branch) {
 	for {
 		r, err := c.Recv()
 		if err == io.EOF {
@@ -992,7 +992,7 @@ func TestListTagNamesContainingCommit(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			request := &pb.ListTagNamesContainingCommitRequest{Repository: testRepo, CommitId: tc.commitID}
+			request := &gitalypb.ListTagNamesContainingCommitRequest{Repository: testRepo, CommitId: tc.commitID}
 
 			c, err := client.ListTagNamesContainingCommit(ctx, request)
 			require.NoError(t, err)
@@ -1086,7 +1086,7 @@ func TestListBranchNamesContainingCommit(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			request := &pb.ListBranchNamesContainingCommitRequest{Repository: testRepo, CommitId: tc.commitID}
+			request := &gitalypb.ListBranchNamesContainingCommitRequest{Repository: testRepo, CommitId: tc.commitID}
 
 			c, err := client.ListBranchNamesContainingCommit(ctx, request)
 			require.NoError(t, err)

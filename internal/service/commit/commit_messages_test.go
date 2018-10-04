@@ -5,10 +5,9 @@ import (
 	"strings"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -33,7 +32,7 @@ func TestSuccessfulGetCommitMessagesRequest(t *testing.T) {
 	commit1ID := testhelper.CreateCommit(t, testRepoPath, "local-big-commits", &testhelper.CreateCommitOpts{Message: message1})
 	commit2ID := testhelper.CreateCommit(t, testRepoPath, "local-big-commits", &testhelper.CreateCommitOpts{Message: message2, ParentID: commit1ID})
 
-	request := &pb.GetCommitMessagesRequest{
+	request := &gitalypb.GetCommitMessagesRequest{
 		Repository: testRepo,
 		CommitIds:  []string{commit1ID, commit2ID},
 	}
@@ -41,7 +40,7 @@ func TestSuccessfulGetCommitMessagesRequest(t *testing.T) {
 	c, err := client.GetCommitMessages(ctx, request)
 	require.NoError(t, err)
 
-	expectedMessages := []*pb.GetCommitMessagesResponse{
+	expectedMessages := []*gitalypb.GetCommitMessagesResponse{
 		{
 			CommitId: commit1ID,
 			Message:  []byte(message1),
@@ -65,12 +64,12 @@ func TestFailedGetCommitMessagesRequest(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.GetCommitMessagesRequest
+		request *gitalypb.GetCommitMessagesRequest
 		code    codes.Code
 	}{
 		{
 			desc: "empty Repository",
-			request: &pb.GetCommitMessagesRequest{
+			request: &gitalypb.GetCommitMessagesRequest{
 				Repository: nil,
 				CommitIds:  []string{"5937ac0a7beb003549fc5fd26fc247adbce4a52e"},
 			},
@@ -98,7 +97,7 @@ func TestFailedGetCommitMessagesRequest(t *testing.T) {
 	}
 }
 
-func readAllMessagesFromClient(t *testing.T, c pb.CommitService_GetCommitMessagesClient) (messages []*pb.GetCommitMessagesResponse) {
+func readAllMessagesFromClient(t *testing.T, c gitalypb.CommitService_GetCommitMessagesClient) (messages []*gitalypb.GetCommitMessagesResponse) {
 	for {
 		resp, err := c.Recv()
 		if err == io.EOF {

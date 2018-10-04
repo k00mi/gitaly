@@ -7,7 +7,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
@@ -15,11 +15,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func copyRepoWithNewRemote(t *testing.T, repo *pb.Repository, remote string) *pb.Repository {
+func copyRepoWithNewRemote(t *testing.T, repo *gitalypb.Repository, remote string) *gitalypb.Repository {
 	repoPath, err := helper.GetRepoPath(repo)
 	require.NoError(t, err)
 
-	cloneRepo := &pb.Repository{StorageName: repo.GetStorageName(), RelativePath: "fetch-remote-clone.git"}
+	cloneRepo := &gitalypb.Repository{StorageName: repo.GetStorageName(), RelativePath: "fetch-remote-clone.git"}
 
 	clonePath := path.Join(testhelper.GitlabTestStoragePath(), "fetch-remote-clone.git")
 	t.Logf("clonePath: %q", clonePath)
@@ -45,7 +45,7 @@ func TestFetchRemoteSuccess(t *testing.T) {
 	client, _ := newRepositoryClient(t, serverSocketPath)
 
 	cloneRepo := copyRepoWithNewRemote(t, testRepo, "my-remote")
-	defer func(r *pb.Repository) {
+	defer func(r *gitalypb.Repository) {
 		path, err := helper.GetRepoPath(r)
 		if err != nil {
 			panic(err)
@@ -53,7 +53,7 @@ func TestFetchRemoteSuccess(t *testing.T) {
 		os.RemoveAll(path)
 	}(cloneRepo)
 
-	resp, err := client.FetchRemote(ctx, &pb.FetchRemoteRequest{
+	resp, err := client.FetchRemote(ctx, &gitalypb.FetchRemoteRequest{
 		Repository: cloneRepo,
 		Remote:     "my-remote",
 		Timeout:    120,
@@ -70,13 +70,13 @@ func TestFetchRemoteFailure(t *testing.T) {
 
 	tests := []struct {
 		desc string
-		req  *pb.FetchRemoteRequest
+		req  *gitalypb.FetchRemoteRequest
 		code codes.Code
 		err  string
 	}{
 		{
 			desc: "invalid storage",
-			req:  &pb.FetchRemoteRequest{Repository: &pb.Repository{StorageName: "invalid", RelativePath: "foobar.git"}},
+			req:  &gitalypb.FetchRemoteRequest{Repository: &gitalypb.Repository{StorageName: "invalid", RelativePath: "foobar.git"}},
 			code: codes.InvalidArgument,
 			err:  "Storage can not be found by name 'invalid'",
 		},

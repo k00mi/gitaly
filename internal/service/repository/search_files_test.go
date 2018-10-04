@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
 )
@@ -113,7 +113,7 @@ func TestSearchFilesByContentSuccessful(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			stream, err := client.SearchFilesByContent(ctx, &pb.SearchFilesByContentRequest{
+			stream, err := client.SearchFilesByContent(ctx, &gitalypb.SearchFilesByContentRequest{
 				Repository: testRepo,
 				Query:      tc.query,
 				Ref:        []byte(tc.ref),
@@ -144,7 +144,7 @@ func TestSearchFilesByContentFailure(t *testing.T) {
 
 	testCases := []struct {
 		desc  string
-		repo  *pb.Repository
+		repo  *gitalypb.Repository
 		query string
 		ref   string
 		code  codes.Code
@@ -173,7 +173,7 @@ func TestSearchFilesByContentFailure(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
 
-			stream, err := client.SearchFilesByContent(ctx, &pb.SearchFilesByContentRequest{
+			stream, err := client.SearchFilesByContent(ctx, &gitalypb.SearchFilesByContentRequest{
 				Repository: tc.repo,
 				Query:      tc.query,
 				Ref:        []byte(tc.ref),
@@ -221,7 +221,7 @@ func TestSearchFilesByNameSuccessful(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		stream, err := client.SearchFilesByName(ctx, &pb.SearchFilesByNameRequest{
+		stream, err := client.SearchFilesByName(ctx, &gitalypb.SearchFilesByNameRequest{
 			Repository: testRepo,
 			Ref:        tc.ref,
 			Query:      tc.query,
@@ -249,7 +249,7 @@ func TestSearchFilesByNameFailure(t *testing.T) {
 
 	testCases := []struct {
 		desc  string
-		repo  *pb.Repository
+		repo  *gitalypb.Repository
 		query string
 		ref   string
 		code  codes.Code
@@ -278,7 +278,7 @@ func TestSearchFilesByNameFailure(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
 
-			stream, err := client.SearchFilesByName(ctx, &pb.SearchFilesByNameRequest{
+			stream, err := client.SearchFilesByName(ctx, &gitalypb.SearchFilesByNameRequest{
 				Repository: tc.repo,
 				Query:      tc.query,
 				Ref:        []byte(tc.ref),
@@ -292,7 +292,7 @@ func TestSearchFilesByNameFailure(t *testing.T) {
 	}
 }
 
-func consumeFilenameByContent(stream pb.RepositoryService_SearchFilesByContentClient) ([][]byte, error) {
+func consumeFilenameByContent(stream gitalypb.RepositoryService_SearchFilesByContentClient) ([][]byte, error) {
 	ret := make([][]byte, 0)
 	for done := false; !done; {
 		resp, err := stream.Recv()
@@ -307,7 +307,7 @@ func consumeFilenameByContent(stream pb.RepositoryService_SearchFilesByContentCl
 	return ret, nil
 }
 
-func consumeFilenameByName(stream pb.RepositoryService_SearchFilesByNameClient) ([][]byte, error) {
+func consumeFilenameByName(stream gitalypb.RepositoryService_SearchFilesByNameClient) ([][]byte, error) {
 	ret := make([][]byte, 0)
 	for done := false; !done; {
 		resp, err := stream.Recv()

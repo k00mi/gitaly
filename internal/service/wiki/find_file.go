@@ -1,15 +1,14 @@
 package wiki
 
 import (
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) WikiFindFile(request *pb.WikiFindFileRequest, stream pb.WikiService_WikiFindFileServer) error {
+func (s *server) WikiFindFile(request *gitalypb.WikiFindFileRequest, stream gitalypb.WikiService_WikiFindFileServer) error {
 	ctx := stream.Context()
 
 	if len(request.GetName()) == 0 {

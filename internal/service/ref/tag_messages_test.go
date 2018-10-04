@@ -5,10 +5,9 @@ import (
 	"strings"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -33,7 +32,7 @@ func TestSuccessfulGetTagMessagesRequest(t *testing.T) {
 	tag1ID := testhelper.CreateTag(t, testRepoPath, "big-tag-1", "master", &testhelper.CreateTagOpts{Message: message1})
 	tag2ID := testhelper.CreateTag(t, testRepoPath, "big-tag-2", "master~", &testhelper.CreateTagOpts{Message: message2})
 
-	request := &pb.GetTagMessagesRequest{
+	request := &gitalypb.GetTagMessagesRequest{
 		Repository: testRepo,
 		TagIds:     []string{tag1ID, tag2ID},
 	}
@@ -41,7 +40,7 @@ func TestSuccessfulGetTagMessagesRequest(t *testing.T) {
 	c, err := client.GetTagMessages(ctx, request)
 	require.NoError(t, err)
 
-	expectedMessages := []*pb.GetTagMessagesResponse{
+	expectedMessages := []*gitalypb.GetTagMessagesResponse{
 		{
 			TagId:   tag1ID,
 			Message: []byte(message1 + "\n"),
@@ -65,12 +64,12 @@ func TestFailedGetTagMessagesRequest(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.GetTagMessagesRequest
+		request *gitalypb.GetTagMessagesRequest
 		code    codes.Code
 	}{
 		{
 			desc: "empty Repository",
-			request: &pb.GetTagMessagesRequest{
+			request: &gitalypb.GetTagMessagesRequest{
 				Repository: nil,
 				TagIds:     []string{"5937ac0a7beb003549fc5fd26fc247adbce4a52e"},
 			},
@@ -98,7 +97,7 @@ func TestFailedGetTagMessagesRequest(t *testing.T) {
 	}
 }
 
-func readAllMessagesFromClient(t *testing.T, c pb.RefService_GetTagMessagesClient) (messages []*pb.GetTagMessagesResponse) {
+func readAllMessagesFromClient(t *testing.T, c gitalypb.RefService_GetTagMessagesClient) (messages []*gitalypb.GetTagMessagesResponse) {
 	for {
 		resp, err := c.Recv()
 		if err == io.EOF {

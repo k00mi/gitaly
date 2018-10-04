@@ -3,17 +3,17 @@ package commit
 import (
 	"fmt"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 type commitsBetweenSender struct {
-	stream pb.CommitService_CommitsBetweenServer
+	stream gitalypb.CommitService_CommitsBetweenServer
 }
 
-func (s *server) CommitsBetween(in *pb.CommitsBetweenRequest, stream pb.CommitService_CommitsBetweenServer) error {
+func (s *server) CommitsBetween(in *gitalypb.CommitsBetweenRequest, stream gitalypb.CommitService_CommitsBetweenServer) error {
 	if err := git.ValidateRevision(in.GetFrom()); err != nil {
 		return status.Errorf(codes.InvalidArgument, "CommitsBetween: from: %v", err)
 	}
@@ -27,6 +27,6 @@ func (s *server) CommitsBetween(in *pb.CommitsBetweenRequest, stream pb.CommitSe
 	return sendCommits(stream.Context(), sender, in.GetRepository(), []string{revisionRange}, nil, "--reverse")
 }
 
-func (sender *commitsBetweenSender) Send(commits []*pb.GitCommit) error {
-	return sender.stream.Send(&pb.CommitsBetweenResponse{Commits: commits})
+func (sender *commitsBetweenSender) Send(commits []*gitalypb.GitCommit) error {
+	return sender.stream.Send(&gitalypb.CommitsBetweenResponse{Commits: commits})
 }

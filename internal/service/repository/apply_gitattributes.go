@@ -7,7 +7,7 @@ import (
 	"os"
 	"path"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -72,7 +72,7 @@ func applyGitattributes(c *catfile.Batch, repoPath string, revision []byte) erro
 	return os.Rename(tempFile.Name(), attributesPath)
 }
 
-func (server) ApplyGitattributes(ctx context.Context, in *pb.ApplyGitattributesRequest) (*pb.ApplyGitattributesResponse, error) {
+func (server) ApplyGitattributes(ctx context.Context, in *gitalypb.ApplyGitattributesRequest) (*gitalypb.ApplyGitattributesResponse, error) {
 	repo := in.GetRepository()
 	repoPath, err := helper.GetRepoPath(repo)
 	if err != nil {
@@ -92,5 +92,5 @@ func (server) ApplyGitattributes(ctx context.Context, in *pb.ApplyGitattributesR
 		return nil, err
 	}
 
-	return &pb.ApplyGitattributesResponse{}, nil
+	return &gitalypb.ApplyGitattributesResponse{}, nil
 }

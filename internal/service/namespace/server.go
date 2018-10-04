@@ -1,12 +1,10 @@
 package namespace
 
-import (
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-)
+import "gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 
 type server struct{}
 
 // NewServer creates a new instance of a gRPC namespace server
-func NewServer() pb.NamespaceServiceServer {
+func NewServer() gitalypb.NamespaceServiceServer {
 	return &server{}
 }

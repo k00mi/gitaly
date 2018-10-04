@@ -10,9 +10,8 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"github.com/stretchr/testify/assert"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
 
 func TestRepackIncrementalSuccess(t *testing.T) {
@@ -34,7 +33,7 @@ func TestRepackIncrementalSuccess(t *testing.T) {
 	testTime := time.Date(2006, 01, 02, 15, 04, 05, 0, time.UTC)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	c, err := client.RepackIncremental(ctx, &pb.RepackIncrementalRequest{Repository: testRepo})
+	c, err := client.RepackIncremental(ctx, &gitalypb.RepackIncrementalRequest{Repository: testRepo})
 	assert.NoError(t, err)
 	assert.NotNil(t, c)
 
@@ -50,21 +49,21 @@ func TestRepackIncrementalFailure(t *testing.T) {
 	defer conn.Close()
 
 	tests := []struct {
-		repo *pb.Repository
+		repo *gitalypb.Repository
 		code codes.Code
 		desc string
 	}{
 		{desc: "nil repo", repo: nil, code: codes.InvalidArgument},
-		{desc: "invalid storage name", repo: &pb.Repository{StorageName: "foo"}, code: codes.InvalidArgument},
-		{desc: "no storage name", repo: &pb.Repository{RelativePath: "bar"}, code: codes.InvalidArgument},
-		{desc: "non-existing repo", repo: &pb.Repository{StorageName: testhelper.TestRepository().GetStorageName(), RelativePath: "bar"}, code: codes.NotFound},
+		{desc: "invalid storage name", repo: &gitalypb.Repository{StorageName: "foo"}, code: codes.InvalidArgument},
+		{desc: "no storage name", repo: &gitalypb.Repository{RelativePath: "bar"}, code: codes.InvalidArgument},
+		{desc: "non-existing repo", repo: &gitalypb.Repository{StorageName: testhelper.TestRepository().GetStorageName(), RelativePath: "bar"}, code: codes.NotFound},
 	}
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			_, err := client.RepackIncremental(ctx, &pb.RepackIncrementalRequest{Repository: test.repo})
+			_, err := client.RepackIncremental(ctx, &gitalypb.RepackIncrementalRequest{Repository: test.repo})
 			testhelper.RequireGrpcError(t, err, test.code)
 		})
 	}
@@ -81,11 +80,11 @@ func TestRepackFullSuccess(t *testing.T) {
 	defer cleanupFn()
 
 	tests := []struct {
-		req  *pb.RepackFullRequest
+		req  *gitalypb.RepackFullRequest
 		desc string
 	}{
-		{req: &pb.RepackFullRequest{Repository: testRepo, CreateBitmap: true}, desc: "with bitmap"},
-		{req: &pb.RepackFullRequest{Repository: testRepo, CreateBitmap: false}, desc: "without bitmap"},
+		{req: &gitalypb.RepackFullRequest{Repository: testRepo, CreateBitmap: true}, desc: "with bitmap"},
+		{req: &gitalypb.RepackFullRequest{Repository: testRepo, CreateBitmap: false}, desc: "without bitmap"},
 	}
 
 	packPath := path.Join(testRepoPath, "objects", "pack")
@@ -130,21 +129,21 @@ func TestRepackFullFailure(t *testing.T) {
 	defer conn.Close()
 
 	tests := []struct {
-		repo *pb.Repository
+		repo *gitalypb.Repository
 		code codes.Code
 		desc string
 	}{
 		{desc: "nil repo", repo: nil, code: codes.InvalidArgument},
-		{desc: "invalid storage name", repo: &pb.Repository{StorageName: "foo"}, code: codes.InvalidArgument},
-		{desc: "no storage name", repo: &pb.Repository{RelativePath: "bar"}, code: codes.InvalidArgument},
-		{desc: "non-existing repo", repo: &pb.Repository{StorageName: testhelper.TestRepository().GetStorageName(), RelativePath: "bar"}, code: codes.NotFound},
+		{desc: "invalid storage name", repo: &gitalypb.Repository{StorageName: "foo"}, code: codes.InvalidArgument},
+		{desc: "no storage name", repo: &gitalypb.Repository{RelativePath: "bar"}, code: codes.InvalidArgument},
+		{desc: "non-existing repo", repo: &gitalypb.Repository{StorageName: testhelper.TestRepository().GetStorageName(), RelativePath: "bar"}, code: codes.NotFound},
 	}
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			_, err := client.RepackFull(ctx, &pb.RepackFullRequest{Repository: test.repo})
+			_, err := client.RepackFull(ctx, &gitalypb.RepackFullRequest{Repository: test.repo})
 			testhelper.RequireGrpcError(t, err, test.code)
 		})
 	}

@@ -3,15 +3,14 @@ package wiki
 import (
 	"fmt"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) WikiWritePage(stream pb.WikiService_WikiWritePageServer) error {
+func (s *server) WikiWritePage(stream gitalypb.WikiService_WikiWritePageServer) error {
 	firstRequest, err := stream.Recv()
 	if err != nil {
 		return err
@@ -62,7 +61,7 @@ func (s *server) WikiWritePage(stream pb.WikiService_WikiWritePageServer) error 
 	return stream.SendAndClose(response)
 }
 
-func validateWikiWritePageRequest(request *pb.WikiWritePageRequest) error {
+func validateWikiWritePageRequest(request *gitalypb.WikiWritePageRequest) error {
 	if len(request.GetName()) == 0 {
 		return fmt.Errorf("empty Name")
 	}

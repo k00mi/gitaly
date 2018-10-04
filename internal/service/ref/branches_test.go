@@ -5,10 +5,9 @@ import (
 	"os/exec"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -37,12 +36,12 @@ func TestSuccessfulCreateBranchRequest(t *testing.T) {
 	testCases := []struct {
 		desc           string
 		startPoint     string
-		expectedBranch *pb.Branch
+		expectedBranch *gitalypb.Branch
 	}{
 		{
 			desc:       "empty start point",
 			startPoint: "",
-			expectedBranch: &pb.Branch{
+			expectedBranch: &gitalypb.Branch{
 				Name:         []byte("to-be-created-soon-1"),
 				TargetCommit: headCommit,
 			},
@@ -50,7 +49,7 @@ func TestSuccessfulCreateBranchRequest(t *testing.T) {
 		{
 			desc:       "present start point",
 			startPoint: startPoint,
-			expectedBranch: &pb.Branch{
+			expectedBranch: &gitalypb.Branch{
 				Name:         []byte("to-be-created-soon-2"),
 				TargetCommit: startPointCommit,
 			},
@@ -60,7 +59,7 @@ func TestSuccessfulCreateBranchRequest(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
 			branchName := testCase.expectedBranch.Name
-			request := &pb.CreateBranchRequest{
+			request := &gitalypb.CreateBranchRequest{
 				Repository: testRepo,
 				Name:       branchName,
 				StartPoint: []byte(testCase.startPoint),
@@ -73,7 +72,7 @@ func TestSuccessfulCreateBranchRequest(t *testing.T) {
 			defer exec.Command("git", "-C", testRepoPath, "branch", "-D", string(branchName)).Run()
 
 			require.NoError(t, err)
-			require.Equal(t, pb.CreateBranchResponse_OK, response.Status, "mismatched status")
+			require.Equal(t, gitalypb.CreateBranchResponse_OK, response.Status, "mismatched status")
 			require.Equal(t, testCase.expectedBranch, response.Branch, "mismatched branches")
 		})
 	}
@@ -93,29 +92,29 @@ func TestFailedCreateBranchRequest(t *testing.T) {
 		desc       string
 		branchName string
 		startPoint string
-		status     pb.CreateBranchResponse_Status
+		status     gitalypb.CreateBranchResponse_Status
 	}{
 		{
 			desc:       "branch exists",
 			branchName: "master",
-			status:     pb.CreateBranchResponse_ERR_EXISTS,
+			status:     gitalypb.CreateBranchResponse_ERR_EXISTS,
 		},
 		{
 			desc:       "empty branch name",
 			branchName: "",
-			status:     pb.CreateBranchResponse_ERR_INVALID,
+			status:     gitalypb.CreateBranchResponse_ERR_INVALID,
 		},
 		{
 			desc:       "invalid start point",
 			branchName: "shiny-new-branch",
 			startPoint: "i-do-not-exist",
-			status:     pb.CreateBranchResponse_ERR_INVALID_START_POINT,
+			status:     gitalypb.CreateBranchResponse_ERR_INVALID_START_POINT,
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			request := &pb.CreateBranchRequest{
+			request := &gitalypb.CreateBranchRequest{
 				Repository: testRepo,
 				Name:       []byte(testCase.branchName),
 				StartPoint: []byte(testCase.startPoint),
@@ -164,7 +163,7 @@ func TestSuccessfulDeleteBranchRequest(t *testing.T) {
 		t.Run(testCase.desc, func(t *testing.T) {
 			testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", branchNameInput)
 
-			request := &pb.DeleteBranchRequest{
+			request := &gitalypb.DeleteBranchRequest{
 				Repository: testRepo,
 				Name:       []byte(testCase.branchName),
 			}
@@ -210,7 +209,7 @@ func TestFailedDeleteBranchRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			request := &pb.DeleteBranchRequest{
+			request := &gitalypb.DeleteBranchRequest{
 				Repository: testRepo,
 				Name:       []byte(testCase.branchName),
 			}
@@ -241,7 +240,7 @@ func TestSuccessfulFindBranchRequest(t *testing.T) {
 	branchTarget, err := log.GetCommit(ctx, testRepo, branchNameInput)
 	require.NoError(t, err)
 
-	branch := &pb.Branch{
+	branch := &gitalypb.Branch{
 		Name:         []byte(branchNameInput),
 		TargetCommit: branchTarget,
 	}
@@ -249,7 +248,7 @@ func TestSuccessfulFindBranchRequest(t *testing.T) {
 	testCases := []struct {
 		desc           string
 		branchName     string
-		expectedBranch *pb.Branch
+		expectedBranch *gitalypb.Branch
 	}{
 		{
 			desc:           "regular branch name",
@@ -274,7 +273,7 @@ func TestSuccessfulFindBranchRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			request := &pb.FindBranchRequest{
+			request := &gitalypb.FindBranchRequest{
 				Repository: testRepo,
 				Name:       []byte(testCase.branchName),
 			}
@@ -315,7 +314,7 @@ func TestFailedFindBranchRequest(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
 
-			request := &pb.FindBranchRequest{
+			request := &gitalypb.FindBranchRequest{
 				Repository: testRepo,
 				Name:       []byte(testCase.branchName),
 			}

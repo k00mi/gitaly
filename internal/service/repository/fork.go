@@ -6,13 +6,12 @@ import (
 	"os/exec"
 	"path"
 
+	"github.com/golang/protobuf/jsonpb"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-
-	"github.com/golang/protobuf/jsonpb"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -20,7 +19,7 @@ import (
 
 const gitalyInternalURL = "ssh://gitaly/internal.git"
 
-func (s *server) CreateFork(ctx context.Context, req *pb.CreateForkRequest) (*pb.CreateForkResponse, error) {
+func (s *server) CreateFork(ctx context.Context, req *gitalypb.CreateForkRequest) (*gitalypb.CreateForkResponse, error) {
 	targetRepository := req.Repository
 	sourceRepository := req.SourceRepository
 
@@ -61,7 +60,7 @@ func (s *server) CreateFork(ctx context.Context, req *pb.CreateForkRequest) (*pb
 
 	sourceRepositoryGitalyToken := sourceRepositoryStorageInfo["token"]
 
-	cloneReq := &pb.SSHUploadPackRequest{Repository: sourceRepository}
+	cloneReq := &gitalypb.SSHUploadPackRequest{Repository: sourceRepository}
 	pbMarshaler := &jsonpb.Marshaler{}
 	payload, err := pbMarshaler.MarshalToString(cloneReq)
 	if err != nil {
@@ -97,9 +96,9 @@ func (s *server) CreateFork(ctx context.Context, req *pb.CreateForkRequest) (*pb
 	}
 
 	// CreateRepository is harmless on existing repositories with the side effect that it creates the hook symlink.
-	if _, err := s.CreateRepository(ctx, &pb.CreateRepositoryRequest{Repository: targetRepository}); err != nil {
+	if _, err := s.CreateRepository(ctx, &gitalypb.CreateRepositoryRequest{Repository: targetRepository}); err != nil {
 		return nil, status.Errorf(codes.Internal, "CreateFork: create hooks failed: %v", err)
 	}
 
-	return &pb.CreateForkResponse{}, nil
+	return &gitalypb.CreateForkResponse{}, nil
 }

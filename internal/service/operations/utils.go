@@ -3,12 +3,12 @@ package operations
 import (
 	"fmt"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 )
 
 type cherryPickOrRevertRequest interface {
-	GetUser() *pb.User
-	GetCommit() *pb.GitCommit
+	GetUser() *gitalypb.User
+	GetCommit() *gitalypb.GitCommit
 	GetBranchName() []byte
 	GetMessage() []byte
 }

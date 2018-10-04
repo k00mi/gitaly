@@ -5,10 +5,9 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
@@ -48,7 +47,7 @@ func TestSuccessfulRawBlameRequest(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(fmt.Sprintf("test case: revision=%q path=%q", testCase.revision, testCase.path), func(t *testing.T) {
 
-			request := &pb.RawBlameRequest{
+			request := &gitalypb.RawBlameRequest{
 				Repository: testRepo,
 				Revision:   testCase.revision,
 				Path:       testCase.path,
@@ -86,11 +85,11 @@ func TestFailedRawBlameRequest(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	invalidRepo := &pb.Repository{StorageName: "fake", RelativePath: "path"}
+	invalidRepo := &gitalypb.Repository{StorageName: "fake", RelativePath: "path"}
 
 	testCases := []struct {
 		description    string
-		repo           *pb.Repository
+		repo           *gitalypb.Repository
 		revision, path []byte
 		code           codes.Code
 	}{
@@ -120,7 +119,7 @@ func TestFailedRawBlameRequest(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.description, func(t *testing.T) {
 
-			request := pb.RawBlameRequest{
+			request := gitalypb.RawBlameRequest{
 				Repository: testCase.repo,
 				Revision:   testCase.revision,
 				Path:       testCase.path,
@@ -138,7 +137,7 @@ func TestFailedRawBlameRequest(t *testing.T) {
 	}
 }
 
-func drainRawBlameResponse(c pb.CommitService_RawBlameClient) error {
+func drainRawBlameResponse(c gitalypb.CommitService_RawBlameClient) error {
 	var err error
 	for err == nil {
 		_, err = c.Recv()

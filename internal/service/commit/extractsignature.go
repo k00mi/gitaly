@@ -1,11 +1,11 @@
 package commit
 
 import (
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 )
 
-func (s *server) ExtractCommitSignature(request *pb.ExtractCommitSignatureRequest, stream pb.CommitService_ExtractCommitSignatureServer) error {
+func (s *server) ExtractCommitSignature(request *gitalypb.ExtractCommitSignatureRequest, stream gitalypb.CommitService_ExtractCommitSignatureServer) error {
 	ctx := stream.Context()
 
 	client, err := s.CommitServiceClient(ctx)

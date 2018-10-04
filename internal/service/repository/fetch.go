@@ -1,13 +1,13 @@
 package repository
 
 import (
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 
 	"golang.org/x/net/context"
 )
 
-func (s *server) FetchSourceBranch(ctx context.Context, req *pb.FetchSourceBranchRequest) (*pb.FetchSourceBranchResponse, error) {
+func (s *server) FetchSourceBranch(ctx context.Context, req *gitalypb.FetchSourceBranchRequest) (*gitalypb.FetchSourceBranchResponse, error) {
 	client, err := s.RepositoryServiceClient(ctx)
 	if err != nil {
 		return nil, err

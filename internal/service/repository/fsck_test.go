@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
@@ -25,7 +25,7 @@ func TestFsckSuccess(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	c, err := client.Fsck(ctx, &pb.FsckRequest{Repository: testRepo})
+	c, err := client.Fsck(ctx, &gitalypb.FsckRequest{Repository: testRepo})
 	assert.NoError(t, err)
 	assert.NotNil(t, c)
 	assert.Empty(t, c.GetError())
@@ -51,7 +51,7 @@ func TestFsckFailureSeverlyBrokenRepo(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, fd.Close())
 
-	c, err := client.Fsck(ctx, &pb.FsckRequest{Repository: testRepo})
+	c, err := client.Fsck(ctx, &gitalypb.FsckRequest{Repository: testRepo})
 	assert.NoError(t, err)
 	assert.NotNil(t, c)
 	assert.Contains(t, strings.ToLower(string(c.GetError())), "not a git repository")
@@ -74,7 +74,7 @@ func TestFsckFailureSlightlyBrokenRepo(t *testing.T) {
 	// proper repo, but `fsck` complains about broken refs...
 	require.NoError(t, os.RemoveAll(path.Join(testRepoPath, "objects", "pack")))
 
-	c, err := client.Fsck(ctx, &pb.FsckRequest{Repository: testRepo})
+	c, err := client.Fsck(ctx, &gitalypb.FsckRequest{Repository: testRepo})
 	assert.NoError(t, err)
 	assert.NotNil(t, c)
 	assert.NotEmpty(t, string(c.GetError()))

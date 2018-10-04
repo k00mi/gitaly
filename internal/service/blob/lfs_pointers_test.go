@@ -5,9 +5,8 @@ import (
 	"os/exec"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -36,7 +35,7 @@ func TestSuccessfulGetLFSPointersRequest(t *testing.T) {
 		"60ecb67744cb56576c30214ff52294f8ce2def98", // commit
 	}
 
-	expectedLFSPointers := []*pb.LFSPointer{
+	expectedLFSPointers := []*gitalypb.LFSPointer{
 		{
 			Size: 133,
 			Data: []byte("version https://git-lfs.github.com/spec/v1\noid sha256:91eff75a492a3ed0dfcb544d7f31326bc4014c8551849c192fd1e48d4dd2c897\nsize 1575078\n\n"),
@@ -54,7 +53,7 @@ func TestSuccessfulGetLFSPointersRequest(t *testing.T) {
 		},
 	}
 
-	request := &pb.GetLFSPointersRequest{
+	request := &gitalypb.GetLFSPointersRequest{
 		Repository: testRepo,
 		BlobIds:    append(lfsPointerIds, otherObjectIds...),
 	}
@@ -62,7 +61,7 @@ func TestSuccessfulGetLFSPointersRequest(t *testing.T) {
 	stream, err := client.GetLFSPointers(ctx, request)
 	require.NoError(t, err)
 
-	var receivedLFSPointers []*pb.LFSPointer
+	var receivedLFSPointers []*gitalypb.LFSPointer
 	for {
 		resp, err := stream.Recv()
 		if err == io.EOF {
@@ -89,12 +88,12 @@ func TestFailedGetLFSPointersRequestDueToValidations(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.GetLFSPointersRequest
+		request *gitalypb.GetLFSPointersRequest
 		code    codes.Code
 	}{
 		{
 			desc: "empty Repository",
-			request: &pb.GetLFSPointersRequest{
+			request: &gitalypb.GetLFSPointersRequest{
 				Repository: nil,
 				BlobIds:    []string{"f00"},
 			},
@@ -102,7 +101,7 @@ func TestFailedGetLFSPointersRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty BlobIds",
-			request: &pb.GetLFSPointersRequest{
+			request: &gitalypb.GetLFSPointersRequest{
 				Repository: testRepo,
 				BlobIds:    nil,
 			},
@@ -148,16 +147,16 @@ func TestSuccessfulGetNewLFSPointersRequest(t *testing.T) {
 
 	testCases := []struct {
 		desc                string
-		request             *pb.GetNewLFSPointersRequest
-		expectedLFSPointers []*pb.LFSPointer
+		request             *gitalypb.GetNewLFSPointersRequest
+		expectedLFSPointers []*gitalypb.LFSPointer
 	}{
 		{
 			desc: "standard request",
-			request: &pb.GetNewLFSPointersRequest{
+			request: &gitalypb.GetNewLFSPointersRequest{
 				Repository: testRepo,
 				Revision:   revision,
 			},
-			expectedLFSPointers: []*pb.LFSPointer{
+			expectedLFSPointers: []*gitalypb.LFSPointer{
 				{
 					Size: 133,
 					Data: []byte("version https://git-lfs.github.com/spec/v1\noid sha256:91eff75a492a3ed0dfcb544d7f31326bc4014c8551849c192fd1e48d4dd2c897\nsize 1575078\n\n"),
@@ -177,11 +176,11 @@ func TestSuccessfulGetNewLFSPointersRequest(t *testing.T) {
 		},
 		{
 			desc: "request with revision in alternate directory",
-			request: &pb.GetNewLFSPointersRequest{
+			request: &gitalypb.GetNewLFSPointersRequest{
 				Repository: testRepo,
 				Revision:   altDirsCommit,
 			},
-			expectedLFSPointers: []*pb.LFSPointer{
+			expectedLFSPointers: []*gitalypb.LFSPointer{
 				{
 					Size: 133,
 					Data: []byte("version https://git-lfs.github.com/spec/v1\noid sha256:91eff75a492a3ed0dfcb544d7f31326bc4014c8551849c192fd1e48d4dd2c897\nsize 1575078\n\n"),
@@ -201,7 +200,7 @@ func TestSuccessfulGetNewLFSPointersRequest(t *testing.T) {
 		},
 		{
 			desc: "request with limit",
-			request: &pb.GetNewLFSPointersRequest{
+			request: &gitalypb.GetNewLFSPointersRequest{
 				Repository: testRepo,
 				Revision:   revision,
 				// This is limiting the amount of lines processed from the
@@ -212,7 +211,7 @@ func TestSuccessfulGetNewLFSPointersRequest(t *testing.T) {
 				// way the current implementation works ¯\_(ツ)_/¯
 				Limit: 19,
 			},
-			expectedLFSPointers: []*pb.LFSPointer{
+			expectedLFSPointers: []*gitalypb.LFSPointer{
 				{
 					Size: 127,
 					Data: []byte("version https://git-lfs.github.com/spec/v1\noid sha256:bad71f905b60729f502ca339f7c9f001281a3d12c68a5da7f15de8009f4bd63d\nsize 18\n"),
@@ -227,12 +226,12 @@ func TestSuccessfulGetNewLFSPointersRequest(t *testing.T) {
 		},
 		{
 			desc: "with NotInAll true",
-			request: &pb.GetNewLFSPointersRequest{
+			request: &gitalypb.GetNewLFSPointersRequest{
 				Repository: testRepo,
 				Revision:   newRevision,
 				NotInAll:   true,
 			},
-			expectedLFSPointers: []*pb.LFSPointer{
+			expectedLFSPointers: []*gitalypb.LFSPointer{
 				{
 					Size: 133,
 					Data: []byte("version https://git-lfs.github.com/spec/v1\noid sha256:91eff75a492a3ed0dfcb544d7f31326bc4014c8551849c192fd1e48d4dd2c897\nsize 1575078\n\n"),
@@ -242,12 +241,12 @@ func TestSuccessfulGetNewLFSPointersRequest(t *testing.T) {
 		},
 		{
 			desc: "with some NotInRefs elements",
-			request: &pb.GetNewLFSPointersRequest{
+			request: &gitalypb.GetNewLFSPointersRequest{
 				Repository: testRepo,
 				Revision:   revision,
 				NotInRefs:  [][]byte{[]byte("048721d90c449b244b7b4c53a9186b04330174ec")},
 			},
-			expectedLFSPointers: []*pb.LFSPointer{
+			expectedLFSPointers: []*gitalypb.LFSPointer{
 				{
 					Size: 127,
 					Data: []byte("version https://git-lfs.github.com/spec/v1\noid sha256:bad71f905b60729f502ca339f7c9f001281a3d12c68a5da7f15de8009f4bd63d\nsize 18\n"),
@@ -271,7 +270,7 @@ func TestSuccessfulGetNewLFSPointersRequest(t *testing.T) {
 			stream, err := client.GetNewLFSPointers(ctx, tc.request)
 			require.NoError(t, err)
 
-			var receivedLFSPointers []*pb.LFSPointer
+			var receivedLFSPointers []*gitalypb.LFSPointer
 			for {
 				resp, err := stream.Recv()
 				if err == io.EOF {
@@ -300,7 +299,7 @@ func TestFailedGetNewLFSPointersRequestDueToValidations(t *testing.T) {
 
 	testCases := []struct {
 		desc       string
-		repository *pb.Repository
+		repository *gitalypb.Repository
 		revision   []byte
 	}{
 		{
@@ -322,7 +321,7 @@ func TestFailedGetNewLFSPointersRequestDueToValidations(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			request := &pb.GetNewLFSPointersRequest{
+			request := &gitalypb.GetNewLFSPointersRequest{
 				Repository: tc.repository,
 				Revision:   tc.revision,
 			}
@@ -340,7 +339,7 @@ func TestFailedGetNewLFSPointersRequestDueToValidations(t *testing.T) {
 	}
 }
 
-func drainNewPointers(c pb.BlobService_GetNewLFSPointersClient) error {
+func drainNewPointers(c gitalypb.BlobService_GetNewLFSPointersClient) error {
 	for {
 		_, err := c.Recv()
 		if err != nil {
@@ -362,7 +361,7 @@ func TestSuccessfulGetAllLFSPointersRequest(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	request := &pb.GetAllLFSPointersRequest{
+	request := &gitalypb.GetAllLFSPointersRequest{
 		Repository: testRepo,
 		Revision:   []byte("54fcc214b94e78d7a41a9a8fe6d87a5e59500e51"),
 	}
@@ -370,7 +369,7 @@ func TestSuccessfulGetAllLFSPointersRequest(t *testing.T) {
 	c, err := client.GetAllLFSPointers(ctx, request)
 	require.NoError(t, err)
 
-	expectedLFSPointers := []*pb.LFSPointer{
+	expectedLFSPointers := []*gitalypb.LFSPointer{
 		{
 			Size: 133,
 			Data: []byte("version https://git-lfs.github.com/spec/v1\noid sha256:91eff75a492a3ed0dfcb544d7f31326bc4014c8551849c192fd1e48d4dd2c897\nsize 1575078\n\n"),
@@ -390,8 +389,8 @@ func TestSuccessfulGetAllLFSPointersRequest(t *testing.T) {
 	require.ElementsMatch(t, getAllPointers(t, c), expectedLFSPointers)
 }
 
-func getAllPointers(t *testing.T, c pb.BlobService_GetAllLFSPointersClient) []*pb.LFSPointer {
-	var receivedLFSPointers []*pb.LFSPointer
+func getAllPointers(t *testing.T, c gitalypb.BlobService_GetAllLFSPointersClient) []*gitalypb.LFSPointer {
+	var receivedLFSPointers []*gitalypb.LFSPointer
 	for {
 		resp, err := c.Recv()
 		if err == io.EOF {
@@ -420,7 +419,7 @@ func TestFailedGetAllLFSPointersRequestDueToValidations(t *testing.T) {
 
 	testCases := []struct {
 		desc       string
-		repository *pb.Repository
+		repository *gitalypb.Repository
 		revision   []byte
 	}{
 		{
@@ -442,7 +441,7 @@ func TestFailedGetAllLFSPointersRequestDueToValidations(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			request := &pb.GetAllLFSPointersRequest{
+			request := &gitalypb.GetAllLFSPointersRequest{
 				Repository: tc.repository,
 				Revision:   tc.revision,
 			}
@@ -457,7 +456,7 @@ func TestFailedGetAllLFSPointersRequestDueToValidations(t *testing.T) {
 	}
 }
 
-func drainAllPointers(c pb.BlobService_GetAllLFSPointersClient) error {
+func drainAllPointers(c gitalypb.BlobService_GetAllLFSPointersClient) error {
 	for {
 		_, err := c.Recv()
 		if err != nil {

@@ -6,7 +6,7 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	log "github.com/sirupsen/logrus"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/diff"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"google.golang.org/grpc/codes"
@@ -18,7 +18,7 @@ type requestWithLeftRightCommitIds interface {
 	GetRightCommitId() string
 }
 
-func (s *server) CommitDiff(in *pb.CommitDiffRequest, stream pb.DiffService_CommitDiffServer) error {
+func (s *server) CommitDiff(in *gitalypb.CommitDiffRequest, stream gitalypb.DiffService_CommitDiffServer) error {
 	grpc_logrus.Extract(stream.Context()).WithFields(log.Fields{
 		"LeftCommitId":           in.LeftCommitId,
 		"RightCommitId":          in.RightCommitId,
@@ -68,7 +68,7 @@ func (s *server) CommitDiff(in *pb.CommitDiffRequest, stream pb.DiffService_Comm
 	limits.SafeMaxBytes = int(in.SafeMaxBytes)
 
 	return eachDiff(stream.Context(), "CommitDiff", in.Repository, cmdArgs, limits, func(diff *diff.Diff) error {
-		response := &pb.CommitDiffResponse{
+		response := &gitalypb.CommitDiffResponse{
 			FromPath:       diff.FromPath,
 			ToPath:         diff.ToPath,
 			FromId:         diff.FromID,
@@ -106,7 +106,7 @@ func (s *server) CommitDiff(in *pb.CommitDiffRequest, stream pb.DiffService_Comm
 				}
 
 				// Use a new response so we don't send other fields (FromPath, ...) over and over
-				response = &pb.CommitDiffResponse{}
+				response = &gitalypb.CommitDiffResponse{}
 			}
 		}
 
@@ -114,7 +114,7 @@ func (s *server) CommitDiff(in *pb.CommitDiffRequest, stream pb.DiffService_Comm
 	})
 }
 
-func (s *server) CommitDelta(in *pb.CommitDeltaRequest, stream pb.DiffService_CommitDeltaServer) error {
+func (s *server) CommitDelta(in *gitalypb.CommitDeltaRequest, stream gitalypb.DiffService_CommitDeltaServer) error {
 	grpc_logrus.Extract(stream.Context()).WithFields(log.Fields{
 		"LeftCommitId":  in.LeftCommitId,
 		"RightCommitId": in.RightCommitId,
@@ -145,7 +145,7 @@ func (s *server) CommitDelta(in *pb.CommitDeltaRequest, stream pb.DiffService_Co
 		}
 	}
 
-	var batch []*pb.CommitDelta
+	var batch []*gitalypb.CommitDelta
 	var batchSize int
 
 	flushFunc := func() error {
@@ -153,7 +153,7 @@ func (s *server) CommitDelta(in *pb.CommitDeltaRequest, stream pb.DiffService_Co
 			return nil
 		}
 
-		if err := stream.Send(&pb.CommitDeltaResponse{Deltas: batch}); err != nil {
+		if err := stream.Send(&gitalypb.CommitDeltaResponse{Deltas: batch}); err != nil {
 			return status.Errorf(codes.Unavailable, "CommitDelta: send: %v", err)
 		}
 
@@ -161,7 +161,7 @@ func (s *server) CommitDelta(in *pb.CommitDeltaRequest, stream pb.DiffService_Co
 	}
 
 	err := eachDiff(stream.Context(), "CommitDelta", in.Repository, cmdArgs, diff.Limits{}, func(diff *diff.Diff) error {
-		delta := &pb.CommitDelta{
+		delta := &gitalypb.CommitDelta{
 			FromPath: diff.FromPath,
 			ToPath:   diff.ToPath,
 			FromId:   diff.FromID,
@@ -203,7 +203,7 @@ func validateRequest(in requestWithLeftRightCommitIds) error {
 	return nil
 }
 
-func eachDiff(ctx context.Context, rpc string, repo *pb.Repository, cmdArgs []string, limits diff.Limits, callback func(*diff.Diff) error) error {
+func eachDiff(ctx context.Context, rpc string, repo *gitalypb.Repository, cmdArgs []string, limits diff.Limits, callback func(*diff.Diff) error) error {
 	cmd, err := git.Command(ctx, repo, cmdArgs...)
 	if err != nil {
 		if _, ok := status.FromError(err); ok {

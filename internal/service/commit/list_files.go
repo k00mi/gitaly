@@ -8,13 +8,13 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
 )
 
-func (s *server) ListFiles(in *pb.ListFilesRequest, stream pb.CommitService_ListFilesServer) error {
+func (s *server) ListFiles(in *gitalypb.ListFilesRequest, stream gitalypb.CommitService_ListFilesServer) error {
 	grpc_logrus.Extract(stream.Context()).WithFields(log.Fields{
 		"Revision": in.GetRevision(),
 	}).Debug("ListFiles")
@@ -37,7 +37,7 @@ func (s *server) ListFiles(in *pb.ListFilesRequest, stream pb.CommitService_List
 		}
 	}
 	if !git.IsValidRef(stream.Context(), repo, string(revision)) {
-		return stream.Send(&pb.ListFilesResponse{})
+		return stream.Send(&gitalypb.ListFilesResponse{})
 	}
 
 	cmd, err := git.Command(stream.Context(), repo, "ls-tree", "-z", "-r", "--full-tree", "--full-name", "--", string(revision))
@@ -51,7 +51,7 @@ func (s *server) ListFiles(in *pb.ListFilesRequest, stream pb.CommitService_List
 	return lines.Send(cmd, listFilesWriter(stream), []byte{'\x00'})
 }
 
-func listFilesWriter(stream pb.CommitService_ListFilesServer) lines.Sender {
+func listFilesWriter(stream gitalypb.CommitService_ListFilesServer) lines.Sender {
 	return func(objs [][]byte) error {
 		paths := make([][]byte, 0)
 		for _, obj := range objs {
@@ -69,6 +69,6 @@ func listFilesWriter(stream pb.CommitService_ListFilesServer) lines.Sender {
 				paths = append(paths, data[1])
 			}
 		}
-		return stream.Send(&pb.ListFilesResponse{Paths: paths})
+		return stream.Send(&gitalypb.ListFilesResponse{Paths: paths})
 	}
 }

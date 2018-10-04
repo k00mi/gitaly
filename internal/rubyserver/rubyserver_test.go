@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	"google.golang.org/grpc/codes"
@@ -29,19 +29,19 @@ func TestSetHeaders(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		repo    *pb.Repository
+		repo    *gitalypb.Repository
 		errType codes.Code
-		setter  func(context.Context, *pb.Repository) (context.Context, error)
+		setter  func(context.Context, *gitalypb.Repository) (context.Context, error)
 	}{
 		{
 			desc:    "SetHeaders invalid storage",
-			repo:    &pb.Repository{StorageName: "foo", RelativePath: "bar.git"},
+			repo:    &gitalypb.Repository{StorageName: "foo", RelativePath: "bar.git"},
 			errType: codes.InvalidArgument,
 			setter:  SetHeaders,
 		},
 		{
 			desc:    "SetHeaders invalid rel path",
-			repo:    &pb.Repository{StorageName: testRepo.StorageName, RelativePath: "bar.git"},
+			repo:    &gitalypb.Repository{StorageName: testRepo.StorageName, RelativePath: "bar.git"},
 			errType: codes.NotFound,
 			setter:  SetHeaders,
 		},
@@ -53,13 +53,13 @@ func TestSetHeaders(t *testing.T) {
 		},
 		{
 			desc:    "SetHeadersWithoutRepoCheck invalid storage",
-			repo:    &pb.Repository{StorageName: "foo", RelativePath: "bar.git"},
+			repo:    &gitalypb.Repository{StorageName: "foo", RelativePath: "bar.git"},
 			errType: codes.InvalidArgument,
 			setter:  SetHeadersWithoutRepoCheck,
 		},
 		{
 			desc:    "SetHeadersWithoutRepoCheck invalid relative path",
-			repo:    &pb.Repository{StorageName: testRepo.StorageName, RelativePath: "bar.git"},
+			repo:    &gitalypb.Repository{StorageName: testRepo.StorageName, RelativePath: "bar.git"},
 			errType: codes.OK,
 			setter:  SetHeadersWithoutRepoCheck,
 		},

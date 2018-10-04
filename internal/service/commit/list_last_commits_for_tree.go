@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
@@ -19,7 +19,7 @@ var (
 	maxNumStatBatchSize = 10
 )
 
-func (s *server) ListLastCommitsForTree(in *pb.ListLastCommitsForTreeRequest, stream pb.CommitService_ListLastCommitsForTreeServer) error {
+func (s *server) ListLastCommitsForTree(in *gitalypb.ListLastCommitsForTreeRequest, stream gitalypb.CommitService_ListLastCommitsForTreeServer) error {
 	if err := validateListLastCommitsForTreeRequest(in); err != nil {
 		return status.Errorf(codes.InvalidArgument, "ListLastCommitsForTree: %v", err)
 	}
@@ -33,7 +33,7 @@ func (s *server) ListLastCommitsForTree(in *pb.ListLastCommitsForTreeRequest, st
 		return status.Errorf(codes.Internal, "ListLastCommitsForTree: gitCommand: %v", err)
 	}
 
-	batch := make([]*pb.ListLastCommitsForTreeResponse_CommitForTree, 0, maxNumStatBatchSize)
+	batch := make([]*gitalypb.ListLastCommitsForTreeResponse_CommitForTree, 0, maxNumStatBatchSize)
 	entries, err := getLSTreeEntries(parser)
 	if err != nil {
 		return err
@@ -56,7 +56,7 @@ func (s *server) ListLastCommitsForTree(in *pb.ListLastCommitsForTreeRequest, st
 			return err
 		}
 
-		commitForTree := &pb.ListLastCommitsForTreeResponse_CommitForTree{
+		commitForTree := &gitalypb.ListLastCommitsForTreeResponse_CommitForTree{
 			Path:   entry.Path,
 			Commit: commit,
 		}
@@ -99,7 +99,7 @@ func getLSTreeEntries(parser *lstree.Parser) (lstree.Entries, error) {
 	return entries, nil
 }
 
-func newLSTreeParser(in *pb.ListLastCommitsForTreeRequest, stream pb.CommitService_ListLastCommitsForTreeServer) (*command.Command, *lstree.Parser, error) {
+func newLSTreeParser(in *gitalypb.ListLastCommitsForTreeRequest, stream gitalypb.CommitService_ListLastCommitsForTreeServer) (*command.Command, *lstree.Parser, error) {
 	path := string(in.GetPath())
 	if path == "" || path == "/" {
 		path = "."
@@ -114,19 +114,19 @@ func newLSTreeParser(in *pb.ListLastCommitsForTreeRequest, stream pb.CommitServi
 	return cmd, lstree.NewParser(cmd), nil
 }
 
-func sendCommitsForTree(batch []*pb.ListLastCommitsForTreeResponse_CommitForTree, stream pb.CommitService_ListLastCommitsForTreeServer) error {
+func sendCommitsForTree(batch []*gitalypb.ListLastCommitsForTreeResponse_CommitForTree, stream gitalypb.CommitService_ListLastCommitsForTreeServer) error {
 	if len(batch) == 0 {
 		return nil
 	}
 
-	if err := stream.Send(&pb.ListLastCommitsForTreeResponse{Commits: batch}); err != nil {
+	if err := stream.Send(&gitalypb.ListLastCommitsForTreeResponse{Commits: batch}); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func validateListLastCommitsForTreeRequest(in *pb.ListLastCommitsForTreeRequest) error {
+func validateListLastCommitsForTreeRequest(in *gitalypb.ListLastCommitsForTreeRequest) error {
 	if in.Revision == "" {
 		return fmt.Errorf("empty Revision")
 	}

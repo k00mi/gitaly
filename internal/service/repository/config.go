@@ -1,17 +1,17 @@
 package repository
 
 import (
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (*server) DeleteConfig(ctx context.Context, req *pb.DeleteConfigRequest) (*pb.DeleteConfigResponse, error) {
+func (*server) DeleteConfig(ctx context.Context, req *gitalypb.DeleteConfigRequest) (*gitalypb.DeleteConfigResponse, error) {
 	for _, k := range req.Keys {
 		// We assume k does not contain any secrets; it is leaked via 'ps'.
 		cmd, err := git.Command(ctx, req.Repository, "config", "--unset-all", k)
@@ -29,10 +29,10 @@ func (*server) DeleteConfig(ctx context.Context, req *pb.DeleteConfigRequest) (*
 		}
 	}
 
-	return &pb.DeleteConfigResponse{}, nil
+	return &gitalypb.DeleteConfigResponse{}, nil
 }
 
-func (s *server) SetConfig(ctx context.Context, req *pb.SetConfigRequest) (*pb.SetConfigResponse, error) {
+func (s *server) SetConfig(ctx context.Context, req *gitalypb.SetConfigRequest) (*gitalypb.SetConfigResponse, error) {
 	// We use gitaly-ruby here because in gitaly-ruby we can use Rugged, and
 	// Rugged lets us set config values without leaking secrets via 'ps'. We
 	// can't use `git config foo.bar secret` because that leaks secrets.

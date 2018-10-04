@@ -8,24 +8,24 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"golang.org/x/net/context"
 )
 
 // RefExists returns true if the given reference exists. The ref must start with the string `ref/`
-func (server) RefExists(ctx context.Context, in *pb.RefExistsRequest) (*pb.RefExistsResponse, error) {
+func (server) RefExists(ctx context.Context, in *gitalypb.RefExistsRequest) (*gitalypb.RefExistsResponse, error) {
 	ref := string(in.Ref)
 	exists, err := refExists(ctx, in.Repository, ref)
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.RefExistsResponse{Value: exists}, nil
+	return &gitalypb.RefExistsResponse{Value: exists}, nil
 }
 
-func refExists(ctx context.Context, repo *pb.Repository, ref string) (bool, error) {
+func refExists(ctx context.Context, repo *gitalypb.Repository, ref string) (bool, error) {
 	grpc_logrus.Extract(ctx).WithFields(log.Fields{
 		"ref": ref,
 	}).Debug("refExists")

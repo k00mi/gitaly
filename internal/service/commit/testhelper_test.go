@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/linguist"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -14,8 +15,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
 
 var ()
@@ -52,14 +51,14 @@ func startTestServices(t *testing.T) (*grpc.Server, string) {
 		t.Fatal("failed to start server")
 	}
 
-	pb.RegisterCommitServiceServer(server, NewServer(rubyServer))
+	gitalypb.RegisterCommitServiceServer(server, NewServer(rubyServer))
 	reflection.Register(server)
 
 	go server.Serve(listener)
 	return server, serverSocketPath
 }
 
-func newCommitServiceClient(t *testing.T, serviceSocketPath string) (pb.CommitServiceClient, *grpc.ClientConn) {
+func newCommitServiceClient(t *testing.T, serviceSocketPath string) (gitalypb.CommitServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
@@ -71,11 +70,11 @@ func newCommitServiceClient(t *testing.T, serviceSocketPath string) (pb.CommitSe
 		t.Fatal(err)
 	}
 
-	return pb.NewCommitServiceClient(conn), conn
+	return gitalypb.NewCommitServiceClient(conn), conn
 }
 
-func dummyCommitAuthor(ts int64) *pb.CommitAuthor {
-	return &pb.CommitAuthor{
+func dummyCommitAuthor(ts int64) *gitalypb.CommitAuthor {
+	return &gitalypb.CommitAuthor{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad+gitlab-test@gitlab.com"),
 		Date:  &timestamp.Timestamp{Seconds: ts},

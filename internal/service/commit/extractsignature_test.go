@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
@@ -33,13 +33,13 @@ func TestExtractCommitSignatureSuccess(t *testing.T) {
 
 	testCases := []struct {
 		desc       string
-		req        *pb.ExtractCommitSignatureRequest
+		req        *gitalypb.ExtractCommitSignatureRequest
 		signature  []byte
 		signedText []byte
 	}{
 		{
 			desc: "commit with signature",
-			req: &pb.ExtractCommitSignatureRequest{
+			req: &gitalypb.ExtractCommitSignatureRequest{
 				Repository: testRepo,
 				CommitId:   "5937ac0a7beb003549fc5fd26fc247adbce4a52e",
 			},
@@ -48,7 +48,7 @@ func TestExtractCommitSignatureSuccess(t *testing.T) {
 		},
 		{
 			desc: "commit without signature",
-			req: &pb.ExtractCommitSignatureRequest{
+			req: &gitalypb.ExtractCommitSignatureRequest{
 				Repository: testRepo,
 				CommitId:   "e63f41fe459e62e1228fcef60d7189127aeba95a",
 			},
@@ -68,14 +68,14 @@ func TestExtractCommitSignatureSuccess(t *testing.T) {
 	}
 }
 
-func getSignatureAndText(ctx context.Context, client pb.CommitServiceClient, req *pb.ExtractCommitSignatureRequest) ([]byte, []byte, error) {
+func getSignatureAndText(ctx context.Context, client gitalypb.CommitServiceClient, req *gitalypb.ExtractCommitSignatureRequest) ([]byte, []byte, error) {
 	stream, err := client.ExtractCommitSignature(ctx, req)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	var signature, signedText []byte
-	var resp *pb.ExtractCommitSignatureResponse
+	var resp *gitalypb.ExtractCommitSignatureResponse
 	for err == nil {
 		resp, err = stream.Recv()
 		if err != nil && err != io.EOF {
@@ -104,12 +104,12 @@ func TestExtractCommitSignatureFail(t *testing.T) {
 
 	testCases := []struct {
 		desc string
-		req  *pb.ExtractCommitSignatureRequest
+		req  *gitalypb.ExtractCommitSignatureRequest
 		code codes.Code
 	}{
 		{
 			desc: "truncated commit ID",
-			req: &pb.ExtractCommitSignatureRequest{
+			req: &gitalypb.ExtractCommitSignatureRequest{
 				Repository: testRepo,
 				CommitId:   "5937ac0a7beb003549fc5fd26",
 			},
@@ -117,7 +117,7 @@ func TestExtractCommitSignatureFail(t *testing.T) {
 		},
 		{
 			desc: "empty commit ID",
-			req: &pb.ExtractCommitSignatureRequest{
+			req: &gitalypb.ExtractCommitSignatureRequest{
 				Repository: testRepo,
 				CommitId:   "",
 			},
@@ -125,7 +125,7 @@ func TestExtractCommitSignatureFail(t *testing.T) {
 		},
 		{
 			desc: "empty repo field",
-			req: &pb.ExtractCommitSignatureRequest{
+			req: &gitalypb.ExtractCommitSignatureRequest{
 				Repository: nil,
 				CommitId:   "e63f41fe459e62e1228fcef60d7189127aeba95a",
 			},
@@ -133,7 +133,7 @@ func TestExtractCommitSignatureFail(t *testing.T) {
 		},
 		{
 			desc: "commit ID unknown",
-			req: &pb.ExtractCommitSignatureRequest{
+			req: &gitalypb.ExtractCommitSignatureRequest{
 				Repository: testRepo,
 				CommitId:   "0000000000000000000000000000000000000000",
 			},
@@ -146,7 +146,7 @@ func TestExtractCommitSignatureFail(t *testing.T) {
 			stream, err := client.ExtractCommitSignature(ctx, tc.req)
 			require.NoError(t, err)
 
-			var resp *pb.ExtractCommitSignatureResponse
+			var resp *gitalypb.ExtractCommitSignatureResponse
 			for err == nil {
 				resp, err = stream.Recv()
 				if resp != nil {

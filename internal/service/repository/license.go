@@ -3,12 +3,11 @@ package repository
 import (
 	"golang.org/x/net/context"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
 
-func (s *server) FindLicense(ctx context.Context, in *pb.FindLicenseRequest) (*pb.FindLicenseResponse, error) {
+func (s *server) FindLicense(ctx context.Context, in *gitalypb.FindLicenseRequest) (*gitalypb.FindLicenseResponse, error) {
 	client, err := s.RepositoryServiceClient(ctx)
 	if err != nil {
 		return nil, err

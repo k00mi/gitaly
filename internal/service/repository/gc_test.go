@@ -14,9 +14,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
 
 var (
@@ -36,15 +35,15 @@ func TestGarbageCollectSuccess(t *testing.T) {
 	defer cleanupFn()
 
 	tests := []struct {
-		req  *pb.GarbageCollectRequest
+		req  *gitalypb.GarbageCollectRequest
 		desc string
 	}{
 		{
-			req:  &pb.GarbageCollectRequest{Repository: testRepo, CreateBitmap: false},
+			req:  &gitalypb.GarbageCollectRequest{Repository: testRepo, CreateBitmap: false},
 			desc: "without bitmap",
 		},
 		{
-			req:  &pb.GarbageCollectRequest{Repository: testRepo, CreateBitmap: true},
+			req:  &gitalypb.GarbageCollectRequest{Repository: testRepo, CreateBitmap: true},
 			desc: "with bitmap",
 		},
 	}
@@ -96,7 +95,7 @@ func TestGarbageCollectDeletesRefsLocks(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	req := &pb.GarbageCollectRequest{Repository: testRepo}
+	req := &gitalypb.GarbageCollectRequest{Repository: testRepo}
 	refsPath := filepath.Join(testRepoPath, "refs")
 
 	// Note: Creating refs this way makes `git gc` crash but this actually works
@@ -142,20 +141,20 @@ func TestGarbageCollectFailure(t *testing.T) {
 	defer cleanupFn()
 
 	tests := []struct {
-		repo *pb.Repository
+		repo *gitalypb.Repository
 		code codes.Code
 	}{
 		{repo: nil, code: codes.InvalidArgument},
-		{repo: &pb.Repository{StorageName: "foo"}, code: codes.InvalidArgument},
-		{repo: &pb.Repository{RelativePath: "bar"}, code: codes.InvalidArgument},
-		{repo: &pb.Repository{StorageName: testRepo.GetStorageName(), RelativePath: "bar"}, code: codes.NotFound},
+		{repo: &gitalypb.Repository{StorageName: "foo"}, code: codes.InvalidArgument},
+		{repo: &gitalypb.Repository{RelativePath: "bar"}, code: codes.InvalidArgument},
+		{repo: &gitalypb.Repository{StorageName: testRepo.GetStorageName(), RelativePath: "bar"}, code: codes.NotFound},
 	}
 
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%v", test.repo), func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			_, err := client.GarbageCollect(ctx, &pb.GarbageCollectRequest{Repository: test.repo})
+			_, err := client.GarbageCollect(ctx, &gitalypb.GarbageCollectRequest{Repository: test.repo})
 			testhelper.RequireGrpcError(t, err, test.code)
 		})
 	}

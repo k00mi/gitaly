@@ -8,7 +8,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
@@ -45,7 +45,7 @@ func TestCommitStatsSuccess(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		resp, err := client.CommitStats(ctx, &pb.CommitStatsRequest{Repository: testRepo, Revision: tc.revision})
+		resp, err := client.CommitStats(ctx, &gitalypb.CommitStatsRequest{Repository: testRepo, Revision: tc.revision})
 		assert.NoError(t, err)
 		assert.Equal(t, tc.oid, resp.GetOid())
 		assert.Equal(t, tc.additions, resp.GetAdditions())
@@ -68,19 +68,19 @@ func TestCommitStatsFailure(t *testing.T) {
 
 	tests := []struct {
 		desc     string
-		repo     *pb.Repository
+		repo     *gitalypb.Repository
 		revision []byte
 		err      codes.Code
 	}{
 		{
 			desc:     "repo not found",
-			repo:     &pb.Repository{StorageName: testRepo.GetStorageName(), RelativePath: "bar.git"},
+			repo:     &gitalypb.Repository{StorageName: testRepo.GetStorageName(), RelativePath: "bar.git"},
 			revision: []byte("test-do-not-touch"),
 			err:      codes.NotFound,
 		},
 		{
 			desc:     "storage not found",
-			repo:     &pb.Repository{StorageName: "foo", RelativePath: "bar.git"},
+			repo:     &gitalypb.Repository{StorageName: "foo", RelativePath: "bar.git"},
 			revision: []byte("test-do-not-touch"),
 			err:      codes.InvalidArgument,
 		},
@@ -94,7 +94,7 @@ func TestCommitStatsFailure(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
-			_, err := client.CommitStats(ctx, &pb.CommitStatsRequest{Repository: tc.repo, Revision: tc.revision})
+			_, err := client.CommitStats(ctx, &gitalypb.CommitStatsRequest{Repository: tc.repo, Revision: tc.revision})
 			testhelper.RequireGrpcError(t, err, tc.err)
 		})
 	}

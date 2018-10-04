@@ -4,10 +4,9 @@ import (
 	"io"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/service/ref"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/require"
@@ -20,7 +19,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 		_findBranchNamesFunc = ref.FindBranchNames
 	}()
 
-	_findBranchNamesFunc = func(ctx context.Context, repo *pb.Repository) ([][]byte, error) {
+	_findBranchNamesFunc = func(ctx context.Context, repo *gitalypb.Repository) ([][]byte, error) {
 		return [][]byte{
 			[]byte("few-commits"),
 			[]byte("two-commits"),
@@ -38,7 +37,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 
 	// Commits made on another branch in parallel to the normal commits below.
 	// Will be used to test topology ordering.
-	alternateCommits := []*pb.GitCommit{
+	alternateCommits := []*gitalypb.GitCommit{
 		{
 			Id:        "0031876facac3f2b2702a0e53a26e89939a42209",
 			Subject:   []byte("Merge branch 'few-commits-4' into few-commits-2"),
@@ -72,7 +71,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 	}
 
 	// Nothing special about these commits.
-	normalCommits := []*pb.GitCommit{
+	normalCommits := []*gitalypb.GitCommit{
 		{
 			Id:        "bf6e164cac2dc32b1f391ca4290badcbe4ffc5fb",
 			Subject:   []byte("Commit #10"),
@@ -160,12 +159,12 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 			Id:      "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
 			Subject: []byte("Initial commit"),
 			Body:    []byte("Initial commit\n"),
-			Author: &pb.CommitAuthor{
+			Author: &gitalypb.CommitAuthor{
 				Name:  []byte("Dmitriy Zaporozhets"),
 				Email: []byte("dmitriy.zaporozhets@gmail.com"),
 				Date:  &timestamp.Timestamp{Seconds: 1393488198},
 			},
-			Committer: &pb.CommitAuthor{
+			Committer: &gitalypb.CommitAuthor{
 				Name:  []byte("Dmitriy Zaporozhets"),
 				Email: []byte("dmitriy.zaporozhets@gmail.com"),
 				Date:  &timestamp.Timestamp{Seconds: 1393488198},
@@ -176,7 +175,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 	}
 
 	// A commit that exists on "two-commits" branch.
-	singleCommit := []*pb.GitCommit{
+	singleCommit := []*gitalypb.GitCommit{
 		{
 			Id:        "304d257dcb821665ab5110318fc58a007bd104ed",
 			Subject:   []byte("Commit #11"),
@@ -188,7 +187,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 		},
 	}
 
-	timeOrderedCommits := []*pb.GitCommit{
+	timeOrderedCommits := []*gitalypb.GitCommit{
 		alternateCommits[0], normalCommits[0],
 		alternateCommits[1], normalCommits[1],
 		alternateCommits[2],
@@ -198,19 +197,19 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 
 	testCases := []struct {
 		desc            string
-		request         *pb.FindAllCommitsRequest
-		expectedCommits []*pb.GitCommit
+		request         *gitalypb.FindAllCommitsRequest
+		expectedCommits []*gitalypb.GitCommit
 	}{
 		{
 			desc: "all commits of a revision",
-			request: &pb.FindAllCommitsRequest{
+			request: &gitalypb.FindAllCommitsRequest{
 				Revision: []byte("few-commits"),
 			},
 			expectedCommits: timeOrderedCommits,
 		},
 		{
 			desc: "maximum number of commits of a revision",
-			request: &pb.FindAllCommitsRequest{
+			request: &gitalypb.FindAllCommitsRequest{
 				MaxCount: 5,
 				Revision: []byte("few-commits"),
 			},
@@ -218,7 +217,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 		},
 		{
 			desc: "skipping number of commits of a revision",
-			request: &pb.FindAllCommitsRequest{
+			request: &gitalypb.FindAllCommitsRequest{
 				Skip:     5,
 				Revision: []byte("few-commits"),
 			},
@@ -226,7 +225,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 		},
 		{
 			desc: "maximum number of commits of a revision plus skipping",
-			request: &pb.FindAllCommitsRequest{
+			request: &gitalypb.FindAllCommitsRequest{
 				Skip:     5,
 				MaxCount: 2,
 				Revision: []byte("few-commits"),
@@ -235,29 +234,29 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 		},
 		{
 			desc: "all commits of a revision ordered by date",
-			request: &pb.FindAllCommitsRequest{
+			request: &gitalypb.FindAllCommitsRequest{
 				Revision: []byte("few-commits"),
-				Order:    pb.FindAllCommitsRequest_DATE,
+				Order:    gitalypb.FindAllCommitsRequest_DATE,
 			},
 			expectedCommits: timeOrderedCommits,
 		},
 		{
 			desc: "all commits of a revision ordered by topology",
-			request: &pb.FindAllCommitsRequest{
+			request: &gitalypb.FindAllCommitsRequest{
 				Revision: []byte("few-commits"),
-				Order:    pb.FindAllCommitsRequest_TOPO,
+				Order:    gitalypb.FindAllCommitsRequest_TOPO,
 			},
 			expectedCommits: topoOrderedCommits,
 		},
 		{
 			desc:            "all commits of all branches",
-			request:         &pb.FindAllCommitsRequest{},
+			request:         &gitalypb.FindAllCommitsRequest{},
 			expectedCommits: append(singleCommit, timeOrderedCommits...),
 		},
 		{
 			desc:            "non-existing revision",
-			request:         &pb.FindAllCommitsRequest{Revision: []byte("i-do-not-exist")},
-			expectedCommits: []*pb.GitCommit{},
+			request:         &gitalypb.FindAllCommitsRequest{Revision: []byte("i-do-not-exist")},
+			expectedCommits: []*gitalypb.GitCommit{},
 		},
 	}
 
@@ -292,21 +291,21 @@ func TestFailedFindAllCommitsRequest(t *testing.T) {
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
-	invalidRepo := &pb.Repository{StorageName: "fake", RelativePath: "path"}
+	invalidRepo := &gitalypb.Repository{StorageName: "fake", RelativePath: "path"}
 
 	testCases := []struct {
 		desc    string
-		request *pb.FindAllCommitsRequest
+		request *gitalypb.FindAllCommitsRequest
 		code    codes.Code
 	}{
 		{
 			desc:    "Invalid repository",
-			request: &pb.FindAllCommitsRequest{Repository: invalidRepo},
+			request: &gitalypb.FindAllCommitsRequest{Repository: invalidRepo},
 			code:    codes.InvalidArgument,
 		},
 		{
 			desc:    "Repository is nil",
-			request: &pb.FindAllCommitsRequest{},
+			request: &gitalypb.FindAllCommitsRequest{},
 			code:    codes.InvalidArgument,
 		},
 	}
@@ -327,8 +326,8 @@ func TestFailedFindAllCommitsRequest(t *testing.T) {
 	}
 }
 
-func collectCommtsFromFindAllCommitsClient(t *testing.T, c pb.CommitService_FindAllCommitsClient) []*pb.GitCommit {
-	receivedCommits := []*pb.GitCommit{}
+func collectCommtsFromFindAllCommitsClient(t *testing.T, c gitalypb.CommitService_FindAllCommitsClient) []*gitalypb.GitCommit {
+	receivedCommits := []*gitalypb.GitCommit{}
 
 	for {
 		resp, err := c.Recv()
@@ -344,7 +343,7 @@ func collectCommtsFromFindAllCommitsClient(t *testing.T, c pb.CommitService_Find
 	return receivedCommits
 }
 
-func drainFindAllCommitsResponse(c pb.CommitService_FindAllCommitsClient) error {
+func drainFindAllCommitsResponse(c gitalypb.CommitService_FindAllCommitsClient) error {
 	var err error
 	for err == nil {
 		_, err = c.Recv()

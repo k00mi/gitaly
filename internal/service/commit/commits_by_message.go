@@ -3,17 +3,16 @@ package commit
 import (
 	"fmt"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 type commitsByMessageSender struct {
-	stream pb.CommitService_CommitsByMessageServer
+	stream gitalypb.CommitService_CommitsByMessageServer
 }
 
-func (s *server) CommitsByMessage(in *pb.CommitsByMessageRequest, stream pb.CommitService_CommitsByMessageServer) error {
+func (s *server) CommitsByMessage(in *gitalypb.CommitsByMessageRequest, stream gitalypb.CommitService_CommitsByMessageServer) error {
 	if err := validateCommitsByMessageRequest(in); err != nil {
 		return status.Errorf(codes.InvalidArgument, "CommitsByMessage: %v", err)
 	}
@@ -53,7 +52,7 @@ func (s *server) CommitsByMessage(in *pb.CommitsByMessageRequest, stream pb.Comm
 	return sendCommits(stream.Context(), sender, in.GetRepository(), []string{string(revision)}, paths, gitLogExtraOptions...)
 }
 
-func validateCommitsByMessageRequest(in *pb.CommitsByMessageRequest) error {
+func validateCommitsByMessageRequest(in *gitalypb.CommitsByMessageRequest) error {
 	if in.GetQuery() == "" {
 		return fmt.Errorf("empty Query")
 	}
@@ -61,6 +60,6 @@ func validateCommitsByMessageRequest(in *pb.CommitsByMessageRequest) error {
 	return nil
 }
 
-func (sender *commitsByMessageSender) Send(commits []*pb.GitCommit) error {
-	return sender.stream.Send(&pb.CommitsByMessageResponse{Commits: commits})
+func (sender *commitsByMessageSender) Send(commits []*gitalypb.GitCommit) error {
+	return sender.stream.Send(&gitalypb.CommitsByMessageResponse{Commits: commits})
 }

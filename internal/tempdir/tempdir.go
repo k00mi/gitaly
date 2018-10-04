@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/housekeeping"
@@ -45,7 +45,7 @@ func ForDeleteAllRepositories(storageName string) (string, error) {
 // New returns the path of a new temporary directory for use with the
 // repository. The directory is removed with os.RemoveAll when ctx
 // expires.
-func New(ctx context.Context, repo *pb.Repository) (string, error) {
+func New(ctx context.Context, repo *gitalypb.Repository) (string, error) {
 	_, path, err := NewAsRepository(ctx, repo)
 	if err != nil {
 		return "", err
@@ -54,13 +54,13 @@ func New(ctx context.Context, repo *pb.Repository) (string, error) {
 	return path, nil
 }
 
-// NewAsRepository is the same as New, but it returns a *pb.Repository for the
+// NewAsRepository is the same as New, but it returns a *gitalypb.Repository for the
 // created directory as well as the bare path as a string
-func NewAsRepository(ctx context.Context, repo *pb.Repository) (*pb.Repository, string, error) {
+func NewAsRepository(ctx context.Context, repo *gitalypb.Repository) (*gitalypb.Repository, string, error) {
 	return newAsRepository(ctx, repo.StorageName, "repo")
 }
 
-func newAsRepository(ctx context.Context, storageName string, prefix string) (*pb.Repository, string, error) {
+func newAsRepository(ctx context.Context, storageName string, prefix string) (*gitalypb.Repository, string, error) {
 	storageDir, err := helper.GetStorageByName(storageName)
 	if err != nil {
 		return nil, "", err
@@ -81,7 +81,7 @@ func newAsRepository(ctx context.Context, storageName string, prefix string) (*p
 		os.RemoveAll(tempDir)
 	}()
 
-	newAsRepo := &pb.Repository{StorageName: storageName}
+	newAsRepo := &gitalypb.Repository{StorageName: storageName}
 	newAsRepo.RelativePath, err = filepath.Rel(storageDir, tempDir)
 	return newAsRepo, tempDir, err
 }

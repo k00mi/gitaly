@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
@@ -42,7 +42,7 @@ func TestSuccessfulCommitPatchRequest(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			request := &pb.CommitPatchRequest{
+			request := &gitalypb.CommitPatchRequest{
 				Repository: testRepo,
 				Revision:   testCase.revision,
 			}

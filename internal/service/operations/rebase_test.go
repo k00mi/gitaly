@@ -7,10 +7,9 @@ import (
 	"strings"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/service/operations"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -37,13 +36,13 @@ func TestSuccessfulUserRebaseRequest(t *testing.T) {
 	branchSha := string(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", branchName))
 	branchSha = strings.TrimSpace(branchSha)
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
 	}
 
-	request := &pb.UserRebaseRequest{
+	request := &gitalypb.UserRebaseRequest{
 		Repository:       testRepo,
 		User:             user,
 		RebaseId:         "1",
@@ -86,13 +85,13 @@ func TestFailedUserRebaseRequestDueToPreReceiveError(t *testing.T) {
 	branchSha := string(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", branchName))
 	branchSha = strings.TrimSpace(branchSha)
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
 	}
 
-	request := &pb.UserRebaseRequest{
+	request := &gitalypb.UserRebaseRequest{
 		Repository:       testRepo,
 		User:             user,
 		RebaseId:         "1",
@@ -140,13 +139,13 @@ func TestFailedUserRebaseRequestDueToGitError(t *testing.T) {
 	branchSha := string(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", branchName))
 	branchSha = strings.TrimSpace(branchSha)
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
 	}
 
-	request := &pb.UserRebaseRequest{
+	request := &gitalypb.UserRebaseRequest{
 		Repository:       testRepo,
 		User:             user,
 		RebaseId:         "1",
@@ -180,7 +179,7 @@ func TestFailedUserRebaseRequestDueToValidations(t *testing.T) {
 	testRepoCopy, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
@@ -188,12 +187,12 @@ func TestFailedUserRebaseRequestDueToValidations(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.UserRebaseRequest
+		request *gitalypb.UserRebaseRequest
 		code    codes.Code
 	}{
 		{
 			desc: "empty repository",
-			request: &pb.UserRebaseRequest{
+			request: &gitalypb.UserRebaseRequest{
 				Repository:       nil,
 				User:             user,
 				RebaseId:         "1",
@@ -206,7 +205,7 @@ func TestFailedUserRebaseRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty user",
-			request: &pb.UserRebaseRequest{
+			request: &gitalypb.UserRebaseRequest{
 				Repository:       testRepo,
 				User:             nil,
 				RebaseId:         "1",
@@ -219,7 +218,7 @@ func TestFailedUserRebaseRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty rebase id",
-			request: &pb.UserRebaseRequest{
+			request: &gitalypb.UserRebaseRequest{
 				Repository:       testRepo,
 				User:             user,
 				RebaseId:         "",
@@ -232,7 +231,7 @@ func TestFailedUserRebaseRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty branch",
-			request: &pb.UserRebaseRequest{
+			request: &gitalypb.UserRebaseRequest{
 				Repository:       testRepo,
 				User:             user,
 				RebaseId:         "1",
@@ -245,7 +244,7 @@ func TestFailedUserRebaseRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty branch sha",
-			request: &pb.UserRebaseRequest{
+			request: &gitalypb.UserRebaseRequest{
 				Repository:       testRepo,
 				User:             user,
 				RebaseId:         "1",
@@ -258,7 +257,7 @@ func TestFailedUserRebaseRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty remote repository",
-			request: &pb.UserRebaseRequest{
+			request: &gitalypb.UserRebaseRequest{
 				Repository:       testRepo,
 				User:             user,
 				RebaseId:         "1",
@@ -271,7 +270,7 @@ func TestFailedUserRebaseRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty remote branch",
-			request: &pb.UserRebaseRequest{
+			request: &gitalypb.UserRebaseRequest{
 				Repository:       testRepo,
 				User:             user,
 				RebaseId:         "1",

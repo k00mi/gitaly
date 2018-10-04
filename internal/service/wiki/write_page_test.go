@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -34,17 +33,17 @@ func TestSuccessfulWikiWritePageRequest(t *testing.T) {
 
 	testCases := []struct {
 		desc       string
-		req        *pb.WikiWritePageRequest
+		req        *gitalypb.WikiWritePageRequest
 		gollumPath string
 		content    []byte
 	}{
 		{
 			desc: "with user id and username",
-			req: &pb.WikiWritePageRequest{
+			req: &gitalypb.WikiWritePageRequest{
 				Repository: wikiRepo,
 				Name:       []byte("Instálling Gitaly"),
 				Format:     "markdown",
-				CommitDetails: &pb.WikiCommitDetails{
+				CommitDetails: &gitalypb.WikiCommitDetails{
 					Name:     authorName,
 					Email:    authorEmail,
 					Message:  message,
@@ -57,11 +56,11 @@ func TestSuccessfulWikiWritePageRequest(t *testing.T) {
 		},
 		{
 			desc: "without user id and username", // deprecate in gitlab 11.0 https://gitlab.com/gitlab-org/gitaly/issues/1154
-			req: &pb.WikiWritePageRequest{
+			req: &gitalypb.WikiWritePageRequest{
 				Repository: wikiRepo,
 				Name:       []byte("Instálling Gitaly 2"),
 				Format:     "markdown",
-				CommitDetails: &pb.WikiCommitDetails{
+				CommitDetails: &gitalypb.WikiCommitDetails{
 					Name:     authorName,
 					Email:    authorEmail,
 					Message:  message,
@@ -88,7 +87,7 @@ func TestSuccessfulWikiWritePageRequest(t *testing.T) {
 				}
 
 				// Use a new response so we don't send other fields (Repository, ...) over and over
-				request = &pb.WikiWritePageRequest{}
+				request = &gitalypb.WikiWritePageRequest{}
 
 				return nil
 			})
@@ -127,7 +126,7 @@ func TestFailedWikiWritePageDueToDuplicatePage(t *testing.T) {
 
 	pageName := "Installing Gitaly"
 	content := []byte("Mock wiki page content")
-	commitDetails := &pb.WikiCommitDetails{
+	commitDetails := &gitalypb.WikiCommitDetails{
 		Name:     []byte("Ahmad Sherif"),
 		Email:    []byte("ahmad@gitlab.com"),
 		Message:  []byte("Add " + pageName),
@@ -137,7 +136,7 @@ func TestFailedWikiWritePageDueToDuplicatePage(t *testing.T) {
 
 	writeWikiPage(t, client, wikiRepo, createWikiPageOpts{title: pageName, content: content})
 
-	request := &pb.WikiWritePageRequest{
+	request := &gitalypb.WikiWritePageRequest{
 		Repository:    wikiRepo,
 		Name:          []byte(pageName),
 		Format:        "markdown",
@@ -156,7 +155,7 @@ func TestFailedWikiWritePageDueToDuplicatePage(t *testing.T) {
 	response, err := stream.CloseAndRecv()
 	require.NoError(t, err)
 
-	expectedResponse := &pb.WikiWritePageResponse{DuplicateError: []byte("Cannot write //Installing-Gitaly.md, found //Installing-Gitaly.md.")}
+	expectedResponse := &gitalypb.WikiWritePageResponse{DuplicateError: []byte("Cannot write //Installing-Gitaly.md, found //Installing-Gitaly.md.")}
 	require.Equal(t, expectedResponse, response, "mismatched response")
 }
 
@@ -172,7 +171,7 @@ func TestFailedWikiWritePageInPathDueToDuplicatePage(t *testing.T) {
 
 	pageName := "foo/Installing Gitaly"
 	content := []byte("Mock wiki page content")
-	commitDetails := &pb.WikiCommitDetails{
+	commitDetails := &gitalypb.WikiCommitDetails{
 		Name:     []byte("Ahmad Sherif"),
 		Email:    []byte("ahmad@gitlab.com"),
 		Message:  []byte("Add " + pageName),
@@ -182,7 +181,7 @@ func TestFailedWikiWritePageInPathDueToDuplicatePage(t *testing.T) {
 
 	writeWikiPage(t, client, wikiRepo, createWikiPageOpts{title: pageName, content: content})
 
-	request := &pb.WikiWritePageRequest{
+	request := &gitalypb.WikiWritePageRequest{
 		Repository:    wikiRepo,
 		Name:          []byte(pageName),
 		Format:        "markdown",
@@ -201,12 +200,12 @@ func TestFailedWikiWritePageInPathDueToDuplicatePage(t *testing.T) {
 	response, err := stream.CloseAndRecv()
 	require.NoError(t, err)
 
-	expectedResponse := &pb.WikiWritePageResponse{DuplicateError: []byte("Cannot write foo/Installing-Gitaly.md, found foo/Installing-Gitaly.md.")}
+	expectedResponse := &gitalypb.WikiWritePageResponse{DuplicateError: []byte("Cannot write foo/Installing-Gitaly.md, found foo/Installing-Gitaly.md.")}
 	require.Equal(t, expectedResponse, response, "mismatched response")
 }
 
 func TestFailedWikiWritePageDueToValidations(t *testing.T) {
-	wikiRepo := &pb.Repository{}
+	wikiRepo := &gitalypb.Repository{}
 
 	server, serverSocketPath := runWikiServiceServer(t)
 	defer server.Stop()
@@ -214,7 +213,7 @@ func TestFailedWikiWritePageDueToValidations(t *testing.T) {
 	client, conn := newWikiClient(t, serverSocketPath)
 	defer conn.Close()
 
-	commitDetails := &pb.WikiCommitDetails{
+	commitDetails := &gitalypb.WikiCommitDetails{
 		Name:     []byte("Ahmad Sherif"),
 		Email:    []byte("ahmad@gitlab.com"),
 		Message:  []byte("Add installation instructions"),
@@ -224,12 +223,12 @@ func TestFailedWikiWritePageDueToValidations(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.WikiWritePageRequest
+		request *gitalypb.WikiWritePageRequest
 		code    codes.Code
 	}{
 		{
 			desc: "empty name",
-			request: &pb.WikiWritePageRequest{
+			request: &gitalypb.WikiWritePageRequest{
 				Repository:    wikiRepo,
 				Format:        "markdown",
 				CommitDetails: commitDetails,
@@ -239,7 +238,7 @@ func TestFailedWikiWritePageDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty format",
-			request: &pb.WikiWritePageRequest{
+			request: &gitalypb.WikiWritePageRequest{
 				Repository:    wikiRepo,
 				Name:          []byte("Installing Gitaly"),
 				CommitDetails: commitDetails,
@@ -249,7 +248,7 @@ func TestFailedWikiWritePageDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty commit details",
-			request: &pb.WikiWritePageRequest{
+			request: &gitalypb.WikiWritePageRequest{
 				Repository: wikiRepo,
 				Name:       []byte("Installing Gitaly"),
 				Format:     "markdown",
@@ -259,11 +258,11 @@ func TestFailedWikiWritePageDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty commit details' name",
-			request: &pb.WikiWritePageRequest{
+			request: &gitalypb.WikiWritePageRequest{
 				Repository: wikiRepo,
 				Name:       []byte("Installing Gitaly"),
 				Format:     "markdown",
-				CommitDetails: &pb.WikiCommitDetails{
+				CommitDetails: &gitalypb.WikiCommitDetails{
 					Email:    []byte("a@b.com"),
 					Message:  []byte("A message"),
 					UserId:   int32(1),
@@ -275,11 +274,11 @@ func TestFailedWikiWritePageDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty commit details' email",
-			request: &pb.WikiWritePageRequest{
+			request: &gitalypb.WikiWritePageRequest{
 				Repository: wikiRepo,
 				Name:       []byte("Installing Gitaly"),
 				Format:     "markdown",
-				CommitDetails: &pb.WikiCommitDetails{
+				CommitDetails: &gitalypb.WikiCommitDetails{
 					Name:     []byte("A name"),
 					Message:  []byte("A message"),
 					UserId:   int32(1),
@@ -291,11 +290,11 @@ func TestFailedWikiWritePageDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty commit details' message",
-			request: &pb.WikiWritePageRequest{
+			request: &gitalypb.WikiWritePageRequest{
 				Repository: wikiRepo,
 				Name:       []byte("Installing Gitaly"),
 				Format:     "markdown",
-				CommitDetails: &pb.WikiCommitDetails{
+				CommitDetails: &gitalypb.WikiCommitDetails{
 					Name:     []byte("A name"),
 					Email:    []byte("a@b.com"),
 					UserId:   int32(1),

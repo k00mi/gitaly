@@ -5,7 +5,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 )
 
@@ -25,51 +25,51 @@ func TestParseRawCommit(t *testing.T) {
 	testCases := []struct {
 		desc string
 		in   []byte
-		out  *pb.GitCommit
+		out  *gitalypb.GitCommit
 	}{
 		{
 			desc: "empty commit object",
 			in:   []byte{},
-			out:  &pb.GitCommit{Id: info.Oid},
+			out:  &gitalypb.GitCommit{Id: info.Oid},
 		},
 		{
 			desc: "no email",
 			in:   []byte("author Jane Doe"),
-			out: &pb.GitCommit{
+			out: &gitalypb.GitCommit{
 				Id:     info.Oid,
-				Author: &pb.CommitAuthor{Name: []byte("Jane Doe")},
+				Author: &gitalypb.CommitAuthor{Name: []byte("Jane Doe")},
 			},
 		},
 		{
 			desc: "unmatched <",
 			in:   []byte("author Jane Doe <janedoe@example.com"),
-			out: &pb.GitCommit{
+			out: &gitalypb.GitCommit{
 				Id:     info.Oid,
-				Author: &pb.CommitAuthor{Name: []byte("Jane Doe")},
+				Author: &gitalypb.CommitAuthor{Name: []byte("Jane Doe")},
 			},
 		},
 		{
 			desc: "unmatched >",
 			in:   []byte("author Jane Doe janedoe@example.com>"),
-			out: &pb.GitCommit{
+			out: &gitalypb.GitCommit{
 				Id:     info.Oid,
-				Author: &pb.CommitAuthor{Name: []byte("Jane Doe janedoe@example.com>")},
+				Author: &gitalypb.CommitAuthor{Name: []byte("Jane Doe janedoe@example.com>")},
 			},
 		},
 		{
 			desc: "missing date",
 			in:   []byte("author Jane Doe <janedoe@example.com> "),
-			out: &pb.GitCommit{
+			out: &gitalypb.GitCommit{
 				Id:     info.Oid,
-				Author: &pb.CommitAuthor{Name: []byte("Jane Doe"), Email: []byte("janedoe@example.com")},
+				Author: &gitalypb.CommitAuthor{Name: []byte("Jane Doe"), Email: []byte("janedoe@example.com")},
 			},
 		},
 		{
 			desc: "date too high",
 			in:   []byte("author Jane Doe <janedoe@example.com> 9007199254740993 +0200"),
-			out: &pb.GitCommit{
+			out: &gitalypb.GitCommit{
 				Id: info.Oid,
-				Author: &pb.CommitAuthor{
+				Author: &gitalypb.CommitAuthor{
 					Name:  []byte("Jane Doe"),
 					Email: []byte("janedoe@example.com"),
 					Date:  &timestamp.Timestamp{Seconds: 9223371974719179007},
@@ -79,9 +79,9 @@ func TestParseRawCommit(t *testing.T) {
 		{
 			desc: "date negative",
 			in:   []byte("author Jane Doe <janedoe@example.com> -1 +0200"),
-			out: &pb.GitCommit{
+			out: &gitalypb.GitCommit{
 				Id: info.Oid,
-				Author: &pb.CommitAuthor{
+				Author: &gitalypb.CommitAuthor{
 					Name:  []byte("Jane Doe"),
 					Email: []byte("janedoe@example.com"),
 					Date:  &timestamp.Timestamp{Seconds: 9223371974719179007},

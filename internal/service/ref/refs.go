@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
@@ -35,7 +35,7 @@ type findRefsOpts struct {
 	delim   []byte
 }
 
-func findRefs(ctx context.Context, writer lines.Sender, repo *pb.Repository, patterns []string, opts *findRefsOpts) error {
+func findRefs(ctx context.Context, writer lines.Sender, repo *gitalypb.Repository, patterns []string, opts *findRefsOpts) error {
 	grpc_logrus.Extract(ctx).WithFields(log.Fields{
 		"Patterns": patterns,
 	}).Debug("FindRefs")
@@ -63,16 +63,16 @@ func findRefs(ctx context.Context, writer lines.Sender, repo *pb.Repository, pat
 }
 
 // FindAllBranchNames creates a stream of ref names for all branches in the given repository
-func (s *server) FindAllBranchNames(in *pb.FindAllBranchNamesRequest, stream pb.RefService_FindAllBranchNamesServer) error {
+func (s *server) FindAllBranchNames(in *gitalypb.FindAllBranchNamesRequest, stream gitalypb.RefService_FindAllBranchNamesServer) error {
 	return findRefs(stream.Context(), newFindAllBranchNamesWriter(stream), in.Repository, []string{"refs/heads"}, &findRefsOpts{})
 }
 
 // FindAllTagNames creates a stream of ref names for all tags in the given repository
-func (s *server) FindAllTagNames(in *pb.FindAllTagNamesRequest, stream pb.RefService_FindAllTagNamesServer) error {
+func (s *server) FindAllTagNames(in *gitalypb.FindAllTagNamesRequest, stream gitalypb.RefService_FindAllTagNamesServer) error {
 	return findRefs(stream.Context(), newFindAllTagNamesWriter(stream), in.Repository, []string{"refs/tags"}, &findRefsOpts{})
 }
 
-func (s *server) FindAllTags(in *pb.FindAllTagsRequest, stream pb.RefService_FindAllTagsServer) error {
+func (s *server) FindAllTags(in *gitalypb.FindAllTagsRequest, stream gitalypb.RefService_FindAllTagsServer) error {
 	ctx := stream.Context()
 
 	client, err := s.RefServiceClient(ctx)
@@ -101,7 +101,7 @@ func (s *server) FindAllTags(in *pb.FindAllTagsRequest, stream pb.RefService_Fin
 	})
 }
 
-func _findBranchNames(ctx context.Context, repo *pb.Repository) ([][]byte, error) {
+func _findBranchNames(ctx context.Context, repo *gitalypb.Repository) ([][]byte, error) {
 	var names [][]byte
 
 	cmd, err := git.Command(ctx, repo, "for-each-ref", "refs/heads", "--format=%(refname)")
@@ -124,7 +124,7 @@ func _findBranchNames(ctx context.Context, repo *pb.Repository) ([][]byte, error
 	return names, nil
 }
 
-func _headReference(ctx context.Context, repo *pb.Repository) ([]byte, error) {
+func _headReference(ctx context.Context, repo *gitalypb.Repository) ([]byte, error) {
 	var headRef []byte
 
 	cmd, err := git.Command(ctx, repo, "rev-parse", "--symbolic-full-name", "HEAD")
@@ -153,7 +153,7 @@ func _headReference(ctx context.Context, repo *pb.Repository) ([]byte, error) {
 }
 
 // DefaultBranchName looks up the name of the default branch given a repoPath
-func DefaultBranchName(ctx context.Context, repo *pb.Repository) ([]byte, error) {
+func DefaultBranchName(ctx context.Context, repo *gitalypb.Repository) ([]byte, error) {
 	branches, err := FindBranchNames(ctx, repo)
 
 	if err != nil {
@@ -194,7 +194,7 @@ func DefaultBranchName(ctx context.Context, repo *pb.Repository) ([]byte, error)
 }
 
 // FindDefaultBranchName returns the default branch name for the given repository
-func (s *server) FindDefaultBranchName(ctx context.Context, in *pb.FindDefaultBranchNameRequest) (*pb.FindDefaultBranchNameResponse, error) {
+func (s *server) FindDefaultBranchName(ctx context.Context, in *gitalypb.FindDefaultBranchNameRequest) (*gitalypb.FindDefaultBranchNameResponse, error) {
 	grpc_logrus.Extract(ctx).Debug("FindDefaultBranchName")
 
 	defaultBranchName, err := DefaultBranchName(ctx, in.Repository)
@@ -205,16 +205,16 @@ func (s *server) FindDefaultBranchName(ctx context.Context, in *pb.FindDefaultBr
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 
-	return &pb.FindDefaultBranchNameResponse{Name: defaultBranchName}, nil
+	return &gitalypb.FindDefaultBranchNameResponse{Name: defaultBranchName}, nil
 }
 
-func parseSortKey(sortKey pb.FindLocalBranchesRequest_SortBy) string {
+func parseSortKey(sortKey gitalypb.FindLocalBranchesRequest_SortBy) string {
 	switch sortKey {
-	case pb.FindLocalBranchesRequest_NAME:
+	case gitalypb.FindLocalBranchesRequest_NAME:
 		return "refname"
-	case pb.FindLocalBranchesRequest_UPDATED_ASC:
+	case gitalypb.FindLocalBranchesRequest_UPDATED_ASC:
 		return "committerdate"
-	case pb.FindLocalBranchesRequest_UPDATED_DESC:
+	case gitalypb.FindLocalBranchesRequest_UPDATED_DESC:
 		return "-committerdate"
 	}
 
@@ -222,7 +222,7 @@ func parseSortKey(sortKey pb.FindLocalBranchesRequest_SortBy) string {
 }
 
 // FindLocalBranches creates a stream of branches for all local branches in the given repository
-func (s *server) FindLocalBranches(in *pb.FindLocalBranchesRequest, stream pb.RefService_FindLocalBranchesServer) error {
+func (s *server) FindLocalBranches(in *gitalypb.FindLocalBranchesRequest, stream gitalypb.RefService_FindLocalBranchesServer) error {
 	ctx := stream.Context()
 	c, err := catfile.New(ctx, in.Repository)
 	if err != nil {
@@ -241,7 +241,7 @@ func (s *server) FindLocalBranches(in *pb.FindLocalBranchesRequest, stream pb.Re
 	return findRefs(ctx, writer, in.Repository, []string{"refs/heads"}, opts)
 }
 
-func (s *server) FindAllBranches(in *pb.FindAllBranchesRequest, stream pb.RefService_FindAllBranchesServer) error {
+func (s *server) FindAllBranches(in *gitalypb.FindAllBranchesRequest, stream gitalypb.RefService_FindAllBranchesServer) error {
 	args := []string{
 		// %00 inserts the null character into the output (see for-each-ref docs)
 		"--format=" + strings.Join(localBranchFormatFields, "%00"),
@@ -285,7 +285,7 @@ func (s *server) FindAllBranches(in *pb.FindAllBranchesRequest, stream pb.RefSer
 
 // ListBranchNamesContainingCommit returns a maximum of in.GetLimit() Branch names
 // which contain the SHA1 passed as argument
-func (*server) ListBranchNamesContainingCommit(in *pb.ListBranchNamesContainingCommitRequest, stream pb.RefService_ListBranchNamesContainingCommitServer) error {
+func (*server) ListBranchNamesContainingCommit(in *gitalypb.ListBranchNamesContainingCommitRequest, stream gitalypb.RefService_ListBranchNamesContainingCommitServer) error {
 	if !validCommitID(in.GetCommitId()) {
 		return status.Errorf(codes.InvalidArgument, "commit id was not a 40 character hexidecimal")
 	}
@@ -296,7 +296,7 @@ func (*server) ListBranchNamesContainingCommit(in *pb.ListBranchNamesContainingC
 	}
 
 	writer := func(refs [][]byte) error {
-		return stream.Send(&pb.ListBranchNamesContainingCommitResponse{BranchNames: refs})
+		return stream.Send(&gitalypb.ListBranchNamesContainingCommitResponse{BranchNames: refs})
 	}
 
 	return findRefs(stream.Context(), writer, in.Repository, []string{"refs/heads"},
@@ -308,7 +308,7 @@ func (*server) ListBranchNamesContainingCommit(in *pb.ListBranchNamesContainingC
 
 // ListTagNamesContainingCommit returns a maximum of in.GetLimit() Tag names
 // which contain the SHA1 passed as argument
-func (*server) ListTagNamesContainingCommit(in *pb.ListTagNamesContainingCommitRequest, stream pb.RefService_ListTagNamesContainingCommitServer) error {
+func (*server) ListTagNamesContainingCommit(in *gitalypb.ListTagNamesContainingCommitRequest, stream gitalypb.RefService_ListTagNamesContainingCommitServer) error {
 	if !validCommitID(in.GetCommitId()) {
 		return status.Errorf(codes.InvalidArgument, "commit id was not a 40 character hexidecimal")
 	}
@@ -319,7 +319,7 @@ func (*server) ListTagNamesContainingCommit(in *pb.ListTagNamesContainingCommitR
 	}
 
 	writer := func(refs [][]byte) error {
-		return stream.Send(&pb.ListTagNamesContainingCommitResponse{TagNames: refs})
+		return stream.Send(&gitalypb.ListTagNamesContainingCommitResponse{TagNames: refs})
 	}
 
 	return findRefs(stream.Context(), writer, in.Repository, []string{"refs/tags"},

@@ -4,7 +4,7 @@ import (
 	"io"
 	"testing"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
 	"github.com/stretchr/testify/require"
@@ -21,7 +21,7 @@ func TestSuccessfulListCommitsByOidRequest(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	commits := []*pb.GitCommit{
+	commits := []*gitalypb.GitCommit{
 		{
 			Id:        "bf6e164cac2dc32b1f391ca4290badcbe4ffc5fb",
 			Subject:   []byte("Commit #10"),
@@ -44,50 +44,50 @@ func TestSuccessfulListCommitsByOidRequest(t *testing.T) {
 
 	testCases := []struct {
 		desc            string
-		request         *pb.ListCommitsByOidRequest
-		expectedCommits []*pb.GitCommit
+		request         *gitalypb.ListCommitsByOidRequest
+		expectedCommits []*gitalypb.GitCommit
 	}{
 		{
 			desc: "find one commit",
-			request: &pb.ListCommitsByOidRequest{
+			request: &gitalypb.ListCommitsByOidRequest{
 				Oid: []string{commits[0].Id},
 			},
 			expectedCommits: commits[0:1],
 		},
 		{
 			desc: "find multiple commits",
-			request: &pb.ListCommitsByOidRequest{
+			request: &gitalypb.ListCommitsByOidRequest{
 				Oid: []string{commits[0].Id, commits[1].Id},
 			},
 			expectedCommits: commits,
 		},
 		{
 			desc: "no query",
-			request: &pb.ListCommitsByOidRequest{
+			request: &gitalypb.ListCommitsByOidRequest{
 				Oid: []string{},
 			},
-			expectedCommits: []*pb.GitCommit{},
+			expectedCommits: []*gitalypb.GitCommit{},
 		},
 		{
 			desc: "empty query",
-			request: &pb.ListCommitsByOidRequest{
+			request: &gitalypb.ListCommitsByOidRequest{
 				Oid: []string{""},
 			},
-			expectedCommits: []*pb.GitCommit{},
+			expectedCommits: []*gitalypb.GitCommit{},
 		},
 		{
 			desc: "partial oids",
-			request: &pb.ListCommitsByOidRequest{
+			request: &gitalypb.ListCommitsByOidRequest{
 				Oid: []string{commits[0].Id[0:10], commits[1].Id[0:8]},
 			},
 			expectedCommits: commits,
 		},
 		{
 			desc: "unknown oids",
-			request: &pb.ListCommitsByOidRequest{
+			request: &gitalypb.ListCommitsByOidRequest{
 				Oid: []string{"deadbeef", "987654321"},
 			},
-			expectedCommits: []*pb.GitCommit{},
+			expectedCommits: []*gitalypb.GitCommit{},
 		},
 	}
 
@@ -114,8 +114,8 @@ func TestSuccessfulListCommitsByOidRequest(t *testing.T) {
 	}
 }
 
-func consumeGetByOidResponse(t *testing.T, c pb.CommitService_ListCommitsByOidClient) []*pb.GitCommit {
-	receivedCommits := []*pb.GitCommit{}
+func consumeGetByOidResponse(t *testing.T, c gitalypb.CommitService_ListCommitsByOidClient) []*gitalypb.GitCommit {
+	receivedCommits := []*gitalypb.GitCommit{}
 	for {
 		resp, err := c.Recv()
 		if err == io.EOF {
@@ -186,7 +186,7 @@ func TestSuccessfulListCommitsByOidLargeRequest(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	req := &pb.ListCommitsByOidRequest{
+	req := &gitalypb.ListCommitsByOidRequest{
 		Oid:        masterCommitids,
 		Repository: testRepo,
 	}

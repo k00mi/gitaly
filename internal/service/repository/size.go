@@ -7,16 +7,15 @@ import (
 	"os/exec"
 	"strconv"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	"golang.org/x/net/context"
 )
 
-func (s *server) RepositorySize(ctx context.Context, in *pb.RepositorySizeRequest) (*pb.RepositorySizeResponse, error) {
+func (s *server) RepositorySize(ctx context.Context, in *gitalypb.RepositorySizeRequest) (*gitalypb.RepositorySizeResponse, error) {
 	path, err := helper.GetPath(in.Repository)
 	if err != nil {
 		return nil, err
@@ -54,6 +53,6 @@ func (s *server) RepositorySize(ctx context.Context, in *pb.RepositorySizeReques
 	return repositorySizeResponse(size), nil
 }
 
-func repositorySizeResponse(size int64) *pb.RepositorySizeResponse {
-	return &pb.RepositorySizeResponse{Size: size}
+func repositorySizeResponse(size int64) *gitalypb.RepositorySizeResponse {
+	return &gitalypb.RepositorySizeResponse{Size: size}
 }

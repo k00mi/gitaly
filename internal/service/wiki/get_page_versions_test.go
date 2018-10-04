@@ -6,9 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,19 +33,19 @@ func TestWikiGetPageVersionsRequest(t *testing.T) {
 	updateWikiPage(t, client, wikiRepo, pageTitle, []byte("New content"))
 	v2cid := testhelper.MustRunCommand(t, nil, "git", "-C", wikiRepoPath, "log", "-1", "--format=%H")
 
-	gitAuthor := &pb.CommitAuthor{
+	gitAuthor := &gitalypb.CommitAuthor{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 	}
 
 	testCases := []struct {
 		desc     string
-		request  *pb.WikiGetPageVersionsRequest
-		versions []*pb.WikiPageVersion
+		request  *gitalypb.WikiGetPageVersionsRequest
+		versions []*gitalypb.WikiPageVersion
 	}{
 		{
 			desc: "No page found",
-			request: &pb.WikiGetPageVersionsRequest{
+			request: &gitalypb.WikiGetPageVersionsRequest{
 				Repository: wikiRepo,
 				PagePath:   []byte("not-found"),
 			},
@@ -54,13 +53,13 @@ func TestWikiGetPageVersionsRequest(t *testing.T) {
 		},
 		{
 			desc: "2 version found",
-			request: &pb.WikiGetPageVersionsRequest{
+			request: &gitalypb.WikiGetPageVersionsRequest{
 				Repository: wikiRepo,
 				PagePath:   []byte(pageTitle),
 			},
-			versions: []*pb.WikiPageVersion{
+			versions: []*gitalypb.WikiPageVersion{
 				{
-					Commit: &pb.GitCommit{
+					Commit: &gitalypb.GitCommit{
 						Id:        strings.TrimRight(string(v2cid), "\n"),
 						Body:      []byte("Update WikiGétPageVersions"),
 						Subject:   []byte("Update WikiGétPageVersions"),
@@ -72,7 +71,7 @@ func TestWikiGetPageVersionsRequest(t *testing.T) {
 					Format: "markdown",
 				},
 				{
-					Commit: &pb.GitCommit{
+					Commit: &gitalypb.GitCommit{
 						Id:        strings.TrimRight(string(v1cid), "\n"),
 						Body:      []byte("Add WikiGétPageVersions"),
 						Subject:   []byte("Add WikiGétPageVersions"),
@@ -160,7 +159,7 @@ func TestWikiGetPageVersionsPaginationParams(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			stream, err := client.WikiGetPageVersions(ctx, &pb.WikiGetPageVersionsRequest{
+			stream, err := client.WikiGetPageVersions(ctx, &gitalypb.WikiGetPageVersionsRequest{
 				Repository: wikiRepo,
 				PagePath:   []byte(pageTitle),
 				PerPage:    tc.perPage,
@@ -184,7 +183,7 @@ func TestWikiGetPageVersionsPaginationParams(t *testing.T) {
 	}
 }
 
-func assertWikiPageVersionEqual(t *testing.T, expected, actual *pb.WikiPageVersion, msg ...interface{}) bool {
+func assertWikiPageVersionEqual(t *testing.T, expected, actual *gitalypb.WikiPageVersion, msg ...interface{}) bool {
 	assert.Equal(t, expected.GetFormat(), actual.GetFormat())
 	assert.NoError(t, testhelper.GitCommitEqual(expected.GetCommit(), actual.GetCommit()))
 

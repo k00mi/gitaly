@@ -6,7 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -14,7 +14,7 @@ import (
 
 var maxTreeEntries = 1000
 
-func validateGetTreeEntriesRequest(in *pb.GetTreeEntriesRequest) error {
+func validateGetTreeEntriesRequest(in *gitalypb.GetTreeEntriesRequest) error {
 	if len(in.GetRevision()) == 0 {
 		return fmt.Errorf("empty Revision")
 	}
@@ -26,11 +26,11 @@ func validateGetTreeEntriesRequest(in *pb.GetTreeEntriesRequest) error {
 	return nil
 }
 
-func populateFlatPath(c *catfile.Batch, entries []*pb.TreeEntry) error {
+func populateFlatPath(c *catfile.Batch, entries []*gitalypb.TreeEntry) error {
 	for _, entry := range entries {
 		entry.FlatPath = entry.Path
 
-		if entry.Type != pb.TreeEntry_TREE {
+		if entry.Type != gitalypb.TreeEntry_TREE {
 			continue
 		}
 
@@ -40,7 +40,7 @@ func populateFlatPath(c *catfile.Batch, entries []*pb.TreeEntry) error {
 			if err != nil {
 				return err
 			}
-			if len(subentries) != 1 || subentries[0].Type != pb.TreeEntry_TREE {
+			if len(subentries) != 1 || subentries[0].Type != gitalypb.TreeEntry_TREE {
 				break
 			}
 
@@ -51,7 +51,7 @@ func populateFlatPath(c *catfile.Batch, entries []*pb.TreeEntry) error {
 	return nil
 }
 
-func sendTreeEntries(stream pb.CommitService_GetTreeEntriesServer, c *catfile.Batch, revision, path string, recursive bool) error {
+func sendTreeEntries(stream gitalypb.CommitService_GetTreeEntriesServer, c *catfile.Batch, revision, path string, recursive bool) error {
 	entries, err := treeEntries(c, revision, path, "", recursive)
 	if err != nil {
 		return err
@@ -64,7 +64,7 @@ func sendTreeEntries(stream pb.CommitService_GetTreeEntriesServer, c *catfile.Ba
 	}
 
 	for len(entries) > maxTreeEntries {
-		chunk := &pb.GetTreeEntriesResponse{
+		chunk := &gitalypb.GetTreeEntriesResponse{
 			Entries: entries[:maxTreeEntries],
 		}
 		if err := stream.Send(chunk); err != nil {
@@ -74,13 +74,13 @@ func sendTreeEntries(stream pb.CommitService_GetTreeEntriesServer, c *catfile.Ba
 	}
 
 	if len(entries) > 0 {
-		return stream.Send(&pb.GetTreeEntriesResponse{Entries: entries})
+		return stream.Send(&gitalypb.GetTreeEntriesResponse{Entries: entries})
 	}
 
 	return nil
 }
 
-func (s *server) GetTreeEntries(in *pb.GetTreeEntriesRequest, stream pb.CommitService_GetTreeEntriesServer) error {
+func (s *server) GetTreeEntries(in *gitalypb.GetTreeEntriesRequest, stream gitalypb.CommitService_GetTreeEntriesServer) error {
 	grpc_logrus.Extract(stream.Context()).WithFields(log.Fields{
 		"Revision": in.Revision,
 		"Path":     in.Path,

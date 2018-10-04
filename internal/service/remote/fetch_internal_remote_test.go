@@ -5,6 +5,7 @@ import (
 	"net"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/service/remote"
 
 	"google.golang.org/grpc"
@@ -14,7 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 	serverPkg "gitlab.com/gitlab-org/gitaly/internal/server"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
@@ -37,7 +37,7 @@ func TestSuccessfulFetchInternalRemote(t *testing.T) {
 	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
 	ctx := metadata.NewOutgoingContext(ctxOuter, md)
 
-	request := &pb.FetchInternalRemoteRequest{
+	request := &gitalypb.FetchInternalRemoteRequest{
 		Repository:       repo,
 		RemoteRepository: remoteRepo,
 	}
@@ -68,9 +68,9 @@ func TestFailedFetchInternalRemote(t *testing.T) {
 	ctx := metadata.NewOutgoingContext(ctxOuter, md)
 
 	// Non-existing remote repo
-	remoteRepo := &pb.Repository{StorageName: "default", RelativePath: "fake.git"}
+	remoteRepo := &gitalypb.Repository{StorageName: "default", RelativePath: "fake.git"}
 
-	request := &pb.FetchInternalRemoteRequest{
+	request := &gitalypb.FetchInternalRemoteRequest{
 		Repository:       repo,
 		RemoteRepository: remoteRepo,
 	}
@@ -90,19 +90,19 @@ func TestFailedFetchInternalRemoteDueToValidations(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	repo := &pb.Repository{StorageName: "default", RelativePath: "repo.git"}
+	repo := &gitalypb.Repository{StorageName: "default", RelativePath: "repo.git"}
 
 	testCases := []struct {
 		desc    string
-		request *pb.FetchInternalRemoteRequest
+		request *gitalypb.FetchInternalRemoteRequest
 	}{
 		{
 			desc:    "empty Repository",
-			request: &pb.FetchInternalRemoteRequest{RemoteRepository: repo},
+			request: &gitalypb.FetchInternalRemoteRequest{RemoteRepository: repo},
 		},
 		{
 			desc:    "empty Remote Repository",
-			request: &pb.FetchInternalRemoteRequest{Repository: repo},
+			request: &gitalypb.FetchInternalRemoteRequest{Repository: repo},
 		},
 	}
 

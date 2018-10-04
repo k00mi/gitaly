@@ -10,7 +10,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/service/ref"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
@@ -43,7 +43,7 @@ var (
 )
 
 func TestListFilesSuccess(t *testing.T) {
-	defaultBranchName = func(ctx context.Context, _ *pb.Repository) ([]byte, error) {
+	defaultBranchName = func(ctx context.Context, _ *gitalypb.Repository) ([]byte, error) {
 		return []byte("test-do-not-touch"), nil
 	}
 	defer func() {
@@ -101,7 +101,7 @@ func TestListFilesSuccess(t *testing.T) {
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("test case: %q", test.revision), func(t *testing.T) {
 			var files [][]byte
-			rpcRequest := pb.ListFilesRequest{
+			rpcRequest := gitalypb.ListFilesRequest{
 				Repository: testRepo, Revision: []byte(test.revision),
 			}
 
@@ -144,22 +144,22 @@ func TestListFilesFailure(t *testing.T) {
 	defer conn.Close()
 
 	tests := []struct {
-		repo *pb.Repository
+		repo *gitalypb.Repository
 		code codes.Code
 		desc string
 	}{
 		// Nil Repo
 		{repo: nil, code: codes.InvalidArgument, desc: "nil repo"},
 		// Empty Repo Object
-		{repo: &pb.Repository{}, code: codes.InvalidArgument, desc: "empty repo object"},
+		{repo: &gitalypb.Repository{}, code: codes.InvalidArgument, desc: "empty repo object"},
 		// Non-existing Repo
-		{repo: &pb.Repository{StorageName: "foo", RelativePath: "bar"}, code: codes.InvalidArgument, desc: "non-existing repo"},
+		{repo: &gitalypb.Repository{StorageName: "foo", RelativePath: "bar"}, code: codes.InvalidArgument, desc: "non-existing repo"},
 	}
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 
-			rpcRequest := pb.ListFilesRequest{
+			rpcRequest := gitalypb.ListFilesRequest{
 				Repository: test.repo, Revision: []byte("master"),
 			}
 
@@ -176,7 +176,7 @@ func TestListFilesFailure(t *testing.T) {
 	}
 }
 
-func drainListFilesResponse(c pb.CommitService_ListFilesClient) error {
+func drainListFilesResponse(c gitalypb.CommitService_ListFilesClient) error {
 	var err error
 	for err == nil {
 		_, err = c.Recv()

@@ -8,17 +8,16 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/linguist"
 	"gitlab.com/gitlab-org/gitaly/internal/service/ref"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-
 	"golang.org/x/net/context"
 )
 
-func (*server) CommitLanguages(ctx context.Context, req *pb.CommitLanguagesRequest) (*pb.CommitLanguagesResponse, error) {
+func (*server) CommitLanguages(ctx context.Context, req *gitalypb.CommitLanguagesRequest) (*gitalypb.CommitLanguagesResponse, error) {
 	repo := req.Repository
 
 	revision := string(req.Revision)
@@ -44,7 +43,7 @@ func (*server) CommitLanguages(ctx context.Context, req *pb.CommitLanguagesReque
 		return nil, err
 	}
 
-	resp := &pb.CommitLanguagesResponse{}
+	resp := &gitalypb.CommitLanguagesResponse{}
 	if len(stats) == 0 {
 		return resp, nil
 	}
@@ -59,7 +58,7 @@ func (*server) CommitLanguages(ctx context.Context, req *pb.CommitLanguagesReque
 	}
 
 	for lang, count := range stats {
-		l := &pb.CommitLanguagesResponse_Language{
+		l := &gitalypb.CommitLanguagesResponse_Language{
 			Name:  lang,
 			Share: float32(100*count) / float32(total),
 			Color: linguist.Color(lang),
@@ -72,13 +71,13 @@ func (*server) CommitLanguages(ctx context.Context, req *pb.CommitLanguagesReque
 	return resp, nil
 }
 
-type languageSorter []*pb.CommitLanguagesResponse_Language
+type languageSorter []*gitalypb.CommitLanguagesResponse_Language
 
 func (ls languageSorter) Len() int           { return len(ls) }
 func (ls languageSorter) Swap(i, j int)      { ls[i], ls[j] = ls[j], ls[i] }
 func (ls languageSorter) Less(i, j int) bool { return ls[i].Share > ls[j].Share }
 
-func lookupRevision(ctx context.Context, repo *pb.Repository, revision string) (string, error) {
+func lookupRevision(ctx context.Context, repo *gitalypb.Repository, revision string) (string, error) {
 	revParse, err := git.Command(ctx, repo, "rev-parse", revision)
 	if err != nil {
 		return "", err

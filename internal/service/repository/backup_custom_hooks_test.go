@@ -10,11 +10,10 @@ import (
 	"path"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 )
@@ -46,7 +45,7 @@ func TestSuccessfullBackupCustomHooksRequest(t *testing.T) {
 		require.NoError(t, ioutil.WriteFile(path.Join(repoPath, fileName), []byte("Some hooks"), 0700), fmt.Sprintf("Could not create %s", fileName))
 	}
 
-	backupRequest := &pb.BackupCustomHooksRequest{Repository: testRepo}
+	backupRequest := &gitalypb.BackupCustomHooksRequest{Repository: testRepo}
 	backupStream, err := client.BackupCustomHooks(ctx, backupRequest)
 	require.NoError(t, err)
 
@@ -87,7 +86,7 @@ func TestSuccessfullBackupCustomHooksSymlink(t *testing.T) {
 	linkTarget := "/var/empty"
 	require.NoError(t, os.Symlink(linkTarget, path.Join(repoPath, "custom_hooks")), "Could not create custom_hooks symlink")
 
-	backupRequest := &pb.BackupCustomHooksRequest{Repository: testRepo}
+	backupRequest := &gitalypb.BackupCustomHooksRequest{Repository: testRepo}
 	backupStream, err := client.BackupCustomHooks(ctx, backupRequest)
 	require.NoError(t, err)
 
@@ -120,7 +119,7 @@ func TestSuccessfullBackupCustomHooksRequestWithNoHooks(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	backupRequest := &pb.BackupCustomHooksRequest{Repository: testRepo}
+	backupRequest := &gitalypb.BackupCustomHooksRequest{Repository: testRepo}
 	backupStream, err := client.BackupCustomHooks(ctx, backupRequest)
 	require.NoError(t, err)
 

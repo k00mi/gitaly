@@ -9,7 +9,7 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	log "github.com/sirupsen/logrus"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"golang.org/x/net/context"
 )
@@ -17,7 +17,7 @@ import (
 // FindRefName returns a ref that starts with the given prefix, if one exists.
 //  If there is more than one such ref there is no guarantee which one is
 //  returned or that the same one is returned on each call.
-func (s *server) FindRefName(ctx context.Context, in *pb.FindRefNameRequest) (*pb.FindRefNameResponse, error) {
+func (s *server) FindRefName(ctx context.Context, in *gitalypb.FindRefNameRequest) (*gitalypb.FindRefNameResponse, error) {
 	if in.CommitId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "Bad Request (empty commit sha)")
 	}
@@ -30,11 +30,11 @@ func (s *server) FindRefName(ctx context.Context, in *pb.FindRefNameRequest) (*p
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 
-	return &pb.FindRefNameResponse{Name: []byte(ref)}, nil
+	return &gitalypb.FindRefNameResponse{Name: []byte(ref)}, nil
 }
 
 // We assume `repo` and `commitID` and `prefix` are non-empty
-func findRefName(ctx context.Context, repo *pb.Repository, commitID, prefix string) (string, error) {
+func findRefName(ctx context.Context, repo *gitalypb.Repository, commitID, prefix string) (string, error) {
 	grpc_logrus.Extract(ctx).WithFields(log.Fields{
 		"commitSha": commitID,
 		"prefix":    prefix,

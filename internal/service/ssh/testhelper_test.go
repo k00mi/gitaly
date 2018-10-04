@@ -9,8 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
-
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -22,7 +21,7 @@ const (
 )
 
 var (
-	testRepo      *pb.Repository
+	testRepo      *gitalypb.Repository
 	gitalySSHPath string
 	cwd           string
 )
@@ -69,7 +68,7 @@ func runSSHServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	pb.RegisterSSHServiceServer(server, NewServer())
+	gitalypb.RegisterSSHServiceServer(server, NewServer())
 	reflection.Register(server)
 
 	go server.Serve(listener)
@@ -77,7 +76,7 @@ func runSSHServer(t *testing.T) (*grpc.Server, string) {
 	return server, serverSocketPath
 }
 
-func newSSHClient(t *testing.T, serverSocketPath string) (pb.SSHServiceClient, *grpc.ClientConn) {
+func newSSHClient(t *testing.T, serverSocketPath string) (gitalypb.SSHServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
@@ -89,5 +88,5 @@ func newSSHClient(t *testing.T, serverSocketPath string) (pb.SSHServiceClient, *
 		t.Fatal(err)
 	}
 
-	return pb.NewSSHServiceClient(conn), conn
+	return gitalypb.NewSSHServiceClient(conn), conn
 }

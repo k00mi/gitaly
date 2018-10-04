@@ -3,7 +3,7 @@ package ref
 import (
 	"bufio"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) ListNewCommits(in *pb.ListNewCommitsRequest, stream pb.RefService_ListNewCommitsServer) error {
+func (s *server) ListNewCommits(in *gitalypb.ListNewCommitsRequest, stream gitalypb.RefService_ListNewCommitsServer) error {
 	oid := in.GetCommitId()
 	if err := validateCommitID(oid); err != nil {
 		return err
@@ -32,7 +32,7 @@ func (s *server) ListNewCommits(in *pb.ListNewCommitsRequest, stream pb.RefServi
 		return status.Errorf(codes.Internal, "ListNewCommits: catfile: %v", err)
 	}
 
-	commits := []*pb.GitCommit{}
+	commits := []*gitalypb.GitCommit{}
 	scanner := bufio.NewScanner(revList)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -44,7 +44,7 @@ func (s *server) ListNewCommits(in *pb.ListNewCommitsRequest, stream pb.RefServi
 		commits = append(commits, commit)
 
 		if len(commits) >= 10 {
-			response := &pb.ListNewCommitsResponse{Commits: commits}
+			response := &gitalypb.ListNewCommitsResponse{Commits: commits}
 			if err := stream.Send(response); err != nil {
 				return err
 			}
@@ -54,7 +54,7 @@ func (s *server) ListNewCommits(in *pb.ListNewCommitsRequest, stream pb.RefServi
 	}
 
 	if len(commits) > 0 {
-		response := &pb.ListNewCommitsResponse{Commits: commits}
+		response := &gitalypb.ListNewCommitsResponse{Commits: commits}
 		if err := stream.Send(response); err != nil {
 			return err
 		}

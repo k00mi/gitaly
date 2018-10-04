@@ -4,9 +4,8 @@ import (
 	"io"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
@@ -168,7 +167,7 @@ func TestSuccessfulListLastCommitsForTreeRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			request := &pb.ListLastCommitsForTreeRequest{
+			request := &gitalypb.ListLastCommitsForTreeRequest{
 				Repository: testRepo,
 				Revision:   testCase.revision,
 				Path:       testCase.path,
@@ -218,16 +217,16 @@ func TestFailedListLastCommitsForTreeRequest(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	invalidRepo := &pb.Repository{StorageName: "broken", RelativePath: "path"}
+	invalidRepo := &gitalypb.Repository{StorageName: "broken", RelativePath: "path"}
 
 	testCases := []struct {
 		desc    string
-		request *pb.ListLastCommitsForTreeRequest
+		request *gitalypb.ListLastCommitsForTreeRequest
 		code    codes.Code
 	}{
 		{
 			desc: "Revision is missing",
-			request: &pb.ListLastCommitsForTreeRequest{
+			request: &gitalypb.ListLastCommitsForTreeRequest{
 				Repository: testRepo,
 				Path:       []byte("/"),
 				Revision:   "",
@@ -238,7 +237,7 @@ func TestFailedListLastCommitsForTreeRequest(t *testing.T) {
 		},
 		{
 			desc: "Invalid repository",
-			request: &pb.ListLastCommitsForTreeRequest{
+			request: &gitalypb.ListLastCommitsForTreeRequest{
 				Repository: invalidRepo,
 				Path:       []byte("/"),
 				Revision:   "570e7b2abdd848b95f2f578043fc23bd6f6fd24d",
@@ -249,7 +248,7 @@ func TestFailedListLastCommitsForTreeRequest(t *testing.T) {
 		},
 		{
 			desc: "Repository is nil",
-			request: &pb.ListLastCommitsForTreeRequest{
+			request: &gitalypb.ListLastCommitsForTreeRequest{
 				Path:     []byte("/"),
 				Revision: "570e7b2abdd848b95f2f578043fc23bd6f6fd24d",
 				Offset:   0,
@@ -259,7 +258,7 @@ func TestFailedListLastCommitsForTreeRequest(t *testing.T) {
 		},
 		{
 			desc: "Revision is missing",
-			request: &pb.ListLastCommitsForTreeRequest{
+			request: &gitalypb.ListLastCommitsForTreeRequest{
 				Repository: testRepo,
 				Path:       []byte("/"),
 				Offset:     0,
@@ -269,7 +268,7 @@ func TestFailedListLastCommitsForTreeRequest(t *testing.T) {
 		},
 		{
 			desc: "Ambiguous revision",
-			request: &pb.ListLastCommitsForTreeRequest{
+			request: &gitalypb.ListLastCommitsForTreeRequest{
 				Repository: testRepo,
 				Revision:   "a",
 				Offset:     0,

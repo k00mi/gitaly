@@ -8,13 +8,13 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 )
 
 const headPrefix = "HEAD branch: "
 
-func findRemoteRootRef(ctx context.Context, repo *pb.Repository, remote string) (string, error) {
+func findRemoteRootRef(ctx context.Context, repo *gitalypb.Repository, remote string) (string, error) {
 	cmd, err := git.Command(ctx, repo, "remote", "show", remote)
 	if err != nil {
 		return "", err
@@ -41,7 +41,7 @@ func findRemoteRootRef(ctx context.Context, repo *pb.Repository, remote string) 
 }
 
 // FindRemoteRootRef queries the remote to determine its HEAD
-func (s *server) FindRemoteRootRef(ctx context.Context, in *pb.FindRemoteRootRefRequest) (*pb.FindRemoteRootRefResponse, error) {
+func (s *server) FindRemoteRootRef(ctx context.Context, in *gitalypb.FindRemoteRootRefRequest) (*gitalypb.FindRemoteRootRefResponse, error) {
 	remote := in.GetRemote()
 	if remote == "" {
 		return nil, status.Error(codes.InvalidArgument, "empty remote can't be queried")
@@ -56,5 +56,5 @@ func (s *server) FindRemoteRootRef(ctx context.Context, in *pb.FindRemoteRootRef
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 
-	return &pb.FindRemoteRootRefResponse{Ref: ref}, nil
+	return &gitalypb.FindRemoteRootRefResponse{Ref: ref}, nil
 }

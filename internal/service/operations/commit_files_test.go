@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/service/operations"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	user = &pb.User{
+	user = &gitalypb.User{
 		Name:  []byte("John Doe"),
 		Email: []byte("johndoe@gitlab.com"),
 		GlId:  "user-1",
@@ -48,7 +48,7 @@ func TestSuccessfulUserCommitFilesRequest(t *testing.T) {
 	authorEmail := []byte("janedoe@gitlab.com")
 	testCases := []struct {
 		desc            string
-		repo            *pb.Repository
+		repo            *gitalypb.Repository
 		repoPath        string
 		branchName      string
 		repoCreated     bool
@@ -193,12 +193,12 @@ func TestFailedUserCommitFilesRequestDueToIndexError(t *testing.T) {
 	ctx := metadata.NewOutgoingContext(ctxOuter, md)
 	testCases := []struct {
 		desc       string
-		requests   []*pb.UserCommitFilesRequest
+		requests   []*gitalypb.UserCommitFilesRequest
 		indexError string
 	}{
 		{
 			desc: "file already exists",
-			requests: []*pb.UserCommitFilesRequest{
+			requests: []*gitalypb.UserCommitFilesRequest{
 				headerRequest(testRepo, user, "feature", commitFilesMessage, nil, nil),
 				createFileHeaderRequest("README.md"),
 				actionContentRequest("This file already exists"),
@@ -207,7 +207,7 @@ func TestFailedUserCommitFilesRequestDueToIndexError(t *testing.T) {
 		},
 		{
 			desc: "file doesn't exists",
-			requests: []*pb.UserCommitFilesRequest{
+			requests: []*gitalypb.UserCommitFilesRequest{
 				headerRequest(testRepo, user, "feature", commitFilesMessage, nil, nil),
 				chmodFileHeaderRequest("documents/story.txt", true),
 			},
@@ -215,12 +215,12 @@ func TestFailedUserCommitFilesRequestDueToIndexError(t *testing.T) {
 		},
 		{
 			desc: "dir already exists",
-			requests: []*pb.UserCommitFilesRequest{
+			requests: []*gitalypb.UserCommitFilesRequest{
 				headerRequest(testRepo, user, "utf-dir", commitFilesMessage, nil, nil),
-				actionRequest(&pb.UserCommitFilesAction{
-					UserCommitFilesActionPayload: &pb.UserCommitFilesAction_Header{
-						Header: &pb.UserCommitFilesActionHeader{
-							Action:        pb.UserCommitFilesActionHeader_CREATE_DIR,
+				actionRequest(&gitalypb.UserCommitFilesAction{
+					UserCommitFilesActionPayload: &gitalypb.UserCommitFilesAction_Header{
+						Header: &gitalypb.UserCommitFilesActionHeader{
+							Action:        gitalypb.UserCommitFilesActionHeader_CREATE_DIR,
 							Base64Content: false,
 							FilePath:      []byte("héllo"),
 						},
@@ -266,7 +266,7 @@ func TestFailedUserCommitFilesRequest(t *testing.T) {
 	branchName := "feature"
 	testCases := []struct {
 		desc string
-		req  *pb.UserCommitFilesRequest
+		req  *gitalypb.UserCommitFilesRequest
 	}{
 		{
 			desc: "empty Repository",
@@ -300,10 +300,10 @@ func TestFailedUserCommitFilesRequest(t *testing.T) {
 	}
 }
 
-func headerRequest(repo *pb.Repository, user *pb.User, branchName string, commitMessage, authorName, authorEmail []byte) *pb.UserCommitFilesRequest {
-	return &pb.UserCommitFilesRequest{
-		UserCommitFilesRequestPayload: &pb.UserCommitFilesRequest_Header{
-			Header: &pb.UserCommitFilesRequestHeader{
+func headerRequest(repo *gitalypb.Repository, user *gitalypb.User, branchName string, commitMessage, authorName, authorEmail []byte) *gitalypb.UserCommitFilesRequest {
+	return &gitalypb.UserCommitFilesRequest{
+		UserCommitFilesRequestPayload: &gitalypb.UserCommitFilesRequest_Header{
+			Header: &gitalypb.UserCommitFilesRequestHeader{
 				Repository:        repo,
 				User:              user,
 				BranchName:        []byte(branchName),
@@ -317,11 +317,11 @@ func headerRequest(repo *pb.Repository, user *pb.User, branchName string, commit
 	}
 }
 
-func createFileHeaderRequest(filePath string) *pb.UserCommitFilesRequest {
-	return actionRequest(&pb.UserCommitFilesAction{
-		UserCommitFilesActionPayload: &pb.UserCommitFilesAction_Header{
-			Header: &pb.UserCommitFilesActionHeader{
-				Action:        pb.UserCommitFilesActionHeader_CREATE,
+func createFileHeaderRequest(filePath string) *gitalypb.UserCommitFilesRequest {
+	return actionRequest(&gitalypb.UserCommitFilesAction{
+		UserCommitFilesActionPayload: &gitalypb.UserCommitFilesAction_Header{
+			Header: &gitalypb.UserCommitFilesActionHeader{
+				Action:        gitalypb.UserCommitFilesActionHeader_CREATE,
 				Base64Content: false,
 				FilePath:      []byte(filePath),
 			},
@@ -329,11 +329,11 @@ func createFileHeaderRequest(filePath string) *pb.UserCommitFilesRequest {
 	})
 }
 
-func chmodFileHeaderRequest(filePath string, executeFilemode bool) *pb.UserCommitFilesRequest {
-	return actionRequest(&pb.UserCommitFilesAction{
-		UserCommitFilesActionPayload: &pb.UserCommitFilesAction_Header{
-			Header: &pb.UserCommitFilesActionHeader{
-				Action:          pb.UserCommitFilesActionHeader_CHMOD,
+func chmodFileHeaderRequest(filePath string, executeFilemode bool) *gitalypb.UserCommitFilesRequest {
+	return actionRequest(&gitalypb.UserCommitFilesAction{
+		UserCommitFilesActionPayload: &gitalypb.UserCommitFilesAction_Header{
+			Header: &gitalypb.UserCommitFilesActionHeader{
+				Action:          gitalypb.UserCommitFilesActionHeader_CHMOD,
 				FilePath:        []byte(filePath),
 				ExecuteFilemode: executeFilemode,
 			},
@@ -341,17 +341,17 @@ func chmodFileHeaderRequest(filePath string, executeFilemode bool) *pb.UserCommi
 	})
 }
 
-func actionContentRequest(content string) *pb.UserCommitFilesRequest {
-	return actionRequest(&pb.UserCommitFilesAction{
-		UserCommitFilesActionPayload: &pb.UserCommitFilesAction_Content{
+func actionContentRequest(content string) *gitalypb.UserCommitFilesRequest {
+	return actionRequest(&gitalypb.UserCommitFilesAction{
+		UserCommitFilesActionPayload: &gitalypb.UserCommitFilesAction_Content{
 			Content: []byte(content),
 		},
 	})
 }
 
-func actionRequest(action *pb.UserCommitFilesAction) *pb.UserCommitFilesRequest {
-	return &pb.UserCommitFilesRequest{
-		UserCommitFilesRequestPayload: &pb.UserCommitFilesRequest_Action{
+func actionRequest(action *gitalypb.UserCommitFilesAction) *gitalypb.UserCommitFilesRequest {
+	return &gitalypb.UserCommitFilesRequest{
+		UserCommitFilesRequestPayload: &gitalypb.UserCommitFilesRequest_Action{
 			Action: action,
 		},
 	}

@@ -8,12 +8,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
 type conflictFile struct {
-	header  *pb.ConflictFileHeader
+	header  *gitalypb.ConflictFileHeader
 	content []byte
 }
 
@@ -52,7 +52,7 @@ end
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	request := &pb.ListConflictFilesRequest{
+	request := &gitalypb.ListConflictFilesRequest{
 		Repository:     testRepo,
 		OurCommitOid:   ourCommitOid,
 		TheirCommitOid: theirCommitOid,
@@ -65,7 +65,7 @@ end
 
 	expectedFiles := []*conflictFile{
 		{
-			header: &pb.ConflictFileHeader{
+			header: &gitalypb.ConflictFileHeader{
 				Repository: testRepo,
 				CommitOid:  ourCommitOid,
 				OurMode:    int32(0100644),
@@ -75,7 +75,7 @@ end
 			content: []byte(conflictContent1),
 		},
 		{
-			header: &pb.ConflictFileHeader{
+			header: &gitalypb.ConflictFileHeader{
 				Repository: testRepo,
 				CommitOid:  ourCommitOid,
 				OurMode:    int32(0100644),
@@ -140,7 +140,7 @@ func TestListConflictFilesFailedPrecondition(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
 
-			request := &pb.ListConflictFilesRequest{
+			request := &gitalypb.ListConflictFilesRequest{
 				Repository:     testRepo,
 				OurCommitOid:   tc.ourCommitOid,
 				TheirCommitOid: tc.theirCommitOid,
@@ -171,12 +171,12 @@ func TestFailedListConflictFilesRequestDueToValidation(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.ListConflictFilesRequest
+		request *gitalypb.ListConflictFilesRequest
 		code    codes.Code
 	}{
 		{
 			desc: "empty repo",
-			request: &pb.ListConflictFilesRequest{
+			request: &gitalypb.ListConflictFilesRequest{
 				Repository:     nil,
 				OurCommitOid:   ourCommitOid,
 				TheirCommitOid: theirCommitOid,
@@ -185,7 +185,7 @@ func TestFailedListConflictFilesRequestDueToValidation(t *testing.T) {
 		},
 		{
 			desc: "empty OurCommitId field",
-			request: &pb.ListConflictFilesRequest{
+			request: &gitalypb.ListConflictFilesRequest{
 				Repository:     testRepo,
 				OurCommitOid:   "",
 				TheirCommitOid: theirCommitOid,
@@ -194,7 +194,7 @@ func TestFailedListConflictFilesRequestDueToValidation(t *testing.T) {
 		},
 		{
 			desc: "empty TheirCommitId field",
-			request: &pb.ListConflictFilesRequest{
+			request: &gitalypb.ListConflictFilesRequest{
 				Repository:     testRepo,
 				OurCommitOid:   ourCommitOid,
 				TheirCommitOid: "",
@@ -214,7 +214,7 @@ func TestFailedListConflictFilesRequestDueToValidation(t *testing.T) {
 	}
 }
 
-func getConflictFiles(t *testing.T, c pb.ConflictsService_ListConflictFilesClient) []*conflictFile {
+func getConflictFiles(t *testing.T, c gitalypb.ConflictsService_ListConflictFilesClient) []*conflictFile {
 	files := []*conflictFile{}
 	var currentFile *conflictFile
 
@@ -247,7 +247,7 @@ func getConflictFiles(t *testing.T, c pb.ConflictsService_ListConflictFilesClien
 	return files
 }
 
-func drainListConflictFilesResponse(c pb.ConflictsService_ListConflictFilesClient) error {
+func drainListConflictFilesResponse(c gitalypb.ConflictsService_ListConflictFilesClient) error {
 	var err error
 	for err == nil {
 		_, err = c.Recv()

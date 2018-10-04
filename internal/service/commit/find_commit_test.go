@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -45,21 +45,21 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 	testCases := []struct {
 		description string
 		revision    string
-		commit      *pb.GitCommit
+		commit      *gitalypb.GitCommit
 	}{
 		{
 			description: "With a branch name",
 			revision:    "branch-merged",
-			commit: &pb.GitCommit{
+			commit: &gitalypb.GitCommit{
 				Id:      "498214de67004b1da3d820901307bed2a68a8ef6",
 				Subject: []byte("adds bar folder and branch-test text file to check Repository merged_to_root_ref method"),
 				Body:    []byte("adds bar folder and branch-test text file to check Repository merged_to_root_ref method\n"),
-				Author: &pb.CommitAuthor{
+				Author: &gitalypb.CommitAuthor{
 					Name:  []byte("tiagonbotelho"),
 					Email: []byte("tiagonbotelho@hotmail.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1474470806},
 				},
-				Committer: &pb.CommitAuthor{
+				Committer: &gitalypb.CommitAuthor{
 					Name:  []byte("tiagonbotelho"),
 					Email: []byte("tiagonbotelho@hotmail.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1474470806},
@@ -71,16 +71,16 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 		{
 			description: "With a tag name",
 			revision:    "v1.0.0",
-			commit: &pb.GitCommit{
+			commit: &gitalypb.GitCommit{
 				Id:      "6f6d7e7ed97bb5f0054f2b1df789b39ca89b6ff9",
 				Subject: []byte("More submodules"),
 				Body:    []byte("More submodules\n\nSigned-off-by: Dmitriy Zaporozhets <dmitriy.zaporozhets@gmail.com>\n"),
-				Author: &pb.CommitAuthor{
+				Author: &gitalypb.CommitAuthor{
 					Name:  []byte("Dmitriy Zaporozhets"),
 					Email: []byte("dmitriy.zaporozhets@gmail.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1393491261},
 				},
-				Committer: &pb.CommitAuthor{
+				Committer: &gitalypb.CommitAuthor{
 					Name:  []byte("Dmitriy Zaporozhets"),
 					Email: []byte("dmitriy.zaporozhets@gmail.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1393491261},
@@ -92,16 +92,16 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 		{
 			description: "With a hash",
 			revision:    "b83d6e391c22777fca1ed3012fce84f633d7fed0",
-			commit: &pb.GitCommit{
+			commit: &gitalypb.GitCommit{
 				Id:      "b83d6e391c22777fca1ed3012fce84f633d7fed0",
 				Subject: []byte("Merge branch 'branch-merged' into 'master'"),
 				Body:    []byte("Merge branch 'branch-merged' into 'master'\r\n\r\nadds bar folder and branch-test text file to check Repository merged_to_root_ref method\r\n\r\n\r\n\r\nSee merge request !12"),
-				Author: &pb.CommitAuthor{
+				Author: &gitalypb.CommitAuthor{
 					Name:  []byte("Job van der Voort"),
 					Email: []byte("job@gitlab.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1474987066},
 				},
-				Committer: &pb.CommitAuthor{
+				Committer: &gitalypb.CommitAuthor{
 					Name:  []byte("Job van der Voort"),
 					Email: []byte("job@gitlab.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1474987066},
@@ -116,16 +116,16 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 		{
 			description: "With an initial commit",
 			revision:    "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
-			commit: &pb.GitCommit{
+			commit: &gitalypb.GitCommit{
 				Id:      "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
 				Subject: []byte("Initial commit"),
 				Body:    []byte("Initial commit\n"),
-				Author: &pb.CommitAuthor{
+				Author: &gitalypb.CommitAuthor{
 					Name:  []byte("Dmitriy Zaporozhets"),
 					Email: []byte("dmitriy.zaporozhets@gmail.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1393488198},
 				},
-				Committer: &pb.CommitAuthor{
+				Committer: &gitalypb.CommitAuthor{
 					Name:  []byte("Dmitriy Zaporozhets"),
 					Email: []byte("dmitriy.zaporozhets@gmail.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1393488198},
@@ -137,16 +137,16 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 		{
 			description: "with non-utf8 message encoding, recognized by Git",
 			revision:    "c809470461118b7bcab850f6e9a7ca97ac42f8ea",
-			commit: &pb.GitCommit{
+			commit: &gitalypb.GitCommit{
 				Id:      "c809470461118b7bcab850f6e9a7ca97ac42f8ea",
 				Subject: windows1251Message[:len(windows1251Message)-1],
 				Body:    windows1251Message,
-				Author: &pb.CommitAuthor{
+				Author: &gitalypb.CommitAuthor{
 					Name:  []byte("Jacob Vosmaer"),
 					Email: []byte("jacob@gitlab.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1512132977},
 				},
-				Committer: &pb.CommitAuthor{
+				Committer: &gitalypb.CommitAuthor{
 					Name:  []byte("Jacob Vosmaer"),
 					Email: []byte("jacob@gitlab.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1512132977},
@@ -158,16 +158,16 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 		{
 			description: "with non-utf8 garbage message encoding, not recognized by Git",
 			revision:    "0999bb770f8dc92ab5581cc0b474b3e31a96bf5c",
-			commit: &pb.GitCommit{
+			commit: &gitalypb.GitCommit{
 				Id:      "0999bb770f8dc92ab5581cc0b474b3e31a96bf5c",
 				Subject: []byte("Hello\xf0world"),
 				Body:    []byte("Hello\xf0world\n"),
-				Author: &pb.CommitAuthor{
+				Author: &gitalypb.CommitAuthor{
 					Name:  []byte("Jacob Vosmaer"),
 					Email: []byte("jacob@gitlab.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1517328273},
 				},
-				Committer: &pb.CommitAuthor{
+				Committer: &gitalypb.CommitAuthor{
 					Name:  []byte("Jacob Vosmaer"),
 					Email: []byte("jacob@gitlab.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1517328273},
@@ -179,15 +179,15 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 		{
 			description: "with a very large message",
 			revision:    bigCommitID,
-			commit: &pb.GitCommit{
+			commit: &gitalypb.GitCommit{
 				Id:      bigCommitID,
 				Subject: []byte("An empty commit with REALLY BIG message"),
-				Author: &pb.CommitAuthor{
+				Author: &gitalypb.CommitAuthor{
 					Name:  []byte("Scrooge McDuck"),
 					Email: []byte("scrooge@mcduck.com"),
 					Date:  &timestamp.Timestamp{Seconds: bigCommit.Author.Date.Seconds},
 				},
-				Committer: &pb.CommitAuthor{
+				Committer: &gitalypb.CommitAuthor{
 					Name:  []byte("Scrooge McDuck"),
 					Email: []byte("scrooge@mcduck.com"),
 					Date:  &timestamp.Timestamp{Seconds: bigCommit.Committer.Date.Seconds},
@@ -200,16 +200,16 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 		{
 			description: "with different author and committer",
 			revision:    "77e835ef0856f33c4f0982f84d10bdb0567fe440",
-			commit: &pb.GitCommit{
+			commit: &gitalypb.GitCommit{
 				Id:      "77e835ef0856f33c4f0982f84d10bdb0567fe440",
 				Subject: []byte("Add file larger than 1 mb"),
 				Body:    []byte("Add file larger than 1 mb\n\nIn order to test Max File Size push rule we need a file larger than 1 MB\n"),
-				Author: &pb.CommitAuthor{
+				Author: &gitalypb.CommitAuthor{
 					Name:  []byte("Ruben Davila"),
 					Email: []byte("rdavila84@gmail.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1523247267},
 				},
-				Committer: &pb.CommitAuthor{
+				Committer: &gitalypb.CommitAuthor{
 					Name:  []byte("Jacob Vosmaer"),
 					Email: []byte("jacob@gitlab.com"),
 					Date:  &timestamp.Timestamp{Seconds: 1527855450},
@@ -230,10 +230,10 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 		},
 	}
 
-	allCommits := []*pb.GitCommit{}
+	allCommits := []*gitalypb.GitCommit{}
 	for _, testCase := range testCases {
 		t.Run(testCase.description, func(t *testing.T) {
-			request := &pb.FindCommitRequest{
+			request := &gitalypb.FindCommitRequest{
 				Repository: testRepo,
 				Revision:   []byte(testCase.revision),
 			}
@@ -255,7 +255,7 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 	)
 
 	for i, testCase := range testCases {
-		request := &pb.FindCommitRequest{
+		request := &gitalypb.FindCommitRequest{
 			Repository: testRepo,
 			Revision:   []byte(testCase.revision),
 		}
@@ -276,12 +276,12 @@ func TestFailedFindCommitRequest(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	invalidRepo := &pb.Repository{StorageName: "fake", RelativePath: "path"}
+	invalidRepo := &gitalypb.Repository{StorageName: "fake", RelativePath: "path"}
 
 	testCases := []struct {
 		description string
 		revision    []byte
-		repo        *pb.Repository
+		repo        *gitalypb.Repository
 	}{
 		{repo: invalidRepo, revision: []byte("master"), description: "Invalid repo"},
 		{repo: testRepo, revision: []byte(""), description: "Empty revision"},
@@ -298,7 +298,7 @@ func TestFailedFindCommitRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.description, func(t *testing.T) {
-			request := &pb.FindCommitRequest{
+			request := &gitalypb.FindCommitRequest{
 				Repository: testCase.repo,
 				Revision:   testCase.revision,
 			}

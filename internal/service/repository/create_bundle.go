@@ -3,16 +3,15 @@ package repository
 import (
 	"io"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/streamio"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) CreateBundle(req *pb.CreateBundleRequest, stream pb.RepositoryService_CreateBundleServer) error {
+func (s *server) CreateBundle(req *gitalypb.CreateBundleRequest, stream gitalypb.RepositoryService_CreateBundleServer) error {
 	repo := req.GetRepository()
 	if repo == nil {
 		return status.Errorf(codes.InvalidArgument, "CreateBundle: empty Repository")
@@ -26,7 +25,7 @@ func (s *server) CreateBundle(req *pb.CreateBundleRequest, stream pb.RepositoryS
 	}
 
 	writer := streamio.NewWriter(func(p []byte) error {
-		return stream.Send(&pb.CreateBundleResponse{Data: p})
+		return stream.Send(&gitalypb.CreateBundleResponse{Data: p})
 	})
 
 	_, err = io.Copy(writer, cmd)

@@ -6,11 +6,10 @@ import (
 	"path"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/service/operations"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -36,7 +35,7 @@ func TestSuccessfulUserRevertRequest(t *testing.T) {
 	masterHeadCommit, err := log.GetCommit(ctxOuter, testRepo, "master")
 	require.NoError(t, err)
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
@@ -50,23 +49,23 @@ func TestSuccessfulUserRevertRequest(t *testing.T) {
 
 	testCases := []struct {
 		desc         string
-		request      *pb.UserRevertRequest
-		branchUpdate *pb.OperationBranchUpdate
+		request      *gitalypb.UserRevertRequest
+		branchUpdate *gitalypb.OperationBranchUpdate
 	}{
 		{
 			desc: "branch exists",
-			request: &pb.UserRevertRequest{
+			request: &gitalypb.UserRevertRequest{
 				Repository: testRepo,
 				User:       user,
 				Commit:     revertedCommit,
 				BranchName: []byte(destinationBranch),
 				Message:    []byte("Reverting " + revertedCommit.Id),
 			},
-			branchUpdate: &pb.OperationBranchUpdate{},
+			branchUpdate: &gitalypb.OperationBranchUpdate{},
 		},
 		{
 			desc: "nonexistent branch + start_repository == repository",
-			request: &pb.UserRevertRequest{
+			request: &gitalypb.UserRevertRequest{
 				Repository:      testRepo,
 				User:            user,
 				Commit:          revertedCommit,
@@ -74,11 +73,11 @@ func TestSuccessfulUserRevertRequest(t *testing.T) {
 				Message:         []byte("Reverting " + revertedCommit.Id),
 				StartBranchName: []byte("master"),
 			},
-			branchUpdate: &pb.OperationBranchUpdate{BranchCreated: true},
+			branchUpdate: &gitalypb.OperationBranchUpdate{BranchCreated: true},
 		},
 		{
 			desc: "nonexistent branch + start_repository != repository",
-			request: &pb.UserRevertRequest{
+			request: &gitalypb.UserRevertRequest{
 				Repository:      testRepo,
 				User:            user,
 				Commit:          revertedCommit,
@@ -87,11 +86,11 @@ func TestSuccessfulUserRevertRequest(t *testing.T) {
 				StartRepository: testRepoCopy,
 				StartBranchName: []byte("master"),
 			},
-			branchUpdate: &pb.OperationBranchUpdate{BranchCreated: true},
+			branchUpdate: &gitalypb.OperationBranchUpdate{BranchCreated: true},
 		},
 		{
 			desc: "nonexistent branch + empty start_repository",
-			request: &pb.UserRevertRequest{
+			request: &gitalypb.UserRevertRequest{
 				Repository:      testRepo,
 				User:            user,
 				Commit:          revertedCommit,
@@ -99,7 +98,7 @@ func TestSuccessfulUserRevertRequest(t *testing.T) {
 				Message:         []byte("Reverting " + revertedCommit.Id),
 				StartBranchName: []byte("master"),
 			},
-			branchUpdate: &pb.OperationBranchUpdate{BranchCreated: true},
+			branchUpdate: &gitalypb.OperationBranchUpdate{BranchCreated: true},
 		},
 	}
 
@@ -140,7 +139,7 @@ func TestSuccessfulGitHooksForUserRevertRequest(t *testing.T) {
 	destinationBranch := "revert-dst"
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", destinationBranch, "master")
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
@@ -149,7 +148,7 @@ func TestSuccessfulGitHooksForUserRevertRequest(t *testing.T) {
 	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, "d59c60028b053793cecfb4022de34602e1a9218e")
 	require.NoError(t, err)
 
-	request := &pb.UserRevertRequest{
+	request := &gitalypb.UserRevertRequest{
 		Repository: testRepo,
 		User:       user,
 		Commit:     revertedCommit,
@@ -195,7 +194,7 @@ func TestFailedUserRevertRequestDueToValidations(t *testing.T) {
 
 	destinationBranch := "revert-dst"
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
@@ -203,12 +202,12 @@ func TestFailedUserRevertRequestDueToValidations(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.UserRevertRequest
+		request *gitalypb.UserRevertRequest
 		code    codes.Code
 	}{
 		{
 			desc: "empty user",
-			request: &pb.UserRevertRequest{
+			request: &gitalypb.UserRevertRequest{
 				Repository: testRepo,
 				User:       nil,
 				Commit:     revertedCommit,
@@ -219,7 +218,7 @@ func TestFailedUserRevertRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty commit",
-			request: &pb.UserRevertRequest{
+			request: &gitalypb.UserRevertRequest{
 				Repository: testRepo,
 				User:       user,
 				Commit:     nil,
@@ -230,7 +229,7 @@ func TestFailedUserRevertRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty branch name",
-			request: &pb.UserRevertRequest{
+			request: &gitalypb.UserRevertRequest{
 				Repository: testRepo,
 				User:       user,
 				Commit:     revertedCommit,
@@ -241,7 +240,7 @@ func TestFailedUserRevertRequestDueToValidations(t *testing.T) {
 		},
 		{
 			desc: "empty message",
-			request: &pb.UserRevertRequest{
+			request: &gitalypb.UserRevertRequest{
 				Repository: testRepo,
 				User:       user,
 				Commit:     revertedCommit,
@@ -279,7 +278,7 @@ func TestFailedUserRevertRequestDueToPreReceiveError(t *testing.T) {
 	destinationBranch := "revert-dst"
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", destinationBranch, "master")
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
@@ -288,7 +287,7 @@ func TestFailedUserRevertRequestDueToPreReceiveError(t *testing.T) {
 	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, "d59c60028b053793cecfb4022de34602e1a9218e")
 	require.NoError(t, err)
 
-	request := &pb.UserRevertRequest{
+	request := &gitalypb.UserRevertRequest{
 		Repository: testRepo,
 		User:       user,
 		Commit:     revertedCommit,
@@ -330,7 +329,7 @@ func TestFailedUserRevertRequestDueToCreateTreeError(t *testing.T) {
 	destinationBranch := "revert-dst"
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", destinationBranch, "master")
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
@@ -340,7 +339,7 @@ func TestFailedUserRevertRequestDueToCreateTreeError(t *testing.T) {
 	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, "372ab6950519549b14d220271ee2322caa44d4eb")
 	require.NoError(t, err)
 
-	request := &pb.UserRevertRequest{
+	request := &gitalypb.UserRevertRequest{
 		Repository: testRepo,
 		User:       user,
 		Commit:     revertedCommit,
@@ -374,7 +373,7 @@ func TestFailedUserRevertRequestDueToCommitError(t *testing.T) {
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", destinationBranch, "master")
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", sourceBranch, "a5391128b0ef5d21df5dd23d98557f4ef12fae20")
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Ahmad Sherif"),
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
@@ -383,7 +382,7 @@ func TestFailedUserRevertRequestDueToCommitError(t *testing.T) {
 	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, sourceBranch)
 	require.NoError(t, err)
 
-	request := &pb.UserRevertRequest{
+	request := &gitalypb.UserRevertRequest{
 		Repository:      testRepo,
 		User:            user,
 		Commit:          revertedCommit,

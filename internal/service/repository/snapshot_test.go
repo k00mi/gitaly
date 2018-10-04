@@ -11,15 +11,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 	"google.golang.org/grpc/codes"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/archive"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 )
 
-func getSnapshot(t *testing.T, req *pb.GetSnapshotRequest) ([]byte, error) {
+func getSnapshot(t *testing.T, req *gitalypb.GetSnapshotRequest) ([]byte, error) {
 	server, serverSocketPath := runRepoServer(t)
 	defer server.Stop()
 
@@ -65,7 +65,7 @@ func TestGetSnapshotSuccess(t *testing.T) {
 	touch(t, filepath.Join(repoPath, "objects/pack/pack-%s.idx"), zeroes)
 	touch(t, filepath.Join(repoPath, "objects/this-should-not-be-included"))
 
-	req := &pb.GetSnapshotRequest{Repository: testRepo}
+	req := &gitalypb.GetSnapshotRequest{Repository: testRepo}
 	data, err := getSnapshot(t, req)
 	require.NoError(t, err)
 
@@ -89,7 +89,7 @@ func TestGetSnapshotFailsIfRepositoryMissing(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	cleanupFn() // Remove the repo
 
-	req := &pb.GetSnapshotRequest{Repository: testRepo}
+	req := &gitalypb.GetSnapshotRequest{Repository: testRepo}
 	data, err := getSnapshot(t, req)
 	testhelper.RequireGrpcError(t, err, codes.NotFound)
 	require.Empty(t, data)
@@ -104,7 +104,7 @@ func TestGetSnapshotFailsIfRepositoryContainsSymlink(t *testing.T) {
 	require.NoError(t, os.Remove(packedRefsFile))
 	require.NoError(t, os.Symlink("HEAD", packedRefsFile))
 
-	req := &pb.GetSnapshotRequest{Repository: testRepo}
+	req := &gitalypb.GetSnapshotRequest{Repository: testRepo}
 	data, err := getSnapshot(t, req)
 	testhelper.RequireGrpcError(t, err, codes.Internal)
 	require.Contains(t, err.Error(), "Building snapshot failed")

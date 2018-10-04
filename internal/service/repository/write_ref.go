@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"google.golang.org/grpc/codes"
@@ -13,7 +13,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-func (s *server) WriteRef(ctx context.Context, req *pb.WriteRefRequest) (*pb.WriteRefResponse, error) {
+func (s *server) WriteRef(ctx context.Context, req *gitalypb.WriteRefRequest) (*gitalypb.WriteRefResponse, error) {
 	if err := validateWriteRefRequest(req); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "WriteRef: %v", err)
 	}
@@ -31,7 +31,7 @@ func (s *server) WriteRef(ctx context.Context, req *pb.WriteRefRequest) (*pb.Wri
 	return client.WriteRef(clientCtx, req)
 }
 
-func validateWriteRefRequest(req *pb.WriteRefRequest) error {
+func validateWriteRefRequest(req *gitalypb.WriteRefRequest) error {
 	if err := git.ValidateRevision(req.Ref); err != nil {
 		return fmt.Errorf("Validate Ref: %v", err)
 	}

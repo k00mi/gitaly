@@ -3,13 +3,13 @@ package conflicts
 import (
 	"fmt"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) ResolveConflicts(stream pb.ConflictsService_ResolveConflictsServer) error {
+func (s *server) ResolveConflicts(stream gitalypb.ConflictsService_ResolveConflictsServer) error {
 	firstRequest, err := stream.Recv()
 	if err != nil {
 		return err
@@ -64,7 +64,7 @@ func (s *server) ResolveConflicts(stream pb.ConflictsService_ResolveConflictsSer
 	return stream.SendAndClose(response)
 }
 
-func validateResolveConflictsHeader(header *pb.ResolveConflictsRequestHeader) error {
+func validateResolveConflictsHeader(header *gitalypb.ResolveConflictsRequestHeader) error {
 	if header.GetOurCommitOid() == "" {
 		return fmt.Errorf("empty OurCommitOid")
 	}

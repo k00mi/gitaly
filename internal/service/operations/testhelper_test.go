@@ -9,10 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -26,7 +25,7 @@ var (
 	GitlabPreHooks  = gitlabPreHooks
 	GitlabHooks     []string
 	RubyServer      *rubyserver.Server
-	user            = &pb.User{
+	user            = &gitalypb.User{
 		Name:       []byte("Jane Doe"),
 		Email:      []byte("janedoe@gitlab.com"),
 		GlId:       "user-123",
@@ -69,7 +68,7 @@ func runOperationServiceServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	pb.RegisterOperationServiceServer(grpcServer, &server{RubyServer})
+	gitalypb.RegisterOperationServiceServer(grpcServer, &server{RubyServer})
 	reflection.Register(grpcServer)
 
 	go grpcServer.Serve(listener)
@@ -77,7 +76,7 @@ func runOperationServiceServer(t *testing.T) (*grpc.Server, string) {
 	return grpcServer, serverSocketPath
 }
 
-func newOperationClient(t *testing.T, serverSocketPath string) (pb.OperationServiceClient, *grpc.ClientConn) {
+func newOperationClient(t *testing.T, serverSocketPath string) (gitalypb.OperationServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
@@ -89,7 +88,7 @@ func newOperationClient(t *testing.T, serverSocketPath string) (pb.OperationServ
 		t.Fatal(err)
 	}
 
-	return pb.NewOperationServiceClient(conn), conn
+	return gitalypb.NewOperationServiceClient(conn), conn
 }
 
 var NewOperationClient = newOperationClient

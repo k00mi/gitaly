@@ -3,13 +3,13 @@ package operations
 import (
 	"fmt"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) UserCommitFiles(stream pb.OperationService_UserCommitFilesServer) error {
+func (s *server) UserCommitFiles(stream gitalypb.OperationService_UserCommitFilesServer) error {
 	firstRequest, err := stream.Recv()
 	if err != nil {
 		return err
@@ -64,7 +64,7 @@ func (s *server) UserCommitFiles(stream pb.OperationService_UserCommitFilesServe
 	return stream.SendAndClose(response)
 }
 
-func validateUserCommitFilesHeader(header *pb.UserCommitFilesRequestHeader) error {
+func validateUserCommitFilesHeader(header *gitalypb.UserCommitFilesRequestHeader) error {
 	if header.GetRepository() == nil {
 		return fmt.Errorf("empty Repository")
 	}

@@ -9,11 +9,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 )
 
-func (s *server) CommitIsAncestor(ctx context.Context, in *pb.CommitIsAncestorRequest) (*pb.CommitIsAncestorResponse, error) {
+func (s *server) CommitIsAncestor(ctx context.Context, in *gitalypb.CommitIsAncestorRequest) (*gitalypb.CommitIsAncestorResponse, error) {
 	if in.AncestorId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "Bad Request (empty ancestor sha)")
 	}
@@ -22,11 +22,11 @@ func (s *server) CommitIsAncestor(ctx context.Context, in *pb.CommitIsAncestorRe
 	}
 
 	ret, err := commitIsAncestorName(ctx, in.Repository, in.AncestorId, in.ChildId)
-	return &pb.CommitIsAncestorResponse{Value: ret}, err
+	return &gitalypb.CommitIsAncestorResponse{Value: ret}, err
 }
 
 // Assumes that `path`, `ancestorID` and `childID` are populated :trollface:
-func commitIsAncestorName(ctx context.Context, repo *pb.Repository, ancestorID, childID string) (bool, error) {
+func commitIsAncestorName(ctx context.Context, repo *gitalypb.Repository, ancestorID, childID string) (bool, error) {
 	grpc_logrus.Extract(ctx).WithFields(log.Fields{
 		"ancestorSha": ancestorID,
 		"childSha":    childID,

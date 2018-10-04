@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -43,19 +43,19 @@ func TestNamespaceExists(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	_, err := client.AddNamespace(ctx, &pb.AddNamespaceRequest{StorageName: "default", Name: "existing"})
+	_, err := client.AddNamespace(ctx, &gitalypb.AddNamespaceRequest{StorageName: "default", Name: "existing"})
 	require.NoError(t, err, "Namespace creation failed")
-	defer client.RemoveNamespace(ctx, &pb.RemoveNamespaceRequest{StorageName: "default", Name: "existing"})
+	defer client.RemoveNamespace(ctx, &gitalypb.RemoveNamespaceRequest{StorageName: "default", Name: "existing"})
 
 	queries := []struct {
 		desc      string
-		request   *pb.NamespaceExistsRequest
+		request   *gitalypb.NamespaceExistsRequest
 		errorCode codes.Code
 		exists    bool
 	}{
 		{
 			desc: "empty name",
-			request: &pb.NamespaceExistsRequest{
+			request: &gitalypb.NamespaceExistsRequest{
 				StorageName: "default",
 				Name:        "",
 			},
@@ -63,7 +63,7 @@ func TestNamespaceExists(t *testing.T) {
 		},
 		{
 			desc: "Namespace doesn't exists",
-			request: &pb.NamespaceExistsRequest{
+			request: &gitalypb.NamespaceExistsRequest{
 				StorageName: "default",
 				Name:        "not-existing",
 			},
@@ -72,7 +72,7 @@ func TestNamespaceExists(t *testing.T) {
 		},
 		{
 			desc: "Wrong storage path",
-			request: &pb.NamespaceExistsRequest{
+			request: &gitalypb.NamespaceExistsRequest{
 				StorageName: "other",
 				Name:        "existing",
 			},
@@ -81,7 +81,7 @@ func TestNamespaceExists(t *testing.T) {
 		},
 		{
 			desc: "Namespace exists",
-			request: &pb.NamespaceExistsRequest{
+			request: &gitalypb.NamespaceExistsRequest{
 				StorageName: "default",
 				Name:        "existing",
 			},
@@ -114,12 +114,12 @@ func TestAddNamespace(t *testing.T) {
 
 	queries := []struct {
 		desc      string
-		request   *pb.AddNamespaceRequest
+		request   *gitalypb.AddNamespaceRequest
 		errorCode codes.Code
 	}{
 		{
 			desc: "No name",
-			request: &pb.AddNamespaceRequest{
+			request: &gitalypb.AddNamespaceRequest{
 				StorageName: "default",
 				Name:        "",
 			},
@@ -127,7 +127,7 @@ func TestAddNamespace(t *testing.T) {
 		},
 		{
 			desc: "Namespace is successfully created",
-			request: &pb.AddNamespaceRequest{
+			request: &gitalypb.AddNamespaceRequest{
 				StorageName: "default",
 				Name:        "create-me",
 			},
@@ -135,7 +135,7 @@ func TestAddNamespace(t *testing.T) {
 		},
 		{
 			desc: "Idempotent on creation",
-			request: &pb.AddNamespaceRequest{
+			request: &gitalypb.AddNamespaceRequest{
 				StorageName: "default",
 				Name:        "create-me",
 			},
@@ -143,7 +143,7 @@ func TestAddNamespace(t *testing.T) {
 		},
 		{
 			desc: "no storage",
-			request: &pb.AddNamespaceRequest{
+			request: &gitalypb.AddNamespaceRequest{
 				StorageName: "",
 				Name:        "mepmep",
 			},
@@ -162,7 +162,7 @@ func TestAddNamespace(t *testing.T) {
 
 			// Clean up
 			if tc.errorCode == codes.OK {
-				client.RemoveNamespace(ctx, &pb.RemoveNamespaceRequest{
+				client.RemoveNamespace(ctx, &gitalypb.RemoveNamespaceRequest{
 					StorageName: tc.request.StorageName,
 					Name:        tc.request.Name,
 				})
@@ -183,12 +183,12 @@ func TestRemoveNamespace(t *testing.T) {
 
 	queries := []struct {
 		desc      string
-		request   *pb.RemoveNamespaceRequest
+		request   *gitalypb.RemoveNamespaceRequest
 		errorCode codes.Code
 	}{
 		{
 			desc: "Namespace is successfully removed",
-			request: &pb.RemoveNamespaceRequest{
+			request: &gitalypb.RemoveNamespaceRequest{
 				StorageName: "default",
 				Name:        "created",
 			},
@@ -196,7 +196,7 @@ func TestRemoveNamespace(t *testing.T) {
 		},
 		{
 			desc: "Idempotent on deletion",
-			request: &pb.RemoveNamespaceRequest{
+			request: &gitalypb.RemoveNamespaceRequest{
 				StorageName: "default",
 				Name:        "not-there",
 			},
@@ -204,7 +204,7 @@ func TestRemoveNamespace(t *testing.T) {
 		},
 		{
 			desc: "no storage",
-			request: &pb.RemoveNamespaceRequest{
+			request: &gitalypb.RemoveNamespaceRequest{
 				StorageName: "",
 				Name:        "mepmep",
 			},
@@ -214,7 +214,7 @@ func TestRemoveNamespace(t *testing.T) {
 
 	for _, tc := range queries {
 		t.Run(tc.desc, func(t *testing.T) {
-			_, err := client.AddNamespace(ctx, &pb.AddNamespaceRequest{StorageName: "default", Name: "created"})
+			_, err := client.AddNamespace(ctx, &gitalypb.AddNamespaceRequest{StorageName: "default", Name: "created"})
 			require.NoError(t, err, "setup failed")
 
 			_, err = client.RemoveNamespace(ctx, tc.request)
@@ -235,12 +235,12 @@ func TestRenameNamespace(t *testing.T) {
 
 	queries := []struct {
 		desc      string
-		request   *pb.RenameNamespaceRequest
+		request   *gitalypb.RenameNamespaceRequest
 		errorCode codes.Code
 	}{
 		{
 			desc: "Renaming an existing namespace",
-			request: &pb.RenameNamespaceRequest{
+			request: &gitalypb.RenameNamespaceRequest{
 				From:        "existing",
 				To:          "new-path",
 				StorageName: "default",
@@ -249,7 +249,7 @@ func TestRenameNamespace(t *testing.T) {
 		},
 		{
 			desc: "No from given",
-			request: &pb.RenameNamespaceRequest{
+			request: &gitalypb.RenameNamespaceRequest{
 				From:        "",
 				To:          "new-path",
 				StorageName: "default",
@@ -258,7 +258,7 @@ func TestRenameNamespace(t *testing.T) {
 		},
 		{
 			desc: "non-existing namespace",
-			request: &pb.RenameNamespaceRequest{
+			request: &gitalypb.RenameNamespaceRequest{
 				From:        "non-existing",
 				To:          "new-path",
 				StorageName: "default",
@@ -267,7 +267,7 @@ func TestRenameNamespace(t *testing.T) {
 		},
 		{
 			desc: "existing destination namespace",
-			request: &pb.RenameNamespaceRequest{
+			request: &gitalypb.RenameNamespaceRequest{
 				From:        "existing",
 				To:          "existing",
 				StorageName: "default",
@@ -276,7 +276,7 @@ func TestRenameNamespace(t *testing.T) {
 		},
 	}
 
-	_, err := client.AddNamespace(ctx, &pb.AddNamespaceRequest{
+	_, err := client.AddNamespace(ctx, &gitalypb.AddNamespaceRequest{
 		StorageName: "default",
 		Name:        "existing",
 	})
@@ -289,7 +289,7 @@ func TestRenameNamespace(t *testing.T) {
 			require.Equal(t, tc.errorCode, helper.GrpcCode(err))
 
 			if tc.errorCode == codes.OK {
-				client.RemoveNamespace(ctx, &pb.RemoveNamespaceRequest{
+				client.RemoveNamespace(ctx, &gitalypb.RemoveNamespaceRequest{
 					StorageName: "default",
 					Name:        "new-path",
 				})

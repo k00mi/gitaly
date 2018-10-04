@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) FindAllRemoteBranches(req *pb.FindAllRemoteBranchesRequest, stream pb.RefService_FindAllRemoteBranchesServer) error {
+func (s *server) FindAllRemoteBranches(req *gitalypb.FindAllRemoteBranchesRequest, stream gitalypb.RefService_FindAllRemoteBranchesServer) error {
 	if err := validateFindAllRemoteBranchesRequest(req); err != nil {
 		return status.Errorf(codes.InvalidArgument, "FindAllRemoteBranches: %v", err)
 	}
@@ -35,7 +35,7 @@ func (s *server) FindAllRemoteBranches(req *pb.FindAllRemoteBranchesRequest, str
 	return findRefs(ctx, writer, req.GetRepository(), patterns, opts)
 }
 
-func validateFindAllRemoteBranchesRequest(req *pb.FindAllRemoteBranchesRequest) error {
+func validateFindAllRemoteBranchesRequest(req *gitalypb.FindAllRemoteBranchesRequest) error {
 	if req.GetRepository() == nil {
 		return fmt.Errorf("empty Repository")
 	}

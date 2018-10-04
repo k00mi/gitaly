@@ -1,14 +1,14 @@
 package repository
 
 import (
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) GetRawChanges(req *pb.GetRawChangesRequest, stream pb.RepositoryService_GetRawChangesServer) error {
+func (s *server) GetRawChanges(req *gitalypb.GetRawChangesRequest, stream gitalypb.RepositoryService_GetRawChangesServer) error {
 	if req.GetRepository() == nil {
 		return status.Errorf(codes.InvalidArgument, "repository argument must be present")
 	}

@@ -3,9 +3,8 @@ package repository
 import (
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -74,7 +73,7 @@ func TestSuccessfulFindFindMergeBaseRequest(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			request := &pb.FindMergeBaseRequest{
+			request := &gitalypb.FindMergeBaseRequest{
 				Repository: testRepo,
 				Revisions:  testCase.revisions,
 			}
@@ -100,7 +99,7 @@ func TestFailedFindMergeBaseRequestDueToValidations(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	request := &pb.FindMergeBaseRequest{
+	request := &gitalypb.FindMergeBaseRequest{
 		Repository: testRepo,
 		Revisions: [][]byte{
 			[]byte("372ab6950519549b14d220271ee2322caa44d4eb"),

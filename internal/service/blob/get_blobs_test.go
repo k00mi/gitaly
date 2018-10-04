@@ -6,9 +6,8 @@ import (
 	"path"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -24,7 +23,7 @@ func TestSuccessfulGetBlobsRequest(t *testing.T) {
 	client, conn := newBlobClient(t, serverSocketPath)
 	defer conn.Close()
 
-	expectedBlobs := []*pb.GetBlobsResponse{
+	expectedBlobs := []*gitalypb.GetBlobsResponse{
 		{
 			Path: []byte("CHANGELOG"),
 			Size: 22846,
@@ -56,13 +55,13 @@ func TestSuccessfulGetBlobsRequest(t *testing.T) {
 
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "worktree", "add", "blobs-sandbox", revision)
 
-	var revisionPaths []*pb.GetBlobsRequest_RevisionPath
+	var revisionPaths []*gitalypb.GetBlobsRequest_RevisionPath
 	for _, blob := range expectedBlobs {
-		revisionPaths = append(revisionPaths, &pb.GetBlobsRequest_RevisionPath{Revision: revision, Path: blob.Path})
+		revisionPaths = append(revisionPaths, &gitalypb.GetBlobsRequest_RevisionPath{Revision: revision, Path: blob.Path})
 	}
 	revisionPaths = append(revisionPaths,
-		&pb.GetBlobsRequest_RevisionPath{Revision: "does-not-exist", Path: []byte("CHANGELOG")},
-		&pb.GetBlobsRequest_RevisionPath{Revision: revision, Path: []byte("file-that-does-not-exist")},
+		&gitalypb.GetBlobsRequest_RevisionPath{Revision: "does-not-exist", Path: []byte("CHANGELOG")},
+		&gitalypb.GetBlobsRequest_RevisionPath{Revision: revision, Path: []byte("file-that-does-not-exist")},
 	)
 
 	for _, limit := range limits {
@@ -70,7 +69,7 @@ func TestSuccessfulGetBlobsRequest(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			request := &pb.GetBlobsRequest{
+			request := &gitalypb.GetBlobsRequest{
 				Repository:    testRepo,
 				RevisionPaths: revisionPaths,
 				Limit:         int64(limit),
@@ -79,8 +78,8 @@ func TestSuccessfulGetBlobsRequest(t *testing.T) {
 			c, err := client.GetBlobs(ctx, request)
 			require.NoError(t, err)
 
-			var receivedBlobs []*pb.GetBlobsResponse
-			var nonExistentBlobs []*pb.GetBlobsResponse
+			var receivedBlobs []*gitalypb.GetBlobsResponse
+			var nonExistentBlobs []*gitalypb.GetBlobsResponse
 
 			for {
 				response, err := c.Recv()
@@ -134,13 +133,13 @@ func TestFailedGetBlobsRequestDueToValidation(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.GetBlobsRequest
+		request *gitalypb.GetBlobsRequest
 		code    codes.Code
 	}{
 		{
 			desc: "empty Repository",
-			request: &pb.GetBlobsRequest{
-				RevisionPaths: []*pb.GetBlobsRequest_RevisionPath{
+			request: &gitalypb.GetBlobsRequest{
+				RevisionPaths: []*gitalypb.GetBlobsRequest_RevisionPath{
 					{Revision: "does-not-exist", Path: []byte("file")},
 				},
 			},
@@ -148,7 +147,7 @@ func TestFailedGetBlobsRequestDueToValidation(t *testing.T) {
 		},
 		{
 			desc: "empty RevisionPaths",
-			request: &pb.GetBlobsRequest{
+			request: &gitalypb.GetBlobsRequest{
 				Repository: testRepo,
 			},
 			code: codes.InvalidArgument,

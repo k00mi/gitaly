@@ -23,7 +23,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
@@ -97,7 +97,7 @@ func GitalyServersMetadata(t *testing.T, serverSocketPath string) metadata.MD {
 	return metadata.Pairs("gitaly-servers", base64.StdEncoding.EncodeToString(gitalyServersJSON))
 }
 
-func testRepoValid(repo *pb.Repository) bool {
+func testRepoValid(repo *gitalypb.Repository) bool {
 	storagePath, _ := config.StoragePath(repo.GetStorageName())
 	if _, err := os.Stat(path.Join(storagePath, repo.RelativePath, "objects")); err != nil {
 		return false
@@ -110,8 +110,8 @@ func testRepoValid(repo *pb.Repository) bool {
 // Tests should be calling this function instead of cloning the repo themselves.
 // Tests that involve modifications to the repo should copy/clone the repo
 // via the `Repository` returned from this function.
-func TestRepository() *pb.Repository {
-	repo := &pb.Repository{
+func TestRepository() *gitalypb.Repository {
+	repo := &gitalypb.Repository{
 		StorageName:  "default",
 		RelativePath: TestRelativePath,
 		GlRepository: "project-1",
@@ -163,7 +163,7 @@ func MustRunCommand(t *testing.T, stdin io.Reader, name string, args ...string) 
 
 // authorSortofEqual tests if two `CommitAuthor`s have the same name and email.
 //  useful when creating commits in the tests.
-func authorSortofEqual(a, b *pb.CommitAuthor) bool {
+func authorSortofEqual(a, b *gitalypb.CommitAuthor) bool {
 	if (a == nil) != (b == nil) {
 		return false
 	}
@@ -172,13 +172,13 @@ func authorSortofEqual(a, b *pb.CommitAuthor) bool {
 }
 
 // AuthorsEqual tests if two `CommitAuthor`s are equal
-func AuthorsEqual(a *pb.CommitAuthor, b *pb.CommitAuthor) bool {
+func AuthorsEqual(a *gitalypb.CommitAuthor, b *gitalypb.CommitAuthor) bool {
 	return authorSortofEqual(a, b) &&
 		a.GetDate().Seconds == b.GetDate().Seconds
 }
 
 // GitCommitEqual tests if two `GitCommit`s are equal
-func GitCommitEqual(a, b *pb.GitCommit) error {
+func GitCommitEqual(a, b *gitalypb.GitCommit) error {
 	if !authorSortofEqual(a.GetAuthor(), b.GetAuthor()) {
 		return fmt.Errorf("Author does not match: %v != %v", a.GetAuthor(), b.GetAuthor())
 	}
@@ -209,14 +209,14 @@ func GitCommitEqual(a, b *pb.GitCommit) error {
 }
 
 // FindLocalBranchCommitAuthorsEqual tests if two `FindLocalBranchCommitAuthor`s are equal
-func FindLocalBranchCommitAuthorsEqual(a *pb.FindLocalBranchCommitAuthor, b *pb.FindLocalBranchCommitAuthor) bool {
+func FindLocalBranchCommitAuthorsEqual(a *gitalypb.FindLocalBranchCommitAuthor, b *gitalypb.FindLocalBranchCommitAuthor) bool {
 	return bytes.Equal(a.Name, b.Name) &&
 		bytes.Equal(a.Email, b.Email) &&
 		a.Date.Seconds == b.Date.Seconds
 }
 
 // FindLocalBranchResponsesEqual tests if two `FindLocalBranchResponse`s are equal
-func FindLocalBranchResponsesEqual(a *pb.FindLocalBranchResponse, b *pb.FindLocalBranchResponse) bool {
+func FindLocalBranchResponsesEqual(a *gitalypb.FindLocalBranchResponse, b *gitalypb.FindLocalBranchResponse) bool {
 	return a.CommitId == b.CommitId &&
 		bytes.Equal(a.CommitSubject, b.CommitSubject) &&
 		FindLocalBranchCommitAuthorsEqual(a.CommitAuthor, b.CommitAuthor) &&
@@ -324,29 +324,29 @@ func Context() (context.Context, func()) {
 	return context.WithCancel(context.Background())
 }
 
-func createRepo(t *testing.T, storagePath string) (repo *pb.Repository, repoPath, relativePath string) {
+func createRepo(t *testing.T, storagePath string) (repo *gitalypb.Repository, repoPath, relativePath string) {
 	normalizedPrefix := strings.Replace(t.Name(), "/", "-", -1) //TempDir doesn't like a prefix containing slashes
 
 	repoPath, err := ioutil.TempDir(storagePath, normalizedPrefix)
 	require.NoError(t, err)
 	relativePath, err = filepath.Rel(storagePath, repoPath)
 	require.NoError(t, err)
-	repo = &pb.Repository{StorageName: "default", RelativePath: relativePath}
+	repo = &gitalypb.Repository{StorageName: "default", RelativePath: relativePath}
 
 	return repo, repoPath, relativePath
 }
 
 // InitBareRepo creates a new bare repository
-func InitBareRepo(t *testing.T) (*pb.Repository, string, func()) {
+func InitBareRepo(t *testing.T) (*gitalypb.Repository, string, func()) {
 	return initRepo(t, true)
 }
 
 // InitRepoWithWorktree creates a new repository with a worktree
-func InitRepoWithWorktree(t *testing.T) (*pb.Repository, string, func()) {
+func InitRepoWithWorktree(t *testing.T) (*gitalypb.Repository, string, func()) {
 	return initRepo(t, false)
 }
 
-func initRepo(t *testing.T, bare bool) (*pb.Repository, string, func()) {
+func initRepo(t *testing.T, bare bool) (*gitalypb.Repository, string, func()) {
 	repo, repoPath, _ := createRepo(t, GitlabTestStoragePath())
 	args := []string{"init"}
 	if bare {
@@ -363,17 +363,17 @@ func initRepo(t *testing.T, bare bool) (*pb.Repository, string, func()) {
 }
 
 // NewTestRepo creates a bare copy of the test repository.
-func NewTestRepo(t *testing.T) (repo *pb.Repository, repoPath string, cleanup func()) {
+func NewTestRepo(t *testing.T) (repo *gitalypb.Repository, repoPath string, cleanup func()) {
 	return cloneTestRepo(t, true)
 }
 
 // NewTestRepoWithWorktree creates a copy of the test repository with a
 // worktree. This is allows you to run normal 'non-bare' Git commands.
-func NewTestRepoWithWorktree(t *testing.T) (repo *pb.Repository, repoPath string, cleanup func()) {
+func NewTestRepoWithWorktree(t *testing.T) (repo *gitalypb.Repository, repoPath string, cleanup func()) {
 	return cloneTestRepo(t, false)
 }
 
-func cloneTestRepo(t *testing.T, bare bool) (repo *pb.Repository, repoPath string, cleanup func()) {
+func cloneTestRepo(t *testing.T, bare bool) (repo *gitalypb.Repository, repoPath string, cleanup func()) {
 	storagePath := GitlabTestStoragePath()
 	repo, repoPath, relativePath := createRepo(t, storagePath)
 	testRepo := TestRepository()

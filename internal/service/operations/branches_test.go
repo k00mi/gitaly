@@ -10,11 +10,10 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"golang.org/x/net/context"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
 
 func TestSuccessfulUserCreateBranchRequest(t *testing.T) {
@@ -38,13 +37,13 @@ func TestSuccessfulUserCreateBranchRequest(t *testing.T) {
 		desc           string
 		branchName     string
 		startPoint     string
-		expectedBranch *pb.Branch
+		expectedBranch *gitalypb.Branch
 	}{
 		{
 			desc:       "valid branch",
 			branchName: "new-branch",
 			startPoint: startPoint,
-			expectedBranch: &pb.Branch{
+			expectedBranch: &gitalypb.Branch{
 				Name:         []byte("new-branch"),
 				TargetCommit: startPointCommit,
 			},
@@ -54,7 +53,7 @@ func TestSuccessfulUserCreateBranchRequest(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
 			branchName := testCase.branchName
-			request := &pb.UserCreateBranchRequest{
+			request := &gitalypb.UserCreateBranchRequest{
 				Repository: testRepo,
 				BranchName: []byte(branchName),
 				StartPoint: []byte(testCase.startPoint),
@@ -90,7 +89,7 @@ func TestSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T) {
 	defer conn.Close()
 
 	branchName := "new-branch"
-	request := &pb.UserCreateBranchRequest{
+	request := &gitalypb.UserCreateBranchRequest{
 		Repository: testRepo,
 		BranchName: []byte(branchName),
 		StartPoint: []byte("c7fbe50c7c7419d9701eebe64b1fdacc3df5b9dd"),
@@ -129,7 +128,7 @@ func TestFailedUserCreateBranchDueToHooks(t *testing.T) {
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
 
-	request := &pb.UserCreateBranchRequest{
+	request := &gitalypb.UserCreateBranchRequest{
 		Repository: testRepo,
 		BranchName: []byte("new-branch"),
 		StartPoint: []byte("c7fbe50c7c7419d9701eebe64b1fdacc3df5b9dd"),
@@ -171,7 +170,7 @@ func TestFailedUserCreateBranchRequest(t *testing.T) {
 		desc       string
 		branchName string
 		startPoint string
-		user       *pb.User
+		user       *gitalypb.User
 		code       codes.Code
 	}{
 		{
@@ -207,7 +206,7 @@ func TestFailedUserCreateBranchRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			request := &pb.UserCreateBranchRequest{
+			request := &gitalypb.UserCreateBranchRequest{
 				Repository: testRepo,
 				BranchName: []byte(testCase.branchName),
 				StartPoint: []byte(testCase.startPoint),
@@ -240,7 +239,7 @@ func TestSuccessfulUserDeleteBranchRequest(t *testing.T) {
 
 	defer exec.Command("git", "-C", testRepoPath, "branch", "-d", branchNameInput).Run()
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Alejandro Rodríguez"),
 		Email: []byte("alejandro@gitlab.com"),
 		GlId:  "user-123",
@@ -248,7 +247,7 @@ func TestSuccessfulUserDeleteBranchRequest(t *testing.T) {
 
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", branchNameInput)
 
-	request := &pb.UserDeleteBranchRequest{
+	request := &gitalypb.UserDeleteBranchRequest{
 		Repository: testRepo,
 		BranchName: []byte(branchNameInput),
 		User:       user,
@@ -274,14 +273,14 @@ func TestSuccessfulGitHooksForUserDeleteBranchRequest(t *testing.T) {
 	branchNameInput := "to-be-deleted-soon-branch"
 	defer exec.Command("git", "-C", testRepoPath, "branch", "-d", branchNameInput).Run()
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:       []byte("Alejandro Rodríguez"),
 		Email:      []byte("alejandro@gitlab.com"),
 		GlId:       "user-123",
 		GlUsername: "johndoe",
 	}
 
-	request := &pb.UserDeleteBranchRequest{
+	request := &gitalypb.UserDeleteBranchRequest{
 		Repository: testRepo,
 		BranchName: []byte(branchNameInput),
 		User:       user,
@@ -318,7 +317,7 @@ func TestFailedUserDeleteBranchDueToValidation(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Alejandro Rodríguez"),
 		Email: []byte("alejandro@gitlab.com"),
 		GlId:  "user-123",
@@ -326,12 +325,12 @@ func TestFailedUserDeleteBranchDueToValidation(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		request *pb.UserDeleteBranchRequest
+		request *gitalypb.UserDeleteBranchRequest
 		code    codes.Code
 	}{
 		{
 			desc: "empty user",
-			request: &pb.UserDeleteBranchRequest{
+			request: &gitalypb.UserDeleteBranchRequest{
 				Repository: testRepo,
 				BranchName: []byte("does-matter-the-name-if-user-is-empty"),
 			},
@@ -339,7 +338,7 @@ func TestFailedUserDeleteBranchDueToValidation(t *testing.T) {
 		},
 		{
 			desc: "empty branch name",
-			request: &pb.UserDeleteBranchRequest{
+			request: &gitalypb.UserDeleteBranchRequest{
 				Repository: testRepo,
 				User:       user,
 			},
@@ -347,7 +346,7 @@ func TestFailedUserDeleteBranchDueToValidation(t *testing.T) {
 		},
 		{
 			desc: "non-existent branch name",
-			request: &pb.UserDeleteBranchRequest{
+			request: &gitalypb.UserDeleteBranchRequest{
 				Repository: testRepo,
 				User:       user,
 				BranchName: []byte("i-do-not-exist"),
@@ -381,13 +380,13 @@ func TestFailedUserDeleteBranchDueToHooks(t *testing.T) {
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", branchNameInput)
 	defer exec.Command("git", "-C", testRepoPath, "branch", "-d", branchNameInput).Run()
 
-	user := &pb.User{
+	user := &gitalypb.User{
 		Name:  []byte("Alejandro Rodríguez"),
 		Email: []byte("alejandro@gitlab.com"),
 		GlId:  "user-123",
 	}
 
-	request := &pb.UserDeleteBranchRequest{
+	request := &gitalypb.UserDeleteBranchRequest{
 		Repository: testRepo,
 		BranchName: []byte(branchNameInput),
 		User:       user,

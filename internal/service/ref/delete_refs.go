@@ -3,14 +3,14 @@ package ref
 import (
 	"fmt"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) DeleteRefs(ctx context.Context, in *pb.DeleteRefsRequest) (*pb.DeleteRefsResponse, error) {
+func (s *server) DeleteRefs(ctx context.Context, in *gitalypb.DeleteRefsRequest) (*gitalypb.DeleteRefsResponse, error) {
 	if err := validateDeleteRefRequest(in); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "DeleteRefs: %v", err)
 	}
@@ -28,7 +28,7 @@ func (s *server) DeleteRefs(ctx context.Context, in *pb.DeleteRefsRequest) (*pb.
 	return client.DeleteRefs(clientCtx, in)
 }
 
-func validateDeleteRefRequest(req *pb.DeleteRefsRequest) error {
+func validateDeleteRefRequest(req *gitalypb.DeleteRefsRequest) error {
 	if len(req.ExceptWithPrefix) > 0 && len(req.Refs) > 0 {
 		return fmt.Errorf("ExceptWithPrefix and Refs are mutually exclusive")
 	}

@@ -7,7 +7,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
@@ -17,7 +17,7 @@ const surroundContext = "2"
 
 var contentDelimiter = []byte("--\n")
 
-func (s *server) SearchFilesByContent(req *pb.SearchFilesByContentRequest, stream pb.RepositoryService_SearchFilesByContentServer) error {
+func (s *server) SearchFilesByContent(req *gitalypb.SearchFilesByContentRequest, stream gitalypb.RepositoryService_SearchFilesByContentServer) error {
 	if err := validateSearchFilesRequest(req); err != nil {
 		return helper.DecorateError(codes.InvalidArgument, err)
 	}
@@ -58,7 +58,7 @@ func (s *server) SearchFilesByContent(req *pb.SearchFilesByContentRequest, strea
 			}
 		}
 		if len(matches) > 0 {
-			err = stream.Send(&pb.SearchFilesByContentResponse{Matches: matches})
+			err = stream.Send(&gitalypb.SearchFilesByContentResponse{Matches: matches})
 			matches = nil
 			return err
 		}
@@ -73,12 +73,12 @@ func (s *server) SearchFilesByContent(req *pb.SearchFilesByContentRequest, strea
 		matches = append(matches, buf)
 	}
 	if len(matches) > 0 {
-		return stream.Send(&pb.SearchFilesByContentResponse{Matches: matches})
+		return stream.Send(&gitalypb.SearchFilesByContentResponse{Matches: matches})
 	}
 	return nil
 }
 
-func (s *server) SearchFilesByName(req *pb.SearchFilesByNameRequest, stream pb.RepositoryService_SearchFilesByNameServer) error {
+func (s *server) SearchFilesByName(req *gitalypb.SearchFilesByNameRequest, stream gitalypb.RepositoryService_SearchFilesByNameServer) error {
 	if err := validateSearchFilesRequest(req); err != nil {
 		return helper.DecorateError(codes.InvalidArgument, err)
 	}
@@ -94,7 +94,7 @@ func (s *server) SearchFilesByName(req *pb.SearchFilesByNameRequest, stream pb.R
 	}
 
 	lr := func(objs [][]byte) error {
-		return stream.Send(&pb.SearchFilesByNameResponse{Files: objs})
+		return stream.Send(&gitalypb.SearchFilesByNameResponse{Files: objs})
 	}
 
 	return lines.Send(cmd, lr, []byte{'\n'})

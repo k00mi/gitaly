@@ -1,7 +1,7 @@
 package conflicts
 
 import (
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 )
 
@@ -10,6 +10,6 @@ type server struct {
 }
 
 // NewServer creates a new instance of a grpc ConflictsServer
-func NewServer(rs *rubyserver.Server) pb.ConflictsServiceServer {
+func NewServer(rs *rubyserver.Server) gitalypb.ConflictsServiceServer {
 	return &server{rs}
 }

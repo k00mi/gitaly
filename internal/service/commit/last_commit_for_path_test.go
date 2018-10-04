@@ -3,9 +3,8 @@ package commit
 import (
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/require"
@@ -23,16 +22,16 @@ func TestSuccessfulLastCommitForPathRequest(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	commit := &pb.GitCommit{
+	commit := &gitalypb.GitCommit{
 		Id:      "570e7b2abdd848b95f2f578043fc23bd6f6fd24d",
 		Subject: []byte("Change some files"),
 		Body:    []byte("Change some files\n\nSigned-off-by: Dmitriy Zaporozhets <dmitriy.zaporozhets@gmail.com>\n"),
-		Author: &pb.CommitAuthor{
+		Author: &gitalypb.CommitAuthor{
 			Name:  []byte("Dmitriy Zaporozhets"),
 			Email: []byte("dmitriy.zaporozhets@gmail.com"),
 			Date:  &timestamp.Timestamp{Seconds: 1393491451},
 		},
-		Committer: &pb.CommitAuthor{
+		Committer: &gitalypb.CommitAuthor{
 			Name:  []byte("Dmitriy Zaporozhets"),
 			Email: []byte("dmitriy.zaporozhets@gmail.com"),
 			Date:  &timestamp.Timestamp{Seconds: 1393491451},
@@ -45,7 +44,7 @@ func TestSuccessfulLastCommitForPathRequest(t *testing.T) {
 		desc     string
 		revision string
 		path     []byte
-		commit   *pb.GitCommit
+		commit   *gitalypb.GitCommit
 	}{
 		{
 			desc:     "path present",
@@ -73,7 +72,7 @@ func TestSuccessfulLastCommitForPathRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			request := &pb.LastCommitForPathRequest{
+			request := &gitalypb.LastCommitForPathRequest{
 				Repository: testRepo,
 				Revision:   []byte(testCase.revision),
 				Path:       []byte(testCase.path),
@@ -101,26 +100,26 @@ func TestFailedLastCommitForPathRequest(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	invalidRepo := &pb.Repository{StorageName: "fake", RelativePath: "path"}
+	invalidRepo := &gitalypb.Repository{StorageName: "fake", RelativePath: "path"}
 
 	testCases := []struct {
 		desc    string
-		request *pb.LastCommitForPathRequest
+		request *gitalypb.LastCommitForPathRequest
 		code    codes.Code
 	}{
 		{
 			desc:    "Invalid repository",
-			request: &pb.LastCommitForPathRequest{Repository: invalidRepo},
+			request: &gitalypb.LastCommitForPathRequest{Repository: invalidRepo},
 			code:    codes.InvalidArgument,
 		},
 		{
 			desc:    "Repository is nil",
-			request: &pb.LastCommitForPathRequest{Revision: []byte("some-branch")},
+			request: &gitalypb.LastCommitForPathRequest{Revision: []byte("some-branch")},
 			code:    codes.InvalidArgument,
 		},
 		{
 			desc:    "Revision is missing",
-			request: &pb.LastCommitForPathRequest{Repository: testRepo, Path: []byte("foo/bar")},
+			request: &gitalypb.LastCommitForPathRequest{Repository: testRepo, Path: []byte("foo/bar")},
 			code:    codes.InvalidArgument,
 		},
 	}

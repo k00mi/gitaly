@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
@@ -29,8 +29,8 @@ func TestSuccessfulWikiGetAllPagesRequest(t *testing.T) {
 	page2Name := "Page 2"
 	createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page1Name})
 	page2Commit := createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page2Name})
-	expectedPage1 := &pb.WikiPage{
-		Version:    &pb.WikiPageVersion{Commit: page2Commit, Format: "markdown"},
+	expectedPage1 := &gitalypb.WikiPage{
+		Version:    &gitalypb.WikiPageVersion{Commit: page2Commit, Format: "markdown"},
 		Title:      []byte(page1Name),
 		Format:     "markdown",
 		UrlPath:    "Page-1",
@@ -39,8 +39,8 @@ func TestSuccessfulWikiGetAllPagesRequest(t *testing.T) {
 		RawData:    mockPageContent,
 		Historical: false,
 	}
-	expectedPage2 := &pb.WikiPage{
-		Version:    &pb.WikiPageVersion{Commit: page2Commit, Format: "markdown"},
+	expectedPage2 := &gitalypb.WikiPage{
+		Version:    &gitalypb.WikiPageVersion{Commit: page2Commit, Format: "markdown"},
 		Title:      []byte(page2Name),
 		Format:     "markdown",
 		UrlPath:    "Page-2",
@@ -72,11 +72,11 @@ func TestSuccessfulWikiGetAllPagesRequest(t *testing.T) {
 		},
 	}
 
-	expectedPages := []*pb.WikiPage{expectedPage1, expectedPage2}
+	expectedPages := []*gitalypb.WikiPage{expectedPage1, expectedPage2}
 
 	for _, tc := range testcases {
 		t.Run(tc.desc, func(t *testing.T) {
-			rpcRequest := pb.WikiGetAllPagesRequest{Repository: wikiRepo, Limit: tc.limit}
+			rpcRequest := gitalypb.WikiGetAllPagesRequest{Repository: wikiRepo, Limit: tc.limit}
 
 			c, err := client.WikiGetAllPages(ctx, &rpcRequest)
 			require.NoError(t, err)
@@ -99,8 +99,8 @@ func TestFailedWikiGetAllPagesDueToValidation(t *testing.T) {
 	client, conn := newWikiClient(t, serverSocketPath)
 	defer conn.Close()
 
-	rpcRequests := []pb.WikiGetAllPagesRequest{
-		{Repository: &pb.Repository{StorageName: "fake", RelativePath: "path"}}, // Repository doesn't exist
+	rpcRequests := []gitalypb.WikiGetAllPagesRequest{
+		{Repository: &gitalypb.Repository{StorageName: "fake", RelativePath: "path"}}, // Repository doesn't exist
 		{Repository: nil}, // Repository is nil
 	}
 
@@ -116,9 +116,9 @@ func TestFailedWikiGetAllPagesDueToValidation(t *testing.T) {
 	}
 }
 
-func readWikiPagesFromWikiGetAllPagesClient(t *testing.T, c pb.WikiService_WikiGetAllPagesClient) []*pb.WikiPage {
-	var wikiPage *pb.WikiPage
-	var wikiPages []*pb.WikiPage
+func readWikiPagesFromWikiGetAllPagesClient(t *testing.T, c gitalypb.WikiService_WikiGetAllPagesClient) []*gitalypb.WikiPage {
+	var wikiPage *gitalypb.WikiPage
+	var wikiPages []*gitalypb.WikiPage
 
 	for {
 		resp, err := c.Recv()
@@ -141,7 +141,7 @@ func readWikiPagesFromWikiGetAllPagesClient(t *testing.T, c pb.WikiService_WikiG
 	return wikiPages
 }
 
-func drainWikiGetAllPagesResponse(c pb.WikiService_WikiGetAllPagesClient) error {
+func drainWikiGetAllPagesResponse(c gitalypb.WikiService_WikiGetAllPagesClient) error {
 	for {
 		_, err := c.Recv()
 		if err == io.EOF {

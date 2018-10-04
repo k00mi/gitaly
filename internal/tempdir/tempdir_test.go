@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
@@ -49,7 +49,7 @@ func TestNewAsRepositorySuccess(t *testing.T) {
 func TestNewAsRepositoryFailStorageUnknown(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
-	_, err := New(ctx, &pb.Repository{StorageName: "does-not-exist", RelativePath: "foobar.git"})
+	_, err := New(ctx, &gitalypb.Repository{StorageName: "does-not-exist", RelativePath: "foobar.git"})
 	require.Error(t, err)
 }
 

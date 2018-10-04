@@ -8,18 +8,18 @@ import (
 	"path/filepath"
 	"strings"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 )
 
 const oidSize = 20
 
-func extractEntryInfoFromTreeData(treeData *bytes.Buffer, commitOid, rootOid, rootPath string, treeInfo *catfile.ObjectInfo) ([]*pb.TreeEntry, error) {
+func extractEntryInfoFromTreeData(treeData *bytes.Buffer, commitOid, rootOid, rootPath string, treeInfo *catfile.ObjectInfo) ([]*gitalypb.TreeEntry, error) {
 	if len(treeInfo.Oid) == 0 {
 		return nil, fmt.Errorf("empty tree oid")
 	}
 
-	var entries []*pb.TreeEntry
+	var entries []*gitalypb.TreeEntry
 	oidBuf := &bytes.Buffer{}
 	for treeData.Len() > 0 {
 		modeBytes, err := treeData.ReadBytes(' ')
@@ -50,7 +50,7 @@ func extractEntryInfoFromTreeData(treeData *bytes.Buffer, commitOid, rootOid, ro
 	return entries, nil
 }
 
-func treeEntries(c *catfile.Batch, revision, path string, rootOid string, recursive bool) ([]*pb.TreeEntry, error) {
+func treeEntries(c *catfile.Batch, revision, path string, rootOid string, recursive bool) ([]*gitalypb.TreeEntry, error) {
 	if path == "." {
 		path = ""
 	}
@@ -106,11 +106,11 @@ func treeEntries(c *catfile.Batch, revision, path string, rootOid string, recurs
 		return entries, nil
 	}
 
-	var orderedEntries []*pb.TreeEntry
+	var orderedEntries []*gitalypb.TreeEntry
 	for _, entry := range entries {
 		orderedEntries = append(orderedEntries, entry)
 
-		if entry.Type == pb.TreeEntry_TREE {
+		if entry.Type == gitalypb.TreeEntry_TREE {
 			subentries, err := treeEntries(c, revision, string(entry.Path), rootOid, true)
 			if err != nil {
 				return nil, err
@@ -124,7 +124,7 @@ func treeEntries(c *catfile.Batch, revision, path string, rootOid string, recurs
 }
 
 // TreeEntryForRevisionAndPath returns a TreeEntry struct for the object present at the revision/path pair.
-func TreeEntryForRevisionAndPath(c *catfile.Batch, revision, path string) (*pb.TreeEntry, error) {
+func TreeEntryForRevisionAndPath(c *catfile.Batch, revision, path string) (*gitalypb.TreeEntry, error) {
 	entries, err := treeEntries(c, revision, pathPkg.Dir(path), "", false)
 	if err != nil {
 		return nil, err

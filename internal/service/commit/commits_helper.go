@@ -3,20 +3,19 @@ package commit
 import (
 	"context"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 )
 
 type commitsSender interface {
-	Send([]*pb.GitCommit) error
+	Send([]*gitalypb.GitCommit) error
 }
 
 const commitsPerChunk = 20
 
-func sendCommits(ctx context.Context, sender commitsSender, repo *pb.Repository, revisionRange []string, paths []string, extraArgs ...string) error {
+func sendCommits(ctx context.Context, sender commitsSender, repo *gitalypb.Repository, revisionRange []string, paths []string, extraArgs ...string) error {
 	cmd, err := log.GitLogCommand(ctx, repo, revisionRange, paths, extraArgs...)
 	if err != nil {
 		return err
@@ -27,7 +26,7 @@ func sendCommits(ctx context.Context, sender commitsSender, repo *pb.Repository,
 		return err
 	}
 
-	var commits []*pb.GitCommit
+	var commits []*gitalypb.GitCommit
 
 	for logParser.Parse() {
 		commit := logParser.Commit()

@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/tempdir"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -52,7 +52,7 @@ func TestDeleteAllSuccess(t *testing.T) {
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
-	_, err := client.DeleteAllRepositories(ctx, &pb.DeleteAllRepositoriesRequest{StorageName: testStorage.Name})
+	_, err := client.DeleteAllRepositories(ctx, &gitalypb.DeleteAllRepositoriesRequest{StorageName: testStorage.Name})
 	require.NoError(t, err)
 
 	dirents = storageDirents(t, testStorage)
@@ -81,23 +81,23 @@ func TestDeleteAllFail(t *testing.T) {
 
 	testCases := []struct {
 		desc  string
-		req   *pb.DeleteAllRepositoriesRequest
+		req   *gitalypb.DeleteAllRepositoriesRequest
 		setup func(t *testing.T)
 		code  codes.Code
 	}{
 		{
 			desc: "empty storage name",
-			req:  &pb.DeleteAllRepositoriesRequest{},
+			req:  &gitalypb.DeleteAllRepositoriesRequest{},
 			code: codes.InvalidArgument,
 		},
 		{
 			desc: "unknown storage name",
-			req:  &pb.DeleteAllRepositoriesRequest{StorageName: "does not exist"},
+			req:  &gitalypb.DeleteAllRepositoriesRequest{StorageName: "does not exist"},
 			code: codes.InvalidArgument,
 		},
 		{
 			desc: "cannot create trash dir",
-			req:  &pb.DeleteAllRepositoriesRequest{StorageName: testStorage.Name},
+			req:  &gitalypb.DeleteAllRepositoriesRequest{StorageName: testStorage.Name},
 			setup: func(t *testing.T) {
 				dataDir := path.Join(testStorage.Path, tempdir.GitalyDataPrefix)
 				require.NoError(t, os.RemoveAll(dataDir))

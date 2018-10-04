@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/diff"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"golang.org/x/net/context"
@@ -24,7 +24,7 @@ func TestSuccessfulDiffStatsRequest(t *testing.T) {
 
 	rightCommit := "e4003da16c1c2c3fc4567700121b17bf8e591c6c"
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
-	rpcRequest := &pb.DiffStatsRequest{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
+	rpcRequest := &gitalypb.DiffStatsRequest{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
@@ -142,21 +142,21 @@ func TestFailedDiffStatsRequest(t *testing.T) {
 
 	tests := []struct {
 		desc          string
-		repo          *pb.Repository
+		repo          *gitalypb.Repository
 		leftCommitID  string
 		rightCommitID string
 		err           codes.Code
 	}{
 		{
 			desc:          "repo not found",
-			repo:          &pb.Repository{StorageName: testRepo.GetStorageName(), RelativePath: "bar.git"},
+			repo:          &gitalypb.Repository{StorageName: testRepo.GetStorageName(), RelativePath: "bar.git"},
 			leftCommitID:  "e4003da16c1c2c3fc4567700121b17bf8e591c6c",
 			rightCommitID: "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab",
 			err:           codes.NotFound,
 		},
 		{
 			desc:          "storage not found",
-			repo:          &pb.Repository{StorageName: "foo", RelativePath: "bar.git"},
+			repo:          &gitalypb.Repository{StorageName: "foo", RelativePath: "bar.git"},
 			leftCommitID:  "e4003da16c1c2c3fc4567700121b17bf8e591c6c",
 			rightCommitID: "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab",
 			err:           codes.InvalidArgument,
@@ -206,7 +206,7 @@ func TestFailedDiffStatsRequest(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		rpcRequest := &pb.DiffStatsRequest{Repository: tc.repo, RightCommitId: tc.rightCommitID, LeftCommitId: tc.leftCommitID}
+		rpcRequest := &gitalypb.DiffStatsRequest{Repository: tc.repo, RightCommitId: tc.rightCommitID, LeftCommitId: tc.leftCommitID}
 		stream, err := client.DiffStats(ctx, rpcRequest)
 		require.NoError(t, err)
 

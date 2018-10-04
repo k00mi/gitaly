@@ -6,13 +6,12 @@ import (
 	"os"
 
 	"github.com/golang/protobuf/jsonpb"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/client"
 )
 
 func uploadPack(url, req string) (int32, error) {
-	var request pb.SSHUploadPackRequest
+	var request gitalypb.SSHUploadPackRequest
 	if err := jsonpb.UnmarshalString(req, &request); err != nil {
 		return 0, fmt.Errorf("json unmarshal: %v", err)
 	}

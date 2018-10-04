@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"github.com/stretchr/testify/assert"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
@@ -77,7 +77,7 @@ func TestApplyGitattributesFailure(t *testing.T) {
 	defer cleanupFn()
 
 	tests := []struct {
-		repo     *pb.Repository
+		repo     *gitalypb.Repository
 		revision []byte
 		code     codes.Code
 	}{
@@ -87,17 +87,17 @@ func TestApplyGitattributesFailure(t *testing.T) {
 			code:     codes.InvalidArgument,
 		},
 		{
-			repo:     &pb.Repository{StorageName: "foo"},
+			repo:     &gitalypb.Repository{StorageName: "foo"},
 			revision: []byte("master"),
 			code:     codes.InvalidArgument,
 		},
 		{
-			repo:     &pb.Repository{RelativePath: "bar"},
+			repo:     &gitalypb.Repository{RelativePath: "bar"},
 			revision: []byte("master"),
 			code:     codes.InvalidArgument,
 		},
 		{
-			repo:     &pb.Repository{StorageName: testRepo.GetStorageName(), RelativePath: "bar"},
+			repo:     &gitalypb.Repository{StorageName: testRepo.GetStorageName(), RelativePath: "bar"},
 			revision: []byte("master"),
 			code:     codes.NotFound,
 		},
@@ -118,18 +118,18 @@ func TestApplyGitattributesFailure(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			req := &pb.ApplyGitattributesRequest{Repository: test.repo, Revision: test.revision}
+			req := &gitalypb.ApplyGitattributesRequest{Repository: test.repo, Revision: test.revision}
 			_, err := client.ApplyGitattributes(ctx, req)
 			testhelper.RequireGrpcError(t, err, test.code)
 		})
 	}
 }
 
-func assertGitattributesApplied(t *testing.T, client pb.RepositoryServiceClient, testRepo *pb.Repository, attributesPath string, revision, expectedContents []byte) {
+func assertGitattributesApplied(t *testing.T, client gitalypb.RepositoryServiceClient, testRepo *gitalypb.Repository, attributesPath string, revision, expectedContents []byte) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	req := &pb.ApplyGitattributesRequest{Repository: testRepo, Revision: revision}
+	req := &gitalypb.ApplyGitattributesRequest{Repository: testRepo, Revision: revision}
 	c, err := client.ApplyGitattributes(ctx, req)
 
 	assert.NoError(t, err)

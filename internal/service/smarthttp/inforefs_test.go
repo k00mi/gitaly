@@ -5,10 +5,9 @@ import (
 	"strings"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
@@ -22,7 +21,7 @@ func TestSuccessfulInfoRefsUploadPack(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	rpcRequest := &pb.InfoRefsRequest{Repository: testRepo}
+	rpcRequest := &gitalypb.InfoRefsRequest{Repository: testRepo}
 
 	response, err := makeInfoRefsUploadPackRequest(t, serverSocketPath, rpcRequest)
 	require.NoError(t, err)
@@ -41,7 +40,7 @@ func TestSuccessfulInfoRefsUploadPackWithGitConfigOptions(t *testing.T) {
 
 	// transfer.hideRefs=refs will hide every ref that info-refs would normally
 	// output, allowing us to test that the custom configuration is respected
-	rpcRequest := &pb.InfoRefsRequest{
+	rpcRequest := &gitalypb.InfoRefsRequest{
 		Repository:       testRepo,
 		GitConfigOptions: []string{"transfer.hideRefs=refs"},
 	}
@@ -51,7 +50,7 @@ func TestSuccessfulInfoRefsUploadPackWithGitConfigOptions(t *testing.T) {
 	assertGitRefAdvertisement(t, "InfoRefsUploadPack", string(response), "001e# service=git-upload-pack", "0000", []string{})
 }
 
-func makeInfoRefsUploadPackRequest(t *testing.T, serverSocketPath string, rpcRequest *pb.InfoRefsRequest) ([]byte, error) {
+func makeInfoRefsUploadPackRequest(t *testing.T, serverSocketPath string, rpcRequest *gitalypb.InfoRefsRequest) ([]byte, error) {
 	client, conn := newSmartHTTPClient(t, serverSocketPath)
 	defer conn.Close()
 
@@ -78,7 +77,7 @@ func TestSuccessfulInfoRefsReceivePack(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	rpcRequest := &pb.InfoRefsRequest{Repository: testRepo}
+	rpcRequest := &gitalypb.InfoRefsRequest{Repository: testRepo}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -107,8 +106,8 @@ func TestFailureRepoNotFoundInfoRefsReceivePack(t *testing.T) {
 
 	client, conn := newSmartHTTPClient(t, serverSocketPath)
 	defer conn.Close()
-	repo := &pb.Repository{StorageName: "default", RelativePath: "testdata/data/another_repo"}
-	rpcRequest := &pb.InfoRefsRequest{Repository: repo}
+	repo := &gitalypb.Repository{StorageName: "default", RelativePath: "testdata/data/another_repo"}
+	rpcRequest := &gitalypb.InfoRefsRequest{Repository: repo}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -129,7 +128,7 @@ func TestFailureRepoNotSetInfoRefsReceivePack(t *testing.T) {
 
 	client, conn := newSmartHTTPClient(t, serverSocketPath)
 	defer conn.Close()
-	rpcRequest := &pb.InfoRefsRequest{}
+	rpcRequest := &gitalypb.InfoRefsRequest{}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

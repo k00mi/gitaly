@@ -1,10 +1,9 @@
 package commit
 
 import (
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/service/ref"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 )
 
 type server struct {
@@ -16,6 +15,6 @@ var (
 )
 
 // NewServer creates a new instance of a grpc CommitServiceServer
-func NewServer(rs *rubyserver.Server) pb.CommitServiceServer {
+func NewServer(rs *rubyserver.Server) gitalypb.CommitServiceServer {
 	return &server{rs}
 }

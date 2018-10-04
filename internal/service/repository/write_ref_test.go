@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
 )
@@ -23,11 +23,11 @@ func TestWriteRefSuccessful(t *testing.T) {
 
 	testCases := []struct {
 		desc string
-		req  *pb.WriteRefRequest
+		req  *gitalypb.WriteRefRequest
 	}{
 		{
 			desc: "rugged update refs/heads/master",
-			req: &pb.WriteRefRequest{
+			req: &gitalypb.WriteRefRequest{
 				Repository: testRepo,
 				Ref:        []byte("refs/heads/master"),
 				Revision:   []byte("4a24d82dbca5c11c61556f3b35ca472b7463187e"),
@@ -36,7 +36,7 @@ func TestWriteRefSuccessful(t *testing.T) {
 		},
 		{
 			desc: "rugged update refs/keep-around/4a24d82dbca5c11c61556f3b35ca472b7463187e",
-			req: &pb.WriteRefRequest{
+			req: &gitalypb.WriteRefRequest{
 				Repository: testRepo,
 				Ref:        []byte("refs/keep-around/4a24d82dbca5c11c61556f3b35ca472b7463187e"),
 				Revision:   []byte("4a24d82dbca5c11c61556f3b35ca472b7463187e"),
@@ -45,7 +45,7 @@ func TestWriteRefSuccessful(t *testing.T) {
 		},
 		{
 			desc: "rugged update HEAD to refs/heads/master",
-			req: &pb.WriteRefRequest{
+			req: &gitalypb.WriteRefRequest{
 				Repository: testRepo,
 				Ref:        []byte("HEAD"),
 				Revision:   []byte("refs/heads/master"),
@@ -54,7 +54,7 @@ func TestWriteRefSuccessful(t *testing.T) {
 		},
 		{
 			desc: "shell update refs/heads/master",
-			req: &pb.WriteRefRequest{
+			req: &gitalypb.WriteRefRequest{
 				Repository: testRepo,
 				Ref:        []byte("refs/heads/master"),
 				Revision:   []byte("b83d6e391c22777fca1ed3012fce84f633d7fed0"),
@@ -63,7 +63,7 @@ func TestWriteRefSuccessful(t *testing.T) {
 		},
 		{
 			desc: "shell update refs/heads/master w/ validation",
-			req: &pb.WriteRefRequest{
+			req: &gitalypb.WriteRefRequest{
 				Repository:  testRepo,
 				Ref:         []byte("refs/heads/master"),
 				Revision:    []byte("498214de67004b1da3d820901307bed2a68a8ef6"),
@@ -110,25 +110,25 @@ func TestWriteRefValidationError(t *testing.T) {
 
 	testCases := []struct {
 		desc string
-		req  *pb.WriteRefRequest
+		req  *gitalypb.WriteRefRequest
 	}{
 		{
 			desc: "empty revision",
-			req: &pb.WriteRefRequest{
+			req: &gitalypb.WriteRefRequest{
 				Repository: testRepo,
 				Ref:        []byte("refs/heads/master"),
 			},
 		},
 		{
 			desc: "empty ref name",
-			req: &pb.WriteRefRequest{
+			req: &gitalypb.WriteRefRequest{
 				Repository: testRepo,
 				Revision:   []byte("498214de67004b1da3d820901307bed2a68a8ef6"),
 			},
 		},
 		{
 			desc: "non-prefixed ref name for shell",
-			req: &pb.WriteRefRequest{
+			req: &gitalypb.WriteRefRequest{
 				Repository: testRepo,
 				Ref:        []byte("master"),
 				Revision:   []byte("498214de67004b1da3d820901307bed2a68a8ef6"),
@@ -137,7 +137,7 @@ func TestWriteRefValidationError(t *testing.T) {
 		},
 		{
 			desc: "revision contains \\x00",
-			req: &pb.WriteRefRequest{
+			req: &gitalypb.WriteRefRequest{
 				Repository: testRepo,
 				Ref:        []byte("refs/heads/master"),
 				Revision:   []byte("012301230123\x001243"),
@@ -145,7 +145,7 @@ func TestWriteRefValidationError(t *testing.T) {
 		},
 		{
 			desc: "ref contains \\x00",
-			req: &pb.WriteRefRequest{
+			req: &gitalypb.WriteRefRequest{
 				Repository: testRepo,
 				Ref:        []byte("refs/head\x00s/master\x00"),
 				Revision:   []byte("0123012301231243"),
@@ -153,7 +153,7 @@ func TestWriteRefValidationError(t *testing.T) {
 		},
 		{
 			desc: "ref contains whitespace",
-			req: &pb.WriteRefRequest{
+			req: &gitalypb.WriteRefRequest{
 				Repository: testRepo,
 				Ref:        []byte("refs/heads /master"),
 				Revision:   []byte("0123012301231243"),

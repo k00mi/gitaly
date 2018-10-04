@@ -5,29 +5,28 @@ import (
 	"io"
 	"strings"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func sendTreeEntry(stream pb.Commit_TreeEntryServer, c *catfile.Batch, revision, path string, limit int64) error {
+func sendTreeEntry(stream gitalypb.Commit_TreeEntryServer, c *catfile.Batch, revision, path string, limit int64) error {
 	treeEntry, err := TreeEntryForRevisionAndPath(c, revision, path)
 	if err != nil {
 		return err
 	}
 
 	if treeEntry == nil || len(treeEntry.Oid) == 0 {
-		return helper.DecorateError(codes.Unavailable, stream.Send(&pb.TreeEntryResponse{}))
+		return helper.DecorateError(codes.Unavailable, stream.Send(&gitalypb.TreeEntryResponse{}))
 	}
 
-	if treeEntry.Type == pb.TreeEntry_COMMIT {
-		response := &pb.TreeEntryResponse{
-			Type: pb.TreeEntryResponse_COMMIT,
+	if treeEntry.Type == gitalypb.TreeEntry_COMMIT {
+		response := &gitalypb.TreeEntryResponse{
+			Type: gitalypb.TreeEntryResponse_COMMIT,
 			Mode: treeEntry.Mode,
 			Oid:  treeEntry.Oid,
 		}
@@ -38,14 +37,14 @@ func sendTreeEntry(stream pb.Commit_TreeEntryServer, c *catfile.Batch, revision,
 		return nil
 	}
 
-	if treeEntry.Type == pb.TreeEntry_TREE {
+	if treeEntry.Type == gitalypb.TreeEntry_TREE {
 		treeInfo, err := c.Info(treeEntry.Oid)
 		if err != nil {
 			return err
 		}
 
-		response := &pb.TreeEntryResponse{
-			Type: pb.TreeEntryResponse_TREE,
+		response := &gitalypb.TreeEntryResponse{
+			Type: gitalypb.TreeEntryResponse_TREE,
 			Oid:  treeEntry.Oid,
 			Size: treeInfo.Size,
 			Mode: treeEntry.Mode,
@@ -71,8 +70,8 @@ func sendTreeEntry(stream pb.Commit_TreeEntryServer, c *catfile.Batch, revision,
 		dataLength = limit
 	}
 
-	response := &pb.TreeEntryResponse{
-		Type: pb.TreeEntryResponse_BLOB,
+	response := &gitalypb.TreeEntryResponse{
+		Type: gitalypb.TreeEntryResponse_BLOB,
 		Oid:  objectInfo.Oid,
 		Size: objectInfo.Size,
 		Mode: treeEntry.Mode,
@@ -94,7 +93,7 @@ func sendTreeEntry(stream pb.Commit_TreeEntryServer, c *catfile.Batch, revision,
 		}
 
 		// Use a new response so we don't send other fields (Size, ...) over and over
-		response = &pb.TreeEntryResponse{}
+		response = &gitalypb.TreeEntryResponse{}
 
 		return nil
 	})
@@ -103,7 +102,7 @@ func sendTreeEntry(stream pb.Commit_TreeEntryServer, c *catfile.Batch, revision,
 	return err
 }
 
-func (s *server) TreeEntry(in *pb.TreeEntryRequest, stream pb.CommitService_TreeEntryServer) error {
+func (s *server) TreeEntry(in *gitalypb.TreeEntryRequest, stream gitalypb.CommitService_TreeEntryServer) error {
 	if err := validateRequest(in); err != nil {
 		return status.Errorf(codes.InvalidArgument, "TreeEntry: %v", err)
 	}
@@ -123,7 +122,7 @@ func (s *server) TreeEntry(in *pb.TreeEntryRequest, stream pb.CommitService_Tree
 	return sendTreeEntry(stream, c, string(in.GetRevision()), requestPath, in.GetLimit())
 }
 
-func validateRequest(in *pb.TreeEntryRequest) error {
+func validateRequest(in *gitalypb.TreeEntryRequest) error {
 	if len(in.GetRevision()) == 0 {
 		return fmt.Errorf("empty Revision")
 	}

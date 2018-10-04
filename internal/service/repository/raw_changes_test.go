@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
 )
@@ -22,18 +22,18 @@ func TestGetRawChanges(t *testing.T) {
 	testCases := []struct {
 		oldRev  string
 		newRev  string
-		changes []*pb.GetRawChangesResponse_RawChange
+		changes []*gitalypb.GetRawChangesResponse_RawChange
 	}{
 		{
 			oldRev: "55bc176024cfa3baaceb71db584c7e5df900ea65",
 			newRev: "7975be0116940bf2ad4321f79d02a55c5f7779aa",
-			changes: []*pb.GetRawChangesResponse_RawChange{
+			changes: []*gitalypb.GetRawChangesResponse_RawChange{
 				{
 					BlobId:    "c60514b6d3d6bf4bec1030f70026e34dfbd69ad5",
 					Size:      824,
 					NewPath:   "README.md",
 					OldPath:   "README.md",
-					Operation: pb.GetRawChangesResponse_RawChange_MODIFIED,
+					Operation: gitalypb.GetRawChangesResponse_RawChange_MODIFIED,
 					OldMode:   0100644,
 					NewMode:   0100644,
 				},
@@ -41,7 +41,7 @@ func TestGetRawChanges(t *testing.T) {
 					BlobId:    "723c2c3f4c8a2a1e957f878c8813acfc08cda2b6",
 					Size:      1219696,
 					NewPath:   "files/images/emoji.png",
-					Operation: pb.GetRawChangesResponse_RawChange_ADDED,
+					Operation: gitalypb.GetRawChangesResponse_RawChange_ADDED,
 					NewMode:   0100644,
 				},
 			},
@@ -49,26 +49,26 @@ func TestGetRawChanges(t *testing.T) {
 		{
 			oldRev: "0000000000000000000000000000000000000000",
 			newRev: "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
-			changes: []*pb.GetRawChangesResponse_RawChange{
+			changes: []*gitalypb.GetRawChangesResponse_RawChange{
 				{
 					BlobId:    "470ad2fcf1e33798f1afc5781d08e60c40f51e7a",
 					Size:      231,
 					NewPath:   ".gitignore",
-					Operation: pb.GetRawChangesResponse_RawChange_ADDED,
+					Operation: gitalypb.GetRawChangesResponse_RawChange_ADDED,
 					NewMode:   0100644,
 				},
 				{
 					BlobId:    "50b27c6518be44c42c4d87966ae2481ce895624c",
 					Size:      1075,
 					NewPath:   "LICENSE",
-					Operation: pb.GetRawChangesResponse_RawChange_ADDED,
+					Operation: gitalypb.GetRawChangesResponse_RawChange_ADDED,
 					NewMode:   0100644,
 				},
 				{
 					BlobId:    "faaf198af3a36dbf41961466703cc1d47c61d051",
 					Size:      55,
 					NewPath:   "README.md",
-					Operation: pb.GetRawChangesResponse_RawChange_ADDED,
+					Operation: gitalypb.GetRawChangesResponse_RawChange_ADDED,
 					NewMode:   0100644,
 				},
 			},
@@ -76,13 +76,13 @@ func TestGetRawChanges(t *testing.T) {
 		{
 			oldRev: "6b8dc4a827797aa025ff6b8f425e583858a10d4f",
 			newRev: "06041ab2037429d243a38abb55957818dd9f948d",
-			changes: []*pb.GetRawChangesResponse_RawChange{
+			changes: []*gitalypb.GetRawChangesResponse_RawChange{
 				{
 					BlobId:    "c84acd1ff0b844201312052f9bb3b7259eb2e177",
 					Size:      23,
 					NewPath:   "files/executables/ls",
 					OldPath:   "files/executables/ls",
-					Operation: pb.GetRawChangesResponse_RawChange_MODIFIED,
+					Operation: gitalypb.GetRawChangesResponse_RawChange_MODIFIED,
 					OldMode:   0100755,
 					NewMode:   0100644,
 				},
@@ -94,7 +94,7 @@ func TestGetRawChanges(t *testing.T) {
 		ctx, cancel := testhelper.Context()
 		defer cancel()
 
-		req := &pb.GetRawChangesRequest{testRepo, tc.oldRev, tc.newRev}
+		req := &gitalypb.GetRawChangesRequest{testRepo, tc.oldRev, tc.newRev}
 
 		resp, err := client.GetRawChanges(ctx, req)
 		require.NoError(t, err)
@@ -139,7 +139,7 @@ func TestGetRawChangesFailures(t *testing.T) {
 		ctx, cancel := testhelper.Context()
 		defer cancel()
 
-		req := &pb.GetRawChangesRequest{testRepo, tc.oldRev, tc.newRev}
+		req := &gitalypb.GetRawChangesRequest{testRepo, tc.oldRev, tc.newRev}
 
 		resp, err := client.GetRawChanges(ctx, req)
 		require.NoError(t, err)
@@ -163,12 +163,12 @@ func TestGetRawChangesManyFiles(t *testing.T) {
 	defer cancel()
 
 	initCommit := "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863"
-	req := &pb.GetRawChangesRequest{testRepo, initCommit, "many_files"}
+	req := &gitalypb.GetRawChangesRequest{testRepo, initCommit, "many_files"}
 
 	c, err := client.GetRawChanges(ctx, req)
 	require.NoError(t, err)
 
-	changes := []*pb.GetRawChangesResponse_RawChange{}
+	changes := []*gitalypb.GetRawChangesResponse_RawChange{}
 	for {
 		resp, err := c.Recv()
 		if err == io.EOF {
@@ -196,7 +196,7 @@ func TestGetRawChangesMappingOperations(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	req := &pb.GetRawChangesRequest{
+	req := &gitalypb.GetRawChangesRequest{
 		testRepo,
 		"1b12f15a11fc6e62177bef08f47bc7b5ce50b141",
 		"94bb47ca1297b7b3731ff2a36923640991e9236f",
@@ -207,23 +207,23 @@ func TestGetRawChangesMappingOperations(t *testing.T) {
 	msg, err := c.Recv()
 	require.NoError(t, err)
 
-	ops := []pb.GetRawChangesResponse_RawChange_Operation{}
+	ops := []gitalypb.GetRawChangesResponse_RawChange_Operation{}
 	for _, change := range msg.GetRawChanges() {
 		ops = append(ops, change.GetOperation())
 	}
 
-	expected := []pb.GetRawChangesResponse_RawChange_Operation{
-		pb.GetRawChangesResponse_RawChange_RENAMED,
-		pb.GetRawChangesResponse_RawChange_MODIFIED,
-		pb.GetRawChangesResponse_RawChange_ADDED,
+	expected := []gitalypb.GetRawChangesResponse_RawChange_Operation{
+		gitalypb.GetRawChangesResponse_RawChange_RENAMED,
+		gitalypb.GetRawChangesResponse_RawChange_MODIFIED,
+		gitalypb.GetRawChangesResponse_RawChange_ADDED,
 	}
 
-	firstChange := &pb.GetRawChangesResponse_RawChange{
+	firstChange := &gitalypb.GetRawChangesResponse_RawChange{
 		BlobId:    "53855584db773c3df5b5f61f72974cb298822fbb",
 		Size:      22846,
 		NewPath:   "CHANGELOG.md",
 		OldPath:   "CHANGELOG",
-		Operation: pb.GetRawChangesResponse_RawChange_RENAMED,
+		Operation: gitalypb.GetRawChangesResponse_RawChange_RENAMED,
 		OldMode:   0100644,
 		NewMode:   0100644,
 	}

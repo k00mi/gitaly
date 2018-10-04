@@ -14,7 +14,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
@@ -72,7 +72,7 @@ func TestSuccessfulAddRemote(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			request := &pb.AddRemoteRequest{
+			request := &gitalypb.AddRemoteRequest{
 				Repository:    testRepo,
 				Name:          tc.remoteName,
 				Url:           tc.url,
@@ -137,7 +137,7 @@ func TestFailedAddRemoteDueToValidation(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			request := &pb.AddRemoteRequest{
+			request := &gitalypb.AddRemoteRequest{
 				Repository: testRepo,
 				Name:       tc.remoteName,
 				Url:        tc.url,
@@ -183,7 +183,7 @@ func TestSuccessfulRemoveRemote(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			request := &pb.RemoveRemoteRequest{
+			request := &gitalypb.RemoveRemoteRequest{
 				Repository: testRepo,
 				Name:       tc.remoteName,
 			}
@@ -212,7 +212,7 @@ func TestFailedRemoveRemoteDueToValidation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	request := &pb.RemoveRemoteRequest{Repository: testRepo} // Remote name empty
+	request := &gitalypb.RemoveRemoteRequest{Repository: testRepo} // Remote name empty
 
 	_, err := client.RemoveRemote(ctx, request)
 	testhelper.RequireGrpcError(t, err, codes.InvalidArgument)
@@ -235,7 +235,7 @@ func TestFindRemoteRepository(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	resp, err := client.FindRemoteRepository(ctx, &pb.FindRemoteRepositoryRequest{Remote: ts.URL})
+	resp, err := client.FindRemoteRepository(ctx, &gitalypb.FindRemoteRepositoryRequest{Remote: ts.URL})
 	require.NoError(t, err)
 
 	require.True(t, resp.Exists)
@@ -262,7 +262,7 @@ func TestFailedFindRemoteRepository(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		resp, err := client.FindRemoteRepository(ctx, &pb.FindRemoteRepositoryRequest{Remote: tc.remote})
+		resp, err := client.FindRemoteRepository(ctx, &gitalypb.FindRemoteRepositoryRequest{Remote: tc.remote})
 		if tc.code == codes.OK {
 			require.NoError(t, err)
 		} else {

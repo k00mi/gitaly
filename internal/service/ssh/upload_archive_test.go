@@ -9,9 +9,8 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-
-	pb "gitlab.com/gitlab-org/gitaly-proto/go"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
@@ -26,22 +25,22 @@ func TestFailedUploadArchiveRequestDueToValidationError(t *testing.T) {
 
 	tests := []struct {
 		Desc string
-		Req  *pb.SSHUploadArchiveRequest
+		Req  *gitalypb.SSHUploadArchiveRequest
 		Code codes.Code
 	}{
 		{
 			Desc: "Repository.RelativePath is empty",
-			Req:  &pb.SSHUploadArchiveRequest{Repository: &pb.Repository{StorageName: "default", RelativePath: ""}},
+			Req:  &gitalypb.SSHUploadArchiveRequest{Repository: &gitalypb.Repository{StorageName: "default", RelativePath: ""}},
 			Code: codes.InvalidArgument,
 		},
 		{
 			Desc: "Repository is nil",
-			Req:  &pb.SSHUploadArchiveRequest{Repository: nil},
+			Req:  &gitalypb.SSHUploadArchiveRequest{Repository: nil},
 			Code: codes.InvalidArgument,
 		},
 		{
 			Desc: "Data exists on first request",
-			Req:  &pb.SSHUploadArchiveRequest{Repository: &pb.Repository{StorageName: "default", RelativePath: "path/to/repo"}, Stdin: []byte("Fail")},
+			Req:  &gitalypb.SSHUploadArchiveRequest{Repository: &gitalypb.Repository{StorageName: "default", RelativePath: "path/to/repo"}, Stdin: []byte("Fail")},
 			Code: codes.InvalidArgument,
 		},
 	}
@@ -76,8 +75,8 @@ func TestUploadArchiveSuccess(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func testArchive(t *testing.T, serverSocketPath string, testRepo *pb.Repository, cmd *exec.Cmd) error {
-	req := &pb.SSHUploadArchiveRequest{Repository: testRepo}
+func testArchive(t *testing.T, serverSocketPath string, testRepo *gitalypb.Repository, cmd *exec.Cmd) error {
+	req := &gitalypb.SSHUploadArchiveRequest{Repository: testRepo}
 	pbMarshaler := &jsonpb.Marshaler{}
 	payload, err := pbMarshaler.MarshalToString(req)
 
@@ -101,7 +100,7 @@ func testArchive(t *testing.T, serverSocketPath string, testRepo *pb.Repository,
 	return nil
 }
 
-func drainUploadArchiveResponse(stream pb.SSHService_SSHUploadArchiveClient) error {
+func drainUploadArchiveResponse(stream gitalypb.SSHService_SSHUploadArchiveClient) error {
 	var err error
 	for err == nil {
 		_, err = stream.Recv()
