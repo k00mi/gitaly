@@ -6,8 +6,9 @@ describe Gitlab::Git::GitlabProjects do
   let(:repository) { gitlab_git_from_gitaly(test_repo_read_only) }
   let(:repo_name) { 'gitlab-test.git' }
   let(:gl_projects) { build_gitlab_projects(DEFAULT_STORAGE_DIR, repo_name) }
-  let(:hooks_path) { '/tmp/test/hooks' }
+  let(:hooks_path) { File.join(tmp_repo_path, 'hooks') }
   let(:tmp_repo_path) { TEST_REPO_PATH }
+  let(:tmp_repos_path) { DEFAULT_STORAGE_DIR }
 
   if $VERBOSE
     let(:logger) { Logger.new(STDOUT) }
@@ -27,6 +28,50 @@ describe Gitlab::Git::GitlabProjects do
     exitstatus = success ? 0 : nil
     expect(gl_projects).to receive(:popen_with_timeout).with(*args)
       .and_return(["output", exitstatus])
+  end
+
+  def stub_spawn_timeout(*args)
+    expect(gl_projects).to receive(:popen_with_timeout).with(*args)
+      .and_raise(Timeout::Error)
+  end
+
+  describe '#initialize' do
+    it { expect(gl_projects.shard_path).to eq(tmp_repos_path) }
+    it { expect(gl_projects.repository_relative_path).to eq(repo_name) }
+    it { expect(gl_projects.repository_absolute_path).to eq(File.join(tmp_repos_path, repo_name)) }
+    it { expect(gl_projects.logger).to eq(logger) }
+  end
+
+  describe '#push_branches' do
+    let(:remote_name) { 'remote-name' }
+    let(:branch_name) { 'master' }
+    let(:cmd) { %W(#{Gitlab.config.git.bin_path} push -- #{remote_name} #{branch_name}) }
+    let(:force) { false }
+
+    subject { gl_projects.push_branches(remote_name, 600, force, [branch_name]) }
+
+    it 'executes the command' do
+      stub_spawn(cmd, 600, tmp_repo_path, success: true)
+
+      is_expected.to be_truthy
+    end
+
+    it 'fails' do
+      stub_spawn(cmd, 600, tmp_repo_path, success: false)
+
+      is_expected.to be_falsy
+    end
+
+    context 'with --force' do
+      let(:cmd) { %W(#{Gitlab.config.git.bin_path} push --force -- #{remote_name} #{branch_name}) }
+      let(:force) { true }
+
+      it 'executes the command' do
+        stub_spawn(cmd, 600, tmp_repo_path, success: true)
+
+        is_expected.to be_truthy
+      end
+    end
   end
 
   describe '#fetch_remote' do
@@ -61,7 +106,7 @@ describe Gitlab::Git::GitlabProjects do
         is_expected.to be_truthy
       end
 
-      it 'fails' do
+      it 'returns false if the command fails' do
         stub_spawn(cmd, 600, tmp_repo_path, {}, success: false)
 
         is_expected.to be_falsy

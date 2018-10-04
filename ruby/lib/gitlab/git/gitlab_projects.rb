@@ -66,22 +66,6 @@ module Gitlab
         end
       end
 
-      def shard_path
-        strong_memoize(:shard_path) do
-          Gitlab.config.repositories.storages.fetch(shard_name).legacy_disk_path
-        end
-      end
-
-      # Import project via git clone --bare
-      # URL must be publicly cloneable
-      def import_project(source, timeout)
-        git_import_repository(source, timeout)
-      end
-
-      def fork_repository(new_shard_name, new_repository_relative_path)
-        git_fork_repository(new_shard_name, new_repository_relative_path)
-      end
-
       def fetch_remote(name, timeout, force:, tags:, ssh_key: nil, known_hosts: nil, prune: true)
         logger.info "Fetching remote #{name} for repository #{repository_absolute_path}."
         cmd = fetch_remote_command(name, tags, prune, force)
@@ -223,52 +207,6 @@ module Gitlab
           cmd << '--force' if force
           cmd << (tags ? '--tags' : '--no-tags')
         end
-      end
-
-      def git_import_repository(source, timeout)
-        # Skip import if repo already exists
-        return false if File.exist?(repository_absolute_path)
-
-        masked_source = mask_password_in_url(source)
-
-        logger.info "Importing project from <#{masked_source}> to <#{repository_absolute_path}>."
-        cmd = %W(#{Gitlab.config.git.bin_path} clone --bare -- #{source} #{repository_absolute_path})
-
-        success = run_with_timeout(cmd, timeout, nil)
-
-        unless success
-          logger.error("Importing project from <#{masked_source}> to <#{repository_absolute_path}> failed.")
-          FileUtils.rm_rf(repository_absolute_path)
-          return false
-        end
-
-        Gitlab::Git::Repository.create_hooks(repository_absolute_path, global_hooks_path)
-
-        # The project was imported successfully.
-        # Remove the origin URL since it may contain password.
-        remove_origin_in_repo
-
-        true
-      end
-
-      def git_fork_repository(new_shard_name, new_repository_relative_path)
-        from_path = repository_absolute_path
-        new_shard_path = Gitlab.config.repositories.storages.fetch(new_shard_name).legacy_disk_path
-        to_path = File.join(new_shard_path, new_repository_relative_path)
-
-        # The repository cannot already exist
-        if File.exist?(to_path)
-          logger.error "fork-repository failed: destination repository <#{to_path}> already exists."
-          return false
-        end
-
-        # Ensure the namepsace / hashed storage directory exists
-        FileUtils.mkdir_p(File.dirname(to_path), mode: 0770)
-
-        logger.info "Forking repository from <#{from_path}> to <#{to_path}>."
-        cmd = %W(#{Gitlab.config.git.bin_path} clone --bare --no-local -- #{from_path} #{to_path})
-
-        run(cmd, nil) && Gitlab::Git::Repository.create_hooks(to_path, global_hooks_path)
       end
     end
   end
