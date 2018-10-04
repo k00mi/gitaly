@@ -1,4 +1,4 @@
-require 'Tempfile'
+require 'tempfile'
 
 module Gitlab
   module Git
