@@ -1,5 +1,0 @@
----
-title: Rename gitaly proto import to gitalypb
-merge_request: 895
-author:
-type: other

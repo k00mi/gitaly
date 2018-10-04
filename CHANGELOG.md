@@ -1,5 +1,19 @@
 # Gitaly changelog
 
+## v0.124.0
+
+#### Deprecated
+- Remove support for Go 1.9
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/
+
+#### Fixed
+- Fix panic in git pktline splitter
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/893
+
+#### Other
+- Rename gitaly proto import to gitalypb
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/895
+
 ## v0.123.0
 
 #### Added
