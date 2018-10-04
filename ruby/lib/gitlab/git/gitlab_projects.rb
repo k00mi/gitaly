@@ -1,3 +1,5 @@
+require 'Tempfile'
+
 module Gitlab
   module Git
     class GitlabProjects
