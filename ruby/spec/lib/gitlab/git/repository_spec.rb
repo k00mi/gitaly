@@ -1,9 +1,57 @@
 require 'spec_helper'
 
-describe Gitlab::Git::RevList do
+describe Gitlab::Git::Repository do
   include TestRepo
 
   let(:repository) { gitlab_git_from_gitaly(test_repo_read_only) }
+
+  describe '#from_gitaly_with_block' do
+    let(:call_metadata) do
+      {
+        'user-agent' => 'grpc-go/1.9.1',
+        'gitaly-storage-path' => DEFAULT_STORAGE_DIR,
+        'gitaly-repo-path' => TEST_REPO_PATH,
+        'gitaly-gl-repository' => 'project-52',
+        'gitaly-repo-alt-dirs' => ''
+      }
+    end
+    let(:call) { double(metadata: call_metadata) }
+    let(:gitlab_shell_path) { '/foo/bar/gitlab-shell' }
+
+    before do
+      ENV['GITALY_RUBY_GITLAB_SHELL_PATH'] = gitlab_shell_path
+    end
+
+    after do
+      ENV.delete('GITALY_RUBY_GITLAB_SHELL_PATH')
+    end
+
+    it 'cleans up the repository' do
+      described_class.from_gitaly_with_block(test_repo_read_only, call) do |repository|
+        expect(repository.rugged).to receive(:close)
+      end
+    end
+  end
+
+  describe '#cleanup' do
+    context 'when Rugged has been called' do
+      it 'calls close on Rugged::Repository' do
+        rugged = repository.rugged
+
+        expect(rugged).to receive(:close).and_call_original
+
+        repository.cleanup
+      end
+    end
+
+    context 'when Rugged has not been called' do
+      it 'does not call close on Rugged::Repository' do
+        expect(repository).not_to receive(:rugged)
+
+        repository.cleanup
+      end
+    end
+  end
 
   describe '#parse_raw_diff_line' do
     let(:diff_data) { repository.parse_raw_diff_line(diff_line) }
