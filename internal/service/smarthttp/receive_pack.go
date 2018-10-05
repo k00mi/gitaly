@@ -27,7 +27,6 @@ func (s *server) PostReceivePack(stream gitalypb.SmartHTTPService_PostReceivePac
 		"GlRepository":     req.GlRepository,
 		"GlUsername":       req.GlUsername,
 		"GitConfigOptions": req.GitConfigOptions,
-		"GitProtocol":      req.GitProtocol,
 	}).Debug("PostReceivePack")
 
 	if err := validateReceivePackRequest(req); err != nil {

@@ -7,7 +7,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
-	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -39,10 +38,6 @@ func (s *server) PostUploadPack(stream gitalypb.SmartHTTPService_PostUploadPackS
 	if err != nil {
 		return err
 	}
-
-	grpc_logrus.Extract(stream.Context()).WithFields(log.Fields{
-		"GitProtocol": req.GitProtocol,
-	}).Debug("PostUploadPack")
 
 	if err := validateUploadPackRequest(req); err != nil {
 		return err

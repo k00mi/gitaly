@@ -6,7 +6,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
-	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -22,10 +21,6 @@ func (s *server) SSHUploadPack(stream gitalypb.SSHService_SSHUploadPackServer) e
 	if err != nil {
 		return err
 	}
-
-	grpc_logrus.Extract(stream.Context()).WithFields(log.Fields{
-		"GitProtocol": req.GitProtocol,
-	}).Debug("SSHUploadPack")
 
 	if err = validateFirstUploadPackRequest(req); err != nil {
 		return err

@@ -35,8 +35,7 @@ func (s *server) InfoRefsReceivePack(in *gitalypb.InfoRefsRequest, stream gitaly
 
 func handleInfoRefs(ctx context.Context, service string, req *gitalypb.InfoRefsRequest, w io.Writer) error {
 	grpc_logrus.Extract(ctx).WithFields(log.Fields{
-		"service":     service,
-		"GitProtocol": req.GitProtocol,
+		"service": service,
 	}).Debug("handleInfoRefs")
 
 	env := git.AddGitProtocolEnv(req, []string{})
