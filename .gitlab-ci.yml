@@ -27,9 +27,6 @@ danger-review:
     - danger
 
 .ruby_template: &ruby_definition
-  before_script:
-    # Override gemfile config (for some reasong `config --delete` doesn't do it)
-    - bundle config --local gemfile Gemfile
   cache:
     key: gems-ruby-2.4
     paths:

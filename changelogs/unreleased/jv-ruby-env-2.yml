@@ -1,0 +1,5 @@
+---
+title: Don't use _build/assembly/ruby in rspec
+merge_request: 901
+author:
+type: fixed

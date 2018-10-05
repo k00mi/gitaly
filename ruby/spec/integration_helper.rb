@@ -4,6 +4,7 @@ require 'gitaly'
 require 'spec_helper'
 
 SOCKET_PATH = 'gitaly.socket'.freeze
+GITALY_RUBY_DIR = File.expand_path('../..', __FILE__)
 TMP_DIR = File.expand_path('../../tmp', __FILE__)
 
 module IntegrationClient
@@ -31,8 +32,8 @@ def start_gitaly
     dir = "#{gitlab_shell_dir}"
     
     [gitaly-ruby]
-    dir = "#{build_dir}/assembly/ruby"
-    
+    dir = "#{GITALY_RUBY_DIR}"
+
     [[storage]]
     name = "#{DEFAULT_STORAGE_NAME}"
     path = "#{DEFAULT_STORAGE_DIR}"
@@ -42,8 +43,10 @@ def start_gitaly
 
   test_log = File.join(TMP_DIR, 'gitaly-rspec-test.log')
   options = { out: test_log, err: test_log, chdir: TMP_DIR }
-  gitaly_pid = spawn(File.join(build_dir, 'bin/gitaly'), config_path, options)
+
+  gitaly_pid = spawn(File.join(build_dir, 'bin/gitaly'), config_path, options)  
   at_exit { Process.kill('KILL', gitaly_pid) }
+
   wait_ready!(File.join('tmp', SOCKET_PATH))
 end
 
