@@ -85,6 +85,8 @@ func TestSuccessfulInfoRefsUploadPackWithGitProtocol(t *testing.T) {
 		}
 	}
 
+	require.NoError(t, err)
+
 	envData, err := testhelper.GetGitEnvData()
 
 	require.NoError(t, err)
