@@ -84,7 +84,7 @@ describe Gitlab::Git::Repository do
       let(:diff_line) { '' }
 
       it 'raises an ArgumentError' do
-        expect {diff_data }.to raise_error(ArgumentError)
+        expect { diff_data }.to raise_error(ArgumentError)
       end
     end
   end
