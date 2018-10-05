@@ -1,5 +1,8 @@
 source 'https://rubygems.org'
 
+# Require bundler >= 1.16.5 to avoid this bug: https://github.com/bundler/bundler/issues/6537
+gem 'bundler', '>= 1.16.5'
+
 gem 'rugged', '~> 0.27.4'
 gem 'github-linguist', '~> 6.1', require: 'linguist'
 gem 'gitlab-markup', '~> 1.6.4'
