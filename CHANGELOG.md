@@ -1,5 +1,15 @@
 # Gitaly changelog
 
+## v0.125.0
+
+#### Added
+- Support Git protocol v2
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/844
+
+#### Other
+- Remove test case that exercises gogit feature flag
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/899
+
 ## v0.124.0
 
 #### Deprecated
