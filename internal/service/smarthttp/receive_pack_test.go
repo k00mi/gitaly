@@ -98,7 +98,7 @@ func TestSuccessfulReceivePackRequestWithGitProtocol(t *testing.T) {
 	require.NoError(t, err)
 
 	push := newTestPush(t, nil)
-	firstRequest := &pb.PostReceivePackRequest{Repository: repo, GlId: "user-123", GlRepository: "project-123", GitProtocol: git.ProtocolV2}
+	firstRequest := &gitalypb.PostReceivePackRequest{Repository: repo, GlId: "user-123", GlRepository: "project-123", GitProtocol: git.ProtocolV2}
 	doPush(t, stream, firstRequest, push.body)
 
 	envData, err := testhelper.GetGitEnvData()
@@ -229,8 +229,8 @@ func TestFailedReceivePackRequestDueToValidationError(t *testing.T) {
 	defer conn.Close()
 
 	rpcRequests := []gitalypb.PostReceivePackRequest{
-		{Repository: &gitalypb.Repository{StorageName: "fake", RelativePath: "path"}, GlId: "user-123"},                                  // Repository doesn't exist
-		{Repository: nil, GlId: "user-123"},                                                                                              // Repository is nil
+		{Repository: &gitalypb.Repository{StorageName: "fake", RelativePath: "path"}, GlId: "user-123"}, // Repository doesn't exist
+		{Repository: nil, GlId: "user-123"}, // Repository is nil
 		{Repository: &gitalypb.Repository{StorageName: "default", RelativePath: "path/to/repo"}, GlId: ""},                               // Empty GlId
 		{Repository: &gitalypb.Repository{StorageName: "default", RelativePath: "path/to/repo"}, GlId: "user-123", Data: []byte("Fail")}, // Data exists on first request
 	}

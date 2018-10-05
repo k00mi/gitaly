@@ -66,7 +66,7 @@ func TestSuccessfulInfoRefsUploadPackWithGitProtocol(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	rpcRequest := &pb.InfoRefsRequest{
+	rpcRequest := &gitalypb.InfoRefsRequest{
 		Repository:  testRepo,
 		GitProtocol: git.ProtocolV2,
 	}
@@ -93,7 +93,7 @@ func TestSuccessfulInfoRefsUploadPackWithGitProtocol(t *testing.T) {
 	require.Equal(t, fmt.Sprintf("GIT_PROTOCOL=%s\n", git.ProtocolV2), envData)
 }
 
-func makeInfoRefsUploadPackRequest(t *testing.T, serverSocketPath string, rpcRequest *pb.InfoRefsRequest) ([]byte, error) {
+func makeInfoRefsUploadPackRequest(t *testing.T, serverSocketPath string, rpcRequest *gitalypb.InfoRefsRequest) ([]byte, error) {
 	client, conn := newSmartHTTPClient(t, serverSocketPath)
 	defer conn.Close()
 

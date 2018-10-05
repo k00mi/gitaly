@@ -178,8 +178,8 @@ func TestUploadPackRequestWithGitProtocol(t *testing.T) {
 
 	// Only a Git server with v2 will recognize this request.
 	// Git v1 will throw a protocol error.
-	rpcRequest := &pb.PostUploadPackRequest{
-		Repository: &pb.Repository{
+	rpcRequest := &gitalypb.PostUploadPackRequest{
+		Repository: &gitalypb.Repository{
 			StorageName:  "default",
 			RelativePath: relativePath,
 		},
