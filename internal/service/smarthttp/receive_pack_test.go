@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 
@@ -70,6 +71,40 @@ func TestSuccessfulReceivePackRequestWithGitOpts(t *testing.T) {
 
 	expectedResponse := "0030\x01000eunpack ok\n0019ok refs/heads/master\n00000000"
 	require.Equal(t, expectedResponse, string(response), "Expected response to be %q, got %q", expectedResponse, response)
+
+	// The fact that this command succeeds means that we got the commit correctly, no further checks should be needed.
+	testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "show", push.newHead)
+}
+
+func TestSuccessfulReceivePackRequestWithGitProtocol(t *testing.T) {
+	defer func(old string) {
+		config.Config.Git.BinPath = old
+	}(config.Config.Git.BinPath)
+	config.Config.Git.BinPath = "../../testhelper/env_git"
+
+	server, serverSocketPath := runSmartHTTPServer(t)
+	defer server.Stop()
+
+	repo, repoPath, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	client, conn := newSmartHTTPClient(t, serverSocketPath)
+	defer conn.Close()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	stream, err := client.PostReceivePack(ctx)
+	require.NoError(t, err)
+
+	push := newTestPush(t, nil)
+	firstRequest := &gitalypb.PostReceivePackRequest{Repository: repo, GlId: "user-123", GlRepository: "project-123", GitProtocol: git.ProtocolV2}
+	doPush(t, stream, firstRequest, push.body)
+
+	envData, err := testhelper.GetGitEnvData()
+
+	require.NoError(t, err)
+	require.Equal(t, fmt.Sprintf("GIT_PROTOCOL=%s\n", git.ProtocolV2), envData)
 
 	// The fact that this command succeeds means that we got the commit correctly, no further checks should be needed.
 	testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "show", push.newHead)

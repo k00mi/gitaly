@@ -7,10 +7,14 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
+
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git/pktline"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -24,7 +28,7 @@ import (
 )
 
 const (
-	clientCapabilities = `multi_ack_detailed no-done side-band-64k thin-pack include-tag ofs-delta deepen-since deepen-not agent=git/2.12.2`
+	clientCapabilities = `multi_ack_detailed no-done side-band-64k thin-pack include-tag ofs-delta deepen-since deepen-not agent=git/2.18.0`
 )
 
 func TestSuccessfulUploadPackRequest(t *testing.T) {
@@ -145,6 +149,51 @@ func TestUploadPackRequestWithGitConfigOptions(t *testing.T) {
 	response, err = makePostUploadPackRequest(t, serverSocketPath, rpcRequest, requestBodyCopy)
 	testhelper.RequireGrpcError(t, err, codes.Unavailable)
 	assert.Equal(t, response.String(), "", "Ref is hidden so no response should be received")
+}
+
+func TestUploadPackRequestWithGitProtocol(t *testing.T) {
+	defer func(old string) {
+		config.Config.Git.BinPath = old
+	}(config.Config.Git.BinPath)
+	config.Config.Git.BinPath = "../../testhelper/env_git"
+
+	server, serverSocketPath := runSmartHTTPServer(t)
+	defer server.Stop()
+
+	testRepo := testhelper.TestRepository()
+	testRepoPath, err := helper.GetRepoPath(testRepo)
+	require.NoError(t, err)
+
+	storagePath := testhelper.GitlabTestStoragePath()
+	relativePath, err := filepath.Rel(storagePath, testRepoPath)
+	require.NoError(t, err)
+
+	requestBody := &bytes.Buffer{}
+
+	pktline.WriteString(requestBody, "command=ls-refs\n")
+	pktline.WriteDelim(requestBody)
+	pktline.WriteString(requestBody, "peel\n")
+	pktline.WriteString(requestBody, "symrefs\n")
+	pktline.WriteFlush(requestBody)
+
+	// Only a Git server with v2 will recognize this request.
+	// Git v1 will throw a protocol error.
+	rpcRequest := &gitalypb.PostUploadPackRequest{
+		Repository: &gitalypb.Repository{
+			StorageName:  "default",
+			RelativePath: relativePath,
+		},
+		GitProtocol: git.ProtocolV2,
+	}
+
+	// The ref is successfully requested as it is not hidden
+	_, err = makePostUploadPackRequest(t, serverSocketPath, rpcRequest, requestBody)
+	require.NoError(t, err)
+
+	envData, err := testhelper.GetGitEnvData()
+
+	require.NoError(t, err)
+	require.Equal(t, fmt.Sprintf("GIT_PROTOCOL=%s\n", git.ProtocolV2), envData)
 }
 
 // This test is here because git-upload-pack returns a non-zero exit code

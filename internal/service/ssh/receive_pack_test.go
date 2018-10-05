@@ -7,9 +7,10 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"strings"
 	"testing"
 	"time"
+
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/stretchr/testify/require"
@@ -84,17 +85,36 @@ func TestReceivePackPushSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Compare(lHead, rHead) != 0 {
-		t.Errorf("local and remote head not equal. push failed: %q != %q", lHead, rHead)
-	}
+	require.Equal(t, lHead, rHead, "local and remote head not equal. push failed")
 
 	lHead, rHead, err = testCloneAndPush(t, serverSocketPath, pushParams{storageName: testRepo.GetStorageName(), glID: "1", gitConfigOptions: []string{"receive.MaxInputSize=10000"}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Compare(lHead, rHead) != 0 {
-		t.Errorf("local and remote head not equal. push failed: %q != %q", lHead, rHead)
+
+	require.Equal(t, lHead, rHead, "local and remote head not equal. push failed")
+}
+
+func TestReceivePackPushSuccessWithGitProtocol(t *testing.T) {
+	defer func(old string) {
+		config.Config.Git.BinPath = old
+	}(config.Config.Git.BinPath)
+	config.Config.Git.BinPath = "../../testhelper/env_git"
+
+	server, serverSocketPath := runSSHServer(t)
+	defer server.Stop()
+
+	lHead, rHead, err := testCloneAndPush(t, serverSocketPath, pushParams{storageName: testRepo.GetStorageName(), glID: "1", gitProtocol: git.ProtocolV2})
+	if err != nil {
+		t.Fatal(err)
 	}
+
+	require.Equal(t, lHead, rHead, "local and remote head not equal. push failed")
+
+	envData, err := testhelper.GetGitEnvData()
+
+	require.NoError(t, err)
+	require.Equal(t, fmt.Sprintf("GIT_PROTOCOL=%s\n", git.ProtocolV2), envData)
 }
 
 func TestReceivePackPushFailure(t *testing.T) {
@@ -152,6 +172,7 @@ func testCloneAndPush(t *testing.T, serverSocketPath string, params pushParams) 
 		GlRepository:     pbTempRepo.GetRelativePath(),
 		GlId:             params.glID,
 		GitConfigOptions: params.gitConfigOptions,
+		GitProtocol:      params.gitProtocol,
 	})
 	require.NoError(t, err)
 
@@ -216,4 +237,5 @@ type pushParams struct {
 	storageName      string
 	glID             string
 	gitConfigOptions []string
+	gitProtocol      string
 }

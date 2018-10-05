@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os/exec"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/pktline"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -36,6 +38,8 @@ func handleInfoRefs(ctx context.Context, service string, req *gitalypb.InfoRefsR
 		"service": service,
 	}).Debug("handleInfoRefs")
 
+	env := git.AddGitProtocolEnv(req, []string{})
+
 	repoPath, err := helper.GetRepoPath(req.Repository)
 	if err != nil {
 		return err
@@ -48,7 +52,9 @@ func handleInfoRefs(ctx context.Context, service string, req *gitalypb.InfoRefsR
 
 	args = append(args, service, "--stateless-rpc", "--advertise-refs", repoPath)
 
-	cmd, err := git.Command(ctx, req.Repository, args...)
+	osCommand := exec.Command(command.GitPath(), args...)
+	cmd, err := command.New(ctx, osCommand, nil, nil, nil, env...)
+
 	if err != nil {
 		if _, ok := status.FromError(err); ok {
 			return err
