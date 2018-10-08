@@ -27,9 +27,6 @@ danger-review:
     - danger
 
 .ruby_template: &ruby_definition
-  before_script:
-    # Override gemfile config (for some reasong `config --delete` doesn't do it)
-    - bundle config --local gemfile Gemfile
   cache:
     key: gems-ruby-2.4
     paths:
@@ -67,6 +64,11 @@ danger-review:
     paths:
       - ruby/vendor/bundle
     policy: pull
+  artifacts:
+    paths:
+    - ruby/tmp/gitaly-rspec-test.log
+    when: on_failure
+    expire_in: 1 week
 
 .test_template: &test_definition
   <<: *go_test_definition

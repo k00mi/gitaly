@@ -87,6 +87,12 @@ func openLanguagesJSON() (io.ReadCloser, error) {
 	cmd := exec.Command("bundle", "exec", "ruby", "-rfileutils", "-e", rubyScript, linguistPathSymlink.Name())
 	cmd.Dir = config.Config.Ruby.Dir
 
+	// We have learned that in practice the command we are about to run is a
+	// canary for Ruby/Bundler configuration problems. Including stderr and
+	// stdout in the gitaly log is useful for debugging such problems.
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+
 	if err := cmd.Run(); err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			err = fmt.Errorf("%v; stderr: %q", exitError, exitError.Stderr)
