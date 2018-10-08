@@ -48,6 +48,14 @@ module Gitlab
           )
         end
 
+        def from_gitaly_with_block(gitaly_repository, call)
+          repository = from_gitaly(gitaly_repository, call)
+
+          yield repository
+
+          repository.cleanup
+        end
+
         def create(repo_path)
           FileUtils.mkdir_p(repo_path, mode: 0770)
 
@@ -165,7 +173,7 @@ module Gitlab
       end
 
       def rugged
-        Rugged::Repository.new(path, alternates: alternate_object_directories)
+        @rugged ||= Rugged::Repository.new(path, alternates: alternate_object_directories)
       rescue Rugged::RepositoryError, Rugged::OSError
         raise NoRepository.new('no repository for such path')
       end
@@ -806,6 +814,12 @@ module Gitlab
         end
 
         run_git!(args, lazy_block: block)
+      end
+
+      def cleanup
+        # Opening a repository may be expensive, and we only need to close it
+        # if it's been open.
+        rugged&.close if defined?(@rugged)
       end
 
       private

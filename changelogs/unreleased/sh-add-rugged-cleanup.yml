@@ -1,0 +1,5 @@
+---
+title: Add support for closing Rugged/libgit2 file descriptors
+merge_request: 903
+author:
+type: added
