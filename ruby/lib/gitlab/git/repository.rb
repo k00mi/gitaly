@@ -26,6 +26,7 @@ module Gitlab
       GITLAB_PROJECTS_TIMEOUT = Gitlab.config.gitlab_shell.git_timeout
       EMPTY_REPOSITORY_CHECKSUM = '0000000000000000000000000000000000000000'.freeze
       AUTOCRLF_VALUES = { 'true' => true, 'false' => false, 'input' => :input }.freeze
+      RUGGED_KEY = :rugged_list
 
       NoRepository = Class.new(StandardError)
       InvalidRepository = Class.new(StandardError)
@@ -173,7 +174,11 @@ module Gitlab
       end
 
       def rugged
-        @rugged ||= Rugged::Repository.new(path, alternates: alternate_object_directories)
+        @rugged ||= begin
+                      Rugged::Repository.new(path, alternates: alternate_object_directories).tap do |repo|
+                        Thread.current[RUGGED_KEY] << repo if Thread.current[RUGGED_KEY]
+                      end
+                    end
       rescue Rugged::RepositoryError, Rugged::OSError
         raise NoRepository.new('no repository for such path')
       end
