@@ -25,7 +25,7 @@ describe GitalyServer::RuggedInterceptor do
 
     let(:streamer) do
       described_class.new.server_streamer(call: call, method: meth) do
-        Thread.current[GitalyServer::RuggedInterceptor::RUGGED_KEY] = [rugged]
+        Thread.current[Gitlab::Git::Repository::RUGGED_KEY] = [rugged]
       end
     end
 

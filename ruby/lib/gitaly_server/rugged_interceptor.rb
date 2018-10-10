@@ -4,8 +4,6 @@ require 'grpc'
 
 module GitalyServer
   class RuggedInterceptor < GRPC::ServerInterceptor
-    RUGGED_KEY = :rugged_list
-
     # Intercept a unary request response call
     %i[request_response server_streamer client_streamer bidi_streamer].each do |meth|
       define_method(meth) do |**, &blk|
@@ -18,11 +16,11 @@ module GitalyServer
     end
 
     def init_rugged_reference_list
-      Thread.current[RUGGED_KEY] = []
+      Thread.current[::Gitlab::Git::Repository::RUGGED_KEY] = []
     end
 
     def cleanup_rugged_references
-      repos = Thread.current[RUGGED_KEY]
+      repos = Thread.current[::Gitlab::Git::Repository::RUGGED_KEY]
       repos.compact.map(&:close)
     end
   end
