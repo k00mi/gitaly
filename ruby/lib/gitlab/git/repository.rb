@@ -296,9 +296,7 @@ module Gitlab
               cat_stdout.close
               cat_stderr.close
 
-              unless [cat_wait_thr, wait_thr].all? { |waiter| waiter.value&.success? }
-                raise ::Gitlab::Git::Repository::GitError, "Unabled to obtain changes between #{old_rev} and #{new_rev}"
-              end
+              raise ::Gitlab::Git::Repository::GitError, "Unabled to obtain changes between #{old_rev} and #{new_rev}" unless [cat_wait_thr, wait_thr].all? { |waiter| waiter.value&.success? }
             end
 
             result
