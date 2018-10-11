@@ -9,9 +9,18 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git/alternates"
 )
 
+// GitEnv contains the ENV variables for git commands
+var GitEnv = []string{
+	// Force english locale for consistency on the output messages
+	"LANG=en_US.UTF-8",
+}
+
 // Command creates a git.Command with the given args
 func Command(ctx context.Context, repo *gitalypb.Repository, args ...string) (*command.Command, error) {
 	repoPath, env, err := alternates.PathAndEnv(repo)
+
+	env = append(env, GitEnv...)
+
 	if err != nil {
 		return nil, err
 	}
