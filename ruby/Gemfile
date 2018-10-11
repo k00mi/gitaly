@@ -25,4 +25,5 @@ gem 'google-protobuf', '= 3.5.1'
 group :development, :test do
   gem 'rubocop', '~> 0.50', require: false
   gem 'rspec', require: false
+  gem 'timecop', require: false
 end
