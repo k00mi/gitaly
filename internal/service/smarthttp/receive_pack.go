@@ -2,7 +2,6 @@ package smarthttp
 
 import (
 	"fmt"
-	"os/exec"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	log "github.com/sirupsen/logrus"
@@ -52,6 +51,7 @@ func (s *server) PostReceivePack(stream gitalypb.SmartHTTPService_PostReceivePac
 	}
 
 	env = git.AddGitProtocolEnv(ctx, req, env)
+	env = append(env, command.GitEnv...)
 
 	repoPath, err := helper.GetRepoPath(req.Repository)
 	if err != nil {
@@ -59,8 +59,7 @@ func (s *server) PostReceivePack(stream gitalypb.SmartHTTPService_PostReceivePac
 	}
 
 	gitOptions := git.BuildGitOptions(req.GitConfigOptions, "receive-pack", "--stateless-rpc", repoPath)
-	osCommand := exec.Command(command.GitPath(), gitOptions...)
-	cmd, err := command.New(ctx, osCommand, stdin, stdout, nil, env...)
+	cmd, err := git.BareCommand(ctx, stdin, stdout, nil, env, gitOptions...)
 
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "PostReceivePack: %v", err)

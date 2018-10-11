@@ -6,10 +6,9 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os/exec"
 	"sync"
 
-	"gitlab.com/gitlab-org/gitaly/internal/command"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -39,7 +38,7 @@ func newBatch(ctx context.Context, repoPath string, env []string) (*batch, error
 	var stdinReader io.Reader
 	stdinReader, b.w = io.Pipe()
 	batchCmdArgs := []string{"--git-dir", repoPath, "cat-file", "--batch"}
-	batchCmd, err := command.New(ctx, exec.Command(command.GitPath(), batchCmdArgs...), stdinReader, nil, nil, env...)
+	batchCmd, err := git.BareCommand(ctx, stdinReader, nil, nil, env, batchCmdArgs...)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "CatFile: cmd: %v", err)
 	}

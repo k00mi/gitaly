@@ -1,8 +1,6 @@
 package ssh
 
 import (
-	"os/exec"
-
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
@@ -35,7 +33,7 @@ func (s *server) SSHUploadPack(stream gitalypb.SSHService_SSHUploadPackServer) e
 		return stream.Send(&gitalypb.SSHUploadPackResponse{Stderr: p})
 	})
 
-	env := git.AddGitProtocolEnv(ctx, req, []string{})
+	env := git.AddGitProtocolEnv(ctx, req, command.GitEnv)
 
 	repoPath, err := helper.GetRepoPath(req.Repository)
 	if err != nil {
@@ -50,9 +48,7 @@ func (s *server) SSHUploadPack(stream gitalypb.SSHService_SSHUploadPackServer) e
 
 	args = append(args, "upload-pack", repoPath)
 
-	osCommand := exec.Command(command.GitPath(), args...)
-
-	cmd, err := command.New(ctx, osCommand, stdin, stdout, stderr, env...)
+	cmd, err := git.BareCommand(ctx, stdin, stdout, stderr, env, args...)
 
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "SSHUploadPack: cmd: %v", err)

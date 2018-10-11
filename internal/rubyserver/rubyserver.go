@@ -16,7 +16,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
-	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver/balancer"
 	"gitlab.com/gitlab-org/gitaly/internal/supervisor"
@@ -110,7 +109,7 @@ func Start() (*Server, error) {
 		"GITALY_VERSION="+version.GetVersion(),
 	)
 
-	env = append(env, git.GitEnv...)
+	env = append(env, command.GitEnv...)
 
 	if dsn := cfg.Logging.RubySentryDSN; dsn != "" {
 		env = append(env, "SENTRY_DSN="+dsn)

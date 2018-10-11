@@ -2,7 +2,6 @@ package smarthttp
 
 import (
 	"io"
-	"os/exec"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
@@ -55,7 +54,7 @@ func (s *server) PostUploadPack(stream gitalypb.SmartHTTPService_PostUploadPackS
 		return stream.Send(&gitalypb.PostUploadPackResponse{Data: p})
 	})
 
-	env := git.AddGitProtocolEnv(ctx, req, []string{})
+	env := git.AddGitProtocolEnv(ctx, req, command.GitEnv)
 
 	repoPath, err := helper.GetRepoPath(req.Repository)
 	if err != nil {
@@ -69,8 +68,7 @@ func (s *server) PostUploadPack(stream gitalypb.SmartHTTPService_PostUploadPackS
 
 	args = append(args, "upload-pack", "--stateless-rpc", repoPath)
 
-	osCommand := exec.Command(command.GitPath(), args...)
-	cmd, err := command.New(ctx, osCommand, stdin, stdout, nil, env...)
+	cmd, err := git.BareCommand(ctx, stdin, stdout, nil, env, args...)
 
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "PostUploadPack: cmd: %v", err)

@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"io"
 	"os/exec"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
@@ -9,27 +10,27 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git/alternates"
 )
 
-// GitEnv contains the ENV variables for git commands
-var GitEnv = []string{
-	// Force english locale for consistency on the output messages
-	"LANG=en_US.UTF-8",
-}
-
-// Command creates a git.Command with the given args
+// Command creates a git.Command with the given args and Repository
 func Command(ctx context.Context, repo *gitalypb.Repository, args ...string) (*command.Command, error) {
 	repoPath, env, err := alternates.PathAndEnv(repo)
-
-	env = append(env, GitEnv...)
 
 	if err != nil {
 		return nil, err
 	}
 
 	args = append([]string{"--git-dir", repoPath}, args...)
-	return command.New(ctx, exec.Command(command.GitPath(), args...), nil, nil, nil, env...)
+
+	return BareCommand(ctx, nil, nil, nil, env, args...)
+}
+
+// BareCommand creates a git.Command with the given args, stdin/stdout/stderr, and env
+func BareCommand(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer, env []string, args ...string) (*command.Command, error) {
+	env = append(env, command.GitEnv...)
+
+	return command.New(ctx, exec.Command(command.GitPath(), args...), stdin, stdout, stderr, env...)
 }
 
 // CommandWithoutRepo works like Command but without a git repository
 func CommandWithoutRepo(ctx context.Context, args ...string) (*command.Command, error) {
-	return command.New(ctx, exec.Command(command.GitPath(), args...), nil, nil, nil, "")
+	return BareCommand(ctx, nil, nil, nil, nil, args...)
 }

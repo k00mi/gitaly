@@ -2,7 +2,6 @@ package ssh
 
 import (
 	"fmt"
-	"os/exec"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	log "github.com/sirupsen/logrus"
@@ -52,6 +51,7 @@ func (s *server) SSHReceivePack(stream gitalypb.SSHService_SSHReceivePackServer)
 		env = append(env, fmt.Sprintf("GL_REPOSITORY=%s", req.GlRepository))
 	}
 	env = git.AddGitProtocolEnv(ctx, req, env)
+	env = append(env, command.GitEnv...)
 
 	repoPath, err := helper.GetRepoPath(req.Repository)
 	if err != nil {
@@ -59,8 +59,7 @@ func (s *server) SSHReceivePack(stream gitalypb.SSHService_SSHReceivePackServer)
 	}
 
 	gitOptions := git.BuildGitOptions(req.GitConfigOptions, "receive-pack", repoPath)
-	osCommand := exec.Command(command.GitPath(), gitOptions...)
-	cmd, err := command.New(ctx, osCommand, stdin, stdout, stderr, env...)
+	cmd, err := git.BareCommand(ctx, stdin, stdout, stderr, env, gitOptions...)
 
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "SSHReceivePack: cmd: %v", err)

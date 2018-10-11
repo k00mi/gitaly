@@ -4,11 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os/exec"
 	"strings"
 	"time"
-
-	"gitlab.com/gitlab-org/gitaly/internal/command"
 )
 
 // FallbackTimeValue is the value returned by `SafeTimeParse` in case it
@@ -42,7 +39,7 @@ func Version() (string, error) {
 	defer cancel()
 
 	var buf bytes.Buffer
-	cmd, err := command.New(ctx, exec.Command(command.GitPath(), "version"), nil, &buf, nil)
+	cmd, err := BareCommand(ctx, nil, &buf, nil, nil, "version")
 	if err != nil {
 		return "", err
 	}
