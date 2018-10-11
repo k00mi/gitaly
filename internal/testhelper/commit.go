@@ -73,7 +73,7 @@ func CreateCommitInAlternateObjectDirectory(t *testing.T, repoPath string, cmd *
 
 	// Because we set 'gitObjectEnv', the new objects created by this command
 	// will go into 'find-commits-alt-test-repo/.git/alt-objects'.
-	cmd.Env = gitObjectEnv
+	cmd.Env = append(cmd.Env, gitObjectEnv...)
 	if output, err := cmd.Output(); err != nil {
 		stderr := err.(*exec.ExitError).Stderr
 		t.Fatalf("stdout: %s, stderr: %s", output, stderr)
