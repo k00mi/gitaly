@@ -53,6 +53,30 @@ describe Gitlab::Git::Repository do
     end
   end
 
+  describe '#rugged' do
+    after do
+      Thread.current[described_class::RUGGED_KEY] = nil
+    end
+
+    it 'stores reference in Thread.current' do
+      Thread.current[described_class::RUGGED_KEY] = []
+
+      2.times do
+        rugged = repository.rugged
+
+        expect(rugged).to be_a(Rugged::Repository)
+        expect(Thread.current[described_class::RUGGED_KEY]).to eq([rugged])
+      end
+    end
+
+    it 'does not store reference if Thread.current is not set up' do
+      rugged = repository.rugged
+
+      expect(rugged).to be_a(Rugged::Repository)
+      expect(Thread.current[described_class::RUGGED_KEY]).to be_nil
+    end
+  end
+
   describe '#parse_raw_diff_line' do
     let(:diff_data) { repository.parse_raw_diff_line(diff_line) }
 

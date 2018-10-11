@@ -1,0 +1,5 @@
+---
+title: Free Rugged open file descriptors in gRPC middleware
+merge_request: 911
+author:
+type: performance
