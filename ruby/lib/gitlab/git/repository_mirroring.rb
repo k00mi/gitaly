@@ -50,11 +50,10 @@ module Gitlab
           next if name =~ /\^\{\}\Z/
 
           target_commit = Gitlab::Git::Commit.find(self, target)
-          Gitlab::Git::Tag.new(self, {
-            name: name,
-            target: target,
-            target_commit: target_commit
-          })
+          Gitlab::Git::Tag.new(self,
+                               name: name,
+                               target: target,
+                               target_commit: target_commit)
         end.compact
       end
 
@@ -76,9 +75,9 @@ module Gitlab
 
       def list_remote_tags(remote)
         tag_list, exit_code, error = nil
-        cmd = %W(#{Gitlab.config.git.bin_path} --git-dir=#{path} ls-remote --tags #{remote})
+        cmd = %W[#{Gitlab.config.git.bin_path} --git-dir=#{path} ls-remote --tags #{remote}]
 
-        Open3.popen3(*cmd) do |stdin, stdout, stderr, wait_thr|
+        Open3.popen3(*cmd) do |_stdin, stdout, stderr, wait_thr|
           tag_list  = stdout.read
           error     = stderr.read
           exit_code = wait_thr.value.exitstatus

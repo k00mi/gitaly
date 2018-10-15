@@ -58,7 +58,7 @@ module Gitlab
         end
 
         def create(repo_path)
-          FileUtils.mkdir_p(repo_path, mode: 0770)
+          FileUtils.mkdir_p(repo_path, mode: 0o770)
 
           # Equivalent to `git --git-path=#{repo_path} init [--bare]`
           repo = Rugged::Repository.init_at(repo_path, true)
@@ -84,7 +84,8 @@ module Gitlab
               # Move the existing hooks somewhere safe
               FileUtils.mv(
                 local_hooks_path,
-                "#{local_hooks_path}.old.#{Time.now.to_i}")
+                "#{local_hooks_path}.old.#{Time.now.to_i}"
+              )
             end
 
             # Create the hooks symlink
@@ -105,12 +106,12 @@ module Gitlab
 
       attr_reader :gitlab_projects, :storage, :gl_repository, :relative_path
 
-      def initialize(gitaly_repository, path, gl_repository, gitlab_projects, combined_alt_dirs="")
+      def initialize(gitaly_repository, path, gl_repository, gitlab_projects, combined_alt_dirs = "")
         @gitaly_repository = gitaly_repository
 
         @alternate_object_directories = combined_alt_dirs
-          .split(File::PATH_SEPARATOR)
-          .map { |d| File.join(path, d) }
+                                        .split(File::PATH_SEPARATOR)
+                                        .map { |d| File.join(path, d) }
 
         @storage = gitaly_repository.storage_name
         @relative_path = gitaly_repository.relative_path
@@ -125,7 +126,7 @@ module Gitlab
 
       def add_branch(branch_name, user:, target:)
         target_object = Ref.dereference_object(lookup(target))
-        raise InvalidRef.new("target not found: #{target}") unless target_object
+        raise InvalidRef, "target not found: #{target}" unless target_object
 
         OperationService.new(user, self).add_branch(branch_name, target_object.oid)
         find_branch(branch_name)
@@ -133,13 +134,9 @@ module Gitlab
         raise InvalidRef, ex
       end
 
-      def gitaly_repository
-        @gitaly_repository
-      end
+      attr_reader :gitaly_repository
 
-      def alternate_object_directories
-        @alternate_object_directories
-      end
+      attr_reader :alternate_object_directories
 
       def sort_branches(branches, sort_by)
         case sort_by
@@ -162,7 +159,7 @@ module Gitlab
       #       is well and truly out in the wild.
       def fsck
         msg, status = run_git(%W[--git-dir=#{path} fsck], nice: true)
-        raise GitError.new("Could not fsck repository: #{msg}") unless status.zero?
+        raise GitError, "Could not fsck repository: #{msg}" unless status.zero?
       end
 
       def exists?
@@ -180,7 +177,7 @@ module Gitlab
                       end
                     end
       rescue Rugged::RepositoryError, Rugged::OSError
-        raise NoRepository.new('no repository for such path')
+        raise NoRepository, 'no repository for such path'
       end
 
       def branch_names
@@ -215,7 +212,7 @@ module Gitlab
       end
 
       def tag_names
-        rugged.tags.map { |t| t.name }
+        rugged.tags.map(&:name)
       end
 
       def tags
@@ -231,12 +228,11 @@ module Gitlab
           end
 
           target_commit = Gitlab::Git::Commit.find(self, ref.target)
-          Gitlab::Git::Tag.new(self, {
-            name: ref.name,
-            target: ref.target,
-            target_commit: target_commit,
-            message: message
-          })
+          Gitlab::Git::Tag.new(self,
+                               name: ref.name,
+                               target: ref.target,
+                               target_commit: target_commit,
+                               message: message)
         end.sort_by(&:name)
       end
 
@@ -292,7 +288,7 @@ module Gitlab
 
             result = []
 
-            Open3.popen3(*git_diff_cmd(old_rev, new_rev)) do |stdin, stdout, _stderr, wait_thr|
+            Open3.popen3(*git_diff_cmd(old_rev, new_rev)) do |_stdin, stdout, _stderr, wait_thr|
               cat_stdin, cat_stdout, cat_stderr, cat_wait_thr = Open3.popen3(*git_cat_file_cmd)
 
               stdout.each_line do |line|
@@ -313,7 +309,7 @@ module Gitlab
             result
           end
       rescue ArgumentError => e
-        raise Gitlab::Git::Repository::GitError.new(e.to_s)
+        raise Gitlab::Git::Repository::GitError, e.to_s
       end
 
       def parse_raw_diff_line(line)
@@ -327,14 +323,14 @@ module Gitlab
         new_blob_id.gsub!(/[^\h]/, '')
 
         # We can't pass '0000000...' to `git cat-file` given it will not return info about the deleted file
-        blob_id = new_blob_id =~ /\A0+\z/ ? old_blob_id : new_blob_id
+        blob_id = new_blob_id.match?(/\A0+\z/) ? old_blob_id : new_blob_id
 
         [old_mode, new_mode, blob_id, rest]
       end
 
       def add_tag(tag_name, user:, target:, message: nil)
         target_object = Ref.dereference_object(lookup(target))
-        raise InvalidRef.new("target not found: #{target}") unless target_object
+        raise InvalidRef, "target not found: #{target}" unless target_object
 
         user = Gitlab::Git::User.from_gitlab(user) unless user.respond_to?(:gl_id)
 
@@ -362,7 +358,7 @@ module Gitlab
       def rm_branch(branch_name, user:)
         branch = find_branch(branch_name)
 
-        raise InvalidRef.new("branch not found: #{branch_name}") unless branch
+        raise InvalidRef, "branch not found: #{branch_name}" unless branch
 
         OperationService.new(user, self).rm_branch(branch)
       end
@@ -370,7 +366,7 @@ module Gitlab
       def rm_tag(tag_name, user:)
         tag = find_tag(tag_name)
 
-        raise InvalidRef.new("tag not found: #{tag_name}") unless tag
+        raise InvalidRef, "tag not found: #{tag_name}" unless tag
 
         Gitlab::Git::OperationService.new(user, self).rm_tag(tag)
       end
@@ -379,7 +375,7 @@ module Gitlab
         tags.find { |tag| tag.name == name }
       end
 
-      def merge(user, source_sha, target_branch, message, &block)
+      def merge(user, source_sha, target_branch, message)
         committer = Gitlab::Git.committer_hash(email: user.email, name: user.name)
 
         OperationService.new(user, self).with_branch(target_branch) do |start_commit|
@@ -456,7 +452,7 @@ module Gitlab
       end
 
       def diff_exists?(sha1, sha2)
-        rugged.diff(sha1, sha2).size > 0
+        !rugged.diff(sha1, sha2).empty?
       end
 
       def rebase(user, rebase_id, branch:, branch_sha:, remote_repository:, remote_branch:)
@@ -472,11 +468,11 @@ module Gitlab
 
         with_worktree(rebase_path, branch, env: env) do
           run_git!(
-            %W(pull --rebase #{remote_repo_path} #{remote_branch}),
+            %W[pull --rebase #{remote_repo_path} #{remote_branch}],
             chdir: rebase_path, env: env
           )
 
-          rebase_sha = run_git!(%w(rev-parse HEAD), chdir: rebase_path, env: env).strip
+          rebase_sha = run_git!(%w[rev-parse HEAD], chdir: rebase_path, env: env).strip
 
           update_branch(branch, user: user, newrev: rebase_sha, oldrev: branch_sha)
 
@@ -492,26 +488,26 @@ module Gitlab
         )
         diff_range = "#{start_sha}...#{end_sha}"
         diff_files = run_git!(
-          %W(diff --name-only --diff-filter=ar --binary #{diff_range})
+          %W[diff --name-only --diff-filter=ar --binary #{diff_range}]
         ).chomp
 
         with_worktree(squash_path, branch, sparse_checkout_files: diff_files, env: env) do
           # Apply diff of the `diff_range` to the worktree
-          diff = run_git!(%W(diff --binary #{diff_range}))
-          run_git!(%w(apply --index --whitespace=nowarn), chdir: squash_path, env: env) do |stdin|
+          diff = run_git!(%W[diff --binary #{diff_range}])
+          run_git!(%w[apply --index --whitespace=nowarn], chdir: squash_path, env: env) do |stdin|
             stdin.binmode
             stdin.write(diff)
           end
 
           # Commit the `diff_range` diff
-          run_git!(%W(commit --no-verify --message #{message}), chdir: squash_path, env: env)
+          run_git!(%W[commit --no-verify --message #{message}], chdir: squash_path, env: env)
 
           # Return the squash sha. May print a warning for ambiguous refs, but
           # we can ignore that with `--quiet` and just take the SHA, if present.
           # HEAD here always refers to the current HEAD commit, even if there is
           # another ref called HEAD.
           run_git!(
-            %w(rev-parse --quiet --verify HEAD), chdir: squash_path, env: env
+            %w[rev-parse --quiet --verify HEAD], chdir: squash_path, env: env
           ).chomp
         end
       end
@@ -531,7 +527,8 @@ module Gitlab
       def multi_action(
         user, branch_name:, message:, actions:,
         author_email: nil, author_name: nil,
-        start_branch_name: nil, start_repository: self)
+        start_branch_name: nil, start_repository: self
+      )
 
         OperationService.new(user, self).with_branch(
           branch_name,
@@ -595,7 +592,8 @@ module Gitlab
             yield branch_commit
           else
             with_repo_tmp_commit(
-              start_repository, start_branch_name, start_commit_id) do |tmp_commit|
+              start_repository, start_branch_name, start_commit_id
+            ) do |tmp_commit|
               yield tmp_commit
             end
           end
@@ -701,7 +699,7 @@ module Gitlab
         Gitlab::Git.check_namespace!(source_repository)
         source_repository = RemoteRepository.new(source_repository) unless source_repository.is_a?(RemoteRepository)
 
-        args = %W(fetch --no-tags -f #{GITALY_INTERNAL_URL} #{source_ref}:#{target_ref})
+        args = %W[fetch --no-tags -f #{GITALY_INTERNAL_URL} #{source_ref}:#{target_ref}]
         message, status = run_git(args, env: source_repository.fetch_env)
         raise Gitlab::Git::CommandError, message if status != 0
 
@@ -929,14 +927,14 @@ module Gitlab
       def build_git_cmd(*args)
         object_directories = alternate_object_directories.join(File::PATH_SEPARATOR)
 
-        env = { 'PWD' => self.path }
+        env = { 'PWD' => path }
         env['GIT_ALTERNATE_OBJECT_DIRECTORIES'] = object_directories if object_directories.present?
 
         [
           env,
           ::Gitlab.config.git.bin_path,
           *args,
-          { chdir: self.path }
+          { chdir: path }
         ]
       end
 
@@ -961,7 +959,7 @@ module Gitlab
         end
 
         unless status.zero?
-          raise GitError.new("Could not delete refs #{ref_names}: #{message}")
+          raise GitError, "Could not delete refs #{ref_names}: #{message}"
         end
       end
 
@@ -981,9 +979,9 @@ module Gitlab
 
           create_commit(message: message,
                         author: {
-                            email: commit.author_email,
-                            name: commit.author_name,
-                            time: commit.authored_date
+                          email: commit.author_email,
+                          name: commit.author_name,
+                          time: commit.authored_date
                         },
                         committer: committer,
                         tree: cherry_pick_tree_id,
@@ -1036,7 +1034,7 @@ module Gitlab
       end
 
       def with_worktree(worktree_path, branch, sparse_checkout_files: nil, env:)
-        base_args = %w(worktree add --detach)
+        base_args = %w[worktree add --detach]
 
         # Note that we _don't_ want to test for `.present?` here: If the caller
         # passes an non nil empty value it means it still wants sparse checkout
@@ -1045,12 +1043,12 @@ module Gitlab
         if sparse_checkout_files
           # Create worktree without checking out
           run_git!(base_args + ['--no-checkout', worktree_path], env: env)
-          worktree_git_path = run_git!(%w(rev-parse --git-dir), chdir: worktree_path).chomp
+          worktree_git_path = run_git!(%w[rev-parse --git-dir], chdir: worktree_path).chomp
 
           configure_sparse_checkout(worktree_git_path, sparse_checkout_files)
 
           # After sparse checkout configuration, checkout `branch` in worktree
-          run_git!(%W(checkout --detach #{branch}), chdir: worktree_path, env: env)
+          run_git!(%W[checkout --detach #{branch}], chdir: worktree_path, env: env)
         else
           # Create worktree and checkout `branch` in it
           run_git!(base_args + [worktree_path, branch], env: env)
@@ -1066,7 +1064,7 @@ module Gitlab
       # this can be very expensive, so set up sparse checkout for the worktree
       # to only check out the files we're interested in.
       def configure_sparse_checkout(worktree_git_path, files)
-        run_git!(%w(config core.sparseCheckout true))
+        run_git!(%w[config core.sparseCheckout true])
 
         return if files.empty?
 

@@ -4,7 +4,7 @@ module GitalyServer
   class RepositoryService < Gitaly::RepositoryService::Service
     include Utils
 
-    def create_repository(request, call)
+    def create_repository(_request, call)
       bridge_exceptions do
         repo_path = GitalyServer.repo_path(call)
 

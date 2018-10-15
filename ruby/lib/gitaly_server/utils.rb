@@ -80,7 +80,7 @@ module GitalyServer
       # Pass GRPC back without wrapping
       raise e
     rescue StandardError => e
-      raise GRPC::Unknown.new(e.message, { "gitaly-ruby.exception.class": e.class.name })
+      raise GRPC::Unknown.new(e.message, "gitaly-ruby.exception.class": e.class.name)
     end
   end
 end

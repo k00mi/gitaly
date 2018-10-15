@@ -8,7 +8,7 @@ module Gitlab
       # Instantiate a CommitStats object
       #
       # Gitaly migration: https://gitlab.com/gitlab-org/gitaly/issues/323
-      def initialize(repo, commit)
+      def initialize(_repo, commit)
         @id = commit.id
         @additions = 0
         @deletions = 0

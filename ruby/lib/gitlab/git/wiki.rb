@@ -113,7 +113,7 @@ module Gitlab
         Gitlab::Git::CommitterWithHooks.new(self, commit_details.to_h)
       end
 
-      def with_committer_with_hooks(commit_details, &block)
+      def with_committer_with_hooks(commit_details)
         committer = committer_with_hooks(commit_details)
 
         yield committer

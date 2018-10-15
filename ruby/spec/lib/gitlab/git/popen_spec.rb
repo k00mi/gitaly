@@ -43,7 +43,7 @@ describe 'Gitlab::Git::Popen' do
       it 'calls popen3 with the provided environment variables' do
         expect(Open3).to receive(:popen3).with(vars, 'ls', options)
 
-        klass.new.popen(%w(ls), path, { 'foobar' => 123 })
+        klass.new.popen(%w(ls), path, 'foobar' => 123)
       end
     end
 

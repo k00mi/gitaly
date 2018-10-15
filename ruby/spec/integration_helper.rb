@@ -54,7 +54,7 @@ def wait_ready!(socket)
   last_exception = StandardError.new('wait_ready! has not made any connection attempts')
 
   print('Booting gitaly for integration tests')
-  100.times do |i|
+  100.times do |_i|
     sleep 0.1
     printf('.')
     begin

@@ -20,7 +20,7 @@ module Gitlab
 
       def apply(action, options)
         validate_action!(action)
-        public_send(action, options.slice(*ACTION_OPTIONS)) # rubocop:disable GitlabSecurity/PublicSend
+        public_send(action, options.slice(*ACTION_OPTIONS))
       end
 
       def write_tree

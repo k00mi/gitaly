@@ -15,7 +15,7 @@ module Gitlab
         result = Gitlab::Git::OperationService.new(git_user, gl_wiki.repository).with_branch(
           @wiki.ref,
           start_branch_name: @wiki.ref
-        ) do |start_commit|
+        ) do |_start_commit|
           super(false)
         end
 

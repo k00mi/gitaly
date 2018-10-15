@@ -77,7 +77,7 @@ end
 GRPC_LOGGER = Logger.new(STDOUT)
 GRPC_LOGGER.level = 'WARN'
 GRPC_LOGGER.progname = 'GRPC'
-GRPC_LOGGER.formatter = proc do |severity, datetime, progname, msg|
+GRPC_LOGGER.formatter = proc do |severity, _datetime, _progname, msg|
   "GRPC-RUBY: #{severity}: #{msg}\n"
 end
 

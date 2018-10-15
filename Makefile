@@ -104,7 +104,7 @@ docker: $(TARGET_SETUP)
 	docker build -t gitlab/gitaly:$(VERSION_PREFIXED) -t gitlab/gitaly:latest $(TARGET_DIR)/docker/
 
 .PHONY: verify
-verify: lint check-formatting megacheck govendor-status notice-up-to-date govendor-tagged
+verify: lint check-formatting megacheck govendor-status notice-up-to-date govendor-tagged rubocop
 
 .PHONY: govendor-status
 govendor-status: $(TARGET_SETUP) $(GOVENDOR)
@@ -136,6 +136,10 @@ race-go: prepare-tests
 .PHONY: rspec
 rspec: assemble-internal prepare-tests
 	cd ruby && bundle exec rspec
+
+.PHONY: rubocop
+rubocop: .ruby-bundle $(TARGET_SETUP)
+	cd ruby && bundle exec rubocop --parallel
 
 .PHONY: test-changes
 test-changes: prepare-tests

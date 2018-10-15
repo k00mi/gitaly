@@ -74,7 +74,7 @@ module GitalyServer
       end
     end
 
-    def filter_shas_with_signatures(session, call)
+    def filter_shas_with_signatures(_session, call)
       Enumerator.new do |y|
         bridge_exceptions do
           repository = nil

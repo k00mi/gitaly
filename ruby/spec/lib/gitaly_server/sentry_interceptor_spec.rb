@@ -71,7 +71,7 @@ describe GitalyServer::SentryInterceptor do
         it 'sends the original cause to Sentry' do
           expect(Raven).to receive(:capture_exception).with(
             ex,
-            { fingerprint: ['gitaly-ruby', 'GitalyServer::RefService#create_branch', 'unknown encoding'] }
+            fingerprint: ['gitaly-ruby', 'GitalyServer::RefService#create_branch', 'unknown encoding']
           )
 
           begin
@@ -90,7 +90,7 @@ describe GitalyServer::SentryInterceptor do
         it 'sends the exception to Sentry' do
           expect(Raven).to receive(:capture_exception).with(
             ex,
-            { fingerprint: ['gitaly-ruby', 'GitalyServer::RefService#create_branch', 'unknown encoding'] }
+            fingerprint: ['gitaly-ruby', 'GitalyServer::RefService#create_branch', 'unknown encoding']
           )
 
           begin

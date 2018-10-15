@@ -143,7 +143,7 @@ module Gitlab
 
       def initialize(options)
         %w(id name path size data mode commit_id binary).each do |key|
-          self.__send__("#{key}=", options[key.to_sym]) # rubocop:disable GitlabSecurity/PublicSend
+          self.__send__("#{key}=", options[key.to_sym])
         end
 
         # Retain the actual size before it is encoded
