@@ -1,0 +1,5 @@
+---
+title: Update grpc to v1.15.x in gitaly-ruby
+merge_request: 918
+author:
+type: other
