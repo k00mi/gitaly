@@ -86,9 +86,7 @@ module Gitlab
         end
 
         def resolve_content(resolution)
-          if resolution == content
-            raise Gitlab::Git::Conflict::Resolver::ResolutionError, "Resolved content has no changes for file #{our_path}"
-          end
+          raise Gitlab::Git::Conflict::Resolver::ResolutionError, "Resolved content has no changes for file #{our_path}" if resolution == content
 
           resolution
         end

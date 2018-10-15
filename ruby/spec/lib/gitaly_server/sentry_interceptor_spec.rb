@@ -1,8 +1,6 @@
 require 'spec_helper'
 
 require_relative '../../../lib/gitaly_server/sentry_interceptor.rb'
-
-# rubocop:disable Lint/RescueWithoutErrorClass
 describe GitalyServer::SentryInterceptor do
   describe 'handling exceptions' do
     let(:meth) { GitalyServer::RefService.instance_method(:create_branch) }

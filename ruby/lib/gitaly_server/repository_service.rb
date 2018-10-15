@@ -48,9 +48,7 @@ module GitalyServer
                                                ssh_key: request.ssh_key.presence,
                                                known_hosts: request.known_hosts.presence)
 
-        unless success
-          raise GRPC::Unknown.new("Fetching remote #{request.remote} failed: #{gitlab_projects.output}")
-        end
+        raise GRPC::Unknown.new("Fetching remote #{request.remote} failed: #{gitlab_projects.output}") unless success
 
         Gitaly::FetchRemoteResponse.new
       end
@@ -113,15 +111,15 @@ module GitalyServer
         request.entries.each do |entry|
           key = entry.key
           value = case entry.value
-          when :value_str
-            entry.value_str
-          when :value_int32
-            entry.value_int32
-          when :value_bool
-            entry.value_bool
-          else
-            raise GRPC::InvalidArgument, "unknown entry type: #{entry.value}"
-          end
+                  when :value_str
+                    entry.value_str
+                  when :value_int32
+                    entry.value_int32
+                  when :value_bool
+                    entry.value_bool
+                  else
+                    raise GRPC::InvalidArgument, "unknown entry type: #{entry.value}"
+                  end
 
           repo.rugged.config[key] = value
         end

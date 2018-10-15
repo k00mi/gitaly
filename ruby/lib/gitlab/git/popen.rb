@@ -6,9 +6,7 @@ module Gitlab
       FAST_GIT_PROCESS_TIMEOUT = 15.seconds
 
       def popen(cmd, path, vars = {}, lazy_block: nil)
-        unless cmd.is_a?(Array)
-          raise "System commands must be given as an array of strings"
-        end
+        raise "System commands must be given as an array of strings" unless cmd.is_a?(Array)
 
         path ||= Dir.pwd
         vars['PWD'] = path
@@ -43,16 +41,12 @@ module Gitlab
       end
 
       def popen_with_timeout(cmd, timeout, path, vars = {})
-        unless cmd.is_a?(Array)
-          raise "System commands must be given as an array of strings"
-        end
+        raise "System commands must be given as an array of strings" unless cmd.is_a?(Array)
 
         path ||= Dir.pwd
         vars['PWD'] = path
 
-        unless File.directory?(path)
-          FileUtils.mkdir_p(path)
-        end
+        FileUtils.mkdir_p(path) unless File.directory?(path)
 
         rout, wout = IO.pipe
         rerr, werr = IO.pipe

@@ -117,9 +117,7 @@ module Gitlab
         # Make commit
         newrev = yield
 
-        unless newrev
-          raise Gitlab::Git::CommitError.new('Failed to create commit')
-        end
+        raise Gitlab::Git::CommitError.new('Failed to create commit') unless newrev
 
         branch = repository.find_branch(branch_name)
         oldrev = find_oldrev_from_branch(newrev, branch)
@@ -188,9 +186,7 @@ module Gitlab
       end
 
       def update_autocrlf_option
-        if repository.autocrlf != :input
-          repository.autocrlf = :input
-        end
+        repository.autocrlf = :input if repository.autocrlf != :input
       end
     end
   end

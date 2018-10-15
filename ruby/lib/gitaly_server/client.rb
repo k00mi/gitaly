@@ -20,9 +20,7 @@ module GitalyServer
     private
 
     def server(storage)
-      unless @servers.has_key?(storage)
-        raise ServerLookupError.new("cannot find gitaly address for storage #{storage.inspect}")
-      end
+      raise ServerLookupError.new("cannot find gitaly address for storage #{storage.inspect}") unless @servers.has_key?(storage)
 
       @servers[storage]
     end

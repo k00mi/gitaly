@@ -101,9 +101,6 @@ module Gitlab
       # Directory name of repo
       attr_reader :name
 
-      # Relative path of repo
-      attr_reader :relative_path
-
       attr_reader :gitlab_projects, :storage, :gl_repository, :relative_path
 
       def initialize(gitaly_repository, path, gl_repository, gitlab_projects, combined_alt_dirs = "")
@@ -222,9 +219,7 @@ module Gitlab
           if ref.target.is_a?(Rugged::Tag::Annotation)
             tag_message = ref.target.message
 
-            if tag_message.respond_to?(:chomp)
-              message = tag_message.chomp
-            end
+            message = tag_message.chomp if tag_message.respond_to?(:chomp)
           end
 
           target_commit = Gitlab::Git::Commit.find(self, ref.target)
@@ -452,7 +447,7 @@ module Gitlab
       end
 
       def diff_exists?(sha1, sha2)
-        !rugged.diff(sha1, sha2).empty?
+        rugged.diff(sha1, sha2).size.positive?
       end
 
       def rebase(user, rebase_id, branch:, branch_sha:, remote_repository:, remote_branch:)
@@ -603,9 +598,7 @@ module Gitlab
       def with_repo_tmp_commit(start_repository, start_branch_name, sha)
         source_ref = start_branch_name
 
-        unless Gitlab::Git.branch_ref?(source_ref)
-          source_ref = "#{Gitlab::Git::BRANCH_REF_PREFIX}#{source_ref}"
-        end
+        source_ref = "#{Gitlab::Git::BRANCH_REF_PREFIX}#{source_ref}" unless Gitlab::Git.branch_ref?(source_ref)
 
         tmp_ref = fetch_ref(
           start_repository,
@@ -745,9 +738,7 @@ module Gitlab
         # the case of mirrors we map its refs (that would usualy go under
         # [remote_name]/) to the top level namespace. We clean the mapping so
         # those don't get deleted.
-        if rugged.config["remote.#{remote_name}.mirror"]
-          rugged.config.delete("remote.#{remote_name}.fetch")
-        end
+        rugged.config.delete("remote.#{remote_name}.fetch") if rugged.config["remote.#{remote_name}.mirror"]
 
         rugged.remotes.delete(remote_name)
         true
@@ -812,9 +803,7 @@ module Gitlab
 
         args.push('--objects') if objects
 
-        if options.any?
-          args.push(*options)
-        end
+        args.push(*options) if options.any?
 
         run_git!(args, lazy_block: block)
       end
@@ -832,9 +821,7 @@ module Gitlab
         cmd.unshift("nice") if nice
 
         object_directories = alternate_object_directories
-        if object_directories.any?
-          env['GIT_ALTERNATE_OBJECT_DIRECTORIES'] = object_directories.join(File::PATH_SEPARATOR)
-        end
+        env['GIT_ALTERNATE_OBJECT_DIRECTORIES'] = object_directories.join(File::PATH_SEPARATOR) if object_directories.any?
 
         popen(cmd, chdir, env, lazy_block: lazy_block, &block)
       end
@@ -958,9 +945,7 @@ module Gitlab
           stdin.write(instructions.join)
         end
 
-        unless status.zero?
-          raise GitError, "Could not delete refs #{ref_names}: #{message}"
-        end
+        raise GitError, "Could not delete refs #{ref_names}: #{message}" unless status.zero?
       end
 
       def rugged_cherry_pick(user:, commit:, branch_name:, message:, start_branch_name:, start_repository:)

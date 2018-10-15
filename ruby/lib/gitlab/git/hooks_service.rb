@@ -14,9 +14,7 @@ module Gitlab
         %w(pre-receive update).each do |hook_name|
           status, message = run_hook(hook_name)
 
-          unless status
-            raise PreReceiveError, message
-          end
+          raise PreReceiveError, message unless status
         end
 
         yield(self).tap do

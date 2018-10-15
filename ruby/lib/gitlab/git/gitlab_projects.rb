@@ -6,10 +6,6 @@ module Gitlab
       include Gitlab::Git::Popen
       include Gitlab::Utils::StrongMemoize
 
-      # Name of shard where repositories are stored.
-      # Example: nfs-file06
-      attr_reader :shard_name
-
       # Relative path is a directory name for repository with .git at the end.
       # Example: gitlab-org/gitlab-test.git
       attr_reader :repository_relative_path
@@ -41,7 +37,6 @@ module Gitlab
         @output = StringIO.new
       end
 
-
       def shard_name
         raise "don't use shard_name in gitaly-ruby"
       end
@@ -72,9 +67,7 @@ module Gitlab
 
         setup_ssh_auth(ssh_key, known_hosts) do |env|
           run_with_timeout(cmd, timeout, repository_absolute_path, env).tap do |success|
-            unless success
-              logger.error "Fetching remote #{name} for repository #{repository_absolute_path} failed."
-            end
+            logger.error "Fetching remote #{name} for repository #{repository_absolute_path} failed." unless success
           end
         end
       end
@@ -87,9 +80,7 @@ module Gitlab
 
         success = run_with_timeout(cmd, timeout, repository_absolute_path)
 
-        unless success
-          logger.error("Pushing branches to remote #{remote_name} failed.")
-        end
+        logger.error("Pushing branches to remote #{remote_name} failed.") unless success
 
         success
       end
@@ -102,9 +93,7 @@ module Gitlab
 
         success = run(cmd, repository_absolute_path)
 
-        unless success
-          logger.error("Pushing deleted branches to remote #{remote_name} failed.")
-        end
+        logger.error("Pushing deleted branches to remote #{remote_name} failed.") unless success
 
         success
       end
@@ -150,7 +139,7 @@ module Gitlab
       # paths with spaces in them. We trust the user not to embed single or double
       # quotes in the key or value.
       def custom_ssh_script(options = {})
-        args = options.map { |k, v| %Q{'-o#{k}="#{v}"'} }.join(' ')
+        args = options.map { |k, v| %{'-o#{k}="#{v}"'} }.join(' ')
 
         [
           "#!/bin/sh",
@@ -211,4 +200,3 @@ module Gitlab
     end
   end
 end
-

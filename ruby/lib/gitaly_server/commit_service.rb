@@ -80,9 +80,7 @@ module GitalyServer
           repository = nil
 
           call.each_remote_read.with_index do |request, index|
-            if index.zero?
-              repository = Gitlab::Git::Repository.from_gitaly(request.repository, call)
-            end
+            repository = Gitlab::Git::Repository.from_gitaly(request.repository, call) if index.zero?
 
             y << Gitaly::FilterShasWithSignaturesResponse.new(shas: Gitlab::Git::Commit.shas_with_signatures(repository, request.shas))
           end
@@ -96,13 +94,9 @@ module GitalyServer
 
         Enumerator.new do |y|
           each_commit_signature_chunk(repository, request.commit_id) do |signature_chunk, signed_text_chunk|
-            if signature_chunk.present?
-              y.yield Gitaly::ExtractCommitSignatureResponse.new(signature: signature_chunk)
-            end
+            y.yield Gitaly::ExtractCommitSignatureResponse.new(signature: signature_chunk) if signature_chunk.present?
 
-            if signed_text_chunk.present?
-              y.yield Gitaly::ExtractCommitSignatureResponse.new(signed_text: signed_text_chunk)
-            end
+            y.yield Gitaly::ExtractCommitSignatureResponse.new(signed_text: signed_text_chunk) if signed_text_chunk.present?
           end
         end
       end

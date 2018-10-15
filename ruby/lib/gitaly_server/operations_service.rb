@@ -131,9 +131,7 @@ module GitalyServer
               y << Gitaly::UserMergeBranchResponse.new(commit_id: commit_id)
 
               second_request = session.next
-              unless second_request.apply
-                raise GRPC::FailedPrecondition.new('merge aborted by client')
-              end
+              raise GRPC::FailedPrecondition.new('merge aborted by client') unless second_request.apply
             end
 
             y << Gitaly::UserMergeBranchResponse.new(branch_update: branch_update_result(result))
@@ -309,9 +307,7 @@ module GitalyServer
         actions: actions
       }
 
-      if header.start_repository
-        opts[:start_repository] = Gitlab::Git::GitalyRemoteRepository.new(header.start_repository, call)
-      end
+      opts[:start_repository] = Gitlab::Git::GitalyRemoteRepository.new(header.start_repository, call) if header.start_repository
 
       optional_fields = {
         start_branch_name: 'start_branch_name',

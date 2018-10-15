@@ -71,11 +71,7 @@ module Gitlab
 
       def branch_name(ref)
         ref = ref.to_s
-        if self.branch_ref?(ref)
-          self.ref_name(ref)
-        else
-          nil
-        end
+        self.ref_name(ref) if self.branch_ref?(ref)
       end
 
       def committer_hash(email:, name:)
@@ -90,11 +86,7 @@ module Gitlab
 
       def tag_name(ref)
         ref = ref.to_s
-        if self.tag_ref?(ref)
-          self.ref_name(ref)
-        else
-          nil
-        end
+        self.ref_name(ref) if self.tag_ref?(ref)
       end
 
       def tag_ref?(ref)
@@ -116,9 +108,7 @@ module Gitlab
       def check_namespace!(*objects)
         expected_namespace = self.name + '::'
         objects.each do |object|
-          unless object.class.name.start_with?(expected_namespace)
-            raise ArgumentError, "expected object in #{expected_namespace}, got #{object}"
-          end
+          raise ArgumentError, "expected object in #{expected_namespace}, got #{object}" unless object.class.name.start_with?(expected_namespace)
         end
       end
 

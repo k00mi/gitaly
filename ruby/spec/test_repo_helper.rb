@@ -40,6 +40,7 @@ module TestRepo
   def repo_path_from_gitaly(gitaly_repo)
     storage_name = gitaly_repo.storage_name
     raise "this helper does not know storage #{storage_name.inspect}" unless storage_name == DEFAULT_STORAGE_NAME
+
     File.join(DEFAULT_STORAGE_DIR, gitaly_repo.relative_path)
   end
 

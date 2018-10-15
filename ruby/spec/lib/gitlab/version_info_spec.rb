@@ -2,12 +2,12 @@ require 'spec_helper'
 
 describe Gitlab::VersionInfo do
   let(:unknown) { described_class.new }
-  let(:v0_0_1) { described_class.new(0, 0, 1)}
+  let(:v0_0_1) { described_class.new(0, 0, 1) }
   let(:v0_1_0) { described_class.new(0, 1, 0) }
   let(:v1_0_0) { described_class.new(1, 0, 0) }
   let(:v1_0_1) { described_class.new(1, 0, 1) }
   let(:v1_1_0) { described_class.new(1, 1, 0) }
-  let(:v2_0_0) {  described_class.new(2, 0, 0) }
+  let(:v2_0_0) { described_class.new(2, 0, 0) }
 
   context '>' do
     it { expect(v2_0_0).to be > v1_1_0 }
@@ -48,8 +48,8 @@ describe Gitlab::VersionInfo do
   context 'unknown' do
     it { expect(unknown).not_to be v0_0_1 }
     it { expect(unknown).not_to be described_class.new }
-    it { expect {unknown > v0_0_1}.to raise_error(ArgumentError) }
-    it { expect {unknown < v0_0_1}.to raise_error(ArgumentError) }
+    it { expect { unknown > v0_0_1 }.to raise_error(ArgumentError) }
+    it { expect { unknown < v0_0_1 }.to raise_error(ArgumentError) }
   end
 
   context 'parse' do

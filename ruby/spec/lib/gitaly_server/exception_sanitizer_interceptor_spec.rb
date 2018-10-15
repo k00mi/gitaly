@@ -1,8 +1,6 @@
 require 'spec_helper'
 
 require_relative '../../../lib/gitaly_server/exception_sanitizer_interceptor.rb'
-
-# rubocop:disable Lint/RescueWithoutErrorClass
 describe GitalyServer::ExceptionSanitizerInterceptor do
   let(:meth) { GitalyServer::RefService.instance_method(:create_branch) }
   let(:ex) { StandardError.new("error: failed to push some refs to 'https://fO0BA7:HunTer!@github.com/ruby/ruby.git'") }

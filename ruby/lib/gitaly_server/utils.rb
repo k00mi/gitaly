@@ -37,7 +37,7 @@ module GitalyServer
       )
     end
 
-    def gitaly_tag_from_gitlab_tag(gitlab_tag, commit=nil)
+    def gitaly_tag_from_gitlab_tag(gitlab_tag, commit = nil)
       tag_message = gitlab_tag.message.to_s
       tag = Gitaly::Tag.new(
         name: gitlab_tag.name.b,

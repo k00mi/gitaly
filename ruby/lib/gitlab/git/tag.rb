@@ -61,9 +61,7 @@ module Gitlab
         @target = @raw_tag.id
         @message = message_from_gitaly_tag
 
-        if @raw_tag.target_commit.present?
-          @target_commit = Gitlab::Git::Commit.decorate(repository, @raw_tag.target_commit)
-        end
+        @target_commit = Gitlab::Git::Commit.decorate(repository, @raw_tag.target_commit) if @raw_tag.target_commit.present?
       end
 
       def message

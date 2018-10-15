@@ -16,7 +16,8 @@ module Gitlab
       LFS_POINTER_MIN_SIZE = 120.bytes
       LFS_POINTER_MAX_SIZE = 200.bytes
 
-      attr_accessor :name, :path, :size, :data, :mode, :id, :commit_id, :loaded_size, :binary
+      attr_accessor :size, :mode, :id, :commit_id, :loaded_size, :binary
+      attr_writer :data, :name, :path
 
       class << self
         def find(repository, sha, path, limit: MAX_DATA_DISPLAY_SIZE)

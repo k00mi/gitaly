@@ -9,7 +9,7 @@ describe GitalyServer::RuggedInterceptor do
   let(:call) { double(metadata: {}) }
 
   subject do
-    described_class.new.server_streamer(call: call, method: meth) { }
+    described_class.new.server_streamer(call: call, method: meth) {}
   end
 
   context 'no Rugged repositories initialized' do
