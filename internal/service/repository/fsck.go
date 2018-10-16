@@ -2,10 +2,9 @@ package repository
 
 import (
 	"bytes"
-	"os/exec"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
-	"gitlab.com/gitlab-org/gitaly/internal/command"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/alternates"
 	"golang.org/x/net/context"
 )
@@ -20,7 +19,7 @@ func (s *server) Fsck(ctx context.Context, req *gitalypb.FsckRequest) (*gitalypb
 
 	args := []string{"--git-dir", repoPath, "fsck"}
 
-	cmd, err := command.New(ctx, exec.Command(command.GitPath(), args...), nil, &stdout, &stderr, env...)
+	cmd, err := git.BareCommand(ctx, nil, &stdout, &stderr, env, args...)
 	if err != nil {
 		return nil, err
 	}

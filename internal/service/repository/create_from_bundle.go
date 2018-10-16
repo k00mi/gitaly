@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path"
 	"strings"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
-	"gitlab.com/gitlab-org/gitaly/internal/command"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/tempdir"
 	"gitlab.com/gitlab-org/gitaly/streamio"
@@ -72,7 +71,7 @@ func (s *server) CreateRepositoryFromBundle(stream gitalypb.RepositoryService_Cr
 		bundlePath,
 		repoPath,
 	}
-	cmd, err := command.New(ctx, exec.Command(command.GitPath(), args...), nil, nil, nil)
+	cmd, err := git.CommandWithoutRepo(ctx, args...)
 	if err != nil {
 		cleanError := sanitizedError(repoPath, "CreateRepositoryFromBundle: cmd start failed: %v", err)
 		return status.Error(codes.Internal, cleanError)
@@ -91,7 +90,7 @@ func (s *server) CreateRepositoryFromBundle(stream gitalypb.RepositoryService_Cr
 		"refs/*:refs/*",
 	}
 
-	cmd, err = command.New(ctx, exec.Command(command.GitPath(), args...), nil, nil, nil)
+	cmd, err = git.CommandWithoutRepo(ctx, args...)
 	if err != nil {
 		cleanError := sanitizedError(repoPath, "CreateRepositoryFromBundle: cmd start failed fetching refs: %v", err)
 		return status.Error(codes.Internal, cleanError)

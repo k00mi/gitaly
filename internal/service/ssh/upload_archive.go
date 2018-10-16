@@ -1,10 +1,9 @@
 package ssh
 
 import (
-	"os/exec"
-
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 	"google.golang.org/grpc/codes"
@@ -35,9 +34,7 @@ func (s *server) SSHUploadArchive(stream gitalypb.SSHService_SSHUploadArchiveSer
 		return stream.Send(&gitalypb.SSHUploadArchiveResponse{Stderr: p})
 	})
 
-	osCommand := exec.Command(command.GitPath(), "upload-archive", repoPath)
-
-	cmd, err := command.New(stream.Context(), osCommand, stdin, stdout, stderr)
+	cmd, err := git.BareCommand(stream.Context(), stdin, stdout, stderr, nil, "upload-archive", repoPath)
 
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "SSHUploadArchive: cmd: %v", err)

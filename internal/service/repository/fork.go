@@ -3,13 +3,12 @@ package repository
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path"
 
 	"github.com/golang/protobuf/jsonpb"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
-	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
@@ -82,7 +81,7 @@ func (s *server) CreateFork(ctx context.Context, req *gitalypb.CreateForkRequest
 		fmt.Sprintf("%s:%s", gitalyInternalURL, sourceRepository.RelativePath),
 		targetRepositoryFullPath,
 	}
-	cmd, err := command.New(ctx, exec.Command(command.GitPath(), args...), nil, nil, nil, env...)
+	cmd, err := git.BareCommand(ctx, nil, nil, nil, env, args...)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "CreateFork: clone cmd start: %v", err)
 	}

@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os/exec"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
-	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/pktline"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -51,8 +49,7 @@ func handleInfoRefs(ctx context.Context, service string, req *gitalypb.InfoRefsR
 
 	args = append(args, service, "--stateless-rpc", "--advertise-refs", repoPath)
 
-	osCommand := exec.Command(command.GitPath(), args...)
-	cmd, err := command.New(ctx, osCommand, nil, nil, nil, env...)
+	cmd, err := git.BareCommand(ctx, nil, nil, nil, env, args...)
 
 	if err != nil {
 		if _, ok := status.FromError(err); ok {

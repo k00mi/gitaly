@@ -6,12 +6,10 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"math/big"
-	"os/exec"
 	"regexp"
 	"strings"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
-	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/alternates"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -92,7 +90,7 @@ func isValidRepo(ctx context.Context, repo *gitalypb.Repository) bool {
 
 	args := []string{"-C", repoPath, "rev-parse", "--is-inside-git-dir"}
 	stdout := &bytes.Buffer{}
-	cmd, err := command.New(ctx, exec.Command(command.GitPath(), args...), nil, stdout, nil, env...)
+	cmd, err := git.BareCommand(ctx, nil, stdout, nil, env, args...)
 	if err != nil {
 		return false
 	}

@@ -3,10 +3,9 @@ package repository
 import (
 	"fmt"
 	"os"
-	"os/exec"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
-	"gitlab.com/gitlab-org/gitaly/internal/command"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
@@ -36,7 +35,7 @@ func (s *server) CreateRepositoryFromURL(ctx context.Context, req *gitalypb.Crea
 		req.Url,
 		repositoryFullPath,
 	}
-	cmd, err := command.New(ctx, exec.Command(command.GitPath(), args...), nil, nil, nil)
+	cmd, err := git.CommandWithoutRepo(ctx, args...)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "CreateRepositoryFromURL: clone cmd start: %v", err)
 	}
