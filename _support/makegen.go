@@ -88,6 +88,10 @@ func (gm *gitalyMake) TestRepo() string {
 	return filepath.Join(gm.TestRepoStoragePath(), "gitlab-test.git")
 }
 
+func (gm *gitalyMake) GitTestRepo() string {
+	return filepath.Join(gm.TestRepoStoragePath(), "gitlab-git-test.git")
+}
+
 func (gm *gitalyMake) CommandPackages() []string {
 	if len(gm.commandPackages) > 0 {
 		return gm.commandPackages
@@ -276,8 +280,11 @@ binaries: assemble
 	# Git notes aren't fetched by default with git clone
 	git -C $@ fetch origin refs/notes/*:refs/notes/*
 
+{{ .GitTestRepo }}:
+	git clone --bare --quiet https://gitlab.com/gitlab-org/gitlab-git-test.git $@
+
 .PHONY: prepare-tests
-prepare-tests: {{ .TestRepo }} ../.ruby-bundle
+prepare-tests: {{ .TestRepo }} {{ .GitTestRepo }} ../.ruby-bundle
 
 .PHONY: test
 test: test-go rspec
