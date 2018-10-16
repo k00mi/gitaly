@@ -263,13 +263,21 @@ assemble: force-ruby-bundle build assemble-internal
 
 # assemble-internal does not force 'bundle install' to run again
 .PHONY: assemble-internal
-assemble-internal: build
-	rm -rf $(ASSEMBLY_ROOT)/bin $(ASSEMBLY_ROOT)/ruby
+assemble-internal: assemble-ruby assemble-go
+
+.PHONY: assemble-go
+assemble-go: build
+	rm -rf $(ASSEMBLY_ROOT)/bin
 	mkdir -p $(ASSEMBLY_ROOT)/bin
+	cd bin && install {{ join .Commands " " }} $(ASSEMBLY_ROOT)/bin
+
+.PHONY: assemble-ruby
+assemble-ruby:
+	rm -rf $(ASSEMBLY_ROOT)/ruby
+	mkdir -p $(ASSEMBLY_ROOT)
 	rm -rf {{ .SourceDir }}/ruby/tmp
 	cp -r {{ .SourceDir }}/ruby $(ASSEMBLY_ROOT)/ruby
 	rm -rf $(ASSEMBLY_ROOT)/ruby/spec
-	cd bin && install {{ join .Commands " " }} $(ASSEMBLY_ROOT)/bin
 
 binaries: assemble
 	@if [ $$(uname -m) != 'x86_64' ]; then echo Incorrect architecture for build: $(uname -m); exit 1; fi
@@ -293,8 +301,12 @@ test: test-go rspec
 test-go: prepare-tests
 	@go test -count=1 {{ join .AllPackages " " }} # count=1 bypasses go 1.10 test caching
 
+.PHONY: race-go
+race-go: prepare-tests
+	@go test -race {{ join .AllPackages " " }}
+
 .PHONY: rspec
-rspec: assemble-internal prepare-tests
+rspec: assemble-go prepare-tests
 	cd {{ .SourceDir }}/ruby && bundle exec rspec
 
 .PHONY: verify
@@ -315,6 +327,12 @@ check-formatting: {{ .GoImports }}
 
 {{ .GoImports }}:
 	go get golang.org/x/tools/cmd/goimports
+
+.PHONY: format
+format: {{ .GoImports }}
+	# In addition to fixing imports, goimports also formats your code in the same style as gofmt
+	# so it can be used as a replacement.
+	@cd {{ .SourceDir }} && goimports -w -l {{ join .GoFiles " " }}
 
 .PHONY: megacheck
 megacheck: {{ .MegaCheck }}
@@ -347,6 +365,10 @@ govendor-tagged: {{ .GoVendor }}
 	# govendor-tagged
 	@cd {{ .SourceDir }} && _support/gitaly-proto-tagged
 
+.PHONY: rubocop
+rubocop: ../.ruby-bundle
+	cd {{ .SourceDir }}/ruby && bundle exec rubocop --parallel
+
 .PHONY: cover
 cover: prepare-tests {{ .GoCovMerge }}
 	@echo "NOTE: make cover does not exit 1 on failure, don't use it to check for tests success!"
@@ -360,23 +382,8 @@ cover: prepare-tests {{ .GoCovMerge }}
 	@echo ""
 	@go tool cover -func "{{ .CoverageDir }}/all.merged"
 
-
 {{ .GoCovMerge }}:
 	go get github.com/wadey/gocovmerge
-
-.PHONY: race-go
-race-go: prepare-tests
-	@go test -race {{ join .AllPackages " " }}
-
-.PHONY: format
-format: {{ .GoImports }}
-	# In addition to fixing imports, goimports also formats your code in the same style as gofmt
-	# so it can be used as a replacement.
-	@cd {{ .SourceDir }} && goimports -w -l {{ join .GoFiles " " }}
-
-.PHONY: rubocop
-rubocop: ../.ruby-bundle
-	cd {{ .SourceDir }}/ruby && bundle exec rubocop --parallel
 
 .PHONY: docker
 docker:
