@@ -38,7 +38,7 @@ var (
 type promMonitor struct {
 	queuedGauge     prometheus.Gauge
 	inprogressGauge prometheus.Gauge
-	histogram       prometheus.Histogram
+	histogram       prometheus.Observer
 }
 
 func init() {
@@ -105,7 +105,7 @@ func NewPromMonitor(system string, fullMethod string) ConcurrencyMonitor {
 	queuedGauge := queuedGaugeVec.WithLabelValues(serviceName, methodName, system)
 	inprogressGauge := inprogressGaugeVec.WithLabelValues(serviceName, methodName, system)
 
-	var histogram prometheus.Histogram
+	var histogram prometheus.Observer
 	if histogramVec != nil {
 		histogram = histogramVec.WithLabelValues(system, serviceName, methodName)
 	}
