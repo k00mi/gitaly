@@ -81,7 +81,12 @@ func (gm *gitalyMake) CoverageDir() string { return filepath.Join(gm.BuildDir(),
 func (gm *gitalyMake) SourceDir() string { return filepath.Join(gm.BuildDir(), "src", gm.Pkg()) }
 
 func (gm *gitalyMake) TestRepoStoragePath() string {
-	return filepath.Join(gm.SourceDir(), "internal/testhelper/testdata/data")
+	path := os.Getenv("TEST_REPO_STORAGE_PATH")
+	if len(path) == 0 {
+		log.Fatal("TEST_REPO_STORAGE_PATH is not set")
+	}
+
+	return path
 }
 
 func (gm *gitalyMake) TestRepo() string {
@@ -222,9 +227,6 @@ PREFIX ?= /usr/local
 INSTALL_DEST_DIR := $(DESTDIR)$(PREFIX)/bin/
 BUNDLE_FLAGS ?= --deployment
 ASSEMBLY_ROOT ?= {{ .BuildDir }}/assembly
-
-# We need to export this path down to Gitaly's test code
-export TEST_REPO_STORAGE_PATH := {{ .TestRepoStoragePath }}
 
 unexport GOROOT
 unexport GOBIN
