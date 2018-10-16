@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
-	prom "github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/net/context"
 )
 
@@ -13,9 +13,9 @@ const acquireDurationLogThreshold = 10 * time.Millisecond
 
 var (
 	histogramEnabled   = false
-	histogramVec       *prom.HistogramVec
-	inprogressGaugeVec = prom.NewGaugeVec(
-		prom.GaugeOpts{
+	histogramVec       *prometheus.HistogramVec
+	inprogressGaugeVec = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
 			Namespace: "gitaly",
 			Subsystem: "rate_limiting",
 			Name:      "in_progress",
@@ -24,8 +24,8 @@ var (
 		[]string{"system", "grpc_service", "grpc_method"},
 	)
 
-	queuedGaugeVec = prom.NewGaugeVec(
-		prom.GaugeOpts{
+	queuedGaugeVec = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
 			Namespace: "gitaly",
 			Subsystem: "rate_limiting",
 			Name:      "queued",
@@ -36,13 +36,13 @@ var (
 )
 
 type promMonitor struct {
-	queuedGauge     prom.Gauge
-	inprogressGauge prom.Gauge
-	histogram       prom.Histogram
+	queuedGauge     prometheus.Gauge
+	inprogressGauge prometheus.Gauge
+	histogram       prometheus.Histogram
 }
 
 func init() {
-	prom.MustRegister(inprogressGaugeVec, queuedGaugeVec)
+	prometheus.MustRegister(inprogressGaugeVec, queuedGaugeVec)
 }
 
 func splitMethodName(fullMethodName string) (string, string) {
@@ -56,7 +56,7 @@ func splitMethodName(fullMethodName string) (string, string) {
 // EnableAcquireTimeHistogram enables histograms for acquisition times
 func EnableAcquireTimeHistogram(buckets []float64) {
 	histogramEnabled = true
-	histogramOpts := prom.HistogramOpts{
+	histogramOpts := prometheus.HistogramOpts{
 		Namespace: "gitaly",
 		Subsystem: "rate_limiting",
 		Name:      "acquiring_seconds",
@@ -64,12 +64,12 @@ func EnableAcquireTimeHistogram(buckets []float64) {
 		Buckets:   buckets,
 	}
 
-	histogramVec = prom.NewHistogramVec(
+	histogramVec = prometheus.NewHistogramVec(
 		histogramOpts,
 		[]string{"system", "grpc_service", "grpc_method"},
 	)
 
-	prom.Register(histogramVec)
+	prometheus.Register(histogramVec)
 }
 
 func (c *promMonitor) Queued(ctx context.Context) {
@@ -105,7 +105,7 @@ func NewPromMonitor(system string, fullMethod string) ConcurrencyMonitor {
 	queuedGauge := queuedGaugeVec.WithLabelValues(serviceName, methodName, system)
 	inprogressGauge := inprogressGaugeVec.WithLabelValues(serviceName, methodName, system)
 
-	var histogram prom.Histogram
+	var histogram prometheus.Histogram
 	if histogramVec != nil {
 		histogram = histogramVec.WithLabelValues(system, serviceName, methodName)
 	}
