@@ -88,9 +88,7 @@ module Gitlab
 
         start_branch_name = nil if start_repository.empty?
 
-        if start_branch_name && !start_repository.branch_exists?(start_branch_name)
-          raise ArgumentError, "Cannot find branch #{start_branch_name} in #{start_repository.relative_path}"
-        end
+        raise ArgumentError, "Cannot find branch #{start_branch_name} in #{start_repository.relative_path}" if start_branch_name && !start_repository.branch_exists?(start_branch_name)
 
         update_branch_with_hooks(branch_name) do
           repository.with_repo_branch_commit(

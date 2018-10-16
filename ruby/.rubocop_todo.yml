@@ -68,7 +68,7 @@ Metrics/AbcSize:
 # Offense count: 26
 # Configuration parameters: CountComments, ExcludedMethods.
 Metrics/BlockLength:
-  Max: 203
+  Max: 250
 
 # Offense count: 11
 # Configuration parameters: CountComments.
@@ -292,4 +292,4 @@ Style/TrivialAccessors:
 # Configuration parameters: AllowHeredoc, AllowURI, URISchemes, IgnoreCopDirectives, IgnoredPatterns.
 # URISchemes: http, https
 Metrics/LineLength:
-  Max: 156
+  Max: 200
