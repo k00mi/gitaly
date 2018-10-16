@@ -1,0 +1,5 @@
+---
+title: Prevent stale packed-refs file when Gitaly is running on top of NFS
+merge_request: 924
+author:
+type: other
