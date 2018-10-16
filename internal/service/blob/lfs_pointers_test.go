@@ -137,6 +137,8 @@ func TestSuccessfulGetNewLFSPointersRequest(t *testing.T) {
 	commiterArgs := []string{"-c", "user.name=Scrooge McDuck", "-c", "user.email=scrooge@mcduck.com"}
 	cmdArgs := append(commiterArgs, "-C", testRepoPath, "cherry-pick", string(revision))
 	cmd := exec.Command("git", cmdArgs...)
+	// Skip smudge since it doesn't work with file:// remotes and we don't need it
+	cmd.Env = append(cmd.Env, "GIT_LFS_SKIP_SMUDGE=1")
 	altDirsCommit, altDirs := testhelper.CreateCommitInAlternateObjectDirectory(t, testRepoPath, cmd)
 
 	// Create a commit not pointed at by any ref to emulate being in the
