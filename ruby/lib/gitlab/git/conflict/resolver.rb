@@ -31,9 +31,7 @@ module Gitlab
 
         def conflict_files(repository, index)
           index.conflicts.map do |conflict|
-            unless conflict[:theirs] && conflict[:ours]
-              raise ListError, 'conflict side missing'
-            end
+            raise ListError, 'conflict side missing' unless conflict[:theirs] && conflict[:ours]
 
             Gitlab::Git::Conflict::File.new(
               repository,

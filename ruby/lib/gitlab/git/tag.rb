@@ -14,10 +14,10 @@ module Gitlab
 
       class << self
         def get_message(repository, tag_id)
-          BatchLoader.for({ repository: repository, tag_id: tag_id }).batch do |items, loader|
+          BatchLoader.for(repository: repository, tag_id: tag_id).batch do |items, loader|
             items_by_repo = items.group_by { |i| i[:repository] }
 
-            items_by_repo.each do |repo, items|
+            items_by_repo.each do |_repo, items|
               tag_ids = items.map { |i| i[:tag_id] }
 
               messages = get_messages(repository, tag_ids)
@@ -52,7 +52,7 @@ module Gitlab
         raw_tag = @raw_tag.symbolize_keys
 
         SERIALIZE_KEYS.each do |key|
-          send("#{key}=", raw_tag[key]) # rubocop:disable GitlabSecurity/PublicSend
+          send("#{key}=", raw_tag[key])
         end
       end
 
@@ -61,9 +61,7 @@ module Gitlab
         @target = @raw_tag.id
         @message = message_from_gitaly_tag
 
-        if @raw_tag.target_commit.present?
-          @target_commit = Gitlab::Git::Commit.decorate(repository, @raw_tag.target_commit)
-        end
+        @target_commit = Gitlab::Git::Commit.decorate(repository, @raw_tag.target_commit) if @raw_tag.target_commit.present?
       end
 
       def message

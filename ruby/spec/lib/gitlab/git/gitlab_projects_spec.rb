@@ -27,12 +27,12 @@ describe Gitlab::Git::GitlabProjects do
   def stub_spawn(*args, success: true)
     exitstatus = success ? 0 : nil
     expect(gl_projects).to receive(:popen_with_timeout).with(*args)
-      .and_return(["output", exitstatus])
+                                                       .and_return(["output", exitstatus])
   end
 
   def stub_spawn_timeout(*args)
     expect(gl_projects).to receive(:popen_with_timeout).with(*args)
-      .and_raise(Timeout::Error)
+                                                       .and_raise(Timeout::Error)
   end
 
   describe '#initialize' do

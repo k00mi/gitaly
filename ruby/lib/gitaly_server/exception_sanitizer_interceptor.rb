@@ -6,8 +6,6 @@ module GitalyServer
   # exceptions from Go then I think we can remove this interceptor.
   class ExceptionSanitizerInterceptor < GRPC::ServerInterceptor
     include GitalyServer::Utils
-
-    # rubocop:disable Lint/RescueWithoutErrorClass
     %i[request_response server_streamer client_streamer bidi_streamer].each do |meth|
       define_method(meth) do |**, &blk|
         begin

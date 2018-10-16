@@ -33,7 +33,7 @@ module Gitlab
         object
       end
 
-      def initialize(repository, name, target, dereferenced_target)
+      def initialize(_repository, name, target, dereferenced_target)
         @name = Gitlab::Git.ref_name(name)
         @dereferenced_target = dereferenced_target
         @target = if target.respond_to?(:oid)
@@ -42,8 +42,6 @@ module Gitlab
                     target.name
                   elsif target.is_a? String
                     target
-                  else
-                    nil
                   end
       end
     end

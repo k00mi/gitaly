@@ -20,7 +20,7 @@ module Gitlab
 
       def apply(action, options)
         validate_action!(action)
-        public_send(action, options.slice(*ACTION_OPTIONS)) # rubocop:disable GitlabSecurity/PublicSend
+        public_send(action, options.slice(*ACTION_OPTIONS))
       end
 
       def write_tree
@@ -34,9 +34,7 @@ module Gitlab
       def create(options)
         options = normalize_options(options)
 
-        if get(options[:file_path])
-          raise IndexError, "A file with this name already exists"
-        end
+        raise IndexError, "A file with this name already exists" if get(options[:file_path])
 
         add_blob(options)
       end
@@ -44,13 +42,9 @@ module Gitlab
       def create_dir(options)
         options = normalize_options(options)
 
-        if get(options[:file_path])
-          raise IndexError, "A file with this name already exists"
-        end
+        raise IndexError, "A file with this name already exists" if get(options[:file_path])
 
-        if dir_exists?(options[:file_path])
-          raise IndexError, "A directory with this name already exists"
-        end
+        raise IndexError, "A directory with this name already exists" if dir_exists?(options[:file_path])
 
         options = options.dup
         options[:file_path] += '/.gitkeep'
@@ -63,9 +57,7 @@ module Gitlab
         options = normalize_options(options)
 
         file_entry = get(options[:file_path])
-        unless file_entry
-          raise IndexError, "A file with this name doesn't exist"
-        end
+        raise IndexError, "A file with this name doesn't exist" unless file_entry
 
         add_blob(options, mode: file_entry[:mode])
       end
@@ -74,13 +66,9 @@ module Gitlab
         options = normalize_options(options)
 
         file_entry = get(options[:previous_path])
-        unless file_entry
-          raise IndexError, "A file with this name doesn't exist"
-        end
+        raise IndexError, "A file with this name doesn't exist" unless file_entry
 
-        if get(options[:file_path])
-          raise IndexError, "A file with this name already exists"
-        end
+        raise IndexError, "A file with this name already exists" if get(options[:file_path])
 
         raw_index.remove(options[:previous_path])
 
@@ -90,9 +78,7 @@ module Gitlab
       def delete(options)
         options = normalize_options(options)
 
-        unless get(options[:file_path])
-          raise IndexError, "A file with this name doesn't exist"
-        end
+        raise IndexError, "A file with this name doesn't exist" unless get(options[:file_path])
 
         raw_index.remove(options[:file_path])
       end
@@ -101,9 +87,7 @@ module Gitlab
         options = normalize_options(options)
 
         file_entry = get(options[:file_path])
-        unless file_entry
-          raise IndexError, "A file with this name doesn't exist"
-        end
+        raise IndexError, "A file with this name doesn't exist" unless file_entry
 
         mode = options[:execute_filemode] ? EXECUTE_MODE : DEFAULT_MODE
 
@@ -120,16 +104,12 @@ module Gitlab
       end
 
       def normalize_path(path)
-        unless path
-          raise IndexError, "You must provide a file path"
-        end
+        raise IndexError, "You must provide a file path" unless path
 
         pathname = Gitlab::Git::PathHelper.normalize_path(path.dup)
 
         pathname.each_filename do |segment|
-          if segment == '..'
-            raise IndexError, 'Path cannot include directory traversal'
-          end
+          raise IndexError, 'Path cannot include directory traversal' if segment == '..'
         end
 
         pathname.to_s
@@ -137,9 +117,7 @@ module Gitlab
 
       def add_blob(options, mode: nil)
         content = options[:content]
-        unless content
-          raise IndexError, "You must provide content"
-        end
+        raise IndexError, "You must provide content" unless content
 
         content = Base64.decode64(content) if options[:encoding] == 'base64'
 
@@ -158,9 +136,7 @@ module Gitlab
       end
 
       def validate_action!(action)
-        unless ACTIONS.include?(action.to_s)
-          raise ArgumentError, "Unknown action '#{action}'"
-        end
+        raise ArgumentError, "Unknown action '#{action}'" unless ACTIONS.include?(action.to_s)
       end
     end
   end

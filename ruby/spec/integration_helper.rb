@@ -4,8 +4,8 @@ require 'gitaly'
 require 'spec_helper'
 
 SOCKET_PATH = 'gitaly.socket'.freeze
-GITALY_RUBY_DIR = File.expand_path('../..', __FILE__)
-TMP_DIR = File.expand_path('../../tmp', __FILE__)
+GITALY_RUBY_DIR = File.expand_path('..', __dir__)
+TMP_DIR = File.expand_path('../tmp', __dir__)
 
 module IntegrationClient
   def gitaly_stub(service)
@@ -19,7 +19,7 @@ module IntegrationClient
 end
 
 def start_gitaly
-  build_dir = File.expand_path('../../../_build', __FILE__)
+  build_dir = File.expand_path('../../_build', __dir__)
   gitlab_shell_dir = File.join(TMP_DIR, 'gitlab-shell')
 
   FileUtils.mkdir_p([TMP_DIR, File.join(gitlab_shell_dir, 'hooks')])
@@ -27,10 +27,10 @@ def start_gitaly
   config_toml = <<~CONFIG
     socket_path = "#{SOCKET_PATH}"
     bin_dir = "#{build_dir}/bin"
-    
+
     [gitlab-shell]
     dir = "#{gitlab_shell_dir}"
-    
+
     [gitaly-ruby]
     dir = "#{GITALY_RUBY_DIR}"
 
@@ -54,7 +54,7 @@ def wait_ready!(socket)
   last_exception = StandardError.new('wait_ready! has not made any connection attempts')
 
   print('Booting gitaly for integration tests')
-  100.times do |i|
+  100.times do |_i|
     sleep 0.1
     printf('.')
     begin

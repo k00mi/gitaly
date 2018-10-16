@@ -7,7 +7,7 @@ Gollum::Page.per_page = 20 # Magic number from Kaminari.config.default_per_page
 
 module Gollum
   class Page
-    def text_data(encoding=nil)
+    def text_data(encoding = nil)
       data = if raw_data.respond_to?(:encoding)
                raw_data.force_encoding(encoding || Encoding::UTF_8)
              else

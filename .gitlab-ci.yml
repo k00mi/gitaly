@@ -9,11 +9,6 @@ variables:
   DOCKER_DRIVER: overlay
   CUSTOM_IMAGE_VERSION: ruby-2.4-golang-1.11-git-2.18
 
-verify:
-  stage: test
-  script:
-    - make verify
-
 danger-review:
   image: registry.gitlab.com/gitlab-org/gitlab-build-images:danger
   stage: build
@@ -76,6 +71,12 @@ danger-review:
     - go version
     - git version
     - make test
+
+verify:
+  <<: *ruby_definition
+  stage: test
+  script:
+    - make verify
 
 build:go1.11:
   <<: *build_definition

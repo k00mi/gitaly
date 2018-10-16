@@ -80,7 +80,8 @@ module Gitlab
         branch_name,
         start_branch_name: nil,
         start_repository: repository,
-        &block)
+        &block
+      )
 
         Gitlab::Git.check_namespace!(start_repository)
         start_repository = RemoteRepository.new(start_repository) unless start_repository.is_a?(RemoteRepository)
@@ -95,7 +96,8 @@ module Gitlab
           repository.with_repo_branch_commit(
             start_repository,
             start_branch_name || branch_name,
-            &block)
+            &block
+          )
         end
       end
 
@@ -115,9 +117,7 @@ module Gitlab
         # Make commit
         newrev = yield
 
-        unless newrev
-          raise Gitlab::Git::CommitError.new('Failed to create commit')
-        end
+        raise Gitlab::Git::CommitError.new('Failed to create commit') unless newrev
 
         branch = repository.find_branch(branch_name)
         oldrev = find_oldrev_from_branch(newrev, branch)
@@ -155,7 +155,8 @@ module Gitlab
           repository,
           oldrev,
           newrev,
-          ref) do |service|
+          ref
+        ) do |service|
 
           yield(service)
         end
@@ -170,7 +171,8 @@ module Gitlab
 
         output, status = popen(
           command,
-          repository.path) do |stdin|
+          repository.path
+        ) do |stdin|
           stdin.write("update #{ref}\x00#{newrev}\x00#{oldrev}\x00")
         end
 
@@ -178,14 +180,13 @@ module Gitlab
           Gitlab::GitLogger.error("'git update-ref' in #{repository.path}: #{output}")
           raise Gitlab::Git::CommitError.new(
             "Could not update branch #{Gitlab::Git.branch_name(ref)}." \
-            " Please refresh and try again.")
+            " Please refresh and try again."
+          )
         end
       end
 
       def update_autocrlf_option
-        if repository.autocrlf != :input
-          repository.autocrlf = :input
-        end
+        repository.autocrlf = :input if repository.autocrlf != :input
       end
     end
   end

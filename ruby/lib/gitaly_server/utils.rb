@@ -37,7 +37,7 @@ module GitalyServer
       )
     end
 
-    def gitaly_tag_from_gitlab_tag(gitlab_tag, commit=nil)
+    def gitaly_tag_from_gitlab_tag(gitlab_tag, commit = nil)
       tag_message = gitlab_tag.message.to_s
       tag = Gitaly::Tag.new(
         name: gitlab_tag.name.b,
@@ -80,7 +80,7 @@ module GitalyServer
       # Pass GRPC back without wrapping
       raise e
     rescue StandardError => e
-      raise GRPC::Unknown.new(e.message, { "gitaly-ruby.exception.class": e.class.name })
+      raise GRPC::Unknown.new(e.message, "gitaly-ruby.exception.class": e.class.name)
     end
   end
 end

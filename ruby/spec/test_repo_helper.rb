@@ -3,7 +3,7 @@ require 'securerandom'
 require 'gitaly'
 require 'rugged'
 
-DEFAULT_STORAGE_DIR = File.expand_path('../../tmp/repositories', __FILE__)
+DEFAULT_STORAGE_DIR = File.expand_path('../tmp/repositories', __dir__)
 DEFAULT_STORAGE_NAME = 'default'.freeze
 TEST_REPO_PATH = File.join(DEFAULT_STORAGE_DIR, 'gitlab-test.git')
 TEST_REPO_ORIGIN = '../internal/testhelper/testdata/data/gitlab-test.git'.freeze
@@ -40,6 +40,7 @@ module TestRepo
   def repo_path_from_gitaly(gitaly_repo)
     storage_name = gitaly_repo.storage_name
     raise "this helper does not know storage #{storage_name.inspect}" unless storage_name == DEFAULT_STORAGE_NAME
+
     File.join(DEFAULT_STORAGE_DIR, gitaly_repo.relative_path)
   end
 
@@ -54,12 +55,13 @@ module TestRepo
   end
 
   def self.clone_new_repo!(destination)
-    return if system(*%W[git clone --quiet --bare #{TEST_REPO_ORIGIN} #{destination}])
+    return if system("git", "clone", "--quiet", "--bare", TEST_REPO_ORIGIN.to_s, destination.to_s)
+
     abort "Failed to clone test repo. Try running 'make prepare-tests' and try again."
   end
 
   def self.init_new_repo!(destination)
-    return if system(*%W[git init --quiet --bare #{destination}])
+    return if system("git", "init", "--quiet", "--bare", destination.to_s)
 
     abort "Failed to init test repo."
   end

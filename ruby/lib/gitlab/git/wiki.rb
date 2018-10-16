@@ -104,16 +104,14 @@ module Gitlab
       end
 
       def assert_type!(object, klass)
-        unless object.is_a?(klass)
-          raise ArgumentError, "expected a #{klass}, got #{object.inspect}"
-        end
+        raise ArgumentError, "expected a #{klass}, got #{object.inspect}" unless object.is_a?(klass)
       end
 
       def committer_with_hooks(commit_details)
         Gitlab::Git::CommitterWithHooks.new(self, commit_details.to_h)
       end
 
-      def with_committer_with_hooks(commit_details, &block)
+      def with_committer_with_hooks(commit_details)
         committer = committer_with_hooks(commit_details)
 
         yield committer
@@ -183,9 +181,7 @@ module Gitlab
       end
 
       def gollum_find_page(title:, version: nil, dir: nil)
-        if version
-          version = Gitlab::Git::Commit.find(@repository, version).id
-        end
+        version = Gitlab::Git::Commit.find(@repository, version).id if version
 
         gollum_page = gollum_wiki.page(title, version, dir)
         return unless gollum_page

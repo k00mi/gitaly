@@ -3,8 +3,6 @@ require 'spec_helper'
 require 'raven/base'
 require 'raven/transports/dummy'
 require_relative '../../../../lib/gitaly_server/sentry.rb'
-
-# rubocop:disable Lint/RescueWithoutErrorClass
 describe GitalyServer::Sentry::URLSanitizer do
   let(:meth) { GitalyServer::RefService.instance_method(:create_branch) }
   let(:ex) { StandardError.new("error: failed to push some refs to 'https://fO0BA7:HunTer!@github.com/ruby/ruby.git'") }

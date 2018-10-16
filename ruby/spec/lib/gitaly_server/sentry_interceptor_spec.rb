@@ -1,8 +1,6 @@
 require 'spec_helper'
 
 require_relative '../../../lib/gitaly_server/sentry_interceptor.rb'
-
-# rubocop:disable Lint/RescueWithoutErrorClass
 describe GitalyServer::SentryInterceptor do
   describe 'handling exceptions' do
     let(:meth) { GitalyServer::RefService.instance_method(:create_branch) }
@@ -71,7 +69,7 @@ describe GitalyServer::SentryInterceptor do
         it 'sends the original cause to Sentry' do
           expect(Raven).to receive(:capture_exception).with(
             ex,
-            { fingerprint: ['gitaly-ruby', 'GitalyServer::RefService#create_branch', 'unknown encoding'] }
+            fingerprint: ['gitaly-ruby', 'GitalyServer::RefService#create_branch', 'unknown encoding']
           )
 
           begin
@@ -90,7 +88,7 @@ describe GitalyServer::SentryInterceptor do
         it 'sends the exception to Sentry' do
           expect(Raven).to receive(:capture_exception).with(
             ex,
-            { fingerprint: ['gitaly-ruby', 'GitalyServer::RefService#create_branch', 'unknown encoding'] }
+            fingerprint: ['gitaly-ruby', 'GitalyServer::RefService#create_branch', 'unknown encoding']
           )
 
           begin

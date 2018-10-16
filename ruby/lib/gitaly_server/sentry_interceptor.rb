@@ -2,8 +2,6 @@ require 'grpc'
 require 'raven/base'
 
 require_relative 'sentry.rb'
-
-# rubocop:disable Lint/RescueWithoutErrorClass
 module GitalyServer
   class SentryInterceptor < GRPC::ServerInterceptor
     # Intercept a unary request response call

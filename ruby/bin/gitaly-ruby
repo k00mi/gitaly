@@ -12,9 +12,7 @@ require_relative '../lib/gitaly_server/rugged_interceptor.rb'
 SHUTDOWN_TIMEOUT = 600
 
 def main
-  if ARGV.length != 2
-    abort "Usage: #{$0} PPID /path/to/socket"
-  end
+  abort "Usage: #{$0} PPID /path/to/socket" if ARGV.length != 2
   ppid, socket_path = ARGV
 
   ppid_i = ppid.to_i
@@ -77,7 +75,7 @@ end
 GRPC_LOGGER = Logger.new(STDOUT)
 GRPC_LOGGER.level = 'WARN'
 GRPC_LOGGER.progname = 'GRPC'
-GRPC_LOGGER.formatter = proc do |severity, datetime, progname, msg|
+GRPC_LOGGER.formatter = proc do |severity, _datetime, _progname, msg|
   "GRPC-RUBY: #{severity}: #{msg}\n"
 end
 

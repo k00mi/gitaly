@@ -1,7 +1,7 @@
 module Gitlab
   module Git
     class WikiPage
-      attr_reader :url_path, :title, :format, :path, :version, :raw_data, :name, :text_data, :historical
+      attr_reader :url_path, :title, :format, :path, :version, :raw_data, :name, :historical
 
       def initialize(gollum_page, version)
         @gollum_page = gollum_page
@@ -18,7 +18,7 @@ module Gitlab
       end
 
       def formatted_data
-         @gollum_page.formatted_data
+        @gollum_page.formatted_data
       end
 
       def historical?
