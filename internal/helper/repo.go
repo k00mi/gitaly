@@ -81,5 +81,15 @@ func IsGitDirectory(dir string) bool {
 		}
 	}
 
+	// See: https://gitlab.com/gitlab-org/gitaly/issues/1339
+	//
+	// This is a workaround for Gitaly running on top of an NFS mount. There
+	// is a Linux NFS v4.0 client bug where opening the packed-refs file can
+	// either result in a stale file handle or stale data. This can happen if
+	// git gc runs for a long time while keeping open the packed-refs file.
+	// Running stat() on the file causes the kernel to revalidate the cached
+	// directory entry. We don't actually care if this file exists.
+	os.Stat(path.Join(dir, "packed-refs"))
+
 	return true
 }
