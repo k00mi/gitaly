@@ -63,8 +63,8 @@ func Version() (string, error) {
 func BuildGitOptions(gitOpts []string, otherOpts ...string) []string {
 	args := []string{}
 
-	if len(gitOpts) > 0 {
-		args = append([]string{"-c"}, gitOpts...)
+	for _, opt := range gitOpts {
+		args = append(args, "-c", opt)
 	}
 
 	return append(args, otherOpts...)

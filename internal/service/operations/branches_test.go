@@ -1,10 +1,8 @@
 package operations
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -99,9 +97,7 @@ func TestSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T) {
 		t.Run(hookName, func(t *testing.T) {
 			defer exec.Command("git", "-C", testRepoPath, "branch", "-D", branchName).Run()
 
-			hookPath, hookOutputTempPath := WriteEnvToHook(t, testRepoPath, hookName)
-			defer os.Remove(hookPath)
-			defer os.Remove(hookOutputTempPath)
+			hookOutputTempPath := WriteEnvToHook(t, testRepoPath, hookName)
 
 			ctx, cancel := testhelper.Context()
 			defer cancel()
@@ -138,9 +134,9 @@ func TestFailedUserCreateBranchDueToHooks(t *testing.T) {
 	hookContent := []byte("#!/bin/sh\nprintenv | paste -sd ' ' -\nexit 1")
 
 	for _, hookName := range gitlabPreHooks {
-		hookPath := path.Join(testRepoPath, "hooks", hookName)
-		ioutil.WriteFile(hookPath, hookContent, 0755)
-		defer os.Remove(hookPath)
+		remove, err := OverrideHooks(hookName, hookContent)
+		require.NoError(t, err)
+		defer remove()
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -289,8 +285,7 @@ func TestSuccessfulGitHooksForUserDeleteBranchRequest(t *testing.T) {
 		t.Run(hookName, func(t *testing.T) {
 			testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", branchNameInput)
 
-			hookPath, hookOutputTempPath := WriteEnvToHook(t, testRepoPath, hookName)
-			defer os.Remove(hookPath)
+			hookOutputTempPath := WriteEnvToHook(t, testRepoPath, hookName)
 			defer os.Remove(hookOutputTempPath)
 
 			ctx, cancel := testhelper.Context()
@@ -395,10 +390,9 @@ func TestFailedUserDeleteBranchDueToHooks(t *testing.T) {
 
 	for _, hookName := range gitlabPreHooks {
 		t.Run(hookName, func(t *testing.T) {
-			require.NoError(t, os.MkdirAll(path.Join(testRepoPath, "hooks"), 0755))
-			hookPath := path.Join(testRepoPath, "hooks", hookName)
-			ioutil.WriteFile(hookPath, hookContent, 0755)
-			defer os.Remove(hookPath)
+			remove, err := OverrideHooks(hookName, hookContent)
+			require.NoError(t, err)
+			defer remove()
 
 			ctx, cancel := testhelper.Context()
 			defer cancel()

@@ -2,9 +2,6 @@ package operations_test
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -139,7 +136,7 @@ func TestFailedUserCommitFilesRequestDueToHooks(t *testing.T) {
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
 	defer conn.Close()
 
-	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
 	ctxOuter, cancel := testhelper.Context()
@@ -154,9 +151,9 @@ func TestFailedUserCommitFilesRequestDueToHooks(t *testing.T) {
 
 	for _, hookName := range operations.GitlabPreHooks {
 		t.Run(hookName, func(t *testing.T) {
-			hookPath := path.Join(testRepoPath, "hooks", hookName)
-			ioutil.WriteFile(hookPath, hookContent, 0755)
-			defer os.Remove(hookPath)
+			remove, err := operations.OverrideHooks(hookName, hookContent)
+			require.NoError(t, err)
+			defer remove()
 
 			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
 			ctx := metadata.NewOutgoingContext(ctxOuter, md)

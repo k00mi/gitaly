@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 	"golang.org/x/net/context"
@@ -30,7 +32,7 @@ func TestSuccessfulReceivePackRequest(t *testing.T) {
 	client, conn := newSmartHTTPClient(t, serverSocketPath)
 	defer conn.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	stream, err := client.PostReceivePack(ctx)
@@ -57,7 +59,7 @@ func TestSuccessfulReceivePackRequestWithGitOpts(t *testing.T) {
 	client, conn := newSmartHTTPClient(t, serverSocketPath)
 	defer conn.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	stream, err := client.PostReceivePack(ctx)
@@ -134,6 +136,44 @@ func TestFailedReceivePackRequestWithGitOpts(t *testing.T) {
 	response := doPush(t, stream, firstRequest, push.body)
 
 	expectedResponse := "002e\x02fatal: pack exceeds maximum allowed size\n0059\x010028unpack unpack-objects abnormal exit\n0028ng refs/heads/master unpacker error\n00000000"
+	require.Equal(t, expectedResponse, string(response), "Expected response to be %q, got %q", expectedResponse, response)
+}
+
+func TestFailedReceivePackRequestDueToHooksFailure(t *testing.T) {
+	hookDir, err := ioutil.TempDir("", "gitaly-tmp-hooks")
+	require.NoError(t, err)
+	defer os.RemoveAll(hookDir)
+
+	defer func(oldDir string) {
+		config.Config.GitlabShell.Dir = hookDir
+	}(config.Config.GitlabShell.Dir)
+	config.Config.GitlabShell.Dir = hookDir
+
+	require.NoError(t, os.MkdirAll(hooks.Path(), 0755))
+
+	hookContent := []byte("#!/bin/sh\nexit 1")
+	ioutil.WriteFile(path.Join(hooks.Path(), "pre-receive"), hookContent, 0755)
+
+	server, serverSocketPath := runSmartHTTPServer(t)
+	defer server.Stop()
+
+	repo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	client, conn := newSmartHTTPClient(t, serverSocketPath)
+	defer conn.Close()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	stream, err := client.PostReceivePack(ctx)
+	require.NoError(t, err)
+
+	push := newTestPush(t, nil)
+	firstRequest := &gitalypb.PostReceivePackRequest{Repository: repo, GlId: "user-123", GlRepository: "project-123"}
+	response := doPush(t, stream, firstRequest, push.body)
+
+	expectedResponse := "004a\x01000eunpack ok\n0033ng refs/heads/master pre-receive hook declined\n00000000"
 	require.Equal(t, expectedResponse, string(response), "Expected response to be %q, got %q", expectedResponse, response)
 }
 

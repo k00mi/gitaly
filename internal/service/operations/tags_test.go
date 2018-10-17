@@ -1,10 +1,8 @@
 package operations
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
 	"strings"
 	"testing"
 
@@ -83,8 +81,7 @@ func TestSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T) {
 		t.Run(hookName, func(t *testing.T) {
 			testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", tagNameInput)
 
-			hookPath, hookOutputTempPath := WriteEnvToHook(t, testRepoPath, hookName)
-			defer os.Remove(hookPath)
+			hookOutputTempPath := WriteEnvToHook(t, testRepoPath, hookName)
 			defer os.Remove(hookOutputTempPath)
 
 			ctx, cancel := testhelper.Context()
@@ -211,8 +208,7 @@ func TestSuccessfulGitHooksForUserCreateTagRequest(t *testing.T) {
 		t.Run(hookName, func(t *testing.T) {
 			defer exec.Command("git", "-C", testRepoPath, "tag", "-d", tagName).Run()
 
-			hookPath, hookOutputTempPath := WriteEnvToHook(t, testRepoPath, hookName)
-			defer os.Remove(hookPath)
+			hookOutputTempPath := WriteEnvToHook(t, testRepoPath, hookName)
 			defer os.Remove(hookOutputTempPath)
 
 			ctx, cancel := testhelper.Context()
@@ -318,9 +314,9 @@ func TestFailedUserDeleteTagDueToHooks(t *testing.T) {
 
 	for _, hookName := range gitlabPreHooks {
 		t.Run(hookName, func(t *testing.T) {
-			hookPath := path.Join(testRepoPath, "hooks", hookName)
-			ioutil.WriteFile(hookPath, hookContent, 0755)
-			defer os.Remove(hookPath)
+			remove, err := OverrideHooks(hookName, hookContent)
+			require.NoError(t, err)
+			defer remove()
 
 			ctx, cancel := testhelper.Context()
 			defer cancel()
@@ -342,7 +338,7 @@ func TestFailedUserCreateTagDueToHooks(t *testing.T) {
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
 
-	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
 	user := &gitalypb.User{
@@ -361,9 +357,9 @@ func TestFailedUserCreateTagDueToHooks(t *testing.T) {
 	hookContent := []byte("#!/bin/sh\necho GL_ID=$GL_ID\nexit 1")
 
 	for _, hookName := range gitlabPreHooks {
-		hookPath := path.Join(testRepoPath, "hooks", hookName)
-		ioutil.WriteFile(hookPath, hookContent, 0755)
-		defer os.Remove(hookPath)
+		remove, err := OverrideHooks(hookName, hookContent)
+		require.NoError(t, err)
+		defer remove()
 
 		ctx, cancel := testhelper.Context()
 		defer cancel()

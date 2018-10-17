@@ -8,6 +8,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 	"google.golang.org/grpc/codes"
@@ -50,15 +51,17 @@ func (s *server) SSHReceivePack(stream gitalypb.SSHService_SSHReceivePackServer)
 	if req.GlRepository != "" {
 		env = append(env, fmt.Sprintf("GL_REPOSITORY=%s", req.GlRepository))
 	}
-	env = git.AddGitProtocolEnv(ctx, req, env)
-	env = append(env, command.GitEnv...)
 
 	repoPath, err := helper.GetRepoPath(req.Repository)
 	if err != nil {
 		return err
 	}
 
-	gitOptions := git.BuildGitOptions(req.GitConfigOptions, "receive-pack", repoPath)
+	env = git.AddGitProtocolEnv(ctx, req, env)
+	env = append(env, command.GitEnv...)
+
+	opts := append([]string{fmt.Sprintf("core.hooksPath=%s", hooks.Path())}, req.GitConfigOptions...)
+	gitOptions := git.BuildGitOptions(opts, "receive-pack", repoPath)
 	cmd, err := git.BareCommand(ctx, stdin, stdout, stderr, env, gitOptions...)
 
 	if err != nil {

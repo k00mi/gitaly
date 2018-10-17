@@ -15,6 +15,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
@@ -138,6 +139,30 @@ func TestReceivePackPushFailure(t *testing.T) {
 			t.Errorf("local and remote head equal. push did not fail")
 		}
 	}
+
+}
+
+func TestReceivePackPushHookFailure(t *testing.T) {
+	server, serverSocketPath := runSSHServer(t)
+	defer server.Stop()
+
+	hookDir, err := ioutil.TempDir("", "gitaly-tmp-hooks")
+	require.NoError(t, err)
+	defer os.RemoveAll(hookDir)
+
+	defer func(oldDir string) {
+		config.Config.GitlabShell.Dir = oldDir
+	}(config.Config.GitlabShell.Dir)
+	config.Config.GitlabShell.Dir = hookDir
+
+	require.NoError(t, os.MkdirAll(hooks.Path(), 0755))
+
+	hookContent := []byte("#!/bin/sh\nexit 1")
+	ioutil.WriteFile(path.Join(hooks.Path(), "pre-receive"), hookContent, 0755)
+
+	_, _, err = testCloneAndPush(t, serverSocketPath, pushParams{storageName: testRepo.GetStorageName(), glID: "1"})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "(pre-receive hook declined)")
 }
 
 func testCloneAndPush(t *testing.T, serverSocketPath string, params pushParams) (string, string, error) {

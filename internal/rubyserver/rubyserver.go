@@ -16,6 +16,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
+	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver/balancer"
 	"gitlab.com/gitlab-org/gitaly/internal/supervisor"
@@ -107,6 +108,7 @@ func Start() (*Server, error) {
 		"GITALY_RUBY_GITLAB_SHELL_PATH="+cfg.GitlabShell.Dir,
 		"GITALY_RUBY_GITALY_BIN_DIR="+cfg.BinDir,
 		"GITALY_VERSION="+version.GetVersion(),
+		"GITALY_GIT_HOOKS_DIR="+hooks.Path(),
 	)
 
 	env = append(env, command.GitEnv...)

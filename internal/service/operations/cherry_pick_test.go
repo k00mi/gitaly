@@ -1,10 +1,8 @@
 package operations_test
 
 import (
-	"io/ioutil"
 	"net"
 	"os"
-	"path"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -160,8 +158,7 @@ func TestSuccessfulGitHooksForUserCherryPickRequest(t *testing.T) {
 
 	for _, hookName := range operations.GitlabHooks {
 		t.Run(hookName, func(t *testing.T) {
-			hookPath, hookOutputTempPath := operations.WriteEnvToHook(t, testRepoPath, hookName)
-			defer os.Remove(hookPath)
+			hookOutputTempPath := operations.WriteEnvToHook(t, testRepoPath, hookName)
 			defer os.Remove(hookOutputTempPath)
 
 			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
@@ -301,9 +298,9 @@ func TestFailedUserCherryPickRequestDueToPreReceiveError(t *testing.T) {
 
 	for _, hookName := range operations.GitlabPreHooks {
 		t.Run(hookName, func(t *testing.T) {
-			hookPath := path.Join(testRepoPath, "hooks", hookName)
-			require.NoError(t, ioutil.WriteFile(hookPath, hookContent, 0755))
-			defer os.Remove(hookPath)
+			remove, err := operations.OverrideHooks(hookName, hookContent)
+			require.NoError(t, err)
+			defer remove()
 
 			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
 			ctx := metadata.NewOutgoingContext(ctxOuter, md)

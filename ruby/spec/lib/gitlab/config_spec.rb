@@ -15,6 +15,5 @@ describe Gitlab::Config do
     end
 
     it { expect(subject.path).to eq(gitlab_shell_path) }
-    it { expect(subject.hooks_path).to eq(File.join(gitlab_shell_path, 'hooks')) }
   end
 end

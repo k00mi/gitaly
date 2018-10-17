@@ -1,17 +1,19 @@
-# Gitaly note: JV: looks like this is only used by Gitlab::Git::HooksService in
-# app/services. We shouldn't bother migrating this until we know how
-# Gitlab::Git::HooksService will be migrated.
+# frozen_string_literal: true
 
 module Gitlab
   module Git
     class Hook
-      GL_PROTOCOL = 'web'.freeze
+      def self.directory
+        Gitlab.config.git.hooks_directory
+      end
+
+      GL_PROTOCOL = 'web'
       attr_reader :name, :path, :repository
 
       def initialize(name, repository)
         @name = name
         @repository = repository
-        @path = File.join(repo_path, 'hooks', name)
+        @path = File.join(self.class.directory, name)
       end
 
       def repo_path
