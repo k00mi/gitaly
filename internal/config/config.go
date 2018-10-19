@@ -146,6 +146,10 @@ func validateStorages() error {
 			return fmt.Errorf("empty storage path in %v", storage)
 		}
 
+		if fs, err := os.Stat(storage.Path); err != nil || !fs.IsDir() {
+			return fmt.Errorf("storage paths have to exist %v", storage)
+		}
+
 		stPath := filepath.Clean(storage.Path)
 		for j := 0; j < i; j++ {
 			other := Config.Storages[j]
@@ -160,7 +164,11 @@ func validateStorages() error {
 			}
 
 			if strings.HasPrefix(stPath, otherPath) || strings.HasPrefix(otherPath, stPath) {
-				return fmt.Errorf("storage paths may not nest: %q and %q", storage.Name, storage.Name)
+				// If storages have the same sub directory, that is allowed
+				if filepath.Dir(stPath) == filepath.Dir(otherPath) {
+					continue
+				}
+				return fmt.Errorf("storage paths may not nest: %q and %q", storage.Name, other.Name)
 			}
 		}
 	}

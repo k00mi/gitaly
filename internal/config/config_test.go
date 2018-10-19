@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -158,6 +159,14 @@ func TestValidateStorages(t *testing.T) {
 		Config.Storages = oldStorages
 	}(Config.Storages)
 
+	repositories, err := filepath.Abs("testdata/repositories")
+	require.NoError(t, err)
+
+	repositories2, err := filepath.Abs("testdata/repositories2")
+	require.NoError(t, err)
+
+	invalidDir := path.Join(repositories, t.Name())
+
 	testCases := []struct {
 		desc     string
 		storages []Storage
@@ -166,23 +175,22 @@ func TestValidateStorages(t *testing.T) {
 		{
 			desc: "just 1 storage",
 			storages: []Storage{
-				{Name: "default", Path: "/home/git/repositories"},
+				{Name: "default", Path: repositories},
 			},
 		},
 		{
 			desc: "multiple storages",
 			storages: []Storage{
-				{Name: "default", Path: "/home/git/repositories1"},
-				{Name: "other", Path: "/home/git/repositories2"},
-				{Name: "third", Path: "/home/git/repositories3"},
+				{Name: "default", Path: repositories},
+				{Name: "other", Path: repositories2},
 			},
 		},
 		{
 			desc: "multiple storages pointing to same directory",
 			storages: []Storage{
-				{Name: "default", Path: "/home/git/repositories"},
-				{Name: "other", Path: "/home/git/repositories"},
-				{Name: "third", Path: "/home/git/repositories"},
+				{Name: "default", Path: repositories},
+				{Name: "other", Path: repositories},
+				{Name: "third", Path: repositories},
 			},
 		},
 		{
@@ -206,23 +214,23 @@ func TestValidateStorages(t *testing.T) {
 		{
 			desc: "duplicate definition",
 			storages: []Storage{
-				{Name: "default", Path: "/home/git/repositories"},
-				{Name: "default", Path: "/home/git/repositories"},
+				{Name: "default", Path: repositories},
+				{Name: "default", Path: repositories},
 			},
 			invalid: true,
 		},
 		{
 			desc: "re-definition",
 			storages: []Storage{
-				{Name: "default", Path: "/home/git/repositories1"},
-				{Name: "default", Path: "/home/git/repositories2"},
+				{Name: "default", Path: repositories},
+				{Name: "default", Path: repositories2},
 			},
 			invalid: true,
 		},
 		{
 			desc: "empty name",
 			storages: []Storage{
-				{Name: "", Path: "/home/git/repositories1"},
+				{Name: "", Path: repositories},
 			},
 			invalid: true,
 		},
@@ -230,6 +238,14 @@ func TestValidateStorages(t *testing.T) {
 			desc: "empty path",
 			storages: []Storage{
 				{Name: "default", Path: ""},
+			},
+			invalid: true,
+		},
+		{
+			desc: "non existing directory",
+			storages: []Storage{
+				{Name: "default", Path: repositories},
+				{Name: "nope", Path: invalidDir},
 			},
 			invalid: true,
 		},
