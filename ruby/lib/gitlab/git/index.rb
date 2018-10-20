@@ -106,13 +106,9 @@ module Gitlab
       def normalize_path(path)
         raise IndexError, "You must provide a file path" unless path
 
-        pathname = Gitlab::Git::PathHelper.normalize_path(path.dup)
-
-        pathname.each_filename do |segment|
-          raise IndexError, 'Path cannot include directory traversal' if segment == '..'
-        end
-
-        pathname.to_s
+        Gitlab::Git::PathHelper.normalize_path!(path.dup)
+      rescue Gitlab::Git::PathHelper::InvalidPath => e
+        raise IndexError, e.message
       end
 
       def add_blob(options, mode: nil)

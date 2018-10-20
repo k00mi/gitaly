@@ -770,6 +770,32 @@ describe Gitlab::Git::Repository do # rubocop:disable Metrics/BlockLength
     end
   end
 
+  describe '#update_submodule' do
+    let(:new_oid) { 'db97db76ecd478eb361f439807438f82d97b29a5' }
+    let(:repository) { gitlab_git_from_gitaly(new_mutable_test_repo) }
+    let(:submodule) { 'gitlab-grack' }
+    let(:head_commit) { repository.commit(branch) }
+    let!(:head_submodule_reference) { repository.blob_at(head_commit.id, submodule).id }
+    let(:committer) { repository.user_to_committer(user) }
+    let(:message) { 'Update submodule' }
+    let(:branch) { 'master' }
+
+    subject do
+      repository.update_submodule(submodule,
+                                  new_oid,
+                                  branch,
+                                  committer,
+                                  message)
+    end
+
+    it 'updates the submodule oid' do
+      blob = repository.blob_at(subject, submodule)
+
+      expect(blob.id).not_to eq head_submodule_reference
+      expect(blob.id).to eq new_oid
+    end
+  end
+
   def create_remote_branch(remote_name, branch_name, source_branch_name)
     source_branch = repository.branches.find { |branch| branch.name == source_branch_name }
     repository_rugged.references.create("refs/remotes/#{remote_name}/#{branch_name}", source_branch.dereferenced_target.sha)

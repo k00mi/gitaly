@@ -513,6 +513,32 @@ module Gitlab
         end
       end
 
+      def update_submodule(submodule_path, commit_sha, branch, committer, message)
+        target = rugged.rev_parse(branch)
+        raise CommitError, 'Invalid branch' unless target.is_a?(Rugged::Commit)
+
+        current_entry = rugged_submodule_entry(target, submodule_path)
+        raise CommitError, 'Invalid submodule path' unless current_entry
+        raise CommitError, "The submodule #{submodule_path} is already at #{commit_sha}" if commit_sha == current_entry[:oid]
+
+        commit_tree = target.tree.update([action: :upsert,
+                                          oid: commit_sha,
+                                          filemode: 0o160000,
+                                          path: submodule_path])
+
+        options = {
+          parents: [target.oid],
+          tree: commit_tree,
+          message: message,
+          author: committer,
+          committer: committer
+        }
+
+        create_commit(options).tap do |result|
+          raise CommitError, 'Failed to create commit' unless result
+        end
+      end
+
       def push_remote_branches(remote_name, branch_names, forced: true)
         success = @gitlab_projects.push_branches(remote_name, GITLAB_PROJECTS_TIMEOUT, forced, branch_names)
 
@@ -1086,6 +1112,22 @@ module Gitlab
 
       def rev_list_param(spec)
         spec == :all ? ['--all'] : spec
+      end
+
+      def rugged_submodule_entry(target, submodule_path)
+        parent_dir = File.dirname(submodule_path)
+        parent_dir = '' if parent_dir == '.'
+        parent_tree = rugged.rev_parse("#{target.oid}^{tree}:#{parent_dir}")
+
+        return unless parent_tree.is_a?(Rugged::Tree)
+
+        current_entry = parent_tree[File.basename(submodule_path)]
+
+        valid_submodule_entry?(current_entry) ? current_entry : nil
+      end
+
+      def valid_submodule_entry?(entry)
+        entry && entry[:type] == :commit
       end
     end
   end
