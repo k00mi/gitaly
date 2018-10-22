@@ -35,6 +35,10 @@ assemble: prepare-build
 binaries: prepare-build
 	cd $(BUILD_DIR) && make $@
 
+.PHONY: prepare-tests
+prepare-tests: prepare-build
+	cd $(BUILD_DIR) && make $@
+
 .PHONY: test
 test: prepare-build
 	cd $(BUILD_DIR) && make $@
