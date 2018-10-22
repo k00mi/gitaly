@@ -298,6 +298,28 @@ module GitalyServer
       end
     end
 
+    def user_apply_patch(call)
+      bridge_exceptions do
+        stream = call.each_remote_read
+        first_request = stream.next
+
+        header = first_request.header
+        user = Gitlab::Git::User.from_gitaly(header.user)
+        target_branch = header.target_branch
+        patches = stream.lazy.map(&:patches)
+
+        branch_update = Gitlab::Git::Repository.from_gitaly_with_block(header.repository, call) do |repo|
+          begin
+            Gitlab::Git::CommitPatches.new(user, repo, target_branch, patches).commit
+          rescue Gitlab::Git::PatchError => e
+            raise GRPC::FailedPrecondition.new(e.message)
+          end
+        end
+
+        Gitaly::UserApplyPatchResponse.new(branch_update: branch_update_result(branch_update))
+      end
+    end
+
     private
 
     def commit_files_opts(call, header, actions)

@@ -1,3 +1,5 @@
+require 'securerandom'
+
 module Gitlab
   module Git
     # These are monkey patches on top of the vendored version of Repository.
@@ -20,6 +22,7 @@ module Gitlab
       # or things will break! (REBASE_WORKTREE_PREFIX and SQUASH_WORKTREE_PREFIX)
       REBASE_WORKTREE_PREFIX = 'rebase'.freeze
       SQUASH_WORKTREE_PREFIX = 'squash'.freeze
+      AM_WORKTREE_PREFIX = 'am'.freeze
       GITALY_INTERNAL_URL = 'ssh://gitaly/internal.git'.freeze
       GITLAB_PROJECTS_TIMEOUT = Gitlab.config.gitlab_shell.git_timeout
       AUTOCRLF_VALUES = { 'true' => true, 'false' => false, 'input' => :input }.freeze
@@ -46,9 +49,11 @@ module Gitlab
         def from_gitaly_with_block(gitaly_repository, call)
           repository = from_gitaly(gitaly_repository, call)
 
-          yield repository
+          result = yield repository
 
           repository.cleanup
+
+          result
         end
 
         def create(repo_path)
@@ -433,7 +438,7 @@ module Gitlab
 
       def rebase(user, rebase_id, branch:, branch_sha:, remote_repository:, remote_branch:)
         rebase_path = worktree_path(REBASE_WORKTREE_PREFIX, rebase_id)
-        env = git_env_for_user(user)
+        env = git_env.merge(user.git_env)
 
         if remote_repository.is_a?(RemoteRepository)
           env.merge!(remote_repository.fetch_env)
@@ -458,7 +463,7 @@ module Gitlab
 
       def squash(user, squash_id, branch:, start_sha:, end_sha:, author:, message:)
         squash_path = worktree_path(SQUASH_WORKTREE_PREFIX, squash_id)
-        env = git_env_for_user(user).merge(
+        env = git_env.merge(user.git_env).merge(
           'GIT_AUTHOR_NAME' => author.name,
           'GIT_AUTHOR_EMAIL' => author.email
         )
@@ -484,6 +489,23 @@ module Gitlab
           # another ref called HEAD.
           run_git!(
             %w[rev-parse --quiet --verify HEAD], chdir: squash_path, env: env
+          ).chomp
+        end
+      end
+
+      def commit_patches(start_point, patches, extra_env: {})
+        worktree_path = worktree_path(AM_WORKTREE_PREFIX, SecureRandom.hex)
+        env = git_env.merge(extra_env)
+
+        with_worktree(worktree_path, start_point, env: env) do
+          result, status = run_git(%w[am --quiet --3way], chdir: worktree_path) do |stdin|
+            loop { stdin.write(patches.next) }
+          end
+
+          raise Gitlab::Git::PatchError, result unless status == 0
+
+          run_git!(
+            %w[rev-parse --quiet --verify HEAD], chdir: worktree_path, env: env
           ).chomp
         end
       end
@@ -815,11 +837,8 @@ module Gitlab
         output
       end
 
-      def git_env_for_user(user)
+      def git_env
         {
-          'GIT_COMMITTER_NAME' => user.name,
-          'GIT_COMMITTER_EMAIL' => user.email,
-          'GL_ID' => Gitlab::GlId.gl_id(user),
           'GL_PROTOCOL' => Gitlab::Git::Hook::GL_PROTOCOL,
           'GL_REPOSITORY' => gl_repository
         }

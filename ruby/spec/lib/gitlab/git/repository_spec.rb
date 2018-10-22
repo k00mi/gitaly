@@ -31,6 +31,12 @@ describe Gitlab::Git::Repository do
         expect(repository.rugged).to receive(:close)
       end
     end
+
+    it 'returns the passed result of the block passed' do
+      result = described_class.from_gitaly_with_block(test_repo_read_only, call) { 'Hello world' }
+
+      expect(result).to eq('Hello world')
+    end
   end
 
   describe '#cleanup' do
@@ -109,6 +115,36 @@ describe Gitlab::Git::Repository do
 
       it 'raises an ArgumentError' do
         expect { diff_data }.to raise_error(ArgumentError)
+      end
+    end
+  end
+
+  describe "#commit_patches" do
+    let(:repository) { gitlab_git_from_gitaly(new_mutable_test_repo) }
+    let(:testdata_dir) { File.join(File.dirname(__FILE__), '../../../../../internal/service/operations/testdata') }
+    let(:patches) { File.foreach(File.join(testdata_dir, patch_file_name)) }
+
+    def apply_patches(branch_name)
+      repository.commit_patches(branch_name, patches)
+    end
+
+    context 'when the patch applies' do
+      let(:patch_file_name) { '0001-A-commit-from-a-patch.patch' }
+
+      it 'creates a new rev with the patch' do
+        new_rev = apply_patches(repository.root_ref)
+        commit = repository.commit(new_rev)
+
+        expect(new_rev).not_to be_nil
+        expect(commit.message).to eq("A commit from a patch\n")
+      end
+    end
+
+    context 'when the patch does not apply' do
+      let(:patch_file_name) { '0001-This-does-not-apply-to-the-feature-branch.patch' }
+
+      it 'raises a PatchError' do
+        expect { apply_patches('feature') }.to raise_error Gitlab::Git::PatchError
       end
     end
   end
