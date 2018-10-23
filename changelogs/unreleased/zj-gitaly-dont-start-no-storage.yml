@@ -1,5 +1,0 @@
----
-title: Require storage directories to exist at startup
-merge_request: 675
-author:
-type: changed

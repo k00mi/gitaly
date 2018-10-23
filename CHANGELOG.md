@@ -1,5 +1,55 @@
 # Gitaly changelog
 
+## v0.126.0
+
+#### Added
+- Add support for closing Rugged/libgit2 file descriptors
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/903
+
+#### Changed
+- Require storage directories to exist at startup
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/675
+
+#### Fixed
+- Don't confuse govendor license with ruby gem .go files
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/935
+- Rspec and bundler setup fixes
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/901
+- Fix git protocol prometheus metrics
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/908
+- Fix order in config.toml.example
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/923
+
+#### Other
+- Standardize git command invocation
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/915
+- Update grpc to v1.15.x in gitaly-ruby
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/918
+- Add package tests for internal/git/pktline
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/909
+- Make Makefile more predictable by bootstrapping
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/913
+- Force english output on git commands
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/898
+- Restore notice check
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/902
+- Prevent stale packed-refs file when Gitaly is running on top of NFS
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/924
+
+#### Performance
+- Update Prometheus vendoring
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/922
+- Free Rugged open file descriptors in gRPC middleware
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/911
+
+#### Removed
+- Remove deprecated methods
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/910
+
+#### Security
+- Bump Rugged to 0.27.5 for security fixes
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/907
+
 ## v0.125.0
 
 #### Added
