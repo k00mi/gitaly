@@ -21,55 +21,55 @@ all: build
 
 .PHONY: build
 build: prepare-build
-	cd $(BUILD_DIR) && make install INSTALL_DEST_DIR=$(CURDIR) 
+	cd $(BUILD_DIR) && $(MAKE) install INSTALL_DEST_DIR=$(CURDIR) 
 
 .PHONY: install
 install: prepare-build
-	cd $(BUILD_DIR) && make $@
+	cd $(BUILD_DIR) && $(MAKE) $@
 
 .PHONY: assemble
 assemble: prepare-build
-	cd $(BUILD_DIR) && make $@
+	cd $(BUILD_DIR) && $(MAKE) $@
 
 .PHONY: binaries
 binaries: prepare-build
-	cd $(BUILD_DIR) && make $@
+	cd $(BUILD_DIR) && $(MAKE) $@
 
 .PHONY: prepare-tests
 prepare-tests: prepare-build
-	cd $(BUILD_DIR) && make $@
+	cd $(BUILD_DIR) && $(MAKE) $@
 
 .PHONY: test
 test: prepare-build
-	cd $(BUILD_DIR) && make $@
+	cd $(BUILD_DIR) && $(MAKE) $@
 	
 .PHONY: rspec
 rspec: prepare-build
-	cd $(BUILD_DIR) && make $@
+	cd $(BUILD_DIR) && $(MAKE) $@
 
 .PHONY: verify
 verify: prepare-build
-	cd $(BUILD_DIR) && make $@
+	cd $(BUILD_DIR) && $(MAKE) $@
 
 .PHONY: format
 format: prepare-build
-	cd $(BUILD_DIR) && make $@
+	cd $(BUILD_DIR) && $(MAKE) $@
 
 .PHONY: cover
 cover: prepare-build
-	cd $(BUILD_DIR) && make $@
+	cd $(BUILD_DIR) && $(MAKE) $@
 
 .PHONY: notice
 notice: prepare-build
-	cd $(BUILD_DIR) && make $@
+	cd $(BUILD_DIR) && $(MAKE) $@
 
 .PHONY: race-go
 race-go: prepare-build
-	cd $(BUILD_DIR) && make $@
+	cd $(BUILD_DIR) && $(MAKE) $@
 
 .PHONY: docker
 docker: prepare-build
-	cd $(BUILD_DIR) && make $@
+	cd $(BUILD_DIR) && $(MAKE) $@
 
 .PHONY: prepare-build
 prepare-build: $(BUILD_DIR)/.ok update-makefile
