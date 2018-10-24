@@ -2,12 +2,14 @@ package repository
 
 import (
 	"context"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
@@ -38,6 +40,44 @@ func TestRepackIncrementalSuccess(t *testing.T) {
 
 	// Entire `path`-folder gets updated so this is fine :D
 	assertModTimeAfter(t, testTime, packPath)
+}
+
+func TestRepackLocal(t *testing.T) {
+	server, serverSocketPath := runRepoServer(t)
+	defer server.Stop()
+
+	client, conn := newRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, repoPath, cleanupFn := testhelper.NewTestRepoWithWorktree(t)
+	defer cleanupFn()
+
+	commiterArgs := []string{"-c", "user.name=Scrooge McDuck", "-c", "user.email=scrooge@mcduck.com"}
+	cmdArgs := append(commiterArgs, "-C", repoPath, "commit", "--allow-empty", "-m", "An empty commit")
+	cmd := exec.Command("git", cmdArgs...)
+	altDirsCommit, altObjectsDir := testhelper.CreateCommitInAlternateObjectDirectory(t, repoPath, cmd)
+
+	repoCommit := testhelper.CreateCommit(t, repoPath, t.Name(), &testhelper.CreateCommitOpts{Message: t.Name()})
+
+	ctx, cancelFn := testhelper.Context()
+	defer cancelFn()
+
+	// Set GIT_ALTERNATE_OBJECT_DIRECTORIES on the outgoing request. The
+	// intended use case of the behavior we're testing here is that
+	// alternates are found through the objects/info/alternates file instead
+	// of GIT_ALTERNATE_OBJECT_DIRECTORIES. But for the purpose of this test
+	// it doesn't matter.
+	testRepo.GitAlternateObjectDirectories = []string{altObjectsDir}
+	_, err := client.RepackFull(ctx, &gitalypb.RepackFullRequest{Repository: testRepo})
+	require.NoError(t, err)
+
+	packFiles, err := filepath.Glob(path.Join(repoPath, ".git", "objects", "pack", "pack-*.pack"))
+	require.NoError(t, err)
+	require.Len(t, packFiles, 1)
+
+	packContents := testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "verify-pack", "-v", packFiles[0])
+	require.NotContains(t, string(packContents), string(altDirsCommit))
+	require.Contains(t, string(packContents), string(repoCommit))
 }
 
 func TestRepackIncrementalFailure(t *testing.T) {
