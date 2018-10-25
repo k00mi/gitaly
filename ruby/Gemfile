@@ -24,6 +24,7 @@ gem 'google-protobuf', '~> 3.6'
 group :development, :test do
   gem 'rubocop', '~> 0.50', require: false
   gem 'rspec', require: false
+  gem 'rspec-parameterized', require: false
   gem 'timecop', require: false
   gem 'factory_bot', require: false
 end
