@@ -8,6 +8,7 @@ require 'factory_bot'
 Dir[File.join(__dir__, 'support/helpers/*.rb')].each { |f| require f }
 
 ENV['GITALY_RUBY_GIT_BIN_PATH'] ||= 'git'
+ENV['GITALY_GIT_HOOKS_DIR'] ||= File.join(Gitlab.config.gitlab_shell.path.to_s, "hooks")
 
 RSpec.configure do |config|
   config.include FactoryBot::Syntax::Methods

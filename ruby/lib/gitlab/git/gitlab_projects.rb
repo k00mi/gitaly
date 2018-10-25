@@ -23,7 +23,7 @@ module Gitlab
         Gitlab::Git::GitlabProjects.new(
           storage_path,
           gitaly_repository.relative_path,
-          global_hooks_path: Gitlab.config.gitlab_shell.hooks_path,
+          global_hooks_path: Gitlab::Git::Hook.directory,
           logger: Rails.logger
         )
       end

@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
 	"strings"
 	"testing"
 	"time"
@@ -51,9 +50,7 @@ func TestSuccessfulMerge(t *testing.T) {
 	hooks := GitlabHooks
 	hookTempfiles := make([]string, len(hooks))
 	for i, h := range hooks {
-		var hookPath string
-		hookPath, hookTempfiles[i] = WriteEnvToHook(t, testRepoPath, h)
-		defer os.Remove(hookPath)
+		hookTempfiles[i] = WriteEnvToHook(t, testRepoPath, h)
 		defer os.Remove(hookTempfiles[i])
 	}
 
@@ -238,10 +235,9 @@ func TestFailedMergeDueToHooks(t *testing.T) {
 
 	for _, hookName := range gitlabPreHooks {
 		t.Run(hookName, func(t *testing.T) {
-			require.NoError(t, os.MkdirAll(path.Join(testRepoPath, "hooks"), 0755))
-			hookPath := path.Join(testRepoPath, "hooks", hookName)
-			ioutil.WriteFile(hookPath, hookContent, 0755)
-			defer os.Remove(hookPath)
+			remove, err := OverrideHooks(hookName, hookContent)
+			require.NoError(t, err)
+			defer remove()
 
 			ctx, cancel := testhelper.Context()
 			defer cancel()
@@ -443,9 +439,9 @@ func TestFailedUserFFBranchDueToHooks(t *testing.T) {
 
 	for _, hookName := range gitlabPreHooks {
 		t.Run(hookName, func(t *testing.T) {
-			hookPath := path.Join(testRepoPath, "hooks", hookName)
-			ioutil.WriteFile(hookPath, hookContent, 0755)
-			defer os.Remove(hookPath)
+			remove, err := OverrideHooks(hookName, hookContent)
+			require.NoError(t, err)
+			defer remove()
 
 			ctx, cancel := testhelper.Context()
 			defer cancel()

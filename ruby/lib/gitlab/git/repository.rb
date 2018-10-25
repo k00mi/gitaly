@@ -64,7 +64,9 @@ module Gitlab
           repo = Rugged::Repository.init_at(repo_path, true)
           repo.close
 
-          symlink_hooks_to = Gitlab.config.gitlab_shell.hooks_path
+          # TODO: remove this when self healing hooks has been merged at least
+          # one release ago: https://gitlab.com/gitlab-org/gitaly/merge_requests/886
+          symlink_hooks_to = Gitlab::Git::Hook.directory
           create_hooks(repo_path, symlink_hooks_to) if symlink_hooks_to.present?
         end
 

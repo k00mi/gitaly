@@ -12,6 +12,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
+	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc"
@@ -44,7 +46,20 @@ func TestMain(m *testing.M) {
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
-	var err error
+	hookDir, err := ioutil.TempDir("", "gitaly-tmp-hooks")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer func(oldDir string) {
+		config.Config.GitlabShell.Dir = oldDir
+	}(config.Config.GitlabShell.Dir)
+	config.Config.GitlabShell.Dir = hookDir
+
+	if err := os.MkdirAll(hooks.Path(), 0755); err != nil {
+		log.Fatal(err)
+	}
+	defer os.RemoveAll(hookDir)
 
 	testhelper.ConfigureGitalySSH()
 
@@ -92,17 +107,25 @@ func newOperationClient(t *testing.T, serverSocketPath string) (gitalypb.Operati
 
 var NewOperationClient = newOperationClient
 
-func WriteEnvToHook(t *testing.T, repoPath, hookName string) (string, string) {
+// The callee is responsible for clean up of the specific hook, testMain removes
+// the hook dir
+func WriteEnvToHook(t *testing.T, repoPath, hookName string) string {
 	hookOutputTemp, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
 	require.NoError(t, hookOutputTemp.Close())
 
-	defer os.Remove(hookOutputTemp.Name())
-
 	hookContent := fmt.Sprintf("#!/bin/sh\n/usr/bin/env > %s\n", hookOutputTemp.Name())
 
-	hookPath := path.Join(repoPath, "hooks", hookName)
-	ioutil.WriteFile(hookPath, []byte(hookContent), 0755)
+	_, err = OverrideHooks(hookName, []byte(hookContent))
+	require.NoError(t, err)
 
-	return hookPath, hookOutputTemp.Name()
+	return hookOutputTemp.Name()
+}
+
+// When testing hooks, the content for one specific hook can be defined, to simulate
+// behaviours on different hook content
+func OverrideHooks(name string, content []byte) (func(), error) {
+	fullPath := path.Join(hooks.Path(), name)
+
+	return func() { os.Remove(fullPath) }, ioutil.WriteFile(fullPath, content, 0755)
 }

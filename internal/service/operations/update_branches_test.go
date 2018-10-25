@@ -1,9 +1,7 @@
 package operations
 
 import (
-	"io/ioutil"
 	"os"
-	"path"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -64,8 +62,7 @@ func TestSuccessfulGitHooksForUserUpdateBranchRequest(t *testing.T) {
 			testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 			defer cleanupFn()
 
-			hookPath, hookOutputTempPath := WriteEnvToHook(t, testRepoPath, hookName)
-			defer os.Remove(hookPath)
+			hookOutputTempPath := WriteEnvToHook(t, testRepoPath, hookName)
 			defer os.Remove(hookOutputTempPath)
 
 			ctx, cancel := testhelper.Context()
@@ -112,11 +109,11 @@ func TestFailedUserUpdateBranchDueToHooks(t *testing.T) {
 	hookContent := []byte("#!/bin/sh\nprintenv | paste -sd ' ' -\nexit 1")
 
 	for _, hookName := range gitlabPreHooks {
-		hookPath := path.Join(testRepoPath, "hooks", hookName)
-		ioutil.WriteFile(hookPath, hookContent, 0755)
-		defer os.Remove(hookPath)
+		remove, err := OverrideHooks(hookName, hookContent)
+		require.NoError(t, err)
+		defer remove()
 
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := testhelper.Context()
 		defer cancel()
 
 		response, err := client.UserUpdateBranch(ctx, request)
