@@ -30,6 +30,14 @@ module Gitlab
       def to_gitaly
         Gitaly::User.new(gl_username: username, gl_id: gl_id, name: name.b, email: email.b)
       end
+
+      def git_env
+        {
+          'GIT_COMMITTER_NAME' => name,
+          'GIT_COMMITTER_EMAIL' => email,
+          'GL_ID' => Gitlab::GlId.gl_id(self)
+        }
+      end
     end
   end
 end

@@ -1,3 +1,5 @@
+require 'securerandom'
+
 module Gitlab
   module Git
     # These are monkey patches on top of the vendored version of Repository.
@@ -15,28 +17,23 @@ module Gitlab
         GIT_OBJECT_DIRECTORY_RELATIVE
         GIT_ALTERNATE_OBJECT_DIRECTORIES_RELATIVE
       ].freeze
-      SEARCH_CONTEXT_LINES = 3
-      REV_LIST_COMMIT_LIMIT = 2_000
       # In https://gitlab.com/gitlab-org/gitaly/merge_requests/698
       # We copied these two prefixes into gitaly-go, so don't change these
       # or things will break! (REBASE_WORKTREE_PREFIX and SQUASH_WORKTREE_PREFIX)
       REBASE_WORKTREE_PREFIX = 'rebase'.freeze
       SQUASH_WORKTREE_PREFIX = 'squash'.freeze
+      AM_WORKTREE_PREFIX = 'am'.freeze
       GITALY_INTERNAL_URL = 'ssh://gitaly/internal.git'.freeze
       GITLAB_PROJECTS_TIMEOUT = Gitlab.config.gitlab_shell.git_timeout
-      EMPTY_REPOSITORY_CHECKSUM = '0000000000000000000000000000000000000000'.freeze
       AUTOCRLF_VALUES = { 'true' => true, 'false' => false, 'input' => :input }.freeze
       RUGGED_KEY = :rugged_list
 
       NoRepository = Class.new(StandardError)
-      InvalidRepository = Class.new(StandardError)
-      InvalidBlobName = Class.new(StandardError)
       InvalidRef = Class.new(StandardError)
       GitError = Class.new(StandardError)
       DeleteBranchError = Class.new(StandardError)
       CreateTreeError = Class.new(StandardError)
       TagExistsError = Class.new(StandardError)
-      ChecksumError = Class.new(StandardError)
 
       class << self
         def from_gitaly(gitaly_repository, call)
@@ -52,9 +49,11 @@ module Gitlab
         def from_gitaly_with_block(gitaly_repository, call)
           repository = from_gitaly(gitaly_repository, call)
 
-          yield repository
+          result = yield repository
 
           repository.cleanup
+
+          result
         end
 
         def create(repo_path)
@@ -154,13 +153,6 @@ module Gitlab
         end
       end
 
-      # TODO: Can be removed once https://gitlab.com/gitlab-org/gitaly/merge_requests/738
-      #       is well and truly out in the wild.
-      def fsck
-        msg, status = run_git(%W[--git-dir=#{path} fsck], nice: true)
-        raise GitError, "Could not fsck repository: #{msg}" unless status.zero?
-      end
-
       def exists?
         File.exist?(File.join(path, 'refs'))
       end
@@ -208,10 +200,6 @@ module Gitlab
             end
           end
         end
-      end
-
-      def tag_names
-        rugged.tags.map(&:name)
       end
 
       def tags
@@ -452,7 +440,7 @@ module Gitlab
 
       def rebase(user, rebase_id, branch:, branch_sha:, remote_repository:, remote_branch:)
         rebase_path = worktree_path(REBASE_WORKTREE_PREFIX, rebase_id)
-        env = git_env_for_user(user)
+        env = git_env.merge(user.git_env)
 
         if remote_repository.is_a?(RemoteRepository)
           env.merge!(remote_repository.fetch_env)
@@ -477,7 +465,7 @@ module Gitlab
 
       def squash(user, squash_id, branch:, start_sha:, end_sha:, author:, message:)
         squash_path = worktree_path(SQUASH_WORKTREE_PREFIX, squash_id)
-        env = git_env_for_user(user).merge(
+        env = git_env.merge(user.git_env).merge(
           'GIT_AUTHOR_NAME' => author.name,
           'GIT_AUTHOR_EMAIL' => author.email
         )
@@ -503,6 +491,23 @@ module Gitlab
           # another ref called HEAD.
           run_git!(
             %w[rev-parse --quiet --verify HEAD], chdir: squash_path, env: env
+          ).chomp
+        end
+      end
+
+      def commit_patches(start_point, patches, extra_env: {})
+        worktree_path = worktree_path(AM_WORKTREE_PREFIX, SecureRandom.hex)
+        env = git_env.merge(extra_env)
+
+        with_worktree(worktree_path, start_point, env: env) do
+          result, status = run_git(%w[am --quiet --3way], chdir: worktree_path) do |stdin|
+            loop { stdin.write(patches.next) }
+          end
+
+          raise Gitlab::Git::PatchError, result unless status == 0
+
+          run_git!(
+            %w[rev-parse --quiet --verify HEAD], chdir: worktree_path, env: env
           ).chomp
         end
       end
@@ -834,15 +839,8 @@ module Gitlab
         output
       end
 
-      def run_git_with_timeout(args, timeout, env: {})
-        popen_with_timeout([Gitlab.config.git.bin_path, *args], timeout, path, env)
-      end
-
-      def git_env_for_user(user)
+      def git_env
         {
-          'GIT_COMMITTER_NAME' => user.name,
-          'GIT_COMMITTER_EMAIL' => user.email,
-          'GL_ID' => Gitlab::GlId.gl_id(user),
           'GL_PROTOCOL' => Gitlab::Git::Hook::GL_PROTOCOL,
           'GL_REPOSITORY' => gl_repository
         }
