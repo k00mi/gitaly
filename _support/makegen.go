@@ -364,7 +364,7 @@ notice: {{ .GoVendor }} clean-ruby-vendor-go
 
 .PHONY: clean-ruby-vendor-go 
 clean-ruby-vendor-go:
-	cd {{ .SourceDir }} && find ruby/vendor -type f -name '*.go' -delete
+	cd {{ .SourceDir }} && mkdir -p ruby/vendor && find ruby/vendor -type f -name '*.go' -delete
 
 .PHONY: govendor-tagged
 govendor-tagged: {{ .GoVendor }}
