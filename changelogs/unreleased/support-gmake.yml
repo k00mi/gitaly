@@ -1,5 +1,0 @@
----
-title: Use $(MAKE) when re-invoking make
-merge_request: 933
-author:
-type: fixed

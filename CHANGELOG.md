@@ -1,5 +1,25 @@
 # Gitaly changelog
 
+## v0.127.0
+
+#### Added
+- Make git hooks self healing
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/886
+- Add an endpoint to apply patches to a branch
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/926
+
+#### Fixed
+- Use $(MAKE) when re-invoking make
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/933
+
+#### Other
+- Bump google-protobuf gem to 3.6.1
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/941
+- Bump Rouge gem to 3.3.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/943
+- Upgrade Ruby version to 2.4.5
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/944
+
 ## v0.126.0
 
 #### Added
