@@ -31,7 +31,7 @@ describe Gitlab::Git::Hook do
     end
 
     context 'when the hooks are successful' do
-      let(:script) { "#!/usr/bin/env true" }
+      let(:script) { "#!/bin/sh\nexit 0\n" }
 
       it 'returns true' do
         hook_names.each do |hook|
@@ -44,7 +44,7 @@ describe Gitlab::Git::Hook do
     end
 
     context 'when the hooks fail' do
-      let(:script) { "#!/usr/bin/env false" }
+      let(:script) { "#!/bin/sh\nexit 1\n" }
 
       it 'returns false' do
         hook_names.each do |hook|
