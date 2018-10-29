@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/service/operations"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
@@ -111,19 +112,29 @@ func TestSuccessfulUserApplyPatch(t *testing.T) {
 				testRepoPath,
 				"log",
 				testCase.branchName,
-				"--format=%s",
+				"--format=%H",
 				maxCount,
 				"--reverse",
 			}
 
 			output := testhelper.MustRunCommand(t, nil, "git", gitArgs...)
-			commitMessages := strings.Split(string(output), "\n")
+			shas := strings.Split(string(output), "\n")
 			// Throw away the last element, as that's going to be
 			// an empty string.
-			if len(commitMessages) > 0 {
-				commitMessages = commitMessages[:len(commitMessages)-1]
+			if len(shas) > 0 {
+				shas = shas[:len(shas)-1]
 			}
-			require.Equal(t, commitMessages, testCase.commitMessages)
+
+			for index, sha := range shas {
+				commit, err := log.GetCommit(ctx, testRepo, sha)
+				require.NoError(t, err)
+
+				require.NotNil(t, commit)
+				require.Equal(t, string(commit.Subject), testCase.commitMessages[index])
+				require.Equal(t, string(commit.Author.Email), "patchuser@gitlab.org")
+				require.Equal(t, string(commit.Committer.Email), string(user.Email))
+			}
+
 		})
 	}
 }
