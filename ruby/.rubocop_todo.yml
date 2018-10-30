@@ -44,7 +44,7 @@ Lint/HandleExceptions:
 # Offense count: 1
 Lint/NonLocalExitFromIterator:
   Exclude:
-    - 'spec/integration_helper.rb'
+    - 'spec/support/helpers/integration_helper.rb'
 
 # Offense count: 3
 Lint/ShadowingOuterLocalVariable:
@@ -244,7 +244,7 @@ Style/RescueStandardError:
     - 'lib/gitaly_server/sentry_interceptor.rb'
     - 'lib/gitlab/git/commit.rb'
     - 'lib/gitlab/git/gitlab_projects.rb'
-    - 'spec/integration_helper.rb'
+    - 'spec/support/helpers/integration_helper.rb'
     - 'spec/lib/gitaly_server/exception_sanitizer_interceptor_spec.rb'
     - 'spec/lib/gitaly_server/sentry/url_sanitizer_spec.rb'
     - 'spec/lib/gitaly_server/sentry_interceptor_spec.rb'
