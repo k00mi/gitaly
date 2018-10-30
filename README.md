@@ -91,6 +91,29 @@ High-level architecture overview:
 
 [Edit this diagram directly in Google Drawings](https://docs.google.com/drawings/d/14-5NHGvsOVaAJZl2w7pIli8iDUqed2eIbvXdff5jneo/edit)
 
+### Gitaly clients
+
+As of Q4 2018, the following GitLab components act as Gitaly clients:
+
+-   [gitlab-rails](https://gitlab.com/gitlab-org/gitlab-ce/blob/master/lib/gitlab/gitaly_client.rb):
+    the main GitLab Rails application.
+-   [gitlab-shell](https://gitlab.com/gitlab-org/gitlab-shell/tree/master):
+    For `git clone`, `git push` etc. via SSH.
+-   [gitlab-workhorse](https://gitlab.com/gitlab-org/gitlab-workhorse/blob/master/internal/gitaly/gitaly.go):
+    For `git clone` via HTTPS and for slow requests that serve raw Git
+    data
+    ([example](https://gitlab.com/gitlab-org/gitaly/raw/master/README.md))
+-   [gitaly-ssh](https://gitlab.com/gitlab-org/gitaly/tree/master/cmd/gitaly-ssh):
+    For internal Git data transfers between Gitaly servers.
+-   [gitaly-ruby](https://gitlab.com/gitlab-org/gitaly/blob/master/ruby/lib/gitlab/git/gitaly_remote_repository.rb):
+    For RPC's that interact with more than one repository, such as
+    merging a branch.
+
+The clients written in Go (gitlab-shell, gitlab-workhorse, gitaly-ssh)
+use library code from the
+[gitlab.com/gitlab-org/gitaly/client](https://gitlab.com/gitlab-org/gitaly/tree/master/client)
+package.
+
 ## Presentations
 
 - [Git Paris meetup, 2017-02-22](https://docs.google.com/presentation/d/19OZUalFMIDM8WujXrrIyCuVb_oVeaUzpb-UdGThOvAo/edit?usp=sharing) a high-level overview of what our plans are and where we are.
