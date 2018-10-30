@@ -39,7 +39,7 @@ func AddGitProtocolEnv(ctx context.Context, req RequestWithGitProtocol, env []st
 	service, method := methodFromContext(ctx)
 
 	if req.GetGitProtocol() == ProtocolV2 {
-		env = append(env, fmt.Sprintf("GIT_PROTOCOL=%s", req.GetGitProtocol()))
+		env = append(env, fmt.Sprintf("GIT_PROTOCOL=%s", ProtocolV2))
 
 		gitProtocolRequests.WithLabelValues(service, method, "v2").Inc()
 	} else {
