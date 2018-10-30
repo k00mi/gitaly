@@ -1,5 +1,0 @@
----
-title: Fix makefile 'find ruby/vendor' bug
-merge_request: 946
-author:
-type: fixed

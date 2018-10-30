@@ -1,5 +1,0 @@
----
-title: Fix incorrect committer when committing patches
-merge_request: 947
-author:
-type: fixed

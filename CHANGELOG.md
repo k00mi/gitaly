@@ -1,5 +1,13 @@
 # Gitaly changelog
 
+## v0.128.0
+
+#### Fixed
+- Fix incorrect committer when committing patches
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/947
+- Fix makefile 'find ruby/vendor' bug
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/946
+
 ## v0.127.0
 
 #### Added
