@@ -19,10 +19,12 @@
 			"versionExact": "master"
 		},
 		{
-			"checksumSHA1": "0hWqEc//bdHUtnxlAo/UPkHSIS0=",
+			"checksumSHA1": "j5lrUUvdX/IICLK/vg9TG9h6Zvs=",
 			"path": "github.com/certifi/gocertifi",
-			"revision": "a9c833d2837d3b16888d55d5aafa9ffe9afb22b0",
-			"revisionTime": "2017-04-17T19:39:30Z"
+			"revision": "deb3ae2ef2610fde3330947281941c562861188b",
+			"revisionTime": "2018-01-18T20:34:23Z",
+			"version": "2018.01.18",
+			"versionExact": "2018.01.18"
 		},
 		{
 			"checksumSHA1": "dvabztWVQX8f6oMLRyv4dLH+TGY=",
