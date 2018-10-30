@@ -500,7 +500,7 @@ module Gitlab
         env = git_env.merge(extra_env)
 
         with_worktree(worktree_path, start_point, env: env) do
-          result, status = run_git(%w[am --quiet --3way], chdir: worktree_path) do |stdin|
+          result, status = run_git(%w[am --quiet --3way], chdir: worktree_path, env: env) do |stdin|
             loop { stdin.write(patches.next) }
           end
 

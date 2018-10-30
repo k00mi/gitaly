@@ -1,5 +1,5 @@
 From 3fee0042e610fb3563e4379e316704cb1210f3de Mon Sep 17 00:00:00 2001
-From: Bob Van Landuyt <bob@vanlanduyt.co>
+From: Patch User <patchuser@gitlab.org>
 Date: Thu, 18 Oct 2018 13:40:35 +0200
 Subject: [PATCH] A commit from a patch
 
@@ -15,6 +15,5 @@ index 3742e48..e40a3b9 100644
  Sample repo for testing gitlab features
 +
 +This was applied in a patch!
--- 
+--
 2.19.1
-

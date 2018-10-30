@@ -1,5 +1,5 @@
 From 00c68c2b4f954370ce82a1162bc29c13f524897e Mon Sep 17 00:00:00 2001
-From: Bob Van Landuyt <bob@vanlanduyt.co>
+From: Patch User <patchuser@gitlab.org>
 Date: Mon, 22 Oct 2018 11:05:48 +0200
 Subject: [PATCH] This does not apply to the `feature` branch
 
@@ -19,6 +19,5 @@ index 0000000..fef26e4
 +    puts 'foo'
 +  end
 +end
--- 
+--
 2.19.1
-
