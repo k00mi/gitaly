@@ -281,16 +281,20 @@
 			"versionExact": "v1.1.1"
 		},
 		{
-			"checksumSHA1": "uyVU5fRfEK17QZuODRjeZX8zDqg=",
+			"checksumSHA1": "c6pbpF7eowwO59phRTpF8cQ80Z0=",
 			"path": "github.com/stretchr/testify/assert",
-			"revision": "87b1dfb5b2fa649f52695dd9eae19abe404a4308",
-			"revisionTime": "2017-12-31T12:27:32Z"
+			"revision": "f35b8ab0b5a2cef36673838d662e249dd9c94686",
+			"revisionTime": "2018-05-06T18:05:49Z",
+			"version": "v1",
+			"versionExact": "v1.2.2"
 		},
 		{
-			"checksumSHA1": "c4nlsCmnaKoKaV62lzYk6wt8QY0=",
+			"checksumSHA1": "wnEANt4k5X/KGwoFyfSSnpxULm4=",
 			"path": "github.com/stretchr/testify/require",
-			"revision": "87b1dfb5b2fa649f52695dd9eae19abe404a4308",
-			"revisionTime": "2017-12-31T12:27:32Z"
+			"revision": "f35b8ab0b5a2cef36673838d662e249dd9c94686",
+			"revisionTime": "2018-05-06T18:05:49Z",
+			"version": "v1",
+			"versionExact": "v1.2.2"
 		},
 		{
 			"checksumSHA1": "sgtWlz2r6XUcjr+eXvBrb9JqgVs=",
