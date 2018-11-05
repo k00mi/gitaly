@@ -24,7 +24,6 @@ module Gitlab
       SQUASH_WORKTREE_PREFIX = 'squash'.freeze
       AM_WORKTREE_PREFIX = 'am'.freeze
       GITALY_INTERNAL_URL = 'ssh://gitaly/internal.git'.freeze
-      GITLAB_PROJECTS_TIMEOUT = Gitlab.config.gitlab_shell.git_timeout
       AUTOCRLF_VALUES = { 'true' => true, 'false' => false, 'input' => :input }.freeze
       RUGGED_KEY = :rugged_list
 
@@ -535,18 +534,6 @@ module Gitlab
         create_commit(options).tap do |result|
           raise CommitError, 'Failed to create commit' unless result
         end
-      end
-
-      def push_remote_branches(remote_name, branch_names, forced: true)
-        success = @gitlab_projects.push_branches(remote_name, GITLAB_PROJECTS_TIMEOUT, forced, branch_names)
-
-        success || gitlab_projects_error
-      end
-
-      def delete_remote_branches(remote_name, branch_names)
-        success = @gitlab_projects.delete_remote_branches(remote_name, branch_names)
-
-        success || gitlab_projects_error
       end
 
       def multi_action(
