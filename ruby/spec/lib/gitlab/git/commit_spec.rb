@@ -1,6 +1,6 @@
 require "spec_helper"
 
-describe Gitlab::Git::Commit, :seed_helper do
+describe Gitlab::Git::Commit do
   include TestRepo
 
   let(:repository) { gitlab_git_from_gitaly(new_mutable_test_repo) }
