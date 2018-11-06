@@ -26,6 +26,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
+	gitalylog "gitlab.com/gitlab-org/gitaly/internal/log"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -45,6 +46,9 @@ func init() {
 	config.Config.Storages = []config.Storage{
 		{Name: "default", Path: GitlabTestStoragePath()},
 	}
+
+	gitalylog.GrpcGo.SetLevel(log.WarnLevel)
+	grpc_logrus.ReplaceGrpcLogger(log.NewEntry(gitalylog.GrpcGo))
 }
 
 // MustReadFile returns the content of a file or fails at once.
