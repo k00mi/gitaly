@@ -137,6 +137,8 @@ It has these top-level messages:
 	UserSquashResponse
 	UserApplyPatchRequest
 	UserApplyPatchResponse
+	UserUpdateSubmoduleRequest
+	UserUpdateSubmoduleResponse
 	ListNewBlobsRequest
 	ListNewBlobsResponse
 	FindDefaultBranchNameRequest

@@ -320,6 +320,30 @@ module GitalyServer
       end
     end
 
+    def user_update_submodule(request, call)
+      bridge_exceptions do
+        user = Gitlab::Git::User.from_gitaly(request.user)
+
+        begin
+          branch_update = Gitlab::Git::Repository.from_gitaly_with_block(request.repository, call) do |repo|
+            begin
+              Gitlab::Git::Submodule
+                .new(user, repo, request.submodule, request.branch)
+                .update(request.commit_sha, request.commit_message.dup)
+            rescue ArgumentError => e
+              raise GRPC::InvalidArgument.new(e.to_s)
+            end
+          end
+
+          Gitaly::UserUpdateSubmoduleResponse.new(branch_update: branch_update_result(branch_update))
+        rescue Gitlab::Git::CommitError => e
+          Gitaly::UserUpdateSubmoduleResponse.new(commit_error: set_utf8!(e.message))
+        rescue Gitlab::Git::PreReceiveError => e
+          Gitaly::UserUpdateSubmoduleResponse.new(pre_receive_error: set_utf8!(e.message))
+        end
+      end
+    end
+
     private
 
     def commit_files_opts(call, header, actions)
