@@ -1,5 +1,23 @@
 # Gitaly changelog
 
+## v0.129.0
+
+#### Added
+- Add submodule reference update operation in the repository
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/936
+
+#### Fixed
+- Improve wiki hook error message
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/963
+- Fix encoding bug in User{Create,Delete}Tag
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/952
+
+#### Other
+- Expand Gitlab::Git::Repository unit specs with examples from rails
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/945
+- Update vendoring
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/954
+
 ## v0.128.0
 
 #### Fixed
