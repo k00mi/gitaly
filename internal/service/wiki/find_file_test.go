@@ -40,7 +40,10 @@ func TestSuccessfulWikiFindFileRequest(t *testing.T) {
 	content, err := ioutil.ReadFile("testdata/clouds.png")
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(path.Join(sandboxWikiPath, "cloúds.png"), content, 0777)
+	err = ioutil.WriteFile(path.Join(sandboxWikiPath, "cloúds.png"), content, 0644)
+	require.NoError(t, err)
+
+	err = ioutil.WriteFile(path.Join(sandboxWikiPath, "no_content.png"), nil, 0644)
 	require.NoError(t, err)
 
 	// Sandbox wiki is empty, so we create a commit to be used later
@@ -65,9 +68,10 @@ func TestSuccessfulWikiFindFileRequest(t *testing.T) {
 	}
 
 	testCases := []struct {
-		desc     string
-		request  *gitalypb.WikiFindFileRequest
-		response *gitalypb.WikiFindFileResponse
+		desc            string
+		request         *gitalypb.WikiFindFileRequest
+		response        *gitalypb.WikiFindFileResponse
+		expectedContent []byte
 	}{
 		{
 			desc: "name only",
@@ -75,7 +79,8 @@ func TestSuccessfulWikiFindFileRequest(t *testing.T) {
 				Repository: sandboxWiki,
 				Name:       []byte("cloúds.png"),
 			},
-			response: response,
+			response:        response,
+			expectedContent: content,
 		},
 		{
 			desc: "name + revision that includes the file",
@@ -84,7 +89,8 @@ func TestSuccessfulWikiFindFileRequest(t *testing.T) {
 				Name:       []byte("cloúds.png"),
 				Revision:   newHeadID,
 			},
-			response: response,
+			response:        response,
+			expectedContent: content,
 		},
 		{
 			desc: "name + revision that does not include the file",
@@ -93,7 +99,8 @@ func TestSuccessfulWikiFindFileRequest(t *testing.T) {
 				Name:       []byte("cloúds.png"),
 				Revision:   oldHeadID,
 			},
-			response: &gitalypb.WikiFindFileResponse{},
+			response:        &gitalypb.WikiFindFileResponse{},
+			expectedContent: content,
 		},
 		{
 			desc: "non-existent name",
@@ -101,7 +108,21 @@ func TestSuccessfulWikiFindFileRequest(t *testing.T) {
 				Repository: sandboxWiki,
 				Name:       []byte("moar-clouds.png"),
 			},
-			response: &gitalypb.WikiFindFileResponse{},
+			response:        &gitalypb.WikiFindFileResponse{},
+			expectedContent: content,
+		},
+		{
+			desc: "file with no content",
+			request: &gitalypb.WikiFindFileRequest{
+				Repository: sandboxWiki,
+				Name:       []byte("no_content.png"),
+			},
+			response: &gitalypb.WikiFindFileResponse{
+				Name:     []byte("no_content.png"),
+				MimeType: "image/png",
+				Path:     []byte("no_content.png"),
+			},
+			expectedContent: nil,
 		},
 	}
 
@@ -125,7 +146,7 @@ func TestSuccessfulWikiFindFileRequest(t *testing.T) {
 
 			require.Equal(t, expectedResponse, receivedResponse, "mismatched response")
 			if len(expectedResponse.Name) > 0 {
-				require.Equal(t, content, receivedContent, "mismatched content")
+				require.Equal(t, testCase.expectedContent, receivedContent, "mismatched content")
 			}
 		})
 	}

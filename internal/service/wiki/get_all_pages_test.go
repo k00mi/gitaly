@@ -25,10 +25,12 @@ func TestSuccessfulWikiGetAllPagesRequest(t *testing.T) {
 
 	page1Name := "Page 1"
 	page2Name := "Page 2"
+	page3Name := "Page 3"
 	createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page1Name})
-	page2Commit := createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page2Name})
+	createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page2Name, forceContentEmpty: true})
+	page3Commit := createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page3Name})
 	expectedPage1 := &gitalypb.WikiPage{
-		Version:    &gitalypb.WikiPageVersion{Commit: page2Commit, Format: "markdown"},
+		Version:    &gitalypb.WikiPageVersion{Commit: page3Commit, Format: "markdown"},
 		Title:      []byte(page1Name),
 		Format:     "markdown",
 		UrlPath:    "Page-1",
@@ -38,12 +40,22 @@ func TestSuccessfulWikiGetAllPagesRequest(t *testing.T) {
 		Historical: false,
 	}
 	expectedPage2 := &gitalypb.WikiPage{
-		Version:    &gitalypb.WikiPageVersion{Commit: page2Commit, Format: "markdown"},
+		Version:    &gitalypb.WikiPageVersion{Commit: page3Commit, Format: "markdown"},
 		Title:      []byte(page2Name),
 		Format:     "markdown",
 		UrlPath:    "Page-2",
 		Path:       []byte("Page-2.md"),
 		Name:       []byte(page2Name),
+		RawData:    nil,
+		Historical: false,
+	}
+	expectedPage3 := &gitalypb.WikiPage{
+		Version:    &gitalypb.WikiPageVersion{Commit: page3Commit, Format: "markdown"},
+		Title:      []byte(page3Name),
+		Format:     "markdown",
+		UrlPath:    "Page-3",
+		Path:       []byte("Page-3.md"),
+		Name:       []byte(page3Name),
 		RawData:    mockPageContent,
 		Historical: false,
 	}
@@ -56,7 +68,7 @@ func TestSuccessfulWikiGetAllPagesRequest(t *testing.T) {
 		{
 			desc:          "No limit",
 			limit:         0,
-			expectedCount: 2,
+			expectedCount: 3,
 		},
 		{
 			desc:          "Limit of 1",
@@ -64,13 +76,13 @@ func TestSuccessfulWikiGetAllPagesRequest(t *testing.T) {
 			expectedCount: 1,
 		},
 		{
-			desc:          "Limit of 2",
-			limit:         1,
-			expectedCount: 1,
+			desc:          "Limit of 3",
+			limit:         3,
+			expectedCount: 3,
 		},
 	}
 
-	expectedPages := []*gitalypb.WikiPage{expectedPage1, expectedPage2}
+	expectedPages := []*gitalypb.WikiPage{expectedPage1, expectedPage2, expectedPage3}
 
 	for _, tc := range testcases {
 		t.Run(tc.desc, func(t *testing.T) {

@@ -24,11 +24,13 @@ func TestSuccessfulWikiFindPageRequest(t *testing.T) {
 	page2Name := "Instálling/Step 133-b"
 	page3Name := "Installing/Step 133-c"
 	page4Name := "Encoding is fun"
+	page5Name := "Empty file"
 	page1Commit := createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page1Name})
 	createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page2Name})
 	createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page3Name})
-	page4Commit := createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page4Name, content: []byte("f\xFCr")})
-	latestCommit := page4Commit
+	createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page4Name, content: []byte("f\xFCr")})
+	page5Commit := createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page5Name, forceContentEmpty: true})
+	latestCommit := page5Commit
 
 	testCases := []struct {
 		desc            string
@@ -135,6 +137,26 @@ func TestSuccessfulWikiFindPageRequest(t *testing.T) {
 				Historical: false,
 			},
 			expectedContent: []byte("fr"),
+		},
+		{
+			desc: "title for file with empty content",
+			request: &gitalypb.WikiFindPageRequest{
+				Repository: wikiRepo,
+				Title:      []byte("Empty file"),
+			},
+			expectedPage: &gitalypb.WikiPage{
+				Version: &gitalypb.WikiPageVersion{
+					Commit: latestCommit,
+					Format: "markdown",
+				},
+				Title:      []byte(page5Name),
+				Format:     "markdown",
+				UrlPath:    "Empty-file",
+				Path:       []byte("Empty-file.md"),
+				Name:       []byte(page5Name),
+				Historical: false,
+			},
+			expectedContent: nil,
 		},
 	}
 
