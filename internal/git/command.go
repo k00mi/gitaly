@@ -5,15 +5,14 @@ import (
 	"io"
 	"os/exec"
 
-	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git/alternates"
+	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
 )
 
 // Command creates a git.Command with the given args and Repository
-func Command(ctx context.Context, repo *gitalypb.Repository, args ...string) (*command.Command, error) {
+func Command(ctx context.Context, repo repository.GitRepo, args ...string) (*command.Command, error) {
 	repoPath, env, err := alternates.PathAndEnv(repo)
-
 	if err != nil {
 		return nil, err
 	}
