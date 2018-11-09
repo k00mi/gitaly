@@ -1,5 +1,11 @@
 # Gitaly changelog
 
+## v0.130.0
+
+#### Added
+- Support SSH credentials for push mirroring
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/959
+
 ## v0.129.0
 
 #### Added
