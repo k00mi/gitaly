@@ -1,5 +1,11 @@
 # Gitaly changelog
 
+## v0.131.0
+
+#### Fixed
+- Fixed bug with wiki operations enumerator when content nil
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/962
+
 ## v0.130.0
 
 #### Added
