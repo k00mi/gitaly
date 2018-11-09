@@ -26,8 +26,20 @@ describe Gitlab::Git::GitlabProjects do
 
   def stub_spawn(*args, success: true)
     exitstatus = success ? 0 : nil
-    expect(gl_projects).to receive(:popen_with_timeout).with(*args)
-                                                       .and_return(["output", exitstatus])
+
+    expect(gl_projects)
+      .to receive(:popen_with_timeout)
+      .with(*args)
+      .and_return(["output", exitstatus])
+  end
+
+  def stub_unlimited_spawn(*args, success: true)
+    exitstatus = success ? 0 : nil
+
+    expect(gl_projects)
+      .to receive(:popen)
+      .with(*args)
+      .and_return(["output", exitstatus])
   end
 
   def stub_spawn_timeout(*args)
@@ -45,19 +57,20 @@ describe Gitlab::Git::GitlabProjects do
   describe '#push_branches' do
     let(:remote_name) { 'remote-name' }
     let(:branch_name) { 'master' }
+    let(:env) { { 'GIT_SSH_COMMAND' => 'foo-command bar' } }
     let(:cmd) { %W(#{Gitlab.config.git.bin_path} push -- #{remote_name} #{branch_name}) }
     let(:force) { false }
 
-    subject { gl_projects.push_branches(remote_name, 600, force, [branch_name]) }
+    subject { gl_projects.push_branches(remote_name, 600, force, [branch_name], env: env) }
 
     it 'executes the command' do
-      stub_spawn(cmd, 600, tmp_repo_path, success: true)
+      stub_spawn(cmd, 600, tmp_repo_path, env, success: true)
 
       is_expected.to be_truthy
     end
 
     it 'fails' do
-      stub_spawn(cmd, 600, tmp_repo_path, success: false)
+      stub_spawn(cmd, 600, tmp_repo_path, env, success: false)
 
       is_expected.to be_falsy
     end
@@ -67,7 +80,7 @@ describe Gitlab::Git::GitlabProjects do
       let(:force) { true }
 
       it 'executes the command' do
-        stub_spawn(cmd, 600, tmp_repo_path, success: true)
+        stub_spawn(cmd, 600, tmp_repo_path, env, success: true)
 
         is_expected.to be_truthy
       end
@@ -78,36 +91,23 @@ describe Gitlab::Git::GitlabProjects do
     let(:remote_name) { 'remote-name' }
     let(:branch_name) { 'master' }
     let(:force) { false }
-    let(:prune) { true }
     let(:tags) { true }
-    let(:args) { { force: force, tags: tags, prune: prune }.merge(extra_args) }
-    let(:extra_args) { {} }
+    let(:env) { { 'GIT_SSH_COMMAND' => 'foo-command bar' } }
+    let(:prune) { true }
+    let(:args) { { force: force, tags: tags, env: env, prune: prune } }
     let(:cmd) { %W(#{Gitlab.config.git.bin_path} fetch #{remote_name} --quiet --prune --tags) }
 
     subject { gl_projects.fetch_remote(remote_name, 600, args) }
 
-    def stub_tempfile(name, filename, opts = {})
-      chmod = opts.delete(:chmod)
-      file = StringIO.new
-
-      allow(file).to receive(:close!)
-      allow(file).to receive(:path).and_return(name)
-
-      expect(Tempfile).to receive(:new).with(filename).and_return(file)
-      expect(file).to receive(:chmod).with(chmod) if chmod
-
-      file
-    end
-
     context 'with default args' do
       it 'executes the command' do
-        stub_spawn(cmd, 600, tmp_repo_path, {}, success: true)
+        stub_spawn(cmd, 600, tmp_repo_path, env, success: true)
 
         is_expected.to be_truthy
       end
 
       it 'returns false if the command fails' do
-        stub_spawn(cmd, 600, tmp_repo_path, {}, success: false)
+        stub_spawn(cmd, 600, tmp_repo_path, env, success: false)
 
         is_expected.to be_falsy
       end
@@ -118,7 +118,7 @@ describe Gitlab::Git::GitlabProjects do
       let(:cmd) { %W(#{Gitlab.config.git.bin_path} fetch #{remote_name} --quiet --prune --force --tags) }
 
       it 'executes the command with forced option' do
-        stub_spawn(cmd, 600, tmp_repo_path, {}, success: true)
+        stub_spawn(cmd, 600, tmp_repo_path, env, success: true)
 
         is_expected.to be_truthy
       end
@@ -129,7 +129,7 @@ describe Gitlab::Git::GitlabProjects do
       let(:cmd) { %W(#{Gitlab.config.git.bin_path} fetch #{remote_name} --quiet --prune --no-tags) }
 
       it 'executes the command' do
-        stub_spawn(cmd, 600, tmp_repo_path, {}, success: true)
+        stub_spawn(cmd, 600, tmp_repo_path, env, success: true)
 
         is_expected.to be_truthy
       end
@@ -140,42 +140,31 @@ describe Gitlab::Git::GitlabProjects do
       let(:cmd) { %W(#{Gitlab.config.git.bin_path} fetch #{remote_name} --quiet --tags) }
 
       it 'executes the command' do
-        stub_spawn(cmd, 600, tmp_repo_path, {}, success: true)
+        stub_spawn(cmd, 600, tmp_repo_path, env, success: true)
 
         is_expected.to be_truthy
       end
     end
+  end
 
-    describe 'with an SSH key' do
-      let(:extra_args) { { ssh_key: 'SSH KEY' } }
+  describe '#delete_remote_branches' do
+    let(:remote_name) { 'remote-name' }
+    let(:branch_name) { 'master' }
+    let(:env) { { 'GIT_SSH_COMMAND' => 'foo-command bar' } }
+    let(:cmd) { %W(#{Gitlab.config.git.bin_path} push -- #{remote_name} :#{branch_name}) }
 
-      it 'sets GIT_SSH to a custom script' do
-        script = stub_tempfile('scriptFile', 'gitlab-shell-ssh-wrapper', chmod: 0o755)
-        key = stub_tempfile('/tmp files/keyFile', 'gitlab-shell-key-file', chmod: 0o400)
+    subject { gl_projects.delete_remote_branches(remote_name, [branch_name], env: env) }
 
-        stub_spawn(cmd, 600, tmp_repo_path, { 'GIT_SSH' => 'scriptFile' }, success: true)
+    it 'executes the command' do
+      stub_unlimited_spawn(cmd, tmp_repo_path, env, success: true)
 
-        is_expected.to be_truthy
-
-        expect(script.string).to eq("#!/bin/sh\nexec ssh '-oIdentityFile=\"/tmp files/keyFile\"' '-oIdentitiesOnly=\"yes\"' \"$@\"")
-        expect(key.string).to eq('SSH KEY')
-      end
+      is_expected.to be_truthy
     end
 
-    describe 'with known_hosts data' do
-      let(:extra_args) { { known_hosts: 'KNOWN HOSTS' } }
+    it 'fails' do
+      stub_unlimited_spawn(cmd, tmp_repo_path, env, success: false)
 
-      it 'sets GIT_SSH to a custom script' do
-        script = stub_tempfile('scriptFile', 'gitlab-shell-ssh-wrapper', chmod: 0o755)
-        key = stub_tempfile('/tmp files/knownHosts', 'gitlab-shell-known-hosts', chmod: 0o400)
-
-        stub_spawn(cmd, 600, tmp_repo_path, { 'GIT_SSH' => 'scriptFile' }, success: true)
-
-        is_expected.to be_truthy
-
-        expect(script.string).to eq("#!/bin/sh\nexec ssh '-oStrictHostKeyChecking=\"yes\"' '-oUserKnownHostsFile=\"/tmp files/knownHosts\"' \"$@\"")
-        expect(key.string).to eq('KNOWN HOSTS')
-      end
+      is_expected.to be_falsy
     end
   end
 end

@@ -28,11 +28,15 @@ module GitalyServer
       bridge_exceptions do
         gitlab_projects = Gitlab::Git::GitlabProjects.from_gitaly(request.repository, call)
 
-        success = gitlab_projects.fetch_remote(request.remote, request.timeout,
-                                               force: request.force,
-                                               tags: !request.no_tags,
-                                               ssh_key: request.ssh_key.presence,
-                                               known_hosts: request.known_hosts.presence)
+        success = Gitlab::Git::SshAuth.from_gitaly(request).setup do |env|
+          gitlab_projects.fetch_remote(
+            request.remote,
+            request.timeout,
+            force: request.force,
+            tags: !request.no_tags,
+            env: env
+          )
+        end
 
         raise GRPC::Unknown.new("Fetching remote #{request.remote} failed: #{gitlab_projects.output}") unless success
 

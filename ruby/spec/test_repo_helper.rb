@@ -74,14 +74,25 @@ module TestRepo
     File.join(DEFAULT_STORAGE_DIR, gitaly_repo.relative_path)
   end
 
-  def gitlab_git_from_gitaly(gitaly_repo)
+  def gitlab_git_from_gitaly(gitaly_repo, gitlab_projects: nil)
     Gitlab::Git::Repository.new(
       gitaly_repo,
       repo_path_from_gitaly(gitaly_repo),
       '',
-      nil,
+      gitlab_projects,
       ''
     )
+  end
+
+  def gitlab_git_from_gitaly_with_gitlab_projects(gitaly_repo)
+    gitlab_projects = Gitlab::Git::GitlabProjects.new(
+      DEFAULT_STORAGE_DIR,
+      gitaly_repo.relative_path,
+      global_hooks_path: '',
+      logger: Rails.logger
+    )
+
+    gitlab_git_from_gitaly(gitaly_repo, gitlab_projects: gitlab_projects)
   end
 
   def repository_from_relative_path(relative_path)

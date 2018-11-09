@@ -61,37 +61,35 @@ module Gitlab
         end
       end
 
-      def fetch_remote(name, timeout, force:, tags:, ssh_key: nil, known_hosts: nil, prune: true)
+      def fetch_remote(name, timeout, force:, tags:, env: {}, prune: true)
         logger.info "Fetching remote #{name} for repository #{repository_absolute_path}."
         cmd = fetch_remote_command(name, tags, prune, force)
 
-        setup_ssh_auth(ssh_key, known_hosts) do |env|
-          run_with_timeout(cmd, timeout, repository_absolute_path, env).tap do |success|
-            logger.error "Fetching remote #{name} for repository #{repository_absolute_path} failed." unless success
-          end
+        run_with_timeout(cmd, timeout, repository_absolute_path, env).tap do |success|
+          logger.error "Fetching remote #{name} for repository #{repository_absolute_path} failed." unless success
         end
       end
 
-      def push_branches(remote_name, timeout, force, branch_names)
+      def push_branches(remote_name, timeout, force, branch_names, env: {})
         logger.info "Pushing branches from #{repository_absolute_path} to remote #{remote_name}: #{branch_names}"
         cmd = %W(#{Gitlab.config.git.bin_path} push)
         cmd << '--force' if force
         cmd += %W(-- #{remote_name}).concat(branch_names)
 
-        success = run_with_timeout(cmd, timeout, repository_absolute_path)
+        success = run_with_timeout(cmd, timeout, repository_absolute_path, env)
 
         logger.error("Pushing branches to remote #{remote_name} failed.") unless success
 
         success
       end
 
-      def delete_remote_branches(remote_name, branch_names)
+      def delete_remote_branches(remote_name, branch_names, env: {})
         branches = branch_names.map { |branch_name| ":#{branch_name}" }
 
         logger.info "Pushing deleted branches from #{repository_absolute_path} to remote #{remote_name}: #{branch_names}"
         cmd = %W(#{Gitlab.config.git.bin_path} push -- #{remote_name}).concat(branches)
 
-        success = run(cmd, repository_absolute_path)
+        success = run(cmd, repository_absolute_path, env)
 
         logger.error("Pushing deleted branches to remote #{remote_name} failed.") unless success
 
@@ -130,62 +128,6 @@ module Gitlab
       def remove_origin_in_repo
         cmd = %W(#{Gitlab.config.git.bin_path} remote rm origin)
         run(cmd, repository_absolute_path)
-      end
-
-      # Builds a small shell script that can be used to execute SSH with a set of
-      # custom options.
-      #
-      # Options are expanded as `'-oKey="Value"'`, so SSH will correctly interpret
-      # paths with spaces in them. We trust the user not to embed single or double
-      # quotes in the key or value.
-      def custom_ssh_script(options = {})
-        args = options.map { |k, v| %{'-o#{k}="#{v}"'} }.join(' ')
-
-        [
-          "#!/bin/sh",
-          "exec ssh #{args} \"$@\""
-        ].join("\n")
-      end
-
-      # Known hosts data and private keys can be passed to gitlab-shell in the
-      # environment. If present, this method puts them into temporary files, writes
-      # a script that can substitute as `ssh`, setting the options to respect those
-      # files, and yields: { "GIT_SSH" => "/tmp/myScript" }
-      def setup_ssh_auth(key, known_hosts)
-        options = {}
-
-        if key
-          key_file = Tempfile.new('gitlab-shell-key-file')
-          key_file.chmod(0o400)
-          key_file.write(key)
-          key_file.close
-
-          options['IdentityFile'] = key_file.path
-          options['IdentitiesOnly'] = 'yes'
-        end
-
-        if known_hosts
-          known_hosts_file = Tempfile.new('gitlab-shell-known-hosts')
-          known_hosts_file.chmod(0o400)
-          known_hosts_file.write(known_hosts)
-          known_hosts_file.close
-
-          options['StrictHostKeyChecking'] = 'yes'
-          options['UserKnownHostsFile'] = known_hosts_file.path
-        end
-
-        return yield({}) if options.empty?
-
-        script = Tempfile.new('gitlab-shell-ssh-wrapper')
-        script.chmod(0o755)
-        script.write(custom_ssh_script(options))
-        script.close
-
-        yield('GIT_SSH' => script.path)
-      ensure
-        key_file&.close!
-        known_hosts_file&.close!
-        script&.close!
       end
 
       private

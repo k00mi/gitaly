@@ -44,8 +44,14 @@ module GitalyServer
 
         only_branches_matching += request_enum.flat_map(&:only_branches_matching)
 
-        remote_mirror = Gitlab::Git::RemoteMirror.new(repo, first_request.ref_name)
-        remote_mirror.update(only_branches_matching: only_branches_matching)
+        remote_mirror = Gitlab::Git::RemoteMirror.new(
+          repo,
+          first_request.ref_name,
+          only_branches_matching: only_branches_matching,
+          ssh_auth: Gitlab::Git::SshAuth.from_gitaly(first_request)
+        )
+
+        remote_mirror.update
 
         Gitaly::UpdateRemoteMirrorResponse.new
       end

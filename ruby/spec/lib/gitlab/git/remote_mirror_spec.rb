@@ -1,0 +1,67 @@
+require 'spec_helper'
+
+describe Gitlab::Git::RemoteMirror do
+  include TestRepo
+
+  let(:repository) { gitlab_git_from_gitaly_with_gitlab_projects(new_mutable_test_repo) }
+  let(:gitlab_projects) { repository.gitlab_projects }
+  let(:ref_name) { 'remote' }
+  let(:ssh_key) { 'SSH KEY' }
+  let(:known_hosts) { 'KNOWN HOSTS' }
+  let(:ssh_auth) { Gitlab::Git::SshAuth.new(ssh_key, known_hosts) }
+  let(:gl_projects_timeout) { Gitlab::Git::RepositoryMirroring::GITLAB_PROJECTS_TIMEOUT }
+  let(:gl_projects_force) { true }
+  let(:env) { { 'GIT_SSH_COMMAND' => /ssh/ } }
+
+  subject(:remote_mirror) do
+    described_class.new(
+      repository,
+      ref_name,
+      ssh_auth: ssh_auth,
+      only_branches_matching: []
+    )
+  end
+
+  def ref(name)
+    double("ref-#{name}", name: name, dereferenced_target: double(id: name))
+  end
+
+  describe '#update' do
+    it 'updates the remote repository' do
+      # Stub this check so we try to delete the obsolete refs
+      allow(repository).to receive(:ancestor?).and_return(true)
+
+      expect(repository).to receive(:local_branches).and_return([ref('master'), ref('new-branch')])
+      expect(repository).to receive(:remote_branches)
+        .with(ref_name)
+        .and_return([ref('master'), ref('obsolete-branch')])
+
+      expect(repository).to receive(:tags).and_return([ref('v1.0.0'), ref('new-tag')])
+      expect(repository).to receive(:remote_tags)
+        .with(ref_name, env: env)
+        .and_return([ref('v1.0.0'), ref('obsolete-tag')])
+
+      expect(gitlab_projects)
+        .to receive(:push_branches)
+        .with(ref_name, gl_projects_timeout, gl_projects_force, ['master', 'new-branch'], env: env)
+        .and_return(true)
+
+      expect(gitlab_projects)
+        .to receive(:push_branches)
+        .with(ref_name, gl_projects_timeout, gl_projects_force, ['v1.0.0', 'new-tag'], env: env)
+        .and_return(true)
+
+      expect(gitlab_projects)
+        .to receive(:delete_remote_branches)
+        .with(ref_name, ['obsolete-branch'], env: env)
+        .and_return(true)
+
+      expect(gitlab_projects)
+        .to receive(:delete_remote_branches)
+        .with(ref_name, ['obsolete-tag'], env: env)
+        .and_return(true)
+
+      remote_mirror.update
+    end
+  end
+end
