@@ -375,6 +375,7 @@ module GitalyServer
         previous_path: set_utf8!(header.previous_path),
         encoding: header.base64_content ? 'base64' : '',
         content: '',
+        infer_content: header.infer_content,
         execute_filemode: header.execute_filemode
       }
     end
