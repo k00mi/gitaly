@@ -382,6 +382,8 @@ describe Gitlab::Git::Repository do # rubocop:disable Metrics/BlockLength
   end
 
   describe '#write_ref' do
+    let(:repository) { mutable_repository }
+
     context 'validations' do
       using RSpec::Parameterized::TableSyntax
 
@@ -395,6 +397,19 @@ describe Gitlab::Git::Repository do # rubocop:disable Metrics/BlockLength
           expect { repository.write_ref(ref_path, ref) }.to raise_error(ArgumentError)
         end
       end
+    end
+
+    it 'writes the HEAD' do
+      repository.write_ref('HEAD', 'refs/heads/feature')
+
+      expect(repository.commit('HEAD')).to eq(repository.commit('feature'))
+      expect(repository.root_ref).to eq('feature')
+    end
+
+    it 'writes other refs' do
+      repository.write_ref('refs/heads/feature', SeedRepo::Commit::ID)
+
+      expect(repository.commit('feature').sha).to eq(SeedRepo::Commit::ID)
     end
   end
 

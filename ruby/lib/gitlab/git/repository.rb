@@ -697,11 +697,16 @@ module Gitlab
         Gitlab::Git.committer_hash(email: user.email, name: user.name)
       end
 
-      def write_ref(ref_path, ref, old_ref: nil, shell: true)
-        if shell
-          shell_write_ref(ref_path, ref, old_ref)
+      def write_ref(ref_path, ref, old_ref: nil)
+        raise ArgumentError, "invalid ref_path #{ref_path.inspect}" if ref_path.include?(' ')
+        raise ArgumentError, "invalid ref #{ref.inspect}" if ref.include?("\x00")
+        raise ArgumentError, "invalid old_ref #{old_ref.inspect}" if !old_ref.nil? && old_ref.include?("\x00")
+
+        if ref_path == 'HEAD'
+          run_git!(%W[symbolic-ref #{ref_path} #{ref}])
         else
-          rugged_write_ref(ref_path, ref)
+          input = "update #{ref_path}\x00#{ref}\x00#{old_ref}\x00"
+          run_git!(%w[update-ref --stdin -z]) { |stdin| stdin.write(input) }
         end
       end
 
@@ -1001,25 +1006,6 @@ module Gitlab
         params[:message].delete!("\r")
 
         Rugged::Commit.create(rugged, params)
-      end
-
-      def shell_write_ref(ref_path, ref, old_ref)
-        raise ArgumentError, "invalid ref_path #{ref_path.inspect}" if ref_path.include?(' ')
-        raise ArgumentError, "invalid ref #{ref.inspect}" if ref.include?("\x00")
-        raise ArgumentError, "invalid old_ref #{old_ref.inspect}" if !old_ref.nil? && old_ref.include?("\x00")
-
-        input = "update #{ref_path}\x00#{ref}\x00#{old_ref}\x00"
-        run_git!(%w[update-ref --stdin -z]) { |stdin| stdin.write(input) }
-      end
-
-      def rugged_write_ref(ref_path, ref)
-        rugged.references.create(ref_path, ref, force: true)
-      rescue Rugged::ReferenceError => ex
-        Rails.logger.error "Unable to create #{ref_path} reference for repository #{path}: #{ex}"
-      rescue Rugged::OSError => ex
-        raise unless ex.message =~ /Failed to create locked file/ && ex.message =~ /File exists/
-
-        Rails.logger.error "Unable to create #{ref_path} reference for repository #{path}: #{ex}"
       end
 
       def rugged_head

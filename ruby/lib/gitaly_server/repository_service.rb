@@ -66,17 +66,10 @@ module GitalyServer
 
     def write_ref(request, call)
       bridge_exceptions do
-        repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
+        Gitlab::Git::Repository.from_gitaly(request.repository, call)
+                               .write_ref(request.ref, request.revision, old_ref: request.old_revision)
 
-        # We ignore the output since the shell-version returns the output
-        #  while the rugged-version returns true. But both throws expections on errors
-        begin
-          repo.write_ref(request.ref, request.revision, old_ref: request.old_revision, shell: request.shell)
-
-          Gitaly::WriteRefResponse.new
-        rescue Rugged::OSError => ex
-          Gitaly::WriteRefResponse.new(error: ex.message.b)
-        end
+        Gitaly::WriteRefResponse.new
       end
     end
 
