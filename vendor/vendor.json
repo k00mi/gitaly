@@ -323,6 +323,22 @@
 			"versionExact": "v0.123.0"
 		},
 		{
+			"checksumSHA1": "S9x46Eq79I1EkoXI8woeIU6w/wY=",
+			"path": "gitlab.com/gitlab-org/labkit/correlation",
+			"revision": "fb2eeb11fc358f8f538692d1c0f6e57d7f268691",
+			"revisionTime": "2018-11-21T15:01:09Z",
+			"version": "master",
+			"versionExact": "master"
+		},
+		{
+			"checksumSHA1": "UFBFulprWZHuL9GHhjCKoHXm+Ww=",
+			"path": "gitlab.com/gitlab-org/labkit/correlation/grpc",
+			"revision": "fb2eeb11fc358f8f538692d1c0f6e57d7f268691",
+			"revisionTime": "2018-11-21T15:01:09Z",
+			"version": "master",
+			"versionExact": "master"
+		},
+		{
 			"checksumSHA1": "BGm8lKZmvJbf/YOJLeL1rw2WVjA=",
 			"path": "golang.org/x/crypto/ssh/terminal",
 			"revision": "4d3f4d9ffa16a13f451c3b2999e9c49e9750bf06",
