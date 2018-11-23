@@ -26,30 +26,11 @@ func TestWriteRefSuccessful(t *testing.T) {
 		req  *gitalypb.WriteRefRequest
 	}{
 		{
-			desc: "rugged update refs/heads/master",
-			req: &gitalypb.WriteRefRequest{
-				Repository: testRepo,
-				Ref:        []byte("refs/heads/master"),
-				Revision:   []byte("4a24d82dbca5c11c61556f3b35ca472b7463187e"),
-				Shell:      false,
-			},
-		},
-		{
-			desc: "rugged update refs/keep-around/4a24d82dbca5c11c61556f3b35ca472b7463187e",
-			req: &gitalypb.WriteRefRequest{
-				Repository: testRepo,
-				Ref:        []byte("refs/keep-around/4a24d82dbca5c11c61556f3b35ca472b7463187e"),
-				Revision:   []byte("4a24d82dbca5c11c61556f3b35ca472b7463187e"),
-				Shell:      false,
-			},
-		},
-		{
-			desc: "rugged update HEAD to refs/heads/master",
+			desc: "shell update HEAD to refs/heads/master",
 			req: &gitalypb.WriteRefRequest{
 				Repository: testRepo,
 				Ref:        []byte("HEAD"),
 				Revision:   []byte("refs/heads/master"),
-				Shell:      false,
 			},
 		},
 		{
@@ -58,7 +39,6 @@ func TestWriteRefSuccessful(t *testing.T) {
 				Repository: testRepo,
 				Ref:        []byte("refs/heads/master"),
 				Revision:   []byte("b83d6e391c22777fca1ed3012fce84f633d7fed0"),
-				Shell:      true,
 			},
 		},
 		{
@@ -68,7 +48,6 @@ func TestWriteRefSuccessful(t *testing.T) {
 				Ref:         []byte("refs/heads/master"),
 				Revision:    []byte("498214de67004b1da3d820901307bed2a68a8ef6"),
 				OldRevision: []byte("b83d6e391c22777fca1ed3012fce84f633d7fed0"),
-				Shell:       true,
 			},
 		},
 	}
