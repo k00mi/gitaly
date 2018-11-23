@@ -1,5 +1,31 @@
 # Gitaly changelog
 
+## v1.0.0
+
+#### Added
+- Add gitaly-debug production debugging tool
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/967
+
+#### Fixed
+- Bump gitlab-markup to 1.6.5
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/975
+- Fix to reallow tcp URLs
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/974
+
+#### Other
+- Upgrade minimum required Git version to 2.18.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/958
+- Bump tzinfo to 1.2.5
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/977
+- Bump activesupport gem to 5.0.7
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/978
+- Propagate correlation-ids in from upstream services and out to Gitaly-Ruby
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/970
+
+#### Security
+- Bump nokogiri to 1.8.5
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/979
+
 ## v0.133.0
 
 #### Other
