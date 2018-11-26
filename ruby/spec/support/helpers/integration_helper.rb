@@ -5,14 +5,48 @@ require 'spec_helper'
 
 SOCKET_PATH = 'gitaly.socket'.freeze
 
+module GitalyConfig
+  def self.dynamic_port
+    @dynamic_port ||= begin
+       sock = Socket.new(:INET, :STREAM)
+       sock.bind(Addrinfo.tcp('127.0.0.1', 0))
+       sock.local_address.ip_port
+     ensure
+       sock.close
+     end
+  end
+end
+
 module IntegrationClient
-  def gitaly_stub(service)
+  def gitaly_stub(service, type = 'unix')
     klass = Gitaly.const_get(service).const_get(:Stub)
-    klass.new("unix:#{File.join(TMP_DIR_NAME, SOCKET_PATH)}", :this_channel_is_insecure)
+    addr = case type
+           when 'unix'
+             "unix:#{File.join(TMP_DIR_NAME, SOCKET_PATH)}"
+           when 'tcp'
+             "tcp://localhost:#{GitalyConfig.dynamic_port}"
+           end
+    klass.new(addr, creds)
+  end
+
+  def creds
+    :this_channel_is_insecure
   end
 
   def gitaly_repo(storage, relative_path)
     Gitaly::Repository.new(storage_name: storage, relative_path: relative_path)
+  end
+
+  def get_client(addr)
+    servers = Base64.strict_encode64({
+      default: {
+        address: addr,
+        token: 'the-secret-token'
+      }
+    }.to_json)
+
+    call = double(metadata: { 'gitaly-servers' => servers })
+    Gitlab::Git::GitalyRemoteRepository.new(repository.gitaly_repository, call)
   end
 end
 
@@ -22,6 +56,7 @@ def start_gitaly
 
   config_toml = <<~CONFIG
     socket_path = "#{SOCKET_PATH}"
+    listen_addr = "localhost:#{GitalyConfig.dynamic_port}"
     bin_dir = "#{build_dir}/bin"
 
     [gitlab-shell]
