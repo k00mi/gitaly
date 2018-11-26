@@ -111,7 +111,6 @@ func TestWriteRefValidationError(t *testing.T) {
 				Repository: testRepo,
 				Ref:        []byte("master"),
 				Revision:   []byte("498214de67004b1da3d820901307bed2a68a8ef6"),
-				Shell:      true,
 			},
 		},
 		{
