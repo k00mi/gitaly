@@ -1,5 +1,13 @@
 # Gitaly changelog
 
+## v1.1.0
+
+#### Other
+- Remove grpc dependency from catfile
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/983
+- Don't use rugged when calling write-ref
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/982
+
 ## v1.0.0
 
 #### Added
