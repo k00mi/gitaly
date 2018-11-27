@@ -171,21 +171,23 @@ describe Gitlab::Git::Index do
     end
 
     context 'when a file at that path exists' do
+      let(:old_entry) { index.get(options[:previous_path]) }
+      let(:old_content) { lookup(old_entry[:oid]).content }
+
+      let(:new_entry) { index.get(options[:file_path]) }
+      let(:new_content) { lookup(new_entry[:oid]).content }
+
       it 'removes the old file in the index' do
         index.move(options)
 
-        entry = index.get(options[:previous_path])
-
-        expect(entry).to be_nil
+        expect(old_entry).to be_nil
       end
 
       it 'creates the new file in the index' do
         index.move(options)
 
-        entry = index.get(options[:file_path])
-
-        expect(entry).not_to be_nil
-        expect(lookup(entry[:oid]).content).to eq(options[:content])
+        expect(new_entry).not_to be_nil
+        expect(new_content).to eq(options[:content])
       end
 
       it 'preserves file mode' do
@@ -193,9 +195,22 @@ describe Gitlab::Git::Index do
 
         index.move(options)
 
-        entry = index.get(options[:file_path])
+        expect(new_entry[:mode]).to eq(0100755)
+      end
 
-        expect(entry[:mode]).to eq(0100755)
+      it 'preserves the original contents if infer_content is set' do
+        options[:content] = 'Not this'
+        options[:infer_content] = true
+
+        # Sanity check: this spec expects the the file at previous_path to be
+        # different to the content specified in the operation
+        expect(old_content).not_to eq(options[:content])
+
+        index.move(options)
+
+        expect(new_entry).not_to be_nil
+        expect(new_entry[:oid]).to eq(old_entry[:oid])
+        expect(old_content).to eq(new_content)
       end
     end
   end

@@ -7,7 +7,9 @@ module Gitlab
       EXECUTE_MODE = 0o100755
 
       ACTIONS = %w(create create_dir update move delete chmod).freeze
-      ACTION_OPTIONS = %i(file_path previous_path content encoding execute_filemode).freeze
+      ACTION_OPTIONS = %i(
+        file_path previous_path content encoding execute_filemode infer_content
+      ).freeze
 
       attr_reader :repository, :raw_index
 
@@ -65,14 +67,19 @@ module Gitlab
       def move(options)
         options = normalize_options(options)
 
-        file_entry = get(options[:previous_path])
-        raise IndexError, "A file with this name doesn't exist" unless file_entry
+        old_entry = get(options[:previous_path])
+        raise IndexError, "A file with this name doesn't exist" unless old_entry
 
-        raise IndexError, "A file with this name already exists" if get(options[:file_path])
+        new_entry = get(options[:file_path])
+        raise IndexError, "A file with this name already exists" if new_entry
 
         raw_index.remove(options[:previous_path])
 
-        add_blob(options, mode: file_entry[:mode])
+        if options[:infer_content]
+          raw_index.add(path: options[:file_path], oid: old_entry[:oid], mode: old_entry[:mode])
+        else
+          add_blob(options, mode: old_entry[:mode])
+        end
       end
 
       def delete(options)
