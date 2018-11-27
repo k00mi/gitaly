@@ -11,6 +11,7 @@ It is generated from these files:
 	diff.proto
 	namespace.proto
 	notifications.proto
+	objectpool.proto
 	operations.proto
 	ref.proto
 	remote.proto
@@ -107,6 +108,15 @@ It has these top-level messages:
 	RenameNamespaceResponse
 	PostReceiveRequest
 	PostReceiveResponse
+	ObjectPool
+	CreateObjectPoolRequest
+	CreateObjectPoolResponse
+	DeleteObjectPoolRequest
+	DeleteObjectPoolResponse
+	LinkRepositoryToObjectPoolRequest
+	LinkRepositoryToObjectPoolResponse
+	UnlinkRepositoryFromObjectPoolRequest
+	UnlinkRepositoryFromObjectPoolResponse
 	UserCreateBranchRequest
 	UserCreateBranchResponse
 	UserUpdateBranchRequest
