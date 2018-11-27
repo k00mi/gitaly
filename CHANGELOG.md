@@ -1,5 +1,17 @@
 # Gitaly changelog
 
+## v1.2.0
+
+#### Added
+- Upgrade proto to v1.2
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/985
+- Allow moved files to infer their content based on the source
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/980
+
+#### Other
+- Add connectivity tests
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/968
+
 ## v1.1.0
 
 #### Other
