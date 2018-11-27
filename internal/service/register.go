@@ -8,6 +8,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/service/conflicts"
 	"gitlab.com/gitlab-org/gitaly/internal/service/diff"
 	"gitlab.com/gitlab-org/gitaly/internal/service/namespace"
+	"gitlab.com/gitlab-org/gitaly/internal/service/objectpool"
 	"gitlab.com/gitlab-org/gitaly/internal/service/operations"
 	"gitlab.com/gitlab-org/gitaly/internal/service/ref"
 	"gitlab.com/gitlab-org/gitaly/internal/service/remote"
@@ -39,6 +40,7 @@ func RegisterAll(grpcServer *grpc.Server, rubyServer *rubyserver.Server) {
 	gitalypb.RegisterRemoteServiceServer(grpcServer, remote.NewServer(rubyServer))
 	gitalypb.RegisterServerServiceServer(grpcServer, server.NewServer())
 	gitalypb.RegisterStorageServiceServer(grpcServer, storage.NewServer())
+	gitalypb.RegisterObjectPoolServiceServer(grpcServer, objectpool.NewServer())
 
 	healthpb.RegisterHealthServer(grpcServer, health.NewServer())
 }

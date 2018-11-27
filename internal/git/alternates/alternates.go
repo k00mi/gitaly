@@ -5,14 +5,14 @@ import (
 	"path"
 	"strings"
 
-	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
 // PathAndEnv finds the disk path to a repository, and returns the
 // alternate object directory environment variables encoded in the
 // gitalypb.Repository instance.
-func PathAndEnv(repo *gitalypb.Repository) (string, []string, error) {
+func PathAndEnv(repo repository.GitRepo) (string, []string, error) {
 	repoPath, err := helper.GetRepoPath(repo)
 	if err != nil {
 		return "", nil, err
