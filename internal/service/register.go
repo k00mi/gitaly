@@ -4,6 +4,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/service/blob"
+	"gitlab.com/gitlab-org/gitaly/internal/service/cleanup"
 	"gitlab.com/gitlab-org/gitaly/internal/service/commit"
 	"gitlab.com/gitlab-org/gitaly/internal/service/conflicts"
 	"gitlab.com/gitlab-org/gitaly/internal/service/diff"
@@ -27,6 +28,7 @@ import (
 // the specified grpc service instance
 func RegisterAll(grpcServer *grpc.Server, rubyServer *rubyserver.Server) {
 	gitalypb.RegisterBlobServiceServer(grpcServer, blob.NewServer(rubyServer))
+	gitalypb.RegisterCleanupServiceServer(grpcServer, cleanup.NewServer())
 	gitalypb.RegisterCommitServiceServer(grpcServer, commit.NewServer(rubyServer))
 	gitalypb.RegisterDiffServiceServer(grpcServer, diff.NewServer(rubyServer))
 	gitalypb.RegisterNamespaceServiceServer(grpcServer, namespace.NewServer())
