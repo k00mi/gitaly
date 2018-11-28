@@ -44,7 +44,7 @@ func (x TreeEntryResponse_ObjectType) String() string {
 	return proto.EnumName(TreeEntryResponse_ObjectType_name, int32(x))
 }
 func (TreeEntryResponse_ObjectType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor1, []int{5, 0}
+	return fileDescriptor2, []int{5, 0}
 }
 
 type TreeEntry_EntryType int32
@@ -69,7 +69,7 @@ var TreeEntry_EntryType_value = map[string]int32{
 func (x TreeEntry_EntryType) String() string {
 	return proto.EnumName(TreeEntry_EntryType_name, int32(x))
 }
-func (TreeEntry_EntryType) EnumDescriptor() ([]byte, []int) { return fileDescriptor1, []int{10, 0} }
+func (TreeEntry_EntryType) EnumDescriptor() ([]byte, []int) { return fileDescriptor2, []int{10, 0} }
 
 type FindAllCommitsRequest_Order int32
 
@@ -94,7 +94,7 @@ func (x FindAllCommitsRequest_Order) String() string {
 	return proto.EnumName(FindAllCommitsRequest_Order_name, int32(x))
 }
 func (FindAllCommitsRequest_Order) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor1, []int{19, 0}
+	return fileDescriptor2, []int{19, 0}
 }
 
 type CommitStatsRequest struct {
@@ -105,7 +105,7 @@ type CommitStatsRequest struct {
 func (m *CommitStatsRequest) Reset()                    { *m = CommitStatsRequest{} }
 func (m *CommitStatsRequest) String() string            { return proto.CompactTextString(m) }
 func (*CommitStatsRequest) ProtoMessage()               {}
-func (*CommitStatsRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{0} }
+func (*CommitStatsRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{0} }
 
 func (m *CommitStatsRequest) GetRepository() *Repository {
 	if m != nil {
@@ -131,7 +131,7 @@ type CommitStatsResponse struct {
 func (m *CommitStatsResponse) Reset()                    { *m = CommitStatsResponse{} }
 func (m *CommitStatsResponse) String() string            { return proto.CompactTextString(m) }
 func (*CommitStatsResponse) ProtoMessage()               {}
-func (*CommitStatsResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{1} }
+func (*CommitStatsResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{1} }
 
 func (m *CommitStatsResponse) GetOid() string {
 	if m != nil {
@@ -163,7 +163,7 @@ type CommitIsAncestorRequest struct {
 func (m *CommitIsAncestorRequest) Reset()                    { *m = CommitIsAncestorRequest{} }
 func (m *CommitIsAncestorRequest) String() string            { return proto.CompactTextString(m) }
 func (*CommitIsAncestorRequest) ProtoMessage()               {}
-func (*CommitIsAncestorRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{2} }
+func (*CommitIsAncestorRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{2} }
 
 func (m *CommitIsAncestorRequest) GetRepository() *Repository {
 	if m != nil {
@@ -193,7 +193,7 @@ type CommitIsAncestorResponse struct {
 func (m *CommitIsAncestorResponse) Reset()                    { *m = CommitIsAncestorResponse{} }
 func (m *CommitIsAncestorResponse) String() string            { return proto.CompactTextString(m) }
 func (*CommitIsAncestorResponse) ProtoMessage()               {}
-func (*CommitIsAncestorResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{3} }
+func (*CommitIsAncestorResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{3} }
 
 func (m *CommitIsAncestorResponse) GetValue() bool {
 	if m != nil {
@@ -214,7 +214,7 @@ type TreeEntryRequest struct {
 func (m *TreeEntryRequest) Reset()                    { *m = TreeEntryRequest{} }
 func (m *TreeEntryRequest) String() string            { return proto.CompactTextString(m) }
 func (*TreeEntryRequest) ProtoMessage()               {}
-func (*TreeEntryRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{4} }
+func (*TreeEntryRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{4} }
 
 func (m *TreeEntryRequest) GetRepository() *Repository {
 	if m != nil {
@@ -258,7 +258,7 @@ type TreeEntryResponse struct {
 func (m *TreeEntryResponse) Reset()                    { *m = TreeEntryResponse{} }
 func (m *TreeEntryResponse) String() string            { return proto.CompactTextString(m) }
 func (*TreeEntryResponse) ProtoMessage()               {}
-func (*TreeEntryResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{5} }
+func (*TreeEntryResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{5} }
 
 func (m *TreeEntryResponse) GetType() TreeEntryResponse_ObjectType {
 	if m != nil {
@@ -304,7 +304,7 @@ type CommitsBetweenRequest struct {
 func (m *CommitsBetweenRequest) Reset()                    { *m = CommitsBetweenRequest{} }
 func (m *CommitsBetweenRequest) String() string            { return proto.CompactTextString(m) }
 func (*CommitsBetweenRequest) ProtoMessage()               {}
-func (*CommitsBetweenRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{6} }
+func (*CommitsBetweenRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{6} }
 
 func (m *CommitsBetweenRequest) GetRepository() *Repository {
 	if m != nil {
@@ -334,7 +334,7 @@ type CommitsBetweenResponse struct {
 func (m *CommitsBetweenResponse) Reset()                    { *m = CommitsBetweenResponse{} }
 func (m *CommitsBetweenResponse) String() string            { return proto.CompactTextString(m) }
 func (*CommitsBetweenResponse) ProtoMessage()               {}
-func (*CommitsBetweenResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{7} }
+func (*CommitsBetweenResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{7} }
 
 func (m *CommitsBetweenResponse) GetCommits() []*GitCommit {
 	if m != nil {
@@ -357,7 +357,7 @@ type CountCommitsRequest struct {
 func (m *CountCommitsRequest) Reset()                    { *m = CountCommitsRequest{} }
 func (m *CountCommitsRequest) String() string            { return proto.CompactTextString(m) }
 func (*CountCommitsRequest) ProtoMessage()               {}
-func (*CountCommitsRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{8} }
+func (*CountCommitsRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{8} }
 
 func (m *CountCommitsRequest) GetRepository() *Repository {
 	if m != nil {
@@ -415,7 +415,7 @@ type CountCommitsResponse struct {
 func (m *CountCommitsResponse) Reset()                    { *m = CountCommitsResponse{} }
 func (m *CountCommitsResponse) String() string            { return proto.CompactTextString(m) }
 func (*CountCommitsResponse) ProtoMessage()               {}
-func (*CountCommitsResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{9} }
+func (*CountCommitsResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{9} }
 
 func (m *CountCommitsResponse) GetCount() int32 {
 	if m != nil {
@@ -443,7 +443,7 @@ type TreeEntry struct {
 func (m *TreeEntry) Reset()                    { *m = TreeEntry{} }
 func (m *TreeEntry) String() string            { return proto.CompactTextString(m) }
 func (*TreeEntry) ProtoMessage()               {}
-func (*TreeEntry) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{10} }
+func (*TreeEntry) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{10} }
 
 func (m *TreeEntry) GetOid() string {
 	if m != nil {
@@ -504,7 +504,7 @@ type GetTreeEntriesRequest struct {
 func (m *GetTreeEntriesRequest) Reset()                    { *m = GetTreeEntriesRequest{} }
 func (m *GetTreeEntriesRequest) String() string            { return proto.CompactTextString(m) }
 func (*GetTreeEntriesRequest) ProtoMessage()               {}
-func (*GetTreeEntriesRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{11} }
+func (*GetTreeEntriesRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{11} }
 
 func (m *GetTreeEntriesRequest) GetRepository() *Repository {
 	if m != nil {
@@ -541,7 +541,7 @@ type GetTreeEntriesResponse struct {
 func (m *GetTreeEntriesResponse) Reset()                    { *m = GetTreeEntriesResponse{} }
 func (m *GetTreeEntriesResponse) String() string            { return proto.CompactTextString(m) }
 func (*GetTreeEntriesResponse) ProtoMessage()               {}
-func (*GetTreeEntriesResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{12} }
+func (*GetTreeEntriesResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{12} }
 
 func (m *GetTreeEntriesResponse) GetEntries() []*TreeEntry {
 	if m != nil {
@@ -558,7 +558,7 @@ type ListFilesRequest struct {
 func (m *ListFilesRequest) Reset()                    { *m = ListFilesRequest{} }
 func (m *ListFilesRequest) String() string            { return proto.CompactTextString(m) }
 func (*ListFilesRequest) ProtoMessage()               {}
-func (*ListFilesRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{13} }
+func (*ListFilesRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{13} }
 
 func (m *ListFilesRequest) GetRepository() *Repository {
 	if m != nil {
@@ -583,7 +583,7 @@ type ListFilesResponse struct {
 func (m *ListFilesResponse) Reset()                    { *m = ListFilesResponse{} }
 func (m *ListFilesResponse) String() string            { return proto.CompactTextString(m) }
 func (*ListFilesResponse) ProtoMessage()               {}
-func (*ListFilesResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{14} }
+func (*ListFilesResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{14} }
 
 func (m *ListFilesResponse) GetPaths() [][]byte {
 	if m != nil {
@@ -600,7 +600,7 @@ type FindCommitRequest struct {
 func (m *FindCommitRequest) Reset()                    { *m = FindCommitRequest{} }
 func (m *FindCommitRequest) String() string            { return proto.CompactTextString(m) }
 func (*FindCommitRequest) ProtoMessage()               {}
-func (*FindCommitRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{15} }
+func (*FindCommitRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{15} }
 
 func (m *FindCommitRequest) GetRepository() *Repository {
 	if m != nil {
@@ -624,7 +624,7 @@ type FindCommitResponse struct {
 func (m *FindCommitResponse) Reset()                    { *m = FindCommitResponse{} }
 func (m *FindCommitResponse) String() string            { return proto.CompactTextString(m) }
 func (*FindCommitResponse) ProtoMessage()               {}
-func (*FindCommitResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{16} }
+func (*FindCommitResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{16} }
 
 func (m *FindCommitResponse) GetCommit() *GitCommit {
 	if m != nil {
@@ -641,7 +641,7 @@ type ListCommitsByOidRequest struct {
 func (m *ListCommitsByOidRequest) Reset()                    { *m = ListCommitsByOidRequest{} }
 func (m *ListCommitsByOidRequest) String() string            { return proto.CompactTextString(m) }
 func (*ListCommitsByOidRequest) ProtoMessage()               {}
-func (*ListCommitsByOidRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{17} }
+func (*ListCommitsByOidRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{17} }
 
 func (m *ListCommitsByOidRequest) GetRepository() *Repository {
 	if m != nil {
@@ -664,7 +664,7 @@ type ListCommitsByOidResponse struct {
 func (m *ListCommitsByOidResponse) Reset()                    { *m = ListCommitsByOidResponse{} }
 func (m *ListCommitsByOidResponse) String() string            { return proto.CompactTextString(m) }
 func (*ListCommitsByOidResponse) ProtoMessage()               {}
-func (*ListCommitsByOidResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{18} }
+func (*ListCommitsByOidResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{18} }
 
 func (m *ListCommitsByOidResponse) GetCommits() []*GitCommit {
 	if m != nil {
@@ -685,7 +685,7 @@ type FindAllCommitsRequest struct {
 func (m *FindAllCommitsRequest) Reset()                    { *m = FindAllCommitsRequest{} }
 func (m *FindAllCommitsRequest) String() string            { return proto.CompactTextString(m) }
 func (*FindAllCommitsRequest) ProtoMessage()               {}
-func (*FindAllCommitsRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{19} }
+func (*FindAllCommitsRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{19} }
 
 func (m *FindAllCommitsRequest) GetRepository() *Repository {
 	if m != nil {
@@ -730,7 +730,7 @@ type FindAllCommitsResponse struct {
 func (m *FindAllCommitsResponse) Reset()                    { *m = FindAllCommitsResponse{} }
 func (m *FindAllCommitsResponse) String() string            { return proto.CompactTextString(m) }
 func (*FindAllCommitsResponse) ProtoMessage()               {}
-func (*FindAllCommitsResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{20} }
+func (*FindAllCommitsResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{20} }
 
 func (m *FindAllCommitsResponse) GetCommits() []*GitCommit {
 	if m != nil {
@@ -757,7 +757,7 @@ type FindCommitsRequest struct {
 func (m *FindCommitsRequest) Reset()                    { *m = FindCommitsRequest{} }
 func (m *FindCommitsRequest) String() string            { return proto.CompactTextString(m) }
 func (*FindCommitsRequest) ProtoMessage()               {}
-func (*FindCommitsRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{21} }
+func (*FindCommitsRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{21} }
 
 func (m *FindCommitsRequest) GetRepository() *Repository {
 	if m != nil {
@@ -844,7 +844,7 @@ type FindCommitsResponse struct {
 func (m *FindCommitsResponse) Reset()                    { *m = FindCommitsResponse{} }
 func (m *FindCommitsResponse) String() string            { return proto.CompactTextString(m) }
 func (*FindCommitsResponse) ProtoMessage()               {}
-func (*FindCommitsResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{22} }
+func (*FindCommitsResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{22} }
 
 func (m *FindCommitsResponse) GetCommits() []*GitCommit {
 	if m != nil {
@@ -861,7 +861,7 @@ type CommitLanguagesRequest struct {
 func (m *CommitLanguagesRequest) Reset()                    { *m = CommitLanguagesRequest{} }
 func (m *CommitLanguagesRequest) String() string            { return proto.CompactTextString(m) }
 func (*CommitLanguagesRequest) ProtoMessage()               {}
-func (*CommitLanguagesRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{23} }
+func (*CommitLanguagesRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{23} }
 
 func (m *CommitLanguagesRequest) GetRepository() *Repository {
 	if m != nil {
@@ -884,7 +884,7 @@ type CommitLanguagesResponse struct {
 func (m *CommitLanguagesResponse) Reset()                    { *m = CommitLanguagesResponse{} }
 func (m *CommitLanguagesResponse) String() string            { return proto.CompactTextString(m) }
 func (*CommitLanguagesResponse) ProtoMessage()               {}
-func (*CommitLanguagesResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{24} }
+func (*CommitLanguagesResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{24} }
 
 func (m *CommitLanguagesResponse) GetLanguages() []*CommitLanguagesResponse_Language {
 	if m != nil {
@@ -903,7 +903,7 @@ func (m *CommitLanguagesResponse_Language) Reset()         { *m = CommitLanguage
 func (m *CommitLanguagesResponse_Language) String() string { return proto.CompactTextString(m) }
 func (*CommitLanguagesResponse_Language) ProtoMessage()    {}
 func (*CommitLanguagesResponse_Language) Descriptor() ([]byte, []int) {
-	return fileDescriptor1, []int{24, 0}
+	return fileDescriptor2, []int{24, 0}
 }
 
 func (m *CommitLanguagesResponse_Language) GetName() string {
@@ -936,7 +936,7 @@ type RawBlameRequest struct {
 func (m *RawBlameRequest) Reset()                    { *m = RawBlameRequest{} }
 func (m *RawBlameRequest) String() string            { return proto.CompactTextString(m) }
 func (*RawBlameRequest) ProtoMessage()               {}
-func (*RawBlameRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{25} }
+func (*RawBlameRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{25} }
 
 func (m *RawBlameRequest) GetRepository() *Repository {
 	if m != nil {
@@ -966,7 +966,7 @@ type RawBlameResponse struct {
 func (m *RawBlameResponse) Reset()                    { *m = RawBlameResponse{} }
 func (m *RawBlameResponse) String() string            { return proto.CompactTextString(m) }
 func (*RawBlameResponse) ProtoMessage()               {}
-func (*RawBlameResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{26} }
+func (*RawBlameResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{26} }
 
 func (m *RawBlameResponse) GetData() []byte {
 	if m != nil {
@@ -984,7 +984,7 @@ type LastCommitForPathRequest struct {
 func (m *LastCommitForPathRequest) Reset()                    { *m = LastCommitForPathRequest{} }
 func (m *LastCommitForPathRequest) String() string            { return proto.CompactTextString(m) }
 func (*LastCommitForPathRequest) ProtoMessage()               {}
-func (*LastCommitForPathRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{27} }
+func (*LastCommitForPathRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{27} }
 
 func (m *LastCommitForPathRequest) GetRepository() *Repository {
 	if m != nil {
@@ -1015,7 +1015,7 @@ type LastCommitForPathResponse struct {
 func (m *LastCommitForPathResponse) Reset()                    { *m = LastCommitForPathResponse{} }
 func (m *LastCommitForPathResponse) String() string            { return proto.CompactTextString(m) }
 func (*LastCommitForPathResponse) ProtoMessage()               {}
-func (*LastCommitForPathResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{28} }
+func (*LastCommitForPathResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{28} }
 
 func (m *LastCommitForPathResponse) GetCommit() *GitCommit {
 	if m != nil {
@@ -1036,7 +1036,7 @@ type ListLastCommitsForTreeRequest struct {
 func (m *ListLastCommitsForTreeRequest) Reset()                    { *m = ListLastCommitsForTreeRequest{} }
 func (m *ListLastCommitsForTreeRequest) String() string            { return proto.CompactTextString(m) }
 func (*ListLastCommitsForTreeRequest) ProtoMessage()               {}
-func (*ListLastCommitsForTreeRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{29} }
+func (*ListLastCommitsForTreeRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{29} }
 
 func (m *ListLastCommitsForTreeRequest) GetRepository() *Repository {
 	if m != nil {
@@ -1080,7 +1080,7 @@ type ListLastCommitsForTreeResponse struct {
 func (m *ListLastCommitsForTreeResponse) Reset()                    { *m = ListLastCommitsForTreeResponse{} }
 func (m *ListLastCommitsForTreeResponse) String() string            { return proto.CompactTextString(m) }
 func (*ListLastCommitsForTreeResponse) ProtoMessage()               {}
-func (*ListLastCommitsForTreeResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{30} }
+func (*ListLastCommitsForTreeResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{30} }
 
 func (m *ListLastCommitsForTreeResponse) GetCommits() []*ListLastCommitsForTreeResponse_CommitForTree {
 	if m != nil {
@@ -1102,7 +1102,7 @@ func (m *ListLastCommitsForTreeResponse_CommitForTree) String() string {
 }
 func (*ListLastCommitsForTreeResponse_CommitForTree) ProtoMessage() {}
 func (*ListLastCommitsForTreeResponse_CommitForTree) Descriptor() ([]byte, []int) {
-	return fileDescriptor1, []int{30, 0}
+	return fileDescriptor2, []int{30, 0}
 }
 
 func (m *ListLastCommitsForTreeResponse_CommitForTree) GetCommit() *GitCommit {
@@ -1131,7 +1131,7 @@ type CommitsByMessageRequest struct {
 func (m *CommitsByMessageRequest) Reset()                    { *m = CommitsByMessageRequest{} }
 func (m *CommitsByMessageRequest) String() string            { return proto.CompactTextString(m) }
 func (*CommitsByMessageRequest) ProtoMessage()               {}
-func (*CommitsByMessageRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{31} }
+func (*CommitsByMessageRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{31} }
 
 func (m *CommitsByMessageRequest) GetRepository() *Repository {
 	if m != nil {
@@ -1183,7 +1183,7 @@ type CommitsByMessageResponse struct {
 func (m *CommitsByMessageResponse) Reset()                    { *m = CommitsByMessageResponse{} }
 func (m *CommitsByMessageResponse) String() string            { return proto.CompactTextString(m) }
 func (*CommitsByMessageResponse) ProtoMessage()               {}
-func (*CommitsByMessageResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{32} }
+func (*CommitsByMessageResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{32} }
 
 func (m *CommitsByMessageResponse) GetCommits() []*GitCommit {
 	if m != nil {
@@ -1201,7 +1201,7 @@ func (m *FilterShasWithSignaturesRequest) Reset()         { *m = FilterShasWithS
 func (m *FilterShasWithSignaturesRequest) String() string { return proto.CompactTextString(m) }
 func (*FilterShasWithSignaturesRequest) ProtoMessage()    {}
 func (*FilterShasWithSignaturesRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor1, []int{33}
+	return fileDescriptor2, []int{33}
 }
 
 func (m *FilterShasWithSignaturesRequest) GetRepository() *Repository {
@@ -1226,7 +1226,7 @@ func (m *FilterShasWithSignaturesResponse) Reset()         { *m = FilterShasWith
 func (m *FilterShasWithSignaturesResponse) String() string { return proto.CompactTextString(m) }
 func (*FilterShasWithSignaturesResponse) ProtoMessage()    {}
 func (*FilterShasWithSignaturesResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor1, []int{34}
+	return fileDescriptor2, []int{34}
 }
 
 func (m *FilterShasWithSignaturesResponse) GetShas() [][]byte {
@@ -1244,7 +1244,7 @@ type ExtractCommitSignatureRequest struct {
 func (m *ExtractCommitSignatureRequest) Reset()                    { *m = ExtractCommitSignatureRequest{} }
 func (m *ExtractCommitSignatureRequest) String() string            { return proto.CompactTextString(m) }
 func (*ExtractCommitSignatureRequest) ProtoMessage()               {}
-func (*ExtractCommitSignatureRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{35} }
+func (*ExtractCommitSignatureRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{35} }
 
 func (m *ExtractCommitSignatureRequest) GetRepository() *Repository {
 	if m != nil {
@@ -1270,7 +1270,7 @@ type ExtractCommitSignatureResponse struct {
 func (m *ExtractCommitSignatureResponse) Reset()                    { *m = ExtractCommitSignatureResponse{} }
 func (m *ExtractCommitSignatureResponse) String() string            { return proto.CompactTextString(m) }
 func (*ExtractCommitSignatureResponse) ProtoMessage()               {}
-func (*ExtractCommitSignatureResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{36} }
+func (*ExtractCommitSignatureResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{36} }
 
 func (m *ExtractCommitSignatureResponse) GetSignature() []byte {
 	if m != nil {
@@ -1294,7 +1294,7 @@ type GetCommitSignaturesRequest struct {
 func (m *GetCommitSignaturesRequest) Reset()                    { *m = GetCommitSignaturesRequest{} }
 func (m *GetCommitSignaturesRequest) String() string            { return proto.CompactTextString(m) }
 func (*GetCommitSignaturesRequest) ProtoMessage()               {}
-func (*GetCommitSignaturesRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{37} }
+func (*GetCommitSignaturesRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{37} }
 
 func (m *GetCommitSignaturesRequest) GetRepository() *Repository {
 	if m != nil {
@@ -1321,7 +1321,7 @@ type GetCommitSignaturesResponse struct {
 func (m *GetCommitSignaturesResponse) Reset()                    { *m = GetCommitSignaturesResponse{} }
 func (m *GetCommitSignaturesResponse) String() string            { return proto.CompactTextString(m) }
 func (*GetCommitSignaturesResponse) ProtoMessage()               {}
-func (*GetCommitSignaturesResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{38} }
+func (*GetCommitSignaturesResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{38} }
 
 func (m *GetCommitSignaturesResponse) GetCommitId() string {
 	if m != nil {
@@ -1352,7 +1352,7 @@ type GetCommitMessagesRequest struct {
 func (m *GetCommitMessagesRequest) Reset()                    { *m = GetCommitMessagesRequest{} }
 func (m *GetCommitMessagesRequest) String() string            { return proto.CompactTextString(m) }
 func (*GetCommitMessagesRequest) ProtoMessage()               {}
-func (*GetCommitMessagesRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{39} }
+func (*GetCommitMessagesRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{39} }
 
 func (m *GetCommitMessagesRequest) GetRepository() *Repository {
 	if m != nil {
@@ -1377,7 +1377,7 @@ type GetCommitMessagesResponse struct {
 func (m *GetCommitMessagesResponse) Reset()                    { *m = GetCommitMessagesResponse{} }
 func (m *GetCommitMessagesResponse) String() string            { return proto.CompactTextString(m) }
 func (*GetCommitMessagesResponse) ProtoMessage()               {}
-func (*GetCommitMessagesResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{40} }
+func (*GetCommitMessagesResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{40} }
 
 func (m *GetCommitMessagesResponse) GetCommitId() string {
 	if m != nil {
@@ -2533,9 +2533,9 @@ var _CommitService_serviceDesc = grpc.ServiceDesc{
 	Metadata: "commit.proto",
 }
 
-func init() { proto.RegisterFile("commit.proto", fileDescriptor1) }
+func init() { proto.RegisterFile("commit.proto", fileDescriptor2) }
 
-var fileDescriptor1 = []byte{
+var fileDescriptor2 = []byte{
 	// 1786 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x58, 0x4b, 0x6f, 0xe3, 0xc8,
 	0x11, 0x36, 0xf5, 0xb2, 0x58, 0xd2, 0x7a, 0xe5, 0x9e, 0x17, 0x4d, 0xcf, 0x8c, 0xbd, 0xbd, 0xd9,

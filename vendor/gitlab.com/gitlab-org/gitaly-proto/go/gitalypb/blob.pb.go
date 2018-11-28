@@ -6,6 +6,7 @@ Package gitalypb is a generated protocol buffer package.
 
 It is generated from these files:
 	blob.proto
+	cleanup.proto
 	commit.proto
 	conflicts.proto
 	diff.proto
@@ -36,6 +37,8 @@ It has these top-level messages:
 	GetNewLFSPointersResponse
 	GetAllLFSPointersRequest
 	GetAllLFSPointersResponse
+	ApplyBfgObjectMapRequest
+	ApplyBfgObjectMapResponse
 	CommitStatsRequest
 	CommitStatsResponse
 	CommitIsAncestorRequest

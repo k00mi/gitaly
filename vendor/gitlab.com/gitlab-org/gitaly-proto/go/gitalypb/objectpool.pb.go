@@ -24,7 +24,7 @@ type ObjectPool struct {
 func (m *ObjectPool) Reset()                    { *m = ObjectPool{} }
 func (m *ObjectPool) String() string            { return proto.CompactTextString(m) }
 func (*ObjectPool) ProtoMessage()               {}
-func (*ObjectPool) Descriptor() ([]byte, []int) { return fileDescriptor6, []int{0} }
+func (*ObjectPool) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{0} }
 
 func (m *ObjectPool) GetRepository() *Repository {
 	if m != nil {
@@ -43,7 +43,7 @@ type CreateObjectPoolRequest struct {
 func (m *CreateObjectPoolRequest) Reset()                    { *m = CreateObjectPoolRequest{} }
 func (m *CreateObjectPoolRequest) String() string            { return proto.CompactTextString(m) }
 func (*CreateObjectPoolRequest) ProtoMessage()               {}
-func (*CreateObjectPoolRequest) Descriptor() ([]byte, []int) { return fileDescriptor6, []int{1} }
+func (*CreateObjectPoolRequest) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{1} }
 
 func (m *CreateObjectPoolRequest) GetObjectPool() *ObjectPool {
 	if m != nil {
@@ -65,7 +65,7 @@ type CreateObjectPoolResponse struct {
 func (m *CreateObjectPoolResponse) Reset()                    { *m = CreateObjectPoolResponse{} }
 func (m *CreateObjectPoolResponse) String() string            { return proto.CompactTextString(m) }
 func (*CreateObjectPoolResponse) ProtoMessage()               {}
-func (*CreateObjectPoolResponse) Descriptor() ([]byte, []int) { return fileDescriptor6, []int{2} }
+func (*CreateObjectPoolResponse) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{2} }
 
 // Removes the directory from disk, caller is responsible for leaving the object
 // pool before calling this RPC
@@ -76,7 +76,7 @@ type DeleteObjectPoolRequest struct {
 func (m *DeleteObjectPoolRequest) Reset()                    { *m = DeleteObjectPoolRequest{} }
 func (m *DeleteObjectPoolRequest) String() string            { return proto.CompactTextString(m) }
 func (*DeleteObjectPoolRequest) ProtoMessage()               {}
-func (*DeleteObjectPoolRequest) Descriptor() ([]byte, []int) { return fileDescriptor6, []int{3} }
+func (*DeleteObjectPoolRequest) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{3} }
 
 func (m *DeleteObjectPoolRequest) GetObjectPool() *ObjectPool {
 	if m != nil {
@@ -91,7 +91,7 @@ type DeleteObjectPoolResponse struct {
 func (m *DeleteObjectPoolResponse) Reset()                    { *m = DeleteObjectPoolResponse{} }
 func (m *DeleteObjectPoolResponse) String() string            { return proto.CompactTextString(m) }
 func (*DeleteObjectPoolResponse) ProtoMessage()               {}
-func (*DeleteObjectPoolResponse) Descriptor() ([]byte, []int) { return fileDescriptor6, []int{4} }
+func (*DeleteObjectPoolResponse) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{4} }
 
 type LinkRepositoryToObjectPoolRequest struct {
 	ObjectPool *ObjectPool `protobuf:"bytes,1,opt,name=object_pool,json=objectPool" json:"object_pool,omitempty"`
@@ -102,7 +102,7 @@ func (m *LinkRepositoryToObjectPoolRequest) Reset()         { *m = LinkRepositor
 func (m *LinkRepositoryToObjectPoolRequest) String() string { return proto.CompactTextString(m) }
 func (*LinkRepositoryToObjectPoolRequest) ProtoMessage()    {}
 func (*LinkRepositoryToObjectPoolRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor6, []int{5}
+	return fileDescriptor7, []int{5}
 }
 
 func (m *LinkRepositoryToObjectPoolRequest) GetObjectPool() *ObjectPool {
@@ -126,7 +126,7 @@ func (m *LinkRepositoryToObjectPoolResponse) Reset()         { *m = LinkReposito
 func (m *LinkRepositoryToObjectPoolResponse) String() string { return proto.CompactTextString(m) }
 func (*LinkRepositoryToObjectPoolResponse) ProtoMessage()    {}
 func (*LinkRepositoryToObjectPoolResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor6, []int{6}
+	return fileDescriptor7, []int{6}
 }
 
 // This RPC doesn't require the ObjectPool as it will remove the alternates file
@@ -139,7 +139,7 @@ func (m *UnlinkRepositoryFromObjectPoolRequest) Reset()         { *m = UnlinkRep
 func (m *UnlinkRepositoryFromObjectPoolRequest) String() string { return proto.CompactTextString(m) }
 func (*UnlinkRepositoryFromObjectPoolRequest) ProtoMessage()    {}
 func (*UnlinkRepositoryFromObjectPoolRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor6, []int{7}
+	return fileDescriptor7, []int{7}
 }
 
 func (m *UnlinkRepositoryFromObjectPoolRequest) GetRepository() *Repository {
@@ -158,7 +158,7 @@ func (m *UnlinkRepositoryFromObjectPoolResponse) Reset() {
 func (m *UnlinkRepositoryFromObjectPoolResponse) String() string { return proto.CompactTextString(m) }
 func (*UnlinkRepositoryFromObjectPoolResponse) ProtoMessage()    {}
 func (*UnlinkRepositoryFromObjectPoolResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor6, []int{8}
+	return fileDescriptor7, []int{8}
 }
 
 func init() {
@@ -346,9 +346,9 @@ var _ObjectPoolService_serviceDesc = grpc.ServiceDesc{
 	Metadata: "objectpool.proto",
 }
 
-func init() { proto.RegisterFile("objectpool.proto", fileDescriptor6) }
+func init() { proto.RegisterFile("objectpool.proto", fileDescriptor7) }
 
-var fileDescriptor6 = []byte{
+var fileDescriptor7 = []byte{
 	// 331 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x94, 0xc1, 0x4e, 0xc2, 0x40,
 	0x18, 0x84, 0x29, 0x26, 0x1c, 0x7e, 0x3c, 0xe0, 0x5e, 0x20, 0x7b, 0x50, 0x6c, 0xd4, 0x20, 0x89,
