@@ -61,7 +61,7 @@ The progress of Gitaly's endpoint migrations is tracked via the [**Migration Boa
 
 ## Installation
 
-Gitaly requires Go 1.8 or newer and Ruby 2.3. Run `make` to download
+Gitaly requires Go 1.10 or newer and Ruby 2.4. Run `make` to download
 and compile Ruby dependencies, and to compile the Gitaly Go
 executable.
 
