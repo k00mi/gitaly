@@ -1,5 +1,13 @@
 # Gitaly changelog
 
+## v1.3.0
+
+#### Other
+- Remove unused bridge_exceptions method
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/987
+- Clean up process documentation
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/984
+
 ## v1.2.0
 
 #### Added
