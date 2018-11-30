@@ -1,5 +1,11 @@
 # Gitaly changelog
 
+## v1.4.0
+
+#### Added
+- Link and Unlink RPCs
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/986
+
 ## v1.3.0
 
 #### Other
