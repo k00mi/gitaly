@@ -12,14 +12,34 @@ import (
 
 // Command creates a git.Command with the given args and Repository
 func Command(ctx context.Context, repo repository.GitRepo, args ...string) (*command.Command, error) {
-	repoPath, env, err := alternates.PathAndEnv(repo)
+	args, env, err := argsAndEnv(repo, args...)
 	if err != nil {
 		return nil, err
 	}
 
+	return BareCommand(ctx, nil, nil, nil, env, args...)
+}
+
+// StdinCommand creates a git.Command with the given args and Repository that is
+// suitable for Write()ing to
+func StdinCommand(ctx context.Context, repo repository.GitRepo, args ...string) (*command.Command, error) {
+	args, env, err := argsAndEnv(repo, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	return BareCommand(ctx, command.SetupStdin, nil, nil, env, args...)
+}
+
+func argsAndEnv(repo repository.GitRepo, args ...string) ([]string, []string, error) {
+	repoPath, env, err := alternates.PathAndEnv(repo)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	args = append([]string{"--git-dir", repoPath}, args...)
 
-	return BareCommand(ctx, nil, nil, nil, env, args...)
+	return args, env, nil
 }
 
 // BareCommand creates a git.Command with the given args, stdin/stdout/stderr, and env
