@@ -13,6 +13,7 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/server"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -26,19 +27,30 @@ func buildGitalySSH(t *testing.T) {
 }
 
 func TestConnectivity(t *testing.T) {
-	buildGitalySSH(t)
-	testRepo := testhelper.TestRepository()
+	config.Config.TLS = config.TLS{
+		CertPath: "testdata/certs/gitalycert.pem",
+		KeyPath:  "testdata/gitalykey.pem",
+	}
 
 	cwd, err := os.Getwd()
 	require.NoError(t, err)
+
+	certPoolPath := path.Join(cwd, "testdata/certs")
+
+	buildGitalySSH(t)
+	testRepo := testhelper.TestRepository()
+
 	gitalySSHPath := path.Join(cwd, "gitaly-ssh")
 
 	socketPath := testhelper.GetTemporaryGitalySocketFileName()
 
-	tcpServer, tcpPort := runServer(t, server.New, "tcp", "localhost:0")
+	tcpServer, tcpPort := runServer(t, server.NewInsecure, "tcp", "localhost:0")
 	defer tcpServer.Stop()
 
-	unixServer, _ := runServer(t, server.New, "unix", socketPath)
+	tlsServer, tlsPort := runServer(t, server.NewSecure, "tcp", "localhost:0")
+	defer tlsServer.Stop()
+
+	unixServer, _ := runServer(t, server.NewInsecure, "unix", socketPath)
 	defer unixServer.Stop()
 
 	testCases := []struct {
@@ -49,6 +61,9 @@ func TestConnectivity(t *testing.T) {
 		},
 		{
 			addr: fmt.Sprintf("unix://%s", socketPath),
+		},
+		{
+			addr: fmt.Sprintf("tls://localhost:%d", tlsPort),
 		},
 	}
 
@@ -66,6 +81,7 @@ func TestConnectivity(t *testing.T) {
 			fmt.Sprintf("GITALY_ADDRESS=%s", testcase.addr),
 			fmt.Sprintf("PATH=.:%s", os.Getenv("PATH")),
 			fmt.Sprintf("GIT_SSH_COMMAND=%s upload-pack", gitalySSHPath),
+			fmt.Sprintf("SSL_CERT_DIR=%s", certPoolPath),
 		}
 
 		output, err := cmd.Output()

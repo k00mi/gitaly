@@ -6,14 +6,28 @@ require 'spec_helper'
 SOCKET_PATH = 'gitaly.socket'.freeze
 
 module GitalyConfig
-  def self.dynamic_port
-    @dynamic_port ||= begin
-       sock = Socket.new(:INET, :STREAM)
-       sock.bind(Addrinfo.tcp('127.0.0.1', 0))
-       sock.local_address.ip_port
-     ensure
-       sock.close
-     end
+  def self.set_dynamic_ports
+    tcp_sock = Socket.new(:INET, :STREAM)
+    tls_sock = Socket.new(:INET, :STREAM)
+    tcp_sock.bind(Addrinfo.tcp('127.0.0.1', 0))
+    tls_sock.bind(Addrinfo.tcp('127.0.0.1', 0))
+
+    @dynamic_tcp_port = tcp_sock.local_address.ip_port
+    @dynamic_tls_port = tls_sock.local_address.ip_port
+  ensure
+    tcp_sock.close
+    tls_sock.close
+  end
+
+  def self.dynamic_port(type)
+    set_dynamic_ports unless @dynamic_tcp_port && @dynamic_tls_port
+
+    case type
+    when 'tcp'
+      @dynamic_tcp_port
+    when 'tls'
+      @dynamic_tls_port
+    end
   end
 end
 
@@ -23,8 +37,8 @@ module IntegrationClient
     addr = case type
            when 'unix'
              "unix:#{File.join(TMP_DIR_NAME, SOCKET_PATH)}"
-           when 'tcp'
-             "tcp://localhost:#{GitalyConfig.dynamic_port}"
+           when 'tcp', 'tls'
+             "#{type}://localhost:#{GitalyConfig.dynamic_port(type)}"
            end
     klass.new(addr, creds)
   end
@@ -54,10 +68,17 @@ def start_gitaly
   build_dir = File.expand_path(File.join(GITALY_RUBY_DIR, '../_build'))
   GitlabShellHelper.setup_gitlab_shell
 
+  cert_path = File.join(File.dirname(__FILE__), "/certs")
+
   config_toml = <<~CONFIG
     socket_path = "#{SOCKET_PATH}"
-    listen_addr = "localhost:#{GitalyConfig.dynamic_port}"
+    listen_addr = "localhost:#{GitalyConfig.dynamic_port('tcp')}"
+    tls_listen_addr = "localhost:#{GitalyConfig.dynamic_port('tls')}"
     bin_dir = "#{build_dir}/bin"
+
+    [tls]
+    certificate_path = "#{cert_path}/gitalycert.pem"
+    key_path = "#{cert_path}/gitalykey.pem"
 
     [gitlab-shell]
     dir = "#{GITLAB_SHELL_DIR}"

@@ -1,11 +1,14 @@
 package server
 
 import (
+	"crypto/tls"
+
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	log "github.com/sirupsen/logrus"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/fieldextractors"
 	gitalylog "gitlab.com/gitlab-org/gitaly/internal/log"
 	"gitlab.com/gitlab-org/gitaly/internal/logsanitizer"
@@ -20,6 +23,7 @@ import (
 	grpccorrelation "gitlab.com/gitlab-org/labkit/correlation/grpc"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -58,15 +62,16 @@ func init() {
 	grpc_logrus.ReplaceGrpcLogger(log.NewEntry(gitalylog.GrpcGo))
 }
 
-// New returns a GRPC server with all Gitaly services and interceptors set up.
-func New(rubyServer *rubyserver.Server) *grpc.Server {
+// createNewServer returns a GRPC server with all Gitaly services and interceptors set up.
+// allows for specifying secure = true to enable tls credentials
+func createNewServer(rubyServer *rubyserver.Server, secure bool) *grpc.Server {
 	ctxTagOpts := []grpc_ctxtags.Option{
 		grpc_ctxtags.WithFieldExtractorForInitialReq(fieldextractors.FieldExtractor),
 	}
 
 	lh := limithandler.New(concurrencyKeyFn)
 
-	server := grpc.NewServer(
+	opts := []grpc.ServerOption{
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
 			grpc_ctxtags.StreamServerInterceptor(ctxTagOpts...),
 			metadatahandler.StreamInterceptor,
@@ -95,7 +100,19 @@ func New(rubyServer *rubyserver.Server) *grpc.Server {
 			// converted to errors and logged
 			panichandler.UnaryPanicHandler,
 		)),
-	)
+	}
+
+	// If tls config is specified attempt to extract tls options and use it
+	// as a grpc.ServerOption
+	if secure {
+		cert, err := tls.LoadX509KeyPair(config.Config.TLS.CertPath, config.Config.TLS.KeyPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		opts = append(opts, grpc.Creds(credentials.NewServerTLSFromCert(&cert)))
+	}
+
+	server := grpc.NewServer(opts...)
 
 	service.RegisterAll(server, rubyServer)
 	reflection.Register(server)
@@ -103,4 +120,14 @@ func New(rubyServer *rubyserver.Server) *grpc.Server {
 	grpc_prometheus.Register(server)
 
 	return server
+}
+
+// NewInsecure returns a GRPC server with all Gitaly services and interceptors set up.
+func NewInsecure(rubyServer *rubyserver.Server) *grpc.Server {
+	return createNewServer(rubyServer, false)
+}
+
+// NewSecure returns a GRPC server enabling TLS credentials
+func NewSecure(rubyServer *rubyserver.Server) *grpc.Server {
+	return createNewServer(rubyServer, true)
 }

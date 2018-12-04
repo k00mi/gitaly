@@ -1,6 +1,8 @@
 package server
 
 import (
+	"crypto/x509"
+	"io/ioutil"
 	"net"
 	"testing"
 
@@ -12,6 +14,7 @@ import (
 	netctx "golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
@@ -23,6 +26,31 @@ func TestSanity(t *testing.T) {
 		grpc.WithInsecure(),
 	}
 	conn, err := dial(serverSocketPath, connOpts)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	require.NoError(t, healthCheck(conn))
+}
+
+func TestTLSSanity(t *testing.T) {
+	srv, addr := runSecureServer(t)
+	defer srv.Stop()
+
+	certPool, err := x509.SystemCertPool()
+	require.NoError(t, err)
+
+	cert, err := ioutil.ReadFile("testdata/gitalycert.pem")
+	require.NoError(t, err)
+
+	ok := certPool.AppendCertsFromPEM(cert)
+	require.True(t, ok)
+
+	creds := credentials.NewClientTLSFromCert(certPool, "")
+	connOpts := []grpc.DialOption{
+		grpc.WithTransportCredentials(creds),
+	}
+
+	conn, err := grpc.Dial(addr, connOpts...)
 	require.NoError(t, err)
 	defer conn.Close()
 
@@ -158,7 +186,7 @@ func healthCheck(conn *grpc.ClientConn) error {
 }
 
 func runServer(t *testing.T) (*grpc.Server, string) {
-	srv := New(nil)
+	srv := NewInsecure(nil)
 
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 
@@ -167,4 +195,20 @@ func runServer(t *testing.T) (*grpc.Server, string) {
 	go srv.Serve(listener)
 
 	return srv, "unix://" + serverSocketPath
+}
+
+func runSecureServer(t *testing.T) (*grpc.Server, string) {
+	config.Config.TLS = config.TLS{
+		CertPath: "testdata/gitalycert.pem",
+		KeyPath:  "testdata/gitalykey.pem",
+	}
+
+	srv := NewSecure(nil)
+
+	listener, err := net.Listen("tcp", "localhost:9999")
+	require.NoError(t, err)
+
+	go srv.Serve(listener)
+
+	return srv, "localhost:9999"
 }
