@@ -21,6 +21,7 @@ var (
 type config struct {
 	SocketPath           string        `toml:"socket_path" split_words:"true"`
 	ListenAddr           string        `toml:"listen_addr" split_words:"true"`
+	TLSListenAddr        string        `toml:"tls_listen_addr" split_words:"true"`
 	PrometheusListenAddr string        `toml:"prometheus_listen_addr" split_words:"true"`
 	BinDir               string        `toml:"bin_dir"`
 	Git                  Git           `toml:"git" envconfig:"git"`
@@ -28,9 +29,16 @@ type config struct {
 	Logging              Logging       `toml:"logging" envconfig:"logging"`
 	Prometheus           Prometheus    `toml:"prometheus"`
 	Auth                 Auth          `toml:"auth"`
+	TLS                  TLS           `toml:"tls"`
 	Ruby                 Ruby          `toml:"gitaly-ruby"`
 	GitlabShell          GitlabShell   `toml:"gitlab-shell"`
 	Concurrency          []Concurrency `toml:"concurrency"`
+}
+
+// TLS configuration
+type TLS struct {
+	CertPath string `toml:"certificate_path"`
+	KeyPath  string `toml:"key_path"`
 }
 
 // GitlabShell contains the settings required for executing `gitlab-shell`

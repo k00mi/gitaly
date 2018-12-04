@@ -114,7 +114,7 @@ func TestFailedFetchInternalRemoteDueToValidations(t *testing.T) {
 }
 
 func runFullServer(t *testing.T) (*grpc.Server, string) {
-	server := serverPkg.New(remote.RubyServer)
+	server := serverPkg.NewInsecure(remote.RubyServer)
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 
 	listener, err := net.Listen("unix", serverSocketPath)

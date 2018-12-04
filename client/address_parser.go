@@ -13,9 +13,9 @@ func parseAddress(rawAddress string) (canonicalAddress string, err error) {
 
 	// tcp:// addresses are a special case which `grpc.Dial` expects in a
 	// different format
-	if u.Scheme == "tcp" {
+	if u.Scheme == "tcp" || u.Scheme == "tls" {
 		if u.Path != "" {
-			return "", fmt.Errorf("tcp addresses should not have a path")
+			return "", fmt.Errorf("%s addresses should not have a path", u.Scheme)
 		}
 		return u.Host, nil
 	}

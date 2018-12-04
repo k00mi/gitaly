@@ -106,7 +106,8 @@ func main() {
 
 	tempdir.StartCleaning()
 
-	var listeners []net.Listener
+	var insecureListeners []net.Listener
+	var secureListeners []net.Listener
 
 	if socketPath := config.Config.SocketPath; socketPath != "" {
 		l, err := createUnixListener(socketPath)
@@ -114,7 +115,7 @@ func main() {
 			log.WithError(err).Fatal("configure unix listener")
 		}
 		log.WithField("address", socketPath).Info("listening on unix socket")
-		listeners = append(listeners, l)
+		insecureListeners = append(insecureListeners, l)
 	}
 
 	if addr := config.Config.ListenAddr; addr != "" {
@@ -124,7 +125,16 @@ func main() {
 		}
 
 		log.WithField("address", addr).Info("listening at tcp address")
-		listeners = append(listeners, connectioncounter.New("tcp", l))
+		insecureListeners = append(insecureListeners, connectioncounter.New("tcp", l))
+	}
+
+	if addr := config.Config.TLSListenAddr; addr != "" {
+		tlsListener, err := net.Listen("tcp", addr)
+		if err != nil {
+			log.WithError(err).Fatal("configure tls listener")
+		}
+
+		secureListeners = append(secureListeners, connectioncounter.New("tls", tlsListener))
 	}
 
 	if config.Config.PrometheusListenAddr != "" {
@@ -139,7 +149,7 @@ func main() {
 		}()
 	}
 
-	log.WithError(run(listeners)).Fatal("shutting down")
+	log.WithError(run(insecureListeners, secureListeners)).Fatal("shutting down")
 }
 
 func createUnixListener(socketPath string) (net.Listener, error) {
@@ -152,7 +162,7 @@ func createUnixListener(socketPath string) (net.Listener, error) {
 
 // Inside here we can use deferred functions. This is needed because
 // log.Fatal bypasses deferred functions.
-func run(listeners []net.Listener) error {
+func run(insecureListeners, secureListeners []net.Listener) error {
 	signals := []os.Signal{syscall.SIGTERM, syscall.SIGINT}
 	termCh := make(chan os.Signal, len(signals))
 	signal.Notify(termCh, signals...)
@@ -163,16 +173,29 @@ func run(listeners []net.Listener) error {
 	}
 	defer ruby.Stop()
 
-	server := server.New(ruby)
-	defer server.Stop()
+	serverErrors := make(chan error, len(insecureListeners)+len(secureListeners))
+	if len(insecureListeners) > 0 {
+		insecureServer := server.NewInsecure(ruby)
+		defer insecureServer.Stop()
 
-	serverErrors := make(chan error, len(listeners))
-	for _, listener := range listeners {
-		// Must pass the listener as a function argument because there is a race
-		// between 'go' and 'for'.
-		go func(l net.Listener) {
-			serverErrors <- server.Serve(l)
-		}(listener)
+		for _, listener := range insecureListeners {
+			// Must pass the listener as a function argument because there is a race
+			// between 'go' and 'for'.
+			go func(l net.Listener) {
+				serverErrors <- insecureServer.Serve(l)
+			}(listener)
+		}
+	}
+
+	if len(secureListeners) > 0 {
+		secureServer := server.NewSecure(ruby)
+		defer secureServer.Stop()
+
+		for _, listener := range secureListeners {
+			go func(l net.Listener) {
+				serverErrors <- secureServer.Serve(l)
+			}(listener)
+		}
 	}
 
 	select {

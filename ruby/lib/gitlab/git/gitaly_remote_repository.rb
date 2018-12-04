@@ -31,6 +31,28 @@ module Gitlab
         stub.find_commit(request, request_kwargs)&.commit&.id.presence
       end
 
+      def certs
+        raise 'SSL_CERT_DIR and/or SSL_CERT_FILE environment variable must be set' unless ENV['SSL_CERT_DIR'] || ENV['SSL_CERT_FILE']
+
+        return @certs if @certs
+
+        files = []
+        files += Dir["#{ENV['SSL_CERT_DIR']}/*"] if ENV['SSL_CERT_DIR']
+        files += [ENV['SSL_CERT_FILE']] if ENV['SSL_CERT_FILE']
+
+        @certs = files.map do |cert|
+          File.read(cert)
+        end.join("\n")
+      end
+
+      def credentials
+        if URI(gitaly_client.address(storage)).scheme == 'tls'
+          GRPC::Core::ChannelCredentials.new certs
+        else
+          :this_channel_is_insecure
+        end
+      end
+
       private
 
       def exists?
@@ -47,12 +69,8 @@ module Gitlab
 
       def address
         addr = gitaly_client.address(storage)
-        addr = addr.sub(%r{^tcp://}, '') if URI(addr).scheme == 'tcp'
+        addr = addr.sub(%r{^tcp://|^tls://}, '') if %w[tcp tls].include? URI(addr).scheme
         addr
-      end
-
-      def credentials
-        :this_channel_is_insecure
       end
 
       def token

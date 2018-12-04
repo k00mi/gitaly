@@ -20,6 +20,7 @@ func TestParseAddress(t *testing.T) {
 		{raw: "tcp://foobar", canonical: "foobar"},
 		{raw: "tcp://foobar:567", canonical: "foobar:567"},
 		{raw: "tcp://1.2.3.4/foo/bar.socket", invalid: true},
+		{raw: "tls://1.2.3.4/foo/bar.socket", invalid: true},
 		{raw: "tcp:///foo/bar.socket", invalid: true},
 		{raw: "tcp:/foo/bar.socket", invalid: true},
 		{raw: "tcp://[2001:0db8:85a3:0000:0000:8a2e:0370:7334]:9999", canonical: "[2001:0db8:85a3:0000:0000:8a2e:0370:7334]:9999"},
