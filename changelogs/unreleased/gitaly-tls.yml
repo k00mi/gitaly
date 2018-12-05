@@ -1,5 +1,0 @@
----
-title: Add tls configuration to gitaly golang server
-merge_request: 932
-author:
-type: added

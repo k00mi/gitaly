@@ -1,5 +1,19 @@
 # Gitaly changelog
 
+## v1.5.0
+
+#### Added
+- Add tls configuration to gitaly golang server
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/932
+
+#### Fixed
+- Fix TLS client code on macOS
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/994
+
+#### Other
+- Update to latest goimports formatting
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/993
+
 ## v1.4.0
 
 #### Added
