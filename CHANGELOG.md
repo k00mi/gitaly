@@ -1,5 +1,11 @@
 # Gitaly changelog
 
+## v1.6.0
+
+#### Other
+- Clean up invalid keep-around refs when performing housekeeping
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/992
+
 ## v1.5.0
 
 #### Added
