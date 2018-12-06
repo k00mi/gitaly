@@ -1,5 +1,11 @@
 # Gitaly changelog
 
+## v1.7.0
+
+#### Added
+- Add an RPC that allows repository size to be reduced by bulk-removing internal references
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/990
+
 ## v1.6.0
 
 #### Other

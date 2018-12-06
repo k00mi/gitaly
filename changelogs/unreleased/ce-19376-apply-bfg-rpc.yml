@@ -1,5 +1,0 @@
----
-title: Add an RPC that allows repository size to be reduced by bulk-removing internal references
-merge_request: 990
-author:
-type: added
