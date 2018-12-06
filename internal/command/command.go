@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -52,6 +53,7 @@ var exportedEnvVars = []string{
 // created it is canceled.
 type Command struct {
 	reader       io.Reader
+	writer       io.WriteCloser
 	logrusWriter io.WriteCloser
 	cmd          *exec.Cmd
 	context      context.Context
@@ -61,6 +63,19 @@ type Command struct {
 	waitOnce  sync.Once
 }
 
+type stdinSentinel struct{}
+
+func (stdinSentinel) Read([]byte) (int, error) {
+	return 0, errors.New("stdin sentinel should not be read from")
+}
+
+// SetupStdin instructs New() to configure the stdin pipe of the command it is
+// creating. This allows you call Write() on the command as if it is an ordinary
+// io.Writer, sending data directly to the stdin of the process.
+//
+// You should not call Read() on this value - it is strictly for configuration!
+var SetupStdin io.Reader = stdinSentinel{}
+
 // Read calls Read() on the stdout pipe of the command.
 func (c *Command) Read(p []byte) (int, error) {
 	if c.reader == nil {
@@ -68,6 +83,15 @@ func (c *Command) Read(p []byte) (int, error) {
 	}
 
 	return c.reader.Read(p)
+}
+
+// Write calls Write() on the stdin pipe of the command.
+func (c *Command) Write(p []byte) (int, error) {
+	if c.writer == nil {
+		panic("command has no writer")
+	}
+
+	return c.writer.Write(p)
 }
 
 // Wait calls Wait() on the exec.Cmd instance inside the command. This
@@ -109,6 +133,9 @@ type contextWithoutDonePanic string
 // New creates a Command from an exec.Cmd. On success, the Command
 // contains a running subprocess. When ctx is canceled the embedded
 // process will be terminated and reaped automatically.
+//
+// If stdin is specified as SetupStdin, you will be able to write to the stdin
+// of the subprocess by calling Write() on the returned Command.
 func New(ctx context.Context, cmd *exec.Cmd, stdin io.Reader, stdout, stderr io.Writer, env ...string) (*Command, error) {
 	if ctx.Done() == nil {
 		panic(contextWithoutDonePanic("command spawned with context without Done() channel"))
@@ -144,7 +171,17 @@ func New(ctx context.Context, cmd *exec.Cmd, stdin io.Reader, stdout, stderr io.
 	// Start the command in its own process group (nice for signalling)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
-	if stdin != nil {
+	// Three possible values for stdin:
+	//   * nil - Go implicitly uses /dev/null
+	//   * SetupStdin - configure with cmd.StdinPipe(), allowing Write() to work
+	//   * Another io.Reader - becomes cmd.Stdin. Write() will not work
+	if stdin == SetupStdin {
+		pipe, err := cmd.StdinPipe()
+		if err != nil {
+			return nil, fmt.Errorf("GitCommand: stdin: %v", err)
+		}
+		command.writer = pipe
+	} else if stdin != nil {
 		cmd.Stdin = stdin
 	}
 
@@ -203,6 +240,11 @@ func exportEnvironment(env []string) []string {
 
 // This function should never be called directly, use Wait().
 func (c *Command) wait() {
+	if c.writer != nil {
+		// Prevent the command from blocking on waiting for stdin to be closed
+		c.writer.Close()
+	}
+
 	if c.reader != nil {
 		// Prevent the command from blocking on writing to its stdout.
 		io.Copy(ioutil.Discard, c.reader)

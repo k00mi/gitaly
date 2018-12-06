@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -153,4 +154,25 @@ wait:
 
 	_, ok := err.(spawnTimeoutError)
 	require.True(t, ok, "type of error should be spawnTimeoutError")
+}
+
+func TestNewCommandWithSetupStdin(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	value := "Test value"
+	output := bytes.NewBuffer(nil)
+
+	cmd, err := New(ctx, exec.Command("cat"), SetupStdin, nil, nil)
+	require.NoError(t, err)
+
+	_, err = fmt.Fprintf(cmd, "%s", value)
+	require.NoError(t, err)
+
+	// The output of the `cat` subprocess should exactly match its input
+	_, err = io.CopyN(output, cmd, int64(len(value)))
+	require.NoError(t, err)
+	require.Equal(t, value, output.String())
+
+	require.NoError(t, cmd.Wait())
 }
