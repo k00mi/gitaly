@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -158,6 +159,98 @@ func TestGarbageCollectFailure(t *testing.T) {
 		})
 	}
 
+}
+
+func TestCleanupInvalidKeepAroundRefs(t *testing.T) {
+	server, serverSocketPath := runRepoServer(t)
+	defer server.Stop()
+
+	client, conn := newRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	// Make the directory, so we can create random reflike things in it
+	require.NoError(t, os.MkdirAll(filepath.Join(testRepoPath, "refs", "keep-around"), 0755))
+
+	testCases := []struct {
+		desc        string
+		refName     string
+		refContent  string
+		shouldExist bool
+	}{
+		{
+			desc:        "A valid ref",
+			refName:     "0b4bc9a49b562e85de7cc9e834518ea6828729b9",
+			refContent:  "0b4bc9a49b562e85de7cc9e834518ea6828729b9",
+			shouldExist: true,
+		},
+		{
+			desc:        "A ref that does not exist",
+			refName:     "bogus",
+			refContent:  "bogus",
+			shouldExist: false,
+		}, {
+			desc:        "Filled with the blank ref",
+			refName:     "0b4bc9a49b562e85de7cc9e834518ea6828729b9",
+			refContent:  "0000000000000000000000000000000000000000",
+			shouldExist: true,
+		}, {
+			desc:        "An existing ref with blank content",
+			refName:     "0b4bc9a49b562e85de7cc9e834518ea6828729b9",
+			refContent:  "",
+			shouldExist: true,
+		}, {
+			desc:        "A valid sha that does not exist in the repo",
+			refName:     "d669a6f1a70693058cf484318c1cee8526119938",
+			refContent:  "d669a6f1a70693058cf484318c1cee8526119938",
+			shouldExist: false,
+		},
+	}
+
+	for _, testcase := range testCases {
+		t.Run(testcase.desc, func(t *testing.T) {
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			// Create a proper keep-around loose ref
+			existingSha := "1e292f8fedd741b75372e19097c76d327140c312"
+			existingRefName := fmt.Sprintf("refs/keep-around/%s", existingSha)
+			testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "update-ref", existingRefName, existingSha)
+
+			// Create an invalid ref that should should be removed with the testcase
+			bogusSha := "b3f5e4adf6277b571b7943a4f0405a6dd7ee7e15"
+			bogusPath := filepath.Join(testRepoPath, fmt.Sprintf("refs/keep-around/%s", bogusSha))
+			require.NoError(t, ioutil.WriteFile(bogusPath, []byte(bogusSha), 0644))
+
+			// Creating the keeparound without using git so we can create invalid ones in testcases
+			refPath := filepath.Join(testRepoPath, fmt.Sprintf("refs/keep-around/%s", testcase.refName))
+			require.NoError(t, ioutil.WriteFile(refPath, []byte(testcase.refContent), 0644))
+
+			// Perform the request
+			req := &gitalypb.GarbageCollectRequest{Repository: testRepo}
+			_, err := client.GarbageCollect(ctx, req)
+			require.NoError(t, err)
+
+			// The existing keeparound still exists
+			commitSha := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", existingRefName)
+			require.Equal(t, existingSha, strings.TrimSpace(string(commitSha)))
+
+			//The invalid one was removed
+			_, err = os.Stat(bogusPath)
+			require.True(t, os.IsNotExist(err), "expected 'does not exist' error, got %v", err)
+
+			if testcase.shouldExist {
+				keepAroundName := fmt.Sprintf("refs/keep-around/%s", testcase.refName)
+				commitSha := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", keepAroundName)
+				require.Equal(t, testcase.refName, strings.TrimSpace(string(commitSha)))
+			} else {
+				_, err := os.Stat(refPath)
+				require.True(t, os.IsNotExist(err), "expected 'does not exist' error, got %v", err)
+			}
+		})
+	}
 }
 
 func createFileWithTimes(path string, mTime time.Time) {
