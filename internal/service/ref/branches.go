@@ -1,9 +1,17 @@
 package ref
 
 import (
+	"bufio"
+	"bytes"
+	"fmt"
+
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"golang.org/x/net/context"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func (s *server) CreateBranch(ctx context.Context, req *gitalypb.CreateBranchRequest) (*gitalypb.CreateBranchResponse, error) {
@@ -35,15 +43,65 @@ func (s *server) DeleteBranch(ctx context.Context, req *gitalypb.DeleteBranchReq
 }
 
 func (s *server) FindBranch(ctx context.Context, req *gitalypb.FindBranchRequest) (*gitalypb.FindBranchResponse, error) {
-	client, err := s.RefServiceClient(ctx)
+	refName := req.GetName()
+	if len(refName) == 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "Branch name cannot be empty")
+	}
+	repo := req.GetRepository()
+
+	if repo == nil {
+		err := status.Errorf(codes.InvalidArgument, "Repository does not exist")
+		return nil, err
+	}
+
+	var branchName []byte
+
+	if bytes.HasPrefix(refName, []byte("refs/heads/")) {
+		branchName = bytes.TrimPrefix(refName, []byte("refs/heads/"))
+	} else if bytes.HasPrefix(refName, []byte("heads/")) {
+		branchName = bytes.TrimPrefix(refName, []byte("heads/"))
+	}
+
+	cmd, err := git.Command(ctx, repo, "for-each-ref", "--format", "'%(objectname) %(refname)'", fmt.Sprintf("refs/heads/%s", string(branchName)))
+
 	if err != nil {
 		return nil, err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, req.GetRepository())
+	reader := bufio.NewReader(cmd)
+
+	line, _, err := reader.ReadLine()
+
 	if err != nil {
 		return nil, err
 	}
 
-	return client.FindBranch(clientCtx, req)
+	var name []byte
+	var revision []byte
+
+	if len(line) > 0 {
+		splitLine := bytes.Split(line, []byte(" "))
+		revision = splitLine[0]
+		name = splitLine[1]
+	}
+
+	commit, err := log.GetCommit(ctx, repo, string(revision))
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = cmd.Wait()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &gitalypb.FindBranchResponse{
+		Branch: &gitalypb.Branch{
+			Name:         name,
+			TargetCommit: commit,
+		},
+	}, nil
+
 }
