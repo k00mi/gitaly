@@ -60,6 +60,8 @@ func (s *server) FindBranch(ctx context.Context, req *gitalypb.FindBranchRequest
 		branchName = bytes.TrimPrefix(refName, []byte("refs/heads/"))
 	} else if bytes.HasPrefix(refName, []byte("heads/")) {
 		branchName = bytes.TrimPrefix(refName, []byte("heads/"))
+	} else {
+		branchName = refName
 	}
 
 	cmd, err := git.Command(ctx, repo, "for-each-ref", "--format", "'%(objectname) %(refname)'", fmt.Sprintf("refs/heads/%s", string(branchName)))
@@ -80,9 +82,9 @@ func (s *server) FindBranch(ctx context.Context, req *gitalypb.FindBranchRequest
 	var revision []byte
 
 	if len(line) > 0 {
-		splitLine := bytes.Split(line, []byte(" "))
+		splitLine := bytes.Split(line[1:len(line)-1], []byte(" "))
 		revision = splitLine[0]
-		name = splitLine[1]
+		name = bytes.TrimPrefix(splitLine[1], []byte("refs/heads/"))
 	}
 
 	commit, err := log.GetCommit(ctx, repo, string(revision))
