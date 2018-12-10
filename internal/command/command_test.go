@@ -176,3 +176,14 @@ func TestNewCommandWithSetupStdin(t *testing.T) {
 
 	require.NoError(t, cmd.Wait())
 }
+
+func TestNewCommandNullInArg(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	_, err := New(ctx, exec.Command("sh", "-c", "hello\x00world"), nil, nil, nil)
+	require.Error(t, err)
+
+	_, ok := err.(nullInArgvError)
+	require.True(t, ok, "expected %+v to be nullInArgvError", err)
+}
