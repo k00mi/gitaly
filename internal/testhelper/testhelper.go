@@ -349,7 +349,7 @@ func createRepo(t *testing.T, storagePath string) (repo *gitalypb.Repository, re
 	require.NoError(t, err)
 	relativePath, err = filepath.Rel(storagePath, repoPath)
 	require.NoError(t, err)
-	repo = &gitalypb.Repository{StorageName: "default", RelativePath: relativePath}
+	repo = &gitalypb.Repository{StorageName: "default", RelativePath: relativePath, GlRepository: "project-1"}
 
 	return repo, repoPath, relativePath
 }
