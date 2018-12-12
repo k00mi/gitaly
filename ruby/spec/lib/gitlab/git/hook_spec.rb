@@ -30,6 +30,24 @@ describe Gitlab::Git::Hook do
       ENV['GITALY_GIT_HOOKS_DIR'] = old_env
     end
 
+    context 'when the hooks require environment variables' do
+      let(:vars) { %w[GL_ID GL_USERNAME PWD GIT_DIR] }
+      let(:script) do
+        "#!/bin/sh\n" +
+          vars.map { |var| "if [ -z \"$#{var}\"]; then exit 1; fi\n" }.join("\n") +
+          "exit 0\n"
+      end
+
+      it 'returns true' do
+        hook_names.each do |hook|
+          trigger_result = described_class.new(hook, repo)
+                                          .trigger('1', 'admin', '0' * 40, 'a' * 40, 'master')
+
+          expect(trigger_result.first).to be(true)
+        end
+      end
+    end
+
     context 'when the hooks are successful' do
       let(:script) { "#!/bin/sh\nexit 0\n" }
 

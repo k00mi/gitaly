@@ -49,6 +49,7 @@ module Gitlab
           'GL_ID' => gl_id,
           'GL_USERNAME' => gl_username,
           'PWD' => repo_path,
+          'GIT_DIR' => repo_path,
           'GL_PROTOCOL' => GL_PROTOCOL,
           'GL_REPOSITORY' => repository.gl_repository
         }
@@ -87,7 +88,8 @@ module Gitlab
         env = {
           'GL_ID' => gl_id,
           'GL_USERNAME' => gl_username,
-          'PWD' => repo_path
+          'PWD' => repo_path,
+          'GIT_DIR' => repo_path
         }
 
         options = {
