@@ -9,7 +9,6 @@ Before you can develop on Gitaly, it's required to have a
 it to be working by starting the required servers and visiting GitLab on
 `http://localhost:3000`.
 
-
 #### Gitaly Proto
 
 GitLab will want to read and manipulate Git data, to do this it needs to talk
@@ -79,6 +78,33 @@ your favourite editor, and all your plugins should work. Note that when
 some tools break. In this case run commands in your global GOPATH instead.
 
 ### Development
+
+#### General advice
+
+##### Editing code and seeing what happens
+
+If you're used to Ruby on Rails development you may be used to a "edit
+code and reload" cycle where you keep editing and reloading until you
+have your change working. This is not a good workflow for Gitaly
+development.
+
+At some point you will know which Gitaly RPC you need to work on. This
+is where you probably want to stop using `localhost:3000` and zoom in on
+the RPC instead.
+
+To experiment with changing an RPC you should use the Gitaly service
+tests. The RPC you want to work on will have tests somewhere in
+`internal/services/...`. Find the tests for your RPC. Next, before you
+edit any code, make sure the tests pass when you run them:
+`go test ./internal/service/foobar -count 1 -run MyRPC`. In this
+command, `MyRPC` is a regex that will match functions like
+`TestMyRPCSuccess` and `TestMyRPCValidationFailure`. Once you have found
+your tests and your test command, you can start tweaking the
+implementation or adding test cases and re-running the tests. The cycle
+is "edit code, run tests".
+
+This is many times faster than "edit gitaly, reinstall Gitaly into GDK,
+restart, reload localhost:3000".
 
 #### Process
 
