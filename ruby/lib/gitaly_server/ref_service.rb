@@ -44,20 +44,6 @@ module GitalyServer
       raise GRPC::Internal.new(e.to_s)
     end
 
-    def find_branch(request, call)
-      branch_name = request.name
-      raise GRPC::InvalidArgument.new("empty Name") if branch_name.empty?
-
-      repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
-      rugged_branch = repo.find_branch(branch_name)
-      gitaly_branch = Gitaly::Branch.new(
-        name: rugged_branch.name.b,
-        target_commit: gitaly_commit_from_rugged(rugged_branch.dereferenced_target.raw_commit)
-      ) unless rugged_branch.nil?
-
-      Gitaly::FindBranchResponse.new(branch: gitaly_branch)
-    end
-
     def find_all_tags(request, call)
       repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
 
