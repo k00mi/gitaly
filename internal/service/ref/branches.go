@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
@@ -75,7 +76,11 @@ func (s *server) FindBranch(ctx context.Context, req *gitalypb.FindBranchRequest
 	line, _, err := reader.ReadLine()
 
 	if err != nil {
-		return nil, err
+		if err == io.EOF {
+			return &gitalypb.FindBranchResponse{
+				nil,
+			}, nil
+		}
 	}
 
 	var name []byte
