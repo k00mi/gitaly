@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -127,8 +128,9 @@ func WaitAllDone() {
 	wg.Wait()
 }
 
-type spawnTimeoutError error
+type spawnTimeoutError struct{ error }
 type contextWithoutDonePanic string
+type nullInArgvError struct{ error }
 
 // New creates a Command from an exec.Cmd. On success, the Command
 // contains a running subprocess. When ctx is canceled the embedded
@@ -139,6 +141,10 @@ type contextWithoutDonePanic string
 func New(ctx context.Context, cmd *exec.Cmd, stdin io.Reader, stdout, stderr io.Writer, env ...string) (*Command, error) {
 	if ctx.Done() == nil {
 		panic(contextWithoutDonePanic("command spawned with context without Done() channel"))
+	}
+
+	if err := checkNullArgv(cmd); err != nil {
+		return nil, err
 	}
 
 	putToken, err := getSpawnToken(ctx)
@@ -308,4 +314,19 @@ func (c *Command) logProcessComplete(ctx context.Context, exitCode int) {
 	}
 
 	entry.Debug("spawn complete")
+}
+
+// Command arguments will be passed to the exec syscall as
+// null-terminated C strings. That means the arguments themselves may not
+// contain a null byte. The go stdlib checks for null bytes but it
+// returns a cryptic error. This function returns a more explicit error.
+func checkNullArgv(cmd *exec.Cmd) error {
+	for _, arg := range cmd.Args {
+		if strings.IndexByte(arg, 0) > -1 {
+			// Use %q so that the null byte gets printed as \x00
+			return nullInArgvError{fmt.Errorf("detected null byte in command argument %q", arg)}
+		}
+	}
+
+	return nil
 }

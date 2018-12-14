@@ -1,5 +1,21 @@
 # Gitaly changelog
 
+## v1.8.0
+
+#### Other
+- Log correlation_id field in structured logging output
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/995
+- Add explicit null byte check in internal/command.New
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/997
+- README cleanup
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/996
+
+## v1.7.1
+
+#### Other
+- Log correlation_id field in structured logging output
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/995
+
 ## v1.7.0
 
 #### Added
