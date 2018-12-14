@@ -50,46 +50,35 @@ func (s *server) FindBranch(ctx context.Context, req *gitalypb.FindBranchRequest
 	}
 	repo := req.GetRepository()
 
-	if repo == nil {
-		err := status.Errorf(codes.InvalidArgument, "Repository does not exist")
-		return nil, err
-	}
-
-	var branchName []byte
-
 	if bytes.HasPrefix(refName, []byte("refs/heads/")) {
-		branchName = bytes.TrimPrefix(refName, []byte("refs/heads/"))
+		refName = bytes.TrimPrefix(refName, []byte("refs/heads/"))
 	} else if bytes.HasPrefix(refName, []byte("heads/")) {
-		branchName = bytes.TrimPrefix(refName, []byte("heads/"))
-	} else {
-		branchName = refName
+		refName = bytes.TrimPrefix(refName, []byte("heads/"))
 	}
 
-	cmd, err := git.Command(ctx, repo, "for-each-ref", "--format", "'%(objectname) %(refname)'", fmt.Sprintf("refs/heads/%s", string(branchName)))
+	cmd, err := git.Command(ctx, repo, "for-each-ref", "--format", "'%(objectname) %(refname)'", fmt.Sprintf("refs/heads/%s", string(refName)))
 
 	if err != nil {
 		return nil, err
 	}
 
 	reader := bufio.NewReader(cmd)
-
 	line, _, err := reader.ReadLine()
 
 	if err != nil {
 		if err == io.EOF {
-			return &gitalypb.FindBranchResponse{
-				nil,
-			}, nil
+			return &gitalypb.FindBranchResponse{}, nil
 		}
 	}
 
 	var name []byte
 	var revision []byte
 
-	if len(line) > 0 {
-		splitLine := bytes.Split(line[1:len(line)-1], []byte(" "))
+	if splitLine := bytes.Split(line[1:len(line)-1], []byte(" ")); len(splitLine) == 2 {
 		revision = splitLine[0]
 		name = bytes.TrimPrefix(splitLine[1], []byte("refs/heads/"))
+	} else {
+		return &gitalypb.FindBranchResponse{}, nil
 	}
 
 	commit, err := log.GetCommit(ctx, repo, string(revision))
@@ -98,9 +87,7 @@ func (s *server) FindBranch(ctx context.Context, req *gitalypb.FindBranchRequest
 		return nil, err
 	}
 
-	err = cmd.Wait()
-
-	if err != nil {
+	if err := cmd.Wait(); err != nil {
 		return nil, err
 	}
 
@@ -110,5 +97,4 @@ func (s *server) FindBranch(ctx context.Context, req *gitalypb.FindBranchRequest
 			TargetCommit: commit,
 		},
 	}, nil
-
 }
