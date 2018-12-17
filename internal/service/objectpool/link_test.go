@@ -147,6 +147,7 @@ func TestUnlink(t *testing.T) {
 			desc: "Successful request",
 			req: &gitalypb.UnlinkRepositoryFromObjectPoolRequest{
 				Repository: testRepo,
+				ObjectPool: pool.ToProto(),
 			},
 			code: codes.OK,
 		},
@@ -161,6 +162,9 @@ func TestUnlink(t *testing.T) {
 				commit, err := log.GetCommit(ctx, testRepo, poolCommitID)
 				require.NoError(t, err)
 				require.Nil(t, commit)
+
+				remotes := testhelper.MustRunCommand(t, nil, "git", "-C", pool.FullPath(), "remote")
+				require.Len(t, remotes, 0)
 			}
 		})
 	}
@@ -185,7 +189,10 @@ func TestUnlinkIdempotent(t *testing.T) {
 	require.NoError(t, pool.Create(ctx, testRepo))
 	require.NoError(t, pool.Link(ctx, testRepo))
 
-	request := &gitalypb.UnlinkRepositoryFromObjectPoolRequest{testRepo}
+	request := &gitalypb.UnlinkRepositoryFromObjectPoolRequest{
+		Repository: testRepo,
+		ObjectPool: pool.ToProto(),
+	}
 
 	_, err = client.UnlinkRepositoryFromObjectPool(ctx, request)
 	require.NoError(t, err)

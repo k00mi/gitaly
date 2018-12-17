@@ -1,5 +1,15 @@
 # Gitaly changelog
 
+## v1.9.0
+
+#### Changed
+- Improve Linking and Unlink object pools RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1000
+
+#### Other
+- Fix tests failing due to test-repo change
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1004
+
 ## v1.8.0
 
 #### Other
