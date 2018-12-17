@@ -57,23 +57,21 @@ func (s *server) FindBranch(ctx context.Context, req *gitalypb.FindBranchRequest
 	}
 
 	cmd, err := git.Command(ctx, repo, "for-each-ref", "--format", "'%(objectname) %(refname)'", fmt.Sprintf("refs/heads/%s", string(refName)))
-
 	if err != nil {
 		return nil, err
 	}
 
 	reader := bufio.NewReader(cmd)
 	line, _, err := reader.ReadLine()
-
 	if err != nil {
 		if err == io.EOF {
 			return &gitalypb.FindBranchResponse{}, nil
 		}
+		return nil, err
 	}
 
 	var name []byte
 	var revision []byte
-
 	if splitLine := bytes.Split(line[1:len(line)-1], []byte(" ")); len(splitLine) == 2 {
 		revision = splitLine[0]
 		name = bytes.TrimPrefix(splitLine[1], []byte("refs/heads/"))
@@ -82,7 +80,6 @@ func (s *server) FindBranch(ctx context.Context, req *gitalypb.FindBranchRequest
 	}
 
 	commit, err := log.GetCommit(ctx, repo, string(revision))
-
 	if err != nil {
 		return nil, err
 	}
