@@ -85,7 +85,7 @@ func (o *ObjectPool) Create(ctx context.Context, repo *gitalypb.Repository) (err
 		return err
 	}
 
-	return nil
+	return o.setConfig(ctx, "gc.auto", "0")
 }
 
 // Remove will remove the pool, and all its contents without preparing and/or

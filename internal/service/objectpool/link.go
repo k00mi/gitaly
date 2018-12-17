@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
-	"gitlab.com/gitlab-org/gitaly/internal/git/objectpool"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -32,7 +31,12 @@ func (s *server) UnlinkRepositoryFromObjectPool(ctx context.Context, req *gitaly
 		return nil, status.Error(codes.InvalidArgument, "no repository")
 	}
 
-	if err := objectpool.Unlink(ctx, req.GetRepository()); err != nil {
+	pool, err := poolForRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := pool.Unlink(ctx, req.GetRepository()); err != nil {
 		return nil, err
 	}
 
