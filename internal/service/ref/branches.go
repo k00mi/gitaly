@@ -2,9 +2,9 @@ package ref
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"io"
+	"strings"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
@@ -44,16 +44,16 @@ func (s *server) DeleteBranch(ctx context.Context, req *gitalypb.DeleteBranchReq
 }
 
 func (s *server) FindBranch(ctx context.Context, req *gitalypb.FindBranchRequest) (*gitalypb.FindBranchResponse, error) {
-	refName := req.GetName()
+	refName := string(req.GetName())
 	if len(refName) == 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "Branch name cannot be empty")
 	}
 	repo := req.GetRepository()
 
-	if bytes.HasPrefix(refName, []byte("refs/heads/")) {
-		refName = bytes.TrimPrefix(refName, []byte("refs/heads/"))
-	} else if bytes.HasPrefix(refName, []byte("heads/")) {
-		refName = bytes.TrimPrefix(refName, []byte("heads/"))
+	if strings.HasPrefix(refName, "refs/heads/") {
+		refName = strings.TrimPrefix(refName, "refs/heads/")
+	} else if strings.HasPrefix(refName, "heads/") {
+		refName = strings.TrimPrefix(refName, "heads/")
 	}
 
 	cmd, err := git.Command(ctx, repo, "for-each-ref", "--format", "%(objectname)", fmt.Sprintf("refs/heads/%s", string(refName)))
@@ -81,7 +81,7 @@ func (s *server) FindBranch(ctx context.Context, req *gitalypb.FindBranchRequest
 
 	return &gitalypb.FindBranchResponse{
 		Branch: &gitalypb.Branch{
-			Name:         refName,
+			Name:         []byte(refName),
 			TargetCommit: commit,
 		},
 	}, nil
