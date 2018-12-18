@@ -45,13 +45,10 @@ module Gitlab
         exit_status = false
         exit_message = nil
 
-        vars = {
-          'GL_ID' => gl_id,
-          'GL_USERNAME' => gl_username,
-          'PWD' => repo_path,
+        vars = env_base_vars(gl_id, gl_username).merge(
           'GL_PROTOCOL' => GL_PROTOCOL,
           'GL_REPOSITORY' => repository.gl_repository
-        }
+        )
 
         options = {
           chdir: repo_path
@@ -84,19 +81,15 @@ module Gitlab
       end
 
       def call_update_hook(gl_id, gl_username, oldrev, newrev, ref)
-        env = {
-          'GL_ID' => gl_id,
-          'GL_USERNAME' => gl_username,
-          'PWD' => repo_path
-        }
-
         options = {
           chdir: repo_path
         }
 
         args = [ref, oldrev, newrev]
 
-        stdout, stderr, status = Open3.capture3(env, path, *args, options)
+        vars = env_base_vars(gl_id, gl_username)
+
+        stdout, stderr, status = Open3.capture3(vars, path, *args, options)
         [status.success?, stderr.presence || stdout]
       end
 
@@ -104,6 +97,15 @@ module Gitlab
         err_message = stderr.read
         err_message = err_message.blank? ? stdout.read : err_message
         err_message
+      end
+
+      def env_base_vars(gl_id, gl_username)
+        {
+          'GL_ID' => gl_id,
+          'GL_USERNAME' => gl_username,
+          'PWD' => repo_path,
+          'GIT_DIR' => repo_path
+        }
       end
     end
   end
