@@ -120,6 +120,8 @@ It has these top-level messages:
 	LinkRepositoryToObjectPoolResponse
 	UnlinkRepositoryFromObjectPoolRequest
 	UnlinkRepositoryFromObjectPoolResponse
+	ReduplicateRepositoryRequest
+	ReduplicateRepositoryResponse
 	UserCreateBranchRequest
 	UserCreateBranchResponse
 	UserUpdateBranchRequest
