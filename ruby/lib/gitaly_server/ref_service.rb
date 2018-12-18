@@ -44,6 +44,7 @@ module GitalyServer
       raise GRPC::Internal.new(e.to_s)
     end
 
+    # Deprecated: Will be removed in GitLab 11.8
     def find_branch(request, call)
       branch_name = request.name
       raise GRPC::InvalidArgument.new("empty Name") if branch_name.empty?
