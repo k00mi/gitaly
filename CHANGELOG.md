@@ -1,5 +1,19 @@
 # Gitaly changelog
 
+## v1.10.0
+
+#### Added
+- Allow repositories to be reduplicated
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1003
+
+#### Fixed
+- Add GIT_DIR to hook environment
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1001
+
+#### Performance
+- Re-implemented FindBranch in Go
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/981
+
 ## v1.9.0
 
 #### Changed

@@ -1,5 +1,0 @@
----
-title: Re-implemented FindBranch in Go
-merge_request: 981
-author:
-type: performance
