@@ -65,29 +65,31 @@ func TestListNewCommits(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		request := &gitalypb.ListNewCommitsRequest{Repository: testRepo, CommitId: tc.revision}
+		t.Run(tc.revision, func(t *testing.T) {
+			request := &gitalypb.ListNewCommitsRequest{Repository: testRepo, CommitId: tc.revision}
 
-		stream, err := client.ListNewCommits(ctx, request)
-		require.NoError(t, err)
-
-		var commits []*gitalypb.GitCommit
-		for {
-			msg, err := stream.Recv()
-
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				require.Equal(t, tc.responseCode, status.Code(err))
-				break
-			}
-
+			stream, err := client.ListNewCommits(ctx, request)
 			require.NoError(t, err)
-			commits = append(commits, msg.Commits...)
-		}
-		require.Len(t, commits, len(tc.newCommitOids))
-		for i, commit := range commits {
-			require.Equal(t, commit.Id, tc.newCommitOids[i])
-		}
+
+			var commits []*gitalypb.GitCommit
+			for {
+				msg, err := stream.Recv()
+
+				if err == io.EOF {
+					break
+				}
+				if err != nil {
+					require.Equal(t, tc.responseCode, status.Code(err))
+					break
+				}
+
+				require.NoError(t, err)
+				commits = append(commits, msg.Commits...)
+			}
+			require.Len(t, commits, len(tc.newCommitOids))
+			for i, commit := range commits {
+				require.Equal(t, commit.Id, tc.newCommitOids[i])
+			}
+		})
 	}
 }
