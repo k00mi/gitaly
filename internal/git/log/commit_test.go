@@ -1,6 +1,7 @@
 package log
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -93,9 +94,10 @@ func TestParseRawCommit(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
 			info.Size = int64(len(tc.in))
-			out, err := parseRawCommit(tc.in, info)
+			out, err := parseRawCommit(bytes.NewBuffer(tc.in), info)
 			require.NoError(t, err, "parse error")
-			require.Equal(t, *tc.out, *out)
+			require.Equal(t, tc.out, out)
+
 		})
 	}
 }

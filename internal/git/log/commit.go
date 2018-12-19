@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"io"
 	"io/ioutil"
 	"strconv"
 	"strings"
@@ -42,15 +43,42 @@ func GetCommitCatfile(c *catfile.Batch, revision string) (*gitalypb.GitCommit, e
 		return nil, err
 	}
 
-	raw, err := ioutil.ReadAll(r)
+	return parseRawCommit(r, info)
+}
+
+// GetCommitMessage looks up a commit message and returns it in its entirety.
+func GetCommitMessage(c *catfile.Batch, repo *gitalypb.Repository, revision string) ([]byte, error) {
+	info, err := c.Info(revision + "^{commit}")
 	if err != nil {
 		return nil, err
 	}
 
-	return parseRawCommit(raw, info)
+	r, err := c.Commit(info.Oid)
+	if err != nil {
+		return nil, err
+	}
+
+	_, body, err := splitRawCommit(r)
+	if err != nil {
+		return nil, err
+	}
+	return body, nil
 }
 
-func parseRawCommit(raw []byte, info *catfile.ObjectInfo) (*gitalypb.GitCommit, error) {
+func parseRawCommit(r io.Reader, info *catfile.ObjectInfo) (*gitalypb.GitCommit, error) {
+	header, body, err := splitRawCommit(r)
+	if err != nil {
+		return nil, err
+	}
+	return buildCommit(header, body, info)
+}
+
+func splitRawCommit(r io.Reader) ([]byte, []byte, error) {
+	raw, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	split := bytes.SplitN(raw, []byte("\n\n"), 2)
 
 	header := split[0]
@@ -59,13 +87,18 @@ func parseRawCommit(raw []byte, info *catfile.ObjectInfo) (*gitalypb.GitCommit, 
 		body = split[1]
 	}
 
+	return header, body, nil
+}
+
+func buildCommit(header, body []byte, info *catfile.ObjectInfo) (*gitalypb.GitCommit, error) {
 	commit := &gitalypb.GitCommit{
 		Id:       info.Oid,
+		BodySize: int64(len(body)),
 		Body:     body,
 		Subject:  subjectFromBody(body),
-		BodySize: int64(len(body)),
 	}
-	if max := helper.MaxCommitOrTagMessageSize; len(commit.Body) > max {
+
+	if max := helper.MaxCommitOrTagMessageSize; len(body) > max {
 		commit.Body = commit.Body[:max]
 	}
 
