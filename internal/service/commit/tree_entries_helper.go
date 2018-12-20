@@ -74,7 +74,7 @@ func treeEntries(c *catfile.Batch, revision, path string, rootOid string, recurs
 		rootOid = rootTreeInfo.Oid
 	}
 
-	treeEntryInfo, err := c.Info(fmt.Sprintf("%s^{tree}:%s", revision, path))
+	treeEntryInfo, err := c.Info(fmt.Sprintf("%s:%s", revision, path))
 	if err != nil {
 		if catfile.IsNotFound(err) {
 			return nil, nil
