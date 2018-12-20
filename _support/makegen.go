@@ -69,13 +69,18 @@ func (gm *gitalyMake) BuildDir() string {
 	return gm.cwd
 }
 
-func (gm *gitalyMake) Pkg() string         { return "gitlab.com/gitlab-org/gitaly" }
-func (gm *gitalyMake) GoImports() string   { return "bin/goimports" }
-func (gm *gitalyMake) GoCovMerge() string  { return "bin/gocovmerge" }
-func (gm *gitalyMake) GoLint() string      { return "bin/golint" }
-func (gm *gitalyMake) GoVendor() string    { return "bin/govendor" }
-func (gm *gitalyMake) MegaCheck() string   { return "bin/megacheck" }
-func (gm *gitalyMake) CoverageDir() string { return filepath.Join(gm.BuildDir(), "cover") }
+func (gm *gitalyMake) Pkg() string               { return "gitlab.com/gitlab-org/gitaly" }
+func (gm *gitalyMake) GoImports() string         { return "bin/goimports" }
+func (gm *gitalyMake) GoCovMerge() string        { return "bin/gocovmerge" }
+func (gm *gitalyMake) GoLint() string            { return "bin/golint" }
+func (gm *gitalyMake) GoVendor() string          { return "bin/govendor" }
+func (gm *gitalyMake) MegaCheck() string         { return "bin/megacheck" }
+func (gm *gitalyMake) CoverageDir() string       { return filepath.Join(gm.BuildDir(), "cover") }
+func (gm *gitalyMake) GitalyRubyDir() string     { return filepath.Join(gm.SourceDir(), "ruby") }
+func (gm *gitalyMake) GitlabShellRelDir() string { return "ruby/vendor/gitlab-shell" }
+func (gm *gitalyMake) GitlabShellDir() string {
+	return filepath.Join(gm.SourceDir(), gm.GitlabShellRelDir())
+}
 
 // SourceDir is the location of gitaly's files, inside the _build GOPATH.
 func (gm *gitalyMake) SourceDir() string { return filepath.Join(gm.BuildDir(), "src", gm.Pkg()) }
@@ -243,10 +248,10 @@ build: ../.ruby-bundle
 # This file is used by Omnibus and CNG to skip the "bundle install"
 # step. Both Omnibus and CNG assume it is in the Gitaly root, not in
 # _build. Hence the '../' in front.
-../.ruby-bundle: {{ .SourceDir }}/ruby/Gemfile.lock {{ .SourceDir }}/ruby/Gemfile
-	cd {{ .SourceDir }}/ruby && bundle config # for debugging
-	cd {{ .SourceDir }}/ruby && bundle install $(BUNDLE_FLAGS)
-	cd {{ .SourceDir }}/ruby && bundle show gitaly-proto # sanity check
+../.ruby-bundle:  {{ .GitalyRubyDir }}/Gemfile.lock  {{ .GitalyRubyDir }}/Gemfile
+	cd  {{ .GitalyRubyDir }} && bundle config # for debugging
+	cd  {{ .GitalyRubyDir }} && bundle install $(BUNDLE_FLAGS)
+	cd  {{ .GitalyRubyDir }} && bundle show gitaly-proto # sanity check
 	touch $@
 
 .PHONY: install
@@ -277,9 +282,9 @@ assemble-go: build
 assemble-ruby:
 	rm -rf $(ASSEMBLY_ROOT)/ruby
 	mkdir -p $(ASSEMBLY_ROOT)
-	rm -rf {{ .SourceDir }}/ruby/tmp
-	cp -r {{ .SourceDir }}/ruby $(ASSEMBLY_ROOT)/ruby
-	rm -rf $(ASSEMBLY_ROOT)/ruby/spec
+	rm -rf {{ .GitalyRubyDir }}/tmp {{ .GitlabShellDir }}/tmp 
+	cp -r  {{ .GitalyRubyDir }} $(ASSEMBLY_ROOT)/ruby
+	rm -rf $(ASSEMBLY_ROOT)/ruby/spec $(ASSEMBLY_ROOT)/{{ .GitlabShellRelDir }}/spec $(ASSEMBLY_ROOT)/{{ .GitlabShellRelDir }}/gitlab-shell.log
 
 binaries: assemble
 	@if [ $$(uname -m) != 'x86_64' ]; then echo Incorrect architecture for build: $(uname -m); exit 1; fi
@@ -317,7 +322,7 @@ race-go: prepare-tests
 
 .PHONY: rspec
 rspec: assemble-go prepare-tests
-	cd {{ .SourceDir }}/ruby && bundle exec rspec
+	cd  {{ .GitalyRubyDir }} && bundle exec rspec
 
 .PHONY: verify
 verify: lint check-formatting megacheck govendor-status notice-up-to-date govendor-tagged rubocop
@@ -381,7 +386,7 @@ govendor-tagged: {{ .GoVendor }}
 
 .PHONY: rubocop
 rubocop: ../.ruby-bundle
-	cd {{ .SourceDir }}/ruby && bundle exec rubocop --parallel
+	cd  {{ .GitalyRubyDir }} && bundle exec rubocop --parallel
 
 .PHONY: cover
 cover: prepare-tests {{ .GoCovMerge }}
@@ -403,8 +408,8 @@ cover: prepare-tests {{ .GoCovMerge }}
 docker:
 	rm -rf docker/
 	mkdir -p docker/bin/
-	rm -rf {{ .SourceDir }}/ruby/tmp
-	cp -r {{ .SourceDir }}/ruby docker/ruby
+	rm -rf  {{ .GitalyRubyDir }}/tmp
+	cp -r  {{ .GitalyRubyDir }} docker/ruby
 	rm -rf docker/ruby/vendor/bundle
 {{ $pkg := .Pkg }}
 {{ $goLdFlags := .GoLdFlags }}
