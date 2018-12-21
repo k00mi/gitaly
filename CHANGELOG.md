@@ -1,5 +1,13 @@
 # Gitaly changelog
 
+## v1.11.0
+
+#### Fixed
+- Fix incorrect tree entries retrieved with directories that have curly braces
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1013
+- Deduplicate CA in gitaly tls
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1005
+
 ## v1.10.0
 
 #### Added
