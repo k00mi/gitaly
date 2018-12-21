@@ -3,6 +3,8 @@ package commit
 import (
 	"fmt"
 	"io"
+	"os"
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -11,6 +13,72 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 )
+
+func TestSuccessfulGetTreeEntriesWithCurlyBraces(t *testing.T) {
+	server, serverSocketPath := startTestServices(t)
+	defer server.Stop()
+
+	client, conn := newCommitServiceClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepoWithWorktree(t)
+	defer cleanupFn()
+
+	normalFolderName := "issue-46261/folder"
+	curlyFolderName := "issue-46261/{{curly}}"
+	normalFolder := path.Join(testRepoPath, normalFolderName)
+	curlyFolder := path.Join(testRepoPath, curlyFolderName)
+
+	os.MkdirAll(normalFolder, 0755)
+	os.MkdirAll(curlyFolder, 0755)
+
+	testhelper.MustRunCommand(t, nil, "touch", path.Join(normalFolder, "/test1.txt"))
+	testhelper.MustRunCommand(t, nil, "touch", path.Join(curlyFolder, "/test2.txt"))
+
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "add", "--all")
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "commit", "-m", "Test commit")
+
+	testCases := []struct {
+		description string
+		revision    []byte
+		path        []byte
+		recursive   bool
+		filename    []byte
+	}{
+		{
+			description: "with a normal folder",
+			revision:    []byte("master"),
+			path:        []byte(normalFolderName),
+			filename:    []byte("issue-46261/folder/test1.txt"),
+		},
+		{
+			description: "with a folder with curly braces",
+			revision:    []byte("master"),
+			path:        []byte(curlyFolderName),
+			filename:    []byte("issue-46261/{{curly}}/test2.txt"),
+		},
+	}
+
+	for _, testCase := range testCases {
+		request := &gitalypb.GetTreeEntriesRequest{
+			Repository: testRepo,
+			Revision:   []byte("HEAD"),
+			Path:       testCase.path,
+			Recursive:  testCase.recursive,
+		}
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		c, err := client.GetTreeEntries(ctx, request)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		fetchedEntries := getTreeEntriesFromTreeEntryClient(t, c)
+		require.Equal(t, 1, len(fetchedEntries))
+		require.Equal(t, testCase.filename, fetchedEntries[0].FlatPath)
+	}
+}
 
 func TestSuccessfulGetTreeEntries(t *testing.T) {
 	//  Force entries to be sliced to test that behaviour

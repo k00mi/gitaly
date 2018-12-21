@@ -1,0 +1,5 @@
+---
+title: Fix incorrect tree entries retrieved with directories that have curly braces
+merge_request: 1013
+author:
+type: fixed
