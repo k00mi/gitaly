@@ -1,5 +1,11 @@
 # Gitaly changelog
 
+## v1.12.0
+
+#### Fixed
+- Fix wildcard protected branches not working with remote mirrors
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1006
+
 ## v1.11.0
 
 #### Fixed
