@@ -502,7 +502,6 @@
 			"version": "v1.8.0",
 			"versionExact": "v1.8.0"
 		},
-
 		{
 			"checksumSHA1": "R6fNN36q3UydLODupK0vdx9h/CY=",
 			"path": "gitlab.com/gitlab-org/labkit/correlation",
