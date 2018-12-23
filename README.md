@@ -5,16 +5,16 @@
 **Quick Links**:
   [**Roadmap**](https://gitlab.com/groups/gitlab-org/-/roadmap?label_name%5B%5D=Gitaly&scope=all&sort=start_date_asc&state=opened) |
   [Want to Contribute?](https://gitlab.com/gitlab-org/gitaly/issues?scope=all&utf8=%E2%9C%93&state=opened&label_name[]=Accepting%20merge%20requests) |
-  [GitLab Gitaly Issues](https://gitlab.com/groups/gitlab-org/issues?scope=all&state=opened&utf8=%E2%9C%93&label_name%5B%5D=Gitaly) |
-  [GitLab Gitaly Merge Requests](https://gitlab.com/groups/gitlab-org/merge_requests?label_name%5B%5D=Gitaly) |
-  [gitlab.com dashboard](https://performance.gitlab.net/dashboard/db/gitaly) |
+  [GitLab Gitaly Issues](https://gitlab.com/groups/gitlab-org/-/issues?scope=all&state=opened&utf8=%E2%9C%93&label_name%5B%5D=Gitaly) |
+  [GitLab Gitaly Merge Requests](https://gitlab.com/groups/gitlab-org/-/merge_requests?label_name%5B%5D=Gitaly) |
+  [gitlab.com monitoring dashboard](https://dashboards.gitlab.com/d/000000176/gitaly) |
 
 --------------------------------------------
 
 Gitaly is a Git [RPC](https://en.wikipedia.org/wiki/Remote_procedure_call)
 service for handling all the git calls made by GitLab.
 
-To see where it fits in please look at [GitLab's architecture](https://docs.gitlab.com/ce/development/architecture.html#system-layout)
+To see where it fits in please look at [GitLab's architecture](https://docs.gitlab.com/ce/development/architecture.html#system-layout).
 
 ## Project Goals
 
@@ -33,7 +33,7 @@ longer uses direct disk access to touch Git repositories; the [NFS
 mounts have been
 removed](https://about.gitlab.com/2018/09/12/the-road-to-gitaly-1-0/).
 
-The last feature that remains to be migrated is the [ElasticSearch
+The last feature that remains to be migrated is the [Elasticsearch
 indexer](https://gitlab.com/gitlab-org/gitaly/issues/760). Once that is
 done we can conclude the migration project by [removing the Git
 repository storage paths from gitlab-rails's
@@ -47,18 +47,18 @@ GitLab.com, we have dashboards!
 
 ##### Overall
 
-[![image](https://gitlab.com/gitlab-org/gitaly/uploads/ee1fd4f33e9bfb92fefca60fee1f44ad/image.png)](http://monitor.gitlab.net/dashboard/db/gitaly?orgId=1&var-job=gitaly-production&from=now-7d&to=now)
+[![image](https://gitlab.com/gitlab-org/gitaly/uploads/ca7dddd2e23b7f1fb8c0f842c93059ce/gitaly-overview_s.png)](https://dashboards.gitlab.com/d/000000176/gitaly)
 
 ##### By Feature
 
- [![image](https://gitlab.com/gitlab-org/gitaly/uploads/5b3825e01c48975c2a64e01ae37b4a3d/image.png)](http://monitor.gitlab.net/dashboard/db/gitaly-features?orgId=1&var-job=gitaly-production&from=now-7d&to=now)
+[![image](https://gitlab.com/gitlab-org/gitaly/uploads/048a1facaaf18b4799569150ca7c3cd6/gitaly-features_s.png)](https://dashboards.gitlab.com/d/000000198/gitaly-features-overview)
 
 ## Installation
 
 Most users won't install Gitaly on its own. It is already included in
 [your GitLab installation](https://about.gitlab.com/install/).
 
-Gitaly requires Go 1.10 or newer and Ruby 2.4. Run `make` to download
+Gitaly requires Go 1.10 or newer and Ruby 2.5. Run `make` to download
 and compile Ruby dependencies, and to compile the Gitaly Go
 executable.
 
@@ -66,7 +66,7 @@ Gitaly uses `git`. Version `2.18.0` or higher is required.
 
 ## Configuration
 
-See [configuration documentation](doc/configuration)
+See [configuration documentation](doc/configuration).
 
 ## Contributing
 
@@ -95,15 +95,15 @@ As of Q4 2018, the following GitLab components act as Gitaly clients:
 -   [gitlab-rails](https://gitlab.com/gitlab-org/gitlab-ce/blob/master/lib/gitlab/gitaly_client.rb):
     the main GitLab Rails application.
 -   [gitlab-shell](https://gitlab.com/gitlab-org/gitlab-shell/tree/master):
-    For `git clone`, `git push` etc. via SSH.
+    for `git clone`, `git push` etc. via SSH.
 -   [gitlab-workhorse](https://gitlab.com/gitlab-org/gitlab-workhorse/blob/master/internal/gitaly/gitaly.go):
-    For `git clone` via HTTPS and for slow requests that serve raw Git
-    data
+    for `git clone` via HTTPS and for slow requests that serve raw Git
+    data.
     ([example](https://gitlab.com/gitlab-org/gitaly/raw/master/README.md))
 -   [gitaly-ssh](https://gitlab.com/gitlab-org/gitaly/tree/master/cmd/gitaly-ssh):
-    For internal Git data transfers between Gitaly servers.
+    for internal Git data transfers between Gitaly servers.
 -   [gitaly-ruby](https://gitlab.com/gitlab-org/gitaly/blob/master/ruby/lib/gitlab/git/gitaly_remote_repository.rb):
-    For RPC's that interact with more than one repository, such as
+    for RPC's that interact with more than one repository, such as
     merging a branch.
 
 The clients written in Go (gitlab-shell, gitlab-workhorse, gitaly-ssh)
