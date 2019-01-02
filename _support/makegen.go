@@ -74,7 +74,7 @@ func (gm *gitalyMake) GoImports() string   { return "bin/goimports" }
 func (gm *gitalyMake) GoCovMerge() string  { return "bin/gocovmerge" }
 func (gm *gitalyMake) GoLint() string      { return "bin/golint" }
 func (gm *gitalyMake) GoVendor() string    { return "bin/govendor" }
-func (gm *gitalyMake) MegaCheck() string   { return "bin/megacheck" }
+func (gm *gitalyMake) StaticCheck() string { return filepath.Join(gm.BuildDir(), "bin/staticcheck") }
 func (gm *gitalyMake) CoverageDir() string { return filepath.Join(gm.BuildDir(), "cover") }
 
 // SourceDir is the location of gitaly's files, inside the _build GOPATH.
@@ -320,7 +320,7 @@ rspec: assemble-go prepare-tests
 	cd {{ .SourceDir }}/ruby && bundle exec rspec
 
 .PHONY: verify
-verify: lint check-formatting megacheck govendor-status notice-up-to-date govendor-tagged rubocop
+verify: lint check-formatting staticcheck govendor-status notice-up-to-date govendor-tagged rubocop
 
 .PHONY: lint
 lint: {{ .GoLint }}
@@ -344,14 +344,14 @@ format: {{ .GoImports }}
 	# so it can be used as a replacement.
 	@cd {{ .SourceDir }} && goimports -w -l {{ join .GoFiles " " }}
 
-.PHONY: megacheck
-megacheck: {{ .MegaCheck }}
-	# megacheck
-	@{{ .MegaCheck }} {{ join .AllPackages " " }}
+.PHONY: staticcheck
+staticcheck: {{ .StaticCheck }}
+	# staticcheck
+	@cd {{ .SourceDir }} && {{ .StaticCheck }} {{ join .AllPackages " " }}
 
-# Install megacheck
-{{ .MegaCheck }}:
-	go get honnef.co/go/tools/cmd/megacheck
+# Install staticcheck
+{{ .StaticCheck }}:
+	go get honnef.co/go/tools/cmd/staticcheck
 
 .PHONY: govendor-status
 govendor-status: {{ .GoVendor }}
