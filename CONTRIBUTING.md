@@ -37,12 +37,12 @@ when an individual is representing the project or its community.
 Instances of abusive, harassing, or otherwise unacceptable behavior can be
 reported by emailing contact@gitlab.com.
 
-This Code of Conduct is adapted from the [Contributor Covenant](http://contributor-covenant.org), version 1.1.0,
-available at [http://contributor-covenant.org/version/1/1/0/](http://contributor-covenant.org/version/1/1/0/).
+This Code of Conduct is adapted from the [Contributor Covenant](https://contributor-covenant.org), version 1.1.0,
+available at [https://contributor-covenant.org/version/1/1/0/](https://contributor-covenant.org/version/1/1/0/).
 
 ## Style Guide
 
-The Gitaly style guide is [documented in it's own file](STYLE.md)
+The Gitaly style guide is [documented in it's own file](STYLE.md).
 
 ## Changelog
 
@@ -159,7 +159,7 @@ the traditional author-reviewer 1-author-reviewer 1-reviewer 2-author-reviewer 2
 
 See the [beginner's guide](doc/beginners_guide.md).
 
-## Debug Logging
+## Debug Logging
 
 Debug logging can be enabled in Gitaly using `level = "debug"` under `[logging]` in config.toml.
 
