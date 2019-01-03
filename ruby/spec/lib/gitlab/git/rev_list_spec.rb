@@ -17,14 +17,17 @@ describe Gitlab::Git::RevList do
       args_for_popen(additional_args),
       repo_path,
       {},
-      hash_including(lazy_block: with_lazy_block ? anything : nil)
+      hash_including(include_stderr: false,
+                     lazy_block: with_lazy_block ? anything : nil)
     ]
 
-    expect(repository).to receive(:popen).with(*params) do |*_, lazy_block:|
+    # rubocop:disable Lint/UnusedBlockArgument
+    expect(repository).to receive(:popen).with(*params) do |*_, include_stderr:, lazy_block:|
       output = lazy_block.call(output.lines.lazy.map(&:chomp)) if with_lazy_block
 
       [output, 0]
     end
+    # rubocop:enable Lint/UnusedBlockArgument
   end
 
   context "#new_refs" do

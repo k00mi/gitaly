@@ -367,6 +367,52 @@ func TestSuccessfulFindCommitsRequestWithAltGitObjectDirs(t *testing.T) {
 	}
 }
 
+func TestSuccessfulFindCommitsRequestWithAmbiguousRef(t *testing.T) {
+	server, serverSocketPath := startTestServices(t)
+	defer server.Stop()
+
+	client, conn := newCommitServiceClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepoWithWorktree(t)
+	defer cleanupFn()
+
+	// These are arbitrary SHAs in the repository. The important part is
+	// that we create a branch using one of them with a different SHA so
+	// that Git detects an ambiguous reference.
+	branchName := "1e292f8fedd741b75372e19097c76d327140c312"
+	commitSha := "6907208d755b60ebeacb2e9dfea74c92c3449a1f"
+
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "checkout", "-b", branchName, commitSha)
+
+	request := &gitalypb.FindCommitsRequest{
+		Repository: testRepo,
+		Revision:   []byte(branchName),
+		Limit:      1,
+	}
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	c, err := client.FindCommits(ctx, request)
+	require.NoError(t, err)
+
+	receivedCommits := []*gitalypb.GitCommit{}
+
+	for {
+		resp, err := c.Recv()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			t.Fatal(err)
+		}
+
+		receivedCommits = append(receivedCommits, resp.GetCommits()...)
+	}
+
+	require.Equal(t, 1, len(receivedCommits), "number of commits received")
+}
+
 func TestFailureFindCommitsRequest(t *testing.T) {
 	server, serverSocketPath := startTestServices(t)
 	defer server.Stop()
