@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"io"
 	"testing"
 
@@ -91,19 +92,25 @@ func TestGetRawChanges(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		ctx, cancel := testhelper.Context()
-		defer cancel()
+		t.Run(fmt.Sprintf("old:%s,new:%s", tc.oldRev, tc.newRev), func(t *testing.T) {
+			ctx, cancel := testhelper.Context()
+			defer cancel()
 
-		req := &gitalypb.GetRawChangesRequest{testRepo, tc.oldRev, tc.newRev}
+			req := &gitalypb.GetRawChangesRequest{testRepo, tc.oldRev, tc.newRev}
 
-		resp, err := client.GetRawChanges(ctx, req)
-		require.NoError(t, err)
+			resp, err := client.GetRawChanges(ctx, req)
+			require.NoError(t, err)
 
-		msg, err := resp.Recv()
-		require.NoError(t, err)
+			var changes []*gitalypb.GetRawChangesResponse_RawChange
+			for err == nil {
+				var msg *gitalypb.GetRawChangesResponse
+				msg, err = resp.Recv()
+				changes = append(changes, msg.GetRawChanges()...)
+			}
 
-		changes := msg.GetRawChanges()
-		require.Equal(t, changes, tc.changes)
+			require.Equal(t, io.EOF, err)
+			require.Equal(t, tc.changes, changes)
+		})
 	}
 }
 
@@ -136,16 +143,21 @@ func TestGetRawChangesFailures(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		ctx, cancel := testhelper.Context()
-		defer cancel()
+		t.Run(fmt.Sprintf("old:%s,new:%s", tc.oldRev, tc.newRev), func(t *testing.T) {
+			ctx, cancel := testhelper.Context()
+			defer cancel()
 
-		req := &gitalypb.GetRawChangesRequest{testRepo, tc.oldRev, tc.newRev}
+			req := &gitalypb.GetRawChangesRequest{testRepo, tc.oldRev, tc.newRev}
 
-		resp, err := client.GetRawChanges(ctx, req)
-		require.NoError(t, err)
+			resp, err := client.GetRawChanges(ctx, req)
+			require.NoError(t, err)
 
-		_, err = resp.Recv()
-		testhelper.RequireGrpcError(t, err, tc.code)
+			for err == nil {
+				_, err = resp.Recv()
+			}
+
+			testhelper.RequireGrpcError(t, err, tc.code)
+		})
 	}
 }
 

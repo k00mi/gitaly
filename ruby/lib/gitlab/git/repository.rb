@@ -261,8 +261,7 @@ module Gitlab
         false
       end
 
-      # old_rev and new_rev are commit ID's
-      # the result of this method is an array of Gitlab::Git::RawDiffChange
+      # TODO: remove after 11.8 because of https://gitlab.com/gitlab-org/gitaly/merge_requests/1026
       def raw_changes_between(old_rev, new_rev)
         @raw_changes_between ||= {}
 
@@ -294,6 +293,7 @@ module Gitlab
         raise Gitlab::Git::Repository::GitError, e.to_s
       end
 
+      # TODO: remove after 11.8 because of https://gitlab.com/gitlab-org/gitaly/merge_requests/1026
       def parse_raw_diff_line(line)
         old_mode, new_mode, old_blob_id, new_blob_id, rest = line.split(/\s/, 5)
 
@@ -941,6 +941,7 @@ module Gitlab
         ]
       end
 
+      # TODO: remove after 11.8 because of https://gitlab.com/gitlab-org/gitaly/merge_requests/1026
       def git_diff_cmd(old_rev, new_rev)
         old_rev = old_rev == ::Gitlab::Git::BLANK_SHA ? ::Gitlab::Git::EMPTY_TREE_ID : old_rev
 
