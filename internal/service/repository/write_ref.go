@@ -6,28 +6,53 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
-	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
+	"gitlab.com/gitlab-org/gitaly/internal/git/updateref"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"golang.org/x/net/context"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func (s *server) WriteRef(ctx context.Context, req *gitalypb.WriteRefRequest) (*gitalypb.WriteRefResponse, error) {
 	if err := validateWriteRefRequest(req); err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "WriteRef: %v", err)
+		return nil, helper.ErrInvalidArgument(err)
+	}
+	if err := writeRef(ctx, req); err != nil {
+		return nil, helper.ErrInternal(err)
 	}
 
-	client, err := s.RepositoryServiceClient(ctx)
+	return &gitalypb.WriteRefResponse{}, nil
+}
+
+func writeRef(ctx context.Context, req *gitalypb.WriteRefRequest) error {
+	if string(req.Ref) == "HEAD" {
+		return updateSymbolicRef(ctx, req)
+	}
+	return updateRef(ctx, req)
+}
+
+func updateSymbolicRef(ctx context.Context, req *gitalypb.WriteRefRequest) error {
+	cmd, err := git.Command(ctx, req.GetRepository(), "symbolic-ref", string(req.GetRef()), string(req.GetRevision()))
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("error when creating symbolic-ref command: %v", err)
 	}
+	if err = cmd.Wait(); err != nil {
+		return fmt.Errorf("error when running symbolic-ref command: %v", err)
+	}
+	return nil
+}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, req.GetRepository())
+func updateRef(ctx context.Context, req *gitalypb.WriteRefRequest) error {
+	u, err := updateref.New(ctx, req.GetRepository())
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("error when running creating new updater: %v", err)
 	}
+	if err = u.Update(string(req.GetRef()), string(req.GetRevision()), string(req.GetOldRevision())); err != nil {
+		return fmt.Errorf("error when creating update-ref command: %v", err)
+	}
+	if err = u.Wait(); err != nil {
+		return fmt.Errorf("error when running update-ref command: %v", err)
+	}
+	return nil
 
-	return client.WriteRef(clientCtx, req)
 }
 
 func validateWriteRefRequest(req *gitalypb.WriteRefRequest) error {
