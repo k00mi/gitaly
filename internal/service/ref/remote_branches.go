@@ -6,15 +6,22 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
 func (s *server) FindAllRemoteBranches(req *gitalypb.FindAllRemoteBranchesRequest, stream gitalypb.RefService_FindAllRemoteBranchesServer) error {
 	if err := validateFindAllRemoteBranchesRequest(req); err != nil {
-		return status.Errorf(codes.InvalidArgument, "FindAllRemoteBranches: %v", err)
+		return helper.ErrInvalidArgument(err)
 	}
 
+	if err := findAllRemoteBranches(req, stream); err != nil {
+		return helper.ErrInternal(err)
+	}
+
+	return nil
+}
+
+func findAllRemoteBranches(req *gitalypb.FindAllRemoteBranchesRequest, stream gitalypb.RefService_FindAllRemoteBranchesServer) error {
 	args := []string{
 		"--format=" + strings.Join(localBranchFormatFields, "%00"),
 	}
