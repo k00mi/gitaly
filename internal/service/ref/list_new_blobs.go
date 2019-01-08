@@ -3,22 +3,28 @@ package ref
 import (
 	"bufio"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
 func (s *server) ListNewBlobs(in *gitalypb.ListNewBlobsRequest, stream gitalypb.RefService_ListNewBlobsServer) error {
 	oid := in.GetCommitId()
-	if err := validateCommitID(oid); err != nil {
-		return err
+	if err := git.ValidateCommitID(oid); err != nil {
+		return helper.ErrInvalidArgument(err)
 	}
 
+	if err := listNewBlobs(in, stream, oid); err != nil {
+		return helper.ErrInternal(err)
+	}
+
+	return nil
+}
+
+func listNewBlobs(in *gitalypb.ListNewBlobsRequest, stream gitalypb.RefService_ListNewBlobsServer, oid string) error {
 	ctx := stream.Context()
 	cmdArgs := []string{"rev-list", oid, "--objects", "--not", "--all"}
 
@@ -28,15 +34,12 @@ func (s *server) ListNewBlobs(in *gitalypb.ListNewBlobsRequest, stream gitalypb.
 
 	revList, err := git.Command(ctx, in.GetRepository(), cmdArgs...)
 	if err != nil {
-		if _, ok := status.FromError(err); ok {
-			return err
-		}
-		return status.Errorf(codes.Internal, "ListNewBlobs: gitCommand: %v", err)
+		return err
 	}
 
 	batch, err := catfile.New(ctx, in.GetRepository())
 	if err != nil {
-		return status.Errorf(codes.Internal, "ListNewBlobs: catfile: %v", err)
+		return err
 	}
 
 	var newBlobs []*gitalypb.NewBlobObject
@@ -51,7 +54,7 @@ func (s *server) ListNewBlobs(in *gitalypb.ListNewBlobsRequest, stream gitalypb.
 
 		info, err := batch.Info(parts[0])
 		if err != nil {
-			return status.Errorf(codes.Internal, "ListNewBlobs: catfile: %v", err)
+			return err
 		}
 
 		if !info.IsBlob() {
@@ -61,21 +64,18 @@ func (s *server) ListNewBlobs(in *gitalypb.ListNewBlobsRequest, stream gitalypb.
 		newBlobs = append(newBlobs, &gitalypb.NewBlobObject{Oid: info.Oid, Size: info.Size, Path: []byte(parts[1])})
 		if len(newBlobs) >= 1000 {
 			response := &gitalypb.ListNewBlobsResponse{NewBlobObjects: newBlobs}
-			stream.Send(response)
+			if err := stream.Send(response); err != nil {
+				return err
+			}
+
 			newBlobs = newBlobs[:0]
 		}
 	}
 
 	response := &gitalypb.ListNewBlobsResponse{NewBlobObjects: newBlobs}
-	stream.Send(response)
-
-	return revList.Wait()
-}
-
-func validateCommitID(commitID string) error {
-	if match, err := regexp.MatchString(`\A[0-9a-f]{40}\z`, commitID); !match || err != nil {
-		return status.Errorf(codes.InvalidArgument, "commit id shoud have 40 hexidecimal characters")
+	if err := stream.Send(response); err != nil {
+		return err
 	}
 
-	return nil
+	return revList.Wait()
 }

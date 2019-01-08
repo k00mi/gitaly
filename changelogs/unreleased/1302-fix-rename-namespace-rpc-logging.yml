@@ -1,0 +1,5 @@
+---
+title: Fix logging of RenameNamespace RPC parameters
+merge_request: 847
+author:
+type: fixed

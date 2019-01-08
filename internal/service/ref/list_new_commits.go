@@ -7,29 +7,33 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
 func (s *server) ListNewCommits(in *gitalypb.ListNewCommitsRequest, stream gitalypb.RefService_ListNewCommitsServer) error {
 	oid := in.GetCommitId()
-	if err := validateCommitID(oid); err != nil {
-		return err
+	if err := git.ValidateCommitID(oid); err != nil {
+		return helper.ErrInvalidArgument(err)
 	}
 
+	if err := listNewCommits(in, stream, oid); err != nil {
+		return helper.ErrInternal(err)
+	}
+
+	return nil
+}
+
+func listNewCommits(in *gitalypb.ListNewCommitsRequest, stream gitalypb.RefService_ListNewCommitsServer, oid string) error {
 	ctx := stream.Context()
 
 	revList, err := git.Command(ctx, in.GetRepository(), "rev-list", oid, "--not", "--all")
 	if err != nil {
-		if _, ok := status.FromError(err); ok {
-			return err
-		}
-		return status.Errorf(codes.Internal, "ListNewCommits: gitCommand: %v", err)
+		return err
 	}
 
 	batch, err := catfile.New(ctx, in.GetRepository())
 	if err != nil {
-		return status.Errorf(codes.Internal, "ListNewCommits: catfile: %v", err)
+		return err
 	}
 
 	commits := []*gitalypb.GitCommit{}
@@ -39,7 +43,7 @@ func (s *server) ListNewCommits(in *gitalypb.ListNewCommitsRequest, stream gital
 
 		commit, err := log.GetCommitCatfile(batch, line)
 		if err != nil {
-			return status.Errorf(codes.Internal, "ListNewCommits: commit not found: %v", err)
+			return err
 		}
 		commits = append(commits, commit)
 

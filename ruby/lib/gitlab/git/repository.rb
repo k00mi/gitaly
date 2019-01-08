@@ -450,7 +450,7 @@ module Gitlab
         with_worktree(rebase_path, branch, env: env) do
           run_git!(
             %W[pull --rebase #{remote_repo_path} #{remote_branch}],
-            chdir: rebase_path, env: env
+            chdir: rebase_path, env: env, include_stderr: true
           )
 
           rebase_sha = run_git!(%w[rev-parse HEAD], chdir: rebase_path, env: env).strip
@@ -475,13 +475,13 @@ module Gitlab
         with_worktree(squash_path, branch, sparse_checkout_files: diff_files, env: env) do
           # Apply diff of the `diff_range` to the worktree
           diff = run_git!(%W[diff --binary #{diff_range}])
-          run_git!(%w[apply --index --whitespace=nowarn], chdir: squash_path, env: env) do |stdin|
+          run_git!(%w[apply --index --whitespace=nowarn], chdir: squash_path, env: env, include_stderr: true) do |stdin|
             stdin.binmode
             stdin.write(diff)
           end
 
           # Commit the `diff_range` diff
-          run_git!(%W[commit --no-verify --message #{message}], chdir: squash_path, env: env)
+          run_git!(%W[commit --no-verify --message #{message}], chdir: squash_path, env: env, include_stderr: true)
 
           # Return the squash sha. May print a warning for ambiguous refs, but
           # we can ignore that with `--quiet` and just take the SHA, if present.
@@ -715,7 +715,7 @@ module Gitlab
         source_repository = RemoteRepository.new(source_repository) unless source_repository.is_a?(RemoteRepository)
 
         args = %W[fetch --no-tags -f #{GITALY_INTERNAL_URL} #{source_ref}:#{target_ref}]
-        message, status = run_git(args, env: source_repository.fetch_env)
+        message, status = run_git(args, env: source_repository.fetch_env, include_stderr: true)
         raise Gitlab::Git::CommandError, message if status != 0
 
         target_ref
@@ -838,18 +838,18 @@ module Gitlab
 
       private
 
-      def run_git(args, chdir: path, env: {}, nice: false, lazy_block: nil, &block)
+      def run_git(args, chdir: path, env: {}, nice: false, include_stderr: false, lazy_block: nil, &block)
         cmd = [Gitlab.config.git.bin_path, *args]
         cmd.unshift("nice") if nice
 
         object_directories = alternate_object_directories
         env['GIT_ALTERNATE_OBJECT_DIRECTORIES'] = object_directories.join(File::PATH_SEPARATOR) if object_directories.any?
 
-        popen(cmd, chdir, env, lazy_block: lazy_block, &block)
+        popen(cmd, chdir, env, include_stderr: include_stderr, lazy_block: lazy_block, &block)
       end
 
-      def run_git!(args, chdir: path, env: {}, nice: false, lazy_block: nil, &block)
-        output, status = run_git(args, chdir: chdir, env: env, nice: nice, lazy_block: lazy_block, &block)
+      def run_git!(args, chdir: path, env: {}, nice: false, include_stderr: false, lazy_block: nil, &block)
+        output, status = run_git(args, chdir: chdir, env: env, nice: nice, include_stderr: include_stderr, lazy_block: lazy_block, &block)
 
         raise GitError, output unless status.zero?
 
@@ -920,7 +920,8 @@ module Gitlab
           cmd += Array(options[:path])
         end
 
-        raw_output, _status = run_git(cmd)
+        # Disable stderr because Git can show warnings that corrupt the output stream
+        raw_output, _status = run_git(cmd, include_stderr: false)
         lines = offset_in_ruby ? raw_output.lines.drop(offset) : raw_output.lines
 
         lines.map! { |c| Rugged::Commit.new(rugged, c.strip) }
@@ -956,7 +957,7 @@ module Gitlab
           "delete #{ref}\x00\x00"
         end
 
-        message, status = run_git(%w[update-ref --stdin -z]) do |stdin|
+        message, status = run_git(%w[update-ref --stdin -z], include_stderr: true) do |stdin|
           stdin.write(instructions.join)
         end
 
@@ -1045,7 +1046,7 @@ module Gitlab
       # this can be very expensive, so set up sparse checkout for the worktree
       # to only check out the files we're interested in.
       def configure_sparse_checkout(worktree_git_path, files)
-        run_git!(%w[config core.sparseCheckout true])
+        run_git!(%w[config core.sparseCheckout true], include_stderr: true)
 
         return if files.empty?
 

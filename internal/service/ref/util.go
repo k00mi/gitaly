@@ -2,13 +2,12 @@ package ref
 
 import (
 	"bytes"
+	"fmt"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 var localBranchFormatFields = []string{"%(refname)", "%(objectname)"}
@@ -16,7 +15,7 @@ var localBranchFormatFields = []string{"%(refname)", "%(objectname)"}
 func parseRef(ref []byte) ([][]byte, error) {
 	elements := bytes.Split(ref, []byte("\x00"))
 	if len(elements) != len(localBranchFormatFields) {
-		return nil, status.Errorf(codes.Internal, "error parsing ref %q", ref)
+		return nil, fmt.Errorf("error parsing ref %q", ref)
 	}
 	return elements, nil
 }

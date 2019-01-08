@@ -63,7 +63,7 @@ func formatNamespaceRequest(namespaceReq namespaceBasedRequest) map[string]inter
 	}
 }
 
-func formatRenameNamespaceRequest(renameReq gitalypb.RenameNamespaceRequest) map[string]interface{} {
+func formatRenameNamespaceRequest(renameReq *gitalypb.RenameNamespaceRequest) map[string]interface{} {
 	return map[string]interface{}{
 		"StorageName": renameReq.GetStorageName(),
 		"From":        renameReq.GetFrom(),
@@ -78,15 +78,16 @@ func FieldExtractor(fullMethod string, req interface{}) map[string]interface{} {
 	}
 
 	var result map[string]interface{}
-	switch req.(type) {
-	case gitalypb.RenameNamespaceRequest:
-		result = formatRenameNamespaceRequest(req.(gitalypb.RenameNamespaceRequest))
+
+	switch req := req.(type) {
+	case *gitalypb.RenameNamespaceRequest:
+		result = formatRenameNamespaceRequest(req)
 	case repositoryBasedRequest:
-		result = formatRepoRequest(req.(repositoryBasedRequest).GetRepository())
+		result = formatRepoRequest(req.GetRepository())
 	case namespaceBasedRequest:
-		result = formatNamespaceRequest(req.(namespaceBasedRequest))
+		result = formatNamespaceRequest(req)
 	case storageBasedRequest:
-		result = formatStorageRequest(req.(storageBasedRequest))
+		result = formatStorageRequest(req)
 	}
 
 	if result == nil {

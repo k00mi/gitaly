@@ -40,12 +40,6 @@ class String
   end
 end
 
-class RequestStore
-  def self.active?
-    false
-  end
-end
-
 module Gitlab
   module Git
     # The ID of empty tree.

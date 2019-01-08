@@ -30,6 +30,15 @@ describe 'Gitlab::Git::Popen' do
       it { expect(output).to include('No such file or directory') }
     end
 
+    context 'when stderr is not included' do
+      let(:result) { klass.new.popen(%w(cat NOTHING), path, include_stderr: false) }
+      let(:output) { result.first }
+      let(:status) { result.last }
+
+      it { expect(status).to eq(1) }
+      it { expect(output).to eq('') }
+    end
+
     context 'unsafe string command' do
       it 'raises an error when it gets called with a string argument' do
         expect { klass.new.popen('ls', path) }.to raise_error(RuntimeError)

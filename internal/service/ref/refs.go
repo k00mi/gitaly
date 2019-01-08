@@ -4,19 +4,15 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"regexp"
 	"strings"
 
-	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
-	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"golang.org/x/net/context"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 var (
@@ -34,10 +30,6 @@ type findRefsOpts struct {
 }
 
 func findRefs(ctx context.Context, writer lines.Sender, repo *gitalypb.Repository, patterns []string, opts *findRefsOpts) error {
-	grpc_logrus.Extract(ctx).WithFields(log.Fields{
-		"Patterns": patterns,
-	}).Debug("FindRefs")
-
 	baseArgs := []string{"for-each-ref"}
 
 	var args []string
@@ -193,14 +185,9 @@ func DefaultBranchName(ctx context.Context, repo *gitalypb.Repository) ([]byte, 
 
 // FindDefaultBranchName returns the default branch name for the given repository
 func (s *server) FindDefaultBranchName(ctx context.Context, in *gitalypb.FindDefaultBranchNameRequest) (*gitalypb.FindDefaultBranchNameResponse, error) {
-	grpc_logrus.Extract(ctx).Debug("FindDefaultBranchName")
-
 	defaultBranchName, err := DefaultBranchName(ctx, in.Repository)
 	if err != nil {
-		if _, ok := status.FromError(err); ok {
-			return nil, err
-		}
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, helper.ErrInternal(err)
 	}
 
 	return &gitalypb.FindDefaultBranchNameResponse{Name: defaultBranchName}, nil
@@ -221,6 +208,14 @@ func parseSortKey(sortKey gitalypb.FindLocalBranchesRequest_SortBy) string {
 
 // FindLocalBranches creates a stream of branches for all local branches in the given repository
 func (s *server) FindLocalBranches(in *gitalypb.FindLocalBranchesRequest, stream gitalypb.RefService_FindLocalBranchesServer) error {
+	if err := findLocalBranches(in, stream); err != nil {
+		return helper.ErrInternal(err)
+	}
+
+	return nil
+}
+
+func findLocalBranches(in *gitalypb.FindLocalBranchesRequest, stream gitalypb.RefService_FindLocalBranchesServer) error {
 	ctx := stream.Context()
 	c, err := catfile.New(ctx, in.Repository)
 	if err != nil {
@@ -240,6 +235,14 @@ func (s *server) FindLocalBranches(in *gitalypb.FindLocalBranchesRequest, stream
 }
 
 func (s *server) FindAllBranches(in *gitalypb.FindAllBranchesRequest, stream gitalypb.RefService_FindAllBranchesServer) error {
+	if err := findAllBranches(in, stream); err != nil {
+		return helper.ErrInternal(err)
+	}
+
+	return nil
+}
+
+func findAllBranches(in *gitalypb.FindAllBranchesRequest, stream gitalypb.RefService_FindAllBranchesServer) error {
 	args := []string{
 		// %00 inserts the null character into the output (see for-each-ref docs)
 		"--format=" + strings.Join(localBranchFormatFields, "%00"),
@@ -250,10 +253,7 @@ func (s *server) FindAllBranches(in *gitalypb.FindAllBranchesRequest, stream git
 	if in.MergedOnly {
 		defaultBranchName, err := DefaultBranchName(stream.Context(), in.Repository)
 		if err != nil {
-			if _, ok := status.FromError(err); ok {
-				return err
-			}
-			return status.Errorf(codes.Internal, err.Error())
+			return err
 		}
 
 		args = append(args, fmt.Sprintf("--merged=%s", string(defaultBranchName)))
@@ -284,10 +284,18 @@ func (s *server) FindAllBranches(in *gitalypb.FindAllBranchesRequest, stream git
 // ListBranchNamesContainingCommit returns a maximum of in.GetLimit() Branch names
 // which contain the SHA1 passed as argument
 func (*server) ListBranchNamesContainingCommit(in *gitalypb.ListBranchNamesContainingCommitRequest, stream gitalypb.RefService_ListBranchNamesContainingCommitServer) error {
-	if !validCommitID(in.GetCommitId()) {
-		return status.Errorf(codes.InvalidArgument, "commit id was not a 40 character hexidecimal")
+	if err := git.ValidateCommitID(in.GetCommitId()); err != nil {
+		return helper.ErrInvalidArgument(err)
 	}
 
+	if err := listBranchNamesContainingCommit(in, stream); err != nil {
+		return helper.ErrInternal(err)
+	}
+
+	return nil
+}
+
+func listBranchNamesContainingCommit(in *gitalypb.ListBranchNamesContainingCommitRequest, stream gitalypb.RefService_ListBranchNamesContainingCommitServer) error {
 	args := []string{fmt.Sprintf("--contains=%s", in.GetCommitId()), "--format=%(refname:strip=2)"}
 	if in.GetLimit() != 0 {
 		args = append(args, fmt.Sprintf("--count=%d", in.GetLimit()))
@@ -307,10 +315,18 @@ func (*server) ListBranchNamesContainingCommit(in *gitalypb.ListBranchNamesConta
 // ListTagNamesContainingCommit returns a maximum of in.GetLimit() Tag names
 // which contain the SHA1 passed as argument
 func (*server) ListTagNamesContainingCommit(in *gitalypb.ListTagNamesContainingCommitRequest, stream gitalypb.RefService_ListTagNamesContainingCommitServer) error {
-	if !validCommitID(in.GetCommitId()) {
-		return status.Errorf(codes.InvalidArgument, "commit id was not a 40 character hexidecimal")
+	if err := git.ValidateCommitID(in.GetCommitId()); err != nil {
+		return helper.ErrInvalidArgument(err)
 	}
 
+	if err := listTagNamesContainingCommit(in, stream); err != nil {
+		return helper.ErrInternal(err)
+	}
+
+	return nil
+}
+
+func listTagNamesContainingCommit(in *gitalypb.ListTagNamesContainingCommitRequest, stream gitalypb.RefService_ListTagNamesContainingCommitServer) error {
 	args := []string{fmt.Sprintf("--contains=%s", in.GetCommitId()), "--format=%(refname:strip=2)"}
 	if in.GetLimit() != 0 {
 		args = append(args, fmt.Sprintf("--count=%d", in.GetLimit()))
@@ -325,12 +341,4 @@ func (*server) ListTagNamesContainingCommit(in *gitalypb.ListTagNamesContainingC
 			cmdArgs: args,
 			delim:   []byte("\n"),
 		})
-}
-
-func validCommitID(id string) bool {
-	if match, err := regexp.MatchString(`\A[0-9a-f]{40}\z`, id); !match || err != nil {
-		return false
-	}
-
-	return true
 }
