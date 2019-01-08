@@ -94,13 +94,7 @@ module Gitlab
       end
 
       def version(commit_id)
-        commit_find_proc = -> { Gitlab::Git::Commit.find(@repository, commit_id) }
-
-        if RequestStore.active?
-          RequestStore.fetch([:wiki_version_commit, commit_id]) { commit_find_proc.call }
-        else
-          commit_find_proc.call
-        end
+        Gitlab::Git::Commit.find(@repository, commit_id)
       end
 
       def assert_type!(object, klass)
