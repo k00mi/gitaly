@@ -62,7 +62,7 @@ func getRawChanges(stream gitalypb.RepositoryService_GetRawChangesServer, repo *
 
 	diffCmd, err := git.Command(ctx, repo, "diff", "--raw", "-z", from, to)
 	if err != nil {
-		return err
+		return fmt.Errorf("start git diff: %v", err)
 	}
 	p := rawdiff.NewParser(diffCmd)
 
@@ -75,12 +75,12 @@ func getRawChanges(stream gitalypb.RepositoryService_GetRawChangesServer, repo *
 				break // happy path
 			}
 
-			return err
+			return fmt.Errorf("read diff: %v", err)
 		}
 
 		change, err := changeFromDiff(batch, d)
 		if err != nil {
-			return err
+			return fmt.Errorf("build change from diff line: %v", err)
 		}
 		chunk = append(chunk, change)
 
@@ -88,7 +88,7 @@ func getRawChanges(stream gitalypb.RepositoryService_GetRawChangesServer, repo *
 		if len(chunk) >= chunkSize {
 			resp := &gitalypb.GetRawChangesResponse{RawChanges: chunk}
 			if err := stream.Send(resp); err != nil {
-				return err
+				return fmt.Errorf("send response: %v", err)
 			}
 			chunk = nil
 		}
@@ -97,11 +97,15 @@ func getRawChanges(stream gitalypb.RepositoryService_GetRawChangesServer, repo *
 	if len(chunk) > 0 {
 		resp := &gitalypb.GetRawChangesResponse{RawChanges: chunk}
 		if err := stream.Send(resp); err != nil {
-			return err
+			return fmt.Errorf("send response: %v", err)
 		}
 	}
 
-	return diffCmd.Wait()
+	if err := diffCmd.Wait(); err != nil {
+		return fmt.Errorf("wait git diff: %v", err)
+	}
+
+	return nil
 }
 
 var zeroRegexp = regexp.MustCompile(`\A0+\z`)
