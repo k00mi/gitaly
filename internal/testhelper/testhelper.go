@@ -20,12 +20,14 @@ import (
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
+	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
+	"gitlab.com/gitlab-org/gitaly/internal/helper/fieldextractors"
 	gitalylog "gitlab.com/gitlab-org/gitaly/internal/log"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"google.golang.org/grpc"
@@ -279,8 +281,13 @@ func NewTestGrpcServer(t *testing.T, streamInterceptors []grpc.StreamServerInter
 	logger := NewTestLogger(t)
 	logrusEntry := log.NewEntry(logger).WithField("test", t.Name())
 
-	streamInterceptors = append([]grpc.StreamServerInterceptor{grpc_logrus.StreamServerInterceptor(logrusEntry)}, streamInterceptors...)
-	unaryInterceptors = append([]grpc.UnaryServerInterceptor{grpc_logrus.UnaryServerInterceptor(logrusEntry)}, unaryInterceptors...)
+	ctxTagger := grpc_ctxtags.WithFieldExtractorForInitialReq(fieldextractors.FieldExtractor)
+	ctxStreamTagger := grpc_ctxtags.StreamServerInterceptor(ctxTagger)
+	ctxUnaryTagger := grpc_ctxtags.UnaryServerInterceptor(ctxTagger)
+
+	streamInterceptors = append([]grpc.StreamServerInterceptor{ctxStreamTagger, grpc_logrus.StreamServerInterceptor(logrusEntry)}, streamInterceptors...)
+	unaryInterceptors = append([]grpc.UnaryServerInterceptor{ctxUnaryTagger, grpc_logrus.UnaryServerInterceptor(logrusEntry)}, unaryInterceptors...)
+
 	return grpc.NewServer(
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(streamInterceptors...)),
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(unaryInterceptors...)),
