@@ -126,7 +126,7 @@ GEM
       crass (~> 1.0.2)
       nokogiri (>= 1.4.4)
       nokogumbo (~> 1.4)
-    sentry-raven (2.7.2)
+    sentry-raven (2.7.4)
       faraday (>= 0.7.6, < 1.0)
     stringex (2.8.4)
     thread_safe (0.3.6)
