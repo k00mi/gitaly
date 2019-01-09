@@ -1,45 +1,53 @@
 package commit
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
-	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
+	"gitlab.com/gitlab-org/gitaly/internal/git/log"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/streamio"
 )
 
 func (s *server) GetCommitMessages(request *gitalypb.GetCommitMessagesRequest, stream gitalypb.CommitService_GetCommitMessagesServer) error {
 	if err := validateGetCommitMessagesRequest(request); err != nil {
-		return status.Errorf(codes.InvalidArgument, "GetCommitMessages: %v", err)
+		return helper.ErrInvalidArgument(err)
+	}
+	if err := getAndStreamCommitMessages(request, stream); err != nil {
+		return helper.ErrInternal(err)
 	}
 
+	return nil
+}
+
+func getAndStreamCommitMessages(request *gitalypb.GetCommitMessagesRequest, stream gitalypb.CommitService_GetCommitMessagesServer) error {
 	ctx := stream.Context()
-
-	client, err := s.CommitServiceClient(ctx)
+	c, err := catfile.New(ctx, request.GetRepository())
 	if err != nil {
 		return err
 	}
-
-	clientCtx, err := rubyserver.SetHeaders(ctx, request.GetRepository())
-	if err != nil {
-		return err
-	}
-
-	rubyStream, err := client.GetCommitMessages(clientCtx, request)
-	if err != nil {
-		return err
-	}
-
-	return rubyserver.Proxy(func() error {
-		resp, err := rubyStream.Recv()
+	for _, commitID := range request.GetCommitIds() {
+		msg, err := log.GetCommitMessage(c, request.GetRepository(), commitID)
 		if err != nil {
-			md := rubyStream.Trailer()
-			stream.SetTrailer(md)
+			return fmt.Errorf("failed to get commit message: %v", err)
+		}
+		msgReader := bytes.NewReader(msg)
+
+		if err := stream.Send(&gitalypb.GetCommitMessagesResponse{CommitId: commitID}); err != nil {
 			return err
 		}
-		return stream.Send(resp)
-	})
+		sw := streamio.NewWriter(func(p []byte) error {
+			return stream.Send(&gitalypb.GetCommitMessagesResponse{Message: p})
+		})
+		_, err = io.Copy(sw, msgReader)
+		if err != nil {
+			return fmt.Errorf("failed to send response: %v", err)
+		}
+	}
+	return nil
 }
 
 func validateGetCommitMessagesRequest(request *gitalypb.GetCommitMessagesRequest) error {
