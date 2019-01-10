@@ -1,16 +1,17 @@
 package commit
 
 import (
-	"bytes"
+	"fmt"
+	"io"
 
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/git/lstree"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
-	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
+	"gitlab.com/gitlab-org/gitaly/internal/helper/chunker"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func (s *server) ListFiles(in *gitalypb.ListFilesRequest, stream gitalypb.CommitService_ListFilesServer) error {
@@ -23,51 +24,64 @@ func (s *server) ListFiles(in *gitalypb.ListFilesRequest, stream gitalypb.Commit
 		return err
 	}
 
-	revision := in.GetRevision()
+	revision := string(in.GetRevision())
 	if len(revision) == 0 {
-		var err error
-
-		revision, err = defaultBranchName(stream.Context(), repo)
+		defaultBranch, err := defaultBranchName(stream.Context(), repo)
 		if err != nil {
-			if _, ok := status.FromError(err); ok {
-				return err
-			}
-			return status.Errorf(codes.NotFound, "Revision not found %q", in.GetRevision())
+			return helper.DecorateError(codes.NotFound, fmt.Errorf("revision not found %q", revision))
 		}
+
+		revision = string(defaultBranch)
 	}
-	if !git.IsValidRef(stream.Context(), repo, string(revision)) {
+
+	if !git.IsValidRef(stream.Context(), repo, revision) {
 		return stream.Send(&gitalypb.ListFilesResponse{})
 	}
 
-	cmd, err := git.Command(stream.Context(), repo, "ls-tree", "-z", "-r", "--full-tree", "--full-name", "--", string(revision))
-	if err != nil {
-		if _, ok := status.FromError(err); ok {
-			return err
-		}
-		return status.Errorf(codes.Internal, err.Error())
+	if err := listFiles(repo, revision, stream); err != nil {
+		return helper.ErrInternal(err)
 	}
 
-	return lines.Send(cmd, listFilesWriter(stream), []byte{'\x00'})
+	return nil
 }
 
-func listFilesWriter(stream gitalypb.CommitService_ListFilesServer) lines.Sender {
-	return func(objs [][]byte) error {
-		paths := make([][]byte, 0)
-		for _, obj := range objs {
-			data := bytes.SplitN(obj, []byte{'\t'}, 2)
-			if len(data) != 2 {
-				return status.Errorf(codes.Internal, "ListFiles: failed parsing line")
-			}
-
-			meta := bytes.SplitN(data[0], []byte{' '}, 3)
-			if len(meta) != 3 {
-				return status.Errorf(codes.Internal, "ListFiles: failed parsing meta")
-			}
-
-			if bytes.Equal(meta[1], []byte("blob")) {
-				paths = append(paths, data[1])
-			}
-		}
-		return stream.Send(&gitalypb.ListFilesResponse{Paths: paths})
+func listFiles(repo *gitalypb.Repository, revision string, stream gitalypb.CommitService_ListFilesServer) error {
+	args := []string{"ls-tree", "-z", "-r", "--full-tree", "--full-name", "--", revision}
+	cmd, err := git.Command(stream.Context(), repo, args...)
+	if err != nil {
+		return err
 	}
+
+	sender := chunker.New(&listFilesSender{stream: stream})
+
+	for parser := lstree.NewParser(cmd); ; {
+		entry, err := parser.NextEntry()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		if entry.Type != lstree.Blob {
+			continue
+		}
+
+		if err := sender.Send([]byte(entry.Path)); err != nil {
+			return err
+		}
+	}
+
+	return sender.Flush()
+}
+
+type listFilesSender struct {
+	stream   gitalypb.CommitService_ListFilesServer
+	response *gitalypb.ListFilesResponse
+}
+
+func (s *listFilesSender) Reset()      { s.response = &gitalypb.ListFilesResponse{} }
+func (s *listFilesSender) Send() error { return s.stream.Send(s.response) }
+func (s *listFilesSender) Append(it chunker.Item) {
+	s.response.Paths = append(s.response.Paths, it.([]byte))
 }
