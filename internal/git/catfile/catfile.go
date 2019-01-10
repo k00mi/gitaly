@@ -49,6 +49,12 @@ func (c *Batch) Blob(revspec string) (io.Reader, error) {
 	return c.batch.reader(revspec, "blob")
 }
 
+// Tag returns a raw tag object. Caller must consume the Reader before
+// making another call on C.
+func (c *Batch) Tag(revspec string) (io.Reader, error) {
+	return c.batch.reader(revspec, "tag")
+}
+
 // New returns a new Batch instance. It is important that ctx gets canceled
 // somewhere, because if it doesn't the cat-file processes spawned by
 // New() never terminate.
