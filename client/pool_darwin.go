@@ -1,5 +1,3 @@
-// +build darwin
-
 package client
 
 import (
@@ -13,7 +11,6 @@ import (
 // SSL_CERT_{DIR,FILE}.
 func systemCertPool() (*x509.CertPool, error) {
 	var certPem []byte
-	count := 0
 
 	if f := os.Getenv("SSL_CERT_FILE"); len(f) > 0 {
 		pem, err := ioutil.ReadFile(f)
@@ -23,7 +20,6 @@ func systemCertPool() (*x509.CertPool, error) {
 
 		pem = append(pem, '\n')
 		certPem = append(certPem, pem...)
-		count++
 	}
 
 	if d := os.Getenv("SSL_CERT_DIR"); len(d) > 0 {
@@ -44,7 +40,6 @@ func systemCertPool() (*x509.CertPool, error) {
 
 			pem = append(pem, '\n')
 			certPem = append(certPem, pem...)
-			count++
 		}
 	}
 
