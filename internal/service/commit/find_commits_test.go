@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -453,4 +454,53 @@ func TestFailureFindCommitsRequest(t *testing.T) {
 			testhelper.RequireGrpcError(t, err, tc.code)
 		})
 	}
+}
+
+func TestFindCommitsRequestWithFollowAndOffset(t *testing.T) {
+	server, serverSocketPath := startTestServices(t)
+	defer server.Stop()
+
+	client, conn := newCommitServiceClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	request := &gitalypb.FindCommitsRequest{
+		Repository: testRepo,
+		Follow:     true,
+		Paths:      [][]byte{[]byte("CHANGELOG")},
+		Limit:      100,
+	}
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+	allCommits := getCommits(ctx, t, request, client)
+	totalCommits := len(allCommits)
+
+	for offset := 0; offset < totalCommits; offset++ {
+		t.Run(fmt.Sprintf("testing with offset %d", offset), func(t *testing.T) {
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+			request.Offset = int32(offset)
+			request.Limit = int32(totalCommits)
+			commits := getCommits(ctx, t, request, client)
+			assert.Len(t, commits, totalCommits-offset)
+			assert.Equal(t, allCommits[offset:], commits)
+		})
+	}
+}
+
+func getCommits(ctx context.Context, t *testing.T, request *gitalypb.FindCommitsRequest, client gitalypb.CommitServiceClient) []*gitalypb.GitCommit {
+	stream, err := client.FindCommits(ctx, request)
+	require.NoError(t, err)
+
+	var commits []*gitalypb.GitCommit
+	for err == nil {
+		var resp *gitalypb.FindCommitsResponse
+		resp, err = stream.Recv()
+		commits = append(commits, resp.GetCommits()...)
+	}
+
+	require.Equal(t, io.EOF, err)
+	return commits
 }
