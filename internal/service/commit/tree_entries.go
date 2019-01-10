@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
+	"gitlab.com/gitlab-org/gitaly/internal/helper/chunker"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -62,22 +63,25 @@ func sendTreeEntries(stream gitalypb.CommitService_GetTreeEntriesServer, c *catf
 		}
 	}
 
-	for len(entries) > maxTreeEntries {
-		chunk := &gitalypb.GetTreeEntriesResponse{
-			Entries: entries[:maxTreeEntries],
-		}
-		if err := stream.Send(chunk); err != nil {
-			return err
-		}
-		entries = entries[maxTreeEntries:]
+	sender := chunker.New(&treeEntriesSender{stream: stream})
+	for _, e := range entries {
+		sender.Send(e)
 	}
 
-	if len(entries) > 0 {
-		return stream.Send(&gitalypb.GetTreeEntriesResponse{Entries: entries})
-	}
-
-	return nil
+	return sender.Flush()
 }
+
+type treeEntriesSender struct {
+	response *gitalypb.GetTreeEntriesResponse
+	stream   gitalypb.CommitService_GetTreeEntriesServer
+}
+
+func (c *treeEntriesSender) Append(it chunker.Item) {
+	c.response.Entries = append(c.response.Entries, it.(*gitalypb.TreeEntry))
+}
+
+func (c *treeEntriesSender) Send() error { return c.stream.Send(c.response) }
+func (c *treeEntriesSender) Reset()      { c.response = &gitalypb.GetTreeEntriesResponse{} }
 
 func (s *server) GetTreeEntries(in *gitalypb.GetTreeEntriesRequest, stream gitalypb.CommitService_GetTreeEntriesServer) error {
 	grpc_logrus.Extract(stream.Context()).WithFields(log.Fields{
