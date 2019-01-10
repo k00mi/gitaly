@@ -171,14 +171,21 @@ func TestGetRawChangesFailures(t *testing.T) {
 	defer cleanupFn()
 
 	testCases := []struct {
-		oldRev string
-		newRev string
-		code   codes.Code
+		oldRev         string
+		newRev         string
+		code           codes.Code
+		omitRepository bool
 	}{
 		{
 			oldRev: "",
 			newRev: "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
 			code:   codes.InvalidArgument,
+		},
+		{
+			oldRev:         "cfe32cf61b73a0d5e9f13e774abde7ff789b1660",
+			newRev:         "913c66a37b4a45b9769037c55c2d238bd0942d2e",
+			code:           codes.InvalidArgument,
+			omitRepository: true,
 		},
 		{
 			// A Gitaly commit, unresolvable in gitlab-test
@@ -194,6 +201,9 @@ func TestGetRawChangesFailures(t *testing.T) {
 			defer cancel()
 
 			req := &gitalypb.GetRawChangesRequest{testRepo, tc.oldRev, tc.newRev}
+			if tc.omitRepository {
+				req.Repository = nil
+			}
 
 			resp, err := client.GetRawChanges(ctx, req)
 			require.NoError(t, err)
