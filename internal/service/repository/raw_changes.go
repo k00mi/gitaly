@@ -32,18 +32,16 @@ func (s *server) GetRawChanges(req *gitalypb.GetRawChangesRequest, stream gitaly
 }
 
 func validateRawChangesRequest(req *gitalypb.GetRawChangesRequest, batch *catfile.Batch) error {
-	if req.GetRepository() == nil {
-		return fmt.Errorf("repository argument must be present")
+	if from := req.FromRevision; from != git.NullSHA {
+		if _, err := batch.Info(from); err != nil {
+			return fmt.Errorf("invalid 'from' revision: %q", from)
+		}
 	}
 
-	from := req.FromRevision
-	if _, err := batch.Info(from); err != nil && from != git.NullSHA {
-		return fmt.Errorf("invalid 'from' revision: %q", from)
-	}
-
-	to := req.ToRevision
-	if _, err := batch.Info(to); err != nil && to != git.NullSHA {
-		return fmt.Errorf("invalid 'to' revision: %q", to)
+	if to := req.ToRevision; to != git.NullSHA {
+		if _, err := batch.Info(to); err != nil {
+			return fmt.Errorf("invalid 'to' revision: %q", to)
+		}
 	}
 
 	return nil
@@ -108,6 +106,11 @@ func getRawChanges(stream gitalypb.RepositoryService_GetRawChangesServer, repo *
 	return nil
 }
 
+// Ordinarily, Git uses 0000000000000000000000000000000000000000, the
+// "null SHA", to represent a non-existing object. In the output of `git
+// diff --raw` however there are only abbreviated SHA's, i.e. with less
+// than 40 characters. Within this context the null SHA is a string that
+// consists of 1 to 40 zeroes.
 var zeroRegexp = regexp.MustCompile(`\A0+\z`)
 
 const submoduleTreeEntryMode = "160000"
