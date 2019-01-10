@@ -104,6 +104,7 @@ module GitalyServer
       Gitaly::FindLicenseResponse.new(license_short_name: short_name || "")
     end
 
+    # TODO: remove after 11.8 because of https://gitlab.com/gitlab-org/gitaly/merge_requests/1026
     def get_raw_changes(request, call)
       repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
 

@@ -1,3 +1,5 @@
+# TODO: remove after 11.8 because of https://gitlab.com/gitlab-org/gitaly/merge_requests/1026
+
 module Gitlab
   module Git
     class RawDiffChange

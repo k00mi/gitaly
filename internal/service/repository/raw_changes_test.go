@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"io"
 	"testing"
 
@@ -91,20 +92,72 @@ func TestGetRawChanges(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		ctx, cancel := testhelper.Context()
-		defer cancel()
+		t.Run(fmt.Sprintf("old:%s,new:%s", tc.oldRev, tc.newRev), func(t *testing.T) {
+			ctx, cancel := testhelper.Context()
+			defer cancel()
 
-		req := &gitalypb.GetRawChangesRequest{testRepo, tc.oldRev, tc.newRev}
+			req := &gitalypb.GetRawChangesRequest{testRepo, tc.oldRev, tc.newRev}
 
-		resp, err := client.GetRawChanges(ctx, req)
-		require.NoError(t, err)
+			stream, err := client.GetRawChanges(ctx, req)
+			require.NoError(t, err)
 
-		msg, err := resp.Recv()
-		require.NoError(t, err)
-
-		changes := msg.GetRawChanges()
-		require.Equal(t, changes, tc.changes)
+			changes := collectChanges(t, stream)
+			require.Equal(t, tc.changes, changes)
+		})
 	}
+}
+
+func TestGetRawChangesSpecialCharacters(t *testing.T) {
+	// We know that 'git diff --raw' sometimes quotes "special characters" in
+	// paths, and that this can result in incorrect results from the
+	// GetRawChanges RPC, see
+	// https://gitlab.com/gitlab-org/gitaly/issues/1444. The definition of
+	// "special" is under core.quotePath in `git help config`.
+	//
+	// This test looks for a specific path known to contain special
+	// characters.
+
+	server, serverSocketPath := runRepoServer(t)
+	defer server.Stop()
+
+	client, conn := newRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	req := &gitalypb.GetRawChangesRequest{
+		Repository:   testRepo,
+		FromRevision: "cfe32cf61b73a0d5e9f13e774abde7ff789b1660",
+		ToRevision:   "913c66a37b4a45b9769037c55c2d238bd0942d2e",
+	}
+
+	stream, err := client.GetRawChanges(ctx, req)
+	require.NoError(t, err)
+
+	changes := collectChanges(t, stream)
+
+	nChangedFiles := 23
+	require.Len(t, changes, nChangedFiles)
+
+	specialFileIdx := 11
+	require.Equal(t, "encoding/テスト.txt", changes[specialFileIdx].NewPath)
+}
+
+func collectChanges(t *testing.T, stream gitalypb.RepositoryService_GetRawChangesClient) []*gitalypb.GetRawChangesResponse_RawChange {
+	var changes []*gitalypb.GetRawChangesResponse_RawChange
+	var err error
+
+	for err == nil {
+		var msg *gitalypb.GetRawChangesResponse
+		msg, err = stream.Recv()
+		changes = append(changes, msg.GetRawChanges()...)
+	}
+	require.Equal(t, io.EOF, err)
+
+	return changes
 }
 
 func TestGetRawChangesFailures(t *testing.T) {
@@ -118,14 +171,21 @@ func TestGetRawChangesFailures(t *testing.T) {
 	defer cleanupFn()
 
 	testCases := []struct {
-		oldRev string
-		newRev string
-		code   codes.Code
+		oldRev         string
+		newRev         string
+		code           codes.Code
+		omitRepository bool
 	}{
 		{
 			oldRev: "",
 			newRev: "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
 			code:   codes.InvalidArgument,
+		},
+		{
+			oldRev:         "cfe32cf61b73a0d5e9f13e774abde7ff789b1660",
+			newRev:         "913c66a37b4a45b9769037c55c2d238bd0942d2e",
+			code:           codes.InvalidArgument,
+			omitRepository: true,
 		},
 		{
 			// A Gitaly commit, unresolvable in gitlab-test
@@ -136,16 +196,24 @@ func TestGetRawChangesFailures(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		ctx, cancel := testhelper.Context()
-		defer cancel()
+		t.Run(fmt.Sprintf("old:%s,new:%s", tc.oldRev, tc.newRev), func(t *testing.T) {
+			ctx, cancel := testhelper.Context()
+			defer cancel()
 
-		req := &gitalypb.GetRawChangesRequest{testRepo, tc.oldRev, tc.newRev}
+			req := &gitalypb.GetRawChangesRequest{testRepo, tc.oldRev, tc.newRev}
+			if tc.omitRepository {
+				req.Repository = nil
+			}
 
-		resp, err := client.GetRawChanges(ctx, req)
-		require.NoError(t, err)
+			resp, err := client.GetRawChanges(ctx, req)
+			require.NoError(t, err)
 
-		_, err = resp.Recv()
-		testhelper.RequireGrpcError(t, err, tc.code)
+			for err == nil {
+				_, err = resp.Recv()
+			}
+
+			testhelper.RequireGrpcError(t, err, tc.code)
+		})
 	}
 }
 
@@ -168,17 +236,7 @@ func TestGetRawChangesManyFiles(t *testing.T) {
 	c, err := client.GetRawChanges(ctx, req)
 	require.NoError(t, err)
 
-	changes := []*gitalypb.GetRawChangesResponse_RawChange{}
-	for {
-		resp, err := c.Recv()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			t.Fatal(err)
-		}
-
-		changes = append(changes, resp.GetRawChanges()...)
-	}
+	changes := collectChanges(t, c)
 
 	require.True(t, len(changes) >= 1041, "Changes has to contain at least 1041 changes")
 }
