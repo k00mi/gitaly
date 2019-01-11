@@ -149,6 +149,12 @@
 			"revisionTime": "2018-11-12T10:25:10Z"
 		},
 		{
+			"checksumSHA1": "40Idbv0LvYI4eMdoV3UCFH0zvjA=",
+			"path": "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing",
+			"revision": "3304cc8863525cd0b328fbfd5bf745bbd38e7106",
+			"revisionTime": "2018-11-12T10:25:10Z"
+		},
+		{
 			"checksumSHA1": "L5z1C445GhhQmDKSisTFv754LdU=",
 			"path": "github.com/grpc-ecosystem/go-grpc-middleware/util/metautils",
 			"revision": "3304cc8863525cd0b328fbfd5bf745bbd38e7106",
@@ -179,12 +185,72 @@
 			"versionExact": "v1.0.1"
 		},
 		{
+			"checksumSHA1": "++h3LjgqASQ5dGLM2WOZmwYp+mU=",
+			"path": "github.com/lightstep/lightstep-tracer-go",
+			"revision": "c9cafc033badd91d4e27900874429fc30a5ffdc2",
+			"revisionTime": "2018-11-01T20:03:43Z"
+		},
+		{
+			"checksumSHA1": "+yBmXMLtl+DTjHc7TnPCLAgJVog=",
+			"path": "github.com/lightstep/lightstep-tracer-go/collectorpb",
+			"revision": "c9cafc033badd91d4e27900874429fc30a5ffdc2",
+			"revisionTime": "2018-11-01T20:03:43Z"
+		},
+		{
+			"checksumSHA1": "RQ3kvBKcSz0kxmQ1p/0taghnjIU=",
+			"path": "github.com/lightstep/lightstep-tracer-go/lightstep/rand",
+			"revision": "c9cafc033badd91d4e27900874429fc30a5ffdc2",
+			"revisionTime": "2018-11-01T20:03:43Z"
+		},
+		{
+			"checksumSHA1": "BOLaaHQ9edFbBXKKJebv2kZHCNQ=",
+			"path": "github.com/lightstep/lightstep-tracer-go/lightstep_thrift",
+			"revision": "c9cafc033badd91d4e27900874429fc30a5ffdc2",
+			"revisionTime": "2018-11-01T20:03:43Z"
+		},
+		{
+			"checksumSHA1": "h8z4oTPYik6oM5Cr0GcnovYVmzA=",
+			"path": "github.com/lightstep/lightstep-tracer-go/lightsteppb",
+			"revision": "c9cafc033badd91d4e27900874429fc30a5ffdc2",
+			"revisionTime": "2018-11-01T20:03:43Z"
+		},
+		{
+			"checksumSHA1": "rUIl0W2zua6pRZvMwOom7EzJCE4=",
+			"path": "github.com/lightstep/thrift/lib/go/thrift",
+			"revision": "de6c3c01b88c1fc8ae76cec4a30f0441ef55a4a4",
+			"revisionTime": "2018-10-23T18:28:18Z"
+		},
+		{
 			"checksumSHA1": "bKMZjd2wPw13VwoE7mBeSv5djFA=",
 			"path": "github.com/matttproud/golang_protobuf_extensions/pbutil",
 			"revision": "c12348ce28de40eed0136aa2b644d0ee0650e56c",
 			"revisionTime": "2016-04-24T11:30:07Z",
 			"version": "v1",
 			"versionExact": "v1.0.1"
+		},
+		{
+			"checksumSHA1": "jqEjDv//suCrQUg8iOGI7oxwfRU=",
+			"path": "github.com/opentracing/opentracing-go",
+			"revision": "be550b025b433cdfa2f11efb962afa2ea3c4d967",
+			"revisionTime": "2018-10-12T22:12:31Z"
+		},
+		{
+			"checksumSHA1": "uhDxBvLEqRAMZKgpTZ8MFuLIIM8=",
+			"path": "github.com/opentracing/opentracing-go/ext",
+			"revision": "be550b025b433cdfa2f11efb962afa2ea3c4d967",
+			"revisionTime": "2018-10-12T22:12:31Z"
+		},
+		{
+			"checksumSHA1": "tnkdNJbJxNKuPZMWapP1xhKIIGw=",
+			"path": "github.com/opentracing/opentracing-go/log",
+			"revision": "be550b025b433cdfa2f11efb962afa2ea3c4d967",
+			"revisionTime": "2018-10-12T22:12:31Z"
+		},
+		{
+			"checksumSHA1": "8U5pEHFpXd1/Klgp+C/a6TqWoh8=",
+			"path": "github.com/philhofer/fwd",
+			"revision": "bb6d471dc95d4fe11e432687f8b70ff496cf3136",
+			"revisionTime": "2017-09-05T21:21:22Z"
 		},
 		{
 			"checksumSHA1": "DTy0iJ2w5C+FDsN9EnzfhNmvS+o=",
@@ -315,6 +381,120 @@
 			"versionExact": "v1.2.2"
 		},
 		{
+			"checksumSHA1": "DAZUaXNahejywdwKXvMohfyHKNc=",
+			"path": "github.com/tinylib/msgp/msgp",
+			"revision": "af6442a0fcf6e2a1b824f70dd0c734f01e817751",
+			"revisionTime": "2018-11-28T01:18:08Z"
+		},
+		{
+			"checksumSHA1": "9JF0HfwNlRf1MVAqpAUGrLukpZw=",
+			"path": "github.com/uber/jaeger-client-go",
+			"revision": "c58709fe19d793cdd40ad8bfa6e645a40a2eccf8",
+			"revisionTime": "2018-11-07T14:24:01Z"
+		},
+		{
+			"checksumSHA1": "n0IcgkLEOYuFPP+S8+VQuGZY6I0=",
+			"path": "github.com/uber/jaeger-client-go/config",
+			"revision": "c58709fe19d793cdd40ad8bfa6e645a40a2eccf8",
+			"revisionTime": "2018-11-07T14:24:01Z"
+		},
+		{
+			"checksumSHA1": "KM5UXTWkHULmw0dDRNuk8ogWyGs=",
+			"path": "github.com/uber/jaeger-client-go/internal/baggage",
+			"revision": "c58709fe19d793cdd40ad8bfa6e645a40a2eccf8",
+			"revisionTime": "2018-11-07T14:24:01Z"
+		},
+		{
+			"checksumSHA1": "tZqlcHV1XoLdZp9jfnydzsZAvYo=",
+			"path": "github.com/uber/jaeger-client-go/internal/baggage/remote",
+			"revision": "c58709fe19d793cdd40ad8bfa6e645a40a2eccf8",
+			"revisionTime": "2018-11-07T14:24:01Z"
+		},
+		{
+			"checksumSHA1": "QB0L0GrzyMGQp6ivkkxp7a1DPsE=",
+			"path": "github.com/uber/jaeger-client-go/internal/spanlog",
+			"revision": "c58709fe19d793cdd40ad8bfa6e645a40a2eccf8",
+			"revisionTime": "2018-11-07T14:24:01Z"
+		},
+		{
+			"checksumSHA1": "79HRO/+ekkpwqDB/OMiW+AHJtlE=",
+			"path": "github.com/uber/jaeger-client-go/internal/throttler",
+			"revision": "c58709fe19d793cdd40ad8bfa6e645a40a2eccf8",
+			"revisionTime": "2018-11-07T14:24:01Z"
+		},
+		{
+			"checksumSHA1": "OVQDWFtFMs+NODe0F/S5kYViQco=",
+			"path": "github.com/uber/jaeger-client-go/internal/throttler/remote",
+			"revision": "c58709fe19d793cdd40ad8bfa6e645a40a2eccf8",
+			"revisionTime": "2018-11-07T14:24:01Z"
+		},
+		{
+			"checksumSHA1": "tMP/vxbHwNAbOEaUhic5/meKfac=",
+			"path": "github.com/uber/jaeger-client-go/log",
+			"revision": "c58709fe19d793cdd40ad8bfa6e645a40a2eccf8",
+			"revisionTime": "2018-11-07T14:24:01Z"
+		},
+		{
+			"checksumSHA1": "j4WrA/B2SJCqHxttCQ+TYbmtQqE=",
+			"path": "github.com/uber/jaeger-client-go/rpcmetrics",
+			"revision": "c58709fe19d793cdd40ad8bfa6e645a40a2eccf8",
+			"revisionTime": "2018-11-07T14:24:01Z"
+		},
+		{
+			"checksumSHA1": "+ffspyTBQLql2UiU6muvfWR/m1o=",
+			"path": "github.com/uber/jaeger-client-go/thrift",
+			"revision": "c58709fe19d793cdd40ad8bfa6e645a40a2eccf8",
+			"revisionTime": "2018-11-07T14:24:01Z"
+		},
+		{
+			"checksumSHA1": "fMIQ4sJFCkqFYhXvvLKIlofqxvY=",
+			"path": "github.com/uber/jaeger-client-go/thrift-gen/agent",
+			"revision": "c58709fe19d793cdd40ad8bfa6e645a40a2eccf8",
+			"revisionTime": "2018-11-07T14:24:01Z"
+		},
+		{
+			"checksumSHA1": "fRR2p+JAp7paApf32YuQuWU7yzY=",
+			"path": "github.com/uber/jaeger-client-go/thrift-gen/baggage",
+			"revision": "c58709fe19d793cdd40ad8bfa6e645a40a2eccf8",
+			"revisionTime": "2018-11-07T14:24:01Z"
+		},
+		{
+			"checksumSHA1": "JZkMEOmiOFFEuGCsDOVLK5RzvMM=",
+			"path": "github.com/uber/jaeger-client-go/thrift-gen/jaeger",
+			"revision": "c58709fe19d793cdd40ad8bfa6e645a40a2eccf8",
+			"revisionTime": "2018-11-07T14:24:01Z"
+		},
+		{
+			"checksumSHA1": "0teQUhTqTE1fLs+vbnTTzWOqdEQ=",
+			"path": "github.com/uber/jaeger-client-go/thrift-gen/sampling",
+			"revision": "c58709fe19d793cdd40ad8bfa6e645a40a2eccf8",
+			"revisionTime": "2018-11-07T14:24:01Z"
+		},
+		{
+			"checksumSHA1": "Nx5witfz05BSO2YlFzh2Gno6bA0=",
+			"path": "github.com/uber/jaeger-client-go/thrift-gen/zipkincore",
+			"revision": "c58709fe19d793cdd40ad8bfa6e645a40a2eccf8",
+			"revisionTime": "2018-11-07T14:24:01Z"
+		},
+		{
+			"checksumSHA1": "UlW+AcyeItWM0x1W4vT9hbUiOJs=",
+			"path": "github.com/uber/jaeger-client-go/transport",
+			"revision": "c58709fe19d793cdd40ad8bfa6e645a40a2eccf8",
+			"revisionTime": "2018-11-07T14:24:01Z"
+		},
+		{
+			"checksumSHA1": "DKwwIk9vq53IKO7RKccat9cnqeo=",
+			"path": "github.com/uber/jaeger-client-go/utils",
+			"revision": "c58709fe19d793cdd40ad8bfa6e645a40a2eccf8",
+			"revisionTime": "2018-11-07T14:24:01Z"
+		},
+		{
+			"checksumSHA1": "gVpUsKwkIZNZfdZXoldq8WPWA3c=",
+			"path": "github.com/uber/jaeger-lib/metrics",
+			"revision": "1fc5c315e03c871d98a3df762234414d185115d7",
+			"revisionTime": "2018-11-02T16:30:54Z"
+		},
+		{
 			"checksumSHA1": "VpLdojyLYx9d/bwnqFkEy12sNd8=",
 			"path": "gitlab.com/gitlab-org/gitaly-proto/go/gitalypb",
 			"revision": "20e398e887e239ba4ddaa44cf075e99841e43f8a",
@@ -323,18 +503,66 @@
 			"versionExact": "v1.5.0"
 		},
 		{
-			"checksumSHA1": "S9x46Eq79I1EkoXI8woeIU6w/wY=",
+			"checksumSHA1": "R6fNN36q3UydLODupK0vdx9h/CY=",
 			"path": "gitlab.com/gitlab-org/labkit/correlation",
-			"revision": "fb2eeb11fc358f8f538692d1c0f6e57d7f268691",
-			"revisionTime": "2018-11-21T15:01:09Z",
+			"revision": "2a3e1f5415a890402696dcbb2c31b5a79c17b579",
+			"revisionTime": "2019-01-08T10:46:58Z",
+			"version": "master",
+			"versionExact": "master"
+		},
+		{
+			"checksumSHA1": "R6fNN36q3UydLODupK0vdx9h/CY=",
+			"path": "gitlab.com/gitlab-org/labkit/correlation",
+			"revision": "9c613f6d8258a1b55701079bf9b358147aea139e",
+			"revisionTime": "2018-12-20T16:08:28Z",
+			"version": "=d-tracing",
+			"versionExact": "d-tracing"
+		},
+		{
+			"checksumSHA1": "UFBFulprWZHuL9GHhjCKoHXm+Ww=",
+			"path": "gitlab.com/gitlab-org/labkit/correlation/grpc",
+			"revision": "2a3e1f5415a890402696dcbb2c31b5a79c17b579",
+			"revisionTime": "2019-01-08T10:46:58Z",
 			"version": "master",
 			"versionExact": "master"
 		},
 		{
 			"checksumSHA1": "UFBFulprWZHuL9GHhjCKoHXm+Ww=",
 			"path": "gitlab.com/gitlab-org/labkit/correlation/grpc",
-			"revision": "fb2eeb11fc358f8f538692d1c0f6e57d7f268691",
-			"revisionTime": "2018-11-21T15:01:09Z",
+			"revision": "3a481e4f5d6cdd19bf9fbbc48a2fe50387b7ae5f",
+			"revisionTime": "2018-12-13T12:30:12Z",
+			"version": "=d-tracing",
+			"versionExact": "d-tracing"
+		},
+		{
+			"checksumSHA1": "JAe9JIwWcJvTUxCbdOPAZxaXIz8=",
+			"path": "gitlab.com/gitlab-org/labkit/tracing",
+			"revision": "2a3e1f5415a890402696dcbb2c31b5a79c17b579",
+			"revisionTime": "2019-01-08T10:46:58Z",
+			"version": "master",
+			"versionExact": "master"
+		},
+		{
+			"checksumSHA1": "uIvjqXAsMQK/Y5FgWRaGydYGbYs=",
+			"path": "gitlab.com/gitlab-org/labkit/tracing/connstr",
+			"revision": "2a3e1f5415a890402696dcbb2c31b5a79c17b579",
+			"revisionTime": "2019-01-08T10:46:58Z",
+			"version": "master",
+			"versionExact": "master"
+		},
+		{
+			"checksumSHA1": "IE38In/zPKpmKqvWAAThyaufQak=",
+			"path": "gitlab.com/gitlab-org/labkit/tracing/grpc",
+			"revision": "2a3e1f5415a890402696dcbb2c31b5a79c17b579",
+			"revisionTime": "2019-01-08T10:46:58Z",
+			"version": "master",
+			"versionExact": "master"
+		},
+		{
+			"checksumSHA1": "hB59Es/WTWfBPLSAheQaRyHGSXA=",
+			"path": "gitlab.com/gitlab-org/labkit/tracing/impl",
+			"revision": "2a3e1f5415a890402696dcbb2c31b5a79c17b579",
+			"revisionTime": "2019-01-08T10:46:58Z",
 			"version": "master",
 			"versionExact": "master"
 		},
@@ -427,6 +655,12 @@
 			"path": "golang.org/x/text/unicode/norm",
 			"revision": "6f44c5a2ea40ee3593d98cdcc905cc1fdaa660e2",
 			"revisionTime": "2018-10-29T18:00:05Z"
+		},
+		{
+			"checksumSHA1": "YNqziavfZHurG6wrwR5Uf9SnI4s=",
+			"path": "google.golang.org/genproto/googleapis/api/annotations",
+			"revision": "bd91e49a0898e27abb88c339b432fa53d7497ac0",
+			"revisionTime": "2018-12-02T18:38:23Z"
 		},
 		{
 			"checksumSHA1": "MgYFT27I9gfAtSVBpGVqkCYOj3U=",
@@ -707,6 +941,36 @@
 			"revisionTime": "2018-10-23T17:37:47Z",
 			"version": "v1.16.0",
 			"versionExact": "v1.16.0"
+		},
+		{
+			"checksumSHA1": "GE96+o57Lj5bo7eUP/rPHAJvhOY=",
+			"path": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
+			"revision": "5a8139286014811d2bccd5ef67ec4844ea0998a7",
+			"revisionTime": "2018-12-07T15:03:43Z"
+		},
+		{
+			"checksumSHA1": "o/e29hKUQ2p/+0gAvCBk6Fri2og=",
+			"path": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext",
+			"revision": "5a8139286014811d2bccd5ef67ec4844ea0998a7",
+			"revisionTime": "2018-12-07T15:03:43Z"
+		},
+		{
+			"checksumSHA1": "Y+OLwoHr6B/kbFMbI8IRui26wZ0=",
+			"path": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/internal",
+			"revision": "5a8139286014811d2bccd5ef67ec4844ea0998a7",
+			"revisionTime": "2018-12-07T15:03:43Z"
+		},
+		{
+			"checksumSHA1": "5eLUeoF0F5+BYLgztcwUCg/T3dc=",
+			"path": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/opentracer",
+			"revision": "5a8139286014811d2bccd5ef67ec4844ea0998a7",
+			"revisionTime": "2018-12-07T15:03:43Z"
+		},
+		{
+			"checksumSHA1": "IUL2h4UqM7KmRzHSWPmn/AIit+o=",
+			"path": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
+			"revision": "5a8139286014811d2bccd5ef67ec4844ea0998a7",
+			"revisionTime": "2018-12-07T15:03:43Z"
 		}
 	],
 	"rootPath": "gitlab.com/gitlab-org/gitaly"

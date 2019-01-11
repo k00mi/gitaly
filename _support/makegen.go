@@ -243,7 +243,7 @@ all: build
 
 .PHONY: build
 build: ../.ruby-bundle
-	go install {{ .GoLdFlags }} {{ join .CommandPackages " " }}
+	go install {{ .GoLdFlags }} -tags "$(BUILD_TAGS)" {{ join .CommandPackages " " }}
 
 # This file is used by Omnibus and CNG to skip the "bundle install"
 # step. Both Omnibus and CNG assume it is in the Gitaly root, not in
@@ -314,11 +314,11 @@ test: test-go rspec
 
 .PHONY: test-go
 test-go: prepare-tests
-	@go test -count=1 {{ join .AllPackages " " }} # count=1 bypasses go 1.10 test caching
+	@go test -tags "$(BUILD_TAGS)" -count=1 {{ join .AllPackages " " }} # count=1 bypasses go 1.10 test caching
 
 .PHONY: race-go
 race-go: prepare-tests
-	@go test -race {{ join .AllPackages " " }}
+	@go test -tags "$(BUILD_TAGS)" -race {{ join .AllPackages " " }}
 
 .PHONY: rspec
 rspec: assemble-go prepare-tests

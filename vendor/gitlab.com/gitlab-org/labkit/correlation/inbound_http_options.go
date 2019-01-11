@@ -2,6 +2,7 @@ package correlation
 
 // The configuration for InjectCorrelationID
 type inboundHandlerConfig struct {
+	propagation bool
 }
 
 // InboundHandlerOption will configure a correlation handler
@@ -10,10 +11,21 @@ type inboundHandlerConfig struct {
 type InboundHandlerOption func(*inboundHandlerConfig)
 
 func applyInboundHandlerOptions(opts []InboundHandlerOption) inboundHandlerConfig {
-	config := inboundHandlerConfig{}
+	config := inboundHandlerConfig{
+		propagation: false,
+	}
 	for _, v := range opts {
 		v(&config)
 	}
 
 	return config
+}
+
+// WithPropagation will configure the handler to propagate existing correlation_ids
+// passed in from upstream services.
+// This is not the default behaviour.
+func WithPropagation() InboundHandlerOption {
+	return func(config *inboundHandlerConfig) {
+		config.propagation = true
+	}
 }
