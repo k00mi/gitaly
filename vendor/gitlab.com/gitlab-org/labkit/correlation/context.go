@@ -26,7 +26,8 @@ func ExtractFromContext(ctx context.Context) string {
 	return str
 }
 
-// ContextWithCorrelation will create a new context containing the Correlation-ID value
+// ContextWithCorrelation will create a new context containing the provided Correlation-ID value
+// This can be extracted using ExtractFromContext
 func ContextWithCorrelation(ctx context.Context, correlationID string) context.Context {
 	return context.WithValue(ctx, keyCorrelationID, correlationID)
 }

@@ -20,6 +20,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/server"
 	"gitlab.com/gitlab-org/gitaly/internal/tempdir"
 	"gitlab.com/gitlab-org/gitaly/internal/version"
+	"gitlab.com/gitlab-org/labkit/tracing"
 )
 
 var (
@@ -103,6 +104,7 @@ func main() {
 	config.ConfigureSentry(version.GetVersion())
 	config.ConfigurePrometheus()
 	config.ConfigureConcurrencyLimits()
+	tracing.Initialize(tracing.WithServiceName("gitaly"))
 
 	tempdir.StartCleaning()
 

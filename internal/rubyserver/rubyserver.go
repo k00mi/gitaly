@@ -23,6 +23,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/version"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 	grpccorrelation "gitlab.com/gitlab-org/labkit/correlation/grpc"
+	grpctracing "gitlab.com/gitlab-org/labkit/tracing/grpc"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
@@ -258,12 +259,14 @@ func dialOptions() []grpc.DialOption {
 		grpc.WithUnaryInterceptor(
 			grpc_middleware.ChainUnaryClient(
 				grpc_prometheus.UnaryClientInterceptor,
+				grpctracing.UnaryClientTracingInterceptor(),
 				grpccorrelation.UnaryClientCorrelationInterceptor(),
 			),
 		),
 		grpc.WithStreamInterceptor(
 			grpc_middleware.ChainStreamClient(
 				grpc_prometheus.StreamClientInterceptor,
+				grpctracing.StreamClientTracingInterceptor(),
 				grpccorrelation.StreamClientCorrelationInterceptor(),
 			),
 		),
