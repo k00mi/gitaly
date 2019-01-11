@@ -38,22 +38,6 @@ module GitalyServer
       Gitaly::FetchRemoteResponse.new
     end
 
-    def is_rebase_in_progress(request, call) # rubocop:disable Naming/PredicateName
-      repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
-
-      result = repo.rebase_in_progress?(request.rebase_id)
-
-      Gitaly::IsRebaseInProgressResponse.new(in_progress: result)
-    end
-
-    def is_squash_in_progress(request, call) # rubocop:disable Naming/PredicateName
-      repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
-
-      result = repo.squash_in_progress?(request.squash_id)
-
-      Gitaly::IsSquashInProgressResponse.new(in_progress: result)
-    end
-
     def write_ref(request, call)
       Gitlab::Git::Repository.from_gitaly(request.repository, call)
                              .write_ref(request.ref, request.revision, old_ref: request.old_revision)
