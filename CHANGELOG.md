@@ -1,5 +1,51 @@
 # Gitaly changelog
 
+## v1.13.0
+
+#### Fixed
+- Fix 503 errors when Git outputs warnings to stderr
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1024
+- Fix regression for https_proxy and unix socket connections
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1032
+- Fix flaky rebase test
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1028
+- Rewrite GetRawChanges and fix quoting bug
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1026
+- Fix logging of RenameNamespace RPC parameters
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/847
+
+#### Other
+- Small refactors to gitaly/client
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1034
+- Prepare for vendoring gitlab-shell hooks
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1020
+- Replace golang.org/x/net/context with context package
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1038
+- Migrate writeref from using the ruby implementation to go
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1008
+  Contributed by johncai
+- Switch from honnef.co/go/tools/megacheck to staticcheck
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1021
+- Add distributed tracing support with LabKit
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/976
+- Simplify error wrapping in service/ref
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1009
+- Remove dummy RequestStore
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1007
+- Simplify error handling in ssh package
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1029
+- Add response chunker abstraction
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1031
+- Use go implementation of FindCommits
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1025
+- Rewrite get commit message
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1012
+- Update docs about monitoring and README
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1016
+  Contributed by Takuya Noguchi
+- Remove unused Ruby rebase/squash code
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1033
+
 ## v1.12.0
 
 #### Fixed

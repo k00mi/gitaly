@@ -1,5 +1,0 @@
----
-title: Replace golang.org/x/net/context with context package
-merge_request: 1038
-author:
-type: other
