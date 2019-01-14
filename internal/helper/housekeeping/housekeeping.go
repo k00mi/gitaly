@@ -1,6 +1,7 @@
 package housekeeping
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,7 +9,6 @@ import (
 
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
 )
 
 const deleteTempFilesOlderThanDuration = 7 * 24 * time.Hour

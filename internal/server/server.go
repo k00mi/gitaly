@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"crypto/tls"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -22,7 +23,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/service"
 	grpccorrelation "gitlab.com/gitlab-org/labkit/correlation/grpc"
 	grpctracing "gitlab.com/gitlab-org/labkit/tracing/grpc"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"

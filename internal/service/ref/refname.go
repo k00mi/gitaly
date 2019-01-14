@@ -2,13 +2,13 @@ package ref
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"strings"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
-	"golang.org/x/net/context"
 )
 
 // FindRefName returns a ref that starts with the given prefix, if one exists.

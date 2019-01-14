@@ -1,6 +1,7 @@
 package commit
 
 import (
+	"context"
 	"io/ioutil"
 	"sort"
 	"strings"
@@ -10,7 +11,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/linguist"
 	"gitlab.com/gitlab-org/gitaly/internal/service/ref"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

@@ -2,6 +2,7 @@ package ref
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -13,7 +14,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 )
 

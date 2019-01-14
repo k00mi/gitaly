@@ -1,6 +1,7 @@
 package ref
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -8,7 +9,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
-	"golang.org/x/net/context"
 )
 
 // RefExists returns true if the given reference exists. The ref must start with the string `ref/`

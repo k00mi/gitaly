@@ -1,6 +1,7 @@
 package server
 
 import (
+	netctx "context"
 	"crypto/x509"
 	"io/ioutil"
 	"net"
@@ -11,7 +12,6 @@ import (
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-	netctx "golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"

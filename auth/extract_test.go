@@ -1,12 +1,12 @@
 package gitalyauth
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/util/metautils"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"

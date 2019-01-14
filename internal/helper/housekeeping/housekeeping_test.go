@@ -1,6 +1,7 @@
 package housekeeping
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -8,7 +9,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
 )
 
 type entryFinalState int

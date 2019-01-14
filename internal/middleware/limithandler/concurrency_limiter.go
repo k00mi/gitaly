@@ -1,10 +1,10 @@
 package limithandler
 
 import (
+	"context"
 	"sync"
 	"time"
 
-	"golang.org/x/net/context"
 	"golang.org/x/sync/semaphore"
 )
 

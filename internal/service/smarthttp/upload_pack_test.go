@@ -2,6 +2,7 @@ package smarthttp
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -20,7 +21,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 )
 

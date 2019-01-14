@@ -3,6 +3,7 @@ package ref
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"strings"
 
@@ -12,7 +13,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
-	"golang.org/x/net/context"
 )
 
 var (

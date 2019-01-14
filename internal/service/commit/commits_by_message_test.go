@@ -1,6 +1,7 @@
 package commit
 
 import (
+	"context"
 	"io"
 	"testing"
 
@@ -8,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 )
 

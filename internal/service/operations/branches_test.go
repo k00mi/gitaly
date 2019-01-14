@@ -1,6 +1,7 @@
 package operations
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"testing"
@@ -9,7 +10,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 )
 
