@@ -1,11 +1,11 @@
 package client
 
 import (
+	"context"
 	"io"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 

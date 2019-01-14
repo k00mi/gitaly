@@ -1,6 +1,7 @@
 package rubyserver
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -24,7 +25,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/streamio"
 	grpccorrelation "gitlab.com/gitlab-org/labkit/correlation/grpc"
 	grpctracing "gitlab.com/gitlab-org/labkit/tracing/grpc"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 

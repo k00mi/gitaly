@@ -1,12 +1,12 @@
 package ref
 
 import (
+	"context"
 	"testing"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 )
 

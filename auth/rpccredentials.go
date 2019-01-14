@@ -1,12 +1,12 @@
 package gitalyauth
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"strconv"
 	"time"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/credentials"
 )
 

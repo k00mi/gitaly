@@ -1,12 +1,12 @@
 package helper
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/metadata"
 )
 

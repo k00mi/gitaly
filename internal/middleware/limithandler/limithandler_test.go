@@ -1,6 +1,7 @@
 package limithandler_test
 
 import (
+	"context"
 	"net"
 	"sync"
 	"testing"
@@ -10,7 +11,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/limithandler"
 	pb "gitlab.com/gitlab-org/gitaly/internal/middleware/limithandler/testpb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 

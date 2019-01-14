@@ -1,6 +1,7 @@
 package namespace
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -10,7 +11,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 )
 

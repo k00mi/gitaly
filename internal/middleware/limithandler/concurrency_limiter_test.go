@@ -1,13 +1,13 @@
 package limithandler
 
 import (
+	"context"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
 )
 
 type counter struct {

@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"os"
@@ -13,7 +14,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/tempdir"
 	"gitlab.com/gitlab-org/labkit/correlation"
 	"gitlab.com/gitlab-org/labkit/tracing"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
