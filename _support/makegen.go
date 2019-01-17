@@ -310,7 +310,7 @@ binaries: assemble
 prepare-tests: {{ .TestRepo }} {{ .GitTestRepo }} ../.ruby-bundle
 
 .PHONY: test
-test: test-go rspec
+test: test-go rspec rspec-gitlab-shell
 
 .PHONY: test-go
 test-go: prepare-tests
@@ -323,6 +323,14 @@ race-go: prepare-tests
 .PHONY: rspec
 rspec: assemble-go prepare-tests
 	cd  {{ .GitalyRubyDir }} && bundle exec rspec
+
+.PHONY: rspec-gitlab-shell
+rspec-gitlab-shell: {{ .GitlabShellDir }}/config.yml assemble-go prepare-tests
+	# rspec in {{ .GitlabShellRelDir }}
+	@cd  {{ .GitalyRubyDir }} && bundle exec bin/ruby-cd {{ .GitlabShellDir }} rspec
+
+{{ .GitlabShellDir }}/config.yml: {{ .GitlabShellDir }}/config.yml.example
+	cp $< $@
 
 .PHONY: verify
 verify: lint check-formatting staticcheck govendor-status notice-up-to-date govendor-tagged rubocop
