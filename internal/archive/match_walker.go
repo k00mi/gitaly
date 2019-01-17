@@ -6,13 +6,14 @@ import (
 	"regexp"
 )
 
-// Walk a directory tree, only calling the wrapped WalkFunc if the path matches
-type matchWalker struct {
+// MatchWalker walks a directory tree, only calling the wrapped WalkFunc if the path matches
+type MatchWalker struct {
 	wrapped  filepath.WalkFunc
 	patterns []*regexp.Regexp
 }
 
-func (m matchWalker) Walk(path string, info os.FileInfo, err error) error {
+// Walk walks the tree, filtering on regexp patterns
+func (m MatchWalker) Walk(path string, info os.FileInfo, err error) error {
 	for _, pattern := range m.patterns {
 		if pattern.MatchString(path) {
 			return m.wrapped(path, info, err)
@@ -20,4 +21,12 @@ func (m matchWalker) Walk(path string, info os.FileInfo, err error) error {
 	}
 
 	return nil
+}
+
+// NewMatchWalker returns a new MatchWalker given a slice of patterns and a filepath.WalkFunc
+func NewMatchWalker(patterns []*regexp.Regexp, walkFunc filepath.WalkFunc) *MatchWalker {
+	return &MatchWalker{
+		wrapped:  walkFunc,
+		patterns: patterns,
+	}
 }

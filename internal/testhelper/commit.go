@@ -8,6 +8,8 @@ import (
 	"path"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 // CreateCommitOpts holds extra options for CreateCommit.
@@ -57,18 +59,15 @@ func CreateCommit(t *testing.T, repoPath, branchName string, opts *CreateCommitO
 // CreateCommitInAlternateObjectDirectory runs a command such that its created
 // objects will live in an alternate objects directory. It returns the current
 // head after the command is run and the alternate objects directory path
-func CreateCommitInAlternateObjectDirectory(t *testing.T, repoPath string, cmd *exec.Cmd) (currentHead []byte, altObjectsDir string) {
+func CreateCommitInAlternateObjectDirectory(t *testing.T, repoPath, altObjectsDir string, cmd *exec.Cmd) (currentHead []byte) {
 	gitPath := path.Join(repoPath, ".git")
-	altObjectsDir = "./alt-objects"
 
 	altObjectsPath := path.Join(gitPath, altObjectsDir)
 	gitObjectEnv := []string{
 		fmt.Sprintf("GIT_OBJECT_DIRECTORY=%s", altObjectsPath),
 		fmt.Sprintf("GIT_ALTERNATE_OBJECT_DIRECTORIES=%s", path.Join(gitPath, "objects")),
 	}
-	if err := os.Mkdir(altObjectsPath, 0777); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, os.MkdirAll(altObjectsPath, 0755))
 
 	// Because we set 'gitObjectEnv', the new objects created by this command
 	// will go into 'find-commits-alt-test-repo/.git/alt-objects'.
@@ -81,9 +80,7 @@ func CreateCommitInAlternateObjectDirectory(t *testing.T, repoPath string, cmd *
 	cmd = exec.Command("git", "-C", repoPath, "rev-parse", "HEAD")
 	cmd.Env = gitObjectEnv
 	currentHead, err := cmd.Output()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	return currentHead[:len(currentHead)-1], altObjectsDir
+	return currentHead[:len(currentHead)-1]
 }

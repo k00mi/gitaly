@@ -162,7 +162,7 @@ func (t *TarBuilder) RecursiveDir(rel string, mustExist bool, patterns ...*regex
 
 	walker := t.walk
 	if len(patterns) > 0 {
-		walker = matchWalker{wrapped: t.walk, patterns: patterns}.Walk
+		walker = NewMatchWalker(patterns, t.walk).Walk
 	}
 
 	// Walk the root and its children, recursively
@@ -172,6 +172,16 @@ func (t *TarBuilder) RecursiveDir(rel string, mustExist bool, patterns ...*regex
 // FileIfExist is a helper for File that sets `mustExist` to false.
 func (t *TarBuilder) FileIfExist(rel string) error {
 	return t.File(rel, false)
+}
+
+// VirtualFileWithContents creates an entry at relPath with contents from the given file.
+// This can be used to build a virtual directory structure inside the tar archive.
+func (t *TarBuilder) VirtualFileWithContents(relPath string, contents *os.File) error {
+	fi, err := contents.Stat()
+	if err != nil {
+		return err
+	}
+	return t.entry(fi, relPath, contents)
 }
 
 // RecursiveDirIfExist is a helper for RecursiveDir that sets `mustExist` to

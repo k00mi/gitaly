@@ -55,7 +55,8 @@ func TestRepackLocal(t *testing.T) {
 	commiterArgs := []string{"-c", "user.name=Scrooge McDuck", "-c", "user.email=scrooge@mcduck.com"}
 	cmdArgs := append(commiterArgs, "-C", repoPath, "commit", "--allow-empty", "-m", "An empty commit")
 	cmd := exec.Command("git", cmdArgs...)
-	altDirsCommit, altObjectsDir := testhelper.CreateCommitInAlternateObjectDirectory(t, repoPath, cmd)
+	altObjectsDir := "./alt-objects"
+	altDirsCommit := testhelper.CreateCommitInAlternateObjectDirectory(t, repoPath, altObjectsDir, cmd)
 
 	repoCommit := testhelper.CreateCommit(t, repoPath, t.Name(), &testhelper.CreateCommitOpts{Message: t.Name()})
 

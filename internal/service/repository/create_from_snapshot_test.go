@@ -23,12 +23,13 @@ var (
 	tarPath      = "/snapshot.tar"
 )
 
-type testhandler struct {
+type tarTesthandler struct {
 	tarData io.Reader
+	secret  string
 }
 
-func (h *testhandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("Authorization") != secret {
+func (h *tarTesthandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Authorization") != h.secret {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -77,7 +78,7 @@ func TestCreateRepositoryFromSnapshotSuccess(t *testing.T) {
 	data, entries := generateTarFile(t, repoPath)
 
 	// Create a HTTP server that serves a given tar file
-	srv := httptest.NewServer(&testhandler{bytes.NewReader(data)})
+	srv := httptest.NewServer(&tarTesthandler{tarData: bytes.NewReader(data), secret: secret})
 	defer srv.Close()
 
 	// Delete the repository so we can re-use the path
@@ -171,7 +172,7 @@ func TestCreateRepositoryFromSnapshotBadRequests(t *testing.T) {
 		},
 	}
 
-	srv := httptest.NewServer(&testhandler{})
+	srv := httptest.NewServer(&tarTesthandler{secret: secret})
 	defer srv.Close()
 
 	for _, tc := range testCases {
@@ -202,7 +203,7 @@ func TestCreateRepositoryFromSnapshotHandlesMalformedResponse(t *testing.T) {
 	// Only serve half of the tar file
 	dataReader := io.LimitReader(bytes.NewReader(data), int64(len(data)/2))
 
-	srv := httptest.NewServer(&testhandler{dataReader})
+	srv := httptest.NewServer(&tarTesthandler{tarData: dataReader, secret: secret})
 	defer srv.Close()
 
 	// Delete the repository so we can re-use the path

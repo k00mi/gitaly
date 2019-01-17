@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
@@ -23,7 +24,7 @@ func TestLink(t *testing.T) {
 
 	require.NoError(t, pool.Create(ctx, testRepo))
 
-	altPath, err := alternatesPath(testRepo)
+	altPath, err := git.AlternatesPath(testRepo)
 	require.NoError(t, err)
 	_, err = os.Stat(altPath)
 	require.True(t, os.IsNotExist(err))
@@ -62,7 +63,7 @@ func TestUnlink(t *testing.T) {
 	// Without a pool on disk, this doesn't return an error
 	require.NoError(t, pool.Unlink(ctx, testRepo))
 
-	altPath, err := alternatesPath(testRepo)
+	altPath, err := git.AlternatesPath(testRepo)
 	require.NoError(t, err)
 
 	require.NoError(t, pool.Create(ctx, testRepo))
