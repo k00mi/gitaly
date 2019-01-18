@@ -23,6 +23,8 @@ def main
   FileUtils.mkdir_p(socket_dir)
   File.chmod(0700, socket_dir)
 
+  load_tracing
+
   s = GRPC::RpcServer.new(
     poll_period: SHUTDOWN_TIMEOUT,
     interceptors: [
@@ -56,6 +58,23 @@ def main
   signal_thread.join
   s.stop
   run_thread.join
+end
+
+def load_tracing
+  config = Gitlab::Config::Gitaly.new
+
+  if config.rbtrace_enabled?
+    GRPC.logger.info("... loading rbtrace")
+    require 'rbtrace'
+  end
+
+  # rubocop:disable Style/GuardClause
+  if config.objspace_trace_enabled?
+    GRPC.logger.info("... loading ObjectSpace allocation tracking")
+    require 'objspace'
+    ObjectSpace.trace_object_allocations_start
+  end
+  # rubocop:enable Style/GuardClause
 end
 
 def start_parent_watcher(original_ppid, signal_thread)

@@ -55,6 +55,18 @@ module Gitlab
       def client_path
         @client_path ||= ENV['GITALY_RUBY_GITALY_BIN_DIR']
       end
+
+      def rbtrace_enabled?
+        @rbtrace_enabled ||= enabled?(ENV['GITALY_RUBY_RBTRACE_ENABLED'])
+      end
+
+      def objspace_trace_enabled?
+        @objspace_trace_enabled ||= enabled?(ENV['GITALY_RUBY_OBJSPACE_TRACE_ENABLED'])
+      end
+
+      def enabled?(value)
+        %w[true yes 1].include?(value&.downcase)
+      end
     end
 
     def git
