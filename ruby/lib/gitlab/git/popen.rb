@@ -22,19 +22,26 @@ module Gitlab
           # Mimic what Ruby does with capture3: https://github.com/ruby/ruby/blob/1ec544695fa02d714180ef9c34e755027b6a2103/lib/open3.rb#L257-L273
           err_reader = Thread.new { stderr.read }
 
-          yield(stdin) if block_given?
-          stdin.close
+          begin
+            yield(stdin) if block_given?
+            stdin.close
 
-          if lazy_block
-            cmd_output = lazy_block.call(stdout.lazy)
-            cmd_status = 0
-            break
-          else
-            cmd_output << stdout.read
+            if lazy_block
+              cmd_output = lazy_block.call(stdout.lazy)
+              cmd_status = 0
+              break
+            else
+              cmd_output << stdout.read
+            end
+
+            cmd_output << err_reader.value if include_stderr
+            cmd_status = wait_thr.value.exitstatus
+          ensure
+            # When Popen3.open3 returns, the stderr reader gets closed, which causes
+            # an exception in the err_reader thread. Kill the thread before
+            # returning from Popen3.open3.
+            err_reader.kill
           end
-
-          cmd_output << err_reader.value if include_stderr
-          cmd_status = wait_thr.value.exitstatus
         end
 
         [cmd_output, cmd_status]
@@ -76,7 +83,13 @@ module Gitlab
           wout.close unless wout.closed?
           werr.close unless werr.closed?
 
+          # rout is shared with out_reader. To prevent an exception in that
+          # thread, kill the thread before closing rout. The same goes for rerr
+          # below.
+          out_reader.kill
           rout.close
+
+          err_reader.kill
           rerr.close
         end
       end
