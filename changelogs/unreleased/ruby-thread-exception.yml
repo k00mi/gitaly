@@ -1,5 +1,0 @@
----
-title: Ensure that we kill ruby Gitlab::Git::Popen reader threads
-merge_request: 1040
-author:
-type: fixed

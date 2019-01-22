@@ -1,5 +1,15 @@
 # Gitaly changelog
 
+## v1.14.0
+
+#### Fixed
+- Ensure that we kill ruby Gitlab::Git::Popen reader threads
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1040
+
+#### Other
+- Vendor gitlab-shell at 6c5b195353a632095d7f6
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1037
+
 ## v1.13.0
 
 #### Fixed
