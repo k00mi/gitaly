@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"gitlab.com/gitlab-org/gitaly/internal/git/remote"
+
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -55,8 +57,8 @@ func (o *ObjectPool) Unlink(ctx context.Context, repo *gitalypb.Repository) erro
 	// We need to use removeRemote, and can't leverage `git config --remove-section`
 	// as the latter doesn't clean up refs
 	remoteName := repo.GetGlRepository()
-	if err := o.removeRemote(ctx, remoteName); err != nil {
-		if present, err2 := o.hasRemote(ctx, remoteName); err2 != nil || present {
+	if err := remote.Remove(ctx, o, remoteName); err != nil {
+		if present, err2 := remote.Exists(ctx, o, remoteName); err2 != nil || present {
 			return err
 		}
 	}

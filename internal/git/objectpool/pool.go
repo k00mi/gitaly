@@ -6,6 +6,7 @@ import (
 	"path"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/git/remote"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
@@ -77,7 +78,7 @@ func (o *ObjectPool) Create(ctx context.Context, repo *gitalypb.Repository) (err
 		return err
 	}
 
-	if err := o.removeRemote(ctx, "origin"); err != nil {
+	if err := remote.Remove(ctx, o, "origin"); err != nil {
 		return err
 	}
 

@@ -12,6 +12,7 @@ module GitalyServer
       Gitaly::AddRemoteResponse.new
     end
 
+    # TODO: remove in gitlab 11.9, this is implemented in Go now
     def remove_remote(request, call)
       repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
 
