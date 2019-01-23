@@ -1,0 +1,5 @@
+---
+title: Add chunking support to SearchFilesByContent RPC
+merge_request: 1015
+author:
+type: fixed

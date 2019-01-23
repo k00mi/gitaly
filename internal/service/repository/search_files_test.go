@@ -2,7 +2,10 @@ package repository
 
 import (
 	"bytes"
+	"fmt"
 	"io"
+	"io/ioutil"
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -109,25 +112,102 @@ func TestSearchFilesByContentSuccessful(t *testing.T) {
 			ref:    "many_files",
 			output: contentCoffeeLines,
 		},
+		{
+			desc:   "no results",
+			query:  "这个应该没有结果",
+			ref:    "many_files",
+			output: [][]byte{},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			stream, err := client.SearchFilesByContent(ctx, &gitalypb.SearchFilesByContentRequest{
+			request := &gitalypb.SearchFilesByContentRequest{
 				Repository: testRepo,
 				Query:      tc.query,
 				Ref:        []byte(tc.ref),
-			})
+			}
+			request.ChunkedResponse = true
+			stream, err := client.SearchFilesByContent(ctx, request)
 			require.NoError(t, err)
 
-			resp, err := consumeFilenameByContent(stream)
+			resp, err := consumeFilenameByContentChunked(stream)
 			require.NoError(t, err)
-
-			require.NotEmpty(t, resp)
 			require.Equal(t, len(tc.output), len(resp))
 			for i := 0; i < len(tc.output); i++ {
 				require.Equal(t, tc.output[i], resp[i])
 			}
+			// Deprecated: testing the old non-chunking code path until we remove it post 11.8
+			request.ChunkedResponse = false
+			stream, err = client.SearchFilesByContent(ctx, request)
+			require.NoError(t, err)
+
+			resp, err = consumeFilenameByContent(stream)
+			require.NoError(t, err)
+			require.Equal(t, len(tc.output), len(resp))
+			for i := 0; i < len(tc.output); i++ {
+				require.Equal(t, tc.output[i], resp[i])
+			}
+		})
+	}
+}
+
+func TestSearchFilesByContentLargeFile(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	server, serverSocketPath := runRepoServer(t)
+	defer server.Stop()
+
+	client, conn := newRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepoWithWorktree(t)
+	defer cleanupFn()
+
+	committerName := "Scrooge McDuck"
+	committerEmail := "scrooge@mcduck.com"
+
+	largeFiles := []struct {
+		filename string
+		line     string
+		repeated int
+		query    string
+	}{
+		{
+			filename: "large_file_of_abcdefg_2mb",
+			line:     "abcdefghi\n", // 10 bytes
+			repeated: 210000,
+			query:    "abcdefg",
+		},
+		{
+			filename: "large_file_of_unicode_1.5mb",
+			line:     "你见天吃了什么东西?\n", // 22 bytes
+			repeated: 70000,
+			query:    "什么东西",
+		},
+	}
+
+	for _, largeFile := range largeFiles {
+		t.Run(largeFile.filename, func(t *testing.T) {
+			require.NoError(t, ioutil.WriteFile(path.Join(testRepoPath, largeFile.filename), bytes.Repeat([]byte(largeFile.line), largeFile.repeated), 0644))
+			testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "add", ".")
+			testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath,
+				"-c", fmt.Sprintf("user.name=%s", committerName),
+				"-c", fmt.Sprintf("user.email=%s", committerEmail), "commit", "-m", "large file commit", "--", largeFile.filename)
+
+			stream, err := client.SearchFilesByContent(ctx, &gitalypb.SearchFilesByContentRequest{
+				Repository:      testRepo,
+				Query:           largeFile.query,
+				Ref:             []byte("master"),
+				ChunkedResponse: true,
+			})
+			require.NoError(t, err)
+
+			resp, err := consumeFilenameByContentChunked(stream)
+			require.NoError(t, err)
+
+			require.Equal(t, largeFile.repeated, len(bytes.Split(bytes.TrimRight(resp[0], "\n"), []byte("\n"))))
 		})
 	}
 }
@@ -293,7 +373,7 @@ func TestSearchFilesByNameFailure(t *testing.T) {
 }
 
 func consumeFilenameByContent(stream gitalypb.RepositoryService_SearchFilesByContentClient) ([][]byte, error) {
-	ret := make([][]byte, 0)
+	var ret [][]byte
 	for done := false; !done; {
 		resp, err := stream.Recv()
 		if err == io.EOF {
@@ -305,10 +385,35 @@ func consumeFilenameByContent(stream gitalypb.RepositoryService_SearchFilesByCon
 		ret = append(ret, resp.Matches...)
 	}
 	return ret, nil
+
+}
+
+func consumeFilenameByContentChunked(stream gitalypb.RepositoryService_SearchFilesByContentClient) ([][]byte, error) {
+	var ret [][]byte
+	var match []byte
+
+	for {
+		resp, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		match = append(match, resp.MatchData...)
+		if resp.EndOfMatch {
+			ret = append(ret, match)
+			match = nil
+		}
+	}
+
+	return ret, nil
 }
 
 func consumeFilenameByName(stream gitalypb.RepositoryService_SearchFilesByNameClient) ([][]byte, error) {
-	ret := make([][]byte, 0)
+	var ret [][]byte
+
 	for done := false; !done; {
 		resp, err := stream.Recv()
 		if err == io.EOF {

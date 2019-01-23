@@ -11,5 +11,5 @@ type server struct {
 
 // NewServer creates a new instance of a gRPC repo server
 func NewServer(rs *rubyserver.Server) gitalypb.RepositoryServiceServer {
-	return &server{rs}
+	return &server{Server: rs}
 }
