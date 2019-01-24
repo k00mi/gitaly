@@ -495,13 +495,14 @@
 			"revisionTime": "2018-11-02T16:30:54Z"
 		},
 		{
-			"checksumSHA1": "XiwmW1r5ZM5VmskAzB/rbKJ9aHI=",
+			"checksumSHA1": "v//yPIdKqUgtH5edzbGS/smwVkI=",
 			"path": "gitlab.com/gitlab-org/gitaly-proto/go/gitalypb",
-			"revision": "ec300d4a3c6f541a20fadd18ebde59ce58fc5c6d",
-			"revisionTime": "2019-01-02T19:16:32Z",
-			"version": "v1.7.0",
-			"versionExact": "v1.7.0"
+			"revision": "3cdbf69a754a59e56578d935a8848de27bba08a6",
+			"revisionTime": "2019-01-04T19:41:27Z",
+			"version": "v1.8.0",
+			"versionExact": "v1.8.0"
 		},
+
 		{
 			"checksumSHA1": "R6fNN36q3UydLODupK0vdx9h/CY=",
 			"path": "gitlab.com/gitlab-org/labkit/correlation",

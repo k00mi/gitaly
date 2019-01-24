@@ -49,6 +49,8 @@ It has these top-level messages:
 	CommitsBetweenResponse
 	CountCommitsRequest
 	CountCommitsResponse
+	CountDivergingCommitsRequest
+	CountDivergingCommitsResponse
 	TreeEntry
 	GetTreeEntriesRequest
 	GetTreeEntriesResponse
