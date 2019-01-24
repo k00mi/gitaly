@@ -33,7 +33,7 @@ func formatRepoRequest(repo *gitalypb.Repository) map[string]interface{} {
 		"repoPath":      repo.RelativePath,
 		"topLevelGroup": getTopLevelGroupFromRepoPath(repo.RelativePath),
 		"glRepository":  repo.GlRepository,
-		"glProjectName": repo.GlProjectName,
+		"glProjectPath": repo.GlProjectPath,
 	}
 }
 

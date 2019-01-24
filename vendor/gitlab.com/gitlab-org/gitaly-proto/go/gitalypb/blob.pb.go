@@ -206,6 +206,8 @@ It has these top-level messages:
 	FindRemoteRepositoryResponse
 	FindRemoteRootRefRequest
 	FindRemoteRootRefResponse
+	ListRemotesRequest
+	ListRemotesResponse
 	RepositoryExistsRequest
 	RepositoryExistsResponse
 	RepackIncrementalRequest
