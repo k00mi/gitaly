@@ -9,4 +9,3 @@ import (
 func (s *server) ListRemotes(ctx context.Context, in *gitalypb.ListRemotesRequest) (*gitalypb.ListRemotesResponse, error) {
 	return nil, nil
 }
-
