@@ -7,7 +7,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
-	"gitlab.com/gitlab-org/gitaly/internal/helper/chunker"
+	"gitlab.com/gitlab-org/gitaly/internal/helper/chunk"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -20,7 +20,7 @@ func (s *server) ListDirectories(req *gitalypb.ListDirectoriesRequest, stream gi
 
 	storageDir = storageDir + "/"
 	maxDepth := dirDepth(storageDir) + req.GetDepth()
-	sender := chunker.New(&dirSender{stream: stream})
+	sender := chunk.New(&dirSender{stream: stream})
 
 	err = filepath.Walk(storageDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -61,8 +61,8 @@ type dirSender struct {
 	dirs   []string
 }
 
-func (s *dirSender) Reset()                 { s.dirs = nil }
-func (s *dirSender) Append(it chunker.Item) { s.dirs = append(s.dirs, it.(string)) }
+func (s *dirSender) Reset()               { s.dirs = nil }
+func (s *dirSender) Append(it chunk.Item) { s.dirs = append(s.dirs, it.(string)) }
 func (s *dirSender) Send() error {
 	return s.stream.Send(&gitalypb.ListDirectoriesResponse{Paths: s.dirs})
 }
