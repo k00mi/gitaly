@@ -5,9 +5,8 @@ import (
 	"fmt"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func (s *server) UserMergeBranch(bidi gitalypb.OperationService_UserMergeBranchServer) error {
@@ -75,7 +74,7 @@ func validateFFRequest(in *gitalypb.UserFFBranchRequest) error {
 
 func (s *server) UserFFBranch(ctx context.Context, in *gitalypb.UserFFBranchRequest) (*gitalypb.UserFFBranchResponse, error) {
 	if err := validateFFRequest(in); err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "UserFFBranch: %v", err)
+		return nil, helper.ErrInvalidArgument(err)
 	}
 
 	client, err := s.OperationServiceClient(ctx)
@@ -89,4 +88,42 @@ func (s *server) UserFFBranch(ctx context.Context, in *gitalypb.UserFFBranchRequ
 	}
 
 	return client.UserFFBranch(clientCtx, in)
+}
+
+func validateUserMergeToRefRequest(in *gitalypb.UserMergeToRefRequest) error {
+	if len(in.Branch) == 0 {
+		return fmt.Errorf("empty branch name")
+	}
+
+	if in.User == nil {
+		return fmt.Errorf("empty user")
+	}
+
+	if in.SourceSha == "" {
+		return fmt.Errorf("empty source SHA")
+	}
+
+	if len(in.TargetRef) == 0 {
+		return fmt.Errorf("empty target ref")
+	}
+
+	return nil
+}
+
+func (s *server) UserMergeToRef(ctx context.Context, in *gitalypb.UserMergeToRefRequest) (*gitalypb.UserMergeToRefResponse, error) {
+	if err := validateUserMergeToRefRequest(in); err != nil {
+		return nil, helper.ErrInvalidArgument(err)
+	}
+
+	client, err := s.OperationServiceClient(ctx)
+	if err != nil {
+		return nil, helper.ErrInternal(err)
+	}
+
+	clientCtx, err := rubyserver.SetHeaders(ctx, in.GetRepository())
+	if err != nil {
+		return nil, err
+	}
+
+	return client.UserMergeToRef(clientCtx, in)
 }

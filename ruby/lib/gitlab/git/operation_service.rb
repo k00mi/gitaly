@@ -101,6 +101,32 @@ module Gitlab
         update_ref_in_hooks(ref, newrev, oldrev)
       end
 
+      # Yields the given block (which should return a commit) and
+      # writes it to the ref while also executing hooks for it.
+      # The ref is _always_ overwritten (nothing is taken from its
+      # previous state).
+      #
+      # Returns the generated commit.
+      #
+      # ref - The target ref path we're commiting to.
+      # from_branch - The branch we're taking the HEAD commit from.
+      def commit_ref(ref, from_branch:)
+        update_autocrlf_option
+
+        repository.write_ref(ref, from_branch.target)
+
+        # Make commit
+        newrev = yield
+
+        raise Gitlab::Git::CommitError.new('Failed to create commit') unless newrev
+
+        oldrev = from_branch.target
+
+        update_ref_in_hooks(ref, newrev, oldrev)
+
+        newrev
+      end
+
       private
 
       # Returns [newrev, should_run_after_create, should_run_after_create_branch]
