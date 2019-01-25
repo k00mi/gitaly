@@ -145,21 +145,38 @@ func (gm *gitalyMake) GoLdFlags() string {
 	return fmt.Sprintf("-ldflags '-X %s/internal/version.version=%s -X %s/internal/version.buildtime=%s'", gm.Pkg(), gm.Version(), gm.Pkg(), gm.BuildTime())
 }
 
-func (gm *gitalyMake) VersionPrefixed() string {
-	if len(gm.versionPrefixed) > 0 {
-		return gm.versionPrefixed
+func (gm *gitalyMake) VersionFromFile() string {
+	data, err := ioutil.ReadFile("../VERSION")
+	if err != nil {
+		log.Printf("Error: %v", err)
+		log.Printf("Unable to obtain version from VERSION file.")
+		return "unknown"
 	}
+	return fmt.Sprintf("v%s",strings.TrimSpace(string(data)))
+}
 
+func (gm *gitalyMake) VersionFromGit() string {
 	cmd := exec.Command("git", "describe")
 	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
 	if err != nil {
 		log.Printf("%s: %v", strings.Join(cmd.Args, " "), err)
-		gm.versionPrefixed = "unknown"
+		return "unknown"
+	}
+	return strings.TrimSpace(string(out))
+}
+
+func (gm *gitalyMake) VersionPrefixed() string {
+	if len(gm.versionPrefixed) > 0 {
 		return gm.versionPrefixed
 	}
-	gm.versionPrefixed = strings.TrimSpace(string(out))
 
+	version := gm.VersionFromGit()
+	if version == "unknown" {
+		log.Printf("Unable to determine version from Git. Attempting VERSION file")
+		version = gm.VersionFromFile()
+	}
+	gm.versionPrefixed = version
 	return gm.versionPrefixed
 }
 
