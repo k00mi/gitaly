@@ -1,5 +1,0 @@
----
-title: Fix tests that used long unix socket paths
-merge_request: 1039
-author:
-type: fixed

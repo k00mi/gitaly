@@ -1,5 +1,35 @@
 # Gitaly changelog
 
+## v1.15.0
+
+#### Added
+- Support rbtrace and ObjectSpace via environment flags
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1046
+
+#### Changed
+- Add CountDivergingCommits RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1023
+
+#### Fixed
+- Add chunking support to SearchFilesByContent RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1015
+- Avoid unsafe use of scanner.Bytes() in ref name RPC's
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1054
+- Fix tests that used long unix socket paths
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1039
+
+#### Other
+- Use chunker for ListDirectories RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1042
+- Stop using nil internally to signal "commit not found"
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1050
+- Refactor refnames RPC's to use chunker
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1041
+
+#### Performance
+- Rewrite CommitStats in Go
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1048
+
 ## v1.14.0
 
 #### Fixed
