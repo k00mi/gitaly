@@ -1,8 +1,10 @@
 package ref
 
 import (
+	"bufio"
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -12,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
+	"gitlab.com/gitlab-org/gitaly/internal/git/updateref"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
@@ -41,9 +44,7 @@ func TestSuccessfulFindAllBranchNames(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	c, err := client.FindAllBranchNames(ctx, rpcRequest)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	var names [][]byte
 	for {
@@ -51,15 +52,72 @@ func TestSuccessfulFindAllBranchNames(t *testing.T) {
 		if err == io.EOF {
 			break
 		}
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
+
 		names = append(names, r.GetNames()...)
 	}
-	for _, branch := range []string{"master", "100%branch", "improve/awesome", "'test'"} {
-		if !containsRef(names, "refs/heads/"+branch) {
-			t.Fatalf("Expected to find branch %q in all branch names", branch)
+
+	expectedBranches, err := ioutil.ReadFile("testdata/branches.txt")
+	require.NoError(t, err)
+
+	for _, branch := range bytes.Split(bytes.TrimSpace(expectedBranches), []byte("\n")) {
+		require.Contains(t, names, branch)
+	}
+}
+
+func TestFindAllBranchNamesVeryLargeResponse(t *testing.T) {
+	server, serverSocketPath := runRefServiceServer(t)
+	defer server.Stop()
+
+	client, conn := newRefServiceClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	updater, err := updateref.New(ctx, testRepo)
+	require.NoError(t, err)
+
+	// We want to create enough refs to overflow the default bufio.Scanner
+	// buffer. Such an overflow will cause scanner.Bytes() to become invalid
+	// at some point. That is expected behavior, but our tests did not
+	// trigger it, so we got away with naively using scanner.Bytes() and
+	// causing a bug: https://gitlab.com/gitlab-org/gitaly/issues/1473.
+	refSizeLowerBound := 100
+	numRefs := 2 * bufio.MaxScanTokenSize / refSizeLowerBound
+
+	var testRefs []string
+	for i := 0; i < numRefs; i++ {
+		refName := fmt.Sprintf("refs/heads/test-%0100d", i)
+		require.True(t, len(refName) > refSizeLowerBound, "ref %q must be larger than %d", refName, refSizeLowerBound)
+
+		require.NoError(t, updater.Create(refName, "HEAD"))
+		testRefs = append(testRefs, refName)
+	}
+
+	require.NoError(t, updater.Wait())
+
+	rpcRequest := &gitalypb.FindAllBranchNamesRequest{Repository: testRepo}
+
+	c, err := client.FindAllBranchNames(ctx, rpcRequest)
+	require.NoError(t, err)
+
+	var names [][]byte
+	for {
+		r, err := c.Recv()
+		if err == io.EOF {
+			break
 		}
+		require.NoError(t, err)
+
+		names = append(names, r.GetNames()...)
+	}
+
+	for _, branch := range testRefs {
+		require.Contains(t, names, []byte(branch), "branch missing from response: %q", branch)
 	}
 }
 
