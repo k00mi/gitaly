@@ -152,7 +152,7 @@ func (gm *gitalyMake) VersionFromFile() string {
 		log.Printf("Unable to obtain version from VERSION file.")
 		return "unknown"
 	}
-	return fmt.Sprintf("v%s",strings.TrimSpace(string(data)))
+	return fmt.Sprintf("v%s", strings.TrimSpace(string(data)))
 }
 
 func (gm *gitalyMake) VersionFromGit() string {
