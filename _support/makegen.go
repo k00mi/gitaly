@@ -82,6 +82,18 @@ func (gm *gitalyMake) GitlabShellDir() string {
 	return filepath.Join(gm.SourceDir(), gm.GitlabShellRelDir())
 }
 
+func (gm *gitalyMake) Git2GoVendorDir() string {
+	return filepath.Join(gm.BuildDir(), "../vendor/github.com/libgit2/git2go/vendor")
+}
+
+func (gm *gitalyMake) LibGit2Version() string {
+	return filepath.Join("0.27.8")
+}
+
+func (gm *gitalyMake) LibGit2SHA() string {
+	return filepath.Join("8313873d49dc01e8b880ec334d7430ae67496a89aaa8c6e7bbd3affb47a00c76")
+}
+
 // SourceDir is the location of gitaly's files, inside the _build GOPATH.
 func (gm *gitalyMake) SourceDir() string { return filepath.Join(gm.BuildDir(), "src", gm.Pkg()) }
 
@@ -265,10 +277,26 @@ unexport GOBIN
 .PHONY: all
 all: build
 
+{{ .Git2GoVendorDir }}/.ok:
+	rm -rf {{ .Git2GoVendorDir }} 
+	mkdir -p {{ .Git2GoVendorDir }}
+
+	cd {{ .Git2GoVendorDir }} && curl -L -o libgit2.tar.gz https://github.com/libgit2/libgit2/archive/v{{ .LibGit2Version }}.tar.gz
+	cd {{ .Git2GoVendorDir }} && echo '{{ .LibGit2SHA }}  libgit2.tar.gz' | shasum -a256 -c -
+	cd {{ .Git2GoVendorDir }} && tar -xvf libgit2.tar.gz
+	cd {{ .Git2GoVendorDir }} && mv libgit2-{{ .LibGit2Version }} libgit2
+
+	mkdir -p {{ .Git2GoVendorDir }}/libgit2/build
+	mkdir -p {{ .Git2GoVendorDir }}/libgit2/install/lib
+	cd {{ .Git2GoVendorDir }}/libgit2/build && cmake -DTHREADSAFE=ON -DBUILD_CLAR=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_C_FLAGS=-fPIC -DCMAKE_BUILD_TYPE="RelWithDebInfo" -DCMAKE_INSTALL_PREFIX=../install ..
+	cd {{ .Git2GoVendorDir }}/libgit2/build && cmake --build .
+
+	touch $@
+
 .PHONY: build
-build: ../.ruby-bundle
+build: ../.ruby-bundle {{ .Git2GoVendorDir }}/.ok
 	# go install
-	@cd {{ .SourceDir }} && go install {{ .GoLdFlags }} -tags "$(BUILD_TAGS)" {{ join .CommandPackages " " }}
+	@cd {{ .SourceDir }} && go install {{ .GoLdFlags }} -tags "$(BUILD_TAGS) static" {{ join .CommandPackages " " }}
 
 # This file is used by Omnibus and CNG to skip the "bundle install"
 # step. Both Omnibus and CNG assume it is in the Gitaly root, not in
@@ -337,17 +365,17 @@ prepare-tests: {{ .TestRepo }} {{ .GitTestRepo }} ../.ruby-bundle
 .PHONY: test
 test: test-go rspec rspec-gitlab-shell
 
-.PHONY: test-go
-test-go: prepare-tests
-	@go test -tags "$(BUILD_TAGS)" -count=1 {{ join .AllPackages " " }} # count=1 bypasses go 1.10 test caching
+.PHONY: test-go 
+test-go: prepare-tests {{ .Git2GoVendorDir }}/.ok
+	@go test -tags "$(BUILD_TAGS) static" -count=1 {{ join .AllPackages " " }} # count=1 bypasses go 1.10 test caching
 
 .PHONY: test-with-proxies
 test-with-proxies: prepare-tests
 	@http_proxy=http://invalid https_proxy=https://invalid go test -tags "$(BUILD_TAGS)" -count=1  {{ .Pkg }}/internal/rubyserver/
 
 .PHONY: race-go
-race-go: prepare-tests
-	@go test -tags "$(BUILD_TAGS)" -race {{ join .AllPackages " " }}
+race-go: prepare-tests {{ .Git2GoVendorDir }}/.ok
+	@go test -tags "$(BUILD_TAGS) static" -race {{ join .AllPackages " " }}
 
 .PHONY: rspec
 rspec: assemble-go prepare-tests
@@ -387,9 +415,9 @@ format: {{ .GoImports }}
 	@cd {{ .SourceDir }} && goimports -w -l {{ join .GoFiles " " }}
 
 .PHONY: staticcheck
-staticcheck: {{ .StaticCheck }}
+staticcheck: {{ .StaticCheck }} {{ .Git2GoVendorDir }}/.ok
 	# staticcheck
-	@cd {{ .SourceDir }} && {{ .StaticCheck }} {{ join .AllPackages " " }}
+	@cd {{ .SourceDir }} && {{ .StaticCheck }} -tags "$(BUILD_TAGS) static" {{ join .AllPackages " " }}
 
 # Install staticcheck
 {{ .StaticCheck }}:
@@ -426,7 +454,7 @@ rubocop: ../.ruby-bundle
 	cd  {{ .GitalyRubyDir }} && bundle exec rubocop --parallel
 
 .PHONY: cover
-cover: prepare-tests {{ .GoCovMerge }}
+cover: prepare-tests {{ .GoCovMerge }} {{ .Git2GoVendorDir }}/.ok
 	@echo "NOTE: make cover does not exit 1 on failure, don't use it to check for tests success!"
 	mkdir -p "{{ .CoverageDir }}"
 	rm -f {{ .CoverageDir }}/*.out "{{ .CoverageDir }}/all.merged" "{{ .CoverageDir }}/all.html"
@@ -442,7 +470,7 @@ cover: prepare-tests {{ .GoCovMerge }}
 	go install {{ .SourceDir }}/vendor/github.com/wadey/gocovmerge
 
 .PHONY: docker
-docker:
+docker: {{ .Git2GoVendorDir }}/.ok
 	rm -rf docker/
 	mkdir -p docker/bin/
 	rm -rf  {{ .GitalyRubyDir }}/tmp
@@ -451,7 +479,7 @@ docker:
 {{ $pkg := .Pkg }}
 {{ $goLdFlags := .GoLdFlags }}
 {{ range $cmd := .Commands }}
-	GOOS=linux GOARCH=amd64 go build {{ $goLdFlags }} -o "docker/bin/{{ $cmd }}" {{ $pkg }}/cmd/{{ $cmd }}
+	GOOS=linux GOARCH=amd64 go build -tags "$(BUILD_TAGS) static" {{ $goLdFlags }} -o "docker/bin/{{ $cmd }}" {{ $pkg }}/cmd/{{ $cmd }}
 {{ end }}
 	cp {{ .SourceDir }}/Dockerfile docker/
 	docker build -t gitlab/gitaly:{{ .VersionPrefixed }} -t gitlab/gitaly:latest docker/

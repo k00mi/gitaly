@@ -53,6 +53,8 @@ func main() {
 		args := []string{
 			"go",
 			"test",
+			"-tags",
+			"static",
 			fmt.Sprintf("-coverpkg=%s", strings.Join(deps, ",")),
 			fmt.Sprintf("-coverprofile=%s/unit-%s.out", outDir, strings.Replace(pkg, "/", "_", -1)),
 			pkg,
@@ -82,7 +84,7 @@ func depsForPackage(pkg string, packageMap map[string]bool) ([]string, error) {
 }
 
 func buildDependentPackages(packages []string) error {
-	buildDeps := exec.Command("go", append([]string{"test", "-i"}, packages...)...)
+	buildDeps := exec.Command("go", append([]string{"test", "-tags", "static", "-i"}, packages...)...)
 	buildDeps.Stdout = os.Stdout
 	buildDeps.Stderr = os.Stderr
 	start := time.Now()
@@ -90,7 +92,7 @@ func buildDependentPackages(packages []string) error {
 		log.Printf("command failed: %s", strings.Join(buildDeps.Args, " "))
 		return err
 	}
-	log.Printf("go test -i\t%.3fs", time.Since(start).Seconds())
+	log.Printf("go test -tags static -i\t%.3fs", time.Since(start).Seconds())
 	return nil
 }
 
