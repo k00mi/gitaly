@@ -4,20 +4,51 @@ import (
 	"fmt"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/helper/chunk"
 	"gitlab.com/gitlab-org/gitaly/internal/service/ref"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // We declare this function in variables so that we can override them in our tests
 var _findBranchNamesFunc = ref.FindBranchNames
 
 type findAllCommitsSender struct {
-	stream gitalypb.CommitService_FindAllCommitsServer
+	stream  gitalypb.CommitService_FindAllCommitsServer
+	commits []*gitalypb.GitCommit
+}
+
+func (sender *findAllCommitsSender) Reset() { sender.commits = nil }
+func (sender *findAllCommitsSender) Append(it chunk.Item) {
+	sender.commits = append(sender.commits, it.(*gitalypb.GitCommit))
+}
+func (sender *findAllCommitsSender) Send() error {
+	return sender.stream.Send(&gitalypb.FindAllCommitsResponse{Commits: sender.commits})
 }
 
 func (s *server) FindAllCommits(in *gitalypb.FindAllCommitsRequest, stream gitalypb.CommitService_FindAllCommitsServer) error {
-	sender := &findAllCommitsSender{stream}
+	var revisions []string
+	if len(in.GetRevision()) == 0 {
+		branchNames, err := _findBranchNamesFunc(stream.Context(), in.Repository)
+		if err != nil {
+			return helper.ErrInvalidArgument(err)
+		}
+
+		for _, branch := range branchNames {
+			revisions = append(revisions, string(branch))
+		}
+	} else {
+		revisions = []string{string(in.GetRevision())}
+	}
+
+	if err := findAllCommits(in, stream, revisions); err != nil {
+		return helper.ErrInternal(err)
+	}
+
+	return nil
+}
+
+func findAllCommits(in *gitalypb.FindAllCommitsRequest, stream gitalypb.CommitService_FindAllCommitsServer, revisions []string) error {
+	sender := &findAllCommitsSender{stream: stream}
 
 	var gitLogExtraOptions []string
 	if maxCount := in.GetMaxCount(); maxCount > 0 {
@@ -35,23 +66,5 @@ func (s *server) FindAllCommits(in *gitalypb.FindAllCommitsRequest, stream gital
 		gitLogExtraOptions = append(gitLogExtraOptions, "--topo-order")
 	}
 
-	var revisions []string
-	if len(in.GetRevision()) == 0 {
-		branchNames, err := _findBranchNamesFunc(stream.Context(), in.Repository)
-		if err != nil {
-			return status.Errorf(codes.InvalidArgument, "FindAllCommits: %v", err)
-		}
-
-		for _, branch := range branchNames {
-			revisions = append(revisions, string(branch))
-		}
-	} else {
-		revisions = []string{string(in.GetRevision())}
-	}
-
 	return sendCommits(stream.Context(), sender, in.GetRepository(), revisions, nil, gitLogExtraOptions...)
-}
-
-func (sender *findAllCommitsSender) Send(commits []*gitalypb.GitCommit) error {
-	return sender.stream.Send(&gitalypb.FindAllCommitsResponse{Commits: commits})
 }
