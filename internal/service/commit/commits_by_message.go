@@ -4,21 +4,38 @@ import (
 	"fmt"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/helper/chunk"
 )
 
 type commitsByMessageSender struct {
-	stream gitalypb.CommitService_CommitsByMessageServer
+	stream  gitalypb.CommitService_CommitsByMessageServer
+	commits []*gitalypb.GitCommit
+}
+
+func (sender *commitsByMessageSender) Reset() { sender.commits = nil }
+func (sender *commitsByMessageSender) Append(it chunk.Item) {
+	sender.commits = append(sender.commits, it.(*gitalypb.GitCommit))
+}
+func (sender *commitsByMessageSender) Send() error {
+	return sender.stream.Send(&gitalypb.CommitsByMessageResponse{Commits: sender.commits})
 }
 
 func (s *server) CommitsByMessage(in *gitalypb.CommitsByMessageRequest, stream gitalypb.CommitService_CommitsByMessageServer) error {
 	if err := validateCommitsByMessageRequest(in); err != nil {
-		return status.Errorf(codes.InvalidArgument, "CommitsByMessage: %v", err)
+		return helper.ErrInvalidArgument(err)
 	}
 
+	if err := commitsByMessage(in, stream); err != nil {
+		return helper.ErrInternal(err)
+	}
+
+	return nil
+}
+
+func commitsByMessage(in *gitalypb.CommitsByMessageRequest, stream gitalypb.CommitService_CommitsByMessageServer) error {
 	ctx := stream.Context()
-	sender := &commitsByMessageSender{stream}
+	sender := &commitsByMessageSender{stream: stream}
 
 	gitLogExtraOptions := []string{
 		"--grep=" + in.GetQuery(),
@@ -37,10 +54,7 @@ func (s *server) CommitsByMessage(in *gitalypb.CommitsByMessageRequest, stream g
 
 		revision, err = defaultBranchName(ctx, in.Repository)
 		if err != nil {
-			if _, ok := status.FromError(err); ok {
-				return err
-			}
-			return status.Errorf(codes.Internal, "CommitsByMessage: defaultBranchName: %v", err)
+			return err
 		}
 	}
 
@@ -58,8 +72,4 @@ func validateCommitsByMessageRequest(in *gitalypb.CommitsByMessageRequest) error
 	}
 
 	return nil
-}
-
-func (sender *commitsByMessageSender) Send(commits []*gitalypb.GitCommit) error {
-	return sender.stream.Send(&gitalypb.CommitsByMessageResponse{Commits: commits})
 }
