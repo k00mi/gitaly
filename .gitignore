@@ -14,3 +14,4 @@
 *.socket
 git-env
 /gitaly-debug
+/praefect

@@ -4,12 +4,12 @@ package praefect
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"sync"
 
 	"github.com/mwitkow/grpc-proxy/proxy"
+	"gitlab.com/gitlab-org/gitaly/client"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -45,7 +45,8 @@ func (c *Coordinator) streamDirector(ctx context.Context, fullMethodName string)
 	c.log.Debugf("Stream director received method %s", fullMethodName)
 
 	// TODO: obtain storage location dynamically from RPC request message
-	storageLoc := "test"
+	// TODO fix hard coding
+	storageLoc := "default"
 
 	c.lock.RLock()
 	cc, ok := c.nodes[storageLoc]
@@ -80,19 +81,22 @@ func NewServer(grpcOpts []grpc.ServerOption, l Logger) *Server {
 	}
 }
 
-// ErrStorageLocExists indicates a storage location has already been registered
-// in the proxy for a downstream Gitaly node
-var ErrStorageLocExists = errors.New("storage location already registered")
-
 // RegisterNode will direct traffic to the supplied downstream connection when the storage location
 // is encountered.
 //
 // TODO: Coordinator probably needs to handle dialing, or another entity
 // needs to handle dialing to ensure keep alives and redialing logic
 // exist for when downstream connections are severed.
-func (c *Coordinator) RegisterNode(storageLoc string, node *grpc.ClientConn) {
+func (c *Coordinator) RegisterNode(storageLoc, listenAddr string) {
 	c.lock.Lock()
-	c.nodes[storageLoc] = node
+	conn, err := client.Dial(listenAddr, []grpc.DialOption{grpc.WithCodec(proxy.Codec())})
+	if err != nil {
+		c.log.Debugf("error registering: %v", err)
+	}
+	// TODO else
+
+	c.nodes[storageLoc] = conn
+
 	c.lock.Unlock()
 }
 
