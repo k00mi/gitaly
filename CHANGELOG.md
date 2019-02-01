@@ -1,5 +1,17 @@
 # Gitaly changelog
 
+## v1.17.0
+
+#### Other
+- Add glProjectPath to logs
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1049
+- Switch from commitsSender to chunker
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1060
+
+#### Security
+- Disable git protocol v2 temporarily
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/
+
 ## v1.16.0
 
 
