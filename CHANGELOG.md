@@ -33,6 +33,12 @@
 - Rewrite CommitStats in Go
   https://gitlab.com/gitlab-org/gitaly/merge_requests/1048
 
+## v1.14.1
+
+#### Security
+- Disable git protocol v2 temporarily
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/
+
 ## v1.14.0
 
 #### Fixed
@@ -89,6 +95,20 @@
 - Remove unused Ruby rebase/squash code
   https://gitlab.com/gitlab-org/gitaly/merge_requests/1033
 
+## v1.12.2
+
+#### Security
+- Disable git protocol v2 temporarily
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/
+
+## v1.12.1
+
+#### Fixed
+- Fix flaky rebase test
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1028
+- Fix regression for https_proxy and unix socket connections
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1032
+
 ## v1.12.0
 
 #### Fixed
@@ -136,6 +156,16 @@
   https://gitlab.com/gitlab-org/gitaly/merge_requests/997
 - README cleanup
   https://gitlab.com/gitlab-org/gitaly/merge_requests/996
+
+## v1.7.2
+
+#### Other
+- Fix tests failing due to test-repo change
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1004
+
+#### Security
+- Disable git protocol v2 temporarily
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/
 
 ## v1.7.1
 
@@ -254,6 +284,16 @@
 #### Added
 - Support SSH credentials for push mirroring
   https://gitlab.com/gitlab-org/gitaly/merge_requests/959
+
+## v0.129.1
+
+#### Other
+- Fix tests failing due to test-repo change
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1004
+
+#### Security
+- Disable git protocol v2 temporarily
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/
 
 ## v0.129.0
 
