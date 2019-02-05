@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
-	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
@@ -40,16 +39,6 @@ func TestCreateRepositorySuccess(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, fi.IsDir(), "%q must be a directory", fi.Name())
 	}
-
-	hooksDir := path.Join(repoDir, "hooks")
-
-	fi, err := os.Lstat(hooksDir)
-	require.NoError(t, err)
-	require.True(t, fi.Mode()&os.ModeSymlink > 0, "expected %q to be a symlink, got mode %v", hooksDir, fi.Mode())
-
-	hooksTarget, err := os.Readlink(hooksDir)
-	require.NoError(t, err)
-	require.Equal(t, path.Join(config.Config.GitlabShell.Dir, "hooks"), hooksTarget)
 }
 
 func TestCreateRepositoryFailure(t *testing.T) {
