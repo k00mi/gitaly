@@ -150,8 +150,9 @@ func (gm *gitalyMake) VersionFromFile() string {
 	if err != nil {
 		log.Printf("Error: %v", err)
 		log.Printf("Unable to obtain version from VERSION file.")
-		return "unknown"
+		return ""
 	}
+
 	return fmt.Sprintf("v%s", strings.TrimSpace(string(data)))
 }
 
@@ -161,8 +162,9 @@ func (gm *gitalyMake) VersionFromGit() string {
 	out, err := cmd.Output()
 	if err != nil {
 		log.Printf("%s: %v", strings.Join(cmd.Args, " "), err)
-		return "unknown"
+		return ""
 	}
+
 	return strings.TrimSpace(string(out))
 }
 
@@ -172,10 +174,15 @@ func (gm *gitalyMake) VersionPrefixed() string {
 	}
 
 	version := gm.VersionFromGit()
-	if version == "unknown" {
+	if version == "" {
 		log.Printf("Unable to determine version from Git. Attempting VERSION file")
 		version = gm.VersionFromFile()
 	}
+
+	if version == "" {
+		version = "unknown"
+	}
+	
 	gm.versionPrefixed = version
 	return gm.versionPrefixed
 }
