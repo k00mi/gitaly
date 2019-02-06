@@ -11,7 +11,7 @@ gem 'activesupport', '~> 5.0.2'
 gem 'rdoc', '~> 4.2'
 gem 'gitlab-gollum-lib', '~> 4.2.7.7', require: false
 gem 'gitlab-gollum-rugged_adapter', '~> 0.4.4.2', require: false
-gem 'grpc', '~> 1.15.0'
+gem 'grpc', '~> 1.19.0'
 gem 'sentry-raven', '~> 2.9.0', require: false
 gem 'faraday', '~> 0.12'
 gem 'rbtrace', require: false
@@ -20,7 +20,7 @@ gem 'rbtrace', require: false
 # This version needs to be in sync with GitLab CE/EE
 gem 'licensee', '~> 8.9.0'
 
-gem 'google-protobuf', '~> 3.6'
+gem 'google-protobuf', '~> 3.7.1'
 
 group :development, :test do
   gem 'rubocop', '~> 0.50', require: false
