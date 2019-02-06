@@ -1,5 +1,0 @@
----
-title: Make clear there is no []byte reuse bug in SearchFilesByContent
-merge_request: 1055
-author:
-type: other

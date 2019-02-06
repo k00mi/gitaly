@@ -1,5 +1,0 @@
----
-title: Statically link jaeger into Gitaly by default
-merge_request: 1063
-author:
-type: other
