@@ -3,6 +3,7 @@ package ref
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -83,7 +84,7 @@ func TestFailedDeleteRefsRequestDueToGitError(t *testing.T) {
 	response, err := client.DeleteRefs(ctx, request)
 	require.NoError(t, err)
 
-	require.Contains(t, response.GitError, "Could not delete refs")
+	assert.Contains(t, response.GitError, "unable to delete refs")
 }
 
 func TestFailedDeleteRefsDueToValidation(t *testing.T) {

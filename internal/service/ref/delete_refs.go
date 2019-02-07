@@ -1,11 +1,15 @@
 package ref
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"strings"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
-	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/git/updateref"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -15,17 +19,74 @@ func (s *server) DeleteRefs(ctx context.Context, in *gitalypb.DeleteRefsRequest)
 		return nil, status.Errorf(codes.InvalidArgument, "DeleteRefs: %v", err)
 	}
 
-	client, err := s.RefServiceClient(ctx)
+	updater, err := updateref.New(ctx, in.GetRepository())
 	if err != nil {
-		return nil, err
+		return nil, helper.ErrInternal(err)
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, in.GetRepository())
+	refnames, err := refsToRemove(ctx, in)
 	if err != nil {
-		return nil, err
+		return nil, helper.ErrInternal(err)
 	}
 
-	return client.DeleteRefs(clientCtx, in)
+	for _, ref := range refnames {
+		if err := updater.Delete(ref); err != nil {
+			return &gitalypb.DeleteRefsResponse{GitError: err.Error()}, nil
+		}
+	}
+
+	if err := updater.Wait(); err != nil {
+		return &gitalypb.DeleteRefsResponse{GitError: fmt.Sprintf("unable to delete refs: %s", err.Error())}, nil
+	}
+
+	return &gitalypb.DeleteRefsResponse{}, nil
+}
+
+func refsToRemove(ctx context.Context, req *gitalypb.DeleteRefsRequest) ([]string, error) {
+	var refs []string
+	if len(req.Refs) > 0 {
+		for _, ref := range req.Refs {
+			refs = append(refs, string(ref))
+		}
+		return refs, nil
+	}
+
+	cmd, err := git.Command(ctx, req.GetRepository(), "for-each-ref", "--format=%(refname)")
+	if err != nil {
+		return nil, fmt.Errorf("error setting up for-each-ref command: %v", err)
+	}
+
+	var prefixes []string
+	for _, prefix := range req.ExceptWithPrefix {
+		prefixes = append(prefixes, string(prefix))
+	}
+
+	scanner := bufio.NewScanner(cmd)
+	for scanner.Scan() {
+		refName := scanner.Text()
+
+		if hasAnyPrefix(refName, prefixes) {
+			continue
+		}
+
+		refs = append(refs, string(refName))
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("error listing refs: %v", cmd.Wait())
+	}
+
+	return refs, nil
+}
+
+func hasAnyPrefix(s string, prefixes []string) bool {
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(s, prefix) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func validateDeleteRefRequest(req *gitalypb.DeleteRefsRequest) error {
