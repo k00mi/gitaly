@@ -1,5 +1,15 @@
 # Gitaly changelog
 
+## v1.19.0
+
+#### Fixed
+- Return blank checksum for git repositories with only invalid refs
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1065
+
+#### Other
+- Use chunker in GetRawChanges
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1043
+
 ## v1.18.0
 
 #### Other
