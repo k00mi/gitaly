@@ -1,0 +1,5 @@
+---
+title: Return blank checksum for git repositories with only invalid refs
+merge_request: 1065
+author:
+type: fixed
