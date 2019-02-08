@@ -1,0 +1,5 @@
+---
+title: 'PreFetch RPC: to optimize a full fetch by doing a local clone from the fork source'
+merge_request: 1073
+author:
+type: added

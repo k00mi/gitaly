@@ -349,7 +349,8 @@ func Context() (context.Context, func()) {
 	return context.WithCancel(context.Background())
 }
 
-func createRepo(t *testing.T, storagePath string) (repo *gitalypb.Repository, repoPath, relativePath string) {
+// CreateRepo creates an temporary directory for a repo, without initializing it
+func CreateRepo(t *testing.T, storagePath string) (repo *gitalypb.Repository, repoPath, relativePath string) {
 	normalizedPrefix := strings.Replace(t.Name(), "/", "-", -1) //TempDir doesn't like a prefix containing slashes
 
 	repoPath, err := ioutil.TempDir(storagePath, normalizedPrefix)
@@ -372,7 +373,7 @@ func InitRepoWithWorktree(t *testing.T) (*gitalypb.Repository, string, func()) {
 }
 
 func initRepo(t *testing.T, bare bool) (*gitalypb.Repository, string, func()) {
-	repo, repoPath, _ := createRepo(t, GitlabTestStoragePath())
+	repo, repoPath, _ := CreateRepo(t, GitlabTestStoragePath())
 	args := []string{"init"}
 	if bare {
 		args = append(args, "--bare")
@@ -400,7 +401,7 @@ func NewTestRepoWithWorktree(t *testing.T) (repo *gitalypb.Repository, repoPath 
 
 func cloneTestRepo(t *testing.T, bare bool) (repo *gitalypb.Repository, repoPath string, cleanup func()) {
 	storagePath := GitlabTestStoragePath()
-	repo, repoPath, relativePath := createRepo(t, storagePath)
+	repo, repoPath, relativePath := CreateRepo(t, storagePath)
 	testRepo := TestRepository()
 	testRepoPath := path.Join(storagePath, testRepo.RelativePath)
 	args := []string{"clone", "--no-hardlinks", "--dissociate"}

@@ -1,8 +1,10 @@
 package objectpool
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -21,12 +23,7 @@ func (o *ObjectPool) Link(ctx context.Context, repo *gitalypb.Repository) error 
 		return err
 	}
 
-	repoPath, err := helper.GetRepoPath(repo)
-	if err != nil {
-		return err
-	}
-
-	relPath, err := filepath.Rel(filepath.Join(repoPath, "objects"), o.FullPath())
+	relPath, err := o.getRelativeObjectPath(repo)
 	if err != nil {
 		return err
 	}
@@ -43,6 +40,52 @@ func (o *ObjectPool) Link(ctx context.Context, repo *gitalypb.Repository) error 
 	}
 
 	return ioutil.WriteFile(altPath, []byte(filepath.Join(relPath, "objects")), 0644)
+}
+
+func (o *ObjectPool) getRelativeObjectPath(repo *gitalypb.Repository) (string, error) {
+	repoPath, err := helper.GetRepoPath(repo)
+	if err != nil {
+		return "", err
+	}
+
+	relPath, err := filepath.Rel(filepath.Join(repoPath, "objects"), o.FullPath())
+	if err != nil {
+		return "", err
+	}
+
+	return relPath, nil
+}
+
+// LinkedToRepository tests if a repository is linked to an object pool
+func (o *ObjectPool) LinkedToRepository(repo *gitalypb.Repository) (bool, error) {
+	altPath, err := git.AlternatesPath(repo)
+	if err != nil {
+		return false, err
+	}
+
+	relPath, err := o.getRelativeObjectPath(repo)
+	if err != nil {
+		return false, err
+	}
+
+	if stat, err := os.Stat(altPath); err == nil && stat.Size() > 0 {
+		alternatesFile, err := os.Open(altPath)
+		if err != nil {
+			return false, err
+		}
+		defer alternatesFile.Close()
+
+		r := bufio.NewReader(alternatesFile)
+
+		b, err := r.ReadBytes('\n')
+		if err != nil && err != io.EOF {
+			return false, fmt.Errorf("reading alternates file: %v", err)
+		}
+
+		return string(b) == filepath.Join(relPath, "objects"), nil
+	}
+
+	return false, nil
 }
 
 // Unlink removes the alternates file, so Git won't look there anymore

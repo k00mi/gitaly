@@ -95,13 +95,3 @@ func (o *ObjectPool) Create(ctx context.Context, repo *gitalypb.Repository) (err
 func (o *ObjectPool) Remove(ctx context.Context) (err error) {
 	return os.RemoveAll(o.FullPath())
 }
-
-// ToProto returns a new struct that is the protobuf definition of the ObjectPool
-func (o *ObjectPool) ToProto() *gitalypb.ObjectPool {
-	return &gitalypb.ObjectPool{
-		Repository: &gitalypb.Repository{
-			StorageName:  o.GetStorageName(),
-			RelativePath: o.GetRelativePath(),
-		},
-	}
-}

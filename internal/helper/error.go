@@ -23,6 +23,9 @@ func ErrInternal(err error) error { return DecorateError(codes.Internal, err) }
 // ErrInvalidArgument wrappes err with codes.InvalidArgument, unless err is already a grpc error
 func ErrInvalidArgument(err error) error { return DecorateError(codes.InvalidArgument, err) }
 
+// ErrPreconditionFailed wraps error with codes.FailedPrecondition, unless err is already a grpc error
+func ErrPreconditionFailed(err error) error { return DecorateError(codes.FailedPrecondition, err) }
+
 // GrpcCode emulates the old grpc.Code function: it translates errors into codes.Code values.
 func GrpcCode(err error) codes.Code {
 	if err == nil {
