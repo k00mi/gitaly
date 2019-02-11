@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"path"
 	"path/filepath"
@@ -128,7 +129,6 @@ func Start() (*Server, error) {
 	for i := 0; i < numWorkers; i++ {
 		name := fmt.Sprintf("gitaly-ruby.%d", i)
 		socketPath := socketPath(i)
-		address := "unix://" + socketPath
 
 		// Use 'ruby-cd' to make sure gitaly-ruby has the same working directory
 		// as the current process. This is a hack to sort-of support relative
@@ -136,13 +136,13 @@ func Start() (*Server, error) {
 		args := []string{"bundle", "exec", "bin/ruby-cd", wd, gitalyRuby, strconv.Itoa(os.Getpid()), socketPath}
 
 		events := make(chan supervisor.Event)
-		check := func() error { return ping(address) }
+		check := func() error { return ping(socketPath) }
 		p, err := supervisor.New(name, env, args, cfg.Ruby.Dir, cfg.Ruby.MaxRSS, events, check)
 		if err != nil {
 			return nil, err
 		}
 
-		s.workers = append(s.workers, newWorker(p, address, events, false))
+		s.workers = append(s.workers, newWorker(p, socketPath, events, false))
 	}
 
 	return s, nil
@@ -256,6 +256,12 @@ func dialOptions() []grpc.DialOption {
 	return []grpc.DialOption{
 		grpc.WithBlock(), // With this we get retries. Without, connections fail fast.
 		grpc.WithInsecure(),
+		// Use a custom dialer to ensure that we don't experience
+		// issues in environments that have proxy configurations
+		// https://gitlab.com/gitlab-org/gitaly/merge_requests/1072#note_140408512
+		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
+			return net.DialTimeout("unix", addr, timeout)
+		}),
 		grpc.WithUnaryInterceptor(
 			grpc_middleware.ChainUnaryClient(
 				grpc_prometheus.UnaryClientInterceptor,
