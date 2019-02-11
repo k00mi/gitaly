@@ -317,6 +317,10 @@ test: test-go rspec rspec-gitlab-shell
 test-go: prepare-tests
 	@go test -tags "$(BUILD_TAGS)" -count=1 {{ join .AllPackages " " }} # count=1 bypasses go 1.10 test caching
 
+.PHONY: test-with-proxies
+test-with-proxies: prepare-tests
+	@http_proxy=http://invalid https_proxy=https://invalid go test -tags "$(BUILD_TAGS)" -count=1  {{ .Pkg }}/internal/rubyserver/
+
 .PHONY: race-go
 race-go: prepare-tests
 	@go test -tags "$(BUILD_TAGS)" -race {{ join .AllPackages " " }}
