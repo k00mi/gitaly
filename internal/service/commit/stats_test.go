@@ -58,6 +58,13 @@ func TestCommitStatsSuccess(t *testing.T) {
 			additions: 0,
 			deletions: 0,
 		},
+		{
+			desc:      "initial commit",
+			revision:  "1a0b36b3",
+			oid:       "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
+			additions: 43,
+			deletions: 0,
+		},
 	}
 
 	for _, tc := range tests {
