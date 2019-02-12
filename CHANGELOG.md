@@ -1,5 +1,11 @@
 # Gitaly changelog
 
+## v1.19.1
+
+#### Fixed
+- Use empty tree if initial commit
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1075
+
 ## v1.19.0
 
 #### Fixed
