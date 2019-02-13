@@ -148,8 +148,7 @@ func (gm *gitalyMake) GoLdFlags() string {
 func (gm *gitalyMake) VersionFromFile() string {
 	data, err := ioutil.ReadFile("../VERSION")
 	if err != nil {
-		log.Printf("Error: %v", err)
-		log.Printf("Unable to obtain version from VERSION file.")
+		log.Printf("error obtaining version from file: %v", err)
 		return ""
 	}
 
@@ -161,7 +160,7 @@ func (gm *gitalyMake) VersionFromGit() string {
 	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
 	if err != nil {
-		log.Printf("%s: %v", strings.Join(cmd.Args, " "), err)
+		log.Printf("error obtaining version from git: %s: %v", strings.Join(cmd.Args, " "), err)
 		return ""
 	}
 
@@ -175,14 +174,14 @@ func (gm *gitalyMake) VersionPrefixed() string {
 
 	version := gm.VersionFromGit()
 	if version == "" {
-		log.Printf("Unable to determine version from Git. Attempting VERSION file")
+		log.Printf("Attempting to get the version from file")
 		version = gm.VersionFromFile()
 	}
 
 	if version == "" {
 		version = "unknown"
 	}
-	
+
 	gm.versionPrefixed = version
 	return gm.versionPrefixed
 }
