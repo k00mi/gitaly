@@ -192,3 +192,15 @@ update-downstream-server-version:
   script:
     - ruby _support/update-downstream-server-version
   allow_failure: true
+
+license_management:
+  image:
+    name: "registry.gitlab.com/gitlab-org/security-products/license-management:$CI_SERVER_VERSION_MAJOR-$CI_SERVER_VERSION_MINOR-stable"
+    entrypoint: [""]
+  stage: test
+  allow_failure: true
+  script:
+    - /run.sh analyze .
+  artifacts:
+    reports:
+      license_management: gl-license-management-report.json
