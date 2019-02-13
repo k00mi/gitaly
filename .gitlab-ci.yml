@@ -117,12 +117,6 @@ cover:
   stage: test
   script:
     - make cover
-  after_script:
-    - bash <(curl -s https://codecov.io/bash) -t "${CODECOV_TOKEN}" -f _build/cover/all.merged -F unittests
-  artifacts:
-    paths:
-      - _build/cover/all.html
-    expire_in: 1 week
 
 code_quality:
   image: docker:stable
