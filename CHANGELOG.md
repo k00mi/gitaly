@@ -1,5 +1,17 @@
 # Gitaly changelog
 
+## v1.20.0
+
+#### Fixed
+- Bring back a custom dialer for Gitaly Ruby
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1072
+
+#### Other
+- Initial design document for High Availability
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1058
+- Reverse proxy pass thru for HA
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1064
+
 ## v1.19.1
 
 #### Fixed
