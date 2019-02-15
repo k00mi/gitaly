@@ -321,7 +321,8 @@ module GitalyServer
       optional_fields = {
         start_branch_name: 'start_branch_name',
         author_name: 'commit_author_name',
-        author_email: 'commit_author_email'
+        author_email: 'commit_author_email',
+        force: 'force'
       }.transform_values { |v| header[v].presence }
 
       opts.merge(optional_fields)

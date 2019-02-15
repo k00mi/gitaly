@@ -201,6 +201,55 @@ func TestSuccessfulUserCommitFilesRequestMove(t *testing.T) {
 	}
 }
 
+func TestSuccessfulUserCommitFilesRequestForceCommit(t *testing.T) {
+	server, serverSocketPath := runFullServer(t)
+	defer server.Stop()
+
+	client, conn := operations.NewOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	ctxOuter, cancel := testhelper.Context()
+	defer cancel()
+
+	branchName := "feature"
+	authorName := []byte("Jane Doe")
+	authorEmail := []byte("janedoe@gitlab.com")
+	startBranchName := []byte("master")
+	filePath := "TEST.md"
+
+	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
+	ctx := metadata.NewOutgoingContext(ctxOuter, md)
+	headerRequest := headerRequest(testRepo, user, branchName, commitFilesMessage, authorName, authorEmail, startBranchName, nil, true)
+	actionsRequest1 := createFileHeaderRequest(filePath)
+	actionsRequest2 := actionContentRequest("Test")
+
+	t.Run("existing repo and branch starting from another branch", func(t *testing.T) {
+		startBranchHeadCommit, err := log.GetCommit(ctxOuter, testRepo, string(startBranchName))
+		require.NoError(t, err)
+
+		oldHeadCommit, err := log.GetCommit(ctxOuter, testRepo, branchName)
+		require.NoError(t, err)
+
+		stream, err := client.UserCommitFiles(ctx)
+		require.NoError(t, err)
+		require.NoError(t, stream.Send(headerRequest))
+		require.NoError(t, stream.Send(actionsRequest1))
+		require.NoError(t, stream.Send(actionsRequest2))
+
+		r, err := stream.CloseAndRecv()
+		require.NoError(t, err)
+		require.NotNil(t, r.GetBranchUpdate())
+
+		headCommit, err := log.GetCommit(ctxOuter, testRepo, branchName)
+		require.NoError(t, err)
+		require.NotEqual(t, oldHeadCommit.Id, headCommit.Id)
+		require.Contains(t, headCommit.ParentIds, startBranchHeadCommit.Id)
+	})
+}
+
 func TestFailedUserCommitFilesRequestDueToHooks(t *testing.T) {
 	server, serverSocketPath := runFullServer(t)
 	defer server.Stop()
