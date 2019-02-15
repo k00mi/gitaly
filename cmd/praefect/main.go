@@ -20,10 +20,13 @@ var (
 	logger     = log.New()
 )
 
+func init() {
+	logger.SetFormatter(&log.JSONFormatter{})
+	logger.SetLevel(log.DebugLevel)
+}
+
 func main() {
 	flag.Parse()
-
-	logger.Formatter = &log.JSONFormatter{}
 
 	logger.WithField("config", *flagConfig).Info("reading config file")
 	conf, err := config.FromFile(*flagConfig)
@@ -46,7 +49,7 @@ func main() {
 }
 
 func run(l net.Listener, conf *config.Config) error {
-	srv := praefect.NewServer(nil, log.New())
+	srv := praefect.NewServer(nil, logger)
 
 	signals := []os.Signal{syscall.SIGTERM, syscall.SIGINT}
 	termCh := make(chan os.Signal, len(signals))

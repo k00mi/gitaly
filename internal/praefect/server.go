@@ -8,8 +8,15 @@ import (
 	"net"
 	"sync"
 
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/mwitkow/grpc-proxy/proxy"
 	"gitlab.com/gitlab-org/gitaly/client"
+	"gitlab.com/gitlab-org/gitaly/internal/middleware/cancelhandler"
+	"gitlab.com/gitlab-org/gitaly/internal/middleware/metadatahandler"
+	"gitlab.com/gitlab-org/gitaly/internal/middleware/panichandler"
+	grpccorrelation "gitlab.com/gitlab-org/labkit/correlation/grpc"
+	grpctracing "gitlab.com/gitlab-org/labkit/tracing/grpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -73,7 +80,29 @@ type Server struct {
 // with the provided gRPC server options
 func NewServer(grpcOpts []grpc.ServerOption, l Logger) *Server {
 	c := newCoordinator(l)
+
 	grpcOpts = append(grpcOpts, proxyRequiredOpts(c.streamDirector)...)
+	grpcOpts = append(grpcOpts, []grpc.ServerOption{
+		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+			grpccorrelation.StreamServerCorrelationInterceptor(), // Must be above the metadata handler
+			grpc_prometheus.StreamServerInterceptor,
+			cancelhandler.Stream, // Should be below LogHandler
+			grpctracing.StreamServerTracingInterceptor(),
+			// Panic handler should remain last so that application panics will be
+			// converted to errors and logged
+			panichandler.StreamPanicHandler,
+		)),
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			grpccorrelation.UnaryServerCorrelationInterceptor(), // Must be above the metadata handler
+			metadatahandler.UnaryInterceptor,
+			grpc_prometheus.UnaryServerInterceptor,
+			cancelhandler.Unary, // Should be below LogHandler
+			grpctracing.UnaryServerTracingInterceptor(),
+			// Panic handler should remain last so that application panics will be
+			// converted to errors and logged
+			panichandler.UnaryPanicHandler,
+		)),
+	}...)
 
 	return &Server{
 		s:           grpc.NewServer(grpcOpts...),
@@ -89,13 +118,13 @@ func NewServer(grpcOpts []grpc.ServerOption, l Logger) *Server {
 // exist for when downstream connections are severed.
 func (c *Coordinator) RegisterNode(storageLoc, listenAddr string) {
 	c.lock.Lock()
+
 	conn, err := client.Dial(listenAddr, []grpc.DialOption{grpc.WithCodec(proxy.Codec())})
 	if err != nil {
 		c.log.Debugf("error registering: %v", err)
+	} else {
+		c.nodes[storageLoc] = conn
 	}
-	// TODO else
-
-	c.nodes[storageLoc] = conn
 
 	c.lock.Unlock()
 }
