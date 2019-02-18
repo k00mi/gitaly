@@ -20,20 +20,20 @@ type GitalyServer struct {
 }
 
 // FromFile loads the config for the passed file path
-func FromFile(filePath string) (*Config, error) {
+func FromFile(filePath string) (Config, error) {
+	config := &Config{}
 	cfgFile, err := os.Open(filePath)
 	if err != nil {
-		return nil, err
+		return *config, err
 	}
 	defer cfgFile.Close()
 
-	config := &Config{}
 	_, err = toml.DecodeReader(cfgFile, config)
-	return config, err
+	return *config, err
 }
 
 // Validate establishes if the config is valid
-func (c *Config) Validate() error {
+func (c Config) Validate() error {
 	if c.ListenAddr == "" {
 		return fmt.Errorf("no listen address configured")
 	}
@@ -45,7 +45,7 @@ func (c *Config) Validate() error {
 	listenAddrs := make(map[string]bool, len(c.GitalyServers))
 	for _, gitaly := range c.GitalyServers {
 		if gitaly.Name == "" {
-			return fmt.Errorf("expect %q to have a name", gitaly)
+			return fmt.Errorf("expect %v to have a name", gitaly)
 		}
 
 		if _, found := listenAddrs[gitaly.ListenAddr]; found {

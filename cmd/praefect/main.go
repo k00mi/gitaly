@@ -13,6 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
+	"gitlab.com/gitlab-org/labkit/tracing"
 )
 
 var (
@@ -38,6 +39,8 @@ func main() {
 		logger.Fatalf("%s", err)
 	}
 
+	tracing.Initialize(tracing.WithServiceName("praefect"))
+
 	l, err := net.Listen("tcp", conf.ListenAddr)
 	if err != nil {
 		logger.Fatalf("%s", err)
@@ -48,7 +51,7 @@ func main() {
 	logger.Fatalf("%v", run(l, conf))
 }
 
-func run(l net.Listener, conf *config.Config) error {
+func run(l net.Listener, conf config.Config) error {
 	srv := praefect.NewServer(nil, logger)
 
 	signals := []os.Signal{syscall.SIGTERM, syscall.SIGINT}
@@ -71,7 +74,7 @@ func run(l net.Listener, conf *config.Config) error {
 
 		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 		if shutdownErr := srv.Shutdown(ctx); shutdownErr != nil {
-			logger.Warn("error received during shutting down: %v", shutdownErr)
+			logger.Warnf("error received during shutting down: %v", shutdownErr)
 		}
 		err = fmt.Errorf("received signal: %v", s)
 	case err = <-serverErrors:
