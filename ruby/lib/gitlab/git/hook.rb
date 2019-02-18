@@ -45,10 +45,7 @@ module Gitlab
         exit_status = false
         exit_message = nil
 
-        vars = env_base_vars(gl_id, gl_username).merge(
-          'GL_PROTOCOL' => GL_PROTOCOL,
-          'GL_REPOSITORY' => repository.gl_repository
-        )
+        vars = env_base_vars(gl_id, gl_username)
 
         options = {
           chdir: repo_path
@@ -104,6 +101,8 @@ module Gitlab
           'GITLAB_SHELL_DIR' => Gitlab.config.gitlab_shell.path,
           'GL_ID' => gl_id,
           'GL_USERNAME' => gl_username,
+          'GL_REPOSITORY' => repository.gl_repository,
+          'GL_PROTOCOL' => GL_PROTOCOL,
           'PWD' => repo_path,
           'GIT_DIR' => repo_path
         }

@@ -78,7 +78,7 @@ module TestRepo
     Gitlab::Git::Repository.new(
       gitaly_repo,
       repo_path_from_gitaly(gitaly_repo),
-      '',
+      'project-123',
       gitlab_projects,
       ''
     )
