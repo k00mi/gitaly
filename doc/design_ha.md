@@ -1,7 +1,8 @@
 # Gitaly High Availability (HA) Design
 Gitaly HA is an active-active cluster configuration for resilient git operations. [Refer to our specific requirements](https://gitlab.com/gitlab-org/gitaly/issues/1332).
 
-Refer to epic &289 for current issues and discussions revolving around HA MVC development.
+Refer to [epic &289][epic] for current issues and discussions revolving around 
+HA MVC development.
 
 ## Terminology
 The following terminology may be used within the context of the Gitaly HA project:
@@ -89,6 +90,22 @@ sequenceDiagram
 
 *Note: Once Node-A propagates changes to a peer, Node-A is no longer the critical path for subsequent propagations. If Node-A fails after a second peer is propagated, that second peer can become the new leader and resume replications.*
 
+## Stages until v1.0
+
+Rome wasn't built in a day, nor will Praefect be build in one. To iterate towards
+a true HA system some properties will not be met until v1.0. Before that
+milestone, an beta stage will worked towards.
+
+The beta stage will consist of only a few required building blocks to iterate
+on towards the envisioned HA system. The first of those building blocks is
+creating and maintaining repository replica's. By maintaining a replica, there's
+no requirement for the replica to be up to date right after each mutation on the
+repository. Detecting that a repository is mutated, and bringing replicas up to
+date in a consistent matter is the primary goal. Implicit in this goal is a way
+to perform leader election.
+
+When the beta nears completion further stages will be defined.
+
 ## Notes
 * Existing discussions
 	* Requirements: https://gitlab.com/gitlab-org/gitaly/issues/1332
@@ -130,3 +147,5 @@ sequenceDiagram
     * While Git is distributed in nature, some write operations need to be serialized to avoid race conditions. This includes ref updates.
 	* How do we coordinate proxies when applying ref updates? Do we need to?
 
+
+[epic]: https://gitlab.com/groups/gitlab-org/-/epics/289
