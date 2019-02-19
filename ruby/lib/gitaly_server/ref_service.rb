@@ -76,6 +76,7 @@ module GitalyServer
       end
     end
 
+    # Post 11.10 this method can be removed
     def delete_refs(request, call)
       repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
 

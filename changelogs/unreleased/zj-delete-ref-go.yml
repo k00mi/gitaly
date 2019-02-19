@@ -1,0 +1,5 @@
+---
+title: Reimplement DeleteRefs in Go
+merge_request: 1069
+author:
+type: performance
