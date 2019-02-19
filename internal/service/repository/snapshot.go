@@ -1,14 +1,21 @@
 package repository
 
 import (
+	"bufio"
+	"context"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 	"regexp"
 
+	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/archive"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 var objectFiles = []*regexp.Regexp{
@@ -62,8 +69,84 @@ func (s *server) GetSnapshot(in *gitalypb.GetSnapshotRequest, stream gitalypb.Re
 	// safe than sorry.
 	builder.FileIfExist("shallow")
 
+	if err := addAlternateFiles(stream.Context(), in.GetRepository(), builder); err != nil {
+		return helper.ErrInternal(err)
+	}
+
 	if err := builder.Close(); err != nil {
-		return status.Errorf(codes.Internal, "Building snapshot failed: %v", err)
+		return helper.ErrInternal(fmt.Errorf("building snapshot failed: %v", err))
+	}
+
+	return nil
+}
+
+func addAlternateFiles(ctx context.Context, repository *gitalypb.Repository, builder *archive.TarBuilder) error {
+	alternateFilePath, err := git.AlternatesPath(repository)
+	if err != nil {
+		return fmt.Errorf("error when getting alternates file path: %v", err)
+	}
+
+	if stat, err := os.Stat(alternateFilePath); err == nil && stat.Size() > 0 {
+		alternatesFile, err := os.Open(alternateFilePath)
+		if err != nil {
+			grpc_logrus.Extract(ctx).WithField("error", err).Warn("error opening alternates file")
+			return nil
+		}
+		defer alternatesFile.Close()
+
+		alternateObjDir, err := bufio.NewReader(alternatesFile).ReadString('\n')
+		if err != nil && err != io.EOF {
+			grpc_logrus.Extract(ctx).WithField("error", err).Warn("error reading alternates file")
+			return nil
+		}
+
+		if err == nil {
+			alternateObjDir = alternateObjDir[:len(alternateObjDir)-1]
+		}
+
+		if stat, err := os.Stat(alternateObjDir); err != nil || !stat.IsDir() {
+			grpc_logrus.Extract(ctx).WithFields(
+				log.Fields{"error": err, "object_dir": alternateObjDir}).Warn("error reading alternate objects directory")
+			return nil
+		}
+
+		if err := walkAndAddToBuilder(alternateObjDir, builder); err != nil {
+			return fmt.Errorf("walking alternates file: %v", err)
+		}
+	}
+	return nil
+}
+
+func walkAndAddToBuilder(alternateObjDir string, builder *archive.TarBuilder) error {
+
+	matchWalker := archive.NewMatchWalker(objectFiles, func(path string, info os.FileInfo, err error) error {
+		fmt.Printf("walking down %v\n", path)
+		if err != nil {
+			return fmt.Errorf("error walking %v: %v", path, err)
+		}
+
+		relPath, err := filepath.Rel(alternateObjDir, path)
+		if err != nil {
+			return err
+		}
+
+		file, err := os.Open(path)
+		if err != nil {
+			return fmt.Errorf("opening file %s: %v", path, err)
+		}
+		defer file.Close()
+
+		objectPath := filepath.Join("objects", relPath)
+
+		if err := builder.VirtualFileWithContents(objectPath, file); err != nil {
+			return fmt.Errorf("expected file %v to exist: %v", path, err)
+		}
+
+		return nil
+	})
+
+	if err := filepath.Walk(alternateObjDir, matchWalker.Walk); err != nil {
+		return fmt.Errorf("error when traversing: %v", err)
 	}
 
 	return nil

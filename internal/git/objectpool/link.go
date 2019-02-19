@@ -16,7 +16,7 @@ import (
 // is to join the pool. This does not trigger deduplication, which is the
 // responsibility of the caller.
 func (o *ObjectPool) Link(ctx context.Context, repo *gitalypb.Repository) error {
-	altPath, err := alternatesPath(repo)
+	altPath, err := git.AlternatesPath(repo)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func (o *ObjectPool) Unlink(ctx context.Context, repo *gitalypb.Repository) erro
 		}
 	}
 
-	altPath, err := alternatesPath(repo)
+	altPath, err := git.AlternatesPath(repo)
 	if err != nil {
 		return err
 	}

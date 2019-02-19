@@ -316,7 +316,8 @@ func TestSuccessfulFindCommitsRequestWithAltGitObjectDirs(t *testing.T) {
 		"-c", fmt.Sprintf("user.name=%s", committerName),
 		"-c", fmt.Sprintf("user.email=%s", committerEmail),
 		"commit", "--allow-empty", "-m", "An empty commit")
-	currentHead, altObjectsDir := testhelper.CreateCommitInAlternateObjectDirectory(t, testRepoCopyPath, cmd)
+	altObjectsDir := "./alt-objects"
+	currentHead := testhelper.CreateCommitInAlternateObjectDirectory(t, testRepoCopyPath, altObjectsDir, cmd)
 
 	testCases := []struct {
 		desc          string
