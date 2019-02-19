@@ -1,3 +1,5 @@
+require 'gitlab-labkit'
+
 module Gitlab
   module Git
     class GitalyRemoteRepository < RemoteRepository
@@ -10,6 +12,9 @@ module Gitlab
         @gitaly_repository = gitaly_repository
         @storage = gitaly_repository.storage_name
         @gitaly_client = GitalyServer.client(call)
+
+        @interceptors = []
+        @interceptors << Labkit::Tracing::GRPCClientInterceptor.instance if Labkit::Tracing.enabled?
       end
 
       def path
@@ -66,13 +71,13 @@ module Gitlab
 
       def exists?
         request = Gitaly::RepositoryExistsRequest.new(repository: @gitaly_repository)
-        stub = Gitaly::RepositoryService::Stub.new(address, credentials)
+        stub = Gitaly::RepositoryService::Stub.new(address, credentials, interceptors: @interceptors)
         stub.repository_exists(request, request_kwargs).exists
       end
 
       def has_visible_content?
         request = Gitaly::HasLocalBranchesRequest.new(repository: @gitaly_repository)
-        stub = Gitaly::RepositoryService::Stub.new(address, credentials)
+        stub = Gitaly::RepositoryService::Stub.new(address, credentials, interceptors: @interceptors)
         stub.has_local_branches(request, request_kwargs).value
       end
 
@@ -89,7 +94,7 @@ module Gitlab
       def request_kwargs
         @request_kwargs ||= begin
           metadata = {
-            'authorization' => "Bearer #{auhtorization_token}",
+            'authorization' => "Bearer #{authorization_token}",
             'client_name' => CLIENT_NAME
           }
 
@@ -97,7 +102,7 @@ module Gitlab
         end
       end
 
-      def auhtorization_token
+      def authorization_token
         issued_at = Time.now.to_i.to_s
         hmac = OpenSSL::HMAC.hexdigest(OpenSSL::Digest::SHA256.new, token, issued_at)
 

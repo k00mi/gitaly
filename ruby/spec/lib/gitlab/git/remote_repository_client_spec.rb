@@ -17,6 +17,7 @@ describe Gitlab::Git::GitalyRemoteRepository do
     context 'when SSL_CERT_FILE is set' do
       it 'Should return the correct certificate' do
         cert = File.join(File.dirname(__FILE__), "testdata/certs/gitalycert.pem")
+        allow(ENV).to receive(:[]).with('GITLAB_TRACING').and_call_original
         allow(ENV).to receive(:[]).with('SSL_CERT_DIR').and_return(nil)
         allow(ENV).to receive(:[]).with('SSL_CERT_FILE').and_return(cert)
         certs = client.certs
@@ -27,6 +28,7 @@ describe Gitlab::Git::GitalyRemoteRepository do
     context 'when SSL_CERT_DIR is set' do
       it 'Should return concatenation of gitalycert and gitalycert2 and gitalycert3 ommiting gitalycertdup.pem' do
         cert_pool_dir = File.join(File.dirname(__FILE__), "testdata/certs")
+        allow(ENV).to receive(:[]).with('GITLAB_TRACING').and_call_original
         allow(ENV).to receive(:[]).with('SSL_CERT_DIR').and_return(cert_pool_dir)
         allow(ENV).to receive(:[]).with('SSL_CERT_FILE').and_return(nil)
         certs = client.certs
@@ -49,6 +51,7 @@ describe Gitlab::Git::GitalyRemoteRepository do
       it 'Should return all certs in SSL_CERT_DIR + SSL_CERT_FILE' do
         cert_pool_dir = File.join(File.dirname(__FILE__), "testdata/certs")
         cert1_file = File.join(File.dirname(__FILE__), "testdata/gitalycert.pem")
+        allow(ENV).to receive(:[]).with('GITLAB_TRACING').and_call_original
         allow(ENV).to receive(:[]).with('SSL_CERT_DIR').and_return(cert_pool_dir)
         allow(ENV).to receive(:[]).with('SSL_CERT_FILE').and_return(cert1_file)
         expected_certs_paths = [cert1_file, File.join(cert_pool_dir, "gitalycert2.pem"), File.join(cert_pool_dir, "gitalycert3.pem")]
@@ -86,6 +89,7 @@ describe Gitlab::Git::GitalyRemoteRepository do
 
       it 'Should connect over tls' do
         cert = File.join(File.dirname(__FILE__), "testdata/certs/gitalycert.pem")
+        allow(ENV).to receive(:[]).with('GITLAB_TRACING').and_call_original
         allow(ENV).to receive(:[]).with('SSL_CERT_DIR').and_return(nil)
         allow(ENV).to receive(:[]).with('SSL_CERT_FILE').and_return(cert)
 
