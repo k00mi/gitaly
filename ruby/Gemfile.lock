@@ -1,9 +1,9 @@
 GIT
   remote: https://gitlab.com/gitlab-org/gitaly-proto
-  revision: cd37c9e8df45d9f6abe2da7dd13831f592bca253
+  revision: 496f2f5d797f48415d1583eafaa9d52a0b2f9763
   branch: 45035-force-commit
   specs:
-    gitaly-proto (1.10.0)
+    gitaly-proto (1.12.0)
       grpc (~> 1.0)
 
 GEM
@@ -70,7 +70,7 @@ GEM
     gollum-grit_adapter (1.0.1)
       gitlab-grit (~> 2.7, >= 2.7.1)
     google-protobuf (3.6.1)
-    googleapis-common-protos-types (1.0.2)
+    googleapis-common-protos-types (1.0.3)
       google-protobuf (~> 3.0)
     grpc (1.15.0)
       google-protobuf (~> 3.1)
