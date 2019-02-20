@@ -1,6 +1,8 @@
 /_build
 /gitaly
-/**/gitaly-ssh
+cmd/gitaly-ssh/gitaly-ssh
+/gitaly-ssh
+**/testdata/gitaly-libexec/
 /*.deb
 /_support/package/bin
 /_support/bin

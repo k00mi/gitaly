@@ -11,13 +11,13 @@ import (
 	"google.golang.org/grpc"
 )
 
-func receivePack(conn *grpc.ClientConn, req string) (int32, error) {
+func receivePack(ctx context.Context, conn *grpc.ClientConn, req string) (int32, error) {
 	var request gitalypb.SSHReceivePackRequest
 	if err := jsonpb.UnmarshalString(req, &request); err != nil {
 		return 0, fmt.Errorf("json unmarshal: %v", err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	return client.ReceivePack(ctx, conn, os.Stdin, os.Stdout, os.Stderr, &request)
