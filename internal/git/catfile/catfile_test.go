@@ -113,6 +113,41 @@ func TestCommit(t *testing.T) {
 
 }
 
+func TestTag(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	c, err := New(ctx, testhelper.TestRepository())
+	require.NoError(t, err)
+
+	tagBytes, err := ioutil.ReadFile("testdata/tag-a509fa67c27202a2bc9dd5e014b4af7e6063ac76")
+	require.NoError(t, err)
+
+	testCases := []struct {
+		desc   string
+		spec   string
+		output string
+	}{
+		{
+			desc:   "tag",
+			spec:   "f4e6814c3e4e7a0de82a9e7cd20c626cc963a2f8",
+			output: string(tagBytes),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			tagReader, err := c.Tag(tc.spec)
+			require.NoError(t, err)
+
+			contents, err := ioutil.ReadAll(tagReader)
+			require.NoError(t, err)
+
+			require.Equal(t, tc.output, string(contents))
+		})
+	}
+}
+
 func TestTree(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()

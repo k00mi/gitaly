@@ -1,0 +1,5 @@
+---
+title: Rewrite FindAllTags in Go
+merge_request: 1036
+author:
+type: performance

@@ -4,15 +4,17 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
+	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/helper/chunk"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
-	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 )
 
 var (
@@ -52,33 +54,106 @@ func findRefs(ctx context.Context, writer lines.Sender, repo *gitalypb.Repositor
 	return cmd.Wait()
 }
 
+type tagSender struct {
+	tags   []*gitalypb.Tag
+	stream gitalypb.RefService_FindAllTagsServer
+}
+
+func (t *tagSender) Reset() {
+	t.tags = nil
+}
+
+func (t *tagSender) Append(i chunk.Item) {
+	t.tags = append(t.tags, i.(*gitalypb.Tag))
+}
+
+func (t *tagSender) Send() error {
+	return t.stream.Send(&gitalypb.FindAllTagsResponse{
+		Tags: t.tags,
+	})
+}
+
+func parseAndReturnTags(ctx context.Context, repo *gitalypb.Repository, stream gitalypb.RefService_FindAllTagsServer) error {
+	tagsCmd, err := git.Command(ctx, repo, "for-each-ref", "--format", "%(objectname) %(objecttype) %(refname:lstrip=2)", "refs/tags/")
+	if err != nil {
+		return fmt.Errorf("for-each-ref error: %v", err)
+	}
+
+	c, err := catfile.New(ctx, repo)
+	if err != nil {
+		return fmt.Errorf("error creating catfile: %v", err)
+	}
+
+	tagChunker := chunk.New(&tagSender{stream: stream})
+
+	scanner := bufio.NewScanner(tagsCmd)
+	for scanner.Scan() {
+		fields := strings.SplitN(scanner.Text(), " ", 3)
+		if len(fields) != 3 {
+			return fmt.Errorf("invalid output from for-each-ref command: %v", scanner.Text())
+		}
+
+		tagID, refType, refName := fields[0], fields[1], fields[2]
+
+		tag := &gitalypb.Tag{
+			Id:   tagID,
+			Name: []byte(refName),
+		}
+		switch refType {
+		// annotated tag
+		case "tag":
+			tag, err = gitlog.GetTagCatfile(c, refName)
+			if err != nil {
+				return fmt.Errorf("getting annotated tag: %v", err)
+			}
+		case "commit":
+			commit, err := gitlog.GetCommitCatfile(c, tagID)
+			if err != nil {
+				return fmt.Errorf("getting commit catfile: %v", err)
+			}
+			tag.TargetCommit = commit
+		}
+
+		if err := tagChunker.Send(tag); err != nil {
+			return fmt.Errorf("sending to chunker: %v", err)
+		}
+	}
+
+	if err := tagsCmd.Wait(); err != nil {
+		return fmt.Errorf("tag command: %v", err)
+	}
+
+	if err := tagChunker.Flush(); err != nil {
+		return fmt.Errorf("flushing chunker: %v", err)
+	}
+
+	return nil
+}
+
 func (s *server) FindAllTags(in *gitalypb.FindAllTagsRequest, stream gitalypb.RefService_FindAllTagsServer) error {
 	ctx := stream.Context()
 
-	client, err := s.RefServiceClient(ctx)
-	if err != nil {
-		return err
+	if err := validateFindAllTagsRequest(in); err != nil {
+		return helper.ErrInvalidArgument(err)
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, in.GetRepository())
-	if err != nil {
-		return err
+	if err := parseAndReturnTags(ctx, in.GetRepository(), stream); err != nil {
+		return helper.ErrInternal(err)
 	}
 
-	rubyStream, err := client.FindAllTags(clientCtx, in)
-	if err != nil {
-		return err
+	return nil
+}
+
+func validateFindAllTagsRequest(request *gitalypb.FindAllTagsRequest) error {
+	if request.GetRepository() == nil {
+		return errors.New("empty Repository")
 	}
 
-	return rubyserver.Proxy(func() error {
-		resp, err := rubyStream.Recv()
-		if err != nil {
-			md := rubyStream.Trailer()
-			stream.SetTrailer(md)
-			return err
-		}
-		return stream.Send(resp)
-	})
+	if _, err := helper.GetRepoPath(request.GetRepository()); err != nil {
+		return fmt.Errorf("invalid git directory: %v", err)
+	}
+
+	return nil
 }
 
 func _findBranchNames(ctx context.Context, repo *gitalypb.Repository) ([][]byte, error) {
