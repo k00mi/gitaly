@@ -1,6 +1,7 @@
 package supervisor
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os/exec"
@@ -10,6 +11,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
+	"gitlab.com/gitlab-org/labkit/tracing"
 )
 
 // Config holds configuration for the circuit breaker of the respawn loop.
@@ -31,7 +33,8 @@ var (
 		[]string{"name"},
 	)
 
-	config Config
+	config      Config
+	envInjector = tracing.NewEnvInjector()
 )
 
 func init() {
@@ -69,7 +72,7 @@ func New(name string, env []string, args []string, dir string, memoryThreshold i
 		memoryThreshold: memoryThreshold,
 		events:          events,
 		healthCheck:     healthCheck,
-		env:             env,
+		env:             envInjector(context.Background(), env),
 		args:            args,
 		dir:             dir,
 		shutdown:        make(chan struct{}),
