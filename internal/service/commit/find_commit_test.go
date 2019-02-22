@@ -9,12 +9,10 @@ import (
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
-	"gitlab.com/gitlab-org/gitaly/internal/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -275,10 +273,6 @@ func TestFailedFindCommitRequest(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	gogitCtx := metadata.NewOutgoingContext(
-		ctx,
-		metadata.New(map[string]string{featureflag.HeaderKey("gogit-findcommit"): "true"}),
-	)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.description, func(t *testing.T) {
@@ -289,9 +283,6 @@ func TestFailedFindCommitRequest(t *testing.T) {
 
 			_, err := client.FindCommit(ctx, request)
 			require.Equal(t, codes.InvalidArgument, status.Code(err), "default lookup should fail")
-
-			_, err = client.FindCommit(gogitCtx, request)
-			require.Equal(t, codes.InvalidArgument, status.Code(err), "go-git lookup should fail")
 		})
 	}
 }

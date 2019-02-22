@@ -1,0 +1,5 @@
+---
+title: Remove another test that exercises gogit feature flag
+merge_request: 1086
+author:
+type: other
