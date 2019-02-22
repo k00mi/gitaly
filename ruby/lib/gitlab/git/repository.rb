@@ -356,28 +356,29 @@ module Gitlab
         tags.find { |tag| tag.name.b == name_b }
       end
 
-      def merge(user, source_sha, target_branch, message)
-        committer = Gitlab::Git.committer_hash(email: user.email, name: user.name)
+      def merge_to_ref(user, source_sha, branch, target_ref, message)
+        branch = find_branch(branch)
 
+        raise InvalidRef unless branch
+
+        OperationService.new(user, self).commit_ref(target_ref, from_branch: branch) do
+          our_commit = branch.target
+          their_commit = source_sha
+
+          create_merge_commit(user, our_commit, their_commit, message)
+        end
+      rescue Gitlab::Git::CommitError # when merge_index.conflicts?
+        nil
+      rescue Rugged::ReferenceError, InvalidRef
+        raise ArgumentError, 'Invalid merge source'
+      end
+
+      def merge(user, source_sha, target_branch, message)
         OperationService.new(user, self).with_branch(target_branch) do |start_commit|
           our_commit = start_commit.sha
           their_commit = source_sha
 
-          raise 'Invalid merge target' unless our_commit
-          raise 'Invalid merge source' unless their_commit
-
-          merge_index = rugged.merge_commits(our_commit, their_commit)
-          break if merge_index.conflicts?
-
-          options = {
-            parents: [our_commit, their_commit],
-            tree: merge_index.write_tree(rugged),
-            message: message,
-            author: committer,
-            committer: committer
-          }
-
-          commit_id = create_commit(options)
+          commit_id = create_merge_commit(user, our_commit, their_commit, message)
 
           yield commit_id
 
@@ -837,6 +838,26 @@ module Gitlab
       end
 
       private
+
+      def create_merge_commit(user, our_commit, their_commit, message)
+        raise 'Invalid merge target' unless our_commit
+        raise 'Invalid merge source' unless their_commit
+
+        committer = user_to_committer(user)
+
+        merge_index = rugged.merge_commits(our_commit, their_commit)
+        return if merge_index.conflicts?
+
+        options = {
+          parents: [our_commit, their_commit],
+          tree: merge_index.write_tree(rugged),
+          author: committer,
+          committer: committer,
+          message: message
+        }
+
+        create_commit(options)
+      end
 
       def run_git(args, chdir: path, env: {}, nice: false, include_stderr: false, lazy_block: nil, &block)
         cmd = [Gitlab.config.git.bin_path, *args]

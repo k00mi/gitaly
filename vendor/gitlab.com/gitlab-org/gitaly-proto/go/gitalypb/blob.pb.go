@@ -136,6 +136,8 @@ It has these top-level messages:
 	UserCreateTagResponse
 	UserMergeBranchRequest
 	UserMergeBranchResponse
+	UserMergeToRefRequest
+	UserMergeToRefResponse
 	OperationBranchUpdate
 	UserFFBranchRequest
 	UserFFBranchResponse

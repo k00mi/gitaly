@@ -36,7 +36,7 @@ GEM
     ffi (1.10.0)
     gemojione (3.3.0)
       json
-    gitaly-proto (1.10.0)
+    gitaly-proto (1.12.0)
       grpc (~> 1.0)
     github-linguist (6.2.0)
       charlock_holmes (~> 0.7.6)
@@ -178,7 +178,7 @@ DEPENDENCIES
   bundler (>= 1.16.5)
   factory_bot
   faraday (~> 0.12)
-  gitaly-proto (~> 1.10.0)
+  gitaly-proto (~> 1.12.0)
   github-linguist (~> 6.1)
   gitlab-gollum-lib (~> 4.2)
   gitlab-gollum-rugged_adapter (~> 0.4.4)
