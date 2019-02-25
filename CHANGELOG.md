@@ -1,5 +1,27 @@
 # Gitaly changelog
 
+## v1.21.0
+
+#### Added
+- Support merge ref writing (without merging to target branch)
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1057
+
+#### Fixed
+- Use VERSION file to detect version as fallback
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1056
+- Fix GetSnapshot RPC to work with repos with object pools
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1045
+
+#### Other
+- Remove another test that exercises gogit feature flag
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1086
+
+#### Performance
+- Rewrite FindAllTags in Go
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1036
+- Reimplement DeleteRefs in Go
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1069
+
 ## v1.20.0
 
 #### Fixed

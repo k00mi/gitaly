@@ -1,5 +1,0 @@
----
-title: Fix GetSnapshot RPC to work with repos with object pools
-merge_request: 1045
-author:
-type: fixed
