@@ -96,28 +96,6 @@ module GitalyServer
       end
     end
 
-    def get_commit_messages(request, call)
-      repository = Gitlab::Git::Repository.from_gitaly(request.repository, call)
-
-      Enumerator.new do |y|
-        request.commit_ids.each do |commit_id|
-          commit = Gitlab::Git::Commit.find(repository, commit_id)
-          next unless commit
-
-          response = Gitaly::GetCommitMessagesResponse.new(commit_id: commit.id)
-          io = StringIO.new(commit.message)
-
-          while chunk = io.read(Gitlab.config.git.max_commit_or_tag_message_size)
-            response.message = chunk
-
-            y.yield response
-
-            response = Gitaly::GetCommitMessagesResponse.new
-          end
-        end
-      end
-    end
-
     private
 
     # yields either signature chunks or signed_text chunks to the passed block
