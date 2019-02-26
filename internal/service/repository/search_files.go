@@ -48,58 +48,8 @@ func (s *server) SearchFilesByContent(req *gitalypb.SearchFilesByContentRequest,
 		return status.Errorf(codes.Internal, "SearchFilesByContent: cmd start failed: %v", err)
 	}
 
-	if req.GetChunkedResponse() {
-		if err = sendSearchFilesResultChunked(cmd, stream); err != nil {
-			return status.Errorf(codes.Internal, "SearchFilesByContent: sending chunked response failed: %v", err)
-		}
-		return nil
-	}
-
-	// Deprecated: we will remove this code path once all clients begin using chunked responses post 11.8
-	if err = sendSearchFilesResult(cmd, stream); err != nil {
-		return status.Errorf(codes.Internal, "SearchFilesByContent: sending response failed: %v", err)
-	}
-
-	return nil
-}
-
-// Deprecated: we will remove this code path once all clients begin using chunked responses post 11.8
-func sendSearchFilesResult(cmd *command.Command, stream gitalypb.RepositoryService_SearchFilesByContentServer) error {
-	var (
-		err     error
-		buf     []byte
-		matches [][]byte
-	)
-
-	reader := func(objs [][]byte) error {
-		for _, obj := range objs {
-			obj = append(obj, '\n')
-			if bytes.Equal(obj, contentDelimiter) {
-				matches = append(matches, buf)
-				buf = nil
-			} else {
-				buf = append(buf, obj...)
-			}
-		}
-		if len(matches) > 0 {
-			err = stream.Send(&gitalypb.SearchFilesByContentResponse{Matches: matches})
-			matches = nil
-			return err
-		}
-		return nil
-	}
-
-	err = lines.Send(cmd, reader, []byte{'\n'})
-	if err != nil {
-		return helper.DecorateError(codes.Internal, err)
-	}
-
-	if len(buf) > 0 {
-		matches = append(matches, buf)
-	}
-
-	if len(matches) > 0 {
-		return stream.Send(&gitalypb.SearchFilesByContentResponse{Matches: matches})
+	if err = sendSearchFilesResultChunked(cmd, stream); err != nil {
+		return status.Errorf(codes.Internal, "SearchFilesByContent: sending chunked response failed: %v", err)
 	}
 
 	return nil

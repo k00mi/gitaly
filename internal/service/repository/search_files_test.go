@@ -137,17 +137,6 @@ func TestSearchFilesByContentSuccessful(t *testing.T) {
 			for i := 0; i < len(tc.output); i++ {
 				require.Equal(t, tc.output[i], resp[i])
 			}
-			// Deprecated: testing the old non-chunking code path until we remove it post 11.8
-			request.ChunkedResponse = false
-			stream, err = client.SearchFilesByContent(ctx, request)
-			require.NoError(t, err)
-
-			resp, err = consumeFilenameByContent(stream)
-			require.NoError(t, err)
-			require.Equal(t, len(tc.output), len(resp))
-			for i := 0; i < len(tc.output); i++ {
-				require.Equal(t, tc.output[i], resp[i])
-			}
 		})
 	}
 }
@@ -260,7 +249,7 @@ func TestSearchFilesByContentFailure(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			_, err = consumeFilenameByContent(stream)
+			_, err = consumeFilenameByContentChunked(stream)
 			testhelper.RequireGrpcError(t, err, tc.code)
 			require.Contains(t, err.Error(), tc.msg)
 		})
@@ -370,22 +359,6 @@ func TestSearchFilesByNameFailure(t *testing.T) {
 			require.Contains(t, err.Error(), tc.msg)
 		})
 	}
-}
-
-func consumeFilenameByContent(stream gitalypb.RepositoryService_SearchFilesByContentClient) ([][]byte, error) {
-	var ret [][]byte
-	for done := false; !done; {
-		resp, err := stream.Recv()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		ret = append(ret, resp.Matches...)
-	}
-	return ret, nil
-
 }
 
 func consumeFilenameByContentChunked(stream gitalypb.RepositoryService_SearchFilesByContentClient) ([][]byte, error) {
