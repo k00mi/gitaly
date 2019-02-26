@@ -6,11 +6,13 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
@@ -59,6 +61,16 @@ func configure() (config.Config, error) {
 
 	logger = conf.ConfigureLogger()
 	tracing.Initialize(tracing.WithServiceName("praefect"))
+
+	if conf.PrometheusListenAddr != "" {
+		logger.WithField("address", conf.PrometheusListenAddr).Info("Starting prometheus listener")
+		promMux := http.NewServeMux()
+		promMux.Handle("/metrics", promhttp.Handler())
+
+		go func() {
+			http.ListenAndServe(conf.PrometheusListenAddr, promMux)
+		}()
+	}
 
 	return conf, nil
 }
