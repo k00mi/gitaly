@@ -11,7 +11,6 @@ import (
 // Whether the Correlation-ID is generated or propagated, once inside this handler the request context
 // will have a Correlation-ID associated with it.
 func InjectCorrelationID(h http.Handler, opts ...InboundHandlerOption) http.Handler {
-	// Currently we don't use any of the options available
 	config := applyInboundHandlerOptions(opts)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -26,6 +25,10 @@ func InjectCorrelationID(h http.Handler, opts ...InboundHandlerOption) http.Hand
 			correlationID = generateRandomCorrelationIDWithFallback(r)
 		}
 
+		if config.sendResponseHeader {
+			setResponseHeader(w, correlationID)
+		}
+
 		ctx := ContextWithCorrelation(parent, correlationID)
 		h.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -33,4 +36,8 @@ func InjectCorrelationID(h http.Handler, opts ...InboundHandlerOption) http.Hand
 
 func extractFromRequest(r *http.Request) string {
 	return r.Header.Get(propagationHeader)
+}
+
+func setResponseHeader(w http.ResponseWriter, correlationID string) {
+	w.Header().Set(propagationHeader, correlationID)
 }

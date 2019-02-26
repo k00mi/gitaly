@@ -5,6 +5,8 @@ import (
 	"path"
 )
 
+const tracingEnvKey = "GITLAB_TRACING"
+
 // The configuration for InjectCorrelationID
 type initializationConfig struct {
 	serviceName      string
@@ -17,7 +19,7 @@ type InitializationOption func(*initializationConfig)
 func applyInitializationOptions(opts []InitializationOption) initializationConfig {
 	config := initializationConfig{
 		serviceName:      path.Base(os.Args[0]),
-		connectionString: os.Getenv("GITLAB_TRACING"),
+		connectionString: os.Getenv(tracingEnvKey),
 	}
 	for _, v := range opts {
 		v(&config)

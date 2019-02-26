@@ -11,11 +11,14 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/labkit/tracing"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 const gitalyInternalURL = "ssh://gitaly/internal.git"
+
+var envInjector = tracing.NewEnvInjector()
 
 func (s *server) CreateFork(ctx context.Context, req *gitalypb.CreateForkRequest) (*gitalypb.CreateForkResponse, error) {
 	targetRepository := req.Repository
@@ -73,6 +76,8 @@ func (s *server) CreateFork(ctx context.Context, req *gitalypb.CreateForkRequest
 		fmt.Sprintf("GITALY_TOKEN=%s", sourceRepositoryGitalyToken),
 		fmt.Sprintf("GIT_SSH_COMMAND=%s upload-pack", gitalySSHPath),
 	}
+	env = envInjector(ctx, env)
+
 	args := []string{
 		"clone",
 		"--bare",

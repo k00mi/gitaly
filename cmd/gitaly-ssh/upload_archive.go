@@ -11,13 +11,13 @@ import (
 	"google.golang.org/grpc"
 )
 
-func uploadArchive(conn *grpc.ClientConn, req string) (int32, error) {
+func uploadArchive(ctx context.Context, conn *grpc.ClientConn, req string) (int32, error) {
 	var request gitalypb.SSHUploadArchiveRequest
 	if err := jsonpb.UnmarshalString(req, &request); err != nil {
 		return 0, fmt.Errorf("json unmarshal: %v", err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	return client.UploadArchive(ctx, conn, os.Stdin, os.Stdout, os.Stderr, &request)
