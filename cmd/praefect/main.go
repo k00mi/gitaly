@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/labkit/tracing"
@@ -18,18 +18,12 @@ import (
 
 var (
 	flagConfig = flag.String("config", "", "Location for the config.toml")
-	logger     = log.New()
+	logger     *logrus.Logger
 )
-
-func init() {
-	logger.SetFormatter(&log.JSONFormatter{})
-	logger.SetLevel(log.DebugLevel)
-}
 
 func main() {
 	flag.Parse()
 
-	logger.WithField("config", *flagConfig).Info("reading config file")
 	conf, err := config.FromFile(*flagConfig)
 	if err != nil {
 		logger.Fatalf("%s", err)
@@ -38,6 +32,8 @@ func main() {
 	if err := conf.Validate(); err != nil {
 		logger.Fatalf("%s", err)
 	}
+
+	logger := conf.ConfigureLogger()
 
 	tracing.Initialize(tracing.WithServiceName("praefect"))
 

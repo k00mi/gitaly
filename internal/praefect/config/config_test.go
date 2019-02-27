@@ -3,47 +3,43 @@ package config
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestConfigValidation(t *testing.T) {
 	gitalySrvs := []*GitalyServer{&GitalyServer{"test", "localhost:23456"}}
 
 	testCases := []struct {
-		desc        string
-		config      *Config
-		expectError bool
+		desc   string
+		config Config
+		err    error
 	}{
 		{
-			desc:        "No ListenAddr",
-			config:      &Config{"", gitalySrvs},
-			expectError: true,
+			desc:   "No ListenAddr",
+			config: Config{ListenAddr: "", GitalyServers: gitalySrvs},
+			err:    errNoListenAddr,
 		},
 		{
-			desc:        "No servers",
-			config:      &Config{"localhost:1234", nil},
-			expectError: true,
+			desc:   "No servers",
+			config: Config{ListenAddr: "localhost:1234", GitalyServers: nil},
+			err:    errNoGitalyServers,
 		},
 		{
-			desc:        "duplicate address",
-			config:      &Config{"localhost:1234", []*GitalyServer{gitalySrvs[0], gitalySrvs[0]}},
-			expectError: true,
+			desc:   "duplicate address",
+			config: Config{ListenAddr: "localhost:1234", GitalyServers: []*GitalyServer{gitalySrvs[0], gitalySrvs[0]}},
+			err:    errDuplicateGitalyAddr,
 		},
 		{
 			desc:   "Valid config",
-			config: &Config{"localhost:1234", gitalySrvs},
+			config: Config{ListenAddr: "localhost:1234", GitalyServers: gitalySrvs},
+			err:    nil,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t1 *testing.T) {
 			err := tc.config.Validate()
-			if tc.expectError {
-				require.Error(t1, err)
-			} else {
-				require.NoError(t1, err)
-			}
-
+			assert.Equal(t, err, tc.err)
 		})
 	}
 }

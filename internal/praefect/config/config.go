@@ -1,16 +1,18 @@
 package config
 
 import (
-	"fmt"
+	"errors"
 	"os"
 
 	"github.com/BurntSushi/toml"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 )
 
 // Config is a container for everything found in the TOML config file
 type Config struct {
 	ListenAddr    string          `toml:"listen_addr" split_words:"true"`
 	GitalyServers []*GitalyServer `toml:"gitaly_server", split_words:"true"`
+	Logging       config.Logging  `toml:"logging"`
 }
 
 // GitalyServer allows configuring the servers that RPCs are proxied to
@@ -32,24 +34,31 @@ func FromFile(filePath string) (Config, error) {
 	return *config, err
 }
 
+var (
+	errNoListenAddr        = errors.New("no listen address configured")
+	errNoGitalyServers     = errors.New("no gitaly backends configured")
+	errDuplicateGitalyAddr = errors.New("gitaly listen addresses are not unique")
+	errGitalyWithoutName   = errors.New("all gitaly servers must have a name")
+)
+
 // Validate establishes if the config is valid
 func (c Config) Validate() error {
 	if c.ListenAddr == "" {
-		return fmt.Errorf("no listen address configured")
+		return errNoListenAddr
 	}
 
 	if len(c.GitalyServers) == 0 {
-		return fmt.Errorf("no gitaly backends configured")
+		return errNoGitalyServers
 	}
 
 	listenAddrs := make(map[string]bool, len(c.GitalyServers))
 	for _, gitaly := range c.GitalyServers {
 		if gitaly.Name == "" {
-			return fmt.Errorf("expect %v to have a name", gitaly)
+			return errGitalyWithoutName
 		}
 
 		if _, found := listenAddrs[gitaly.ListenAddr]; found {
-			return fmt.Errorf("gitaly listen_addr: %s is not unique", gitaly.ListenAddr)
+			return errDuplicateGitalyAddr
 		}
 
 		listenAddrs[gitaly.ListenAddr] = true

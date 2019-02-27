@@ -37,8 +37,8 @@ type Coordinator struct {
 
 	// Nodes will in the first interations have only one key, which limits
 	// the praefect to serve only 1 distinct set of Gitaly nodes.
-	// One limitation this creates; each server needs the same amount of
-	// disk space in case of full replication.
+	// One limitation is that each server needs the same amount of disk
+	// space in case of full replication.
 	nodes map[string]*grpc.ClientConn
 }
 
