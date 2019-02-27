@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mwitkow/grpc-proxy/proxy"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/client"
@@ -49,6 +50,17 @@ func TestServerRouting(t *testing.T) {
 	require.NoError(t, <-errQ)
 }
 
+func TestRegisteringSecondStorageLocation(t *testing.T) {
+	prf := praefect.NewServer(nil, testLogger{t})
+
+	mCli, _, cleanup := newMockDownstream(t)
+	defer cleanup() // clean up mock downstream server resources
+
+	assert.NoError(t, prf.RegisterNode("1", mCli))
+	assert.Error(t, prf.RegisterNode("2", mCli))
+
+}
+
 func listenAvailPort(tb testing.TB) (net.Listener, int) {
 	listener, err := net.Listen("tcp", ":0")
 	require.NoError(tb, err)
@@ -85,7 +97,7 @@ func (tl testLogger) Debugf(format string, args ...interface{}) {
 }
 
 // initializes and returns a client to downstream server, downstream server, and cleanup function
-func newMockDownstream(tb testing.TB) (*grpc.ClientConn, gitalypb.RepositoryServiceServer, func()) {
+func newMockDownstream(tb testing.TB) (string, gitalypb.RepositoryServiceServer, func()) {
 	// setup mock server
 	m := &mockRepoSvc{
 		srv: grpc.NewServer(),
@@ -106,8 +118,13 @@ func newMockDownstream(tb testing.TB) (*grpc.ClientConn, gitalypb.RepositoryServ
 		m.srv.GracefulStop()
 		lis.Close()
 		cc.Close()
-		require.NoError(tb, <-errQ)
+
+		// If the server is shutdown before Serve() is called on it
+		// the Serve() calls will return the ErrServerStopped
+		if err := <-errQ; err != nil && err != grpc.ErrServerStopped {
+			require.NoError(tb, err)
+		}
 	}
 
-	return cc, m, cleanup
+	return fmt.Sprintf("tcp://localhost:%d", port), m, cleanup
 }
