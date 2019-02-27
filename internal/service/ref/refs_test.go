@@ -13,11 +13,13 @@ import (
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/git/updateref"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 )
 
 func containsRef(refs [][]byte, ref string) bool {
@@ -489,9 +491,7 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 	rpcRequest := &gitalypb.FindAllTagsRequest{Repository: testRepoCopy}
 
 	c, err := client.FindAllTags(ctx, rpcRequest)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	var receivedTags []*gitalypb.Tag
 	for {
@@ -499,9 +499,7 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 		if err == io.EOF {
 			break
 		}
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		receivedTags = append(receivedTags, r.GetTags()...)
 	}
 
@@ -570,26 +568,36 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 		},
 	}
 
-	if len(receivedTags) < len(expectedTags) {
-		t.Fatalf("expected at least %d tags, got %d", len(expectedTags), len(receivedTags))
+	require.Len(t, receivedTags, len(expectedTags))
+
+	for i, expectedTag := range expectedTags {
+		require.Equal(t, expectedTag, receivedTags[i])
 	}
 
-	for _, expectedTag := range expectedTags {
-		t.Run(string(expectedTag.Name), func(t *testing.T) {
-			receivedTag := findTag(receivedTags, expectedTag.Name)
-			require.NotNil(t, receivedTag, "tag not found")
-			require.Equal(t, expectedTag, receivedTag)
-		})
-	}
-}
+	expectedNumberOfTags := len(receivedTags)
+	// using Go implementation
 
-func findTag(tags []*gitalypb.Tag, tagName []byte) *gitalypb.Tag {
-	for _, t := range tags {
-		if bytes.Equal(t.Name, tagName) {
-			return t
+	md := metadata.New(map[string]string{featureflag.HeaderKey(findAllTagsFeatureFlag): "true"})
+	ctx = metadata.NewOutgoingContext(context.Background(), md)
+
+	c, err = client.FindAllTags(ctx, rpcRequest)
+	require.NoError(t, err)
+
+	receivedTags = nil
+	for {
+		r, err := c.Recv()
+		if err == io.EOF {
+			break
 		}
+		require.NoError(t, err)
+		receivedTags = append(receivedTags, r.GetTags()...)
 	}
-	return nil
+
+	require.Len(t, receivedTags, expectedNumberOfTags, "received wrong number of tags")
+
+	for i, expectedTag := range expectedTags {
+		require.Equal(t, expectedTag, receivedTags[i])
+	}
 }
 
 func TestInvalidFindAllTagsRequest(t *testing.T) {
