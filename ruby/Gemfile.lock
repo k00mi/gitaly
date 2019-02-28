@@ -141,7 +141,7 @@ GEM
       ruby-progressbar (~> 1.7)
       unicode-display_width (~> 1.0, >= 1.0.1)
     ruby-progressbar (1.10.0)
-    rugged (0.27.5)
+    rugged (0.28.0)
     safe_yaml (1.0.4)
     sanitize (4.6.6)
       crass (~> 1.0.2)
@@ -197,7 +197,7 @@ DEPENDENCIES
   rspec
   rspec-parameterized
   rubocop (~> 0.50)
-  rugged (~> 0.27)
+  rugged (~> 0.28)
   sentry-raven (~> 2.7.2)
   simplecov (~> 0.9.0)
   timecop
