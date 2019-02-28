@@ -214,40 +214,37 @@ func TestSuccessfulUserCommitFilesRequestForceCommit(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	branchName := "feature"
-	authorName := []byte("Jane Doe")
-	authorEmail := []byte("janedoe@gitlab.com")
-	startBranchName := []byte("master")
-	filePath := "TEST.md"
-
 	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
 	ctx := metadata.NewOutgoingContext(ctxOuter, md)
-	headerRequest := headerRequest(testRepo, user, branchName, commitFilesMessage, authorName, authorEmail, startBranchName, nil, true)
-	actionsRequest1 := createFileHeaderRequest(filePath)
-	actionsRequest2 := actionContentRequest("Test")
+	authorName := []byte("Jane Doe")
+	authorEmail := []byte("janedoe@gitlab.com")
+	targetBranchName := "feature"
+	startBranchName := []byte("master")
 
-	t.Run("existing repo and branch starting from another branch", func(t *testing.T) {
-		startBranchHeadCommit, err := log.GetCommit(ctxOuter, testRepo, string(startBranchName))
-		require.NoError(t, err)
+	startBranchCommit, err := log.GetCommit(ctxOuter, testRepo, string(startBranchName))
+	require.NoError(t, err)
 
-		oldHeadCommit, err := log.GetCommit(ctxOuter, testRepo, branchName)
-		require.NoError(t, err)
+	targetBranchCommit, err := log.GetCommit(ctxOuter, testRepo, targetBranchName)
+	require.NoError(t, err)
+	require.NotContains(t, targetBranchCommit.ParentIds, startBranchCommit.Id)
 
-		stream, err := client.UserCommitFiles(ctx)
-		require.NoError(t, err)
-		require.NoError(t, stream.Send(headerRequest))
-		require.NoError(t, stream.Send(actionsRequest1))
-		require.NoError(t, stream.Send(actionsRequest2))
+	headerRequest := headerRequest(testRepo, user, targetBranchName, commitFilesMessage, authorName, authorEmail)
+	header := headerRequest.UserCommitFilesRequestPayload.(*gitalypb.UserCommitFilesRequest_Header).Header
+	header.StartBranchName = startBranchName
+	header.Force = true
+	stream, err := client.UserCommitFiles(ctx)
+	require.NoError(t, err)
+	require.NoError(t, stream.Send(headerRequest))
+	require.NoError(t, stream.Send(createFileHeaderRequest("TEST.md")))
+	require.NoError(t, stream.Send(actionContentRequest("Test")))
 
-		r, err := stream.CloseAndRecv()
-		require.NoError(t, err)
-		require.NotNil(t, r.GetBranchUpdate())
+	r, err := stream.CloseAndRecv()
+	require.NoError(t, err)
 
-		headCommit, err := log.GetCommit(ctxOuter, testRepo, branchName)
-		require.NoError(t, err)
-		require.NotEqual(t, oldHeadCommit.Id, headCommit.Id)
-		require.Contains(t, headCommit.ParentIds, startBranchHeadCommit.Id)
-	})
+	update := r.GetBranchUpdate()
+	newCommit, err := log.GetCommit(ctxOuter, testRepo, update.CommitId)
+	require.NoError(t, err)
+	require.Equal(t, newCommit.ParentIds, []string{startBranchCommit.Id})
 }
 
 func TestFailedUserCommitFilesRequestDueToHooks(t *testing.T) {
