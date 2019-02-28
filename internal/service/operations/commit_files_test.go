@@ -242,9 +242,10 @@ func TestSuccessfulUserCommitFilesRequestForceCommit(t *testing.T) {
 	require.NoError(t, err)
 
 	update := r.GetBranchUpdate()
-	newCommit, err := log.GetCommit(ctxOuter, testRepo, update.CommitId)
+	targetBranchCommit, err = log.GetCommit(ctxOuter, testRepo, targetBranchName)
 	require.NoError(t, err)
-	require.Equal(t, newCommit.ParentIds, []string{startBranchCommit.Id})
+	require.Equal(t, targetBranchCommit.Id, update.CommitId)
+	require.Equal(t, targetBranchCommit.ParentIds, []string{startBranchCommit.Id})
 }
 
 func TestFailedUserCommitFilesRequestDueToHooks(t *testing.T) {
