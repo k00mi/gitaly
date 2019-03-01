@@ -1,11 +1,3 @@
-GIT
-  remote: https://gitlab.com/gitlab-org/gitaly-proto
-  revision: 496f2f5d797f48415d1583eafaa9d52a0b2f9763
-  branch: 45035-force-commit
-  specs:
-    gitaly-proto (1.12.0)
-      grpc (~> 1.0)
-
 GEM
   remote: https://rubygems.org/
   specs:
@@ -44,6 +36,8 @@ GEM
     ffi (1.10.0)
     gemojione (3.3.0)
       json
+    gitaly-proto (1.13.0)
+      grpc (~> 1.0)
     github-linguist (6.2.0)
       charlock_holmes (~> 0.7.6)
       escape_utils (~> 1.2.0)
@@ -188,7 +182,7 @@ DEPENDENCIES
   bundler (>= 1.16.5)
   factory_bot
   faraday (~> 0.12)
-  gitaly-proto!
+  gitaly-proto (~> 1.13.0)
   github-linguist (~> 6.1)
   gitlab-gollum-lib (~> 4.2)
   gitlab-gollum-rugged_adapter (~> 0.4.4)
