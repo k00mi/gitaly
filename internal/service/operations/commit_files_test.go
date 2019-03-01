@@ -133,12 +133,6 @@ func TestSuccessfulUserCommitFilesRequest(t *testing.T) {
 	}
 }
 
-func setAuthorAndEmail(headerRequest *gitalypb.UserCommitFilesRequest, authorName, authorEmail []byte) {
-	header := headerRequest.UserCommitFilesRequestPayload.(*gitalypb.UserCommitFilesRequest_Header).Header
-	header.CommitAuthorName = authorName
-	header.CommitAuthorEmail = authorEmail
-}
-
 func TestSuccessfulUserCommitFilesRequestMove(t *testing.T) {
 	server, serverSocketPath := runFullServer(t)
 	defer server.Stop()
@@ -232,10 +226,10 @@ func TestSuccessfulUserCommitFilesRequestForceCommit(t *testing.T) {
 	mergeBaseID := strings.TrimSuffix(string(mergeBaseOut), "\n")
 	require.NotEqual(t, mergeBaseID, targetBranchCommit.Id, "expected %s not to be an ancestor of %s", targetBranchCommit.Id, startBranchCommit.Id)
 
-	headerRequest := headerRequest(testRepo, user, targetBranchName, commitFilesMessage, authorName, authorEmail)
-	header := headerRequest.UserCommitFilesRequestPayload.(*gitalypb.UserCommitFilesRequest_Header).Header
-	header.StartBranchName = startBranchName
-	header.Force = true
+	headerRequest := headerRequest(testRepo, user, targetBranchName, commitFilesMessage)
+	setAuthorAndEmail(headerRequest, authorName, authorEmail)
+	setStartBranchName(headerRequest, startBranchName)
+	setForce(headerRequest, true)
 
 	stream, err := client.UserCommitFiles(ctx)
 	require.NoError(t, err)
@@ -434,6 +428,26 @@ func headerRequest(repo *gitalypb.Repository, user *gitalypb.User, branchName st
 			},
 		},
 	}
+}
+
+func setAuthorAndEmail(headerRequest *gitalypb.UserCommitFilesRequest, authorName, authorEmail []byte) {
+	header := getHeader(headerRequest)
+	header.CommitAuthorName = authorName
+	header.CommitAuthorEmail = authorEmail
+}
+
+func setStartBranchName(headerRequest *gitalypb.UserCommitFilesRequest, startBranchName []byte) {
+	header := getHeader(headerRequest)
+	header.StartBranchName = startBranchName
+}
+
+func setForce(headerRequest *gitalypb.UserCommitFilesRequest, force bool) {
+	header := getHeader(headerRequest)
+	header.Force = force
+}
+
+func getHeader(headerRequest *gitalypb.UserCommitFilesRequest) *gitalypb.UserCommitFilesRequestHeader {
+	return headerRequest.UserCommitFilesRequestPayload.(*gitalypb.UserCommitFilesRequest_Header).Header
 }
 
 func createFileHeaderRequest(filePath string) *gitalypb.UserCommitFilesRequest {

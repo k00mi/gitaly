@@ -2612,15 +2612,6 @@ func (c *operationServiceClient) UserMergeToRef(ctx context.Context, in *UserMer
 	return out, nil
 }
 
-func (c *operationServiceClient) UserMergeToRef(ctx context.Context, in *UserMergeToRefRequest, opts ...grpc.CallOption) (*UserMergeToRefResponse, error) {
-	out := new(UserMergeToRefResponse)
-	err := grpc.Invoke(ctx, "/gitaly.OperationService/UserMergeToRef", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *operationServiceClient) UserMergeBranch(ctx context.Context, opts ...grpc.CallOption) (OperationService_UserMergeBranchClient, error) {
 	stream, err := c.cc.NewStream(ctx, &_OperationService_serviceDesc.Streams[0], "/gitaly.OperationService/UserMergeBranch", opts...)
 	if err != nil {
