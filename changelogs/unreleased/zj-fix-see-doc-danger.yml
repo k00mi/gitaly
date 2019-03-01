@@ -1,0 +1,5 @@
+---
+title: Fix missing SEE_DOC constant in Danger
+merge_request: 1109
+author:
+type: fixed
