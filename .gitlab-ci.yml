@@ -194,6 +194,8 @@ update-downstream-server-version:
   allow_failure: true
 
 license_management:
+  variables:
+    SETUP_CMD: "echo 'Skipping Ruby setup, only checking Go dependencies'"
   image:
     name: "registry.gitlab.com/gitlab-org/security-products/license-management:$CI_SERVER_VERSION_MAJOR-$CI_SERVER_VERSION_MINOR-stable"
     entrypoint: [""]
