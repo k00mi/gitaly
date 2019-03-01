@@ -1,5 +1,33 @@
 # Gitaly changelog
 
+## v1.23.0
+
+#### Added
+- Allow debugging ruby tests with pry
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1102
+- Create Praefect binary for proxy server execution
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1068
+
+#### Fixed
+- Try to resolve flaky TestRemoval balancer test
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1094
+- Bump Rugged to 0.28.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/
+
+#### Other
+- Remove unused Ruby implementation for CommitStats
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1092
+- GitalyBot will apply labels to merge requests
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1105
+- Remove non-chunked code path for SearchFilesByContent
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1100
+- Remove ruby implementation of find commits
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1099
+- Update Gitaly-Proto with protobuf go compiler 1.2
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1084
+- removing deprecated ruby write-ref
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1098
+
 ## v1.22.0
 
 #### Fixed

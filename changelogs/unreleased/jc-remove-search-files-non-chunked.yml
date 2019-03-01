@@ -1,5 +1,0 @@
----
-title: Remove non-chunked code path for SearchFilesByContent
-merge_request: 1100
-author:
-type: other
