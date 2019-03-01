@@ -10,50 +10,88 @@ import (
 	"github.com/mwitkow/grpc-proxy/proxy"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/mock"
 	"google.golang.org/grpc"
 )
 
-func TestServerRouting(t *testing.T) {
-	prf := praefect.NewServer(nil, testLogger{t})
+// TestServerSimpleUnaryUnary verifies that the Praefect server is capable of
+// routing a specific unary request to and unary response from a backend server
+func TestServerSimpleUnaryUnary(t *testing.T) {
+	testCases := []struct {
+		name string
 
-	listener, port := listenAvailPort(t)
-	t.Logf("proxy listening on port %d", port)
-	defer listener.Close()
+		// callback is the actual RPC implementation
+		callback simpleUnaryUnaryCallback
 
-	errQ := make(chan error)
+		// all inputs and outputs for RPC SimpleUnaryUnary
+		request      *mock.SimpleRequest
+		expectResp   *mock.SimpleResponse
+		expectErrStr string
+	}{
+		{
+			name:     "simple request with response",
+			callback: callbackIncrement,
+			request: &mock.SimpleRequest{
+				Value: 1,
+			},
+			expectResp: &mock.SimpleResponse{
+				Value: 2,
+			},
+		},
+	}
 
-	go func() {
-		errQ <- prf.Start(listener)
-	}()
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			prf := praefect.NewServer(nil, testLogger{t})
 
-	// dial client to proxy
-	cc := dialLocalPort(t, port, false)
-	defer cc.Close()
-	gCli := gitalypb.NewRepositoryServiceClient(cc)
+			listener, port := listenAvailPort(t)
+			t.Logf("proxy listening on port %d", port)
+			defer listener.Close()
 
-	mCli, _, cleanup := newMockDownstream(t)
-	defer cleanup() // clean up mock downstream server resources
+			errQ := make(chan error)
 
-	prf.RegisterNode("test", mCli)
+			go func() {
+				errQ <- prf.Start(listener)
+			}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
+			// dial client to praefect
+			cc := dialLocalPort(t, port, false)
+			defer cc.Close()
+			cli := mock.NewSimpleServiceClient(cc)
 
-	_, err := gCli.RepositoryExists(ctx, &gitalypb.RepositoryExistsRequest{})
-	require.NoError(t, err)
+			backend, cleanup := newMockDownstream(t, tt.callback)
+			defer cleanup() // clean up mock downstream server resources
 
-	err = prf.Shutdown(ctx)
-	require.NoError(t, err)
-	require.NoError(t, <-errQ)
+			prf.RegisterNode("test", backend)
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+
+			resp, err := cli.SimpleUnaryUnary(ctx, tt.request)
+			if err != nil {
+				require.EqualError(t, err, tt.expectErrStr)
+			}
+			require.Equal(t, tt.expectResp, resp)
+
+			err = prf.Shutdown(ctx)
+			require.NoError(t, err)
+			require.NoError(t, <-errQ)
+		})
+	}
+}
+
+func callbackIncrement(_ context.Context, req *mock.SimpleRequest) (*mock.SimpleResponse, error) {
+	return &mock.SimpleResponse{
+		Value: req.Value + 1,
+	}, nil
 }
 
 func TestRegisteringSecondStorageLocation(t *testing.T) {
 	prf := praefect.NewServer(nil, testLogger{t})
 
-	mCli, _, cleanup := newMockDownstream(t)
+	mCli, cleanup := newMockDownstream(t, nil)
 	defer cleanup() // clean up mock downstream server resources
 
 	assert.NoError(t, prf.RegisterNode("1", mCli))
@@ -97,27 +135,27 @@ func (tl testLogger) Debugf(format string, args ...interface{}) {
 }
 
 // initializes and returns a client to downstream server, downstream server, and cleanup function
-func newMockDownstream(tb testing.TB) (string, gitalypb.RepositoryServiceServer, func()) {
+func newMockDownstream(tb testing.TB, callback simpleUnaryUnaryCallback) (string, func()) {
 	// setup mock server
-	m := &mockRepoSvc{
-		srv: grpc.NewServer(),
+	m := &mockSvc{
+		simpleUnaryUnary: callback,
 	}
-	gitalypb.RegisterRepositoryServiceServer(m.srv, m)
-	lis, port := listenAvailPort(tb)
 
-	// dial praefect to backend service
-	cc := dialLocalPort(tb, port, true)
+	srv := grpc.NewServer()
+	mock.RegisterSimpleServiceServer(srv, m)
+
+	// client to backend service
+	lis, port := listenAvailPort(tb)
 
 	errQ := make(chan error)
 
 	go func() {
-		errQ <- m.srv.Serve(lis)
+		errQ <- srv.Serve(lis)
 	}()
 
 	cleanup := func() {
-		m.srv.GracefulStop()
+		srv.GracefulStop()
 		lis.Close()
-		cc.Close()
 
 		// If the server is shutdown before Serve() is called on it
 		// the Serve() calls will return the ErrServerStopped
@@ -126,5 +164,5 @@ func newMockDownstream(tb testing.TB) (string, gitalypb.RepositoryServiceServer,
 		}
 	}
 
-	return fmt.Sprintf("tcp://localhost:%d", port), m, cleanup
+	return fmt.Sprintf("tcp://localhost:%d", port), cleanup
 }
