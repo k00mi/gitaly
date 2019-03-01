@@ -1,13 +1,11 @@
 # ![Gitaly](https://gitlab.com/gitlab-org/gitaly/uploads/509123ed56bd51247996038c858db006/gitaly-wordmark-small.png)
 
-[![Pipeline status](https://gitlab.com/gitlab-org/gitaly/badges/master/pipeline.svg)](https://gitlab.com/gitlab-org/gitaly/commits/master) [![coverage report](https://gitlab.com/gitlab-org/gitaly/badges/master/coverage.svg)](https://codecov.io/gl/gitlab-org/gitaly)
-
 **Quick Links**:
-  [**Roadmap**](https://gitlab.com/groups/gitlab-org/-/roadmap?label_name%5B%5D=Gitaly&scope=all&sort=start_date_asc&state=opened) |
+  [**Roadmap**][roadmap] |
   [Want to Contribute?](https://gitlab.com/gitlab-org/gitaly/issues?scope=all&utf8=%E2%9C%93&state=opened&label_name[]=Accepting%20merge%20requests) |
   [GitLab Gitaly Issues](https://gitlab.com/groups/gitlab-org/-/issues?scope=all&state=opened&utf8=%E2%9C%93&label_name%5B%5D=Gitaly) |
   [GitLab Gitaly Merge Requests](https://gitlab.com/groups/gitlab-org/-/merge_requests?label_name%5B%5D=Gitaly) |
-  [gitlab.com monitoring dashboard](https://dashboards.gitlab.com/d/000000176/gitaly) |
+  [GitLab.com Monitoring Dashboard][dashboards]
 
 --------------------------------------------
 
@@ -33,17 +31,16 @@ longer uses direct disk access to touch Git repositories; the [NFS
 mounts have been
 removed](https://about.gitlab.com/2018/09/12/the-road-to-gitaly-1-0/).
 
-The last feature that remains to be migrated is the [Elasticsearch
-indexer](https://gitlab.com/gitlab-org/gitaly/issues/760). Once that is
-done we can conclude the migration project by [removing the Git
-repository storage paths from gitlab-rails's
+For performance reasons some RPCs can be performed through NFS still. An
+effort is made to mitigate performance issues by removing [Gitaly N+1](https://gitlab.com/groups/gitlab-org/-/epics/827).
+Once that is no longer neccesairy we can conclude the migration project by 
+[removing the Git repository storage paths from gitlab-rails's
 configuration](https://gitlab.com/gitlab-org/gitaly/issues/1282).
 
-In the meantime we are building features according to our
-[roadmap](https://gitlab.com/groups/gitlab-org/-/roadmap?label_name%5B%5D=Gitaly&scope=all&sort=start_date_asc&state=opened).
+In the meantime we are building features according to our [roadmap][roadmap].
 
 If you're interested in seeing how well Gitaly is performing on
-GitLab.com, we have dashboards!
+GitLab.com, we have [dashboards][dashboards]!
 
 ##### Overall
 
@@ -111,6 +108,10 @@ use library code from the
 [gitlab.com/gitlab-org/gitaly/client](https://gitlab.com/gitlab-org/gitaly/tree/master/client)
 package.
 
+## Further reading
+
+More about the project, and its processes is [accumulated in the docs](doc/index.md).
+
 ## Distributed Tracing
 
 Gitaly supports distributed tracing through [LabKit](https://gitlab.com/gitlab-org/labkit/) using [OpenTracing APIs](https://opentracing.io).
@@ -137,3 +138,6 @@ GITLAB_TRACING=opentracing://jaeger ./gitaly config.toml
 - [Infrastructure Team Update 2017-05-11](https://about.gitlab.com/2017/05/11/functional-group-updates/#infrastructure-team)
 - [Gitaly Basics, 2017-05-01](https://docs.google.com/presentation/d/1cLslUbXVkniOaeJ-r3s5AYF0kQep8VeNfvs0XSGrpA0/edit#slide=id.g1c73db867d_0_0)
 - [Git Paris meetup, 2017-02-22](https://docs.google.com/presentation/d/19OZUalFMIDM8WujXrrIyCuVb_oVeaUzpb-UdGThOvAo/edit?usp=sharing) a high-level overview of what our plans are and where we are.
+
+[dashboards]: https://dashboards.gitlab.com/d/000000176/gitaly
+[roadmap]: https://gitlab.com/groups/gitlab-org/-/roadmap?label_name%5B%5D=Gitaly&scope=all&sort=start_date_asc&state=opened
