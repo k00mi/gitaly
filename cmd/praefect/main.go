@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"net"
@@ -18,24 +19,18 @@ import (
 
 var (
 	flagConfig = flag.String("config", "", "Location for the config.toml")
-	logger     *logrus.Logger
+	logger     = logrus.New()
+
+	errNoConfigFile = errors.New("the config flag must be passed")
 )
 
 func main() {
 	flag.Parse()
 
-	conf, err := config.FromFile(*flagConfig)
+	conf, err := configure()
 	if err != nil {
-		logger.Fatalf("%s", err)
+		logger.Fatal(err)
 	}
-
-	if err := conf.Validate(); err != nil {
-		logger.Fatalf("%s", err)
-	}
-
-	logger := conf.ConfigureLogger()
-
-	tracing.Initialize(tracing.WithServiceName("praefect"))
 
 	l, err := net.Listen("tcp", conf.ListenAddr)
 	if err != nil {
@@ -43,8 +38,29 @@ func main() {
 	}
 
 	logger.WithField("address", conf.ListenAddr).Info("listening at tcp address")
-
 	logger.Fatalf("%v", run(l, conf))
+}
+
+func configure() (config.Config, error) {
+	var conf config.Config
+
+	if *flagConfig == "" {
+		return conf, errNoConfigFile
+	}
+
+	conf, err := config.FromFile(*flagConfig)
+	if err != nil {
+		return conf, fmt.Errorf("error reading config file: %v", err)
+	}
+
+	if err := conf.Validate(); err != nil {
+		return conf, err
+	}
+
+	logger = conf.ConfigureLogger()
+	tracing.Initialize(tracing.WithServiceName("praefect"))
+
+	return conf, nil
 }
 
 func run(l net.Listener, conf config.Config) error {
