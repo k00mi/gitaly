@@ -15,9 +15,14 @@ func TestConfigValidation(t *testing.T) {
 		err    error
 	}{
 		{
-			desc:   "No ListenAddr",
+			desc:   "No ListenAddr or SocketPath",
 			config: Config{ListenAddr: "", GitalyServers: gitalySrvs},
-			err:    errNoListenAddr,
+			err:    errNoListener,
+		},
+		{
+			desc:   "Only a SocketPath",
+			config: Config{SocketPath: "/tmp/praefect.socket", GitalyServers: gitalySrvs},
+			err:    nil,
 		},
 		{
 			desc:   "No servers",

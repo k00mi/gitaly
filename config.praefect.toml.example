@@ -1,10 +1,9 @@
 # Example Praefect configuration file
 
 # # TCP address to listen on
-listen_addr = "127.0.0.1:2305"
-# socket_path = "/home/git/gitlab/tmp/sockets/private/praefect.socket"
-#
-prometheus_listen_addr = "127.0.0.1:10101"
+# listen_addr = "127.0.0.1:2305"
+socket_path = "/home/git/gitlab/tmp/sockets/private/praefect.socket"
+# prometheus_listen_addr = "127.0.0.1:10101"
 
 # # You can optionally configure Praefect to output JSON-formatted log messages to stdout
 # [logging]

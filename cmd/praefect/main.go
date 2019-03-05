@@ -34,13 +34,12 @@ func main() {
 		logger.Fatal(err)
 	}
 
-	l, err := net.Listen("tcp", conf.ListenAddr)
+	listeners, err := getListeners(conf.SocketPath, conf.ListenAddr)
 	if err != nil {
 		logger.Fatalf("%s", err)
 	}
 
-	logger.WithField("address", conf.ListenAddr).Info("listening at tcp address")
-	logger.Fatalf("%v", run(l, conf))
+	logger.Fatalf("%v", run(listeners, conf))
 }
 
 func configure() (config.Config, error) {
@@ -75,7 +74,7 @@ func configure() (config.Config, error) {
 	return conf, nil
 }
 
-func run(l net.Listener, conf config.Config) error {
+func run(listeners []net.Listener, conf config.Config) error {
 	srv := praefect.NewServer(nil, logger)
 
 	signals := []os.Signal{syscall.SIGTERM, syscall.SIGINT}
@@ -83,7 +82,10 @@ func run(l net.Listener, conf config.Config) error {
 	signal.Notify(termCh, signals...)
 
 	serverErrors := make(chan error, 1)
-	go func() { serverErrors <- srv.Start(l) }()
+
+	for _, l := range listeners {
+		go func(lis net.Listener) { serverErrors <- srv.Start(lis) }(l)
+	}
 
 	for _, gitaly := range conf.GitalyServers {
 		srv.RegisterNode(gitaly.Name, gitaly.ListenAddr)
@@ -105,4 +107,34 @@ func run(l net.Listener, conf config.Config) error {
 	}
 
 	return err
+}
+
+func getListeners(socketPath, listenAddr string) ([]net.Listener, error) {
+	var listeners []net.Listener
+
+	if socketPath != "" {
+		if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
+			return nil, err
+		}
+		l, err := net.Listen("unix", socketPath)
+		if err != nil {
+			return nil, err
+		}
+
+		listeners = append(listeners, l)
+
+		logger.WithField("address", socketPath).Info("listening on unix socket")
+	}
+
+	if listenAddr != "" {
+		l, err := net.Listen("tcp", listenAddr)
+		if err != nil {
+			return nil, err
+		}
+
+		listeners = append(listeners, l)
+		logger.WithField("address", listenAddr).Info("listening at tcp address")
+	}
+
+	return listeners, nil
 }
