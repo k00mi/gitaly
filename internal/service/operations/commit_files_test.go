@@ -3,6 +3,7 @@ package operations_test
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -132,12 +133,6 @@ func TestSuccessfulUserCommitFilesRequest(t *testing.T) {
 	}
 }
 
-func setAuthorAndEmail(headerRequest *gitalypb.UserCommitFilesRequest, authorName, authorEmail []byte) {
-	header := headerRequest.UserCommitFilesRequestPayload.(*gitalypb.UserCommitFilesRequest_Header).Header
-	header.CommitAuthorName = authorName
-	header.CommitAuthorEmail = authorEmail
-}
-
 func TestSuccessfulUserCommitFilesRequestMove(t *testing.T) {
 	server, serverSocketPath := runFullServer(t)
 	defer server.Stop()
@@ -199,6 +194,58 @@ func TestSuccessfulUserCommitFilesRequestMove(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSuccessfulUserCommitFilesRequestForceCommit(t *testing.T) {
+	server, serverSocketPath := runFullServer(t)
+	defer server.Stop()
+
+	client, conn := operations.NewOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	ctxOuter, cancel := testhelper.Context()
+	defer cancel()
+
+	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
+	ctx := metadata.NewOutgoingContext(ctxOuter, md)
+	authorName := []byte("Jane Doe")
+	authorEmail := []byte("janedoe@gitlab.com")
+	targetBranchName := "feature"
+	startBranchName := []byte("master")
+
+	startBranchCommit, err := log.GetCommit(ctxOuter, testRepo, string(startBranchName))
+	require.NoError(t, err)
+
+	targetBranchCommit, err := log.GetCommit(ctxOuter, testRepo, targetBranchName)
+	require.NoError(t, err)
+
+	mergeBaseOut := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "merge-base", targetBranchCommit.Id, startBranchCommit.Id)
+	mergeBaseID := strings.TrimSuffix(string(mergeBaseOut), "\n")
+	require.NotEqual(t, mergeBaseID, targetBranchCommit.Id, "expected %s not to be an ancestor of %s", targetBranchCommit.Id, startBranchCommit.Id)
+
+	headerRequest := headerRequest(testRepo, user, targetBranchName, commitFilesMessage)
+	setAuthorAndEmail(headerRequest, authorName, authorEmail)
+	setStartBranchName(headerRequest, startBranchName)
+	setForce(headerRequest, true)
+
+	stream, err := client.UserCommitFiles(ctx)
+	require.NoError(t, err)
+	require.NoError(t, stream.Send(headerRequest))
+	require.NoError(t, stream.Send(createFileHeaderRequest("TEST.md")))
+	require.NoError(t, stream.Send(actionContentRequest("Test")))
+
+	r, err := stream.CloseAndRecv()
+	require.NoError(t, err)
+
+	update := r.GetBranchUpdate()
+	newTargetBranchCommit, err := log.GetCommit(ctxOuter, testRepo, targetBranchName)
+	require.NoError(t, err)
+
+	require.Equal(t, newTargetBranchCommit.Id, update.CommitId)
+	require.Equal(t, newTargetBranchCommit.ParentIds, []string{startBranchCommit.Id})
 }
 
 func TestFailedUserCommitFilesRequestDueToHooks(t *testing.T) {
@@ -381,6 +428,26 @@ func headerRequest(repo *gitalypb.Repository, user *gitalypb.User, branchName st
 			},
 		},
 	}
+}
+
+func setAuthorAndEmail(headerRequest *gitalypb.UserCommitFilesRequest, authorName, authorEmail []byte) {
+	header := getHeader(headerRequest)
+	header.CommitAuthorName = authorName
+	header.CommitAuthorEmail = authorEmail
+}
+
+func setStartBranchName(headerRequest *gitalypb.UserCommitFilesRequest, startBranchName []byte) {
+	header := getHeader(headerRequest)
+	header.StartBranchName = startBranchName
+}
+
+func setForce(headerRequest *gitalypb.UserCommitFilesRequest, force bool) {
+	header := getHeader(headerRequest)
+	header.Force = force
+}
+
+func getHeader(headerRequest *gitalypb.UserCommitFilesRequest) *gitalypb.UserCommitFilesRequestHeader {
+	return headerRequest.UserCommitFilesRequestPayload.(*gitalypb.UserCommitFilesRequest_Header).Header
 }
 
 func createFileHeaderRequest(filePath string) *gitalypb.UserCommitFilesRequest {

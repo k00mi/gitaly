@@ -537,16 +537,18 @@ module Gitlab
         end
       end
 
+      # rubocop:disable Metrics/ParameterLists
       def multi_action(
         user, branch_name:, message:, actions:,
         author_email: nil, author_name: nil,
-        start_branch_name: nil, start_repository: self
+        start_branch_name: nil, start_repository: self, force: false
       )
 
         OperationService.new(user, self).with_branch(
           branch_name,
           start_branch_name: start_branch_name,
-          start_repository: start_repository
+          start_repository: start_repository,
+          force: force
         ) do |start_commit|
 
           index = Gitlab::Git::Index.new(self)
@@ -572,6 +574,7 @@ module Gitlab
           create_commit(options)
         end
       end
+      # rubocop:enable Metrics/ParameterLists
 
       def with_repo_branch_commit(start_repository, start_branch_name)
         Gitlab::Git.check_namespace!(start_repository)
