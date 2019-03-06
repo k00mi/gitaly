@@ -1,0 +1,5 @@
+---
+title: Stop using gitlab-shell hooks -- but keep using gitlab-shell config
+merge_request: 1088
+author:
+type: changed
