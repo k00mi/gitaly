@@ -1,0 +1,5 @@
+---
+title: Rewrite remove remote in go
+merge_request: 1051
+author: maxmati
+type: performance

@@ -7,9 +7,11 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
+
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
-	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
+	"gitlab.com/gitlab-org/gitaly/internal/git/remote"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -47,20 +49,22 @@ func validateAddRemoteRequest(req *gitalypb.AddRemoteRequest) error {
 // RemoveRemote removes the given remote
 func (s *server) RemoveRemote(ctx context.Context, req *gitalypb.RemoveRemoteRequest) (*gitalypb.RemoveRemoteResponse, error) {
 	if err := validateRemoveRemoteRequest(req); err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "AddRemote: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "RemoveRemote: %v", err)
 	}
 
-	client, err := s.RemoteServiceClient(ctx)
+	hasRemote, err := remote.Exists(ctx, req.GetRepository(), req.Name)
 	if err != nil {
 		return nil, err
 	}
+	if !hasRemote {
+		return &gitalypb.RemoveRemoteResponse{Result: false}, nil
+	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, req.GetRepository())
-	if err != nil {
+	if err := remote.Remove(ctx, req.GetRepository(), req.Name); err != nil {
 		return nil, err
 	}
 
-	return client.RemoveRemote(clientCtx, req)
+	return &gitalypb.RemoveRemoteResponse{Result: true}, nil
 }
 
 func (s *server) FindRemoteRepository(ctx context.Context, req *gitalypb.FindRemoteRepositoryRequest) (*gitalypb.FindRemoteRepositoryResponse, error) {
