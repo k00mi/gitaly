@@ -1,5 +1,21 @@
 # Gitaly changelog
 
+## v1.24.0
+
+#### Added
+- Accept Force option for UserCommitFiles to overwrite branch on commit
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1077
+
+#### Fixed
+- Fix missing SEE_DOC constant in Danger
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1109
+
+#### Other
+- Increase Praefect unit test coverage
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1103
+- Use GitLab for License management
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1076
+
 ## v1.23.0
 
 #### Added

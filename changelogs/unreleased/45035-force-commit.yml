@@ -1,5 +1,0 @@
----
-title: Accept Force option for UserCommitFiles to overwrite branch on commit
-merge_request: 1077
-author:
-type: added
