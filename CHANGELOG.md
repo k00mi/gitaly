@@ -1,5 +1,30 @@
 # Gitaly changelog
 
+## v1.25.0
+
+#### Added
+- Add prometheus listener to Praefect
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1108
+
+#### Changed
+- Stop using gitlab-shell hooks -- but keep using gitlab-shell config
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1088
+
+#### Fixed
+- Fix undefined logger panicing
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1114
+
+#### Other
+- Stop running tests on Ruby 2.4
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1113
+- Add feature flag for FindAllTags
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1106
+
+#### Performance
+- Rewrite remove remote in go
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1051
+  Contributed by maxmati
+
 ## v1.24.0
 
 #### Added

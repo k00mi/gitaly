@@ -1,5 +1,0 @@
----
-title: Fix undefined logger panicing
-merge_request: 1114
-author:
-type: fixed
