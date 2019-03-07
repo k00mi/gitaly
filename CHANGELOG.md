@@ -1,5 +1,11 @@
 # Gitaly changelog
 
+## v1.26.0
+
+#### Added
+- PreFetch RPC: to optimize a full fetch by doing a local clone from the fork source
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1073
+
 ## v1.25.0
 
 #### Added
