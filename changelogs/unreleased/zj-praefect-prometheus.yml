@@ -1,0 +1,5 @@
+---
+title: Add prometheus listener to Praefect
+merge_request: 1108
+author:
+type: added

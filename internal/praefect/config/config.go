@@ -10,9 +10,10 @@ import (
 
 // Config is a container for everything found in the TOML config file
 type Config struct {
-	ListenAddr    string          `toml:"listen_addr" split_words:"true"`
-	GitalyServers []*GitalyServer `toml:"gitaly_server", split_words:"true"`
-	Logging       config.Logging  `toml:"logging"`
+	ListenAddr           string          `toml:"listen_addr" split_words:"true"`
+	GitalyServers        []*GitalyServer `toml:"gitaly_server", split_words:"true"`
+	Logging              config.Logging  `toml:"logging"`
+	PrometheusListenAddr string          `toml:"prometheus_listen_addr", split_words:"true"`
 }
 
 // GitalyServer allows configuring the servers that RPCs are proxied to
