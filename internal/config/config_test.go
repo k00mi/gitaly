@@ -416,7 +416,6 @@ func TestConfigureRuby(t *testing.T) {
 		{dir: "", desc: "empty"},
 		{dir: "/does/not/exist", desc: "does not exist"},
 		{dir: tmpFile, desc: "exists but is not a directory"},
-		{dir: ".", ok: true, desc: "relative path"},
 		{dir: tmpDir, ok: true, desc: "ok"},
 	}
 
@@ -425,15 +424,11 @@ func TestConfigureRuby(t *testing.T) {
 			Config.Ruby = Ruby{Dir: tc.dir}
 
 			err := ConfigureRuby()
-			if !tc.ok {
+			if tc.ok {
+				require.NoError(t, err)
+			} else {
 				require.Error(t, err)
-				return
 			}
-
-			require.NoError(t, err)
-
-			dir := Config.Ruby.Dir
-			require.True(t, filepath.IsAbs(dir), "expected %q to be absolute path", dir)
 		})
 	}
 }

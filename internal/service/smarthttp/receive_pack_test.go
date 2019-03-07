@@ -128,8 +128,10 @@ func TestFailedReceivePackRequestDueToHooksFailure(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(hookDir)
 
-	defer func() { hooks.Override = "" }()
-	hooks.Override = hookDir
+	defer func(oldDir string) {
+		config.Config.GitlabShell.Dir = hookDir
+	}(config.Config.GitlabShell.Dir)
+	config.Config.GitlabShell.Dir = hookDir
 
 	require.NoError(t, os.MkdirAll(hooks.Path(), 0755))
 
