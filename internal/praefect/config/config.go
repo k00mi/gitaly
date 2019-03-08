@@ -10,10 +10,12 @@ import (
 
 // Config is a container for everything found in the TOML config file
 type Config struct {
-	ListenAddr           string          `toml:"listen_addr" split_words:"true"`
-	GitalyServers        []*GitalyServer `toml:"gitaly_server", split_words:"true"`
-	Logging              config.Logging  `toml:"logging"`
-	PrometheusListenAddr string          `toml:"prometheus_listen_addr", split_words:"true"`
+	ListenAddr    string          `toml:"listen_addr" split_words:"true"`
+	SocketPath    string          `toml:"socket_path" split_words:"true"`
+	GitalyServers []*GitalyServer `toml:"gitaly_server", split_words:"true"`
+
+	Logging              config.Logging `toml:"logging"`
+	PrometheusListenAddr string         `toml:"prometheus_listen_addr", split_words:"true"`
 }
 
 // GitalyServer allows configuring the servers that RPCs are proxied to
@@ -36,7 +38,7 @@ func FromFile(filePath string) (Config, error) {
 }
 
 var (
-	errNoListenAddr        = errors.New("no listen address configured")
+	errNoListener          = errors.New("no listen address or socket path configured")
 	errNoGitalyServers     = errors.New("no gitaly backends configured")
 	errDuplicateGitalyAddr = errors.New("gitaly listen addresses are not unique")
 	errGitalyWithoutName   = errors.New("all gitaly servers must have a name")
@@ -44,8 +46,8 @@ var (
 
 // Validate establishes if the config is valid
 func (c Config) Validate() error {
-	if c.ListenAddr == "" {
-		return errNoListenAddr
+	if c.ListenAddr == "" && c.SocketPath == "" {
+		return errNoListener
 	}
 
 	if len(c.GitalyServers) == 0 {

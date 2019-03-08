@@ -21,3 +21,5 @@ Gitaly does not replicate any data. If a Gitaly server goes down, any of its
 clients can't read or write to the repositories stored on that server. This
 means that Gitaly is not highly available. How this will be solved is described
 [in the HA design document](doc/design_ha.md)
+
+For configuration please read [praefects configuration documentation](doc/configuration/praefect.md).
