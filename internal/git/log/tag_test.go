@@ -40,9 +40,9 @@ func TestGetTag(t *testing.T) {
 	require.NoError(t, err)
 	for _, testCase := range testCases {
 		t.Run(testCase.tagName, func(t *testing.T) {
-			testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", "-m", testCase.message, testCase.tagName, testCase.rev)
+			tagID := testhelper.CreateTag(t, testRepoPath, testCase.tagName, testCase.rev, &testhelper.CreateTagOpts{Message: testCase.message})
 
-			tag, err := GetTagCatfile(c, testCase.tagName)
+			tag, err := GetTagCatfile(c, string(tagID), testCase.tagName)
 			require.NoError(t, err)
 			if len(testCase.message) >= helper.MaxCommitOrTagMessageSize {
 				testCase.message = testCase.message[:helper.MaxCommitOrTagMessageSize]
