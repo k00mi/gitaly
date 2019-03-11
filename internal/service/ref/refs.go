@@ -120,7 +120,7 @@ func parseAndReturnTags(ctx context.Context, repo *gitalypb.Repository, stream g
 		switch refType {
 		// annotated tag
 		case "tag":
-			tag, err = gitlog.GetTagCatfile(c, refName)
+			tag, err = gitlog.GetTagCatfile(c, tagID, refName)
 			if err != nil {
 				return fmt.Errorf("getting annotated tag: %v", err)
 			}

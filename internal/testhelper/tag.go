@@ -40,6 +40,6 @@ func CreateTag(t *testing.T, repoPath, tagName, targetID string, opts *CreateTag
 
 	MustRunCommand(t, stdin, "git", args...)
 
-	tagID := MustRunCommand(t, nil, "git", "-C", repoPath, "rev-parse", tagName)
+	tagID := MustRunCommand(t, nil, "git", "-C", repoPath, "show-ref", "-s", tagName)
 	return strings.TrimSpace(string(tagID))
 }

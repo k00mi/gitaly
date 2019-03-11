@@ -485,6 +485,9 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 	bigMessage := strings.Repeat("a", 11*1024)
 	bigMessageTag1ID := testhelper.CreateTag(t, testRepoCopyPath, "v1.7.0", commitID, &testhelper.CreateTagOpts{Message: bigMessage})
 
+	// A tag with a commit id as its name
+	commitTagID := testhelper.CreateTag(t, testRepoCopyPath, commitID, commitID, &testhelper.CreateTagOpts{Message: "commit tag with a commit sha as the name"})
+
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
@@ -504,6 +507,13 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 	}
 
 	expectedTags := []*gitalypb.Tag{
+		{
+			Name:         []byte(commitID),
+			Id:           string(commitTagID),
+			TargetCommit: gitCommit,
+			Message:      []byte("commit tag with a commit sha as the name"),
+			MessageSize:  40,
+		},
 		{
 			Name:         []byte("v1.0.0"),
 			Id:           "f4e6814c3e4e7a0de82a9e7cd20c626cc963a2f8",

@@ -14,14 +14,11 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
-// GetTagCatfile looks up a commit by revision using an existing *catfile.Batch instance.
-func GetTagCatfile(c *catfile.Batch, tagName string) (*gitalypb.Tag, error) {
-	info, err := c.Info(tagName)
-	if err != nil {
-		return nil, err
-	}
-
-	r, err := c.Tag(info.Oid)
+// GetTagCatfile looks up a commit by tagID using an existing *catfile.Batch instance.
+// note: we pass in the tagName because the tag name from refs/tags may be different
+// than the name found in the actual tag object. We want to use the tagName found in refs/tags
+func GetTagCatfile(c *catfile.Batch, tagID, tagName string) (*gitalypb.Tag, error) {
+	r, err := c.Tag(tagID)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +28,8 @@ func GetTagCatfile(c *catfile.Batch, tagName string) (*gitalypb.Tag, error) {
 		return nil, err
 	}
 
-	tag, err := buildAnnotatedTag(c, info.Oid, tagName, header, body)
+	// the tagID is the oid of the tag object
+	tag, err := buildAnnotatedTag(c, tagID, tagName, header, body)
 	if err != nil {
 		return nil, err
 	}
