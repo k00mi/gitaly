@@ -1,5 +1,15 @@
 # Gitaly changelog
 
+## v1.27.0
+
+#### Added
+- Support socket paths for praefect
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1115
+
+#### Fixed
+- Fix bug in FindAllTags when commit shas are used as tag names
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1119
+
 ## v1.26.0
 
 #### Added
