@@ -1,5 +1,11 @@
 # Gitaly changelog
 
+## v1.28.0
+
+#### Changed
+- RenameNamespace RPC creates parent directories for the new location
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1090
+
 ## v1.27.0
 
 #### Added
