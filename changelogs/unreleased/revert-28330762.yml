@@ -1,0 +1,6 @@
+---
+title: Revert !1088 "Stop using gitlab-shell hooks -- but keep using gitlab-shell
+  config"
+merge_request: 1117
+author:
+type: fixed
