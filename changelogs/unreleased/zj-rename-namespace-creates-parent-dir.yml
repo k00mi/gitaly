@@ -1,0 +1,5 @@
+---
+title: RenameNamespace RPC creates parent directories for the new location
+merge_request: 1090
+author:
+type: changed
