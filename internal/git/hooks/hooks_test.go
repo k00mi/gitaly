@@ -1,7 +1,6 @@
 package hooks
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -10,25 +9,13 @@ import (
 )
 
 func TestPath(t *testing.T) {
-	defer func(rubyDir, shellDir string) {
+	defer func(rubyDir string) {
 		config.Config.Ruby.Dir = rubyDir
-		config.Config.GitlabShell.Dir = shellDir
-	}(config.Config.Ruby.Dir, config.Config.GitlabShell.Dir)
+	}(config.Config.Ruby.Dir)
 	config.Config.Ruby.Dir = "/bazqux/gitaly-ruby"
-	config.Config.GitlabShell.Dir = "/foobar/gitlab-shell"
 
-	hooksVar := "GITALY_USE_EMBEDDED_HOOKS"
-	t.Run(fmt.Sprintf("with %s=1", hooksVar), func(t *testing.T) {
-		os.Setenv(hooksVar, "1")
-		defer os.Unsetenv(hooksVar)
-
+	t.Run("default", func(t *testing.T) {
 		require.Equal(t, "/bazqux/gitaly-ruby/git-hooks", Path())
-	})
-
-	t.Run(fmt.Sprintf("without %s=1", hooksVar), func(t *testing.T) {
-		os.Unsetenv(hooksVar)
-
-		require.Equal(t, "/foobar/gitlab-shell/hooks", Path())
 	})
 
 	t.Run("with an override", func(t *testing.T) {
@@ -37,4 +24,14 @@ func TestPath(t *testing.T) {
 
 		require.Equal(t, "/override/hooks", Path())
 	})
+
+	t.Run("when an env override", func(t *testing.T) {
+		key := "GITALY_TESTING_NO_GIT_HOOKS"
+
+		os.Setenv(key, "1")
+		defer os.Unsetenv(key)
+
+		require.Equal(t, "/var/empty", Path())
+	})
+
 }
