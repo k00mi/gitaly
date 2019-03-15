@@ -2,6 +2,8 @@
 
 ## v1.28.0
 
+Should not be used as it [will break gitlab-rails](https://gitlab.com/gitlab-org/gitlab-ce/issues/58855).
+
 #### Changed
 - RenameNamespace RPC creates parent directories for the new location
   https://gitlab.com/gitlab-org/gitaly/merge_requests/1090

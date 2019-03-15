@@ -1,6 +1,7 @@
 package namespace
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -39,7 +40,7 @@ func TestNamespaceExists(t *testing.T) {
 	defer conn.Close()
 
 	// Create one namespace for testing it exists
-	ctx, cancel := testhelper.Context()
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	_, err := client.AddNamespace(ctx, &gitalypb.AddNamespaceRequest{StorageName: "default", Name: "existing"})
@@ -91,7 +92,7 @@ func TestNamespaceExists(t *testing.T) {
 
 	for _, tc := range queries {
 		t.Run(tc.desc, func(t *testing.T) {
-			ctx, cancel := testhelper.Context()
+			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			response, err := client.NamespaceExists(ctx, tc.request)
 
@@ -152,7 +153,7 @@ func TestAddNamespace(t *testing.T) {
 
 	for _, tc := range queries {
 		t.Run(tc.desc, func(t *testing.T) {
-			ctx, cancel := testhelper.Context()
+			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
 			_, err := client.AddNamespace(ctx, tc.request)
@@ -177,7 +178,7 @@ func TestRemoveNamespace(t *testing.T) {
 	client, conn := newNamespaceClient(t, serverSocketPath)
 	defer conn.Close()
 
-	ctx, cancel := testhelper.Context()
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	queries := []struct {
@@ -229,7 +230,7 @@ func TestRenameNamespace(t *testing.T) {
 	client, conn := newNamespaceClient(t, serverSocketPath)
 	defer conn.Close()
 
-	ctx, cancel := testhelper.Context()
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	queries := []struct {
@@ -262,7 +263,7 @@ func TestRenameNamespace(t *testing.T) {
 				To:          "new-path",
 				StorageName: "default",
 			},
-			errorCode: codes.Internal,
+			errorCode: codes.InvalidArgument,
 		},
 		{
 			desc: "existing destination namespace",
@@ -271,37 +272,20 @@ func TestRenameNamespace(t *testing.T) {
 				To:          "existing",
 				StorageName: "default",
 			},
-			errorCode: codes.Internal,
-		},
-		{
-			desc: "non existing to parent directory",
-			request: &gitalypb.RenameNamespaceRequest{
-				From:        "existing",
-				To:          "ab/cd/non-existing",
-				StorageName: "default",
-			},
-			errorCode: codes.OK,
+			errorCode: codes.InvalidArgument,
 		},
 	}
 
+	_, err := client.AddNamespace(ctx, &gitalypb.AddNamespaceRequest{
+		StorageName: "default",
+		Name:        "existing",
+	})
+	require.NoError(t, err)
+
 	for _, tc := range queries {
 		t.Run(tc.desc, func(t *testing.T) {
-			_, err := client.AddNamespace(ctx, &gitalypb.AddNamespaceRequest{
-				StorageName: "default",
-				Name:        "existing",
-			})
-			require.NoError(t, err)
+			_, err := client.RenameNamespace(ctx, tc.request)
 
-			defer client.RemoveNamespace(ctx, &gitalypb.RemoveNamespaceRequest{
-				StorageName: tc.request.StorageName,
-				Name:        tc.request.To,
-			})
-
-			_, err = client.RenameNamespace(ctx, tc.request)
-
-			if tc.errorCode != helper.GrpcCode(err) {
-				t.Fatal(err)
-			}
 			require.Equal(t, tc.errorCode, helper.GrpcCode(err))
 
 			if tc.errorCode == codes.OK {
