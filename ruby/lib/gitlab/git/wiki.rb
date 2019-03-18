@@ -38,8 +38,8 @@ module Gitlab
         gollum_update_page(page_path, title, format, content, commit_details)
       end
 
-      def pages(limit: nil)
-        gollum_get_all_pages(limit: limit)
+      def pages(limit: nil, sort: nil, direction_desc: false)
+        gollum_get_all_pages(limit: limit, sort: sort, direction_desc: direction_desc)
       end
 
       def page(title:, version: nil, dir: nil)
@@ -191,8 +191,12 @@ module Gitlab
         Gitlab::Git::WikiFile.new(gollum_file)
       end
 
-      def gollum_get_all_pages(limit: nil)
-        gollum_wiki.pages(limit: limit).map { |gollum_page| new_page(gollum_page) }
+      def gollum_get_all_pages(limit: nil, sort: nil, direction_desc: false)
+        gollum_wiki.pages(
+          limit: limit, sort: sort, direction_desc: direction_desc
+        ).map do |gollum_page|
+          new_page(gollum_page)
+        end
       end
     end
   end

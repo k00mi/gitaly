@@ -72,7 +72,9 @@ module GitalyServer
       pages_limit = request.limit.zero? ? nil : request.limit
 
       Enumerator.new do |y|
-        wiki.pages(limit: pages_limit).each do |page|
+        wiki.pages(
+          limit: pages_limit, sort: request.sort.to_s.downcase, direction_desc: request.direction_desc
+        ).each do |page|
           y.yield Gitaly::WikiGetAllPagesResponse.new(page: build_gitaly_wiki_page(page))
 
           io = StringIO.new(page.text_data)
