@@ -7,7 +7,6 @@ import (
 	"path"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
-	"gitlab.com/gitlab-org/gitaly/internal/git/remote"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
@@ -77,14 +76,6 @@ func (o *ObjectPool) Create(ctx context.Context, repo *gitalypb.Repository) (err
 
 	if err := o.removeHooksDir(); err != nil {
 		return fmt.Errorf("remove hooks: %v", err)
-	}
-
-	if err := remote.Remove(ctx, o, "origin"); err != nil {
-		return fmt.Errorf("remove origin: %v", err)
-	}
-
-	if err := o.removeRefs(ctx); err != nil {
-		return fmt.Errorf("remove refs: %v", err)
 	}
 
 	if err := o.setConfig(ctx, "gc.auto", "0"); err != nil {

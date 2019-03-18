@@ -42,20 +42,12 @@ func TestCreate(t *testing.T) {
 	// Checks if the underlying repository is valid
 	require.True(t, pool.IsValid())
 
-	// No refs
-	out := testhelper.MustRunCommand(t, nil, "git", "-C", pool.FullPath(), "for-each-ref")
-	assert.Len(t, out, 0)
-
-	// No remotes
-	out = testhelper.MustRunCommand(t, nil, "git", "-C", pool.FullPath(), "remote")
-	assert.Len(t, out, 0)
-
 	// No hooks
 	_, err = os.Stat(path.Join(pool.FullPath(), "hooks"))
 	assert.True(t, os.IsNotExist(err))
 
 	// No problems
-	out = testhelper.MustRunCommand(t, nil, "git", "-C", pool.FullPath(), "cat-file", "-s", "55bc176024cfa3baaceb71db584c7e5df900ea65")
+	out := testhelper.MustRunCommand(t, nil, "git", "-C", pool.FullPath(), "cat-file", "-s", "55bc176024cfa3baaceb71db584c7e5df900ea65")
 	assert.Equal(t, "282\n", string(out))
 
 	// No automatic GC
