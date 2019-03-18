@@ -73,7 +73,7 @@ def create_mr(project_id, tag_version, assignee_id)
     "title": "Upgrade Gitaly to #{tag_version}",
     "assignee_id": assignee_id,
     "description": "Upgrade Gitaly to #{tag_version}",
-    "labels": "Gitaly",
+    "labels": "Gitaly,backstage",
     "remove_source_branch": true,
     "squash": true
   }
