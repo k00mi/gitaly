@@ -1,5 +1,21 @@
 # Gitaly changelog
 
+## v1.29.0
+
+#### Fixed
+- Fix "bytes written" count in pktline.WriteString
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1129
+- Prevent clobbering existing Git alternates
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1132
+- Revert !1088 "Stop using gitlab-shell hooks -- but keep using gitlab-shell config"
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1117
+
+#### Other
+- Introduce text.ChompBytes helper
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1144
+- Re-apply MR 1088 (Git hooks change)
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1130
+
 ## v1.28.0
 
 Should not be used as it [will break gitlab-rails](https://gitlab.com/gitlab-org/gitlab-ce/issues/58855).

@@ -1,5 +1,0 @@
----
-title: Fix "bytes written" count in pktline.WriteString
-merge_request: 1129
-author:
-type: fixed
