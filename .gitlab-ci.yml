@@ -6,7 +6,7 @@ stages:
   - publish
 
 variables:
-  DOCKER_DRIVER: overlay
+  DOCKER_DRIVER: overlay2
   CUSTOM_IMAGE_VERSION: ruby-2.5-golang-1.11-git-2.18
 
 danger-review:
@@ -135,8 +135,6 @@ cover:
 
 code_quality:
   image: docker:stable
-  variables:
-    DOCKER_DRIVER: overlay2
   allow_failure: true
   services:
     - docker:stable-dind
