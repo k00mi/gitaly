@@ -47,8 +47,8 @@ func TestLink(t *testing.T) {
 	require.Equal(t, content, newContent)
 
 	// Test if the remote is set
-	remotes := testhelper.MustRunCommand(t, nil, "git", "-C", pool.FullPath(), "remote")
-	assert.Equal(t, testRepo.GetGlRepository()+"\n", string(remotes))
+	remotes := strings.Split(string(testhelper.MustRunCommand(t, nil, "git", "-C", pool.FullPath(), "remote")), "\n")
+	assert.Contains(t, remotes, testRepo.GetGlRepository())
 }
 
 func TestUnlink(t *testing.T) {
