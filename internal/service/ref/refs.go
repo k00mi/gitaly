@@ -8,10 +8,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"gitlab.com/gitlab-org/gitaly/internal/featureflag"
-	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
-
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
@@ -28,21 +24,7 @@ var (
 	headReference = _headReference
 	// FindBranchNames is exported to be used in other packages
 	FindBranchNames = _findBranchNames
-
-	findAllTagsFeatureFlag = "go-find-all-tags"
-
-	findAllTagsRequests = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "gitaly_find_all_tags_requests_total",
-			Help: "Counter of go vs ruby implementation of FindAllTags",
-		},
-		[]string{"implementation"},
-	)
 )
-
-func init() {
-	prometheus.Register(findAllTagsRequests)
-}
 
 type findRefsOpts struct {
 	cmdArgs []string
@@ -155,39 +137,10 @@ func (s *server) FindAllTags(in *gitalypb.FindAllTagsRequest, stream gitalypb.Re
 		return helper.ErrInvalidArgument(err)
 	}
 
-	if featureflag.IsEnabled(ctx, findAllTagsFeatureFlag) {
-		findAllTagsRequests.WithLabelValues("go").Inc()
-		if err := parseAndReturnTags(ctx, in.GetRepository(), stream); err != nil {
-			return helper.ErrInternal(err)
-		}
-		return nil
+	if err := parseAndReturnTags(ctx, in.GetRepository(), stream); err != nil {
+		return helper.ErrInternal(err)
 	}
-
-	findAllTagsRequests.WithLabelValues("ruby").Inc()
-	client, err := s.RefServiceClient(ctx)
-	if err != nil {
-		return err
-	}
-
-	clientCtx, err := rubyserver.SetHeaders(ctx, in.GetRepository())
-	if err != nil {
-		return err
-	}
-
-	rubyStream, err := client.FindAllTags(clientCtx, in)
-	if err != nil {
-		return err
-	}
-
-	return rubyserver.Proxy(func() error {
-		resp, err := rubyStream.Recv()
-		if err != nil {
-			md := rubyStream.Trailer()
-			stream.SetTrailer(md)
-			return err
-		}
-		return stream.Send(resp)
-	})
+	return nil
 }
 
 func validateFindAllTagsRequest(request *gitalypb.FindAllTagsRequest) error {

@@ -13,13 +13,11 @@ import (
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
-	"gitlab.com/gitlab-org/gitaly/internal/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/git/updateref"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 )
 
 func containsRef(refs [][]byte, ref string) bool {
@@ -579,31 +577,6 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 	}
 
 	require.Len(t, receivedTags, len(expectedTags))
-
-	for i, expectedTag := range expectedTags {
-		require.Equal(t, expectedTag, receivedTags[i])
-	}
-
-	expectedNumberOfTags := len(receivedTags)
-	// using Go implementation
-
-	md := metadata.New(map[string]string{featureflag.HeaderKey(findAllTagsFeatureFlag): "true"})
-	ctx = metadata.NewOutgoingContext(context.Background(), md)
-
-	c, err = client.FindAllTags(ctx, rpcRequest)
-	require.NoError(t, err)
-
-	receivedTags = nil
-	for {
-		r, err := c.Recv()
-		if err == io.EOF {
-			break
-		}
-		require.NoError(t, err)
-		receivedTags = append(receivedTags, r.GetTags()...)
-	}
-
-	require.Len(t, receivedTags, expectedNumberOfTags, "received wrong number of tags")
 
 	for i, expectedTag := range expectedTags {
 		require.Equal(t, expectedTag, receivedTags[i])
