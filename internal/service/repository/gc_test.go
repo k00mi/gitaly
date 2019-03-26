@@ -13,9 +13,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 )
 
 var (
@@ -256,4 +258,39 @@ func TestCleanupInvalidKeepAroundRefs(t *testing.T) {
 func createFileWithTimes(path string, mTime time.Time) {
 	ioutil.WriteFile(path, nil, 0644)
 	os.Chtimes(path, mTime, mTime)
+}
+
+func TestGarbageCollectDeltaIslands(t *testing.T) {
+	server, serverSocketPath := runRepoServer(t)
+	defer server.Stop()
+
+	client, conn := newRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	md := metadata.New(map[string]string{featureflag.HeaderKey(deltaIslandsFeatureFlag): "true"})
+	ctxWithFeatureFlag := metadata.NewOutgoingContext(ctx, md)
+
+	testCases := []struct {
+		desc    string
+		outcome deltaIslandOutcome
+		ctx     context.Context
+	}{
+		{desc: "feature flag not set", outcome: expectNoDeltaIslands, ctx: ctx},
+		{desc: "feature flag set", outcome: expectDeltaIslands, ctx: ctxWithFeatureFlag},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			testDeltaIslands(t, testRepoPath, tc.outcome, func() error {
+				_, err := client.GarbageCollect(tc.ctx, &gitalypb.GarbageCollectRequest{Repository: testRepo})
+				return err
+			})
+		})
+	}
 }

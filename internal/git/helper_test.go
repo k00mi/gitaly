@@ -29,3 +29,33 @@ func TestValidateRevision(t *testing.T) {
 		})
 	}
 }
+
+func TestSupportsDeltaIslands(t *testing.T) {
+	testCases := []struct {
+		version string
+		fail    bool
+		delta   bool
+	}{
+		{version: "2.20.0", delta: true},
+		{version: "2.21.5", delta: true},
+		{version: "2.19.8", delta: false},
+		{version: "1.20.8", delta: false},
+		{version: "1.18.0", delta: false},
+		{version: "2.20", fail: true},
+		{version: "bla bla", fail: true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.version, func(t *testing.T) {
+			out, err := SupportsDeltaIslands(tc.version)
+
+			if tc.fail {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tc.delta, out, "delta island support")
+		})
+	}
+}

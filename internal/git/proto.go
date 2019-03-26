@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -59,6 +60,27 @@ func Version() (string, error) {
 	}
 
 	return ver[2], nil
+}
+
+// SupportsDeltaIslands checks if a version string (e.g. "2.20.0")
+// corresponds to a Git version that supports delta islands.
+func SupportsDeltaIslands(version string) (bool, error) {
+	versionSplit := strings.SplitN(version, ".", 3)
+	if len(versionSplit) < 3 {
+		return false, fmt.Errorf("expected major.minor.patch in %q", version)
+	}
+
+	var major, minor uint32
+	for i, v := range []*uint32{&major, &minor} {
+		n64, err := strconv.ParseUint(versionSplit[i], 10, 32)
+		if err != nil {
+			return false, err
+		}
+
+		*v = uint32(n64)
+	}
+
+	return major >= 2 && minor >= 20, nil
 }
 
 // BuildGitOptions helps to generate options to the git command.

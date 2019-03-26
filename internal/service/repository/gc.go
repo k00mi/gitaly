@@ -38,12 +38,8 @@ func (server) GarbageCollect(ctx context.Context, in *gitalypb.GarbageCollectReq
 		return nil, err
 	}
 
-	args := []string{"-c"}
-	if in.GetCreateBitmap() {
-		args = append(args, "repack.writeBitmaps=true")
-	} else {
-		args = append(args, "repack.writeBitmaps=false")
-	}
+	args := repackConfig(ctx, in.CreateBitmap)
+
 	args = append(args, "gc")
 	cmd, err := git.Command(ctx, in.GetRepository(), args...)
 	if err != nil {

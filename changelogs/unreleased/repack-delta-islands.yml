@@ -1,0 +1,5 @@
+---
+title: Use delta islands in RepackFull and GarbageCollect
+merge_request: 1110
+author:
+type: performance

@@ -102,6 +102,10 @@ binaries_go1.10:
   <<: *assemble_definition
   image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.5-golang-1.10-git-2.18
 
+test:go1.12-git-2.21-ruby-2.5:
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.5-golang-1.12-git-2.21
+  <<: *test_definition
+
 test:go1.12-git-2.18-ruby-2.5:
   image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.5-golang-1.12-git-2.18
   <<: *test_definition
