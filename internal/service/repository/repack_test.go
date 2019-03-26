@@ -11,8 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 )
 
 func TestRepackIncrementalSuccess(t *testing.T) {
@@ -185,6 +187,41 @@ func TestRepackFullFailure(t *testing.T) {
 			defer cancel()
 			_, err := client.RepackFull(ctx, &gitalypb.RepackFullRequest{Repository: test.repo})
 			testhelper.RequireGrpcError(t, err, test.code)
+		})
+	}
+}
+
+func TestRepackFullDeltaIslands(t *testing.T) {
+	server, serverSocketPath := runRepoServer(t)
+	defer server.Stop()
+
+	client, conn := newRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	md := metadata.New(map[string]string{featureflag.HeaderKey(deltaIslandsFeatureFlag): "true"})
+	ctxWithFeatureFlag := metadata.NewOutgoingContext(ctx, md)
+
+	testCases := []struct {
+		desc    string
+		outcome deltaIslandOutcome
+		ctx     context.Context
+	}{
+		{desc: "feature flag not set", outcome: expectNoDeltaIslands, ctx: ctx},
+		{desc: "feature flag set", outcome: expectDeltaIslands, ctx: ctxWithFeatureFlag},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			testDeltaIslands(t, testRepoPath, tc.outcome, func() error {
+				_, err := client.RepackFull(tc.ctx, &gitalypb.RepackFullRequest{Repository: testRepo})
+				return err
+			})
 		})
 	}
 }
