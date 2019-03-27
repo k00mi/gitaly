@@ -1,8 +1,14 @@
 package repository
 
 import (
+	"bytes"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -86,6 +92,140 @@ func TestFetchRemoteFailure(t *testing.T) {
 			defer cancel()
 
 			resp, err := client.FetchRemote(ctx, tc.req)
+			testhelper.RequireGrpcError(t, err, tc.code)
+			require.Contains(t, err.Error(), tc.err)
+			assert.Nil(t, resp)
+		})
+	}
+}
+
+const (
+	httpToken = "ABCefg0999182"
+)
+
+func remoteHTTPServer(t *testing.T, repoName, httpToken string) (*httptest.Server, string) {
+	s := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.String() == fmt.Sprintf("/%s.git/info/refs?service=git-upload-pack", repoName) {
+				if httpToken != "" && r.Header.Get("Authorization") != httpToken {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				w.Header().Set("Content-Type", "application/x-git-upload-pack-advertisement")
+				w.WriteHeader(http.StatusOK)
+
+				b, err := ioutil.ReadFile("testdata/advertise.txt")
+				require.NoError(t, err)
+				w.Write(b)
+			} else {
+				w.WriteHeader(http.StatusNotFound)
+			}
+		}),
+	)
+
+	return s, fmt.Sprintf("%s/%s.git", s.URL, repoName)
+}
+
+func getRefnames(t *testing.T, repoPath string) []string {
+	result := testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "for-each-ref", "--format", "%(refname:lstrip=2)")
+	return strings.Split(string(bytes.TrimRight(result, "\n")), "\n")
+}
+
+func TestFetchRemoteOverHTTP(t *testing.T) {
+	server, serverSocketPath := runRepoServer(t)
+	defer server.Stop()
+
+	client, conn := newRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	testCases := []struct {
+		description string
+		httpToken   string
+	}{
+		{
+			description: "with http token",
+			httpToken:   httpToken,
+		},
+		{
+			description: "without http token",
+			httpToken:   "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			forkedRepo, forkedRepoPath, forkedRepoCleanup := testhelper.NewTestRepo(t)
+			defer forkedRepoCleanup()
+
+			_, remoteURL := remoteHTTPServer(t, "my-repo", tc.httpToken)
+
+			req := &gitalypb.FetchRemoteRequest{
+				Repository: forkedRepo,
+				RemoteParams: &gitalypb.Remote{
+					Url:                     remoteURL,
+					Name:                    "geo",
+					HttpAuthorizationHeader: tc.httpToken,
+					MirrorRefmaps:           []string{"all_refs"},
+				},
+				Timeout: 1000,
+			}
+
+			refs := getRefnames(t, forkedRepoPath)
+			require.True(t, len(refs) > 1, "the advertisement.txt should have deleted all refs except for master")
+
+			_, err := client.FetchRemote(ctx, req)
+			require.NoError(t, err)
+
+			refs = getRefnames(t, forkedRepoPath)
+
+			require.Len(t, refs, 1)
+			assert.Equal(t, "master", refs[0])
+
+		})
+	}
+}
+
+func TestFetchRemoteOverHTTPError(t *testing.T) {
+	server, serverSocketPath := runRepoServer(t)
+	defer server.Stop()
+
+	client, conn := newRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	testCases := []struct {
+		desc    string
+		request gitalypb.FetchRemoteRequest
+		code    codes.Code
+		err     string
+	}{
+		{
+			desc: "bad remote url",
+			request: gitalypb.FetchRemoteRequest{
+				Repository: testRepo,
+				RemoteParams: &gitalypb.Remote{
+					Url:                     "not a url",
+					Name:                    "remote",
+					HttpAuthorizationHeader: httpToken,
+				},
+				Timeout: 1000,
+			},
+			code: codes.InvalidArgument,
+			err:  "invalid remote url",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			resp, err := client.FetchRemote(ctx, &tc.request)
 			testhelper.RequireGrpcError(t, err, tc.code)
 			require.Contains(t, err.Error(), tc.err)
 			assert.Nil(t, resp)
