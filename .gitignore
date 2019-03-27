@@ -4,6 +4,8 @@ cmd/gitaly-ssh/gitaly-ssh
 /gitaly-ssh
 cmd/gitaly-wrapper/gitaly-wrapper
 /gitaly-wrapper
+cmd/gitaly-remote/gitaly-remote
+/gitaly-remote
 **/testdata/gitaly-libexec/
 /*.deb
 /_support/package/bin
