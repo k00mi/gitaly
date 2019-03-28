@@ -1,5 +1,31 @@
 # Gitaly changelog
 
+## v1.30.0
+
+#### Added
+- WikiGetAllPages RPC - Add params for sorting
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1081
+
+#### Changed
+- Keep origin remote and refs when creating an object pool
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1136
+
+#### Fixed
+- Bump github-linguist to 6.4.1
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1153
+- Fix too lenient ref wildcard matcher
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1158
+
+#### Other
+- Bump Rugged to 0.28.1
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/154
+- Remove FindAllTags feature flag
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1155
+
+#### Performance
+- Use delta islands in RepackFull and GarbageCollect
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1110
+
 ## v1.29.0
 
 #### Fixed
