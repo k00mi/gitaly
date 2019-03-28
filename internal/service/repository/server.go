@@ -1,7 +1,10 @@
 package repository
 
 import (
+	"context"
+
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 )
 
@@ -12,4 +15,8 @@ type server struct {
 // NewServer creates a new instance of a gRPC repo server
 func NewServer(rs *rubyserver.Server) gitalypb.RepositoryServiceServer {
 	return &server{Server: rs}
+}
+
+func (s *server) FetchHTTPRemote(ctx context.Context, req *gitalypb.FetchHTTPRemoteRequest) (*gitalypb.FetchHTTPRemoteResponse, error) {
+	return nil, helper.Unimplemented
 }
