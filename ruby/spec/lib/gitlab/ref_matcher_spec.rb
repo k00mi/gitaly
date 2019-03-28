@@ -16,7 +16,7 @@ describe GitLab::RefMatcher do
       end
     end
 
-    context "when the ref pattern  name contains wildcard(s)" do
+    context "when the ref pattern name contains wildcard(s)" do
       context "when there is a single '*'" do
         let(:pattern) { 'production/*' }
 
@@ -28,6 +28,18 @@ describe GitLab::RefMatcher do
         it "returns false for branch names not matching the wildcard" do
           expect(subject.matches?("staging/some-branch")).to be false
           expect(subject.matches?("production")).to be false
+        end
+      end
+
+      context "when the wildcard begins with a '*'" do
+        let(:pattern) { '*-stable' }
+
+        it "returns true for branch names matching the wildcard" do
+          expect(subject.matches?('11-0-stable')).to be true
+        end
+
+        it "returns false for branch names not matching the wildcard" do
+          expect(subject.matches?('11-0-stable-test')).to be false
         end
       end
 
