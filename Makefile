@@ -14,7 +14,7 @@ MAKEGEN = $(BUILD_DIR)/makegen
 
 # These variables are handed down to make in _build
 export GOPATH := $(CURDIR)/$(BUILD_DIR)
-export PATH := $(PATH):$(GOPATH)/bin
+export PATH := $(GOPATH)/bin:$(PATH)
 export TEST_REPO_STORAGE_PATH := $(CURDIR)/internal/testhelper/testdata/data
 
 all: build
