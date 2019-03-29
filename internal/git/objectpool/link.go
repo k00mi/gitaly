@@ -3,6 +3,7 @@ package objectpool
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -21,7 +22,7 @@ import (
 // is to join the pool. This does not trigger deduplication, which is the
 // responsibility of the caller.
 func (o *ObjectPool) Link(ctx context.Context, repo *gitalypb.Repository) error {
-	altPath, err := git.AlternatesPath(repo)
+	altPath, err := git.InfoAlternatesPath(repo)
 	if err != nil {
 		return err
 	}
@@ -90,7 +91,7 @@ func (o *ObjectPool) getRelativeObjectPath(repo *gitalypb.Repository) (string, e
 
 // LinkedToRepository tests if a repository is linked to an object pool
 func (o *ObjectPool) LinkedToRepository(repo *gitalypb.Repository) (bool, error) {
-	altPath, err := git.AlternatesPath(repo)
+	altPath, err := git.InfoAlternatesPath(repo)
 	if err != nil {
 		return false, err
 	}
@@ -124,7 +125,7 @@ func (o *ObjectPool) LinkedToRepository(repo *gitalypb.Repository) (bool, error)
 // It removes the remote from the object pool too,
 func (o *ObjectPool) Unlink(ctx context.Context, repo *gitalypb.Repository) error {
 	if !o.Exists() {
-		return nil
+		return errors.New("pool does not exist")
 	}
 
 	// We need to use removeRemote, and can't leverage `git config --remove-section`
@@ -136,12 +137,7 @@ func (o *ObjectPool) Unlink(ctx context.Context, repo *gitalypb.Repository) erro
 		}
 	}
 
-	altPath, err := git.AlternatesPath(repo)
-	if err != nil {
-		return err
-	}
-
-	return os.RemoveAll(altPath)
+	return nil
 }
 
 // Config options setting will leak the key value pairs in the logs. This makes
