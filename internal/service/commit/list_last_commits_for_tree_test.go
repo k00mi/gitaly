@@ -1,12 +1,18 @@
 package commit
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"io"
+	"strings"
 	"testing"
+	"unicode/utf8"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
 )
@@ -196,7 +202,8 @@ func TestSuccessfulListLastCommitsForTreeRequest(t *testing.T) {
 				for _, fetchedCommit := range commits {
 					expectedInfo := testCase.info[counter]
 
-					require.Equal(t, string(expectedInfo.path), string(fetchedCommit.Path))
+					require.Equal(t, string(expectedInfo.path), fetchedCommit.Path)
+					require.Equal(t, expectedInfo.path, fetchedCommit.PathBytes)
 					require.Equal(t, expectedInfo.id, fetchedCommit.Commit.Id)
 
 					counter++
@@ -290,4 +297,59 @@ func TestFailedListLastCommitsForTreeRequest(t *testing.T) {
 			testhelper.RequireGrpcError(t, err, testCase.code)
 		})
 	}
+}
+
+func TestNonUtf8ListLastCommitsForTreeRequest(t *testing.T) {
+	server, serverSockerPath := startTestServices(t)
+	defer server.Stop()
+
+	client, conn := newCommitServiceClient(t, serverSockerPath)
+	defer conn.Close()
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	// This is an arbitrary blob known to exist in the test repository
+	const blobID = "c60514b6d3d6bf4bec1030f70026e34dfbd69ad5"
+
+	nonUTF8Filename := "hello\x80world"
+	require.False(t, utf8.ValidString(nonUTF8Filename))
+
+	mktreeIn := strings.NewReader(fmt.Sprintf("100644 blob %s\t%s", blobID, nonUTF8Filename))
+	treeID := text.ChompBytes(testhelper.MustRunCommand(t, mktreeIn, "git", "-C", testRepoPath, "mktree"))
+
+	commitID := text.ChompBytes(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "commit-tree", treeID, "-m", "commit for non-utf8 path"))
+
+	request := &gitalypb.ListLastCommitsForTreeRequest{
+		Repository: testRepo,
+		Revision:   string(commitID),
+		Limit:      100,
+		Offset:     0,
+	}
+
+	stream, err := client.ListLastCommitsForTree(ctx, request)
+	require.NoError(t, err)
+
+	var nonUTF8FilenameFound bool
+	for {
+		fetchedCommits, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+
+		require.NoError(t, err)
+
+		commits := fetchedCommits.GetCommits()
+
+		for _, fetchedCommit := range commits {
+			if bytes.Equal(fetchedCommit.PathBytes, []byte(nonUTF8Filename)) {
+				nonUTF8FilenameFound = true
+			}
+			assert.Equal(t, InvalidUTF8PathPlaceholder, fetchedCommit.Path)
+		}
+	}
+
+	assert.True(t, nonUTF8FilenameFound)
 }

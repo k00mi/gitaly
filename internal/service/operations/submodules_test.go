@@ -74,8 +74,8 @@ func TestSuccessfulUserUpdateSubmoduleRequest(t *testing.T) {
 			parser := lstree.NewParser(bytes.NewReader(entry))
 			parsedEntry, err := parser.NextEntry()
 			require.NoError(t, err)
-			require.Equal(t, parsedEntry.Path, testCase.submodule)
-			require.Equal(t, parsedEntry.Oid, testCase.commitSha)
+			require.Equal(t, testCase.submodule, string(parsedEntry.Path))
+			require.Equal(t, testCase.commitSha, parsedEntry.Oid)
 		})
 	}
 }
