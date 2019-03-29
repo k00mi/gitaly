@@ -1,6 +1,7 @@
 package command
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -207,9 +209,10 @@ func New(ctx context.Context, cmd *exec.Cmd, stdin io.Reader, stdout, stderr io.
 		cmd.Stderr = stderr
 	} else {
 		// If we don't do something with cmd.Stderr, Git errors will be lost
-		command.logrusWriter = grpc_logrus.Extract(ctx).WriterLevel(log.InfoLevel)
+		command.logrusWriter = grpc_logrus.Extract(ctx).WriterLevel(log.ErrorLevel)
 		cmd.Stderr = command.logrusWriter
 	}
+	cmd.Stderr = escapeNewlineWriter(cmd.Stderr)
 
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("GitCommand: start %v: %v", cmd.Args, err)
@@ -242,6 +245,30 @@ func exportEnvironment(env []string) []string {
 	}
 
 	return env
+}
+
+func escapeNewlineWriter(outbound io.Writer) io.Writer {
+	r, w := io.Pipe()
+
+	go writeLines(outbound, r)
+
+	runtime.SetFinalizer(w, func(w *io.PipeWriter) {
+		w.Close()
+	})
+
+	return w
+}
+
+func writeLines(writer io.Writer, reader io.Reader) {
+	scanner := bufio.NewScanner(reader)
+
+	for scanner.Scan() {
+		writer.Write(scanner.Bytes())
+		writer.Write([]byte(`\n`))
+	}
+	if err := scanner.Err(); err != nil {
+		fmt.Printf("Error while reading from Writer: %s", err)
+	}
 }
 
 // This function should never be called directly, use Wait().
