@@ -81,25 +81,6 @@ module GitalyServer
       Gitaly::FindLicenseResponse.new(license_short_name: short_name || "")
     end
 
-    # TODO: remove after 11.8 because of https://gitlab.com/gitlab-org/gitaly/merge_requests/1026
-    def get_raw_changes(request, call)
-      repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
-
-      changes = begin
-                  repo
-                    .raw_changes_between(request.from_revision, request.to_revision)
-                    .map { |c| to_proto_raw_change(c) }
-                rescue ::Gitlab::Git::Repository::GitError => e
-                  raise GRPC::InvalidArgument.new(e.message)
-                end
-
-      Enumerator.new do |y|
-        changes.each_slice(100) do |batch|
-          y.yield Gitaly::GetRawChangesResponse.new(raw_changes: batch)
-        end
-      end
-    end
-
     private
 
     OPERATION_MAP = {
