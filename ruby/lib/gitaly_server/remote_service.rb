@@ -12,15 +12,6 @@ module GitalyServer
       Gitaly::AddRemoteResponse.new
     end
 
-    # TODO: remove in gitlab 11.9, this is implemented in Go now
-    def remove_remote(request, call)
-      repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
-
-      result = repo.remove_remote(request.name)
-
-      Gitaly::RemoveRemoteResponse.new(result: result)
-    end
-
     def fetch_internal_remote(request, call)
       repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
       remote_repo = Gitlab::Git::GitalyRemoteRepository.new(request.remote_repository, call)
