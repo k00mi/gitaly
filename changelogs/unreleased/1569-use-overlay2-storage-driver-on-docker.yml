@@ -1,5 +1,0 @@
----
-title: Always use overlay2 storage driver on Docker build
-merge_request: 1148
-author: Takuya Noguchi
-type: other

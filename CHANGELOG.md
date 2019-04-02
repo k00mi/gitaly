@@ -1,5 +1,28 @@
 # Gitaly changelog
 
+## v1.31.0
+
+#### Added
+- Accept Path option for GetArchive RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1142
+
+#### Changed
+- UnlinkRepositoryFromObjectPool: stop removing objects/info/alternates
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1151
+
+#### Other
+- Always use overlay2 storage driver on Docker build
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1148
+  Contributed by Takuya Noguchi
+- Remove unused Ruby implementation of GetRawChanges
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1169
+- Remove Ruby implementation of remove remote
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1164
+
+#### Removed
+- Drop support for Golang 1.10
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1149
+
 ## v1.30.0
 
 #### Added

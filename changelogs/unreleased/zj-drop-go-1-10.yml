@@ -1,5 +1,0 @@
----
-title: Drop support for Golang 1.10
-merge_request: 1149
-author:
-type: removed
