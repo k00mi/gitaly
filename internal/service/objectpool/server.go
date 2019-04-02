@@ -2,9 +2,9 @@ package objectpool
 
 import (
 	"context"
-	"errors"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
 type server struct{}
@@ -15,5 +15,5 @@ func NewServer() gitalypb.ObjectPoolServiceServer {
 }
 
 func (s *server) DisconnectGitAlternates(ctx context.Context, req *gitalypb.DisconnectGitAlternatesRequest) (*gitalypb.DisconnectGitAlternatesResponse, error) {
-	return nil, errors.New("not implemented yet")
+	return nil, helper.Unimplemented
 }

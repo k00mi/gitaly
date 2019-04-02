@@ -7,6 +7,7 @@ import (
 	"path"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
@@ -91,4 +92,22 @@ func (o *ObjectPool) Create(ctx context.Context, repo *gitalypb.Repository) (err
 // these are empty.
 func (o *ObjectPool) Remove(ctx context.Context) (err error) {
 	return os.RemoveAll(o.FullPath())
+}
+
+// Init will intiailize an empty pool repository
+// if one already exists, it will do nothing
+func (o *ObjectPool) Init(ctx context.Context) (err error) {
+	targetDir := o.FullPath()
+
+	if helper.IsGitDirectory(targetDir) {
+		return nil
+	}
+
+	initArgs := []string{"init", "--bare", targetDir}
+	cmd, err := git.CommandWithoutRepo(ctx, initArgs...)
+	if err != nil {
+		return err
+	}
+
+	return cmd.Wait()
 }
