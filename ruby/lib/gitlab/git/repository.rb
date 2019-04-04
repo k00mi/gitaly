@@ -848,32 +848,6 @@ module Gitlab
         sort_branches(branches, sort_by)
       end
 
-      def build_git_cmd(*args)
-        object_directories = alternate_object_directories.join(File::PATH_SEPARATOR)
-
-        env = { 'PWD' => path }
-        env['GIT_ALTERNATE_OBJECT_DIRECTORIES'] = object_directories if object_directories.present?
-
-        [
-          env,
-          ::Gitlab.config.git.bin_path,
-          *args,
-          { chdir: path }
-        ]
-      end
-
-      # TODO: remove after 11.8 because of https://gitlab.com/gitlab-org/gitaly/merge_requests/1026
-      def git_diff_cmd(old_rev, new_rev)
-        old_rev = old_rev == ::Gitlab::Git::BLANK_SHA ? ::Gitlab::Git::EMPTY_TREE_ID : old_rev
-
-        build_git_cmd('diff', old_rev, new_rev, '--raw')
-      end
-
-      def git_cat_file_cmd
-        format = '%(objectname) %(objectsize) %(rest)'
-        build_git_cmd('cat-file', "--batch-check=#{format}")
-      end
-
       def git_delete_refs(*ref_names)
         instructions = ref_names.map do |ref|
           "delete #{ref}\x00\x00"
@@ -994,10 +968,6 @@ module Gitlab
             false
           end
         end
-      end
-
-      def sha_from_ref(ref)
-        rev_parse_target(ref).oid
       end
 
       def gitlab_projects_error
