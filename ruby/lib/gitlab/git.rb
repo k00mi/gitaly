@@ -16,7 +16,6 @@ require_relative 'git_logger.rb'
 require_relative 'rails_logger.rb'
 require_relative 'gollum.rb'
 require_relative 'config.rb'
-require_relative 'version_info'
 
 dir = __dir__
 
@@ -122,14 +121,6 @@ module Gitlab
         return false if length < Gitlab::Git::Commit::MIN_SHA_LENGTH
 
         sha1[0, length] == sha2[0, length]
-      end
-    end
-
-    module Version
-      extend Gitlab::Git::Popen
-
-      def self.git_version
-        Gitlab::VersionInfo.parse(popen(%W(#{Gitlab.config.git.bin_path} --version), nil).first)
       end
     end
   end

@@ -103,19 +103,6 @@ module Gitlab
         @safe_message ||= message
       end
 
-      def created_at
-        committed_date
-      end
-
-      # Was this commit committed by a different person than the original author?
-      def different_committer?
-        author_name != committer_name || author_email != committer_email
-      end
-
-      def parent_id
-        parent_ids.first
-      end
-
       # Not to be called directly, but right now its used for tests and in old
       # migrations
       def rugged_diff_from_parent(options = {})
@@ -181,23 +168,6 @@ module Gitlab
 
       def merge_commit?
         parent_ids.size > 1
-      end
-
-      def tree_entry(path)
-        return unless path.present?
-
-        # We're only interested in metadata, so limit actual data to 1 byte
-        # since Gitaly doesn't support "send no data" option.
-        entry = @repository.gitaly_commit_client.tree_entry(id, path, 1)
-        return unless entry
-
-        # To be compatible with the rugged format
-        entry = entry.to_h
-        entry.delete(:data)
-        entry[:name] = File.basename(path)
-        entry[:type] = entry[:type].downcase
-
-        entry
       end
 
       def to_gitaly_commit
