@@ -551,3 +551,71 @@ func TestLoadGracefulRestartTimeout(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateInternalSocketDir(t *testing.T) {
+	defer func(internalSocketDir string) {
+		Config.InternalSocketDir = internalSocketDir
+	}(Config.InternalSocketDir)
+
+	// create a valid socket directory
+	tempDir, err := ioutil.TempDir("testdata", t.Name())
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	// create a symlinked socket directory
+	dirName := "internal_socket_dir"
+	validSocketDirSymlink := filepath.Join(tempDir, dirName)
+	tmpSocketDir, err := ioutil.TempDir(tempDir, "")
+	require.NoError(t, err)
+	tmpSocketDir, err = filepath.Abs(tmpSocketDir)
+	require.NoError(t, err)
+	require.NoError(t, os.Symlink(tmpSocketDir, validSocketDirSymlink))
+
+	// create a broken symlink
+	dirName = "internal_socket_dir_broken"
+	brokenSocketDirSymlink := filepath.Join(tempDir, dirName)
+	require.NoError(t, os.Symlink("/does/not/exist", brokenSocketDirSymlink))
+
+	testCases := []struct {
+		desc              string
+		internalSocketDir string
+		shouldError       bool
+	}{
+		{
+			desc:              "empty socket dir",
+			internalSocketDir: "",
+			shouldError:       false,
+		},
+		{
+			desc:              "non existing directory",
+			internalSocketDir: "/tmp/relative/path/to/nowhere",
+			shouldError:       true,
+		},
+		{
+			desc:              "valid socket directory",
+			internalSocketDir: tempDir,
+			shouldError:       false,
+		},
+		{
+			desc:              "valid symlinked directory",
+			internalSocketDir: validSocketDirSymlink,
+			shouldError:       false,
+		},
+		{
+			desc:              "broken symlinked directory",
+			internalSocketDir: brokenSocketDirSymlink,
+			shouldError:       true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			Config.InternalSocketDir = tc.internalSocketDir
+			if tc.shouldError {
+				assert.Error(t, validateInternalSocketDir())
+				return
+			}
+			assert.NoError(t, validateInternalSocketDir())
+		})
+	}
+}

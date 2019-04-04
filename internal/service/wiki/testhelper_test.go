@@ -2,6 +2,7 @@ package wiki
 
 import (
 	"bytes"
+	"io/ioutil"
 	"net"
 	"os"
 	"path"
@@ -10,6 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -29,18 +31,24 @@ type createWikiPageOpts struct {
 
 var (
 	mockPageContent = bytes.Repeat([]byte("Mock wiki page content"), 10000)
+	rubyServer      = &rubyserver.Server{}
 )
 
 func TestMain(m *testing.M) {
 	os.Exit(testMain(m))
 }
 
-var rubyServer = &rubyserver.Server{}
-
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
-	hooks.Override = "/does/not/exist"
+	tempDir, err := ioutil.TempDir("", "gitaly")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	hooks.Override = tempDir + "/hooks"
+	config.Config.InternalSocketDir = tempDir + "/sock"
 
 	if err := rubyServer.Start(); err != nil {
 		log.Fatal(err)

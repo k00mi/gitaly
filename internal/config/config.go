@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,6 +16,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/config/auth"
 	internallog "gitlab.com/gitlab-org/gitaly/internal/config/log"
 	"gitlab.com/gitlab-org/gitaly/internal/config/sentry"
+	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 )
 
 const (
@@ -49,6 +51,7 @@ type Cfg struct {
 	Concurrency                []Concurrency `toml:"concurrency"`
 	GracefulRestartTimeout     time.Duration
 	GracefulRestartTimeoutToml duration `toml:"graceful_restart_timeout"`
+	InternalSocketDir          string   `toml:"internal_socket_dir"`
 }
 
 // TLS configuration
@@ -146,6 +149,7 @@ func Validate() error {
 		validateShell(),
 		ConfigureRuby(),
 		validateBinDir(),
+		validateInternalSocketDir(),
 	} {
 		if err != nil {
 			return err
@@ -299,4 +303,39 @@ func validateToken() error {
 
 	log.Warn("Authentication is enabled but not enforced because transitioning=true. Gitaly will accept unauthenticated requests.")
 	return nil
+}
+
+func validateInternalSocketDir() error {
+	if Config.InternalSocketDir == "" {
+		return nil
+	}
+
+	dir := Config.InternalSocketDir
+
+	f, err := os.Stat(dir)
+	switch {
+	case err != nil:
+		return fmt.Errorf("InternalSocketDir: %s", err)
+	case !f.IsDir():
+		return fmt.Errorf("InternalSocketDir %s is not a directory", dir)
+	}
+
+	// To validate the socket can actually be created, we open and close a socket.
+	// Any error will be assumed persistent for when the gitaly-ruby sockets are created
+	// and thus fatal at boot time
+	b, err := text.RandomHex(4)
+	if err != nil {
+		return err
+	}
+
+	socketPath := filepath.Join(dir, fmt.Sprintf("test-%s.sock", b))
+	defer os.Remove(socketPath)
+
+	// Attempt to create an actual socket and not just a file to catch socket path length problems
+	l, err := net.Listen("unix", socketPath)
+	if err != nil {
+		return fmt.Errorf("socket could not be created in %s: %s", dir, err)
+	}
+
+	return l.Close()
 }
