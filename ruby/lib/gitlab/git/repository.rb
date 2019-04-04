@@ -260,55 +260,6 @@ module Gitlab
         false
       end
 
-      # TODO: remove after 11.8 because of https://gitlab.com/gitlab-org/gitaly/merge_requests/1026
-      def raw_changes_between(old_rev, new_rev)
-        @raw_changes_between ||= {}
-
-        @raw_changes_between[[old_rev, new_rev]] ||=
-          begin
-            return [] if new_rev.blank? || new_rev == Gitlab::Git::BLANK_SHA
-
-            result = []
-
-            Open3.popen3(*git_diff_cmd(old_rev, new_rev)) do |_stdin, stdout, _stderr, wait_thr|
-              cat_stdin, cat_stdout, cat_stderr, cat_wait_thr = Open3.popen3(*git_cat_file_cmd)
-
-              stdout.each_line do |line|
-                old_mode, new_mode, blob_id, rest = parse_raw_diff_line(line)
-                cat_stdin.puts("#{blob_id} #{rest}")
-                result << ::Gitlab::Git::RawDiffChange.new(cat_stdout.gets.chomp, old_mode, new_mode)
-              end
-
-              cat_stdin.close
-              cat_stdout.close
-              cat_stderr.close
-
-              raise ::Gitlab::Git::Repository::GitError, "Unabled to obtain changes between #{old_rev} and #{new_rev}" unless [cat_wait_thr, wait_thr].all? { |waiter| waiter.value&.success? }
-            end
-
-            result
-          end
-      rescue ArgumentError => e
-        raise Gitlab::Git::Repository::GitError, e.to_s
-      end
-
-      # TODO: remove after 11.8 because of https://gitlab.com/gitlab-org/gitaly/merge_requests/1026
-      def parse_raw_diff_line(line)
-        old_mode, new_mode, old_blob_id, new_blob_id, rest = line.split(/\s/, 5)
-
-        # If the last element got a value we should be good
-        raise ArgumentError, "Invalid diff line: #{line}" unless rest
-
-        old_mode.gsub!(/\A:/, '')
-        old_blob_id.gsub!(/[^\h]/, '')
-        new_blob_id.gsub!(/[^\h]/, '')
-
-        # We can't pass '0000000...' to `git cat-file` given it will not return info about the deleted file
-        blob_id = new_blob_id.match?(/\A0+\z/) ? old_blob_id : new_blob_id
-
-        [old_mode, new_mode, blob_id, rest]
-      end
-
       def add_tag(tag_name, user:, target:, message: nil)
         target_object = Ref.dereference_object(lookup(target))
         raise InvalidRef, "target not found: #{target}" unless target_object
