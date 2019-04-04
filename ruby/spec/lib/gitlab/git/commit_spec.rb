@@ -46,15 +46,12 @@ describe Gitlab::Git::Commit do
     it { expect(commit.id).to eq(rugged_commit.oid) }
     it { expect(commit.sha).to eq(rugged_commit.oid) }
     it { expect(commit.safe_message).to eq(rugged_commit.message) }
-    it { expect(commit.created_at).to eq(rugged_commit.author[:time]) }
     it { expect(commit.date).to eq(rugged_commit.committer[:time]) }
     it { expect(commit.author_email).to eq(author[:email]) }
     it { expect(commit.author_name).to eq(author[:name]) }
     it { expect(commit.committer_name).to eq(committer[:name]) }
     it { expect(commit.committer_email).to eq(committer[:email]) }
-    it { expect(commit.different_committer?).to be_truthy }
     it { expect(commit.parents).to eq(gitlab_parents) }
-    it { expect(commit.parent_id).to eq(parents.first.oid) }
     it { expect(commit.no_commit_message).to eq("--no commit message") }
   end
 
@@ -72,7 +69,6 @@ describe Gitlab::Git::Commit do
     it { expect(commit.id).to eq(id) }
     it { expect(commit.sha).to eq(id) }
     it { expect(commit.safe_message).to eq(body) }
-    it { expect(commit.created_at).to eq(Time.at(committer.date.seconds)) }
     it { expect(commit.author_email).to eq(author.email) }
     it { expect(commit.author_name).to eq(author.name) }
     it { expect(commit.committer_name).to eq(committer.name) }

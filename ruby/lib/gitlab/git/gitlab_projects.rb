@@ -37,10 +37,6 @@ module Gitlab
         @output = StringIO.new
       end
 
-      def shard_name
-        raise "don't use shard_name in gitaly-ruby"
-      end
-
       def shard_path
         @shard_path
       end
