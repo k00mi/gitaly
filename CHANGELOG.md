@@ -1,5 +1,15 @@
 # Gitaly changelog
 
+## v1.32.0
+
+#### Fixed
+- Remove test dependency in main binaries
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1171
+
+#### Other
+- Vendor gitlab-shell at 433cc96551a6d1f1621f9e10
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1175
+
 ## v1.31.0
 
 #### Added
