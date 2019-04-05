@@ -1,5 +1,0 @@
----
-title: Move gitlab-shell out of ruby/vendor
-merge_request: 1173
-author:
-type: changed

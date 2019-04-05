@@ -1,5 +1,31 @@
 # Gitaly changelog
 
+## v1.33.0
+
+#### Added
+- Zero downtime deployment
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1133
+
+#### Changed
+- Move gitlab-shell out of ruby/vendor
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1173
+
+#### Other
+- Bump Ruby gitaly-proto to v1.19.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1186
+- Bump sentry-raven to 2.9.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1183
+- Bump gitlab-markup to 1.7.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1182
+
+#### Performance
+- Improve GetBlobs performance for fetching lots of files
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1165
+
+#### Security
+- Bump activesupport to 5.0.2.1
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1185
+
 ## v1.32.0
 
 #### Fixed
