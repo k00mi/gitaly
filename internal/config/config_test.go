@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,7 +42,10 @@ func TestLoadEmptyConfig(t *testing.T) {
 	err := Load(tmpFile)
 	assert.NoError(t, err)
 
-	assert.Equal(t, config{}, Config)
+	defaultConf := config{}
+	defaultConf.setDefaults()
+
+	assert.Equal(t, defaultConf, Config)
 }
 
 func TestLoadStorage(t *testing.T) {
@@ -53,11 +57,14 @@ path = "/tmp"`)
 	assert.NoError(t, err)
 
 	if assert.Equal(t, 1, len(Config.Storages), "Expected one (1) storage") {
-		assert.Equal(t, config{
+		expectedConf := config{
 			Storages: []Storage{
 				{Name: "default", Path: "/tmp"},
 			},
-		}, Config)
+		}
+		expectedConf.setDefaults()
+
+		assert.Equal(t, expectedConf, Config)
 	}
 }
 
@@ -74,12 +81,15 @@ path="/tmp/repos2"`)
 	assert.NoError(t, err)
 
 	if assert.Equal(t, 2, len(Config.Storages), "Expected one (1) storage") {
-		assert.Equal(t, config{
+		expectedConf := config{
 			Storages: []Storage{
 				{Name: "default", Path: "/tmp/repos1"},
 				{Name: "other", Path: "/tmp/repos2"},
 			},
-		}, Config)
+		}
+		expectedConf.setDefaults()
+
+		assert.Equal(t, expectedConf, Config)
 	}
 }
 
@@ -487,6 +497,34 @@ func TestValidateListeners(t *testing.T) {
 			} else {
 				require.Error(t, err)
 			}
+		})
+	}
+}
+
+func TestLoadGracefulRestartTimeout(t *testing.T) {
+	tests := []struct {
+		name     string
+		config   string
+		expected time.Duration
+	}{
+		{
+			name:     "default value",
+			expected: 1 * time.Minute,
+		},
+		{
+			name:     "8m03s",
+			config:   `graceful_restart_timeout = "8m03s"`,
+			expected: 8*time.Minute + 3*time.Second,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			tmpFile := configFileReader(test.config)
+
+			err := Load(tmpFile)
+			assert.NoError(t, err)
+
+			assert.Equal(t, test.expected, Config.GracefulRestartTimeout)
 		})
 	}
 }

@@ -7,10 +7,18 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
+)
+
+const (
+	// EnvPidFile is the name of the environment variable containing the pid file path
+	EnvPidFile = "GITALY_PID_FILE"
+	// EnvUpgradesEnabled is an environment variable that when defined gitaly must enable graceful upgrades on SIGHUP
+	EnvUpgradesEnabled = "GITALY_UPGRADES_ENABLED"
 )
 
 var (
@@ -19,20 +27,22 @@ var (
 )
 
 type config struct {
-	SocketPath           string        `toml:"socket_path" split_words:"true"`
-	ListenAddr           string        `toml:"listen_addr" split_words:"true"`
-	TLSListenAddr        string        `toml:"tls_listen_addr" split_words:"true"`
-	PrometheusListenAddr string        `toml:"prometheus_listen_addr" split_words:"true"`
-	BinDir               string        `toml:"bin_dir"`
-	Git                  Git           `toml:"git" envconfig:"git"`
-	Storages             []Storage     `toml:"storage" envconfig:"storage"`
-	Logging              Logging       `toml:"logging" envconfig:"logging"`
-	Prometheus           Prometheus    `toml:"prometheus"`
-	Auth                 Auth          `toml:"auth"`
-	TLS                  TLS           `toml:"tls"`
-	Ruby                 Ruby          `toml:"gitaly-ruby"`
-	GitlabShell          GitlabShell   `toml:"gitlab-shell"`
-	Concurrency          []Concurrency `toml:"concurrency"`
+	SocketPath                 string        `toml:"socket_path" split_words:"true"`
+	ListenAddr                 string        `toml:"listen_addr" split_words:"true"`
+	TLSListenAddr              string        `toml:"tls_listen_addr" split_words:"true"`
+	PrometheusListenAddr       string        `toml:"prometheus_listen_addr" split_words:"true"`
+	BinDir                     string        `toml:"bin_dir"`
+	Git                        Git           `toml:"git" envconfig:"git"`
+	Storages                   []Storage     `toml:"storage" envconfig:"storage"`
+	Logging                    Logging       `toml:"logging" envconfig:"logging"`
+	Prometheus                 Prometheus    `toml:"prometheus"`
+	Auth                       Auth          `toml:"auth"`
+	TLS                        TLS           `toml:"tls"`
+	Ruby                       Ruby          `toml:"gitaly-ruby"`
+	GitlabShell                GitlabShell   `toml:"gitlab-shell"`
+	Concurrency                []Concurrency `toml:"concurrency"`
+	GracefulRestartTimeout     time.Duration
+	GracefulRestartTimeoutToml duration `toml:"graceful_restart_timeout"`
 }
 
 // TLS configuration
@@ -100,6 +110,8 @@ func Load(file io.Reader) error {
 		return fmt.Errorf("envconfig: %v", err)
 	}
 
+	Config.setDefaults()
+
 	return nil
 }
 
@@ -119,6 +131,13 @@ func Validate() error {
 		}
 	}
 	return nil
+}
+
+func (c *config) setDefaults() {
+	c.GracefulRestartTimeout = c.GracefulRestartTimeoutToml.Duration
+	if c.GracefulRestartTimeout == 0 {
+		c.GracefulRestartTimeout = 1 * time.Minute
+	}
 }
 
 func validateListeners() error {
