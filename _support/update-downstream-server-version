@@ -93,7 +93,7 @@ def add_changelog(project_id, tag_version, merge_request_number)
   changelog_commit = {
     "branch": "gitaly-version-#{tag_version}",
     "start_branch": "gitaly-version-#{tag_version}",
-    "commit_message": "Add changelog [skip ci]",
+    "commit_message": "Add changelog entry",
     "actions": [{
       "action": "create",
       "file_path": "changelogs/unreleased/gitaly-version-#{tag_version}.yml",
