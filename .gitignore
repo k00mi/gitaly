@@ -2,6 +2,8 @@
 /gitaly
 cmd/gitaly-ssh/gitaly-ssh
 /gitaly-ssh
+cmd/gitaly-wrapper/gitaly-wrapper
+/gitaly-wrapper
 **/testdata/gitaly-libexec/
 /*.deb
 /_support/package/bin
@@ -17,3 +19,4 @@ cmd/gitaly-ssh/gitaly-ssh
 git-env
 /gitaly-debug
 /praefect
+gitaly.pid

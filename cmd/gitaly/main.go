@@ -3,20 +3,15 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
-	"gitlab.com/gitlab-org/gitaly/internal/connectioncounter"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/linguist"
-	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/server"
 	"gitlab.com/gitlab-org/gitaly/internal/tempdir"
 	"gitlab.com/gitlab-org/gitaly/internal/version"
@@ -81,6 +76,14 @@ func main() {
 	flag.Usage = flagUsage
 	flag.Parse()
 
+	// gitaly-wrapper is supposed to set config.EnvUpgradesEnabled in order to enable graceful upgrades
+	_, isWrapped := os.LookupEnv(config.EnvUpgradesEnabled)
+	b, err := newBootstrap(os.Getenv(config.EnvPidFile), isWrapped)
+	if err != nil {
+		log.WithError(err).Fatal("init bootstrap")
+	}
+	defer b.Stop()
+
 	// If invoked with -version
 	if *flagVersion {
 		fmt.Println(version.GetVersionString())
@@ -108,103 +111,30 @@ func main() {
 
 	tempdir.StartCleaning()
 
-	var insecureListeners []net.Listener
-	var secureListeners []net.Listener
-
-	if socketPath := config.Config.SocketPath; socketPath != "" {
-		l, err := createUnixListener(socketPath)
-		if err != nil {
-			log.WithError(err).Fatal("configure unix listener")
-		}
-		log.WithField("address", socketPath).Info("listening on unix socket")
-		insecureListeners = append(insecureListeners, l)
-	}
-
-	if addr := config.Config.ListenAddr; addr != "" {
-		l, err := net.Listen("tcp", addr)
-		if err != nil {
-			log.WithError(err).Fatal("configure tcp listener")
-		}
-
-		log.WithField("address", addr).Info("listening at tcp address")
-		insecureListeners = append(insecureListeners, connectioncounter.New("tcp", l))
-	}
-
-	if addr := config.Config.TLSListenAddr; addr != "" {
-		tlsListener, err := net.Listen("tcp", addr)
-		if err != nil {
-			log.WithError(err).Fatal("configure tls listener")
-		}
-
-		secureListeners = append(secureListeners, connectioncounter.New("tls", tlsListener))
+	if err = b.listen(); err != nil {
+		log.WithError(err).Fatal("bootstrap failed")
 	}
 
 	if config.Config.PrometheusListenAddr != "" {
-		log.WithField("address", config.Config.PrometheusListenAddr).Info("Starting prometheus listener")
+		l, err := b.prometheusListener()
+		if err != nil {
+			log.WithError(err).Fatal("configure prometheus listener")
+		}
+
 		promMux := http.NewServeMux()
 		promMux.Handle("/metrics", promhttp.Handler())
 
 		server.AddPprofHandlers(promMux)
 
 		go func() {
-			http.ListenAndServe(config.Config.PrometheusListenAddr, promMux)
+			err = http.Serve(l, promMux)
+			if err != nil {
+				log.WithError(err).Fatal("Unable to serve prometheus")
+			}
 		}()
 	}
 
-	log.WithError(run(insecureListeners, secureListeners)).Fatal("shutting down")
-}
+	b.run()
 
-func createUnixListener(socketPath string) (net.Listener, error) {
-	if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
-		return nil, err
-	}
-	l, err := net.Listen("unix", socketPath)
-	return connectioncounter.New("unix", l), err
-}
-
-// Inside here we can use deferred functions. This is needed because
-// log.Fatal bypasses deferred functions.
-func run(insecureListeners, secureListeners []net.Listener) error {
-	signals := []os.Signal{syscall.SIGTERM, syscall.SIGINT}
-	termCh := make(chan os.Signal, len(signals))
-	signal.Notify(termCh, signals...)
-
-	ruby, err := rubyserver.Start()
-	if err != nil {
-		return err
-	}
-	defer ruby.Stop()
-
-	serverErrors := make(chan error, len(insecureListeners)+len(secureListeners))
-	if len(insecureListeners) > 0 {
-		insecureServer := server.NewInsecure(ruby)
-		defer insecureServer.Stop()
-
-		for _, listener := range insecureListeners {
-			// Must pass the listener as a function argument because there is a race
-			// between 'go' and 'for'.
-			go func(l net.Listener) {
-				serverErrors <- insecureServer.Serve(l)
-			}(listener)
-		}
-	}
-
-	if len(secureListeners) > 0 {
-		secureServer := server.NewSecure(ruby)
-		defer secureServer.Stop()
-
-		for _, listener := range secureListeners {
-			go func(l net.Listener) {
-				serverErrors <- secureServer.Serve(l)
-			}(listener)
-		}
-	}
-
-	select {
-	case s := <-termCh:
-		err = fmt.Errorf("received signal %q", s)
-	case err = <-serverErrors:
-	}
-
-	return err
+	log.Fatal("shutting down")
 }
