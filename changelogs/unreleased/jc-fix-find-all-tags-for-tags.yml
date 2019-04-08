@@ -1,0 +1,5 @@
+---
+title: Fix FindAllTags to dereference tags that point to other tags
+merge_request: 1193
+author:
+type: fixed
