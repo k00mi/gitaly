@@ -23,3 +23,7 @@ means that Gitaly is not highly available. How this will be solved is described
 [in the HA design document](doc/design_ha.md)
 
 For configuration please read [praefects configuration documentation](doc/configuration/praefect.md).
+
+#### Technical explanations
+
+- [Delta Islands](doc/delta_islands.md)
