@@ -75,20 +75,34 @@ func configure() (config.Config, error) {
 }
 
 func run(listeners []net.Listener, conf config.Config) error {
-	srv := praefect.NewServer(nil, logger)
+	var (
+		// top level server dependencies
+		coordinator = praefect.NewCoordinator(logger, conf.PrimaryServer.Name)
+		datastore   = praefect.NewMemoryDatastore(conf, time.Now())
+		repl        = praefect.NewReplMgr("default", logger, datastore, coordinator, praefect.WithWhitelist(conf.Whitelist))
+		srv         = praefect.NewServer(coordinator, repl, nil, logger)
 
-	signals := []os.Signal{syscall.SIGTERM, syscall.SIGINT}
-	termCh := make(chan os.Signal, len(signals))
+		// signal related
+		signals      = []os.Signal{syscall.SIGTERM, syscall.SIGINT}
+		termCh       = make(chan os.Signal, len(signals))
+		serverErrors = make(chan error, 1)
+	)
+
 	signal.Notify(termCh, signals...)
-
-	serverErrors := make(chan error, 1)
 
 	for _, l := range listeners {
 		go func(lis net.Listener) { serverErrors <- srv.Start(lis) }(l)
 	}
 
-	for _, gitaly := range conf.GitalyServers {
-		srv.RegisterNode(gitaly.Name, gitaly.ListenAddr)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() { serverErrors <- repl.ProcessBacklog(ctx) }()
+
+	allBackendServers := append(conf.SecondaryServers, conf.PrimaryServer)
+
+	for _, gitaly := range allBackendServers {
+		coordinator.RegisterNode(gitaly.Name, gitaly.ListenAddr)
 
 		logger.WithField("gitaly listen addr", gitaly.ListenAddr).Info("registered gitaly node")
 	}
@@ -97,6 +111,7 @@ func run(listeners []net.Listener, conf config.Config) error {
 	select {
 	case s := <-termCh:
 		logger.WithField("signal", s).Warn("received signal, shutting down gracefully")
+		cancel() // cancels the replicator job processing
 
 		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 		if shutdownErr := srv.Shutdown(ctx); shutdownErr != nil {

@@ -10,12 +10,18 @@ import (
 
 // Config is a container for everything found in the TOML config file
 type Config struct {
-	ListenAddr    string          `toml:"listen_addr" split_words:"true"`
-	SocketPath    string          `toml:"socket_path" split_words:"true"`
-	GitalyServers []*GitalyServer `toml:"gitaly_server", split_words:"true"`
+	ListenAddr string `toml:"listen_addr"`
+	SocketPath string `toml:"socket_path"`
+
+	PrimaryServer    *GitalyServer   `toml:"primary_server"`
+	SecondaryServers []*GitalyServer `toml:"secondary_server"`
+
+	// Whitelist is a list of relative project paths (paths comprised of project
+	// hashes) that are permitted to use high availability features
+	Whitelist []string `toml:"whitelist"`
 
 	Logging              config.Logging `toml:"logging"`
-	PrometheusListenAddr string         `toml:"prometheus_listen_addr", split_words:"true"`
+	PrometheusListenAddr string         `toml:"prometheus_listen_addr"`
 }
 
 // GitalyServer allows configuring the servers that RPCs are proxied to
@@ -39,10 +45,12 @@ func FromFile(filePath string) (Config, error) {
 
 var (
 	errNoListener          = errors.New("no listen address or socket path configured")
-	errNoGitalyServers     = errors.New("no gitaly backends configured")
+	errNoGitalyServers     = errors.New("no primary gitaly backends configured")
 	errDuplicateGitalyAddr = errors.New("gitaly listen addresses are not unique")
 	errGitalyWithoutName   = errors.New("all gitaly servers must have a name")
 )
+
+var emptyServer = &GitalyServer{}
 
 // Validate establishes if the config is valid
 func (c Config) Validate() error {
@@ -50,12 +58,12 @@ func (c Config) Validate() error {
 		return errNoListener
 	}
 
-	if len(c.GitalyServers) == 0 {
+	if c.PrimaryServer == nil || c.PrimaryServer == emptyServer {
 		return errNoGitalyServers
 	}
 
-	listenAddrs := make(map[string]bool, len(c.GitalyServers))
-	for _, gitaly := range c.GitalyServers {
+	listenAddrs := make(map[string]bool, len(c.SecondaryServers)+1)
+	for _, gitaly := range append(c.SecondaryServers, c.PrimaryServer) {
 		if gitaly.Name == "" {
 			return errGitalyWithoutName
 		}
