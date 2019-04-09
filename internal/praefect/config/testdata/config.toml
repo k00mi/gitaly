@@ -1,0 +1,22 @@
+listen_addr = ""
+socket_path = ""
+whitelist = ["abcd1234", "edfg5678"]
+prometheus_listen_addr = ""
+
+[primary_server]
+  name = "default"
+  listen_addr = "tcp://gitaly-primary.example.com"
+
+[[secondary_server]]
+  name = "default"
+  listen_addr = "tcp://gitaly-backup1.example.com"
+
+[[secondary_server]]
+  name = "backup"
+  listen_addr = "tcp://gitaly-backup2.example.com"
+
+[logging]
+  Format = ""
+  sentry_dsn = ""
+  ruby_sentry_dsn = ""
+  level = ""

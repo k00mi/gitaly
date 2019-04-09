@@ -8,10 +8,11 @@ import (
 	"time"
 
 	"github.com/mwitkow/grpc-proxy/proxy"
-	"github.com/stretchr/testify/assert"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/mock"
 	"google.golang.org/grpc"
 )
@@ -44,7 +45,25 @@ func TestServerSimpleUnaryUnary(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			prf := praefect.NewServer(nil, testLogger{t})
+			const (
+				storagePrimary = "default"
+				storageBackup  = "backup"
+			)
+
+			coordinator := praefect.NewCoordinator(logrus.New(), storagePrimary)
+			datastore := praefect.NewMemoryDatastore(config.Config{}, time.Now())
+			replmgr := praefect.NewReplMgr(
+				storagePrimary,
+				logrus.New(),
+				datastore,
+				coordinator,
+			)
+			prf := praefect.NewServer(
+				coordinator,
+				replmgr,
+				nil,
+				logrus.New(),
+			)
 
 			listener, port := listenAvailPort(t)
 			t.Logf("proxy listening on port %d", port)
@@ -61,10 +80,12 @@ func TestServerSimpleUnaryUnary(t *testing.T) {
 			defer cc.Close()
 			cli := mock.NewSimpleServiceClient(cc)
 
-			backend, cleanup := newMockDownstream(t, tt.callback)
-			defer cleanup() // clean up mock downstream server resources
+			for _, replica := range []string{storagePrimary, storageBackup} {
+				backend, cleanup := newMockDownstream(t, tt.callback)
+				defer cleanup() // clean up mock downstream server resources
 
-			prf.RegisterNode("test", backend)
+				coordinator.RegisterNode(replica, backend)
+			}
 
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 			defer cancel()
@@ -86,17 +107,6 @@ func callbackIncrement(_ context.Context, req *mock.SimpleRequest) (*mock.Simple
 	return &mock.SimpleResponse{
 		Value: req.Value + 1,
 	}, nil
-}
-
-func TestRegisteringSecondStorageLocation(t *testing.T) {
-	prf := praefect.NewServer(nil, testLogger{t})
-
-	mCli, cleanup := newMockDownstream(t, nil)
-	defer cleanup() // clean up mock downstream server resources
-
-	assert.NoError(t, prf.RegisterNode("1", mCli))
-	assert.Error(t, prf.RegisterNode("2", mCli))
-
 }
 
 func listenAvailPort(tb testing.TB) (net.Listener, int) {
@@ -124,14 +134,6 @@ func dialLocalPort(tb testing.TB, port int, backend bool) *grpc.ClientConn {
 	require.NoError(tb, err)
 
 	return cc
-}
-
-type testLogger struct {
-	testing.TB
-}
-
-func (tl testLogger) Debugf(format string, args ...interface{}) {
-	tl.TB.Logf(format, args...)
 }
 
 // initializes and returns a client to downstream server, downstream server, and cleanup function
