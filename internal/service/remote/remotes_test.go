@@ -270,3 +270,152 @@ func TestFailedFindRemoteRepository(t *testing.T) {
 		require.Equal(t, tc.exists, resp.GetExists(), tc.description)
 	}
 }
+
+func TestListDifferentPushUrlRemote(t *testing.T) {
+	server, serverSocketPath := runRemoteServiceServer(t)
+	defer server.Stop()
+
+	client, conn := NewRemoteClient(t, serverSocketPath)
+	defer conn.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	client.RemoveRemote(ctx, &gitalypb.RemoveRemoteRequest{
+		Repository: testRepo,
+		Name:       "origin",
+	})
+
+	branchName := "my-remote"
+	fetchURL := "http://my-repo.git"
+	pushURL := "http://my-other-repo.git"
+
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "remote", "add", branchName, fetchURL)
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "remote", "set-url", "--push", branchName, pushURL)
+
+	testCases := []*gitalypb.ListRemotesResponse_Remote{
+		{
+			Name:     branchName,
+			FetchUrl: fetchURL,
+			PushUrl:  pushURL,
+		},
+	}
+
+	request := &gitalypb.ListRemotesRequest{Repository: testRepo}
+
+	resp, err := client.ListRemotes(ctx, request)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	receivedRemotes := consumeListRemotesResponse(t, resp)
+	require.NoError(t, err)
+
+	require.Len(t, receivedRemotes, len(testCases))
+	require.ElementsMatch(t, testCases, receivedRemotes)
+
+}
+
+func TestListRemotes(t *testing.T) {
+	server, serverSocketPath := runRemoteServiceServer(t)
+	defer server.Stop()
+
+	client, conn := NewRemoteClient(t, serverSocketPath)
+	defer conn.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	repoWithSingleRemote, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	repoWithMultipleRemotes, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	repoWithEmptyRemote, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	singleRemote := []*gitalypb.ListRemotesResponse_Remote{
+		{Name: "my-remote", FetchUrl: "http://my-repo.git", PushUrl: "http://my-repo.git"},
+	}
+
+	multipleRemotes := []*gitalypb.ListRemotesResponse_Remote{
+		{Name: "my-other-remote", FetchUrl: "johndoe@host:my-new-repo.git", PushUrl: "johndoe@host:my-new-repo.git"},
+		{Name: "my-remote", FetchUrl: "http://my-repo.git", PushUrl: "http://my-repo.git"},
+	}
+
+	testCases := []struct {
+		description string
+		repository  *gitalypb.Repository
+		remotes     []*gitalypb.ListRemotesResponse_Remote
+	}{
+		{
+			description: "empty remote",
+			repository:  repoWithEmptyRemote,
+			remotes:     []*gitalypb.ListRemotesResponse_Remote{},
+		},
+		{
+			description: "single remote",
+			repository:  repoWithSingleRemote,
+			remotes:     singleRemote,
+		},
+		{
+			description: "multiple remotes",
+			repository:  repoWithMultipleRemotes,
+			remotes:     multipleRemotes,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			client.RemoveRemote(ctx, &gitalypb.RemoveRemoteRequest{
+				Repository: tc.repository,
+				Name:       "origin",
+			})
+
+			for _, r := range tc.remotes {
+				request := &gitalypb.AddRemoteRequest{
+					Repository: tc.repository,
+					Name:       r.Name,
+					Url:        r.FetchUrl,
+				}
+
+				_, err := client.AddRemote(ctx, request)
+				require.NoError(t, err)
+			}
+
+			request := &gitalypb.ListRemotesRequest{Repository: tc.repository}
+
+			resp, err := client.ListRemotes(ctx, request)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			receivedRemotes := consumeListRemotesResponse(t, resp)
+			require.NoError(t, err)
+
+			require.Len(t, receivedRemotes, len(tc.remotes))
+			require.ElementsMatch(t, tc.remotes, receivedRemotes)
+		})
+	}
+
+}
+
+func consumeListRemotesResponse(t *testing.T, l gitalypb.RemoteService_ListRemotesClient) []*gitalypb.ListRemotesResponse_Remote {
+	receivedRemotes := []*gitalypb.ListRemotesResponse_Remote{}
+	for {
+		resp, err := l.Recv()
+		if err == io.EOF {
+			break
+		}
+
+		require.NoError(t, err)
+
+		receivedRemotes = append(receivedRemotes, resp.GetRemotes()...)
+	}
+
+	return receivedRemotes
+}

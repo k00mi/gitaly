@@ -1,17 +1,19 @@
 package remote
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
 	"strings"
 
+	"gitlab.com/gitlab-org/gitaly/internal/git/remote"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
-	"gitlab.com/gitlab-org/gitaly/internal/git/remote"
+	"gitlab.com/gitlab-org/gitaly/internal/helper/chunk"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -102,3 +104,79 @@ func validateRemoveRemoteRequest(req *gitalypb.RemoveRemoteRequest) error {
 
 	return nil
 }
+
+func (s *server) ListRemotes(req *gitalypb.ListRemotesRequest, stream gitalypb.RemoteService_ListRemotesServer) error {
+	repo := req.GetRepository()
+
+	ctx := stream.Context()
+	cmd, err := git.Command(ctx, repo, "remote", "-v")
+	if err != nil {
+		return err
+	}
+
+	scanner := bufio.NewScanner(cmd)
+	remotesMap := make(map[string]*gitalypb.ListRemotesResponse_Remote)
+
+	for scanner.Scan() {
+		text := scanner.Text()
+		splitLine := strings.Fields(text)
+		if len(splitLine) != 3 {
+			continue
+		}
+
+		remote := &gitalypb.ListRemotesResponse_Remote{Name: splitLine[0]}
+		if splitLine[2] == "(fetch)" {
+			remote.FetchUrl = splitLine[1]
+		} else if splitLine[2] == "(push)" {
+			remote.PushUrl = splitLine[1]
+		}
+
+		oldRemote := remotesMap[splitLine[0]]
+		remotesMap[splitLine[0]] = mergeGitalyRemote(oldRemote, remote)
+	}
+
+	sender := chunk.New(&listRemotesSender{stream: stream})
+	for _, remote := range remotesMap {
+		if err := sender.Send(remote); err != nil {
+			return err
+		}
+	}
+
+	return sender.Flush()
+}
+
+func mergeGitalyRemote(oldRemote *gitalypb.ListRemotesResponse_Remote, newRemote *gitalypb.ListRemotesResponse_Remote) *gitalypb.ListRemotesResponse_Remote {
+	if oldRemote == nil {
+		return &gitalypb.ListRemotesResponse_Remote{Name: newRemote.Name, FetchUrl: newRemote.FetchUrl, PushUrl: newRemote.PushUrl}
+	}
+
+	newRemoteInstance := &gitalypb.ListRemotesResponse_Remote{Name: oldRemote.Name, FetchUrl: oldRemote.FetchUrl, PushUrl: oldRemote.PushUrl}
+	if newRemote.Name != "" {
+		newRemoteInstance.Name = newRemote.Name
+	}
+
+	if newRemote.PushUrl != "" {
+		newRemoteInstance.PushUrl = newRemote.PushUrl
+	}
+
+	if newRemote.FetchUrl != "" {
+		newRemoteInstance.FetchUrl = newRemote.PushUrl
+	}
+
+	return newRemoteInstance
+}
+
+type listRemotesSender struct {
+	stream  gitalypb.RemoteService_ListRemotesServer
+	remotes []*gitalypb.ListRemotesResponse_Remote
+}
+
+func (l *listRemotesSender) Append(it chunk.Item) {
+	l.remotes = append(l.remotes, it.(*gitalypb.ListRemotesResponse_Remote))
+}
+
+func (l *listRemotesSender) Send() error {
+	return l.stream.Send(&gitalypb.ListRemotesResponse{Remotes: l.remotes})
+}
+
+func (l *listRemotesSender) Reset() { l.remotes = nil }
