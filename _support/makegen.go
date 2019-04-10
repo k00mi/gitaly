@@ -437,7 +437,7 @@ format: {{ .GoImports }}
 .PHONY: staticcheck
 staticcheck: {{ .StaticCheck }}
 	# staticcheck
-	@cd {{ .SourceDir }} && {{ .StaticCheck }} -tags "$(BUILD_TAGS)" {{ join .AllPackages " " }}
+	@cd {{ .SourceDir }} && {{ .StaticCheck }} -tags "$(BUILD_TAGS) static" {{ join .AllPackages " " }}
 
 # Install staticcheck
 {{ .StaticCheck }}:
