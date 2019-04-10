@@ -14,7 +14,7 @@ import (
 func buildGitRemote() {
 	// Build the test-binary that we need
 	os.Remove("gitaly-remote")
-	testhelper.MustRunCommand(nil, nil, "go", "build", "-tags", "static", "gitlab.com/gitlab-org/gitaly/cmd/gitaly-remote")
+	testhelper.MustRunCommand(nil, nil, "go", "build", "-tags", "static gitaly_remote", "gitlab.com/gitlab-org/gitaly/cmd/gitaly-remote")
 }
 
 func TestAddRemote(t *testing.T) {

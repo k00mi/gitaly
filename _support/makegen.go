@@ -114,6 +114,10 @@ func (gm *gitalyMake) GitTestRepo() string {
 	return filepath.Join(gm.TestRepoStoragePath(), "gitlab-git-test.git")
 }
 
+func (gm *gitalyMake) GitalyRemotePackage() string {
+	return filepath.Join(gm.Pkg(), "cmd", "gitaly-remote")
+}
+
 func (gm *gitalyMake) CommandPackages() []string {
 	if len(gm.commandPackages) > 0 {
 		return gm.commandPackages
@@ -125,6 +129,10 @@ func (gm *gitalyMake) CommandPackages() []string {
 	}
 
 	for _, dir := range entries {
+		//Do not build gitaly-remote by default
+		if dir.Name() == "gitaly-remote" {
+			continue
+		}
 		if !dir.IsDir() {
 			continue
 		}
@@ -246,6 +254,10 @@ func (gm *gitalyMake) AllPackages() []string {
 
 	var pkgs []string
 	for k := range pkgMap {
+		//Do not build gitaly-remote by default
+		if k == "gitlab.com/gitlab-org/gitaly/cmd/gitaly-remote" {
+			continue
+		}
 		pkgs = append(pkgs, k)
 	}
 
@@ -293,10 +305,18 @@ all: build
 
 	touch $@
 
+.PHONY: build-gitaly-remote
+build-gitaly-remote: {{ .Git2GoVendorDir }}/.ok
+	cd {{ .SourceDir }} && go install {{ .GoLdFlags }} -tags "$(BUILD_TAGS) static" {{ .GitalyRemotePackage }}
+
+.PHONY: test-gitaly-remote
+test-gitaly-remote: prepare-tests {{ .Git2GoVendorDir }}/.ok
+	@go test -tags "$(BUILD_TAGS) static" -count=1 {{ .GitalyRemotePackage }}
+
 .PHONY: build
-build: ../.ruby-bundle {{ .Git2GoVendorDir }}/.ok
+build: ../.ruby-bundle
 	# go install
-	@cd {{ .SourceDir }} && go install {{ .GoLdFlags }} -tags "$(BUILD_TAGS) static" {{ join .CommandPackages " " }}
+	@cd {{ .SourceDir }} && go install {{ .GoLdFlags }} -tags "$(BUILD_TAGS)" {{ join .CommandPackages " " }}
 
 # This file is used by Omnibus and CNG to skip the "bundle install"
 # step. Both Omnibus and CNG assume it is in the Gitaly root, not in
@@ -366,16 +386,16 @@ prepare-tests: {{ .TestRepo }} {{ .GitTestRepo }} ../.ruby-bundle
 test: test-go rspec rspec-gitlab-shell
 
 .PHONY: test-go 
-test-go: prepare-tests {{ .Git2GoVendorDir }}/.ok
-	@go test -tags "$(BUILD_TAGS) static" -count=1 {{ join .AllPackages " " }} # count=1 bypasses go 1.10 test caching
+test-go: prepare-tests
+	@go test -tags "$(BUILD_TAGS)" -count=1 {{ join .AllPackages " " }} # count=1 bypasses go 1.10 test caching
 
 .PHONY: test-with-proxies
 test-with-proxies: prepare-tests
 	@http_proxy=http://invalid https_proxy=https://invalid go test -tags "$(BUILD_TAGS)" -count=1  {{ .Pkg }}/internal/rubyserver/
 
 .PHONY: race-go
-race-go: prepare-tests {{ .Git2GoVendorDir }}/.ok
-	@go test -tags "$(BUILD_TAGS) static" -race {{ join .AllPackages " " }}
+race-go: prepare-tests
+	@go test -tags "$(BUILD_TAGS)" -race {{ join .AllPackages " " }}
 
 .PHONY: rspec
 rspec: assemble-go prepare-tests
@@ -415,9 +435,9 @@ format: {{ .GoImports }}
 	@cd {{ .SourceDir }} && goimports -w -l {{ join .GoFiles " " }}
 
 .PHONY: staticcheck
-staticcheck: {{ .StaticCheck }} {{ .Git2GoVendorDir }}/.ok
+staticcheck: {{ .StaticCheck }}
 	# staticcheck
-	@cd {{ .SourceDir }} && {{ .StaticCheck }} -tags "$(BUILD_TAGS) static" {{ join .AllPackages " " }}
+	@cd {{ .SourceDir }} && {{ .StaticCheck }} -tags "$(BUILD_TAGS)" {{ join .AllPackages " " }}
 
 # Install staticcheck
 {{ .StaticCheck }}:
@@ -454,7 +474,7 @@ rubocop: ../.ruby-bundle
 	cd  {{ .GitalyRubyDir }} && bundle exec rubocop --parallel
 
 .PHONY: cover
-cover: prepare-tests {{ .GoCovMerge }} {{ .Git2GoVendorDir }}/.ok
+cover: prepare-tests {{ .GoCovMerge }}
 	@echo "NOTE: make cover does not exit 1 on failure, don't use it to check for tests success!"
 	mkdir -p "{{ .CoverageDir }}"
 	rm -f {{ .CoverageDir }}/*.out "{{ .CoverageDir }}/all.merged" "{{ .CoverageDir }}/all.html"
@@ -470,7 +490,7 @@ cover: prepare-tests {{ .GoCovMerge }} {{ .Git2GoVendorDir }}/.ok
 	go install {{ .SourceDir }}/vendor/github.com/wadey/gocovmerge
 
 .PHONY: docker
-docker: {{ .Git2GoVendorDir }}/.ok
+docker:
 	rm -rf docker/
 	mkdir -p docker/bin/
 	rm -rf  {{ .GitalyRubyDir }}/tmp
@@ -479,7 +499,7 @@ docker: {{ .Git2GoVendorDir }}/.ok
 {{ $pkg := .Pkg }}
 {{ $goLdFlags := .GoLdFlags }}
 {{ range $cmd := .Commands }}
-	GOOS=linux GOARCH=amd64 go build -tags "$(BUILD_TAGS) static" {{ $goLdFlags }} -o "docker/bin/{{ $cmd }}" {{ $pkg }}/cmd/{{ $cmd }}
+	GOOS=linux GOARCH=amd64 go build -tags "$(BUILD_TAGS)" {{ $goLdFlags }} -o "docker/bin/{{ $cmd }}" {{ $pkg }}/cmd/{{ $cmd }}
 {{ end }}
 	cp {{ .SourceDir }}/Dockerfile docker/
 	docker build -t gitlab/gitaly:{{ .VersionPrefixed }} -t gitlab/gitaly:latest docker/
