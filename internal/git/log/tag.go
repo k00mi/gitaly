@@ -144,5 +144,7 @@ func dereferenceTag(b *catfile.Batch, Oid string) (*gitalypb.GitCommit, error) {
 		}
 	}
 
+	// at this point the tag nesting has gone too deep. We want to return silently here however, as we don't
+	// want to fail the entire request if one tag is nested too deeply.
 	return nil, nil
 }
