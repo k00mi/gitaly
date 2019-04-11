@@ -17,7 +17,3 @@ func NewServer() gitalypb.CleanupServiceServer {
 func (s *server) CloseSession(context.Context, *gitalypb.CloseSessionRequest) (*gitalypb.CloseSessionResponse, error) {
 	return nil, helper.Unimplemented
 }
-
-func (s *server) ApplyBfgObjectMapStream(gitalypb.CleanupService_ApplyBfgObjectMapStreamServer) error {
-	return helper.Unimplemented
-}
