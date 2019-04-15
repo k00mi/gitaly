@@ -3,7 +3,6 @@ package protoregistry
 import (
 	"bytes"
 	"compress/gzip"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"sync"
@@ -11,9 +10,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
-
-	// importing gitalypb so we have access to the gitaliypb go package
-	_ "gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 )
 
 // GitalyProtoFileDescriptors is a slice of all gitaly registered file descriptors
@@ -92,7 +88,6 @@ func (pr *Registry) RegisterFiles(protos ...*descriptor.FileDescriptorProto) err
 					mi.Operation = OpAccessor
 				case gitalypb.OperationMsg_MUTATOR:
 					mi.Operation = OpMutator
-				case gitalypb.OperationMsg_UNKNOWN:
 				default:
 					mi.Operation = OpUnknown
 				}
@@ -113,15 +108,16 @@ func (pr *Registry) LookupMethod(service, method string) (MethodInfo, error) {
 	pr.RLock()
 	defer pr.RUnlock()
 	if _, ok := pr.protos[service]; !ok {
-		return MethodInfo{}, errors.New("service not found")
+		return MethodInfo{}, fmt.Errorf("service not found: %v", service)
 	}
 	if _, ok := pr.protos[service][method]; !ok {
-		return MethodInfo{}, errors.New("method not found")
+		return MethodInfo{}, fmt.Errorf("method not found: %v", method)
 	}
 	return pr.protos[service][method], nil
 }
 
 // extractFile extracts a FileDescriptorProto from a gzip'd buffer.
+// https://github.com/golang/protobuf/blob/9eb2c01ac278a5d89ce4b2be68fe4500955d8179/descriptor/descriptor.go#L50
 func extractFile(gz []byte) (*descriptor.FileDescriptorProto, error) {
 	r, err := gzip.NewReader(bytes.NewReader(gz))
 	if err != nil {
