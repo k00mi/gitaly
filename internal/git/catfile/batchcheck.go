@@ -27,6 +27,7 @@ func newBatchCheck(ctx context.Context, repoPath string, env []string) (*batchCh
 	if err != nil {
 		return nil, err
 	}
+
 	bc.r = bufio.NewReader(batchCmd)
 	go func() {
 		<-ctx.Done()
