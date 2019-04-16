@@ -2,6 +2,7 @@ package repository
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
@@ -183,6 +185,75 @@ func TestCleanupDeletesStaleWorktrees(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCleanupDisconnectedWorktrees(t *testing.T) {
+	const (
+		worktreeName     = "test-worktree"
+		worktreeAdminDir = "worktrees"
+	)
+
+	addWorkTree := func(repoPath, worktree string) error {
+		return exec.Command(
+			"git",
+			testhelper.AddWorktreeArgs(repoPath, worktree)...,
+		).Run()
+	}
+
+	server, serverSocketPath := runRepoServer(t)
+	defer server.Stop()
+
+	client, conn := newRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	worktreePath := filepath.Join(testRepoPath, worktreeName)
+	worktreeAdminPath := filepath.Join(
+		testRepoPath, worktreeAdminDir, filepath.Base(worktreeName),
+	)
+
+	req := &gitalypb.CleanupRequest{Repository: testRepo}
+
+	testhelper.AddWorktree(t, testRepoPath, worktreeName)
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	// removing the work tree path but leaving the administrative files in
+	// $GIT_DIR/worktrees will result in the work tree being in a
+	// "disconnected" state
+	err := os.RemoveAll(worktreePath)
+	require.NoError(t, err,
+		"disconnecting worktree by removing work tree at %s should succeed", worktreePath,
+	)
+
+	// TODO: remove the following version checks when the lowest supported git
+	// version is 2.20.0 or higher. Refer to relevant gitlab-ce issue:
+	// https://gitlab.com/gitlab-org/gitlab-ce/issues/54255
+	version, err := git.Version()
+	require.NoError(t, err)
+
+	pre2_20_0, err := git.VersionLessThan(version, "2.20.0")
+	require.NoError(t, err)
+
+	if !pre2_20_0 {
+		err = addWorkTree(testRepoPath, worktreeName)
+		require.Error(t, err,
+			"creating a new work tree at the same path as a disconnected work tree should fail",
+		)
+	}
+
+	// cleanup should prune the disconnected worktree administrative files
+	_, err = client.Cleanup(ctx, req)
+	require.NoError(t, err)
+	testhelper.AssertFileNotExists(t, worktreeAdminPath)
+
+	// if the worktree administrative files are pruned, then we should be able
+	// to checkout another worktree at the same path
+	err = addWorkTree(testRepoPath, worktreeName)
+	require.NoError(t, err)
 }
 
 func TestCleanupFileLocks(t *testing.T) {
