@@ -9,6 +9,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
+	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 )
 
@@ -22,6 +23,7 @@ func init() {
 		if err != nil {
 			panic(err)
 		}
+
 		GitalyProtoFileDescriptors = append(GitalyProtoFileDescriptors, fd)
 	}
 }
@@ -70,6 +72,9 @@ func (pr *Registry) RegisterFiles(protos ...*descriptor.FileDescriptorProto) err
 				methodDescriptorProto.GetInputType()
 
 				if !proto.HasExtension(options, gitalypb.E_OpType) {
+					logrus.WithField("service", serviceDescriptorProto.GetName()).
+						WithField("method", serviceDescriptorProto.GetName()).
+						Warn("grpc method missing op_type")
 					continue
 				}
 
@@ -107,13 +112,15 @@ func (pr *Registry) RegisterFiles(protos ...*descriptor.FileDescriptorProto) err
 func (pr *Registry) LookupMethod(service, method string) (MethodInfo, error) {
 	pr.RLock()
 	defer pr.RUnlock()
+
 	if _, ok := pr.protos[service]; !ok {
 		return MethodInfo{}, fmt.Errorf("service not found: %v", service)
 	}
-	if _, ok := pr.protos[service][method]; !ok {
+	methodInfo, ok := pr.protos[service][method]
+	if !ok {
 		return MethodInfo{}, fmt.Errorf("method not found: %v", method)
 	}
-	return pr.protos[service][method], nil
+	return methodInfo, nil
 }
 
 // extractFile extracts a FileDescriptorProto from a gzip'd buffer.

@@ -279,9 +279,9 @@ func GetGitEnvData() (string, error) {
 }
 
 // NewTestGrpcServer creates a GRPC Server for testing purposes
-func NewTestGrpcServer(t *testing.T, streamInterceptors []grpc.StreamServerInterceptor, unaryInterceptors []grpc.UnaryServerInterceptor) *grpc.Server {
-	logger := NewTestLogger(t)
-	logrusEntry := log.NewEntry(logger).WithField("test", t.Name())
+func NewTestGrpcServer(tb testing.TB, streamInterceptors []grpc.StreamServerInterceptor, unaryInterceptors []grpc.UnaryServerInterceptor) *grpc.Server {
+	logger := NewTestLogger(tb)
+	logrusEntry := log.NewEntry(logger).WithField("test", tb.Name())
 
 	ctxTagger := grpc_ctxtags.WithFieldExtractorForInitialReq(fieldextractors.FieldExtractor)
 	ctxStreamTagger := grpc_ctxtags.StreamServerInterceptor(ctxTagger)
