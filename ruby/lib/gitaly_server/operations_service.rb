@@ -99,7 +99,7 @@ module GitalyServer
       repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
       user = Gitlab::Git::User.from_gitaly(request.user)
 
-      commit_id = repo.merge_to_ref(user, request.source_sha, request.branch, request.target_ref, request.message.dup)
+      commit_id = repo.merge_to_ref(user, request.source_sha, request.branch, request.target_ref, request.message.dup, request.first_parent_ref)
 
       Gitaly::UserMergeToRefResponse.new(commit_id: commit_id)
     rescue Gitlab::Git::CommitError => e

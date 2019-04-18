@@ -107,18 +107,18 @@ module Gitlab
       # Returns the generated commit.
       #
       # ref - The target ref path we're committing to.
-      # from_branch - The branch we're taking the HEAD commit from.
-      def commit_ref(ref, from_branch:)
+      # from_ref - The ref we're taking the HEAD commit from.
+      def commit_ref(ref, from_ref:)
         update_autocrlf_option
 
-        repository.write_ref(ref, from_branch.target)
+        repository.write_ref(ref, from_ref.target)
 
         # Make commit
         newrev = yield
 
         raise Gitlab::Git::CommitError.new('Failed to create commit') unless newrev
 
-        oldrev = from_branch.target
+        oldrev = from_ref.target
 
         update_ref(ref, newrev, oldrev)
 

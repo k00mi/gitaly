@@ -475,30 +475,40 @@ func TestSuccessfulUserMergeToRefRequest(t *testing.T) {
 	require.NoError(t, err, "give an existing state to the target ref: %s", out)
 
 	testCases := []struct {
-		desc      string
-		user      *gitalypb.User
-		branch    []byte
-		targetRef []byte
-		emptyRef  bool
-		sourceSha string
-		message   string
+		desc           string
+		user           *gitalypb.User
+		branch         []byte
+		targetRef      []byte
+		emptyRef       bool
+		sourceSha      string
+		message        string
+		firstParentRef []byte
 	}{
 		{
-			desc:      "empty target ref merge",
-			user:      mergeUser,
-			branch:    []byte(mergeBranchName),
-			targetRef: emptyTargetRef,
-			emptyRef:  true,
-			sourceSha: commitToMerge,
-			message:   mergeCommitMessage,
+			desc:           "empty target ref merge",
+			user:           mergeUser,
+			targetRef:      emptyTargetRef,
+			emptyRef:       true,
+			sourceSha:      commitToMerge,
+			message:        mergeCommitMessage,
+			firstParentRef: []byte("refs/heads/" + mergeBranchName),
 		},
 		{
-			desc:      "existing target ref",
+			desc:           "existing target ref",
+			user:           mergeUser,
+			targetRef:      existingTargetRef,
+			emptyRef:       false,
+			sourceSha:      commitToMerge,
+			message:        mergeCommitMessage,
+			firstParentRef: []byte("refs/heads/" + mergeBranchName),
+		},
+		{
+			desc:      "branch is specified and firstParentRef is empty",
 			user:      mergeUser,
 			branch:    []byte(mergeBranchName),
 			targetRef: existingTargetRef,
 			emptyRef:  false,
-			sourceSha: commitToMerge,
+			sourceSha: "38008cb17ce1466d8fec2dfa6f6ab8dcfe5cf49e",
 			message:   mergeCommitMessage,
 		},
 	}
@@ -509,12 +519,13 @@ func TestSuccessfulUserMergeToRefRequest(t *testing.T) {
 			defer cancel()
 
 			request := &gitalypb.UserMergeToRefRequest{
-				Repository: testRepo,
-				User:       testCase.user,
-				Branch:     testCase.branch,
-				TargetRef:  testCase.targetRef,
-				SourceSha:  testCase.sourceSha,
-				Message:    []byte(testCase.message),
+				Repository:     testRepo,
+				User:           testCase.user,
+				Branch:         testCase.branch,
+				TargetRef:      testCase.targetRef,
+				SourceSha:      testCase.sourceSha,
+				Message:        []byte(testCase.message),
+				FirstParentRef: testCase.firstParentRef,
 			}
 
 			commitBeforeRefMerge, fetchRefBeforeMergeErr := gitlog.GetCommit(ctx, testRepo, string(testCase.targetRef))
@@ -608,7 +619,7 @@ func TestFailedUserMergeToRefRequest(t *testing.T) {
 			code:      codes.InvalidArgument,
 		},
 		{
-			desc:      "empty branch",
+			desc:      "empty branch and first parent ref",
 			repo:      testRepo,
 			user:      mergeUser,
 			sourceSha: commitToMerge,

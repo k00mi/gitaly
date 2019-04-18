@@ -267,13 +267,17 @@ module Gitlab
         tags.find { |tag| tag.name.b == name_b }
       end
 
-      def merge_to_ref(user, source_sha, branch, target_ref, message)
-        branch = find_branch(branch)
+      def merge_to_ref(user, source_sha, branch, target_ref, message, first_parent_ref)
+        ref = if first_parent_ref.present?
+                find_ref(first_parent_ref)
+              else
+                find_branch(branch)
+              end
 
-        raise InvalidRef unless branch
+        raise InvalidRef unless ref
 
-        OperationService.new(user, self).commit_ref(target_ref, from_branch: branch) do
-          our_commit = branch.target
+        OperationService.new(user, self).commit_ref(target_ref, from_ref: ref) do
+          our_commit = ref.target
           their_commit = source_sha
 
           create_merge_commit(user, our_commit, their_commit, message)
@@ -546,6 +550,14 @@ module Gitlab
           target_commit = Gitlab::Git::Commit.find(self, rugged_ref.target)
           Gitlab::Git::Branch.new(self, rugged_ref.name, rugged_ref.target, target_commit)
         end
+      end
+
+      def find_ref(name)
+        rugged_ref = rugged.references[name]
+
+        return unless rugged_ref
+
+        Gitlab::Git::Ref.new(self, rugged_ref.name, rugged_ref.target, rugged_ref.target_id)
       end
 
       # Delete the specified branch from the repository
