@@ -1,5 +1,31 @@
 # Gitaly changelog
 
+## v1.34.0
+
+#### Added
+- Add PackRefs RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1161
+- Implement ListRemotes
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1019
+- Test and require Git 2.21
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1205
+- Add WikiListPages RPC call
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1194
+
+#### Fixed
+- Cleanup RPC prunes disconnected work trees
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1189
+- Fix FindAllTags to dereference tags that point to other tags
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1193
+
+#### Other
+- Datastore pattern for replication jobs
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1147
+- Remove find all tags ruby
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1163
+- Delete SSH frontend code from ruby/gitlab-shell
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1179
+
 ## v1.33.0
 
 #### Added
