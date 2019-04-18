@@ -11,8 +11,10 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/git/updateref"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -486,6 +488,9 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 	// A tag with a commit id as its name
 	commitTagID := testhelper.CreateTag(t, testRepoCopyPath, commitID, commitID, &testhelper.CreateTagOpts{Message: "commit tag with a commit sha as the name"})
 
+	// a tag of a tag
+	tagOfTagID := testhelper.CreateTag(t, testRepoCopyPath, "tag-of-tag", commitTagID, &testhelper.CreateTagOpts{Message: "tag of a tag"})
+
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
@@ -511,6 +516,13 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 			TargetCommit: gitCommit,
 			Message:      []byte("commit tag with a commit sha as the name"),
 			MessageSize:  40,
+		},
+		{
+			Name:         []byte("tag-of-tag"),
+			Id:           string(tagOfTagID),
+			TargetCommit: gitCommit,
+			Message:      []byte("tag of a tag"),
+			MessageSize:  12,
 		},
 		{
 			Name:         []byte("v1.0.0"),
@@ -580,6 +592,105 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 
 	for i, expectedTag := range expectedTags {
 		require.Equal(t, expectedTag, receivedTags[i])
+	}
+}
+func TestFindAllTagNestedTags(t *testing.T) {
+	server, serverSocketPath := runRefServiceServer(t)
+	defer server.Stop()
+
+	testRepoCopy, testRepoCopyPath, cleanupFn := testhelper.NewTestRepoWithWorktree(t)
+	defer cleanupFn()
+
+	blobID := "faaf198af3a36dbf41961466703cc1d47c61d051"
+	commitID := "6f6d7e7ed97bb5f0054f2b1df789b39ca89b6ff9"
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	testCases := []struct {
+		description string
+		depth       int
+		originalOid string
+	}{
+		{
+			description: "nested 1 deep, points to a commit",
+			depth:       1,
+			originalOid: commitID,
+		},
+		{
+			description: "nested 4 deep, points to a commit",
+			depth:       4,
+			originalOid: commitID,
+		},
+		{
+			description: "nested 3 deep, points to a blob",
+			depth:       3,
+			originalOid: blobID,
+		},
+		{
+			description: "nested 20 deep, points to a commit",
+			depth:       20,
+			originalOid: commitID,
+		},
+	}
+
+	for _, tc := range testCases {
+		tags := bytes.NewReader(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoCopyPath, "tag"))
+		testhelper.MustRunCommand(t, tags, "xargs", "git", "-C", testRepoCopyPath, "tag", "-d")
+
+		batch, err := catfile.New(ctx, testRepoCopy)
+		require.NoError(t, err)
+
+		info, err := batch.Info(tc.originalOid)
+		require.NoError(t, err)
+
+		expectedTags := make(map[string]*gitalypb.Tag)
+		tagID := tc.originalOid
+
+		for depth := 0; depth < tc.depth; depth++ {
+			tagName := fmt.Sprintf("tag-depth-%d", depth)
+			tagMessage := fmt.Sprintf("a commit %d deep", depth)
+			tagID = string(testhelper.CreateTag(t, testRepoCopyPath, tagName, tagID, &testhelper.CreateTagOpts{Message: tagMessage}))
+
+			expectedTag := &gitalypb.Tag{
+				Name:        []byte(tagName),
+				Id:          string(tagID),
+				Message:     []byte(tagMessage),
+				MessageSize: int64(len([]byte(tagMessage))),
+			}
+
+			// only expect the TargetCommit to be populated if it is a commit and if its less than 10 tags deep
+			if info.Type == "commit" && depth < log.MaxTagReferenceDepth {
+				commit, err := log.GetCommitCatfile(batch, tc.originalOid)
+				require.NoError(t, err)
+				expectedTag.TargetCommit = commit
+			}
+
+			expectedTags[string(expectedTag.Name)] = expectedTag
+		}
+
+		client, conn := newRefServiceClient(t, serverSocketPath)
+		defer conn.Close()
+
+		rpcRequest := &gitalypb.FindAllTagsRequest{Repository: testRepoCopy}
+
+		c, err := client.FindAllTags(ctx, rpcRequest)
+		require.NoError(t, err)
+
+		var receivedTags []*gitalypb.Tag
+		for {
+			r, err := c.Recv()
+			if err == io.EOF {
+				break
+			}
+			require.NoError(t, err)
+			receivedTags = append(receivedTags, r.GetTags()...)
+		}
+
+		require.Len(t, receivedTags, len(expectedTags))
+		for _, receivedTag := range receivedTags {
+			assert.Equal(t, expectedTags[string(receivedTag.Name)], receivedTag)
+		}
 	}
 }
 
@@ -652,6 +763,7 @@ func TestSuccessfulFindLocalBranches(t *testing.T) {
 		if err == io.EOF {
 			break
 		}
+		require.NoError(t, err)
 		if err != nil {
 			t.Fatal(err)
 		}

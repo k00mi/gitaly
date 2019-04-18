@@ -13,6 +13,11 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
+const (
+	// MaxTagReferenceDepth is the maximum depth of tag references we will dereference
+	MaxTagReferenceDepth = 10
+)
+
 // GetTagCatfile looks up a commit by tagID using an existing *catfile.Batch instance.
 // note: we pass in the tagName because the tag name from refs/tags may be different
 // than the name found in the actual tag object. We want to use the tagName found in refs/tags
@@ -88,14 +93,58 @@ func buildAnnotatedTag(b *catfile.Batch, tagID, name string, header *tagHeader, 
 		tag.Message = tag.Message[:max]
 	}
 
-	if header.tagType == "commit" {
-		commit, err := GetCommitCatfile(b, header.oid)
+	var err error
+	switch header.tagType {
+	case "commit":
+		tag.TargetCommit, err = GetCommitCatfile(b, header.oid)
 		if err != nil {
 			return nil, fmt.Errorf("buildAnnotatedTag error when getting target commit: %v", err)
 		}
 
-		tag.TargetCommit = commit
+	case "tag":
+		tag.TargetCommit, err = dereferenceTag(b, header.oid)
+		if err != nil {
+			return nil, fmt.Errorf("buildAnnotatedTag error when dereferencing tag: %v", err)
+		}
 	}
 
 	return tag, nil
+}
+
+// dereferenceTag recursively dereferences annotated tags until it finds a commit.
+// This matches the original behavior in the ruby implementation.
+// we also protect against circular tag references. Even though this is not possible in git,
+// we still want to protect against an infinite looop
+
+func dereferenceTag(b *catfile.Batch, Oid string) (*gitalypb.GitCommit, error) {
+	for depth := 0; depth < MaxTagReferenceDepth; depth++ {
+		i, err := b.Info(Oid)
+		if err != nil {
+			return nil, err
+		}
+
+		switch i.Type {
+		case "tag":
+			r, err := b.Tag(Oid)
+			if err != nil {
+				return nil, err
+			}
+
+			header, _, err := splitRawTag(r)
+			if err != nil {
+				return nil, err
+			}
+
+			Oid = header.oid
+			continue
+		case "commit":
+			return GetCommitCatfile(b, Oid)
+		default: // This current tag points to a tree or a blob
+			return nil, nil
+		}
+	}
+
+	// at this point the tag nesting has gone too deep. We want to return silently here however, as we don't
+	// want to fail the entire request if one tag is nested too deeply.
+	return nil, nil
 }
