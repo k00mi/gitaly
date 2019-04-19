@@ -3,7 +3,6 @@ package praefect
 import (
 	"context"
 	"fmt"
-	"strings"
 	"sync"
 
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
@@ -43,6 +42,7 @@ func NewCoordinator(l *logrus.Logger, storageLoc string, fileDescriptors ...*des
 	}
 }
 
+// RegisterProtos allows coordinator to register new protos on the fly
 func (c *Coordinator) RegisterProtos(protos ...*descriptor.FileDescriptorProto) error {
 	return c.registry.RegisterFiles(protos...)
 }
@@ -60,39 +60,11 @@ func (c *Coordinator) GetStorageNode(storage string) (Node, error) {
 	}, nil
 }
 
-func parseFullMethod(fullMethodName string) (serviceName, methodName string, err error) {
-	split := strings.Split(strings.TrimLeft(fullMethodName, "/"), "/")
-	if len(split) != 2 {
-		return "", "", fmt.Errorf("invalid full method name: %v", fullMethodName)
-	}
-
-	serviceName, methodName = split[0], split[1]
-
-	serviceNameSplit := strings.Split(serviceName, ".")
-	if len(serviceNameSplit) > 0 {
-		serviceName = strings.Join(serviceNameSplit[1:], ".")
-	}
-
-	return serviceName, methodName, nil
-}
-
 // streamDirector determines which downstream servers receive requests
 func (c *Coordinator) streamDirector(ctx context.Context, fullMethodName string) (context.Context, *grpc.ClientConn, error) {
 	// For phase 1, we need to route messages based on the storage location
 	// to the appropriate Gitaly node.
 	c.log.Debugf("Stream director received method %s", fullMethodName)
-
-	service, method, err := parseFullMethod(fullMethodName)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	methodInfo, err := c.registry.LookupMethod(service, method)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	c.log.Debugf("methodInfo for %s: %+v", fullMethodName, methodInfo)
 
 	if c.storageLoc == "" {
 		err := status.Error(
