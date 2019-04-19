@@ -40,25 +40,5 @@ module GitalyServer
 
       Gitaly::UpdateRemoteMirrorResponse.new
     end
-
-    private
-
-    def parse_refmaps(refmaps)
-      return unless refmaps.present?
-
-      parsed_refmaps = refmaps.map do |refmap|
-        next unless refmap.present?
-
-        refmap_spec = refmap.to_sym
-
-        if Gitlab::Git::RepositoryMirroring::REFMAPS.has_key?(refmap_spec)
-          refmap_spec
-        else
-          refmap
-        end
-      end
-
-      parsed_refmaps.compact.presence
-    end
   end
 end
