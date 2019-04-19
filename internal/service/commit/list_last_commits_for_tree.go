@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"unicode/utf8"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
@@ -12,6 +13,13 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git/lstree"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+)
+
+const (
+	// InvalidUTF8PathPlaceholder is a placeholder we return in the Path field since
+	// returning non utf8 data will result in a marshalling error
+	// Once we deprecate the Path field, we can remove this
+	InvalidUTF8PathPlaceholder = "ENCODING ERROR gitaly#1547"
 )
 
 var (
@@ -56,8 +64,14 @@ func (s *server) ListLastCommitsForTree(in *gitalypb.ListLastCommitsForTreeReque
 		}
 
 		commitForTree := &gitalypb.ListLastCommitsForTreeResponse_CommitForTree{
-			Path:   entry.Path,
-			Commit: commit,
+			Path:      entry.Path,
+			PathBytes: []byte(entry.Path),
+			Commit:    commit,
+		}
+
+		// for non-utf8 encoded paths, return placeholder until we can deprecate Path
+		if !utf8.ValidString(entry.Path) {
+			commitForTree.Path = InvalidUTF8PathPlaceholder
 		}
 
 		batch = append(batch, commitForTree)
