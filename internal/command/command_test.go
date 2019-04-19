@@ -193,7 +193,9 @@ func TestCommandStdErr(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	//	var stdout, stderr bytes.Buffer
 	var stdout, stderr bytes.Buffer
+
 	cmd, err := New(ctx, exec.Command("./testdata/stderr_script.sh"), nil, &stdout, &stderr)
 	require.NoError(t, err)
 

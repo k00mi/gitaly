@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -57,7 +56,8 @@ var exportedEnvVars = []string{
 type Command struct {
 	reader       io.Reader
 	writer       io.WriteCloser
-	logrusWriter io.WriteCloser
+	stderrCloser io.WriteCloser
+	stderrDone   chan struct{}
 	cmd          *exec.Cmd
 	context      context.Context
 	startTime    time.Time
@@ -165,9 +165,10 @@ func New(ctx context.Context, cmd *exec.Cmd, stdin io.Reader, stdout, stderr io.
 	}()
 
 	command := &Command{
-		cmd:       cmd,
-		startTime: time.Now(),
-		context:   ctx,
+		cmd:        cmd,
+		startTime:  time.Now(),
+		context:    ctx,
+		stderrDone: make(chan struct{}),
 	}
 
 	// Explicitly set the environment for the command
@@ -206,13 +207,12 @@ func New(ctx context.Context, cmd *exec.Cmd, stdin io.Reader, stdout, stderr io.
 	}
 
 	if stderr != nil {
-		cmd.Stderr = stderr
+		command.stderrCloser = escapeNewlineWriter(stderr, command.stderrDone)
 	} else {
-		// If we don't do something with cmd.Stderr, Git errors will be lost
-		command.logrusWriter = grpc_logrus.Extract(ctx).WriterLevel(log.ErrorLevel)
-		cmd.Stderr = command.logrusWriter
+		command.stderrCloser = escapeNewlineWriter(grpc_logrus.Extract(ctx).WriterLevel(log.ErrorLevel), command.stderrDone)
 	}
-	cmd.Stderr = escapeNewlineWriter(cmd.Stderr)
+
+	cmd.Stderr = command.stderrCloser
 
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("GitCommand: start %v: %v", cmd.Args, err)
@@ -247,28 +247,27 @@ func exportEnvironment(env []string) []string {
 	return env
 }
 
-func escapeNewlineWriter(outbound io.Writer) io.Writer {
+func escapeNewlineWriter(outbound io.Writer, done chan struct{}) io.WriteCloser {
 	r, w := io.Pipe()
 
-	go writeLines(outbound, r)
-
-	runtime.SetFinalizer(w, func(w *io.PipeWriter) {
-		w.Close()
-	})
+	go writeLines(outbound, r, done)
 
 	return w
 }
 
-func writeLines(writer io.Writer, reader io.Reader) {
+func writeLines(writer io.Writer, reader io.Reader, done chan struct{}) {
 	scanner := bufio.NewScanner(reader)
 
 	for scanner.Scan() {
 		writer.Write(scanner.Bytes())
 		writer.Write([]byte(`\n`))
 	}
+
 	if err := scanner.Err(); err != nil {
 		fmt.Printf("Error while reading from Writer: %s", err)
 	}
+
+	done <- struct{}{}
 }
 
 // This function should never be called directly, use Wait().
@@ -294,10 +293,11 @@ func (c *Command) wait() {
 
 	c.logProcessComplete(c.context, exitCode)
 
-	if w := c.logrusWriter; w != nil {
-		// Closing this writer lets a logrus goroutine finish early
+	if w := c.stderrCloser; w != nil {
 		w.Close()
 	}
+
+	<-c.stderrDone
 }
 
 // ExitStatus will return the exit-code from an error returned by Wait().
