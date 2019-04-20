@@ -179,7 +179,7 @@ PLATFORMS
 
 DEPENDENCIES
   activesupport (~> 5.0.2)
-  bundler (>= 1.16.5)
+  bundler (>= 1.17.3)
   factory_bot
   faraday (~> 0.12)
   gitaly-proto (~> 1.22.0)
