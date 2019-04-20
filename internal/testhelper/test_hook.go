@@ -8,7 +8,7 @@ import (
 )
 
 type testHook struct {
-	t         *testing.T
+	t         testing.TB
 	formatter log.Formatter
 }
 
@@ -43,12 +43,12 @@ func (s testHook) Fire(entry *log.Entry) error {
 }
 
 // NewTestLogger created a logrus hook which can be used with testing logs
-func NewTestLogger(t *testing.T) *log.Logger {
+func NewTestLogger(tb testing.TB) *log.Logger {
 	logger := log.New()
 	logger.Out = ioutil.Discard
 	formatter := &log.TextFormatter{}
 
-	logger.Hooks.Add(testHook{t, formatter})
+	logger.Hooks.Add(testHook{tb, formatter})
 
 	return logger
 }

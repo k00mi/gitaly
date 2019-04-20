@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"sync"
 
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
+
+	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/mwitkow/grpc-proxy/proxy"
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/client"
@@ -22,16 +25,26 @@ type Coordinator struct {
 
 	storageLoc string
 
-	nodes map[string]*grpc.ClientConn
+	nodes    map[string]*grpc.ClientConn
+	registry *protoregistry.Registry
 }
 
 // NewCoordinator returns a new Coordinator that utilizes the provided logger
-func NewCoordinator(l *logrus.Logger, storageLoc string) *Coordinator {
+func NewCoordinator(l *logrus.Logger, storageLoc string, fileDescriptors ...*descriptor.FileDescriptorProto) *Coordinator {
+	registry := protoregistry.New()
+	registry.RegisterFiles(fileDescriptors...)
+
 	return &Coordinator{
 		log:        l,
 		storageLoc: storageLoc,
 		nodes:      make(map[string]*grpc.ClientConn),
+		registry:   registry,
 	}
+}
+
+// RegisterProtos allows coordinator to register new protos on the fly
+func (c *Coordinator) RegisterProtos(protos ...*descriptor.FileDescriptorProto) error {
+	return c.registry.RegisterFiles(protos...)
 }
 
 // GetStorageNode returns the registered node for the given storage location
