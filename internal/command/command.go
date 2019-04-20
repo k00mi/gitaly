@@ -50,6 +50,11 @@ var exportedEnvVars = []string{
 	"no_proxy",
 }
 
+const (
+	// MaxStderrBytes is at most how many bytes will be written to stderr
+	MaxStderrBytes = 1000000 // 1mb
+)
+
 // Command encapsulates a running exec.Cmd. The embedded exec.Cmd is
 // terminated and reaped automatically when the context.Context that
 // created it is canceled.
@@ -207,9 +212,9 @@ func New(ctx context.Context, cmd *exec.Cmd, stdin io.Reader, stdout, stderr io.
 	}
 
 	if stderr != nil {
-		command.stderrCloser = escapeNewlineWriter(stderr, command.stderrDone)
+		command.stderrCloser = escapeNewlineWriter(stderr, command.stderrDone, MaxStderrBytes)
 	} else {
-		command.stderrCloser = escapeNewlineWriter(grpc_logrus.Extract(ctx).WriterLevel(log.ErrorLevel), command.stderrDone)
+		command.stderrCloser = escapeNewlineWriter(grpc_logrus.Extract(ctx).WriterLevel(log.ErrorLevel), command.stderrDone, MaxStderrBytes)
 	}
 
 	cmd.Stderr = command.stderrCloser
@@ -247,20 +252,34 @@ func exportEnvironment(env []string) []string {
 	return env
 }
 
-func escapeNewlineWriter(outbound io.Writer, done chan struct{}) io.WriteCloser {
+func escapeNewlineWriter(outbound io.Writer, done chan struct{}, maxBytes int) io.WriteCloser {
 	r, w := io.Pipe()
 
-	go writeLines(outbound, r, done)
+	go writeLines(outbound, r, done, maxBytes)
 
 	return w
 }
 
-func writeLines(writer io.Writer, reader io.Reader, done chan struct{}) {
+func writeLines(writer io.Writer, reader io.Reader, done chan struct{}, maxBytes int) {
+	var bytesWritten int
+
 	scanner := bufio.NewScanner(reader)
 
 	for scanner.Scan() {
-		writer.Write(scanner.Bytes())
-		writer.Write([]byte(`\n`))
+		b := scanner.Bytes()
+		if bytesWritten >= maxBytes {
+			ioutil.Discard.Write(b)
+			continue
+		}
+
+		if len(b)+bytesWritten >= maxBytes {
+			b = b[:maxBytes-bytesWritten]
+		} else {
+			b = append(b, '\n')
+		}
+
+		n, _ := writer.Write(b)
+		bytesWritten += n
 	}
 
 	if err := scanner.Err(); err != nil {

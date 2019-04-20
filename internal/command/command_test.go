@@ -193,13 +193,41 @@ func TestCommandStdErr(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	//	var stdout, stderr bytes.Buffer
 	var stdout, stderr bytes.Buffer
 
 	cmd, err := New(ctx, exec.Command("./testdata/stderr_script.sh"), nil, &stdout, &stderr)
 	require.NoError(t, err)
 
 	require.Error(t, cmd.Wait())
-	assert.Empty(t, stdout.String())
+	assert.Empty(t, stdout.Bytes())
 	assert.Equal(t, `hello world\nhello world\nhello world\nhello world\nhello world\n`, stderr.String())
+}
+
+func TestCommandStdErrLargeOutput(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var stdout, stderr bytes.Buffer
+
+	cmd, err := New(ctx, exec.Command("./testdata/stderr_many_lines.sh"), nil, &stdout, &stderr)
+	require.NoError(t, err)
+
+	require.Error(t, cmd.Wait())
+	assert.Empty(t, stdout.Bytes())
+	assert.True(t, stderr.Len() <= MaxStderrBytes)
+}
+
+func TestCommandStdErrBinaryNullBytes(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var stdout, stderr bytes.Buffer
+
+	cmd, err := New(ctx, exec.Command("./testdata/stderr_binary_null.sh"), nil, &stdout, &stderr)
+	require.NoError(t, err)
+
+	require.Error(t, cmd.Wait())
+	assert.Empty(t, stdout.Bytes())
+	assert.Empty(t, stderr.Bytes())
+	t.Logf("%v", stderr.String())
 }
