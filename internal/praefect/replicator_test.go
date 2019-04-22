@@ -2,15 +2,24 @@ package praefect_test
 
 import (
 	"context"
+	"log"
+	"net"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 
+	gitaly_config "gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
+	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
+	serverPkg "gitlab.com/gitlab-org/gitaly/internal/server"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
@@ -118,4 +127,144 @@ func (mr *mockReplicator) Replicate(ctx context.Context, source praefect.Reposit
 	}
 
 	return nil
+}
+
+func TestReplicate(t *testing.T) {
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	commitID := testhelper.CreateCommit(t, testRepoPath, "master", &testhelper.CreateCommitOpts{
+		Message: "a commit",
+	})
+
+	defer cleanupFn()
+	var (
+		cfg = config.Config{
+			PrimaryServer: &config.GitalyServer{
+				Name:       "default",
+				ListenAddr: "tcp://gitaly-primary.example.com",
+			},
+			SecondaryServers: []*config.GitalyServer{
+				{
+					Name:       "backup",
+					ListenAddr: "tcp://gitaly-backup1.example.com",
+				},
+			},
+			Whitelist: []string{
+				testRepo.GetRelativePath(),
+			},
+		}
+	)
+	backupDir := filepath.Join(testhelper.GitlabTestStoragePath(), "backup")
+	require.NoError(t, os.Mkdir(backupDir, os.ModeDir|0755))
+	defer func() {
+		os.RemoveAll(backupDir)
+	}()
+
+	oldStorages := gitaly_config.Config.Storages
+	defer func() {
+		gitaly_config.Config.Storages = oldStorages
+	}()
+
+	gitaly_config.Config.Storages = append(gitaly_config.Config.Storages, gitaly_config.Storage{
+		Name: "backup",
+		Path: backupDir,
+	}, gitaly_config.Storage{
+		Name: "default",
+		Path: testhelper.GitlabTestStoragePath(),
+	})
+
+	srv, socketPath := runFullGitalyServer(t)
+	defer srv.Stop()
+
+	datastore := praefect.NewMemoryDatastore(cfg)
+	coordinator := praefect.NewCoordinator(logrus.New(), cfg.PrimaryServer.Name)
+
+	coordinator.RegisterNode("backup", socketPath)
+	coordinator.RegisterNode("default", socketPath)
+
+	replman := praefect.NewReplMgr(
+		cfg.SecondaryServers[0].Name,
+		logrus.New(),
+		datastore,
+		coordinator,
+		praefect.WithWhitelist([]string{testRepo.GetRelativePath()}),
+	)
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	replman.ScheduleReplication(ctx, praefect.Repository{
+		Storage:      testRepo.GetStorageName(),
+		RelativePath: testRepo.GetRelativePath(),
+	})
+
+	md := testhelper.GitalyServersMetadata(t, socketPath)
+	ctx = metadata.NewOutgoingContext(ctx, md)
+
+	go func() {
+		require.Error(t, context.Canceled, replman.ProcessBacklog(ctx))
+	}()
+
+	var tries int
+	jobs, err := datastore.GetIncompleteJobs("backup", 1)
+	require.NoError(t, err)
+
+	for len(jobs) > 0 {
+		if tries > 10 {
+			t.Error("exceeded timeout")
+		}
+		time.Sleep(1 * time.Second)
+		tries++
+
+		jobs, err = datastore.GetIncompleteJobs("backup", 1)
+		require.NoError(t, err)
+	}
+	cancel()
+
+	replicatedPath := filepath.Join(backupDir, filepath.Base(testRepoPath))
+	testhelper.MustRunCommand(t, nil, "git", "-C", replicatedPath, "cat-file", "-e", commitID)
+}
+
+func runFullGitalyServer(t *testing.T) (*grpc.Server, string) {
+	server := serverPkg.NewInsecure(RubyServer)
+	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
+
+	listener, err := net.Listen("unix", serverSocketPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	go server.Serve(listener)
+
+	return server, "unix://" + serverSocketPath
+}
+
+var RubyServer *rubyserver.Server
+
+func TestMain(m *testing.M) {
+	os.Exit(testMain(m))
+}
+
+func testMain(m *testing.M) int {
+	defer testhelper.MustHaveNoChildProcess()
+
+	testhelper.ConfigureRuby()
+	gitaly_config.Config.Auth = gitaly_config.Auth{Token: testhelper.RepositoryAuthToken}
+
+	var err error
+	gitaly_config.Config.GitlabShell.Dir, err = filepath.Abs("testdata/gitlab-shell")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	testhelper.ConfigureGitalySSH()
+
+	RubyServer, err = rubyserver.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer RubyServer.Stop()
+
+	return m.Run()
 }

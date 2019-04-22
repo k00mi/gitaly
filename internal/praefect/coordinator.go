@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sync"
 
+	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
+	gitalyconfig "gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
@@ -88,7 +90,10 @@ func (c *Coordinator) streamDirector(ctx context.Context, fullMethodName string)
 // is encountered.
 func (c *Coordinator) RegisterNode(storageLoc, listenAddr string) error {
 	conn, err := client.Dial(listenAddr,
-		[]grpc.DialOption{grpc.WithDefaultCallOptions(grpc.CallCustomCodec(proxy.Codec()))},
+		[]grpc.DialOption{
+			grpc.WithDefaultCallOptions(grpc.CallCustomCodec(proxy.Codec())),
+			grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials(gitalyconfig.Config.Auth.Token)),
+		},
 	)
 	if err != nil {
 		return err

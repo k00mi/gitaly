@@ -2,7 +2,10 @@ package praefect
 
 import (
 	"context"
+	"fmt"
 	"time"
+
+	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 
 	"github.com/sirupsen/logrus"
 )
@@ -17,7 +20,37 @@ type defaultReplicator struct {
 }
 
 func (dr defaultReplicator) Replicate(ctx context.Context, source Repository, target Node) error {
-	dr.log.Infof("replicating from %v to target %q", source, target.Storage)
+	repository := &gitalypb.Repository{
+		StorageName:  target.Storage,
+		RelativePath: source.RelativePath,
+	}
+	remoteRepository := &gitalypb.Repository{
+		StorageName:  source.Storage,
+		RelativePath: source.RelativePath,
+	}
+
+	repositoryClient := gitalypb.NewRepositoryServiceClient(target.cc)
+	remoteClient := gitalypb.NewRemoteServiceClient(target.cc)
+
+	// CreateRepository is idempotent
+	if _, err := repositoryClient.CreateRepository(ctx, &gitalypb.CreateRepositoryRequest{
+		Repository: repository,
+	}); err != nil {
+		return fmt.Errorf("failed to create repository: %v", err)
+	}
+
+	if _, err := remoteClient.FetchInternalRemote(ctx, &gitalypb.FetchInternalRemoteRequest{
+		Repository:       repository,
+		RemoteRepository: remoteRepository,
+	}); err != nil {
+		return err
+	}
+	// TODO: ensure attribute files are synced
+	// https://gitlab.com/gitlab-org/gitaly/issues/1655
+
+	// TODO: ensure objects/info/alternates are synced
+	// https://gitlab.com/gitlab-org/gitaly/issues/1674
+
 	return nil
 }
 
@@ -103,9 +136,7 @@ const (
 
 // ProcessBacklog will process queued jobs. It will block while processing jobs.
 func (r ReplMgr) ProcessBacklog(ctx context.Context) error {
-	since := time.Time{}
 	for {
-		r.log.Debugf("fetching replication jobs since %s", since)
 		jobs, err := r.jobsStore.GetIncompleteJobs(r.storage, 10)
 		if err != nil {
 			return err
