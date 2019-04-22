@@ -1,7 +1,7 @@
 source 'https://rubygems.org'
 
 # Require bundler >= 1.16.5 to avoid this bug: https://github.com/bundler/bundler/issues/6537
-gem 'bundler', '>= 1.16.5'
+gem 'bundler', '>= 1.17.3'
 
 gem 'rugged', '~> 0.28'
 gem 'github-linguist', '~> 6.1', require: 'linguist'
