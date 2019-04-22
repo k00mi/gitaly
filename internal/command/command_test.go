@@ -228,6 +228,20 @@ func TestCommandStdErrBinaryNullBytes(t *testing.T) {
 
 	require.Error(t, cmd.Wait())
 	assert.Empty(t, stdout.Bytes())
-	assert.Empty(t, stderr.Bytes())
-	t.Logf("%v", stderr.String())
+	assert.NotEmpty(t, stderr.Bytes())
+}
+
+func TestCommandStdErrLongLine(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var stdout, stderr bytes.Buffer
+
+	cmd, err := New(ctx, exec.Command("./testdata/stderr_repeat_a.sh"), nil, &stdout, &stderr)
+	require.NoError(t, err)
+
+	require.Error(t, cmd.Wait())
+	assert.Empty(t, stdout.Bytes())
+	assert.NotEmpty(t, stderr.Bytes())
+	assert.Equal(t, fmt.Sprintf("%s\\n%s", strings.Repeat("a", 4096), strings.Repeat("b", 4096)), stderr.String())
 }

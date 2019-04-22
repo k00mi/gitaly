@@ -15,6 +15,7 @@ import (
 	"time"
 
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 )
@@ -263,27 +264,54 @@ func escapeNewlineWriter(outbound io.Writer, done chan struct{}, maxBytes int) i
 func writeLines(writer io.Writer, reader io.Reader, done chan struct{}, maxBytes int) {
 	var bytesWritten int
 
-	scanner := bufio.NewScanner(reader)
+	bufReader := bufio.NewReader(reader)
 
-	for scanner.Scan() {
-		b := scanner.Bytes()
+	var err error
+	var b []byte
+	var isPrefix, discardRestOfLine bool
+
+	for err == nil {
+		b, isPrefix, err = bufReader.ReadLine()
+
+		if discardRestOfLine {
+			ioutil.Discard.Write(b)
+			// if isPrefix = false, that means the reader has gotten to the end
+			// of the line. We want to read the first chunk of the  next line
+			if !isPrefix {
+				discardRestOfLine = false
+			}
+			continue
+		}
+
+		// if we've reached the max, discard
 		if bytesWritten >= maxBytes {
 			ioutil.Discard.Write(b)
 			continue
 		}
 
-		if len(b)+bytesWritten >= maxBytes {
-			b = b[:maxBytes-bytesWritten]
-		} else {
-			b = append(b, '\n')
+		// only write up to the max
+		if len(b)+bytesWritten+2 >= maxBytes {
+			b = b[:maxBytes-bytesWritten-2]
+		}
+
+		// prepend an escaped newline
+		if bytesWritten > 0 {
+			b = append([]byte{'\\', 'n'}, b...)
 		}
 
 		n, _ := writer.Write(b)
 		bytesWritten += n
+
+		// if isPrefix, it means the line is too long so we want to discard the rest
+		if isPrefix {
+			discardRestOfLine = true
+		}
 	}
 
-	if err := scanner.Err(); err != nil {
-		fmt.Printf("Error while reading from Writer: %s", err)
+	// read the rest so the command doesn't get blocked
+	if err != io.EOF {
+		logrus.WithError(err).Error("error while reading from Writer")
+		io.Copy(ioutil.Discard, reader)
 	}
 
 	done <- struct{}{}
