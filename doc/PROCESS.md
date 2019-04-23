@@ -40,7 +40,8 @@ GITLAB_TOKEN=$(cat /path/to/gitlab-token) _support/update-downstream-server-vers
   in GitLab-Rails
 - Create a stable branch for this version:
   - `git checkout vX.Y.Z`, than `git checkout -b X-Y-stable`, and push it to the main gitlab.com repository
-- Create the required merge requests on `dev.gitlab.org` and follow the usual process
+- Create the required merge requests on `dev.gitlab.org`, making sure to bump `GITALY_SERVER_VERSION` on the client (gitlab-rails) in every backported merge request
+- Follow the usual security process
 
 ## Experimental builds
 
