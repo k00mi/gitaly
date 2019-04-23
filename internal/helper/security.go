@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"errors"
 	"os"
 	"regexp"
 	"strings"
@@ -23,4 +24,9 @@ var hostPattern = regexp.MustCompile(`(?i)([a-z][a-z0-9+\-.]*://)([a-z0-9\-._~%!
 // with [FILTERED].
 func SanitizeString(str string) string {
 	return hostPattern.ReplaceAllString(str, "$1[FILTERED]@$3$4")
+}
+
+// SanitizeError does the same thing as SanitizeString but for error types
+func SanitizeError(err error) error {
+	return errors.New(SanitizeString(err.Error()))
 }

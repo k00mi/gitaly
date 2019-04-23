@@ -5,6 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
+
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
@@ -153,6 +156,38 @@ func TestLinkNoClobber(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, contentBefore, string(contentAfter), "contents of existing alternates file should not have changed")
+}
+
+func TestLinkNoPool(t *testing.T) {
+	server, serverSocketPath := runObjectPoolServer(t)
+	defer server.Stop()
+
+	client, conn := newObjectPoolClient(t, serverSocketPath)
+	defer conn.Close()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	pool, err := objectpool.NewObjectPool(testRepo.GetStorageName(), t.Name())
+	require.NoError(t, err)
+	// intentionally do not call pool.Create
+	defer pool.Remove(ctx)
+
+	request := &gitalypb.LinkRepositoryToObjectPoolRequest{
+		Repository: testRepo,
+		ObjectPool: pool.ToProto(),
+	}
+
+	_, err = client.LinkRepositoryToObjectPool(ctx, request)
+	require.NoError(t, err)
+
+	poolRepoPath, err := helper.GetRepoPath(pool)
+	require.NoError(t, err)
+
+	assert.True(t, helper.IsGitDirectory(poolRepoPath))
 }
 
 func TestUnlink(t *testing.T) {
