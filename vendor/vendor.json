@@ -593,12 +593,12 @@
 			"revisionTime": "2016-03-31T18:18:00Z"
 		},
 		{
-			"checksumSHA1": "iJKQ/S8ynk2UP3iBJFixbHEJu10=",
+			"checksumSHA1": "GIKWOybd1FBje1xV81B+havPyOQ=",
 			"path": "gitlab.com/gitlab-org/gitaly-proto/go/gitalypb",
-			"revision": "9647fbe9afb8acef26f9dbdc8f55fafc4a67175c",
-			"revisionTime": "2019-04-15T18:02:16Z",
-			"version": "v1.24.0",
-			"versionExact": "v1.24.0"
+			"revision": "f90f9782cbceab4f8611b2f7ba680c78ae555c85",
+			"revisionTime": "2019-04-16T22:54:53Z",
+			"version": "v1.26.0",
+			"versionExact": "v1.26.0"
 		},
 		{
 			"checksumSHA1": "WMOuBgCyclqy+Mqunb0NbykaC4Y=",

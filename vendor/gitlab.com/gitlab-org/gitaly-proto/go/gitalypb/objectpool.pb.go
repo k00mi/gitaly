@@ -37,7 +37,7 @@ func (m *CreateObjectPoolRequest) Reset()         { *m = CreateObjectPoolRequest
 func (m *CreateObjectPoolRequest) String() string { return proto.CompactTextString(m) }
 func (*CreateObjectPoolRequest) ProtoMessage()    {}
 func (*CreateObjectPoolRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_objectpool_3dfe0d7fff6d05f6, []int{0}
+	return fileDescriptor_objectpool_9f08c40ea75d0855, []int{0}
 }
 func (m *CreateObjectPoolRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CreateObjectPoolRequest.Unmarshal(m, b)
@@ -81,7 +81,7 @@ func (m *CreateObjectPoolResponse) Reset()         { *m = CreateObjectPoolRespon
 func (m *CreateObjectPoolResponse) String() string { return proto.CompactTextString(m) }
 func (*CreateObjectPoolResponse) ProtoMessage()    {}
 func (*CreateObjectPoolResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_objectpool_3dfe0d7fff6d05f6, []int{1}
+	return fileDescriptor_objectpool_9f08c40ea75d0855, []int{1}
 }
 func (m *CreateObjectPoolResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CreateObjectPoolResponse.Unmarshal(m, b)
@@ -114,7 +114,7 @@ func (m *DeleteObjectPoolRequest) Reset()         { *m = DeleteObjectPoolRequest
 func (m *DeleteObjectPoolRequest) String() string { return proto.CompactTextString(m) }
 func (*DeleteObjectPoolRequest) ProtoMessage()    {}
 func (*DeleteObjectPoolRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_objectpool_3dfe0d7fff6d05f6, []int{2}
+	return fileDescriptor_objectpool_9f08c40ea75d0855, []int{2}
 }
 func (m *DeleteObjectPoolRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DeleteObjectPoolRequest.Unmarshal(m, b)
@@ -151,7 +151,7 @@ func (m *DeleteObjectPoolResponse) Reset()         { *m = DeleteObjectPoolRespon
 func (m *DeleteObjectPoolResponse) String() string { return proto.CompactTextString(m) }
 func (*DeleteObjectPoolResponse) ProtoMessage()    {}
 func (*DeleteObjectPoolResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_objectpool_3dfe0d7fff6d05f6, []int{3}
+	return fileDescriptor_objectpool_9f08c40ea75d0855, []int{3}
 }
 func (m *DeleteObjectPoolResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DeleteObjectPoolResponse.Unmarshal(m, b)
@@ -183,7 +183,7 @@ func (m *LinkRepositoryToObjectPoolRequest) Reset()         { *m = LinkRepositor
 func (m *LinkRepositoryToObjectPoolRequest) String() string { return proto.CompactTextString(m) }
 func (*LinkRepositoryToObjectPoolRequest) ProtoMessage()    {}
 func (*LinkRepositoryToObjectPoolRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_objectpool_3dfe0d7fff6d05f6, []int{4}
+	return fileDescriptor_objectpool_9f08c40ea75d0855, []int{4}
 }
 func (m *LinkRepositoryToObjectPoolRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_LinkRepositoryToObjectPoolRequest.Unmarshal(m, b)
@@ -227,7 +227,7 @@ func (m *LinkRepositoryToObjectPoolResponse) Reset()         { *m = LinkReposito
 func (m *LinkRepositoryToObjectPoolResponse) String() string { return proto.CompactTextString(m) }
 func (*LinkRepositoryToObjectPoolResponse) ProtoMessage()    {}
 func (*LinkRepositoryToObjectPoolResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_objectpool_3dfe0d7fff6d05f6, []int{5}
+	return fileDescriptor_objectpool_9f08c40ea75d0855, []int{5}
 }
 func (m *LinkRepositoryToObjectPoolResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_LinkRepositoryToObjectPoolResponse.Unmarshal(m, b)
@@ -261,7 +261,7 @@ func (m *UnlinkRepositoryFromObjectPoolRequest) Reset()         { *m = UnlinkRep
 func (m *UnlinkRepositoryFromObjectPoolRequest) String() string { return proto.CompactTextString(m) }
 func (*UnlinkRepositoryFromObjectPoolRequest) ProtoMessage()    {}
 func (*UnlinkRepositoryFromObjectPoolRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_objectpool_3dfe0d7fff6d05f6, []int{6}
+	return fileDescriptor_objectpool_9f08c40ea75d0855, []int{6}
 }
 func (m *UnlinkRepositoryFromObjectPoolRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_UnlinkRepositoryFromObjectPoolRequest.Unmarshal(m, b)
@@ -307,7 +307,7 @@ func (m *UnlinkRepositoryFromObjectPoolResponse) Reset() {
 func (m *UnlinkRepositoryFromObjectPoolResponse) String() string { return proto.CompactTextString(m) }
 func (*UnlinkRepositoryFromObjectPoolResponse) ProtoMessage()    {}
 func (*UnlinkRepositoryFromObjectPoolResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_objectpool_3dfe0d7fff6d05f6, []int{7}
+	return fileDescriptor_objectpool_9f08c40ea75d0855, []int{7}
 }
 func (m *UnlinkRepositoryFromObjectPoolResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_UnlinkRepositoryFromObjectPoolResponse.Unmarshal(m, b)
@@ -338,7 +338,7 @@ func (m *ReduplicateRepositoryRequest) Reset()         { *m = ReduplicateReposit
 func (m *ReduplicateRepositoryRequest) String() string { return proto.CompactTextString(m) }
 func (*ReduplicateRepositoryRequest) ProtoMessage()    {}
 func (*ReduplicateRepositoryRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_objectpool_3dfe0d7fff6d05f6, []int{8}
+	return fileDescriptor_objectpool_9f08c40ea75d0855, []int{8}
 }
 func (m *ReduplicateRepositoryRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ReduplicateRepositoryRequest.Unmarshal(m, b)
@@ -375,7 +375,7 @@ func (m *ReduplicateRepositoryResponse) Reset()         { *m = ReduplicateReposi
 func (m *ReduplicateRepositoryResponse) String() string { return proto.CompactTextString(m) }
 func (*ReduplicateRepositoryResponse) ProtoMessage()    {}
 func (*ReduplicateRepositoryResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_objectpool_3dfe0d7fff6d05f6, []int{9}
+	return fileDescriptor_objectpool_9f08c40ea75d0855, []int{9}
 }
 func (m *ReduplicateRepositoryResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ReduplicateRepositoryResponse.Unmarshal(m, b)
@@ -406,7 +406,7 @@ func (m *DisconnectGitAlternatesRequest) Reset()         { *m = DisconnectGitAlt
 func (m *DisconnectGitAlternatesRequest) String() string { return proto.CompactTextString(m) }
 func (*DisconnectGitAlternatesRequest) ProtoMessage()    {}
 func (*DisconnectGitAlternatesRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_objectpool_3dfe0d7fff6d05f6, []int{10}
+	return fileDescriptor_objectpool_9f08c40ea75d0855, []int{10}
 }
 func (m *DisconnectGitAlternatesRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DisconnectGitAlternatesRequest.Unmarshal(m, b)
@@ -443,7 +443,7 @@ func (m *DisconnectGitAlternatesResponse) Reset()         { *m = DisconnectGitAl
 func (m *DisconnectGitAlternatesResponse) String() string { return proto.CompactTextString(m) }
 func (*DisconnectGitAlternatesResponse) ProtoMessage()    {}
 func (*DisconnectGitAlternatesResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_objectpool_3dfe0d7fff6d05f6, []int{11}
+	return fileDescriptor_objectpool_9f08c40ea75d0855, []int{11}
 }
 func (m *DisconnectGitAlternatesResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DisconnectGitAlternatesResponse.Unmarshal(m, b)
@@ -463,6 +463,90 @@ func (m *DisconnectGitAlternatesResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_DisconnectGitAlternatesResponse proto.InternalMessageInfo
 
+type FetchIntoObjectPoolRequest struct {
+	Origin               *Repository `protobuf:"bytes,1,opt,name=origin,proto3" json:"origin,omitempty"`
+	ObjectPool           *ObjectPool `protobuf:"bytes,2,opt,name=object_pool,json=objectPool,proto3" json:"object_pool,omitempty"`
+	Repack               bool        `protobuf:"varint,3,opt,name=repack,proto3" json:"repack,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
+	XXX_unrecognized     []byte      `json:"-"`
+	XXX_sizecache        int32       `json:"-"`
+}
+
+func (m *FetchIntoObjectPoolRequest) Reset()         { *m = FetchIntoObjectPoolRequest{} }
+func (m *FetchIntoObjectPoolRequest) String() string { return proto.CompactTextString(m) }
+func (*FetchIntoObjectPoolRequest) ProtoMessage()    {}
+func (*FetchIntoObjectPoolRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_objectpool_9f08c40ea75d0855, []int{12}
+}
+func (m *FetchIntoObjectPoolRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_FetchIntoObjectPoolRequest.Unmarshal(m, b)
+}
+func (m *FetchIntoObjectPoolRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_FetchIntoObjectPoolRequest.Marshal(b, m, deterministic)
+}
+func (dst *FetchIntoObjectPoolRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_FetchIntoObjectPoolRequest.Merge(dst, src)
+}
+func (m *FetchIntoObjectPoolRequest) XXX_Size() int {
+	return xxx_messageInfo_FetchIntoObjectPoolRequest.Size(m)
+}
+func (m *FetchIntoObjectPoolRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_FetchIntoObjectPoolRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_FetchIntoObjectPoolRequest proto.InternalMessageInfo
+
+func (m *FetchIntoObjectPoolRequest) GetOrigin() *Repository {
+	if m != nil {
+		return m.Origin
+	}
+	return nil
+}
+
+func (m *FetchIntoObjectPoolRequest) GetObjectPool() *ObjectPool {
+	if m != nil {
+		return m.ObjectPool
+	}
+	return nil
+}
+
+func (m *FetchIntoObjectPoolRequest) GetRepack() bool {
+	if m != nil {
+		return m.Repack
+	}
+	return false
+}
+
+type FetchIntoObjectPoolResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *FetchIntoObjectPoolResponse) Reset()         { *m = FetchIntoObjectPoolResponse{} }
+func (m *FetchIntoObjectPoolResponse) String() string { return proto.CompactTextString(m) }
+func (*FetchIntoObjectPoolResponse) ProtoMessage()    {}
+func (*FetchIntoObjectPoolResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_objectpool_9f08c40ea75d0855, []int{13}
+}
+func (m *FetchIntoObjectPoolResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_FetchIntoObjectPoolResponse.Unmarshal(m, b)
+}
+func (m *FetchIntoObjectPoolResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_FetchIntoObjectPoolResponse.Marshal(b, m, deterministic)
+}
+func (dst *FetchIntoObjectPoolResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_FetchIntoObjectPoolResponse.Merge(dst, src)
+}
+func (m *FetchIntoObjectPoolResponse) XXX_Size() int {
+	return xxx_messageInfo_FetchIntoObjectPoolResponse.Size(m)
+}
+func (m *FetchIntoObjectPoolResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_FetchIntoObjectPoolResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_FetchIntoObjectPoolResponse proto.InternalMessageInfo
+
 func init() {
 	proto.RegisterType((*CreateObjectPoolRequest)(nil), "gitaly.CreateObjectPoolRequest")
 	proto.RegisterType((*CreateObjectPoolResponse)(nil), "gitaly.CreateObjectPoolResponse")
@@ -476,6 +560,8 @@ func init() {
 	proto.RegisterType((*ReduplicateRepositoryResponse)(nil), "gitaly.ReduplicateRepositoryResponse")
 	proto.RegisterType((*DisconnectGitAlternatesRequest)(nil), "gitaly.DisconnectGitAlternatesRequest")
 	proto.RegisterType((*DisconnectGitAlternatesResponse)(nil), "gitaly.DisconnectGitAlternatesResponse")
+	proto.RegisterType((*FetchIntoObjectPoolRequest)(nil), "gitaly.FetchIntoObjectPoolRequest")
+	proto.RegisterType((*FetchIntoObjectPoolResponse)(nil), "gitaly.FetchIntoObjectPoolResponse")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -497,6 +583,7 @@ type ObjectPoolServiceClient interface {
 	UnlinkRepositoryFromObjectPool(ctx context.Context, in *UnlinkRepositoryFromObjectPoolRequest, opts ...grpc.CallOption) (*UnlinkRepositoryFromObjectPoolResponse, error)
 	ReduplicateRepository(ctx context.Context, in *ReduplicateRepositoryRequest, opts ...grpc.CallOption) (*ReduplicateRepositoryResponse, error)
 	DisconnectGitAlternates(ctx context.Context, in *DisconnectGitAlternatesRequest, opts ...grpc.CallOption) (*DisconnectGitAlternatesResponse, error)
+	FetchIntoObjectPool(ctx context.Context, in *FetchIntoObjectPoolRequest, opts ...grpc.CallOption) (*FetchIntoObjectPoolResponse, error)
 }
 
 type objectPoolServiceClient struct {
@@ -561,6 +648,15 @@ func (c *objectPoolServiceClient) DisconnectGitAlternates(ctx context.Context, i
 	return out, nil
 }
 
+func (c *objectPoolServiceClient) FetchIntoObjectPool(ctx context.Context, in *FetchIntoObjectPoolRequest, opts ...grpc.CallOption) (*FetchIntoObjectPoolResponse, error) {
+	out := new(FetchIntoObjectPoolResponse)
+	err := c.cc.Invoke(ctx, "/gitaly.ObjectPoolService/FetchIntoObjectPool", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ObjectPoolServiceServer is the server API for ObjectPoolService service.
 type ObjectPoolServiceServer interface {
 	CreateObjectPool(context.Context, *CreateObjectPoolRequest) (*CreateObjectPoolResponse, error)
@@ -570,6 +666,7 @@ type ObjectPoolServiceServer interface {
 	UnlinkRepositoryFromObjectPool(context.Context, *UnlinkRepositoryFromObjectPoolRequest) (*UnlinkRepositoryFromObjectPoolResponse, error)
 	ReduplicateRepository(context.Context, *ReduplicateRepositoryRequest) (*ReduplicateRepositoryResponse, error)
 	DisconnectGitAlternates(context.Context, *DisconnectGitAlternatesRequest) (*DisconnectGitAlternatesResponse, error)
+	FetchIntoObjectPool(context.Context, *FetchIntoObjectPoolRequest) (*FetchIntoObjectPoolResponse, error)
 }
 
 func RegisterObjectPoolServiceServer(s *grpc.Server, srv ObjectPoolServiceServer) {
@@ -684,6 +781,24 @@ func _ObjectPoolService_DisconnectGitAlternates_Handler(srv interface{}, ctx con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ObjectPoolService_FetchIntoObjectPool_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FetchIntoObjectPoolRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ObjectPoolServiceServer).FetchIntoObjectPool(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/gitaly.ObjectPoolService/FetchIntoObjectPool",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ObjectPoolServiceServer).FetchIntoObjectPool(ctx, req.(*FetchIntoObjectPoolRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _ObjectPoolService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "gitaly.ObjectPoolService",
 	HandlerType: (*ObjectPoolServiceServer)(nil),
@@ -712,42 +827,50 @@ var _ObjectPoolService_serviceDesc = grpc.ServiceDesc{
 			MethodName: "DisconnectGitAlternates",
 			Handler:    _ObjectPoolService_DisconnectGitAlternates_Handler,
 		},
+		{
+			MethodName: "FetchIntoObjectPool",
+			Handler:    _ObjectPoolService_FetchIntoObjectPool_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "objectpool.proto",
 }
 
-func init() { proto.RegisterFile("objectpool.proto", fileDescriptor_objectpool_3dfe0d7fff6d05f6) }
+func init() { proto.RegisterFile("objectpool.proto", fileDescriptor_objectpool_9f08c40ea75d0855) }
 
-var fileDescriptor_objectpool_3dfe0d7fff6d05f6 = []byte{
-	// 459 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x95, 0xc1, 0x6e, 0xd3, 0x40,
-	0x10, 0x86, 0xe5, 0x48, 0x58, 0x68, 0xca, 0xa1, 0xac, 0x84, 0x12, 0xad, 0xa0, 0x69, 0xad, 0xb6,
-	0x84, 0x4a, 0x71, 0x50, 0xfa, 0x04, 0x40, 0x05, 0x17, 0x04, 0xc8, 0x94, 0x0b, 0x12, 0x42, 0xb6,
-	0x3b, 0x32, 0x0b, 0x5b, 0x8f, 0x59, 0x6f, 0x91, 0x02, 0x0f, 0xc0, 0x85, 0x03, 0x37, 0xde, 0x85,
-	0x47, 0xe3, 0x84, 0x1c, 0xdb, 0x71, 0xec, 0xb0, 0xb6, 0x45, 0x73, 0xdb, 0xac, 0xfe, 0x7c, 0xff,
-	0xbf, 0x93, 0x7f, 0x14, 0xd8, 0xa5, 0xe0, 0x23, 0x86, 0x3a, 0x21, 0x92, 0x6e, 0xa2, 0x48, 0x13,
-	0xb3, 0x23, 0xa1, 0x7d, 0xb9, 0xe0, 0xb7, 0xd2, 0x0f, 0xbe, 0xc2, 0x8b, 0xfc, 0xd6, 0xf9, 0x0a,
-	0xc3, 0x27, 0x0a, 0x7d, 0x8d, 0x2f, 0x97, 0xfa, 0x57, 0x44, 0xd2, 0xc3, 0xcf, 0x57, 0x98, 0x6a,
-	0x76, 0x0a, 0x3b, 0x39, 0xe4, 0x7d, 0x46, 0x19, 0x59, 0xfb, 0xd6, 0x64, 0x67, 0xce, 0xdc, 0x1c,
-	0xe3, 0xae, 0xe9, 0x81, 0x56, 0x67, 0x76, 0x02, 0x36, 0x29, 0x11, 0x89, 0x78, 0x34, 0xa8, 0xeb,
-	0x3d, 0x4c, 0x28, 0x15, 0x9a, 0xd4, 0xc2, 0x2b, 0x14, 0x0e, 0x87, 0xd1, 0xa6, 0x77, 0x9a, 0x50,
-	0x9c, 0xa2, 0xf3, 0x02, 0x86, 0x67, 0x28, 0x71, 0x5b, 0xb9, 0x32, 0xaf, 0x4d, 0x5e, 0xe1, 0xf5,
-	0xc3, 0x82, 0x83, 0xe7, 0x22, 0xfe, 0x54, 0x45, 0x3c, 0xa7, 0x2d, 0x8d, 0x63, 0x0e, 0xa0, 0x56,
-	0xd4, 0x96, 0x91, 0xac, 0xa9, 0x9c, 0x43, 0x70, 0xda, 0xd2, 0x14, 0xa1, 0x7f, 0x5a, 0x70, 0xf4,
-	0x26, 0x96, 0x35, 0xe1, 0x53, 0x45, 0x97, 0x9b, 0xc1, 0xeb, 0x19, 0xac, 0x3e, 0x19, 0x9a, 0x8f,
-	0x1d, 0xf4, 0x9a, 0xf1, 0x04, 0x8e, 0xbb, 0x12, 0x15, 0xe1, 0x3d, 0xb8, 0xeb, 0xe1, 0xc5, 0x55,
-	0x22, 0x45, 0xe8, 0x6b, 0x5c, 0xcb, 0xf0, 0xff, 0x91, 0x9d, 0x31, 0xdc, 0x33, 0x30, 0x0b, 0xd3,
-	0x73, 0xd8, 0x3b, 0x13, 0x69, 0x48, 0x71, 0x8c, 0xa1, 0x7e, 0x26, 0xf4, 0x23, 0xa9, 0x51, 0xc5,
-	0xbe, 0xc6, 0xf4, 0x3a, 0xb6, 0x07, 0x30, 0x36, 0x52, 0x73, 0xe3, 0xf9, 0xef, 0x1b, 0x70, 0xbb,
-	0x1a, 0xc2, 0x6b, 0x54, 0x5f, 0x44, 0x88, 0xec, 0x1d, 0xec, 0x36, 0xdb, 0xcf, 0xc6, 0xa5, 0x99,
-	0x61, 0x27, 0xf9, 0xbe, 0x59, 0x50, 0xbc, 0xd2, 0xfe, 0xf3, 0x6b, 0x32, 0xb8, 0x69, 0x65, 0xf8,
-	0x66, 0xe1, 0x2b, 0xbc, 0x61, 0xb5, 0x2a, 0xbc, 0x71, 0x57, 0x4a, 0xfc, 0x37, 0xe0, 0xe6, 0x92,
-	0xb2, 0x07, 0x25, 0xa7, 0x73, 0xad, 0xf8, 0x49, 0x1f, 0x69, 0xc3, 0xfc, 0xbb, 0x05, 0x7b, 0xed,
-	0x4d, 0x63, 0xd3, 0x12, 0xdb, 0x6b, 0x47, 0xb8, 0xdb, 0x57, 0xde, 0x48, 0x22, 0xe1, 0xce, 0x3f,
-	0x4b, 0xc7, 0x0e, 0xab, 0xda, 0x98, 0x7b, 0xce, 0x8f, 0x3a, 0x54, 0x0d, 0x37, 0x05, 0x43, 0x43,
-	0xd7, 0xd8, 0xf1, 0xea, 0x97, 0x6b, 0xad, 0x38, 0xbf, 0xdf, 0xa9, 0xab, 0x7b, 0x3e, 0x7e, 0xf8,
-	0x36, 0xfb, 0x86, 0xf4, 0x03, 0x37, 0xa4, 0xcb, 0x59, 0x7e, 0x9c, 0x92, 0x8a, 0x66, 0x39, 0x67,
-	0xba, 0xfc, 0x1b, 0x99, 0x45, 0x54, 0x7c, 0x4e, 0x82, 0xc0, 0x5e, 0x5e, 0x9d, 0xfe, 0x0d, 0x00,
-	0x00, 0xff, 0xff, 0x04, 0x1b, 0xa1, 0xe4, 0x83, 0x06, 0x00, 0x00,
+var fileDescriptor_objectpool_9f08c40ea75d0855 = []byte{
+	// 520 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x95, 0xc1, 0x6f, 0xd3, 0x30,
+	0x14, 0xc6, 0xe5, 0x22, 0x45, 0xd3, 0x1b, 0x87, 0x61, 0x04, 0xad, 0x0c, 0x5b, 0xbb, 0xb0, 0x8d,
+	0x32, 0xa9, 0x29, 0xea, 0xfe, 0x02, 0x60, 0x1a, 0x42, 0x42, 0x80, 0xc2, 0xb8, 0x20, 0x21, 0x94,
+	0x66, 0x8f, 0x2e, 0x2c, 0xcb, 0x0b, 0x8e, 0x87, 0x34, 0xf8, 0x03, 0xb8, 0x70, 0xe0, 0x82, 0xb8,
+	0xf3, 0x67, 0x72, 0x42, 0x6d, 0x9c, 0xa6, 0x4d, 0xeb, 0x24, 0xda, 0x7a, 0x8b, 0xad, 0x4f, 0xdf,
+	0xf7, 0xeb, 0xb3, 0x3f, 0x17, 0x36, 0x68, 0xf8, 0x19, 0x7d, 0x15, 0x13, 0x85, 0x4e, 0x2c, 0x49,
+	0x11, 0xb7, 0x46, 0x81, 0xf2, 0xc2, 0x4b, 0x71, 0x33, 0x39, 0xf5, 0x24, 0x9e, 0xa4, 0xbb, 0xf6,
+	0x37, 0x68, 0x3e, 0x93, 0xe8, 0x29, 0x7c, 0x3d, 0xd1, 0xbf, 0x21, 0x0a, 0x5d, 0xfc, 0x72, 0x81,
+	0x89, 0xe2, 0x07, 0xb0, 0x9e, 0x9a, 0x7c, 0x1c, 0xbb, 0xb4, 0x58, 0x87, 0x75, 0xd7, 0x07, 0xdc,
+	0x49, 0x6d, 0x9c, 0x19, 0x3d, 0xd0, 0xf4, 0x9b, 0xef, 0x83, 0x45, 0x32, 0x18, 0x05, 0x51, 0xab,
+	0x31, 0xaf, 0x77, 0x31, 0xa6, 0x24, 0x50, 0x24, 0x2f, 0x5d, 0xad, 0xb0, 0x05, 0xb4, 0x16, 0xb3,
+	0x93, 0x98, 0xa2, 0x04, 0xed, 0x57, 0xd0, 0x3c, 0xc4, 0x10, 0x57, 0xc5, 0x35, 0xce, 0x5a, 0xf4,
+	0xd3, 0x59, 0x3f, 0x19, 0x6c, 0xbf, 0x0c, 0xa2, 0xb3, 0x1c, 0xf1, 0x98, 0x56, 0x34, 0x8e, 0x01,
+	0x80, 0x9c, 0xba, 0x96, 0x8c, 0x64, 0x46, 0x65, 0xef, 0x80, 0x5d, 0x46, 0xa3, 0xa1, 0x7f, 0x31,
+	0xd8, 0x7d, 0x17, 0x85, 0x73, 0xc2, 0x23, 0x49, 0xe7, 0x8b, 0xe0, 0xf3, 0x0c, 0xac, 0x0e, 0x43,
+	0xf1, 0xc7, 0x36, 0x6a, 0xcd, 0xb8, 0x0b, 0x7b, 0x55, 0x44, 0x1a, 0xde, 0x85, 0xfb, 0x2e, 0x9e,
+	0x5c, 0xc4, 0x61, 0xe0, 0x7b, 0x0a, 0x67, 0x18, 0xae, 0x8e, 0x6c, 0xb7, 0x61, 0xd3, 0xe0, 0xa9,
+	0x43, 0x8f, 0x61, 0xeb, 0x30, 0x48, 0x7c, 0x8a, 0x22, 0xf4, 0xd5, 0xf3, 0x40, 0x3d, 0x09, 0x15,
+	0xca, 0xc8, 0x53, 0x98, 0x5c, 0x27, 0x76, 0x1b, 0xda, 0x46, 0x57, 0x1d, 0xfc, 0x9b, 0x81, 0x38,
+	0x42, 0xe5, 0x9f, 0xbe, 0x88, 0xd4, 0x92, 0x8b, 0x95, 0x57, 0x86, 0x55, 0x55, 0xe6, 0x4a, 0xe7,
+	0xc2, 0xef, 0x82, 0x25, 0x31, 0xf6, 0xfc, 0xb3, 0xd6, 0x8d, 0x0e, 0xeb, 0xae, 0xb9, 0x7a, 0x65,
+	0x6f, 0xc2, 0xbd, 0xa5, 0x58, 0x29, 0xf6, 0xe0, 0xaf, 0x05, 0xb7, 0xf2, 0xed, 0xb7, 0x28, 0xbf,
+	0x06, 0x3e, 0xf2, 0x0f, 0xb0, 0x51, 0x2c, 0x2d, 0x6f, 0x67, 0x00, 0x86, 0xa7, 0x44, 0x74, 0xcc,
+	0x02, 0x3d, 0x23, 0xeb, 0xdf, 0x9f, 0x6e, 0x63, 0x8d, 0x8d, 0xed, 0x8b, 0x3d, 0xcd, 0xed, 0x0d,
+	0x2f, 0x42, 0x6e, 0x6f, 0xac, 0x78, 0x66, 0xff, 0x1d, 0x84, 0xb9, 0x5b, 0xfc, 0x51, 0xe6, 0x53,
+	0xf9, 0x1a, 0x88, 0xfd, 0x3a, 0xd2, 0x42, 0xf8, 0x0f, 0x06, 0x5b, 0xe5, 0x05, 0xe1, 0xbd, 0xcc,
+	0xb6, 0x56, 0xb5, 0x85, 0x53, 0x57, 0x5e, 0x20, 0x09, 0xe1, 0xce, 0xd2, 0xae, 0xf0, 0x9d, 0xfc,
+	0xee, 0x99, 0xeb, 0x29, 0x76, 0x2b, 0x54, 0x85, 0x34, 0x09, 0x4d, 0x43, 0x45, 0xf8, 0xde, 0xf4,
+	0xe4, 0x4a, 0x9b, 0x29, 0x1e, 0x56, 0xea, 0x0a, 0x99, 0x9f, 0xe0, 0xf6, 0x92, 0xbb, 0xcd, 0xed,
+	0xcc, 0xc7, 0xdc, 0x47, 0xf1, 0xa0, 0x54, 0x33, 0x9f, 0xf3, 0xf4, 0xf1, 0xfb, 0xb1, 0x3a, 0xf4,
+	0x86, 0x8e, 0x4f, 0xe7, 0xfd, 0xf4, 0xb3, 0x47, 0x72, 0xd4, 0x4f, 0x3d, 0x7a, 0x93, 0x7f, 0xd9,
+	0xfe, 0x88, 0xf4, 0x3a, 0x1e, 0x0e, 0xad, 0xc9, 0xd6, 0xc1, 0xff, 0x00, 0x00, 0x00, 0xff, 0xff,
+	0x31, 0x3d, 0xeb, 0x4f, 0xa2, 0x07, 0x00, 0x00,
 }

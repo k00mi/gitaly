@@ -8,6 +8,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -42,7 +43,7 @@ func (server) RepackIncremental(ctx context.Context, in *gitalypb.RepackIncremen
 	return &gitalypb.RepackIncrementalResponse{}, nil
 }
 
-func repackCommand(ctx context.Context, repo *gitalypb.Repository, bitmap bool, args ...string) error {
+func repackCommand(ctx context.Context, repo repository.GitRepo, bitmap bool, args ...string) error {
 	cmdArgs := repackConfig(ctx, bitmap)
 
 	cmdArgs = append(cmdArgs, "repack", "-d")
