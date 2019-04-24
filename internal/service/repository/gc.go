@@ -15,7 +15,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/housekeeping"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
@@ -38,19 +37,12 @@ func (server) GarbageCollect(ctx context.Context, in *gitalypb.GarbageCollectReq
 		return nil, err
 	}
 
-	args := repackConfig(ctx, in.CreateBitmap)
-
-	args = append(args, "gc")
-	cmd, err := git.Command(ctx, in.GetRepository(), args...)
-	if err != nil {
-		if _, ok := status.FromError(err); ok {
-			return nil, err
-		}
-		return nil, status.Errorf(codes.Internal, "GarbageCollect: gitCommand: %v", err)
+	if err := gc(ctx, in); err != nil {
+		return nil, err
 	}
 
-	if err := cmd.Wait(); err != nil {
-		return nil, status.Errorf(codes.Internal, "GarbageCollect: cmd wait: %v", err)
+	if err := configureCommitGraph(ctx, in); err != nil {
+		return nil, err
 	}
 
 	// Perform housekeeping post GC
@@ -60,6 +52,50 @@ func (server) GarbageCollect(ctx context.Context, in *gitalypb.GarbageCollectReq
 	}
 
 	return &gitalypb.GarbageCollectResponse{}, nil
+}
+
+func gc(ctx context.Context, in *gitalypb.GarbageCollectRequest) error {
+	args := repackConfig(ctx, in.CreateBitmap)
+
+	// run garbage collect and also write the commit graph
+	args = append(args,
+		"-c", "core.commitGrap=true",
+		"-c", "gc.writeCommitGraph=true",
+		"gc",
+	)
+
+	cmd, err := git.Command(ctx, in.GetRepository(), args...)
+	if err != nil {
+		if _, ok := status.FromError(err); ok {
+			return err
+		}
+		return helper.ErrInternal(fmt.Errorf("GarbageCollect: gitCommand: %v", err))
+	}
+
+	if err := cmd.Wait(); err != nil {
+		return helper.ErrInternal(fmt.Errorf("GarbageCollect: cmd wait: %v", err))
+	}
+
+	return nil
+}
+
+func configureCommitGraph(ctx context.Context, in *gitalypb.GarbageCollectRequest) error {
+	args := []string{"config", "core.commitGraph", "true"}
+
+	cmd, err := git.Command(ctx, in.GetRepository(), args...)
+	if err != nil {
+		if _, ok := status.FromError(err); ok {
+			return err
+		}
+
+		return helper.ErrInternal(fmt.Errorf("GarbageCollect: config gitCommand: %v", err))
+	}
+
+	if err := cmd.Wait(); err != nil {
+		return helper.ErrInternal(fmt.Errorf("GarbageCollect: config cmd wait: %v", err))
+	}
+
+	return nil
 }
 
 func cleanupKeepArounds(ctx context.Context, repo *gitalypb.Repository) error {
