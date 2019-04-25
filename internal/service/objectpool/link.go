@@ -21,8 +21,12 @@ func (s *server) LinkRepositoryToObjectPool(ctx context.Context, req *gitalypb.L
 		return nil, err
 	}
 
+	if err := pool.Init(ctx); err != nil {
+		return nil, helper.ErrInternal(err)
+	}
+
 	if err := pool.Link(ctx, req.GetRepository()); err != nil {
-		return nil, status.Error(codes.Internal, helper.SanitizeString(err.Error()))
+		return nil, helper.ErrInternal(helper.SanitizeError(err))
 	}
 
 	return &gitalypb.LinkRepositoryToObjectPoolResponse{}, nil
