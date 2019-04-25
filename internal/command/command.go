@@ -53,7 +53,8 @@ var exportedEnvVars = []string{
 
 const (
 	// MaxStderrBytes is at most how many bytes will be written to stderr
-	MaxStderrBytes = 1000000 // 1mb
+	MaxStderrBytes   = 10000 // 10kb
+	StderrBufferSize = 4096
 )
 
 // Command encapsulates a running exec.Cmd. The embedded exec.Cmd is
@@ -264,7 +265,7 @@ func escapeNewlineWriter(outbound io.Writer, done chan struct{}, maxBytes int) i
 func writeLines(writer io.Writer, reader io.Reader, done chan struct{}, maxBytes int) {
 	var bytesWritten int
 
-	bufReader := bufio.NewReader(reader)
+	bufReader := bufio.NewReaderSize(reader, StderrBufferSize)
 
 	var err error
 	var b []byte

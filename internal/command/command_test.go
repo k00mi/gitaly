@@ -243,5 +243,6 @@ func TestCommandStdErrLongLine(t *testing.T) {
 	require.Error(t, cmd.Wait())
 	assert.Empty(t, stdout.Bytes())
 	assert.NotEmpty(t, stderr.Bytes())
-	assert.Equal(t, fmt.Sprintf("%s\\n%s", strings.Repeat("a", 4096), strings.Repeat("b", 4096)), stderr.String())
+	assert.Equal(t, fmt.Sprintf("%s\\n%s", strings.Repeat("a", StderrBufferSize), strings.Repeat("b", StderrBufferSize)), stderr.String())
+	//	t.Logf(stderr.String())
 }
