@@ -20,6 +20,10 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 )
 
+const (
+	escapedNewline = `\n`
+)
+
 // GitEnv contains the ENV variables for git commands
 var GitEnv = []string{
 	// Force english locale for consistency on the output messages
@@ -53,7 +57,9 @@ var exportedEnvVars = []string{
 
 const (
 	// MaxStderrBytes is at most how many bytes will be written to stderr
-	MaxStderrBytes   = 10000 // 10kb
+	MaxStderrBytes = 10000 // 10kb
+	// StderrBufferSize is the buffer size we use for the reader that reads from
+	// the stderr stream of the command
 	StderrBufferSize = 4096
 )
 
@@ -291,13 +297,13 @@ func writeLines(writer io.Writer, reader io.Reader, done chan struct{}, maxBytes
 		}
 
 		// only write up to the max
-		if len(b)+bytesWritten+2 >= maxBytes {
-			b = b[:maxBytes-bytesWritten-2]
+		if len(b)+bytesWritten+len(escapedNewline) >= maxBytes {
+			b = b[:maxBytes-bytesWritten-len(escapedNewline)]
 		}
 
 		// prepend an escaped newline
 		if bytesWritten > 0 {
-			b = append([]byte{'\\', 'n'}, b...)
+			b = append([]byte(escapedNewline), b...)
 		}
 
 		n, _ := writer.Write(b)
