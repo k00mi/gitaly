@@ -34,6 +34,14 @@ GITLAB_TOKEN=$(cat /path/to/gitlab-token) _support/update-downstream-server-vers
 - This will create a merge-request (with changelog) and assign it to you. Once the build has
   completed successfully, assign it to a maintainer for review.
 
+##### Security release
+
+- Check what version of Gitaly you're backporting by opening [`GITALY_SERVER_VERSION`](https://gitlab.com/gitlab-org/gitlab-ce/blob/master/GITALY_SERVER_VERSION)
+- Create a stable branch for this version:
+  - `git checkout vX.Y.Z`, then `git checkout -b X-Y-stable`, and push it to the main gitlab.com repository
+- Create the required merge requests on `dev.gitlab.org`, making sure to bump `GITALY_SERVER_VERSION` on the client (gitlab-rails) in every backported merge request
+- Follow the [usual security process](https://gitlab.com/gitlab-org/release/docs/blob/master/general/security/developer.md)
+
 ## Experimental builds
 
 Push the release tag to dev.gitlab.org/gitlab/gitaly. After the
