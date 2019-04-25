@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -186,4 +187,62 @@ func TestNewCommandNullInArg(t *testing.T) {
 
 	_, ok := err.(nullInArgvError)
 	require.True(t, ok, "expected %+v to be nullInArgvError", err)
+}
+
+func TestCommandStdErr(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var stdout, stderr bytes.Buffer
+
+	cmd, err := New(ctx, exec.Command("./testdata/stderr_script.sh"), nil, &stdout, &stderr)
+	require.NoError(t, err)
+
+	require.Error(t, cmd.Wait())
+	assert.Empty(t, stdout.Bytes())
+	assert.Equal(t, `hello world\nhello world\nhello world\nhello world\nhello world\n`, stderr.String())
+}
+
+func TestCommandStdErrLargeOutput(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var stdout, stderr bytes.Buffer
+
+	cmd, err := New(ctx, exec.Command("./testdata/stderr_many_lines.sh"), nil, &stdout, &stderr)
+	require.NoError(t, err)
+
+	require.Error(t, cmd.Wait())
+	assert.Empty(t, stdout.Bytes())
+	assert.True(t, stderr.Len() <= MaxStderrBytes)
+}
+
+func TestCommandStdErrBinaryNullBytes(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var stdout, stderr bytes.Buffer
+
+	cmd, err := New(ctx, exec.Command("./testdata/stderr_binary_null.sh"), nil, &stdout, &stderr)
+	require.NoError(t, err)
+
+	require.Error(t, cmd.Wait())
+	assert.Empty(t, stdout.Bytes())
+	assert.NotEmpty(t, stderr.Bytes())
+}
+
+func TestCommandStdErrLongLine(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var stdout, stderr bytes.Buffer
+
+	cmd, err := New(ctx, exec.Command("./testdata/stderr_repeat_a.sh"), nil, &stdout, &stderr)
+	require.NoError(t, err)
+
+	require.Error(t, cmd.Wait())
+	assert.Empty(t, stdout.Bytes())
+	assert.NotEmpty(t, stderr.Bytes())
+	assert.Equal(t, fmt.Sprintf("%s\\n%s", strings.Repeat("a", StderrBufferSize), strings.Repeat("b", StderrBufferSize)), stderr.String())
+	//	t.Logf(stderr.String())
 }

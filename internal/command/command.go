@@ -1,6 +1,7 @@
 package command
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -14,8 +15,13 @@ import (
 	"time"
 
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
+)
+
+const (
+	escapedNewline = `\n`
 )
 
 // GitEnv contains the ENV variables for git commands
@@ -49,13 +55,22 @@ var exportedEnvVars = []string{
 	"no_proxy",
 }
 
+const (
+	// MaxStderrBytes is at most how many bytes will be written to stderr
+	MaxStderrBytes = 10000 // 10kb
+	// StderrBufferSize is the buffer size we use for the reader that reads from
+	// the stderr stream of the command
+	StderrBufferSize = 4096
+)
+
 // Command encapsulates a running exec.Cmd. The embedded exec.Cmd is
 // terminated and reaped automatically when the context.Context that
 // created it is canceled.
 type Command struct {
 	reader       io.Reader
 	writer       io.WriteCloser
-	logrusWriter io.WriteCloser
+	stderrCloser io.WriteCloser
+	stderrDone   chan struct{}
 	cmd          *exec.Cmd
 	context      context.Context
 	startTime    time.Time
@@ -163,9 +178,10 @@ func New(ctx context.Context, cmd *exec.Cmd, stdin io.Reader, stdout, stderr io.
 	}()
 
 	command := &Command{
-		cmd:       cmd,
-		startTime: time.Now(),
-		context:   ctx,
+		cmd:        cmd,
+		startTime:  time.Now(),
+		context:    ctx,
+		stderrDone: make(chan struct{}),
 	}
 
 	// Explicitly set the environment for the command
@@ -204,12 +220,12 @@ func New(ctx context.Context, cmd *exec.Cmd, stdin io.Reader, stdout, stderr io.
 	}
 
 	if stderr != nil {
-		cmd.Stderr = stderr
+		command.stderrCloser = escapeNewlineWriter(stderr, command.stderrDone, MaxStderrBytes)
 	} else {
-		// If we don't do something with cmd.Stderr, Git errors will be lost
-		command.logrusWriter = grpc_logrus.Extract(ctx).WriterLevel(log.InfoLevel)
-		cmd.Stderr = command.logrusWriter
+		command.stderrCloser = escapeNewlineWriter(grpc_logrus.Extract(ctx).WriterLevel(log.ErrorLevel), command.stderrDone, MaxStderrBytes)
 	}
+
+	cmd.Stderr = command.stderrCloser
 
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("GitCommand: start %v: %v", cmd.Args, err)
@@ -244,6 +260,70 @@ func exportEnvironment(env []string) []string {
 	return env
 }
 
+func escapeNewlineWriter(outbound io.Writer, done chan struct{}, maxBytes int) io.WriteCloser {
+	r, w := io.Pipe()
+
+	go writeLines(outbound, r, done, maxBytes)
+
+	return w
+}
+
+func writeLines(writer io.Writer, reader io.Reader, done chan struct{}, maxBytes int) {
+	var bytesWritten int
+
+	bufReader := bufio.NewReaderSize(reader, StderrBufferSize)
+
+	var err error
+	var b []byte
+	var isPrefix, discardRestOfLine bool
+
+	for err == nil {
+		b, isPrefix, err = bufReader.ReadLine()
+
+		if discardRestOfLine {
+			ioutil.Discard.Write(b)
+			// if isPrefix = false, that means the reader has gotten to the end
+			// of the line. We want to read the first chunk of the  next line
+			if !isPrefix {
+				discardRestOfLine = false
+			}
+			continue
+		}
+
+		// if we've reached the max, discard
+		if bytesWritten >= maxBytes {
+			ioutil.Discard.Write(b)
+			continue
+		}
+
+		// only write up to the max
+		if len(b)+bytesWritten+len(escapedNewline) >= maxBytes {
+			b = b[:maxBytes-bytesWritten-len(escapedNewline)]
+		}
+
+		// prepend an escaped newline
+		if bytesWritten > 0 {
+			b = append([]byte(escapedNewline), b...)
+		}
+
+		n, _ := writer.Write(b)
+		bytesWritten += n
+
+		// if isPrefix, it means the line is too long so we want to discard the rest
+		if isPrefix {
+			discardRestOfLine = true
+		}
+	}
+
+	// read the rest so the command doesn't get blocked
+	if err != io.EOF {
+		logrus.WithError(err).Error("error while reading from Writer")
+		io.Copy(ioutil.Discard, reader)
+	}
+
+	done <- struct{}{}
+}
+
 // This function should never be called directly, use Wait().
 func (c *Command) wait() {
 	if c.writer != nil {
@@ -267,10 +347,11 @@ func (c *Command) wait() {
 
 	c.logProcessComplete(c.context, exitCode)
 
-	if w := c.logrusWriter; w != nil {
-		// Closing this writer lets a logrus goroutine finish early
+	if w := c.stderrCloser; w != nil {
 		w.Close()
 	}
+
+	<-c.stderrDone
 }
 
 // ExitStatus will return the exit-code from an error returned by Wait().
