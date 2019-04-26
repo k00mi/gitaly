@@ -147,6 +147,18 @@ type spawnTimeoutError struct{ error }
 type contextWithoutDonePanic string
 type nullInArgvError struct{ error }
 
+// noopWriteCloser has a noop Close(). The reason for this is so we can close any WriteClosers that get
+// passed into writeLines. We need this for WriteClosers such as the Logrus writer, which has a
+// goroutine that is stopped by the runtime https://github.com/sirupsen/logrus/blob/master/writer.go#L51.
+// Unless we explicitly close it, go test will complain that logs are being written to after the Test exits.
+type noopWriteCloser struct {
+	io.Writer
+}
+
+func (n *noopWriteCloser) Close() error {
+	return nil
+}
+
 // New creates a Command from an exec.Cmd. On success, the Command
 // contains a running subprocess. When ctx is canceled the embedded
 // process will be terminated and reaped automatically.
@@ -220,7 +232,7 @@ func New(ctx context.Context, cmd *exec.Cmd, stdin io.Reader, stdout, stderr io.
 	}
 
 	if stderr != nil {
-		command.stderrCloser = escapeNewlineWriter(stderr, command.stderrDone, MaxStderrBytes)
+		command.stderrCloser = escapeNewlineWriter(&noopWriteCloser{stderr}, command.stderrDone, MaxStderrBytes)
 	} else {
 		command.stderrCloser = escapeNewlineWriter(grpc_logrus.Extract(ctx).WriterLevel(log.ErrorLevel), command.stderrDone, MaxStderrBytes)
 	}
@@ -260,7 +272,7 @@ func exportEnvironment(env []string) []string {
 	return env
 }
 
-func escapeNewlineWriter(outbound io.Writer, done chan struct{}, maxBytes int) io.WriteCloser {
+func escapeNewlineWriter(outbound io.WriteCloser, done chan struct{}, maxBytes int) io.WriteCloser {
 	r, w := io.Pipe()
 
 	go writeLines(outbound, r, done, maxBytes)
@@ -268,7 +280,7 @@ func escapeNewlineWriter(outbound io.Writer, done chan struct{}, maxBytes int) i
 	return w
 }
 
-func writeLines(writer io.Writer, reader io.Reader, done chan struct{}, maxBytes int) {
+func writeLines(writer io.WriteCloser, reader io.Reader, done chan struct{}, maxBytes int) {
 	var bytesWritten int
 
 	bufReader := bufio.NewReaderSize(reader, StderrBufferSize)
@@ -321,6 +333,7 @@ func writeLines(writer io.Writer, reader io.Reader, done chan struct{}, maxBytes
 		io.Copy(ioutil.Discard, reader)
 	}
 
+	writer.Close()
 	done <- struct{}{}
 }
 
