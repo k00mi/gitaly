@@ -59,7 +59,6 @@ func gc(ctx context.Context, in *gitalypb.GarbageCollectRequest) error {
 
 	// run garbage collect and also write the commit graph
 	args = append(args,
-		"-c", "core.commitGrap=true",
 		"-c", "gc.writeCommitGraph=true",
 		"gc",
 	)
