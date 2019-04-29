@@ -1,21 +1,5 @@
 # Gitaly changelog
 
-## v1.35.1
-
-#### Added
-- adding ProtoRegistry
-  https://gitlab.com/gitlab-org/gitaly/merge_requests/1188
-
-#### Other
-- Bump Ruby bundler version to 1.17.3
-  https://gitlab.com/gitlab-org/gitaly/merge_requests/1215
-- Update FetchRemote ruby to write http auth as well as add remote
-  https://gitlab.com/gitlab-org/gitaly/merge_requests/1126
-
-#### Security
-- Loosen regex for exception sanitization
-  https://gitlab.com/gitlab-org/gitaly/merge_requests/25
-
 ## v1.35.0
 
 
