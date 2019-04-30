@@ -38,8 +38,16 @@
 - Loosen regex for exception sanitization
   https://gitlab.com/gitlab-org/gitaly/merge_requests/25
 
+## v1.35.1
+
+The v1.35.1 tag points to a release that was made on the wrong branch, please
+ignore.
+
 ## v1.35.0
 
+#### Added
+- Return path data in ListLastCommitsForTree
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1168
 
 ## v1.34.0
 
