@@ -51,6 +51,7 @@ func findCommits(ctx context.Context, req *gitalypb.FindCommitsRequest, stream g
 	if err != nil {
 		return fmt.Errorf("error when creating git log command: %v", err)
 	}
+
 	batch, err := catfile.New(ctx, req.GetRepository())
 	if err != nil {
 		return fmt.Errorf("creating catfile: %v", err)

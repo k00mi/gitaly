@@ -36,6 +36,9 @@ func newBatch(ctx context.Context, repoPath string, env []string) (*batch, error
 	var stdinReader io.Reader
 	stdinReader, b.w = io.Pipe()
 	batchCmdArgs := []string{"--git-dir", repoPath, "cat-file", "--batch"}
+
+	currentCatfileProcesses.Inc()
+	totalCatfileProcesses.Inc()
 	batchCmd, err := git.BareCommand(ctx, stdinReader, nil, nil, env, batchCmdArgs...)
 	if err != nil {
 		return nil, err
@@ -45,6 +48,7 @@ func newBatch(ctx context.Context, repoPath string, env []string) (*batch, error
 		<-ctx.Done()
 		// This is crucial to prevent leaking file descriptors.
 		b.w.Close()
+		currentCatfileProcesses.Dec()
 	}()
 
 	return b, nil
