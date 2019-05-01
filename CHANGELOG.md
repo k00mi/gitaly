@@ -1,5 +1,11 @@
 # Gitaly changelog
 
+## v1.38.0
+
+#### Other
+- Upgrade Rubocop to 0.68.1
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1229
+
 ## v1.37.0
 
 #### Added
