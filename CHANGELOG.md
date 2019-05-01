@@ -1,5 +1,11 @@
 # Gitaly changelog
 
+## v1.37.0
+
+#### Added
+- Add DisconnectGitAlternates RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1141
+
 ## v1.36.0
 
 #### Added
