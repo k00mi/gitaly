@@ -64,7 +64,7 @@ type BatchCache struct {
 }
 
 func closeBatchAndStopTTL(key lru.Key, value interface{}) {
-	cacheItem := value.(CacheItem)
+	cacheItem := value.(*CacheItem)
 	close(cacheItem.stopTTL)
 
 	if !cacheItem.preserveBatchOnEvict {
@@ -97,7 +97,7 @@ func (bc *BatchCache) Get(key CacheKey) *Batch {
 		return nil
 	}
 
-	cacheItem := v.(CacheItem)
+	cacheItem := v.(*CacheItem)
 
 	// set preserveBatchOnEvict=true so that OnEvict doesn't close the batch
 	cacheItem.preserveBatchOnEvict = true
@@ -123,7 +123,7 @@ func (bc *BatchCache) Add(key CacheKey, b *Batch, ttl time.Duration) {
 
 	stopTTL := make(chan struct{})
 
-	bc.lru.Add(key, CacheItem{
+	bc.lru.Add(key, &CacheItem{
 		batch:   b,
 		stopTTL: stopTTL,
 	})
