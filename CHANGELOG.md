@@ -1,5 +1,16 @@
 # Gitaly changelog
 
+## v1.39.0
+
+#### Added
+- Add option to add Sentry environment
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1216
+  Contributed by Roger Meier
+
+#### Fixed
+- Fix CacheItem pointer in cache
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1234
+
 ## v1.38.0
 
 #### Other
