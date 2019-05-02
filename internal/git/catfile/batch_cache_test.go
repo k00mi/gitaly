@@ -33,3 +33,27 @@ func TestBatchCacheTTL(t *testing.T) {
 
 	assert.Nil(t, batchCache.Get(cacheKey))
 }
+
+func TestBatchCache(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	batchCache := catfile.NewCache(10)
+
+	c, err := catfile.New(ctx, testRepo)
+	require.NoError(t, err)
+
+	sessionID := "abcdefg1231231"
+
+	ttl := 10 * time.Second
+
+	cacheKey := catfile.NewCacheKey(sessionID, testRepo)
+	batchCache.Add(cacheKey, c, ttl)
+	b := batchCache.Get(cacheKey)
+	defer b.Close()
+
+	assert.Equal(t, c, b)
+}

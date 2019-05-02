@@ -331,7 +331,11 @@ func benchmarkFindCommit(withCache bool, b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		revision := revisions[b.N%len(revisions)]
 		if withCache {
-			md := metadata.New(map[string]string{featureflag.HeaderKey(catfile.CacheFeatureFlagKey): "true", "gitaly-session-id": "abc123"})
+			md := metadata.New(map[string]string{
+				featureflag.HeaderKey(catfile.CacheFeatureFlagKey): "true",
+				"gitaly-session-id": "abc123",
+			})
+
 			ctx = metadata.NewOutgoingContext(ctx, md)
 		}
 		_, err := client.FindCommit(ctx, &gitalypb.FindCommitRequest{
@@ -339,5 +343,50 @@ func benchmarkFindCommit(withCache bool, b *testing.B) {
 			Revision:   []byte(revision),
 		})
 		require.NoError(b, err)
+	}
+}
+
+func TestFindCommitWithCache(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	server, serverSocketPath := startTestServices(t)
+	defer server.Stop()
+
+	client, conn := newCommitServiceClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	// get a list of revisions
+
+	logCmd, err := git.Command(ctx, testRepo, "log", "--format=format:%H")
+	require.NoError(t, err)
+
+	logScanner := bufio.NewScanner(logCmd)
+
+	var revisions []string
+	for logScanner.Scan() {
+		revisions = append(revisions, logScanner.Text())
+	}
+
+	require.NoError(t, logCmd.Wait())
+
+	defer catfile.ExpireAll()
+
+	for i := 0; i < 10; i++ {
+		revision := revisions[i%len(revisions)]
+		md := metadata.New(map[string]string{
+			featureflag.HeaderKey(catfile.CacheFeatureFlagKey): "true",
+			"gitaly-session-id": "abc123",
+		})
+
+		ctx = metadata.NewOutgoingContext(ctx, md)
+		_, err := client.FindCommit(ctx, &gitalypb.FindCommitRequest{
+			Repository: testRepo,
+			Revision:   []byte(revision),
+		})
+		require.NoError(t, err)
 	}
 }
