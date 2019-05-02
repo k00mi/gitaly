@@ -1,7 +1,7 @@
 # Gitaly High Availability (HA) Design
 Gitaly HA is an active-active cluster configuration for resilient git operations. [Refer to our specific requirements](https://gitlab.com/gitlab-org/gitaly/issues/1332).
 
-Refer to [epic &289][epic] for current issues and discussions revolving around 
+Refer to [epic &289][epic] for current issues and discussions revolving around
 HA MVC development.
 
 ## Terminology
@@ -92,6 +92,22 @@ sequenceDiagram
 ```
 
 *Note: Once Node-A propagates changes to a peer, Node-A is no longer the critical path for subsequent propagations. If Node-A fails after a second peer is propagated, that second peer can become the new leader and resume replications.*
+
+##### Replication Logic
+
+Here are the steps during a Gitaly client GRPC call intercepted by Praefect:
+
+```mermaid
+graph TD
+  A[Gitaly Client]-->B{Does RPC Mutate a repository?}
+  B-->| yes | C[Peek into RPC Stream to determine Repository]
+  B-->| no  | G[Forward request to Gitaly]
+  C-->D{Scoped for repository?}
+	D-->| yes | E[Get target repository from message]
+	D-->| no  | G
+  E-->F[Schedule Replication]
+	F-->G
+```
 
 ## Stages until v1.0
 
