@@ -1,5 +1,11 @@
 # Gitaly changelog
 
+## v1.40.0
+
+#### Fixed
+- Do not close the TTL channel twice
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1235
+
 ## v1.39.0
 
 #### Added
