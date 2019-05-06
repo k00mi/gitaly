@@ -38,7 +38,7 @@ func (s *server) SearchFilesByContent(req *gitalypb.SearchFilesByContentRequest,
 		"--null",
 		"--before-context", surroundContext,
 		"--after-context", surroundContext,
-		"--extended-regexp",
+		"--perl-regexp",
 		"-e", // next arg is pattern, keep this last
 		req.GetQuery(),
 		string(req.GetRef()),
