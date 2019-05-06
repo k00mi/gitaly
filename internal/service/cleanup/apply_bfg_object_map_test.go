@@ -52,7 +52,7 @@ func TestApplyBfgObjectMapSuccess(t *testing.T) {
 	assert.Contains(t, refs, "refs/notes/_keep")
 }
 
-func TestFailsOnInvalidInput(t *testing.T) {
+func TestApplyBfgObjectMapFailsOnInvalidInput(t *testing.T) {
 	server, serverSocketPath := runCleanupServiceServer(t)
 	defer server.Stop()
 

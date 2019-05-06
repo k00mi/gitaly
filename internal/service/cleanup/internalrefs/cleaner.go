@@ -22,11 +22,17 @@ var internalRefs = []string{
 	"refs/merge-requests/",
 }
 
+// A ForEachFunc can be called for every entry in the BFG object map file that
+// the cleaner is processing. Returning an error will stop the  cleaner before
+// it has processed the entry in question
+type ForEachFunc func(oldOID, newOID string, isInternalRef bool) error
+
 // Cleaner is responsible for updating the internal references in a repository
 // as specified by a BFG object map. Currently, internal references pointing to
 // a commit that has been rewritten will simply be removed.
 type Cleaner struct {
-	ctx context.Context
+	ctx     context.Context
+	forEach ForEachFunc
 
 	// Map of SHA -> reference names
 	table   map[string][]string
@@ -39,7 +45,7 @@ type ErrInvalidObjectMap error
 
 // NewCleaner builds a new instance of Cleaner, which is used to apply a BFG
 // object map to a repository.
-func NewCleaner(ctx context.Context, repo *gitalypb.Repository) (*Cleaner, error) {
+func NewCleaner(ctx context.Context, repo *gitalypb.Repository, forEach ForEachFunc) (*Cleaner, error) {
 	table, err := buildLookupTable(ctx, repo)
 	if err != nil {
 		return nil, err
@@ -50,7 +56,7 @@ func NewCleaner(ctx context.Context, repo *gitalypb.Repository) (*Cleaner, error
 		return nil, err
 	}
 
-	return &Cleaner{ctx: ctx, table: table, updater: updater}, nil
+	return &Cleaner{ctx: ctx, table: table, updater: updater, forEach: forEach}, nil
 }
 
 // ApplyObjectMap processes a BFG object map file, removing any internal
@@ -70,7 +76,7 @@ func (c *Cleaner) ApplyObjectMap(reader io.Reader) error {
 			return ErrInvalidObjectMap(fmt.Errorf("object map invalid at line %d", i))
 		}
 
-		if err := c.removeRefsFor(shas[0]); err != nil {
+		if err := c.processEntry(shas[0], shas[1]); err != nil {
 			return err
 		}
 	}
@@ -78,14 +84,21 @@ func (c *Cleaner) ApplyObjectMap(reader io.Reader) error {
 	return c.updater.Wait()
 }
 
-func (c *Cleaner) removeRefsFor(sha string) error {
-	refs, isPresent := c.table[sha]
+func (c *Cleaner) processEntry(oldSHA, newSHA string) error {
+	refs, isPresent := c.table[oldSHA]
+
+	if c.forEach != nil {
+		if err := c.forEach(oldSHA, newSHA, isPresent); err != nil {
+			return err
+		}
+	}
+
 	if !isPresent {
 		return nil
 	}
 
 	grpc_logrus.Extract(c.ctx).WithFields(log.Fields{
-		"sha":  sha,
+		"sha":  oldSHA,
 		"refs": refs,
 	}).Info("removing internal references")
 
