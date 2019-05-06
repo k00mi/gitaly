@@ -202,7 +202,6 @@ func TestSuccessfulListLastCommitsForTreeRequest(t *testing.T) {
 				for _, fetchedCommit := range commits {
 					expectedInfo := testCase.info[counter]
 
-					require.Equal(t, string(expectedInfo.path), fetchedCommit.Path)
 					require.Equal(t, expectedInfo.path, fetchedCommit.PathBytes)
 					require.Equal(t, expectedInfo.id, fetchedCommit.Commit.Id)
 
@@ -347,7 +346,6 @@ func TestNonUtf8ListLastCommitsForTreeRequest(t *testing.T) {
 			if bytes.Equal(fetchedCommit.PathBytes, []byte(nonUTF8Filename)) {
 				nonUTF8FilenameFound = true
 			}
-			assert.Equal(t, InvalidUTF8PathPlaceholder, fetchedCommit.Path)
 		}
 	}
 
