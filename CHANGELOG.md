@@ -1,5 +1,11 @@
 # Gitaly changelog
 
+## v1.41.0
+
+#### Added
+- Implement the ApplyBfgObjectMapStream RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1199
+
 ## v1.40.0
 
 #### Fixed
