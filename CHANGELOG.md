@@ -1,5 +1,11 @@
 # Gitaly changelog
 
+## v1.42.0
+
+#### Other
+- Use simpler data structure for cat-file cache
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1233
+
 ## v1.41.0
 
 #### Added
