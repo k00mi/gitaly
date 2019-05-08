@@ -118,6 +118,12 @@ func TestSearchFilesByContentSuccessful(t *testing.T) {
 			ref:    "many_files",
 			output: [][]byte{},
 		},
+		{
+			desc:   "with regexp limiter only recognized by pcre",
+			query:  "(*LIMIT_MATCH=1)foobar",
+			ref:    "many_files",
+			output: contentOutputLines,
+		},
 	}
 
 	for _, tc := range testCases {
