@@ -96,6 +96,11 @@ func (r ReplMgr) ScheduleReplication(ctx context.Context, repo Repository) error
 	return nil
 }
 
+const (
+	jobFetchInterval = 10 * time.Millisecond
+	logWithReplJobID = "replication-job-ID"
+)
+
 // ProcessBacklog will process queued jobs. It will block while processing jobs.
 func (r ReplMgr) ProcessBacklog(ctx context.Context) error {
 	since := time.Time{}
@@ -107,10 +112,12 @@ func (r ReplMgr) ProcessBacklog(ctx context.Context) error {
 		}
 
 		if len(jobs) == 0 {
+			r.log.Debugf("no jobs for %s, checking again in %s", r.storage, jobFetchInterval)
+
 			select {
 
 			// TODO: exponential backoff when no queries are returned
-			case <-time.After(10 * time.Millisecond):
+			case <-time.After(jobFetchInterval):
 				continue
 
 			case <-ctx.Done():
@@ -122,14 +129,24 @@ func (r ReplMgr) ProcessBacklog(ctx context.Context) error {
 		r.log.Debugf("fetched replication jobs: %#v", jobs)
 
 		for _, job := range jobs {
-			r.log.Infof("processing replication job %#v", job)
+			r.log.WithField(logWithReplJobID, job.ID).
+				Infof("processing replication job %#v", job)
 			node, err := r.coordinator.GetStorageNode(job.Target)
 			if err != nil {
 				return err
 			}
 
-			err = r.replicator.Replicate(ctx, job.Source, node)
-			if err != nil {
+			if err := r.jobsStore.UpdateReplJob(job.ID, JobStateInProgress); err != nil {
+				return err
+			}
+
+			if err := r.replicator.Replicate(ctx, job.Source, node); err != nil {
+				return err
+			}
+
+			r.log.WithField(logWithReplJobID, job.ID).
+				Info("completed replication")
+			if err := r.jobsStore.UpdateReplJob(job.ID, JobStateComplete); err != nil {
 				return err
 			}
 		}
