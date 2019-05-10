@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"sort"
-	"unicode/utf8"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
@@ -64,14 +63,8 @@ func (s *server) ListLastCommitsForTree(in *gitalypb.ListLastCommitsForTreeReque
 		}
 
 		commitForTree := &gitalypb.ListLastCommitsForTreeResponse_CommitForTree{
-			Path:      entry.Path,
 			PathBytes: []byte(entry.Path),
 			Commit:    commit,
-		}
-
-		// for non-utf8 encoded paths, return placeholder until we can deprecate Path
-		if !utf8.ValidString(entry.Path) {
-			commitForTree.Path = InvalidUTF8PathPlaceholder
 		}
 
 		batch = append(batch, commitForTree)
