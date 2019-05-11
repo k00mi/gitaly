@@ -44,23 +44,6 @@ module GitalyServer
       raise GRPC::Internal.new(e.to_s)
     end
 
-    # Post 11.10 this method can be removed
-    def delete_refs(request, call)
-      repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
-
-      begin
-        if request.refs.any?
-          repo.delete_refs(*request.refs)
-        else
-          repo.delete_all_refs_except(request.except_with_prefix)
-        end
-
-        Gitaly::DeleteRefsResponse.new
-      rescue Gitlab::Git::Repository::GitError => e
-        Gitaly::DeleteRefsResponse.new(git_error: e.message)
-      end
-    end
-
     def get_tag_messages(request, call)
       repository = Gitlab::Git::Repository.from_gitaly(request.repository, call)
 

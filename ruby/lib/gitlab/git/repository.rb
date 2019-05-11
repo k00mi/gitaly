@@ -598,10 +598,6 @@ module Gitlab
         git_delete_refs(*ref_names)
       end
 
-      def delete_all_refs_except(prefixes)
-        delete_refs(*all_ref_names_except(prefixes))
-      end
-
       # Returns an Array of all ref names, except when it's matching pattern
       #
       # regexp - The pattern for ref names we don't want
