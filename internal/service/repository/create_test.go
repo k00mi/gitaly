@@ -63,7 +63,7 @@ func TestCreateRepositoryFailure(t *testing.T) {
 		Repository: &gitalypb.Repository{StorageName: "default", RelativePath: "foo.git"},
 	})
 
-	testhelper.RequireGrpcError(t, err, codes.Unknown)
+	testhelper.RequireGrpcError(t, err, codes.Internal)
 }
 
 func TestCreateRepositoryFailureInvalidArgs(t *testing.T) {

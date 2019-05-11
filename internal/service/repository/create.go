@@ -4,19 +4,24 @@ import (
 	"context"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
-	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
 func (s *server) CreateRepository(ctx context.Context, req *gitalypb.CreateRepositoryRequest) (*gitalypb.CreateRepositoryResponse, error) {
-	client, err := s.RepositoryServiceClient(ctx)
+	diskPath, err := helper.GetPath(req.GetRepository())
 	if err != nil {
-		return nil, err
+		return nil, helper.ErrInvalidArgument(err)
 	}
 
-	clientCtx, err := rubyserver.SetHeadersWithoutRepoCheck(ctx, req.GetRepository())
+	cmd, err := git.CommandWithoutRepo(ctx, "init", "--bare", "--quiet", diskPath)
 	if err != nil {
-		return nil, err
+		return nil, helper.ErrInternal(err)
 	}
 
-	return client.CreateRepository(clientCtx, req)
+	if err := cmd.Wait(); err != nil {
+		return nil, helper.ErrInternal(err)
+	}
+
+	return &gitalypb.CreateRepositoryResponse{}, nil
 }
