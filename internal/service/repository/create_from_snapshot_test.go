@@ -106,10 +106,6 @@ func TestCreateRepositoryFromSnapshotSuccess(t *testing.T) {
 
 	// hooks/ and config were excluded, but the RPC should create them
 	require.FileExists(t, filepath.Join(repoPath, "config"), "Config file not created")
-
-	fi, err := os.Lstat(filepath.Join(repoPath, "hooks"))
-	require.NoError(t, err)
-	require.Equal(t, os.ModeSymlink, fi.Mode()&os.ModeSymlink, "Symlink to global hooks not created")
 }
 
 func TestCreateRepositoryFromSnapshotFailsIfRepositoryExists(t *testing.T) {

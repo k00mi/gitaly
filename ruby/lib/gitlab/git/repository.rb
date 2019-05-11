@@ -61,37 +61,6 @@ module Gitlab
           # Equivalent to `git --git-path=#{repo_path} init [--bare]`
           repo = Rugged::Repository.init_at(repo_path, true)
           repo.close
-
-          # TODO: stop symlinking to the old hooks location in or after GitLab 12.0.
-          # https://gitlab.com/gitlab-org/gitaly/issues/1392
-          create_hooks(repo_path, Gitlab::Git::Hook.legacy_hooks_directory)
-        end
-
-        def create_hooks(repo_path, global_hooks_path)
-          local_hooks_path = File.join(repo_path, 'hooks')
-          real_local_hooks_path = :not_found
-
-          begin
-            real_local_hooks_path = File.realpath(local_hooks_path)
-          rescue Errno::ENOENT
-            # real_local_hooks_path == :not_found
-          end
-
-          # Do nothing if hooks already exist
-          unless real_local_hooks_path == File.realpath(global_hooks_path)
-            if File.exist?(local_hooks_path)
-              # Move the existing hooks somewhere safe
-              FileUtils.mv(
-                local_hooks_path,
-                "#{local_hooks_path}.old.#{Time.now.to_i}"
-              )
-            end
-
-            # Create the hooks symlink
-            FileUtils.ln_sf(global_hooks_path, local_hooks_path)
-          end
-
-          true
         end
       end
 
