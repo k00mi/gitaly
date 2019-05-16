@@ -22,7 +22,15 @@ all: build
 
 .PHONY: build
 build: prepare-build
-	cd $(BUILD_DIR) && $(MAKE) install INSTALL_DEST_DIR=$(CURDIR) 
+	cd $(BUILD_DIR) && $(MAKE) install INSTALL_DEST_DIR=$(CURDIR)
+
+.PHONY: build-gitaly-remote
+build-gitaly-remote: prepare-build
+	cd $(BUILD_DIR) && $(MAKE) $@
+
+.PHONY: test-gitaly-remote
+test-gitaly-remote: prepare-build
+	cd $(BUILD_DIR) && $(MAKE) $@
 
 .PHONY: install
 install: prepare-build

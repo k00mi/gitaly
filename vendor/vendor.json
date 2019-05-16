@@ -271,6 +271,14 @@
 			"versionExact": "v1.0.1"
 		},
 		{
+			"checksumSHA1": "kQcyh4PCOZIhOH/KFfYYW+M7eCU=",
+			"path": "github.com/libgit2/git2go",
+			"revision": "ecaeb7a21d479b7966311760a2e8bd734f8f0eef",
+			"revisionTime": "2019-01-04T13:40:18Z",
+			"version": "v27",
+			"versionExact": "v27"
+		},
+		{
 			"checksumSHA1": "++h3LjgqASQ5dGLM2WOZmwYp+mU=",
 			"path": "github.com/lightstep/lightstep-tracer-go",
 			"revision": "c9cafc033badd91d4e27900874429fc30a5ffdc2",
