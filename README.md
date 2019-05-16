@@ -134,48 +134,53 @@ GITLAB_TRACING=opentracing://jaeger ./gitaly config.toml
 
 ## Presentations
 
--   [How Gitaly fits into GitLab, part 6 (video),
-    2019-03-21](https://drive.google.com/file/d/1fp5pYvW1h0R_g6cRp0otywtaApNeK-U1/view?usp=sharing)
-    a 1-hour training video for contributors new to GitLab and Gitaly.
-    Topic: how Gitaly creates Git commits on behalf of Git users.
-    Contents: demonstrate how usually Git hooks are run by
-    `git-receive-pack`, but sometimes by `gitaly-ruby`. Deep dive into
-    UserCommitFiles: where do those hooks actually get run? A look at
-    UserMerge. How does Gitaly make merge commits. A look at the
-    implementation of the special feature where users are not allowed
-    push to a branch, but are allowed to merge into it.
--   [How Gitaly fits into GitLab, part 5 (video),
-    2019-03-21](https://drive.google.com/file/d/1g-oUW0Lyw9sl0CWX6ewpmthl5h4h7zaG/view?usp=sharing)
-    a 1-hour training video for contributors new to GitLab and Gitaly.
-    Topic: the internal Git replication traffic used to create Merge
-    Requests across forks. Contents: fixing a locally broken Ruby gem C
-    extension by recompiling, demo of how creating a MR across forks
-    causes new commits to suddenly appear in the fork parent repository,
-    deep dive into the FetchSourceBranch RPC, adding debug code to see
-    how address and authentication metadata is passed down to
-    gitaly-ruby, failed attempt to log gitaly-ssh arguments, comparison
-    of gitaly-ssh and gitlab-shell, a Gitaly server can end up making RPC calls to itself.
--   [How Gitaly fits into GitLab, part 4 (video),
-    2019-03-14](https://drive.google.com/file/d/1S-X1MvXMTEHJDIQWrabyROfVNOkmPxWH/view?usp=sharing)
-    a 1-hour training video for contributors new to GitLab and Gitaly. Topic: Git HTTP.
-    Contents: intercepting Git HTTP traffic with mitmproxy, overview of
-    Git HTTP clone steps, code walk in gitlab-workhorse and gitlab-ce,
-    investigating internal workhorse API messages used for Git HTTP.
--   [How Gitaly fits into GitLab, part 3 (video),
-    2019-03-07](https://drive.google.com/file/d/1G3xOpsblfYcCTyzv1Xe6Pg2Ce2TGriTb/view?usp=sharing)
-    a 1-hour training video for contributors new to GitLab and Gitaly. Topic: Git push.
-    Contents: a closer look at the final stage of `git push` where the
-    git hooks run and the refs get updated. Interaction between the git
-    hooks and GitLab internal API. The Git [object quarantine mechanism](https://git-scm.com/docs/git-receive-pack#_quarantine_environment).
-    Preview of Git HTTP (to be discussed next time).
--   [How Gitaly fits into GitLab, part 2 (video),
-    2019-02-28](https://drive.google.com/file/d/1SFvx49kJkMsvz8YD4chP0y_QJaygSiiH/view?usp=sharing)
-    a 1-hour training video for contributors new to GitLab and Gitaly. Topic: Git SSH.
-    Contents: what is in a gitaly-proto Repository message, legacy vs
-    hashed storage (repository directories), `git clone` via SSH,
-    gitlab-shell, `authorized_keys` and forced commands, what happens
-    during `git push`.
-- [How Gitaly fits into GitLab, part 1 (video), 2019-02-21](https://drive.google.com/file/d/1aKlbPVbKr7MueNIyNeIRZIX2u0K4lKQB/view?usp=sharing) a 1-hour training video for contributors new to GitLab and Gitaly. Topic: the Gitaly client in gitlab-ce. Contents: overview of GitLab backend processes, gitlab-rails deep dive: Gitaly config in gitlab-rails, SQL data model, overview of how Gitaly calls get made via GitalyClient.call.
+- [How Gitaly fits into GitLab (Youtube)](https://www.youtube.com/playlist?list=PL05JrBw4t0KqoFUiX42JG7BAc7pipMBAy) - a series of 1-hour training videos for contributors new to GitLab and Gitaly.
+  - [Part 1: the Gitaly client in gitlab-ce, 2019-02-21](https://www.youtube.com/watch?v=j0HNiKCnLTI&list=PL05JrBw4t0KqoFUiX42JG7BAc7pipMBAy)
+      
+      Overview of GitLab backend processes, gitlab-rails deep dive: Gitaly
+      config in gitlab-rails, SQL data model, overview of how Gitaly calls get
+      made via GitalyClient.call.
+      
+  - [Part 2: Git SSH, 2019-02-28](https://www.youtube.com/watch?v=0kY0HPFn25o&list=PL05JrBw4t0KqoFUiX42JG7BAc7pipMBAy)
+      
+      What is in a gitaly-proto Repository message, legacy vs
+      hashed storage (repository directories), `git clone` via SSH,
+      gitlab-shell, `authorized_keys` and forced commands, what happens
+      during `git push`.
+      
+  - [Part 3: Git push, 2019-03-07](https://www.youtube.com/watch?v=-kXYycFYDzo&list=PL05JrBw4t0KqoFUiX42JG7BAc7pipMBAy)
+      
+      A closer look at the final stage of `git push` where the git hooks run
+      and the refs get updated. Interaction between the git hooks and GitLab
+      internal API. The Git
+      [object quarantine mechanism](https://git-scm.com/docs/git-receive-pack#_quarantine_environment).
+      Preview of Git HTTP (to be discussed next time).
+      
+  - [Part 4: Git HTTP, 2019-03-14](https://www.youtube.com/watch?v=lM13p8lCu8A&list=PL05JrBw4t0KqoFUiX42JG7BAc7pipMBAy)
+      
+      Intercepting Git HTTP traffic with mitmproxy, overview of
+      Git HTTP clone steps, code walk in gitlab-workhorse and gitlab-ce,
+      investigating internal workhorse API messages used for Git HTTP.
+      
+  - [Part 5: Merge Requests across Forks, 2019-03-21](https://www.youtube.com/watch?v=yGSuOz0XOHQ&list=PL05JrBw4t0KqoFUiX42JG7BAc7pipMBAy)
+      
+      Fixing a locally broken Ruby gem C
+      extension by recompiling, demo of how creating a MR across forks
+      causes new commits to suddenly appear in the fork parent repository,
+      deep dive into the FetchSourceBranch RPC, adding debug code to see
+      how address and authentication metadata is passed down to
+      gitaly-ruby, failed attempt to log gitaly-ssh arguments, comparison
+      of gitaly-ssh and gitlab-shell, a Gitaly server can end up making RPC calls to itself.
+      
+  -  [Part 6: Creating Git commits on behalf of Git users, 2019-03-21](https://www.youtube.com/watch?v=Rbe0KGTLkxY&list=PL05JrBw4t0KqoFUiX42JG7BAc7pipMBAy)
+
+      Demonstrate how usually Git hooks are run by
+      `git-receive-pack`, but sometimes by `gitaly-ruby`. Deep dive into
+      UserCommitFiles: where do those hooks actually get run? A look at
+      UserMerge. How does Gitaly make merge commits. A look at the
+      implementation of the special feature where users are not allowed
+      push to a branch, but are allowed to merge into it.
+      
 - [Infrastructure Team Update 2017-05-11](https://about.gitlab.com/2017/05/11/functional-group-updates/#infrastructure-team)
 - [Gitaly Basics, 2017-05-01](https://docs.google.com/presentation/d/1cLslUbXVkniOaeJ-r3s5AYF0kQep8VeNfvs0XSGrpA0/edit#slide=id.g1c73db867d_0_0)
 - [Git Paris meetup, 2017-02-22](https://docs.google.com/presentation/d/19OZUalFMIDM8WujXrrIyCuVb_oVeaUzpb-UdGThOvAo/edit?usp=sharing) a high-level overview of what our plans are and where we are.
