@@ -103,23 +103,6 @@ module Gitlab
         @safe_message ||= message
       end
 
-      # Not to be called directly, but right now its used for tests and in old
-      # migrations
-      def rugged_diff_from_parent(options = {})
-        options ||= {}
-        break_rewrites = options[:break_rewrites]
-        actual_options = Gitlab::Git::Diff.filter_diff_options(options)
-
-        diff = if rugged_commit.parents.empty?
-                 rugged_commit.diff(actual_options.merge(reverse: true))
-               else
-                 rugged_commit.parents[0].diff(rugged_commit, actual_options)
-               end
-
-        diff.find_similar!(break_rewrites: break_rewrites)
-        diff
-      end
-
       def no_commit_message
         "--no commit message"
       end
@@ -185,7 +168,14 @@ module Gitlab
       end
 
       def to_diff
-        rugged_diff_from_parent.patch
+        diff = if rugged_commit.parents.empty?
+                 rugged_commit.diff(reverse: true)
+               else
+                 rugged_commit.parents[0].diff(rugged_commit)
+               end
+
+        diff.find_similar!
+        diff.patch
       end
 
       private

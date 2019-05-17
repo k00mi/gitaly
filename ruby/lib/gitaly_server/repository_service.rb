@@ -98,31 +98,5 @@ module GitalyServer
 
       Gitaly::FindLicenseResponse.new(license_short_name: short_name || "")
     end
-
-    private
-
-    OPERATION_MAP = {
-      added: Gitaly::GetRawChangesResponse::RawChange::Operation::ADDED,
-      copied: Gitaly::GetRawChangesResponse::RawChange::Operation::COPIED,
-      deleted: Gitaly::GetRawChangesResponse::RawChange::Operation::DELETED,
-      modified: Gitaly::GetRawChangesResponse::RawChange::Operation::MODIFIED,
-      renamed: Gitaly::GetRawChangesResponse::RawChange::Operation::RENAMED,
-      type_changed: Gitaly::GetRawChangesResponse::RawChange::Operation::TYPE_CHANGED
-    }.freeze
-
-    def to_proto_raw_change(change)
-      operation = OPERATION_MAP[change.operation] || Gitaly::GetRawChangesResponse::RawChange::Operation::UNKNOWN
-
-      # Protobuf doesn't even try to call `to_s` or `to_i` where it might be needed.
-      Gitaly::GetRawChangesResponse::RawChange.new(
-        blob_id: change.blob_id.to_s,
-        size: change.blob_size.to_i,
-        new_path: change.new_path.to_s,
-        old_path: change.old_path.to_s,
-        operation: operation,
-        old_mode: change.old_mode.to_i(8),
-        new_mode: change.new_mode.to_i(8)
-      )
-    end
   end
 end
