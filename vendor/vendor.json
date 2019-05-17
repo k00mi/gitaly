@@ -323,12 +323,6 @@
 			"versionExact": "v1.0.1"
 		},
 		{
-			"checksumSHA1": "603wOI+hKduL75jXGGxfLKP5GE4=",
-			"path": "github.com/mwitkow/grpc-proxy/proxy",
-			"revision": "0f1106ef9c766333b9acb4b81e705da4bade7215",
-			"revisionTime": "2018-10-17T16:41:39Z"
-		},
-		{
 			"checksumSHA1": "jqEjDv//suCrQUg8iOGI7oxwfRU=",
 			"path": "github.com/opentracing/opentracing-go",
 			"revision": "be550b025b433cdfa2f11efb962afa2ea3c4d967",
@@ -479,6 +473,12 @@
 			"revisionTime": "2018-05-06T18:05:49Z",
 			"version": "v1",
 			"versionExact": "v1.2.2"
+		},
+		{
+			"checksumSHA1": "lIp4dQzfVYRQARgsmRm3h3wRFgs=",
+			"path": "github.com/stretchr/testify/suite",
+			"revision": "34c6fa2dc70986bccbbffcc6130f6920a924b075",
+			"revisionTime": "2019-03-04T09:57:49Z"
 		},
 		{
 			"checksumSHA1": "DAZUaXNahejywdwKXvMohfyHKNc=",
