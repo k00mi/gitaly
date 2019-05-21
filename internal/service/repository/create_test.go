@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -94,4 +96,28 @@ func TestCreateRepositoryFailureInvalidArgs(t *testing.T) {
 			testhelper.RequireGrpcError(t, err, tc.code)
 		})
 	}
+}
+func TestCreateRepositoryIdempotent(t *testing.T) {
+	server, serverSocketPath := runRepoServer(t)
+	defer server.Stop()
+
+	client, conn := newRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	refsBefore := strings.Split(string(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "for-each-ref")), "\n")
+
+	req := &gitalypb.CreateRepositoryRequest{Repository: testRepo}
+	_, err := client.CreateRepository(ctx, req)
+	require.NoError(t, err)
+
+	refsAfter := strings.Split(string(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "for-each-ref")), "\n")
+
+	assert.Equal(t, refsBefore, refsAfter)
+
 }
