@@ -16,6 +16,9 @@ gem 'sentry-raven', '~> 2.9.0', require: false
 gem 'faraday', '~> 0.12'
 gem 'rbtrace', require: false
 
+# Labkit provides observability functionality
+gem 'gitlab-labkit', '~> 0.3.0'
+
 # Detects the open source license the repository includes
 # This version needs to be in sync with GitLab CE/EE
 gem 'licensee', '~> 8.9.0'

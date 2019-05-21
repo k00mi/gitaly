@@ -3,6 +3,7 @@
 require 'fileutils'
 
 require 'grpc'
+require 'gitlab-labkit'
 
 require_relative '../lib/gitaly_server.rb'
 require_relative '../lib/gitaly_server/sentry_interceptor.rb'
@@ -23,15 +24,13 @@ def main
   FileUtils.mkdir_p(socket_dir)
   File.chmod(0700, socket_dir)
 
+  load_distributed_tracing
+
   load_tracing
 
   s = GRPC::RpcServer.new(
     poll_period: SHUTDOWN_TIMEOUT,
-    interceptors: [
-      GitalyServer::SentryInterceptor.new,
-      GitalyServer::ExceptionSanitizerInterceptor.new,
-      GitalyServer::RuggedInterceptor.new
-    ]
+    interceptors: build_server_interceptor_chain
   )
   port = 'unix:' + socket_path
   s.add_http2_port(port, :this_port_is_insecure)
@@ -58,6 +57,13 @@ def main
   signal_thread.join
   s.stop
   run_thread.join
+end
+
+def load_distributed_tracing
+  return unless Labkit::Tracing.enabled?
+
+  tracer = Labkit::Tracing::Factory.create_tracer("gitaly-ruby", Labkit::Tracing.connection_string)
+  OpenTracing.global_tracer = tracer if tracer
 end
 
 def load_tracing
@@ -89,6 +95,16 @@ def start_parent_watcher(original_ppid, signal_thread)
       sleep 1
     end
   end
+end
+
+def build_server_interceptor_chain
+  chain = []
+  chain << GitalyServer::SentryInterceptor.new
+  chain << Labkit::Tracing::GRPC::ServerInterceptor.new if Labkit::Tracing.enabled?
+  chain << GitalyServer::ExceptionSanitizerInterceptor.new
+  chain << GitalyServer::RuggedInterceptor.new
+
+  chain
 end
 
 GRPC_LOGGER = Logger.new(STDOUT)
