@@ -109,7 +109,7 @@ package.
 
 ## Further reading
 
-More about the project, and its processes is [accumulated in the docs](doc/index.md).
+More about the project and its processes is [detailed in the docs](doc/README.md).
 
 ## Distributed Tracing
 
