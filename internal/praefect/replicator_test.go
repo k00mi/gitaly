@@ -194,30 +194,24 @@ func TestReplicate(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	replman.ScheduleReplication(ctx, praefect.Repository{
-		Storage:      testRepo.GetStorageName(),
-		RelativePath: testRepo.GetRelativePath(),
-	})
-
 	md := testhelper.GitalyServersMetadata(t, socketPath)
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
 	go func() {
 		require.Error(t, context.Canceled, replman.ProcessBacklog(ctx))
 	}()
-
 	var tries int
-	jobs, err := datastore.GetIncompleteJobs("backup", 1)
+	jobs, err := datastore.GetJobs(praefect.JobStateInProgress|praefect.JobStatePending|praefect.JobStateReady, "backup", 1)
 	require.NoError(t, err)
 
 	for len(jobs) > 0 {
-		if tries > 10 {
+		if tries > 20 {
 			t.Error("exceeded timeout")
 		}
 		time.Sleep(1 * time.Second)
 		tries++
 
-		jobs, err = datastore.GetIncompleteJobs("backup", 1)
+		jobs, err = datastore.GetJobs(praefect.JobStateInProgress|praefect.JobStatePending|praefect.JobStateReady, "backup", 1)
 		require.NoError(t, err)
 	}
 	cancel()

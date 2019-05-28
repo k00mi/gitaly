@@ -15,12 +15,12 @@ import (
 )
 
 // JobState is an enum that indicates the state of a job
-type JobState int
+type JobState uint8
 
 const (
 	// JobStatePending is the initial job state when it is not yet ready to run
 	// and may indicate recovery from a failure prior to the ready-state
-	JobStatePending = iota
+	JobStatePending JobState = 1 << iota
 	// JobStateReady indicates the job is now ready to proceed
 	JobStateReady
 	// JobStateInProgress indicates the job is being processed by a worker
@@ -75,10 +75,10 @@ type ReplicasDatastore interface {
 // ReplJobsDatastore represents the behavior needed for fetching and updating
 // replication jobs from the datastore
 type ReplJobsDatastore interface {
-	// GetReplJobs fetches a list of chronologically ordered replication
+	// GetJobs fetches a list of chronologically ordered replication
 	// jobs for the given storage replica. The returned list will be at most
 	// count-length.
-	GetIncompleteJobs(storage string, count int) ([]ReplJob, error)
+	GetJobs(flag JobState, storage string, count int) ([]ReplJob, error)
 
 	// CreateSecondaryJobs will create replication jobs for each secondary
 	// replica of a repository known to the datastore. A set of replication job
@@ -196,30 +196,25 @@ func (md *MemoryDatastore) getShard(project string) (shard, bool) {
 // replicas
 var ErrSecondariesMissing = errors.New("repository missing secondary replicas")
 
-// GetIncompleteJobs will return all incomplete replications jobs for the
-// specified storage to the specified result limit.
-func (md *MemoryDatastore) GetIncompleteJobs(storage string, count int) ([]ReplJob, error) {
+// GetJobs is a more general method to retrieve jobs of a certain state from the datastore
+func (md *MemoryDatastore) GetJobs(state JobState, storage string, count int) ([]ReplJob, error) {
 	md.jobs.RLock()
 	defer md.jobs.RUnlock()
 
 	var results []ReplJob
 
 	for i, record := range md.jobs.records {
-		if record.state == JobStateComplete ||
-			record.state == JobStateCancelled ||
-			record.state == JobStateInProgress ||
-			record.target != storage {
-			continue
-		}
+		// state is a bitmap that is a combination of one or more JobStates
+		if record.state&state != 0 && record.target == storage {
+			job, err := md.replJobFromRecord(i, record)
+			if err != nil {
+				return nil, err
+			}
 
-		job, err := md.replJobFromRecord(i, record)
-		if err != nil {
-			return nil, err
-		}
-
-		results = append(results, job)
-		if len(results) >= count {
-			break
+			results = append(results, job)
+			if len(results) >= count {
+				break
+			}
 		}
 	}
 

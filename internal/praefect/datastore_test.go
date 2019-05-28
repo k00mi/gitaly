@@ -28,7 +28,7 @@ var operations = []struct {
 	{
 		desc: "query an empty datastore",
 		opFn: func(t *testing.T, ds praefect.Datastore) {
-			jobs, err := ds.GetIncompleteJobs(stor1, 1)
+			jobs, err := ds.GetJobs(praefect.JobStatePending|praefect.JobStateReady, stor1, 1)
 			require.NoError(t, err)
 			require.Len(t, jobs, 0)
 		},
@@ -58,7 +58,7 @@ var operations = []struct {
 	{
 		desc: "fetch inserted replication jobs after primary mapped",
 		opFn: func(t *testing.T, ds praefect.Datastore) {
-			jobs, err := ds.GetIncompleteJobs(stor2, 10)
+			jobs, err := ds.GetJobs(praefect.JobStatePending|praefect.JobStateReady, stor2, 10)
 			require.NoError(t, err)
 			require.Len(t, jobs, 1)
 
@@ -81,7 +81,7 @@ var operations = []struct {
 	{
 		desc: "try fetching completed replication job",
 		opFn: func(t *testing.T, ds praefect.Datastore) {
-			jobs, err := ds.GetIncompleteJobs(stor1, 1)
+			jobs, err := ds.GetJobs(praefect.JobStatePending|praefect.JobStateReady, stor1, 1)
 			require.NoError(t, err)
 			require.Len(t, jobs, 0)
 		},
