@@ -14,7 +14,7 @@ module Gitlab
         @gitaly_client = GitalyServer.client(call)
 
         @interceptors = []
-        @interceptors << Labkit::Tracing::GRPCClientInterceptor.instance if Labkit::Tracing.enabled?
+        @interceptors << Labkit::Tracing::GRPC::ClientInterceptor.instance if Labkit::Tracing.enabled?
       end
 
       def path
