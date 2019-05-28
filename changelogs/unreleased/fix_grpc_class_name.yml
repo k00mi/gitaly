@@ -1,0 +1,5 @@
+---
+title: Fix class name of Labkit tracing inteceptor
+merge_request: 1269
+author:
+type: fixed

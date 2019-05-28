@@ -4,6 +4,42 @@ describe Gitlab::Git::GitalyRemoteRepository do
   include TestRepo
   include IntegrationClient
 
+  describe '#new' do
+    let(:gitaly_repository) { double(storage_name: 'storage') }
+    let(:call) do
+      servers = Base64.strict_encode64({
+        default: {
+          address: 'address',
+          token: 'the-secret-token'
+        }
+      }.to_json)
+
+      double(metadata: { 'gitaly-servers' => servers })
+    end
+
+    context 'Labkit::Tracing enabled' do
+      before do
+        expect(Labkit::Tracing).to receive(:enabled?).and_return(true)
+      end
+
+      it 'initializes with an interceptor' do
+        client = described_class.new(gitaly_repository, call)
+        expect(client.instance_variable_get(:@interceptors).size).to eq 1
+      end
+    end
+
+    context 'Labkit::Tracing disabled' do
+      before do
+        expect(Labkit::Tracing).to receive(:enabled?).and_return(false)
+      end
+
+      it 'initializes with no interceptors' do
+        client = described_class.new(gitaly_repository, call)
+        expect(client.instance_variable_get(:@interceptors).size).to eq 0
+      end
+    end
+  end
+
   let(:repository) { gitlab_git_from_gitaly_with_gitlab_projects(new_mutable_test_repo) }
   describe 'certs' do
     let(:client) { get_client("tls://localhost:#{GitalyConfig.dynamic_port('tls')}") }
