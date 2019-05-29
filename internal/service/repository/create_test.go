@@ -36,6 +36,10 @@ func TestCreateRepositorySuccess(t *testing.T) {
 	_, err = client.CreateRepository(ctx, req)
 	require.NoError(t, err)
 
+	fi, err := os.Stat(repoDir)
+	require.NoError(t, err)
+	require.Equal(t, "drwxr-x---", fi.Mode().String())
+
 	for _, dir := range []string{repoDir, path.Join(repoDir, "refs")} {
 		fi, err := os.Stat(dir)
 		require.NoError(t, err)
