@@ -1,5 +1,52 @@
 # Gitaly changelog
 
+## v1.43.0
+
+#### Added
+- Stop symlinking hooks on repository creation
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1052
+- Replication logic
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1219
+- gRPC proxy stream peeking capability
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1260
+- Introduce ps package
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1258
+
+#### Changed
+- Remove delta island feature flags
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1267
+
+#### Fixed
+- Fix class name of Labkit tracing inteceptor
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1269
+- Fix replication job state changing
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1236
+- Remove path field in ListLastCommitsForTree response
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1240
+- Check if PID belongs to Gitaly before adopting an existing process
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1249
+
+#### Other
+- Absorb grpc-proxy into Gitaly
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1248
+- Add git2go dependency
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1061
+  Contributed by maxmati
+- Upgrade Rubocop to 0.69.0 with other dependencies
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1250
+- LabKit integration with Gitaly-Ruby
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1083
+
+#### Performance
+- Fix catfile N+1 in ListLastCommitsForTree
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1253
+- Use --perl-regexp for code search
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1241
+- Upgrade to Ruby 2.6
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1228
+- Port repository creation to Golang
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1245
+
 ## v1.42.0
 
 #### Other

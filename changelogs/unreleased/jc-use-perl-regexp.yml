@@ -1,5 +1,0 @@
----
-title: Use --perl-regexp for code search
-merge_request: 1241
-author:
-type: performance

@@ -1,5 +1,0 @@
----
-title: Remove path field in ListLastCommitsForTree response
-merge_request: 1240
-author:
-type: fixed
