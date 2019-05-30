@@ -40,6 +40,8 @@ Security releases involve additional processes to ensure that recent releases
 of GitLab are properly patched while avoiding the leaking of the security
 details to the public until appropriate.
 
+## DO NOT PUSH TO GITLAB.COM!
+
 **IMPORTANT:** All steps below involved with a security release should be done
 in a dedicated local repository cloned from https://dev.gitlab.org/gitlab/gitaly
 unless otherwise specified. Using a dedicated repository prevents leaking
