@@ -142,7 +142,7 @@ func TestLimiter(t *testing.T) {
 			wg.Add(tt.concurrency)
 
 			// We know of an edge case that can lead to the rate limiter
-			// occassionally letting one or two extra goroutines run
+			// occasionally letting one or two extra goroutines run
 			// concurrently.
 			for c := 0; c < tt.concurrency; c++ {
 				go func(counter int) {

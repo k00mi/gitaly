@@ -14,7 +14,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 )
 
-// CountDivergingCommits counts the diverging commits between from and to. Important to note that when --max-count is applied, the counts are not gauranteed to be
+// CountDivergingCommits counts the diverging commits between from and to. Important to note that when --max-count is applied, the counts are not guaranteed to be
 // accurate because --max-count is applied before it does the rev walk.
 func (s *server) CountDivergingCommits(ctx context.Context, req *gitalypb.CountDivergingCommitsRequest) (*gitalypb.CountDivergingCommitsResponse, error) {
 	if err := validateCountDivergingCommitsRequest(req); err != nil {

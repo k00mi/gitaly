@@ -215,7 +215,7 @@ func TestDiffParserWithLargeDiffOfSmallPatches(t *testing.T) {
 `
 
 	// Create 3 files of 5 lines. The first two files added together surpass
-	// the limits, which should cause the last one to be collpased.
+	// the limits, which should cause the last one to be collapsed.
 	for i := 0; i < 3; i++ {
 		rawDiff += fmt.Sprintf(`diff --git a/expand-collapse/file-%d.txt b/expand-collapse/file-%d.txt
 new file mode 100644

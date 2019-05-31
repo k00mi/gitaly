@@ -21,7 +21,7 @@ import (
 // httpTransport defines a http.Transport with values that are more restrictive
 // than for http.DefaultTransport.
 //
-// They define shorter TLS Handshake, and more agressive connection closing
+// They define shorter TLS Handshake, and more aggressive connection closing
 // to prevent the connection hanging and reduce FD usage.
 var httpTransport = &http.Transport{
 	Proxy: http.ProxyFromEnvironment,

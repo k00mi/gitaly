@@ -62,7 +62,7 @@ describe Gitlab::Git::GitalyRemoteRepository do
     end
 
     context 'when SSL_CERT_DIR is set' do
-      it 'Should return concatenation of gitalycert and gitalycert2 and gitalycert3 ommiting gitalycertdup.pem' do
+      it 'Should return concatenation of gitalycert and gitalycert2 and gitalycert3 omitting gitalycertdup.pem' do
         cert_pool_dir = File.join(File.dirname(__FILE__), "testdata/certs")
         allow(ENV).to receive(:[]).with('GITLAB_TRACING').and_call_original
         allow(ENV).to receive(:[]).with('SSL_CERT_DIR').and_return(cert_pool_dir)
