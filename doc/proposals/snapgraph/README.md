@@ -25,7 +25,7 @@ Key properties:
 
 ### Git repository snapshots
 
-In https://gitlab.com/gitlab-org/gitaly/merge\_requests/1244 we have an
+In [MR 1244](https://gitlab.com/gitlab-org/gitaly/merge_requests/1244) we have an
 example of how we can use Git plumbing commands to efficiently create
 incremental snapshots of an entire Git repository, where each snapshot
 may be stored as a single blob. We do this by combining a full dump of
@@ -39,7 +39,7 @@ are incremental in exactly the same way that `git fetch` is incremental.
 ### Snapshot graph
 
 Once we can make full and incremental snapshots of a repository, we can
-represent it as a graph of snapshots where the first element must be a
+represent that repository as a graph of snapshots where the first element must be a
 full snapshot, and each later element is incremental. The simplest graph
 would be a chain but in our case we also want to be able to deduplicate
 Git repositories (for the "project fork" feature in GitLab), meaning we
@@ -75,8 +75,10 @@ snapshots is that this makes it faster to propagate writes from the
 scratch Gitaly server into persistent storage (object storage). For
 faster restores, and to keep the total graph size in check, we can
 collapse multiple snapshots into one. This comes down to restoring the
-repository in question up to a known snapshot, and then making a new
-full (i.e. non-incremental) snapshot from that point-in-time copy.
+repository in a temporary directory, up to a known snapshot. Then we
+make a new full (i.e. non-incremental) snapshot from that point-in-time
+copy, and replace all snapshots up to and including that point with a
+single (full) snapshot.
 
 ### Snapshot graph representation
 
@@ -96,8 +98,8 @@ the "front end" of the cluster which decides if the repository in an RPC
 call exists, and if so on which Gitaly scratch server the RPC will be
 handled. This front end could use an event log data structure backed by
 SQL where each push ("mutator" in Praefect) creates a "begin" and "end"
-event in the log. Each snapshot would also create a "begin" and "end"
+event in the log. Each snapshot creation job would also create a "begin" and "end"
 event. The interleaving of these events in the log will then tell us the
-replication state. Old events would be deleted, meaning that the total
+replication state of all "dirty" repositories. Old events can be deleted, meaning that the total
 number of rows in the events table is a measure for how much unpersisted
 data there is in the cluster.
