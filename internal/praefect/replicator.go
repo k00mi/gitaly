@@ -137,7 +137,7 @@ const (
 // ProcessBacklog will process queued jobs. It will block while processing jobs.
 func (r ReplMgr) ProcessBacklog(ctx context.Context) error {
 	for {
-		jobs, err := r.jobsStore.GetIncompleteJobs(r.storage, 10)
+		jobs, err := r.jobsStore.GetJobs(JobStatePending|JobStateReady, r.storage, 10)
 		if err != nil {
 			return err
 		}
@@ -146,14 +146,12 @@ func (r ReplMgr) ProcessBacklog(ctx context.Context) error {
 			r.log.Debugf("no jobs for %s, checking again in %s", r.storage, jobFetchInterval)
 
 			select {
-
 			// TODO: exponential backoff when no queries are returned
 			case <-time.After(jobFetchInterval):
 				continue
 
 			case <-ctx.Done():
 				return ctx.Err()
-
 			}
 		}
 

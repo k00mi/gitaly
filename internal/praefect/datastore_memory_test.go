@@ -84,11 +84,11 @@ func TestMemoryDatastoreWhitelist(t *testing.T) {
 		},
 	}
 
-	backup1ActualJobs, err := mds.GetIncompleteJobs(backup1.Name, 10)
+	backup1ActualJobs, err := mds.GetJobs(praefect.JobStatePending|praefect.JobStateReady, backup1.Name, 10)
 	require.NoError(t, err)
 	require.Equal(t, backup1ExpectedJobs, backup1ActualJobs)
 
-	backup2ActualJobs, err := mds.GetIncompleteJobs(backup2.Name, 10)
+	backup2ActualJobs, err := mds.GetJobs(praefect.JobStatePending|praefect.JobStateReady, backup2.Name, 10)
 	require.NoError(t, err)
 	require.Equal(t, backup2ActualJobs, backup2ExpectedJobs)
 
