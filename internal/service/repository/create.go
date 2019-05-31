@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"os"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
@@ -12,6 +13,10 @@ func (s *server) CreateRepository(ctx context.Context, req *gitalypb.CreateRepos
 	diskPath, err := helper.GetPath(req.GetRepository())
 	if err != nil {
 		return nil, helper.ErrInvalidArgument(err)
+	}
+
+	if err := os.MkdirAll(diskPath, 0770); err != nil {
+		return nil, helper.ErrInternal(err)
 	}
 
 	cmd, err := git.CommandWithoutRepo(ctx, "init", "--bare", "--quiet", diskPath)
