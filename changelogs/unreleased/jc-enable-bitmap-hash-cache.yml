@@ -1,0 +1,5 @@
+---
+title: Enable bitmap hash cache
+merge_request: 1282
+author:
+type: performance

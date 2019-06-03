@@ -70,6 +70,7 @@ func repackConfig(ctx context.Context, bitmap bool) []string {
 
 	if bitmap {
 		args = append(args, "-c", "repack.writeBitmaps=true")
+		args = append(args, "-c", "pack.writeBitmapHashCache=true")
 	} else {
 		args = append(args, "-c", "repack.writeBitmaps=false")
 	}
