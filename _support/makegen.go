@@ -274,7 +274,7 @@ var templateText = `
 # makegen.go.
 #
 
-# These variables may be overriden at runtime by top-level make
+# These variables may be overridden at runtime by top-level make
 PREFIX ?= /usr/local
 INSTALL_DEST_DIR := $(DESTDIR)$(PREFIX)/bin/
 BUNDLE_FLAGS ?= --deployment

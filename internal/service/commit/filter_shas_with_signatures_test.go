@@ -44,7 +44,7 @@ func TestFilterShasWithSignaturesSuccessful(t *testing.T) {
 			out:  [][]byte{[]byte("5937ac0a7beb003549fc5fd26fc247adbce4a52e"), []byte("6f6d7e7ed97bb5f0054f2b1df789b39ca89b6ff9")},
 		},
 		{
-			desc: "3 shas, middle non-existant",
+			desc: "3 shas, middle non-existent",
 			in:   [][]byte{[]byte("5937ac0a7beb003549fc5fd26fc247adbce4a52e"), []byte("deadf00d00000000000000000000000000000000"), []byte("6f6d7e7ed97bb5f0054f2b1df789b39ca89b6ff9")},
 			out:  [][]byte{[]byte("5937ac0a7beb003549fc5fd26fc247adbce4a52e"), []byte("6f6d7e7ed97bb5f0054f2b1df789b39ca89b6ff9")},
 		},

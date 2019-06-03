@@ -660,7 +660,7 @@ module Gitlab
 
       def remove_remote(remote_name)
         # When a remote is deleted all its remote refs are deleted too, but in
-        # the case of mirrors we map its refs (that would usualy go under
+        # the case of mirrors we map its refs (that would usually go under
         # [remote_name]/) to the top level namespace. We clean the mapping so
         # those don't get deleted.
         rugged.config.delete("remote.#{remote_name}.fetch") if rugged.config["remote.#{remote_name}.mirror"]

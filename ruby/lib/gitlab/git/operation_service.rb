@@ -106,7 +106,7 @@ module Gitlab
       #
       # Returns the generated commit.
       #
-      # ref - The target ref path we're commiting to.
+      # ref - The target ref path we're committing to.
       # from_branch - The branch we're taking the HEAD commit from.
       def commit_ref(ref, from_branch:)
         update_autocrlf_option

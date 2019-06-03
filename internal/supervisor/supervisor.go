@@ -61,7 +61,7 @@ type Process struct {
 	stopOnce sync.Once
 }
 
-// New creates a new proces instance.
+// New creates a new process instance.
 func New(name string, env []string, args []string, dir string, memoryThreshold int, events chan<- Event, healthCheck func() error) (*Process, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("need at least one argument")

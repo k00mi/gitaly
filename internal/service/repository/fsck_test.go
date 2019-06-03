@@ -31,7 +31,7 @@ func TestFsckSuccess(t *testing.T) {
 	assert.Empty(t, c.GetError())
 }
 
-func TestFsckFailureSeverlyBrokenRepo(t *testing.T) {
+func TestFsckFailureSeverelyBrokenRepo(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
@@ -44,7 +44,7 @@ func TestFsckFailureSeverlyBrokenRepo(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	// This makes the repo severly broken so that `git` does not identify it as a
+	// This makes the repo severely broken so that `git` does not identify it as a
 	// proper repo.
 	require.NoError(t, os.RemoveAll(path.Join(testRepoPath, "objects")))
 	fd, err := os.Create(path.Join(testRepoPath, "objects"))
@@ -70,7 +70,7 @@ func TestFsckFailureSlightlyBrokenRepo(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	// This makes the repo slighly broken so that `git` still identify it as a
+	// This makes the repo slightly broken so that `git` still identify it as a
 	// proper repo, but `fsck` complains about broken refs...
 	require.NoError(t, os.RemoveAll(path.Join(testRepoPath, "objects", "pack")))
 
