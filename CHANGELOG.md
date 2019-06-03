@@ -1,5 +1,27 @@
 # Gitaly changelog
 
+## v1.44.0
+
+#### Added
+- Expose the FileSystem name on the storage info
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1261
+
+#### Changed
+- DisconnectGitAlternates: bail out more often
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1266
+
+#### Fixed
+- Created repository directories have FileMode 0770
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1274
+- Fix UserRebaseConfirmable not sending PreReceiveError and GitError responses to client
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1270
+- Fix stderr log writer
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1275
+
+#### Other
+- Speed up 'make assemble' using rsync
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1272
+
 ## v1.43.0
 
 #### Added
