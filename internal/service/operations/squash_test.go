@@ -3,6 +3,8 @@ package operations
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -60,6 +62,19 @@ func TestSuccessfulUserSquashRequest(t *testing.T) {
 	require.Equal(t, user.Name, commit.Committer.Name)
 	require.Equal(t, user.Email, commit.Committer.Email)
 	require.Equal(t, commitMessage, commit.Subject)
+}
+
+func ensureSplitIndexExists(t *testing.T, repoDir string) bool {
+	testhelper.MustRunCommand(t, nil, "git", "-C", repoDir, "update-index", "--add")
+
+	fis, err := ioutil.ReadDir(filepath.Join(repoDir, ".git"))
+	require.NoError(t, err)
+	for _, fi := range fis {
+		if strings.HasPrefix(fi.Name(), "sharedindex") {
+			return true
+		}
+	}
+	return false
 }
 
 func TestSuccessfulUserSquashRequestWith3wayMerge(t *testing.T) {
@@ -130,6 +145,38 @@ index 5b812ff..ff85394 100644
 	require.Equal(t, user.Name, commit.Committer.Name)
 	require.Equal(t, user.Email, commit.Committer.Email)
 	require.Equal(t, commitMessage, commit.Subject)
+}
+
+func TestSplitIndex(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	server, serverSocketPath := runOperationServiceServer(t)
+	defer server.Stop()
+
+	client, conn := NewOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanup := testhelper.NewTestRepoWithWorktree(t)
+	defer cleanup()
+
+	require.False(t, ensureSplitIndexExists(t, testRepoPath))
+
+	request := &gitalypb.UserSquashRequest{
+		Repository:    testRepo,
+		User:          user,
+		SquashId:      "1",
+		Branch:        []byte(branchName),
+		Author:        author,
+		CommitMessage: commitMessage,
+		StartSha:      startSha,
+		EndSha:        endSha,
+	}
+
+	response, err := client.UserSquash(ctx, request)
+	require.NoError(t, err)
+	require.Empty(t, response.GetGitError())
+	require.True(t, ensureSplitIndexExists(t, testRepoPath))
 }
 
 func TestFailedUserSquashRequestDueToGitError(t *testing.T) {
