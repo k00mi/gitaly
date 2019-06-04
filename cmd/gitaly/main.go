@@ -12,7 +12,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/bootstrap"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
-	"gitlab.com/gitlab-org/gitaly/internal/linguist"
 	"gitlab.com/gitlab-org/gitaly/internal/server"
 	"gitlab.com/gitlab-org/gitaly/internal/tempdir"
 	"gitlab.com/gitlab-org/gitaly/internal/version"
@@ -34,15 +33,7 @@ func loadConfig(configPath string) error {
 		return err
 	}
 
-	if err := config.Validate(); err != nil {
-		return err
-	}
-
-	if err := linguist.LoadColors(); err != nil {
-		return fmt.Errorf("load linguist colors: %v", err)
-	}
-
-	return nil
+	return config.Validate()
 }
 
 // registerServerVersionPromGauge registers a label with the current server version
