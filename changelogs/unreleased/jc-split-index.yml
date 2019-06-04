@@ -1,5 +1,0 @@
----
-title: Enable splitIndex for repositories in GarbageCollect rpc
-merge_request: 1247
-author:
-type: performance

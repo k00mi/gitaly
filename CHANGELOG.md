@@ -1,5 +1,15 @@
 # Gitaly changelog
 
+## v1.45.0
+
+#### Performance
+- Enable splitIndex for repositories in GarbageCollect rpc
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1247
+
+#### Security
+- Fix GetArchive injection vulnerability
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/26
+
 ## v1.44.0
 
 #### Added
