@@ -16,7 +16,7 @@ prometheus_listen_addr = ""
   listen_addr = "tcp://gitaly-backup2.example.com"
 
 [logging]
-  Format = ""
+  format = ""
   sentry_dsn = ""
   ruby_sentry_dsn = ""
   level = ""

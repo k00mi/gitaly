@@ -128,7 +128,7 @@ func getListeners(socketPath, listenAddr string) ([]net.Listener, error) {
 	var listeners []net.Listener
 
 	if socketPath != "" {
-		if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
+		if err := os.RemoveAll(socketPath); err != nil {
 			return nil, err
 		}
 		l, err := net.Listen("unix", socketPath)

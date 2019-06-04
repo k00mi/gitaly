@@ -171,7 +171,7 @@ func (b *Bootstrap) waitGracePeriod(kill <-chan os.Signal) error {
 
 func (b *Bootstrap) listen(network, path string) (net.Listener, error) {
 	if network == "unix" && b.isFirstBoot() {
-		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		if err := os.RemoveAll(path); err != nil {
 			return nil, err
 		}
 	}
