@@ -84,7 +84,7 @@ type Storage struct {
 
 // Logging contains the logging configuration for Gitaly
 type Logging struct {
-	Format            string
+	Format            string `toml:"format"`
 	SentryDSN         string `toml:"sentry_dsn"`
 	RubySentryDSN     string `toml:"ruby_sentry_dsn"`
 	SentryEnvironment string `toml:"sentry_environment"`
