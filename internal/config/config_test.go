@@ -307,12 +307,15 @@ func TestStoragePath(t *testing.T) {
 
 func TestLoadGit(t *testing.T) {
 	tmpFile := configFileReader(`[git]
-bin_path = "/my/git/path"`)
+bin_path = "/my/git/path"
+catfile_cache_size = 50
+`)
 
 	err := Load(tmpFile)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.Equal(t, "/my/git/path", Config.Git.BinPath)
+	require.Equal(t, "/my/git/path", Config.Git.BinPath)
+	require.Equal(t, 50, Config.Git.CatfileCacheSize)
 }
 
 func TestSetGitPath(t *testing.T) {
