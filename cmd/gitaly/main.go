@@ -13,6 +13,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/server"
+	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/internal/tempdir"
 	"gitlab.com/gitlab-org/gitaly/internal/version"
 	"gitlab.com/gitlab-org/labkit/tracing"
@@ -150,6 +151,12 @@ func run(b *bootstrap.Bootstrap) error {
 
 			return nil
 		})
+	}
+
+	for _, shard := range config.Config.Storages {
+		if err = storage.WriteMetadataFile(shard); err != nil {
+			log.WithError(err).Error("Unable to write gitaly metadata file")
+		}
 	}
 
 	if err := b.Start(); err != nil {
