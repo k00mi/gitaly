@@ -1,5 +1,23 @@
 # Gitaly changelog
 
+## v1.46.0
+
+#### Added
+- Add GetObjectDirectorySize RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1263
+
+#### Changed
+- Make catfile cache size configurable
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1271
+
+#### Fixed
+- Wait for all the socket to terminate during a graceful restart
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1190
+
+#### Performance
+- Enable bitmap hash cache
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1282
+
 ## v1.45.0
 
 #### Performance
