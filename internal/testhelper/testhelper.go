@@ -495,3 +495,12 @@ func CreateLooseRef(t *testing.T, repoPath, refName string) {
 	MustRunCommand(t, nil, "git", "-C", repoPath, "update-ref", relRefPath, "master")
 	require.FileExists(t, filepath.Join(repoPath, relRefPath), "ref must be in loose file")
 }
+
+// TempDir is a wrapper around ioutil.TempDir that provides a cleanup function
+func TempDir(t *testing.T, dir, prefix string) (string, func() error) {
+	dirPath, err := ioutil.TempDir(dir, prefix)
+	require.NoError(t, err)
+	return dirPath, func() error {
+		return os.RemoveAll(dirPath)
+	}
+}
