@@ -8,5 +8,7 @@ func statFileSystemType(path string) (int64, error) {
 		return 0, err
 	}
 
-	return stat.Type, nil
+	// This explicit cast to int64 is required for systems where the syscall
+	// returns an int32 instead.
+	return int64(stat.Type), nil
 }

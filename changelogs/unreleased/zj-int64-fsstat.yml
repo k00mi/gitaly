@@ -1,0 +1,3 @@
+title: Cast FsStat syscall to int64
+type: fixed
+merge_request: 1306
