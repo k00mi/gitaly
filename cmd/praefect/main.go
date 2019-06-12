@@ -102,7 +102,9 @@ func run(listeners []net.Listener, conf config.Config) error {
 	allBackendServers := append(conf.SecondaryServers, conf.PrimaryServer)
 
 	for _, gitaly := range allBackendServers {
-		coordinator.RegisterNode(gitaly.Name, gitaly.ListenAddr)
+		if err := coordinator.RegisterNode(gitaly.Name, gitaly.ListenAddr); err != nil {
+			return fmt.Errorf("failed to register %s: %s", gitaly.Name, err)
+		}
 
 		logger.WithField("gitaly listen addr", gitaly.ListenAddr).Info("registered gitaly node")
 	}
