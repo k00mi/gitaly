@@ -65,12 +65,15 @@ module Gitlab
         end
       end
 
-      # Whenever `start_branch_name` is passed, if `branch_name` doesn't exist,
-      # it would be created from `start_branch_name`.
+      # Whenever `start_branch_name` or `start_sha` is passed, if `branch_name`
+      # doesn't exist, it will be created from the commit pointed to by
+      # `start_branch_name` or `start_sha`.
+      #
       # If `start_repository` is passed, and the branch doesn't exist,
       # it would try to find the commits from it instead of current repository.
       def with_branch(branch_name,
                       start_branch_name: nil,
+                      start_sha: nil,
                       start_repository: repository,
                       force: false,
                       &block)
@@ -78,12 +81,16 @@ module Gitlab
 
         start_branch_name = nil if start_repository.empty?
 
-        raise ArgumentError, "Cannot find branch #{start_branch_name} in #{start_repository.relative_path}" if start_branch_name && !start_repository.branch_exists?(start_branch_name)
+        if start_branch_name.present? && !start_repository.branch_exists?(start_branch_name)
+          raise ArgumentError, "Cannot find branch '#{start_branch_name}'"
+        elsif start_sha.present? && !start_repository.commit_id(start_sha)
+          raise ArgumentError, "Cannot find commit '#{start_sha}'"
+        end
 
         update_branch_with_hooks(branch_name, force) do
           repository.with_repo_branch_commit(
             start_repository,
-            start_branch_name || branch_name,
+            start_sha.presence || start_branch_name.presence || branch_name,
             &block
           )
         end

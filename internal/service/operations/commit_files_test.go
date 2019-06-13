@@ -107,10 +107,10 @@ func TestSuccessfulUserCommitFilesRequest(t *testing.T) {
 			require.NoError(t, stream.Send(actionsRequest3))
 			require.NoError(t, stream.Send(actionsRequest4))
 
-			r, err := stream.CloseAndRecv()
+			resp, err := stream.CloseAndRecv()
 			require.NoError(t, err)
-			require.Equal(t, tc.repoCreated, r.GetBranchUpdate().GetRepoCreated())
-			require.Equal(t, tc.branchCreated, r.GetBranchUpdate().GetBranchCreated())
+			require.Equal(t, tc.repoCreated, resp.GetBranchUpdate().GetRepoCreated())
+			require.Equal(t, tc.branchCreated, resp.GetBranchUpdate().GetBranchCreated())
 
 			headCommit, err := log.GetCommit(ctxOuter, tc.repo, tc.branchName)
 			require.NoError(t, err)
@@ -179,10 +179,10 @@ func TestSuccessfulUserCommitFilesRequestMove(t *testing.T) {
 				require.NoError(t, stream.Send(actionsRequest2))
 			}
 
-			r, err := stream.CloseAndRecv()
+			resp, err := stream.CloseAndRecv()
 			require.NoError(t, err)
 
-			update := r.GetBranchUpdate()
+			update := resp.GetBranchUpdate()
 			require.NotNil(t, update)
 
 			fileContent := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "show", update.CommitId+":"+filePath)
@@ -237,15 +237,99 @@ func TestSuccessfulUserCommitFilesRequestForceCommit(t *testing.T) {
 	require.NoError(t, stream.Send(createFileHeaderRequest("TEST.md")))
 	require.NoError(t, stream.Send(actionContentRequest("Test")))
 
-	r, err := stream.CloseAndRecv()
+	resp, err := stream.CloseAndRecv()
 	require.NoError(t, err)
 
-	update := r.GetBranchUpdate()
+	update := resp.GetBranchUpdate()
 	newTargetBranchCommit, err := log.GetCommit(ctxOuter, testRepo, targetBranchName)
 	require.NoError(t, err)
 
 	require.Equal(t, newTargetBranchCommit.Id, update.CommitId)
 	require.Equal(t, newTargetBranchCommit.ParentIds, []string{startBranchCommit.Id})
+}
+
+func TestSuccessfulUserCommitFilesRequestStartSha(t *testing.T) {
+	server, serverSocketPath := runFullServer(t)
+	defer server.Stop()
+
+	client, conn := operations.NewOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	ctxOuter, cancel := testhelper.Context()
+	defer cancel()
+
+	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
+	ctx := metadata.NewOutgoingContext(ctxOuter, md)
+	targetBranchName := "new"
+
+	startCommit, err := log.GetCommit(ctxOuter, testRepo, "master")
+	require.NoError(t, err)
+
+	headerRequest := headerRequest(testRepo, user, targetBranchName, commitFilesMessage)
+	setStartSha(headerRequest, startCommit.Id)
+
+	stream, err := client.UserCommitFiles(ctx)
+	require.NoError(t, err)
+	require.NoError(t, stream.Send(headerRequest))
+	require.NoError(t, stream.Send(createFileHeaderRequest("TEST.md")))
+	require.NoError(t, stream.Send(actionContentRequest("Test")))
+
+	resp, err := stream.CloseAndRecv()
+	require.NoError(t, err)
+
+	update := resp.GetBranchUpdate()
+	newTargetBranchCommit, err := log.GetCommit(ctxOuter, testRepo, targetBranchName)
+	require.NoError(t, err)
+
+	require.Equal(t, newTargetBranchCommit.Id, update.CommitId)
+	require.Equal(t, newTargetBranchCommit.ParentIds, []string{startCommit.Id})
+}
+
+func TestSuccessfulUserCommitFilesRequestStartShaRemoteRepository(t *testing.T) {
+	server, serverSocketPath := runFullServer(t)
+	defer server.Stop()
+
+	client, conn := operations.NewOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	ctxOuter, cancel := testhelper.Context()
+	defer cancel()
+
+	newRepo, _, newRepoCleanupFn := testhelper.InitBareRepo(t)
+	defer newRepoCleanupFn()
+
+	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
+	ctx := metadata.NewOutgoingContext(ctxOuter, md)
+	targetBranchName := "new"
+
+	startCommit, err := log.GetCommit(ctxOuter, testRepo, "master")
+	require.NoError(t, err)
+
+	headerRequest := headerRequest(newRepo, user, targetBranchName, commitFilesMessage)
+	setStartSha(headerRequest, startCommit.Id)
+	setStartRepository(headerRequest, testRepo)
+
+	stream, err := client.UserCommitFiles(ctx)
+	require.NoError(t, err)
+	require.NoError(t, stream.Send(headerRequest))
+	require.NoError(t, stream.Send(createFileHeaderRequest("TEST.md")))
+	require.NoError(t, stream.Send(actionContentRequest("Test")))
+
+	resp, err := stream.CloseAndRecv()
+	require.NoError(t, err)
+
+	update := resp.GetBranchUpdate()
+	newTargetBranchCommit, err := log.GetCommit(ctxOuter, newRepo, targetBranchName)
+	require.NoError(t, err)
+
+	require.Equal(t, newTargetBranchCommit.Id, update.CommitId)
+	require.Equal(t, newTargetBranchCommit.ParentIds, []string{startCommit.Id})
 }
 
 func TestFailedUserCommitFilesRequestDueToHooks(t *testing.T) {
@@ -282,11 +366,11 @@ func TestFailedUserCommitFilesRequestDueToHooks(t *testing.T) {
 			require.NoError(t, stream.Send(actionsRequest1))
 			require.NoError(t, stream.Send(actionsRequest2))
 
-			r, err := stream.CloseAndRecv()
+			resp, err := stream.CloseAndRecv()
 			require.NoError(t, err)
 
-			require.Contains(t, r.PreReceiveError, "GL_ID="+user.GlId)
-			require.Contains(t, r.PreReceiveError, "GL_USERNAME="+user.GlUsername)
+			require.Contains(t, resp.PreReceiveError, "GL_ID="+user.GlId)
+			require.Contains(t, resp.PreReceiveError, "GL_USERNAME="+user.GlUsername)
 		})
 	}
 }
@@ -356,9 +440,9 @@ func TestFailedUserCommitFilesRequestDueToIndexError(t *testing.T) {
 				require.NoError(t, stream.Send(req))
 			}
 
-			r, err := stream.CloseAndRecv()
+			resp, err := stream.CloseAndRecv()
 			require.NoError(t, err)
-			require.Equal(t, tc.indexError, r.GetIndexError())
+			require.Equal(t, tc.indexError, resp.GetIndexError())
 		})
 	}
 }
@@ -398,6 +482,10 @@ func TestFailedUserCommitFilesRequest(t *testing.T) {
 		{
 			desc: "empty CommitMessage",
 			req:  headerRequest(testRepo, user, branchName, nil),
+		},
+		{
+			desc: "invalid commit ID: \"foobar\"",
+			req:  setStartSha(headerRequest(testRepo, user, branchName, commitFilesMessage), "foobar"),
 		},
 	}
 
@@ -439,6 +527,18 @@ func setAuthorAndEmail(headerRequest *gitalypb.UserCommitFilesRequest, authorNam
 func setStartBranchName(headerRequest *gitalypb.UserCommitFilesRequest, startBranchName []byte) {
 	header := getHeader(headerRequest)
 	header.StartBranchName = startBranchName
+}
+
+func setStartRepository(headerRequest *gitalypb.UserCommitFilesRequest, startRepository *gitalypb.Repository) {
+	header := getHeader(headerRequest)
+	header.StartRepository = startRepository
+}
+
+func setStartSha(headerRequest *gitalypb.UserCommitFilesRequest, startSha string) *gitalypb.UserCommitFilesRequest {
+	header := getHeader(headerRequest)
+	header.StartSha = startSha
+
+	return headerRequest
 }
 
 func setForce(headerRequest *gitalypb.UserCommitFilesRequest, force bool) {

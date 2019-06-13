@@ -35,12 +35,12 @@ module Gitlab
           gitaly_repository.relative_path == other_repository.relative_path
       end
 
-      def fetch_env
+      def fetch_env(git_config_options: [])
         gitaly_ssh = File.absolute_path(File.join(Gitlab.config.gitaly.client_path, 'gitaly-ssh'))
         gitaly_address = gitaly_client.address(storage)
         gitaly_token = gitaly_client.token(storage)
 
-        request = Gitaly::SSHUploadPackRequest.new(repository: gitaly_repository)
+        request = Gitaly::SSHUploadPackRequest.new(repository: gitaly_repository, git_config_options: git_config_options)
         env = {
           'GITALY_ADDRESS' => gitaly_address,
           'GITALY_PAYLOAD' => request.to_json,

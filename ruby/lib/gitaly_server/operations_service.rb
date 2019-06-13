@@ -282,6 +282,8 @@ module GitalyServer
       Gitaly::UserCommitFilesResponse.new(pre_receive_error: set_utf8!(e.message))
     rescue Gitlab::Git::CommitError => e
       raise GRPC::FailedPrecondition.new(e.message)
+    rescue ArgumentError => e
+      raise GRPC::InvalidArgument.new(e.message)
     end
 
     def user_squash(request, call)
@@ -354,6 +356,7 @@ module GitalyServer
 
       optional_fields = {
         start_branch_name: 'start_branch_name',
+        start_sha: 'start_sha',
         author_name: 'commit_author_name',
         author_email: 'commit_author_email',
         force: 'force'
