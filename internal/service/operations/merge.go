@@ -3,6 +3,7 @@ package operations
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -105,6 +106,10 @@ func validateUserMergeToRefRequest(in *gitalypb.UserMergeToRefRequest) error {
 
 	if len(in.TargetRef) == 0 {
 		return fmt.Errorf("empty target ref")
+	}
+
+	if !strings.HasPrefix(string(in.TargetRef), "refs/merge-requests") {
+		return fmt.Errorf("invalid target ref")
 	}
 
 	return nil

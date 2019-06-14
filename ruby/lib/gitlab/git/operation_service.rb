@@ -120,7 +120,7 @@ module Gitlab
 
         oldrev = from_branch.target
 
-        update_ref_in_hooks(ref, newrev, oldrev)
+        update_ref(ref, newrev, oldrev)
 
         newrev
       end
