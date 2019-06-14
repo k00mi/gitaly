@@ -219,7 +219,7 @@ _support/vendor-gitaly-proto v<tag-version>
 gem 'gitaly-proto', git: 'https://gitlab.com/my-user/gitaly-proto.git', branch: 'my-branch'
 ```
 
-- Update Gemfile.lock with
+- Update `Gemfile.lock` with
 
 ```shell
 cd ruby && bundle update gitaly-proto

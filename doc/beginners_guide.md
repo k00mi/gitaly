@@ -18,9 +18,10 @@ send with the request. For each request the response is defined too.
 
 You can find a clone of the [gitaly-proto repository][gitaly-proto] in
 `/path/to/gdk/gitaly/src/gitlab.com/gitlab-org/gitaly-proto`.
+You can check out your working branch here, but be aware that `gdk update` will reset it to the `master` branch.
 
 For running a custom gitaly-proto when developing, please consult the
-[contributing documentation](./CONTRIBUTING.md#development-and-testing-with-a-custom-gitaly-proto)
+[contributing documentation][custom-gitaly-proto].
 
 #### Gitaly
 
@@ -28,6 +29,7 @@ Gitaly is a component that calls procedure on the Git data when it's requested
 to do so.
 
 You can find a clone of the gitaly repository in `/path/to/gdk/gitaly/src/gitlab.com/gitlab-org/gitaly`.
+You can check out your working branch here, but be aware that `gdk update` will reset it to the tag specified by `/path/to/gdk/gitlab/GITALY_SERVER_VERSION`.
 
 ##### GOPATH and GDK
 
@@ -94,7 +96,7 @@ the RPC instead.
 
 To experiment with changing an RPC you should use the Gitaly service
 tests. The RPC you want to work on will have tests somewhere in
-`internal/services/...`. Find the tests for your RPC. Next, before you
+`internal/service/...`. Find the tests for your RPC. Next, before you
 edit any code, make sure the tests pass when you run them:
 `go test ./internal/service/foobar -count 1 -run MyRPC`. In this
 command, `MyRPC` is a regex that will match functions like
@@ -130,22 +132,8 @@ Then create a merge request and wait for a review.
 
 ##### Gitaly
 
-The Gitaly Proto changes need to be updated in Gitaly itself before the server
-can be edited.
-
-```bash
-$ _support/vendor-gitaly-proto --fork gitlab.com/my-user/gitaly-proto my-branch
-
-# change the versions in Gemfile for gitaly-proto
-# cd ruby
-$ vim Gemfile
-# Change:
-# gem 'gitaly-proto', '~> 0.75.0', require: 'gitaly' 
-# To 
-# gem 'gitaly-proto', require: 'gitaly', git: 'https://gitlab.com/<your-username>/gitaly-proto'
-
-$ bundle
-```
+The Gitaly Proto changes [need to be updated in Gitaly itself][custom-gitaly-proto]
+before the server can be edited.
 
 If proto is updated, run `make`. This will fail to compile Gitaly, as Gitaly
 doesn't yet have the new endpoint implemented. We fix this by adding a dummy implementation.
@@ -227,6 +215,8 @@ It should only be used for:
 - legacy GitLab application code that is too complex or subtle to rewrite in Go
 - prototyping (if you the contributor are uncomfortable writing Go)
 
+Note that for any changes to `gitaly-ruby` to be used by GDK, you need to
+run `make gitaly-setup` in your GDK root and restart your processes.
 
 ###### Gitaly-ruby boilerplate
 
@@ -250,15 +240,16 @@ instance of the response object.
 There is no autoloader in gitaly-ruby. If you add new ruby files, you need to manually
 add a `require` statement in `ruby/lib/gitlab/git.rb` or `ruby/lib/gitaly_server.rb.`
 
-Finally, to test it manually using the GitLab Development Kit, GitLab must be told
-to use the new Gitaly. First run `make` to compile the project. Then go to the
-`gitlab` directory in your GDK and follow the [instructions on using a custom Gitaly][custom-gitaly].
-
 ### Testing
 
-Gitaly's tests are mostly written in Go but it is possible to write Rspec tests too.
+Gitaly's tests are mostly written in Go but it is possible to write RSpec tests too.
 
-To run the full test suite, use `make test`.
+Generally, you should always write new tests in Go even when testing Ruby code,
+since we're planning to gradually rewrite everything in Go and want to avoid
+having to rewrite the tests as well.
+
+To run the full test suite, use `make test`.  
+You'll need some [test repositories](test_repos.md), you can set these up with `make prepare-tests`.
 
 #### Go tests
 
@@ -302,24 +293,32 @@ called on `testing.T`.
 [require]: https://github.com/stretchr/testify/tree/master/require
 [assert]: https://github.com/stretchr/testify/tree/master/assert
 
-#### Rspec tests
+#### RSpec tests
 
-It is possible to write end-to-end Rspec tests that run against a full
+It is possible to write end-to-end RSpec tests that run against a full
 Gitaly server. This is more or less equivalent to the service-level
 tests we write in Go. You can also write unit tests for Ruby code in
-Rspec.
+RSpec.
 
-Because the Rspec tests use a full Gitaly server you must re-compile
-Gitaly everytime you change the Go code. Run `make` to recompile.
+Because the RSpec tests use a full Gitaly server you must re-compile
+Gitaly every time you change the Go code. Run `make` to recompile.
 
-Then, you can run Rspec tests in the `ruby` subdirectory.
+Then, you can run RSpec tests in the `ruby` subdirectory.
 
 ```
 cd ruby
 bundle exec rspec
 ```
 
+### Rails tests
+
+To use your custom Gitaly when running Rails tests in GDK, go to the
+`gitlab` directory in your GDK and follow the instructions at
+[Running tests with a locally modified version of Gitaly][custom-gitaly].
+
+
 [custom-gitaly]: https://docs.gitlab.com/ee/development/gitaly.html#running-tests-with-a-locally-modified-version-of-gitaly
+[custom-gitaly-proto]: https://gitlab.com/gitlab-org/gitaly/blob/master/CONTRIBUTING.md#development-and-testing-with-a-custom-gitaly-proto
 [gdk]: https://gitlab.com/gitlab-org/gitlab-development-kit/#getting-started
 [git-remote]: https://git-scm.com/book/en/v2/Git-Basics-Working-with-Remotes
 [gitaly]: https://gitlab.com/gitlab-org/gitaly
