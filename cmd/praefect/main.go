@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -39,7 +40,9 @@ func main() {
 		logger.Fatalf("%s", err)
 	}
 
-	logger.Fatalf("%v", run(listeners, conf))
+	if err := run(listeners, conf); err != nil {
+		logger.Fatalf("%v", err)
+	}
 }
 
 func configure() (config.Config, error) {
@@ -109,7 +112,6 @@ func run(listeners []net.Listener, conf config.Config) error {
 		logger.WithField("gitaly listen addr", gitaly.ListenAddr).Info("registered gitaly node")
 	}
 
-	var err error
 	select {
 	case s := <-termCh:
 		logger.WithField("signal", s).Warn("received signal, shutting down gracefully")
@@ -118,12 +120,13 @@ func run(listeners []net.Listener, conf config.Config) error {
 		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 		if shutdownErr := srv.Shutdown(ctx); shutdownErr != nil {
 			logger.Warnf("error received during shutting down: %v", shutdownErr)
+			return shutdownErr
 		}
-		err = fmt.Errorf("received signal: %v", s)
-	case err = <-serverErrors:
+	case err := <-serverErrors:
+		return err
 	}
 
-	return err
+	return nil
 }
 
 func getListeners(socketPath, listenAddr string) ([]net.Listener, error) {
@@ -133,7 +136,9 @@ func getListeners(socketPath, listenAddr string) ([]net.Listener, error) {
 		if err := os.RemoveAll(socketPath); err != nil {
 			return nil, err
 		}
-		l, err := net.Listen("unix", socketPath)
+
+		cleanPath := strings.TrimPrefix(socketPath, "unix:")
+		l, err := net.Listen("unix", cleanPath)
 		if err != nil {
 			return nil, err
 		}
