@@ -3,6 +3,7 @@ package objectpool
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -46,6 +47,54 @@ func TestLink(t *testing.T) {
 	require.Equal(t, content, newContent)
 
 	require.True(t, testhelper.RemoteExists(t, pool.FullPath(), testRepo.GetGlRepository()), "pool remotes should include %v", testRepo)
+}
+
+func TestLinkRemoveBitmap(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	pool, err := NewObjectPool(testRepo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
+	require.NoError(t, err)
+
+	require.NoError(t, pool.Init(ctx))
+
+	poolPath := pool.FullPath()
+	testhelper.MustRunCommand(t, nil, "git", "-C", poolPath, "fetch", testRepoPath, "+refs/*:refs/*")
+
+	testhelper.MustRunCommand(t, nil, "git", "-C", poolPath, "repack", "-adb")
+	require.Len(t, listBitmaps(t, pool.FullPath()), 1, "pool bitmaps before")
+
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "repack", "-adb")
+	require.Len(t, listBitmaps(t, testRepoPath), 1, "member bitmaps before")
+
+	refsBefore := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "for-each-ref")
+
+	require.NoError(t, pool.Link(ctx, testRepo))
+
+	require.Len(t, listBitmaps(t, pool.FullPath()), 1, "pool bitmaps after")
+	require.Len(t, listBitmaps(t, testRepoPath), 0, "member bitmaps after")
+
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "fsck")
+
+	refsAfter := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "for-each-ref")
+	require.Equal(t, refsBefore, refsAfter, "compare member refs before/after link")
+}
+
+func listBitmaps(t *testing.T, repoPath string) []string {
+	entries, err := ioutil.ReadDir(filepath.Join(repoPath, "objects/pack"))
+	require.NoError(t, err)
+
+	var bitmaps []string
+	for _, entry := range entries {
+		if strings.HasSuffix(entry.Name(), ".bitmap") {
+			bitmaps = append(bitmaps, entry.Name())
+		}
+	}
+
+	return bitmaps
 }
 
 func TestUnlink(t *testing.T) {
