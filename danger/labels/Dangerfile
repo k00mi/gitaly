@@ -5,7 +5,7 @@ def changelog_entry
 
       YAML.safe_load(File.read(file))
     rescue
-      # The changelog danger file will handle this
+      # The change log danger file will handle this
       {}
     end
 end
@@ -30,12 +30,24 @@ TYPE_TO_LABEL = {
   nil => []
 }
 
+INHERIRABLE_LABELS = TYPE_TO_LABEL.values.flatten +  %w[Deliverable]
+
+def inherited_labels
+  gitlab.api
+    .merge_request_closes_issues( gitlab.mr_json['project_id'], gitlab.mr_json['iid'])
+    .flat_map { |i| i.labels }
+    .compact
+    .uniq
+    .select { |label| INHERIRABLE_LABELS.include?(label) }
+end
+
 required_labels.concat(TYPE_TO_LABEL[changelog_entry["type"]])
 
+mr_labels = gitlab.mr_labels | required_labels |inherited_labels
 gitlab.api.update_merge_request(
   gitlab.mr_json['project_id'],
   gitlab.mr_json['iid'],
-  labels: (gitlab.mr_labels | required_labels).join(",")
+  labels: mr_labels.join(",")
 )
 
 # vim: ft=ruby
