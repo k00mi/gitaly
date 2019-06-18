@@ -1,5 +1,0 @@
----
-title: Replace govendor with 'go mod'
-merge_request: 1286
-author:
-type: other

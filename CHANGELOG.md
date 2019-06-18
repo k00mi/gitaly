@@ -1,5 +1,31 @@
 # Gitaly changelog
 
+## v1.47.0
+
+#### Changed
+- Remove member bitmaps when linking to objectpool
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1311
+- Un-dangle dangling objects in object pools
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1297
+
+#### Fixed
+- Log node registration failures
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/
+- Fix Prometheus metric naming errors
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1292
+- Cast FsStat syscall to int64
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1306
+
+#### Other
+- Upgrade protobuf, prometheus and logrus
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1290
+- Replace govendor with 'go mod'
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1286
+
+#### Removed
+- Remove ruby code to create a repository
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1302
+
 ## v1.46.0
 
 #### Added
