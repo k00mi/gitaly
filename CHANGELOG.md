@@ -1,5 +1,15 @@
 # Gitaly changelog
 
+## v1.48.0
+
+#### Fixed
+- Fix praefect not listening to the correct socket path
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1313
+
+#### Other
+- Skip hooks for UserMergeToRef RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1312
+
 ## v1.47.0
 
 #### Changed

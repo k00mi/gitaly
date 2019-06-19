@@ -1,5 +1,0 @@
----
-title: Fix praefect not listening to the correct socket path
-merge_request: 1313
-author:
-type: fixed
