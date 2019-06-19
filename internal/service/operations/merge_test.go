@@ -616,6 +616,15 @@ func TestFailedUserMergeToRefRequest(t *testing.T) {
 			code:      codes.InvalidArgument,
 		},
 		{
+			desc:      "invalid target ref",
+			repo:      testRepo,
+			user:      mergeUser,
+			branch:    []byte(branchName),
+			sourceSha: commitToMerge,
+			targetRef: []byte("refs/heads/branch"),
+			code:      codes.InvalidArgument,
+		},
+		{
 			desc:      "non-existing branch",
 			repo:      testRepo,
 			user:      mergeUser,
@@ -644,7 +653,7 @@ func TestFailedUserMergeToRefRequest(t *testing.T) {
 	}
 }
 
-func TestUserMergeToRefFailedDueToHooksRequest(t *testing.T) {
+func TestUserMergeToRefIgnoreHooksRequest(t *testing.T) {
 	server, serverSocketPath := runOperationServiceServer(t)
 	defer server.Stop()
 
@@ -680,8 +689,8 @@ func TestUserMergeToRefFailedDueToHooksRequest(t *testing.T) {
 			defer cancel()
 
 			resp, err := client.UserMergeToRef(ctx, request)
-			require.Nil(t, err)
-			require.Contains(t, resp.PreReceiveError, "failure")
+			require.NoError(t, err)
+			require.Empty(t, resp.PreReceiveError)
 		})
 	}
 }
