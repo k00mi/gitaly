@@ -12,5 +12,7 @@ func Env() []string {
 		"GITALY_LOG_FORMAT=" + cfg.Logging.Format,
 		"GITALY_LOG_LEVEL=" + cfg.Logging.Level,
 		"GITLAB_SHELL_DIR=" + cfg.GitlabShell.Dir, //GITLAB_SHELL_DIR has been deprecated
+		"GITALY_BIN_DIR=" + config.Config.BinDir,
+		"GITALY_RUBY_DIR=" + config.Config.Ruby.Dir,
 	}
 }

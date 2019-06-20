@@ -107,6 +107,8 @@ module Gitlab
           'GITALY_LOG_DIR' => Gitlab.config.logging.dir,
           'GITALY_LOG_LEVEL' => Gitlab.config.logging.level,
           'GITALY_LOG_FORMAT' => Gitlab.config.logging.format,
+          'GITALY_RUBY_DIR' => Gitlab.config.gitaly.ruby_dir,
+          'GITALY_BIN_DIR' => Gitlab.config.gitaly.bin_dir,
           'GL_ID' => gl_id,
           'GL_USERNAME' => gl_username,
           'GL_REPOSITORY' => repository.gl_repository,

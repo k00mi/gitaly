@@ -22,8 +22,8 @@ func HookEnv(req ReceivePackRequest) []string {
 	return append([]string{
 		fmt.Sprintf("GL_ID=%s", req.GetGlId()),
 		fmt.Sprintf("GL_USERNAME=%s", req.GetGlUsername()),
-		fmt.Sprintf("GITLAB_SHELL_DIR=%s", config.Config.GitlabShell.Dir),
 		fmt.Sprintf("GL_REPOSITORY=%s", req.GetGlRepository()),
+		fmt.Sprintf("GITLAB_SHELL_DIR=%s", config.Config.GitlabShell.Dir),
 	}, gitlabshell.Env()...)
 }
 
