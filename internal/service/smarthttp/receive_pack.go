@@ -62,6 +62,7 @@ func (s *server) PostReceivePack(stream gitalypb.SmartHTTPService_PostReceivePac
 	env = append(env, command.GitEnv...)
 
 	opts := append([]string{fmt.Sprintf("core.hooksPath=%s", hooks.Path())}, req.GitConfigOptions...)
+
 	gitOptions := git.BuildGitOptions(opts, "receive-pack", "--stateless-rpc", repoPath)
 	cmd, err := git.BareCommand(ctx, stdin, stdout, nil, env, gitOptions...)
 

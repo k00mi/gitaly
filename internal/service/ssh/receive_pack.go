@@ -70,6 +70,14 @@ func sshReceivePack(stream gitalypb.SSHService_SSHReceivePackServer, req *gitaly
 	env = append(env, command.GitEnv...)
 
 	opts := append([]string{fmt.Sprintf("core.hooksPath=%s", hooks.Path())}, req.GitConfigOptions...)
+
+	// In case the repository belongs to an object pool, we want to prevent
+	// Git from including the pool's refs in the ref advertisement. We do
+	// this by rigging core.alternateRefsCommand to produce no output.
+	// Because Git itself will append the pool repository directory, the
+	// command ends with a "#". The end result is that Git runs
+	// `/bin/sh -c 'exit 0 # /path/to/pool.git`.
+	opts = append(opts, "core.alternateRefsCommand=exit 0 #")
 	gitOptions := git.BuildGitOptions(opts, "receive-pack", repoPath)
 	cmd, err := git.BareCommand(ctx, stdin, stdout, stderr, env, gitOptions...)
 
