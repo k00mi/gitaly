@@ -5,10 +5,13 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/git/gittest"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
@@ -85,4 +88,108 @@ func TestFetchFromOriginDangling(t *testing.T) {
 	for _, id := range []string{newBlob, newTree, newCommit, newTag} {
 		require.Contains(t, refsAfterLines, fmt.Sprintf("refs/dangling/%s %s", id, id))
 	}
+}
+
+func TestFetchFromOriginDeltaIslands(t *testing.T) {
+	source, sourcePath, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	pool, err := NewObjectPool(source.StorageName, testhelper.NewTestObjectPoolName(t))
+	require.NoError(t, err)
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	require.NoError(t, pool.FetchFromOrigin(ctx, source), "seed pool")
+	require.NoError(t, pool.Link(ctx, source))
+
+	gittest.TestDeltaIslands(t, sourcePath, func() error {
+		// This should create a new packfile with good delta chains in the pool
+		if err := pool.FetchFromOrigin(ctx, source); err != nil {
+			return err
+		}
+
+		// Make sure the old packfile, with bad delta chains, is deleted from the source repo
+		testhelper.MustRunCommand(t, nil, "git", "-C", sourcePath, "repack", "-ald")
+
+		return nil
+	})
+}
+
+func TestFetchFromOriginBitmapHashCache(t *testing.T) {
+	source, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	pool, err := NewObjectPool(source.StorageName, testhelper.NewTestObjectPoolName(t))
+	require.NoError(t, err)
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	require.NoError(t, pool.FetchFromOrigin(ctx, source), "seed pool")
+
+	packDir := filepath.Join(pool.FullPath(), "objects/pack")
+	packEntries, err := ioutil.ReadDir(packDir)
+	require.NoError(t, err)
+
+	var bitmap string
+	for _, ent := range packEntries {
+		if name := ent.Name(); strings.HasSuffix(name, ".bitmap") {
+			bitmap = filepath.Join(packDir, name)
+			break
+		}
+	}
+
+	require.NotEmpty(t, bitmap, "path to bitmap file")
+
+	gittest.TestBitmapHasHashcache(t, bitmap)
+}
+
+func TestFetchFromOriginRefUpdates(t *testing.T) {
+	source, sourcePath, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	pool, err := NewObjectPool(source.StorageName, testhelper.NewTestObjectPoolName(t))
+	require.NoError(t, err)
+	poolPath := pool.FullPath()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	require.NoError(t, pool.FetchFromOrigin(ctx, source), "seed pool")
+
+	oldRefs := map[string]string{
+		"heads/csv":   "3dd08961455abf80ef9115f4afdc1c6f968b503c",
+		"tags/v1.1.0": "8a2a6eb295bb170b34c24c76c49ed0e9b2eaf34b",
+	}
+
+	for ref, oid := range oldRefs {
+		require.Equal(t, oid, resolveRef(t, sourcePath, "refs/"+ref), "look up %q in source", ref)
+		require.Equal(t, oid, resolveRef(t, poolPath, "refs/remotes/origin/"+ref), "look up %q in pool", ref)
+	}
+
+	newRefs := map[string]string{
+		"heads/csv":   "46abbb087fcc0fd02c340f0f2f052bd2c7708da3",
+		"tags/v1.1.0": "646ece5cfed840eca0a4feb21bcd6a81bb19bda3",
+	}
+
+	for ref, newOid := range newRefs {
+		require.NotEqual(t, newOid, oldRefs[ref], "sanity check of new refs")
+	}
+
+	for ref, oid := range newRefs {
+		testhelper.MustRunCommand(t, nil, "git", "-C", sourcePath, "update-ref", "refs/"+ref, oid)
+		require.Equal(t, oid, resolveRef(t, sourcePath, "refs/"+ref), "look up %q in source after update", ref)
+	}
+
+	require.NoError(t, pool.FetchFromOrigin(ctx, source), "update pool")
+
+	for ref, oid := range newRefs {
+		require.Equal(t, oid, resolveRef(t, poolPath, "refs/remotes/origin/"+ref), "look up %q in pool after update", ref)
+	}
+}
+
+func resolveRef(t *testing.T, repo string, ref string) string {
+	out := testhelper.MustRunCommand(t, nil, "git", "-C", repo, "rev-parse", ref)
+	return text.ChompBytes(out)
 }

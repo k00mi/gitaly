@@ -2,8 +2,6 @@ package repository
 
 import (
 	"context"
-	"encoding/binary"
-	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
@@ -13,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/git/gittest"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
 )
@@ -154,7 +153,7 @@ func TestRepackFullSuccess(t *testing.T) {
 				if len(bmPath) == 0 {
 					t.Errorf("No bitmaps found")
 				}
-				require.True(t, doBitmapsContainHashCache(t, bmPath), "bitmap file should contain hash cache")
+				doBitmapsContainHashCache(t, bmPath)
 			} else {
 				if len(bmPath) != 0 {
 					t.Errorf("Bitmap found: %v", bmPath)
@@ -164,26 +163,12 @@ func TestRepackFullSuccess(t *testing.T) {
 	}
 }
 
-func doBitmapsContainHashCache(t *testing.T, bitmapPaths []string) bool {
+func doBitmapsContainHashCache(t *testing.T, bitmapPaths []string) {
 	// for each bitmap file, check the 2-byte flag as documented in
 	// https://github.com/git/git/blob/master/Documentation/technical/bitmap-format.txt
 	for _, bitmapPath := range bitmapPaths {
-		b := make([]byte, 8)
-		bitmapFile, err := os.Open(bitmapPath)
-		require.NoError(t, err)
-		defer bitmapFile.Close()
-
-		read, err := bitmapFile.Read(b)
-		require.NoError(t, err)
-		require.Equal(t, 8, read)
-
-		flags := binary.BigEndian.Uint16(b[6:])
-		if flags != 5 {
-			return false
-		}
+		gittest.TestBitmapHasHashcache(t, bitmapPath)
 	}
-
-	return true
 }
 
 func TestRepackFullFailure(t *testing.T) {
@@ -227,20 +212,8 @@ func TestRepackFullDeltaIslands(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	testCases := []struct {
-		desc    string
-		outcome deltaIslandOutcome
-		ctx     context.Context
-	}{
-		{desc: "are created by default", outcome: expectDeltaIslands, ctx: ctx},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.desc, func(t *testing.T) {
-			testDeltaIslands(t, testRepoPath, tc.outcome, func() error {
-				_, err := client.RepackFull(tc.ctx, &gitalypb.RepackFullRequest{Repository: testRepo})
-				return err
-			})
-		})
-	}
+	gittest.TestDeltaIslands(t, testRepoPath, func() error {
+		_, err := client.RepackFull(ctx, &gitalypb.RepackFullRequest{Repository: testRepo})
+		return err
+	})
 }
