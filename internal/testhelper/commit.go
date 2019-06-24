@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -83,4 +84,14 @@ func CreateCommitInAlternateObjectDirectory(t *testing.T, repoPath, altObjectsDi
 	require.NoError(t, err)
 
 	return currentHead[:len(currentHead)-1]
+}
+
+// CommitBlobWithName will create a commit for the specified blob with the
+// specified name. This enables testing situations where the filepath is not
+// possible due to filesystem constraints (e.g. non-UTF characters). The commit
+// ID is returned.
+func CommitBlobWithName(t *testing.T, testRepoPath, blobID, fileName, commitMessage string) string {
+	mktreeIn := strings.NewReader(fmt.Sprintf("100644 blob %s\t%s", blobID, fileName))
+	treeID := text.ChompBytes(MustRunCommand(t, mktreeIn, "git", "-C", testRepoPath, "mktree"))
+	return text.ChompBytes(MustRunCommand(t, nil, "git", "-C", testRepoPath, "commit-tree", treeID, "-m", commitMessage))
 }

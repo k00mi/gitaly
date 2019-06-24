@@ -5,6 +5,7 @@ import (
 	"io"
 	"regexp"
 	"strconv"
+	"unicode/utf8"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
@@ -155,33 +156,46 @@ func changeFromDiff(batch *catfile.Batch, d *rawdiff.Diff) (*gitalypb.GetRawChan
 	return resp, nil
 }
 
+// InvalidUTF8PathPlaceholder is a temporary placeholder that indicates the
+const InvalidUTF8PathPlaceholder = "ENCODING ERROR gitaly#1470"
+
 func setOperationAndPaths(d *rawdiff.Diff, resp *gitalypb.GetRawChangesResponse_RawChange) error {
 	if len(d.Status) == 0 {
 		return fmt.Errorf("empty diff status")
 	}
 
-	resp.NewPath = d.SrcPath
-	resp.OldPath = d.SrcPath
+	resp.NewPathBytes = []byte(d.SrcPath)
+	resp.OldPathBytes = []byte(d.SrcPath)
 
 	switch d.Status[0] {
 	case 'A':
 		resp.Operation = gitalypb.GetRawChangesResponse_RawChange_ADDED
-		resp.OldPath = ""
+		resp.OldPathBytes = nil
 	case 'C':
 		resp.Operation = gitalypb.GetRawChangesResponse_RawChange_COPIED
-		resp.NewPath = d.DstPath
+		resp.NewPathBytes = []byte(d.DstPath)
 	case 'D':
 		resp.Operation = gitalypb.GetRawChangesResponse_RawChange_DELETED
-		resp.NewPath = ""
+		resp.NewPathBytes = nil
 	case 'M':
 		resp.Operation = gitalypb.GetRawChangesResponse_RawChange_MODIFIED
 	case 'R':
 		resp.Operation = gitalypb.GetRawChangesResponse_RawChange_RENAMED
-		resp.NewPath = d.DstPath
+		resp.NewPathBytes = []byte(d.DstPath)
 	case 'T':
 		resp.Operation = gitalypb.GetRawChangesResponse_RawChange_TYPE_CHANGED
 	default:
 		resp.Operation = gitalypb.GetRawChangesResponse_RawChange_UNKNOWN
+	}
+
+	resp.OldPath = string(resp.OldPathBytes)
+	resp.NewPath = string(resp.NewPathBytes)
+
+	if !utf8.ValidString(resp.OldPath) {
+		resp.OldPath = InvalidUTF8PathPlaceholder
+	}
+	if !utf8.ValidString(resp.NewPath) {
+		resp.NewPath = InvalidUTF8PathPlaceholder
 	}
 
 	return nil
