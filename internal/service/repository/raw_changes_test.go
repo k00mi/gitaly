@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
@@ -30,20 +31,23 @@ func TestGetRawChanges(t *testing.T) {
 			newRev: "7975be0116940bf2ad4321f79d02a55c5f7779aa",
 			changes: []*gitalypb.GetRawChangesResponse_RawChange{
 				{
-					BlobId:    "c60514b6d3d6bf4bec1030f70026e34dfbd69ad5",
-					Size:      824,
-					NewPath:   "README.md",
-					OldPath:   "README.md",
-					Operation: gitalypb.GetRawChangesResponse_RawChange_MODIFIED,
-					OldMode:   0100644,
-					NewMode:   0100644,
+					BlobId:       "c60514b6d3d6bf4bec1030f70026e34dfbd69ad5",
+					Size:         824,
+					NewPath:      "README.md",
+					NewPathBytes: []byte("README.md"),
+					OldPath:      "README.md",
+					OldPathBytes: []byte("README.md"),
+					Operation:    gitalypb.GetRawChangesResponse_RawChange_MODIFIED,
+					OldMode:      0100644,
+					NewMode:      0100644,
 				},
 				{
-					BlobId:    "723c2c3f4c8a2a1e957f878c8813acfc08cda2b6",
-					Size:      1219696,
-					NewPath:   "files/images/emoji.png",
-					Operation: gitalypb.GetRawChangesResponse_RawChange_ADDED,
-					NewMode:   0100644,
+					BlobId:       "723c2c3f4c8a2a1e957f878c8813acfc08cda2b6",
+					Size:         1219696,
+					NewPath:      "files/images/emoji.png",
+					NewPathBytes: []byte("files/images/emoji.png"),
+					Operation:    gitalypb.GetRawChangesResponse_RawChange_ADDED,
+					NewMode:      0100644,
 				},
 			},
 		},
@@ -52,25 +56,28 @@ func TestGetRawChanges(t *testing.T) {
 			newRev: "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
 			changes: []*gitalypb.GetRawChangesResponse_RawChange{
 				{
-					BlobId:    "470ad2fcf1e33798f1afc5781d08e60c40f51e7a",
-					Size:      231,
-					NewPath:   ".gitignore",
-					Operation: gitalypb.GetRawChangesResponse_RawChange_ADDED,
-					NewMode:   0100644,
+					BlobId:       "470ad2fcf1e33798f1afc5781d08e60c40f51e7a",
+					Size:         231,
+					NewPath:      ".gitignore",
+					NewPathBytes: []byte(".gitignore"),
+					Operation:    gitalypb.GetRawChangesResponse_RawChange_ADDED,
+					NewMode:      0100644,
 				},
 				{
-					BlobId:    "50b27c6518be44c42c4d87966ae2481ce895624c",
-					Size:      1075,
-					NewPath:   "LICENSE",
-					Operation: gitalypb.GetRawChangesResponse_RawChange_ADDED,
-					NewMode:   0100644,
+					BlobId:       "50b27c6518be44c42c4d87966ae2481ce895624c",
+					Size:         1075,
+					NewPath:      "LICENSE",
+					NewPathBytes: []byte("LICENSE"),
+					Operation:    gitalypb.GetRawChangesResponse_RawChange_ADDED,
+					NewMode:      0100644,
 				},
 				{
-					BlobId:    "faaf198af3a36dbf41961466703cc1d47c61d051",
-					Size:      55,
-					NewPath:   "README.md",
-					Operation: gitalypb.GetRawChangesResponse_RawChange_ADDED,
-					NewMode:   0100644,
+					BlobId:       "faaf198af3a36dbf41961466703cc1d47c61d051",
+					Size:         55,
+					NewPath:      "README.md",
+					NewPathBytes: []byte("README.md"),
+					Operation:    gitalypb.GetRawChangesResponse_RawChange_ADDED,
+					NewMode:      0100644,
 				},
 			},
 		},
@@ -79,13 +86,15 @@ func TestGetRawChanges(t *testing.T) {
 			newRev: "06041ab2037429d243a38abb55957818dd9f948d",
 			changes: []*gitalypb.GetRawChangesResponse_RawChange{
 				{
-					BlobId:    "c84acd1ff0b844201312052f9bb3b7259eb2e177",
-					Size:      23,
-					NewPath:   "files/executables/ls",
-					OldPath:   "files/executables/ls",
-					Operation: gitalypb.GetRawChangesResponse_RawChange_MODIFIED,
-					OldMode:   0100755,
-					NewMode:   0100644,
+					BlobId:       "c84acd1ff0b844201312052f9bb3b7259eb2e177",
+					Size:         23,
+					NewPath:      "files/executables/ls",
+					NewPathBytes: []byte("files/executables/ls"),
+					OldPath:      "files/executables/ls",
+					OldPathBytes: []byte("files/executables/ls"),
+					Operation:    gitalypb.GetRawChangesResponse_RawChange_MODIFIED,
+					OldMode:      0100755,
+					NewMode:      0100644,
 				},
 			},
 		},
@@ -290,15 +299,89 @@ func TestGetRawChangesMappingOperations(t *testing.T) {
 	}
 
 	firstChange := &gitalypb.GetRawChangesResponse_RawChange{
-		BlobId:    "53855584db773c3df5b5f61f72974cb298822fbb",
-		Size:      22846,
-		NewPath:   "CHANGELOG.md",
-		OldPath:   "CHANGELOG",
-		Operation: gitalypb.GetRawChangesResponse_RawChange_RENAMED,
-		OldMode:   0100644,
-		NewMode:   0100644,
+		BlobId:       "53855584db773c3df5b5f61f72974cb298822fbb",
+		Size:         22846,
+		NewPath:      "CHANGELOG.md",
+		NewPathBytes: []byte("CHANGELOG.md"),
+		OldPath:      "CHANGELOG",
+		OldPathBytes: []byte("CHANGELOG"),
+		Operation:    gitalypb.GetRawChangesResponse_RawChange_RENAMED,
+		OldMode:      0100644,
+		NewMode:      0100644,
 	}
 
 	require.Equal(t, firstChange, msg.GetRawChanges()[0])
 	require.EqualValues(t, expected, ops)
+}
+
+func TestGetRawChangesInvalidUTF8Paths(t *testing.T) {
+	server, serverSocketPath := runRepoServer(t)
+	defer server.Stop()
+
+	client, conn := newRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	const (
+		// These are arbitrary blobs known to exist in the test repository
+		blobID1         = "c60514b6d3d6bf4bec1030f70026e34dfbd69ad5"
+		blobID2         = "50b27c6518be44c42c4d87966ae2481ce895624c"
+		nonUTF8Filename = "hello\x80world"
+	)
+	require.False(t, utf8.ValidString(nonUTF8Filename)) // sanity check
+
+	fromCommitID := testhelper.CommitBlobWithName(
+		t,
+		testRepoPath,
+		blobID1,
+		nonUTF8Filename,
+		"killer AI might use non-UTF filenames",
+	)
+	toCommitID := testhelper.CommitBlobWithName(
+		t,
+		testRepoPath,
+		blobID2,
+		nonUTF8Filename,
+		"hostile extraterrestials won't use UTF",
+	)
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	req := &gitalypb.GetRawChangesRequest{
+		Repository:   testRepo,
+		FromRevision: fromCommitID,
+		ToRevision:   toCommitID,
+	}
+
+	c, err := client.GetRawChanges(ctx, req)
+	require.NoError(t, err)
+
+	newPathFound := false
+	oldPathFound := false
+	for {
+		msg, err := c.Recv()
+		if err != nil {
+			require.Equal(t, io.EOF, err)
+			break
+		}
+
+		for _, rawChange := range msg.GetRawChanges() {
+			if string(rawChange.GetOldPathBytes()) == nonUTF8Filename {
+				oldPathFound = true
+				//lint:ignore SA1019 gitlab.com/gitlab-org/gitaly/issues/1746
+				require.Equal(t, rawChange.GetOldPath(), InvalidUTF8PathPlaceholder)
+			}
+
+			if string(rawChange.GetNewPathBytes()) == nonUTF8Filename {
+				newPathFound = true
+				//lint:ignore SA1019 gitlab.com/gitlab-org/gitaly/issues/1746
+				require.Equal(t, rawChange.GetNewPath(), InvalidUTF8PathPlaceholder)
+			}
+		}
+	}
+
+	require.True(t, newPathFound && oldPathFound)
 }

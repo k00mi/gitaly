@@ -3,16 +3,13 @@ package commit
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
-	"strings"
 	"testing"
 	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
-	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
 )
@@ -316,10 +313,12 @@ func TestNonUtf8ListLastCommitsForTreeRequest(t *testing.T) {
 	nonUTF8Filename := "hello\x80world"
 	require.False(t, utf8.ValidString(nonUTF8Filename))
 
-	mktreeIn := strings.NewReader(fmt.Sprintf("100644 blob %s\t%s", blobID, nonUTF8Filename))
-	treeID := text.ChompBytes(testhelper.MustRunCommand(t, mktreeIn, "git", "-C", testRepoPath, "mktree"))
-
-	commitID := text.ChompBytes(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "commit-tree", treeID, "-m", "commit for non-utf8 path"))
+	commitID := testhelper.CommitBlobWithName(t,
+		testRepoPath,
+		blobID,
+		nonUTF8Filename,
+		"commit for non-utf8 path",
+	)
 
 	request := &gitalypb.ListLastCommitsForTreeRequest{
 		Repository: testRepo,
