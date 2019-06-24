@@ -1,5 +1,21 @@
 # Gitaly changelog
 
+## v1.49.0
+
+#### Fixed
+- Cleanup RPC now uses proper prefix for worktree clean up
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1325
+- GetRawChanges RPC uses both string and byte path fields
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1207
+
+#### Other
+- Add lock file package for atomic file writes
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1298
+
+#### Performance
+- Maintain pool packfiles
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1316
+
 ## v1.48.0
 
 #### Fixed

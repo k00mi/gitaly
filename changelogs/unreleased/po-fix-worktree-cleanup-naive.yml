@@ -1,5 +1,0 @@
----
-title: Cleanup RPC now uses proper prefix for worktree clean up
-merge_request: 1325
-author:
-type: fixed
