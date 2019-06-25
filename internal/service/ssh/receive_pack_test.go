@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -18,7 +19,9 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
+	"gitlab.com/gitlab-org/gitaly/internal/git/objectpool"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
+	"gitlab.com/gitlab-org/gitaly/streamio"
 	"google.golang.org/grpc/codes"
 )
 
@@ -60,15 +63,12 @@ func TestFailedReceivePackRequestDueToValidationError(t *testing.T) {
 		t.Run(test.Desc, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			stream, err := client.SSHReceivePack(ctx)
-			if err != nil {
-				t.Fatal(err)
-			}
 
-			if err = stream.Send(test.Req); err != nil {
-				t.Fatal(err)
-			}
-			stream.CloseSend()
+			stream, err := client.SSHReceivePack(ctx)
+			require.NoError(t, err)
+
+			require.NoError(t, stream.Send(test.Req))
+			require.NoError(t, stream.CloseSend())
 
 			err = drainPostReceivePackResponse(stream)
 			testhelper.RequireGrpcError(t, err, test.Code)
@@ -130,14 +130,10 @@ func TestReceivePackPushFailure(t *testing.T) {
 	defer server.Stop()
 
 	_, _, err := testCloneAndPush(t, serverSocketPath, pushParams{storageName: "foobar", glID: "1"})
-	if err == nil {
-		t.Errorf("local and remote head equal. push did not fail")
-	}
+	require.Error(t, err, "local and remote head equal. push did not fail")
 
 	_, _, err = testCloneAndPush(t, serverSocketPath, pushParams{storageName: testRepo.GetStorageName(), glID: ""})
-	if err == nil {
-		t.Errorf("local and remote head equal. push did not fail")
-	}
+	require.Error(t, err, "local and remote head equal. push did not fail")
 }
 
 func TestReceivePackPushHookFailure(t *testing.T) {
@@ -159,6 +155,51 @@ func TestReceivePackPushHookFailure(t *testing.T) {
 	_, _, err = testCloneAndPush(t, serverSocketPath, pushParams{storageName: testRepo.GetStorageName(), glID: "1"})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "(pre-receive hook declined)")
+}
+
+func TestObjectPoolRefAdvertisementHidingSSH(t *testing.T) {
+	server, serverSocketPath := runSSHServer(t)
+	defer server.Stop()
+
+	client, conn := newSSHClient(t, serverSocketPath)
+	defer conn.Close()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	stream, err := client.SSHReceivePack(ctx)
+	require.NoError(t, err)
+
+	repo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	pool, err := objectpool.NewObjectPool(repo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
+	require.NoError(t, err)
+
+	require.NoError(t, pool.Create(ctx, repo))
+	defer pool.Remove(ctx)
+
+	require.NoError(t, pool.Link(ctx, repo))
+
+	commitID := testhelper.CreateCommit(t, pool.FullPath(), t.Name(), nil)
+
+	// First request
+	require.NoError(t, stream.Send(&gitalypb.SSHReceivePackRequest{
+		Repository: &gitalypb.Repository{StorageName: "default", RelativePath: repo.GetRelativePath()}, GlId: "user-123",
+	}))
+
+	require.NoError(t, stream.Send(&gitalypb.SSHReceivePackRequest{Stdin: []byte("0000")}))
+	require.NoError(t, stream.CloseSend())
+
+	r := streamio.NewReader(func() ([]byte, error) {
+		msg, err := stream.Recv()
+		return msg.GetStdout(), err
+	})
+
+	var b bytes.Buffer
+	_, err = io.Copy(&b, r)
+	require.NoError(t, err)
+	require.NotContains(t, b.String(), commitID+" .have")
 }
 
 func testCloneAndPush(t *testing.T, serverSocketPath string, params pushParams) (string, string, error) {

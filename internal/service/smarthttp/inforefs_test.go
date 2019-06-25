@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/git/objectpool"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 	"google.golang.org/grpc/codes"
@@ -137,6 +138,43 @@ func TestSuccessfulInfoRefsReceivePack(t *testing.T) {
 		"003ef4e6814c3e4e7a0de82a9e7cd20c626cc963a2f8 refs/tags/v1.0.0",
 		"003e8a2a6eb295bb170b34c24c76c49ed0e9b2eaf34b refs/tags/v1.1.0",
 	})
+}
+
+func TestObjectPoolRefAdvertisementHiding(t *testing.T) {
+	server, serverSocketPath := runSmartHTTPServer(t)
+	defer server.Stop()
+
+	client, conn := newSmartHTTPClient(t, serverSocketPath)
+	defer conn.Close()
+
+	repo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	pool, err := objectpool.NewObjectPool(repo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
+	require.NoError(t, err)
+
+	require.NoError(t, pool.Create(ctx, repo))
+	defer pool.Remove(ctx)
+
+	commitID := testhelper.CreateCommit(t, pool.FullPath(), t.Name(), nil)
+
+	require.NoError(t, pool.Link(ctx, repo))
+
+	rpcRequest := &gitalypb.InfoRefsRequest{Repository: repo}
+
+	c, err := client.InfoRefsReceivePack(ctx, rpcRequest)
+	require.NoError(t, err)
+
+	response, err := ioutil.ReadAll(streamio.NewReader(func() ([]byte, error) {
+		resp, err := c.Recv()
+		return resp.GetData(), err
+	}))
+
+	require.NoError(t, err)
+	require.NotContains(t, string(response), commitID+" .have")
 }
 
 func TestFailureRepoNotFoundInfoRefsReceivePack(t *testing.T) {

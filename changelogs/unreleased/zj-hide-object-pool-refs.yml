@@ -1,0 +1,5 @@
+---
+title: Hide object pools .have refs
+merge_request: 1323
+author:
+type: performance
