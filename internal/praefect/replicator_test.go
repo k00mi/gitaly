@@ -48,7 +48,7 @@ func TestReplicatorProcessJobsWhitelist(t *testing.T) {
 			},
 		}
 		datastore   = praefect.NewMemoryDatastore(cfg)
-		coordinator = praefect.NewCoordinator(logrus.New(), cfg.PrimaryServer.Name)
+		coordinator = praefect.NewCoordinator(logrus.New(), datastore)
 		resultsCh   = make(chan result)
 		replman     = praefect.NewReplMgr(
 			cfg.SecondaryServers[1].Name,
@@ -178,7 +178,7 @@ func TestReplicate(t *testing.T) {
 	defer srv.Stop()
 
 	datastore := praefect.NewMemoryDatastore(cfg)
-	coordinator := praefect.NewCoordinator(logrus.New(), cfg.PrimaryServer.Name)
+	coordinator := praefect.NewCoordinator(logrus.New(), datastore)
 
 	coordinator.RegisterNode("backup", socketPath)
 	coordinator.RegisterNode("default", socketPath)

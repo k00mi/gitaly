@@ -25,22 +25,22 @@ type Coordinator struct {
 	log  *logrus.Logger
 	lock sync.RWMutex
 
-	storageLoc string
+	datastore PrimaryDatastore
 
 	nodes    map[string]*grpc.ClientConn
 	registry *protoregistry.Registry
 }
 
 // NewCoordinator returns a new Coordinator that utilizes the provided logger
-func NewCoordinator(l *logrus.Logger, storageLoc string, fileDescriptors ...*descriptor.FileDescriptorProto) *Coordinator {
+func NewCoordinator(l *logrus.Logger, datastore PrimaryDatastore, fileDescriptors ...*descriptor.FileDescriptorProto) *Coordinator {
 	registry := protoregistry.New()
 	registry.RegisterFiles(fileDescriptors...)
 
 	return &Coordinator{
-		log:        l,
-		storageLoc: storageLoc,
-		nodes:      make(map[string]*grpc.ClientConn),
-		registry:   registry,
+		log:       l,
+		datastore: datastore,
+		nodes:     make(map[string]*grpc.ClientConn),
+		registry:  registry,
 	}
 }
 
@@ -68,7 +68,8 @@ func (c *Coordinator) streamDirector(ctx context.Context, fullMethodName string,
 	// to the appropriate Gitaly node.
 	c.log.Debugf("Stream director received method %s", fullMethodName)
 
-	if c.storageLoc == "" {
+	storageName, err := c.datastore.GetPrimary()
+	if err != nil {
 		err := status.Error(
 			codes.FailedPrecondition,
 			"no downstream node registered",
@@ -78,9 +79,9 @@ func (c *Coordinator) streamDirector(ctx context.Context, fullMethodName string,
 
 	// We only need the primary node, as there's only one primary storage
 	// location per praefect at this time
-	cc, ok := c.getConn(c.storageLoc)
+	cc, ok := c.getConn(storageName)
 	if !ok {
-		return nil, nil, fmt.Errorf("unable to find existing client connection for %s", c.storageLoc)
+		return nil, nil, fmt.Errorf("unable to find existing client connection for %s", storageName)
 	}
 
 	return ctx, cc, nil
@@ -88,7 +89,7 @@ func (c *Coordinator) streamDirector(ctx context.Context, fullMethodName string,
 
 // RegisterNode will direct traffic to the supplied downstream connection when the storage location
 // is encountered.
-func (c *Coordinator) RegisterNode(storageLoc, listenAddr string) error {
+func (c *Coordinator) RegisterNode(storageName, listenAddr string) error {
 	conn, err := client.Dial(listenAddr,
 		[]grpc.DialOption{
 			grpc.WithDefaultCallOptions(grpc.CallCustomCodec(proxy.Codec())),
@@ -99,20 +100,20 @@ func (c *Coordinator) RegisterNode(storageLoc, listenAddr string) error {
 		return err
 	}
 
-	c.setConn(storageLoc, conn)
+	c.setConn(storageName, conn)
 
 	return nil
 }
 
-func (c *Coordinator) setConn(storageLoc string, conn *grpc.ClientConn) {
+func (c *Coordinator) setConn(storageName string, conn *grpc.ClientConn) {
 	c.lock.Lock()
-	c.nodes[storageLoc] = conn
+	c.nodes[storageName] = conn
 	c.lock.Unlock()
 }
 
-func (c *Coordinator) getConn(storageLoc string) (*grpc.ClientConn, bool) {
+func (c *Coordinator) getConn(storageName string) (*grpc.ClientConn, bool) {
 	c.lock.RLock()
-	cc, ok := c.nodes[storageLoc]
+	cc, ok := c.nodes[storageName]
 	c.lock.RUnlock()
 
 	return cc, ok
