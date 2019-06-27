@@ -169,3 +169,6 @@ update-downstream-server-version:
   script:
     - ruby _support/update-downstream-server-version
   allow_failure: true
+
+include:
+  template: Security/License-Management.gitlab-ci.yml
