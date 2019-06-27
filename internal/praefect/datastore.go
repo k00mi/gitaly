@@ -14,6 +14,11 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 )
 
+var (
+	// ErrPrimaryNotSet indicates the primary has not been set in the datastore
+	ErrPrimaryNotSet = errors.New("primary is not set")
+)
+
 // JobState is an enum that indicates the state of a job
 type JobState uint8
 
@@ -58,6 +63,15 @@ func (b byJobID) Less(i, j int) bool { return b.replJobs[i].ID < b.replJobs[j].I
 type Datastore interface {
 	ReplJobsDatastore
 	ReplicasDatastore
+	PrimaryDatastore
+}
+
+// PrimaryDatastore manages accessing and setting the primary storage location
+type PrimaryDatastore interface {
+	// GetPrimary gets the primary storage location
+	GetPrimary() (string, error)
+	// SetPrimary sets the primary storage location
+	SetPrimary(primary string) error
 }
 
 // ReplicasDatastore manages accessing and setting which secondary replicas
@@ -115,6 +129,11 @@ type MemoryDatastore struct {
 		next    uint64
 		records map[uint64]jobRecord // all jobs indexed by ID
 	}
+
+	primary *struct {
+		sync.RWMutex
+		storageName string
+	}
 }
 
 // NewMemoryDatastore returns an initialized in-memory datastore
@@ -133,6 +152,12 @@ func NewMemoryDatastore(cfg config.Config) *MemoryDatastore {
 		}{
 			next:    0,
 			records: map[uint64]jobRecord{},
+		},
+		primary: &struct {
+			sync.RWMutex
+			storageName string
+		}{
+			storageName: cfg.PrimaryServer.Name,
 		},
 	}
 
@@ -305,4 +330,27 @@ func (md *MemoryDatastore) UpdateReplJob(jobID uint64, newState JobState) error 
 	job.state = newState
 	md.jobs.records[jobID] = job
 	return nil
+}
+
+// SetPrimary sets the primary datastore location
+func (md *MemoryDatastore) SetPrimary(primary string) error {
+	md.primary.Lock()
+	defer md.primary.Unlock()
+
+	md.primary.storageName = primary
+
+	return nil
+}
+
+// GetPrimary gets the primary datastore location
+func (md *MemoryDatastore) GetPrimary() (string, error) {
+	md.primary.RLock()
+	defer md.primary.RUnlock()
+
+	storageName := md.primary.storageName
+	if storageName == "" {
+		return "", ErrPrimaryNotSet
+	}
+
+	return storageName, nil
 }

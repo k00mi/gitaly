@@ -90,7 +90,14 @@ var operations = []struct {
 
 // TODO: add SQL datastore flavor
 var flavors = map[string]func() praefect.Datastore{
-	"in-memory-datastore": func() praefect.Datastore { return praefect.NewMemoryDatastore(config.Config{}) },
+	"in-memory-datastore": func() praefect.Datastore {
+		return praefect.NewMemoryDatastore(
+			config.Config{
+				PrimaryServer: &config.GitalyServer{
+					Name: "default",
+				},
+			})
+	},
 }
 
 // TestDatastoreInterface will verify that every implementation or "flavor" of
