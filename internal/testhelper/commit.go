@@ -95,3 +95,16 @@ func CommitBlobWithName(t *testing.T, testRepoPath, blobID, fileName, commitMess
 	treeID := text.ChompBytes(MustRunCommand(t, mktreeIn, "git", "-C", testRepoPath, "mktree"))
 	return text.ChompBytes(MustRunCommand(t, nil, "git", "-C", testRepoPath, "commit-tree", treeID, "-m", commitMessage))
 }
+
+// CreateCommitOnNewBranch creates a branch and a commit, returning the commit sha and the branch name respectivelyi
+func CreateCommitOnNewBranch(t *testing.T, repoPath string) (string, string) {
+	nonce, err := text.RandomHex(4)
+	require.NoError(t, err)
+	newBranch := "branch-" + nonce
+
+	sha := CreateCommit(t, repoPath, newBranch, &CreateCommitOpts{
+		Message: "a new branch and commit " + nonce,
+	})
+
+	return sha, newBranch
+}

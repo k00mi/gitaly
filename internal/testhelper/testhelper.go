@@ -367,7 +367,7 @@ func Context() (context.Context, func()) {
 	return context.WithCancel(context.Background())
 }
 
-// CreateRepo creates an temporary directory for a repo, without initializing it
+// CreateRepo creates a temporary directory for a repo, without initializing it
 func CreateRepo(t testing.TB, storagePath string) (repo *gitalypb.Repository, repoPath, relativePath string) {
 	normalizedPrefix := strings.Replace(t.Name(), "/", "-", -1) //TempDir doesn't like a prefix containing slashes
 

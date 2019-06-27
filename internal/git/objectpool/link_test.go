@@ -19,8 +19,8 @@ func TestLink(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	pool, err := NewObjectPool(testRepo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
-	require.NoError(t, err)
+	pool, poolCleanup := NewTestObjectPool(ctx, t, testRepo.GetStorageName())
+	defer poolCleanup()
 
 	require.NoError(t, pool.Remove(ctx), "make sure pool does not exist prior to creation")
 	require.NoError(t, pool.Create(ctx, testRepo), "create pool")
@@ -56,8 +56,8 @@ func TestLinkRemoveBitmap(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	pool, err := NewObjectPool(testRepo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
-	require.NoError(t, err)
+	pool, poolCleanup := NewTestObjectPool(ctx, t, testRepo.GetStorageName())
+	defer poolCleanup()
 
 	require.NoError(t, pool.Init(ctx))
 
@@ -104,9 +104,8 @@ func TestUnlink(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	pool, err := NewObjectPool(testRepo.GetStorageName(), t.Name())
-	require.NoError(t, err)
-	defer pool.Remove(ctx)
+	pool, poolCleanup := NewTestObjectPool(ctx, t, testRepo.GetStorageName())
+	defer poolCleanup()
 
 	require.Error(t, pool.Unlink(ctx, testRepo), "removing a non-existing pool should be an error")
 
@@ -117,4 +116,39 @@ func TestUnlink(t *testing.T) {
 
 	require.NoError(t, pool.Unlink(ctx, testRepo), "unlink repo")
 	require.False(t, testhelper.RemoteExists(t, pool.FullPath(), testRepo.GetGlRepository()), "pool remotes should no longer include %v", testRepo)
+}
+
+func TestLinkAbsoluteLinkExists(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	pool, poolCleanup := NewTestObjectPool(ctx, t, testRepo.GetStorageName())
+	defer poolCleanup()
+
+	require.NoError(t, pool.Remove(ctx), "make sure pool does not exist prior to creation")
+	require.NoError(t, pool.Create(ctx, testRepo), "create pool")
+
+	altPath, err := git.InfoAlternatesPath(testRepo)
+	require.NoError(t, err)
+
+	fullPath := filepath.Join(pool.FullPath(), "objects")
+
+	require.NoError(t, ioutil.WriteFile(altPath, []byte(fullPath), 0644))
+
+	require.NoError(t, pool.Link(ctx, testRepo), "we expect this call to change the absolute link to a relative link")
+
+	require.FileExists(t, altPath, "alternates file must exist after Link")
+
+	content, err := ioutil.ReadFile(altPath)
+	require.NoError(t, err)
+
+	require.False(t, filepath.IsAbs(string(content)), "expected %q to be relative path", content)
+
+	testRepoObjectsPath := filepath.Join(testRepoPath, "objects")
+	require.Equal(t, fullPath, filepath.Join(testRepoObjectsPath, string(content)), "the content of the alternates file should be the relative version of the absolute pat")
+
+	require.True(t, testhelper.RemoteExists(t, pool.FullPath(), "origin"), "pool remotes should include %v", testRepo)
 }
