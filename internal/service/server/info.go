@@ -6,35 +6,47 @@ import (
 	"os"
 	"path"
 
+	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/fstype"
+	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/internal/version"
 )
 
 func (s *server) ServerInfo(ctx context.Context, in *gitalypb.ServerInfoRequest) (*gitalypb.ServerInfoResponse, error) {
 	gitVersion, err := git.Version()
+	if err != nil {
+		return nil, helper.ErrInternal(err)
+	}
 
 	var storageStatuses []*gitalypb.ServerInfoResponse_StorageStatus
 	for _, shard := range config.Config.Storages {
 		readable, writeable := shardCheck(shard.Path)
 		fsType := fstype.FileSystem(shard.Path)
 
-		storageStatuses = append(storageStatuses, &gitalypb.ServerInfoResponse_StorageStatus{
-			StorageName: shard.Name,
-			Readable:    readable,
-			Writeable:   writeable,
-			FsType:      fsType,
-		})
+		gitalyMetadata, err := storage.ReadMetadataFile(shard)
+		if err != nil {
+			grpc_logrus.Extract(ctx).WithField("storage", shard).WithError(err).Error("reading gitaly metadata file")
+		}
 
+		storageStatuses = append(storageStatuses, &gitalypb.ServerInfoResponse_StorageStatus{
+			StorageName:  shard.Name,
+			Readable:     readable,
+			Writeable:    writeable,
+			FsType:       fsType,
+			FilesystemId: gitalyMetadata.GitalyFilesystemID,
+		})
 	}
 
 	return &gitalypb.ServerInfoResponse{
 		ServerVersion:   version.GetVersion(),
 		GitVersion:      gitVersion,
 		StorageStatuses: storageStatuses,
-	}, err
+	}, nil
 }
 
 func shardCheck(shardPath string) (readable bool, writeable bool) {

@@ -5,6 +5,7 @@ require (
 	github.com/cloudflare/tableflip v0.0.0-20190329062924-8392f1641731
 	github.com/getsentry/raven-go v0.1.2
 	github.com/golang/protobuf v1.3.1
+	github.com/google/uuid v1.1.1
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/kelseyhightower/envconfig v1.3.0
@@ -13,7 +14,7 @@ require (
 	github.com/sirupsen/logrus v1.2.0
 	github.com/stretchr/testify v1.3.0
 	github.com/tinylib/msgp v1.1.0 // indirect
-	gitlab.com/gitlab-org/gitaly-proto v1.32.0
+	gitlab.com/gitlab-org/gitaly-proto v1.33.0
 	gitlab.com/gitlab-org/labkit v0.0.0-20190221122536-0c3fc7cdd57c
 	golang.org/x/net v0.0.0-20190613194153-d28f0bde5980
 	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"io/ioutil"
 	"net"
 	"testing"
 
@@ -10,6 +11,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/server/auth"
+	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/internal/version"
 	"google.golang.org/grpc"
@@ -36,6 +38,15 @@ func TestGitalyServerInfo(t *testing.T) {
 	}(config.Config.Storages)
 	config.Config.Storages = testStorages
 
+	tempDir, err := ioutil.TempDir("", "gitaly-bin")
+	require.NoError(t, err)
+
+	config.Config.BinDir = tempDir
+
+	require.NoError(t, storage.WriteMetadataFile(testStorages[0]))
+	metadata, err := storage.ReadMetadataFile(testStorages[0])
+	require.NoError(t, err)
+
 	c, err := client.ServerInfo(ctx, &gitalypb.ServerInfoRequest{})
 	require.NoError(t, err)
 
@@ -52,6 +63,7 @@ func TestGitalyServerInfo(t *testing.T) {
 
 	require.False(t, c.GetStorageStatuses()[1].Readable)
 	require.False(t, c.GetStorageStatuses()[1].Writeable)
+	require.Equal(t, metadata.GitalyFilesystemID, c.GetStorageStatuses()[0].FilesystemId)
 }
 
 func runServer(t *testing.T) (*grpc.Server, string) {
