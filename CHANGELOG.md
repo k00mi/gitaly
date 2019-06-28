@@ -1,5 +1,29 @@
 # Gitaly changelog
 
+## v1.50.0
+
+#### Added
+- Use datastore to store the primary node
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1335
+
+#### Fixed
+- Fix default lookup of global custom hooks
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1336
+
+#### Other
+- Add filesystem metadata file on startup
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1289
+- Pass down gitlab-shell log config through env vars
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1293
+- Remove duplication of receive-pack config
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1332
+- Update Prometheus client library
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1329
+
+#### Performance
+- Hide object pools .have refs
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1323
+
 ## v1.49.0
 
 #### Fixed
