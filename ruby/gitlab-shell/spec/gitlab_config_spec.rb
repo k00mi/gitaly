@@ -31,4 +31,25 @@ describe GitlabConfig do
       is_expected.to eq('text')
     end
   end
+
+  describe '#fetch_from_legacy_config' do
+    let(:key) { 'yaml_key' }
+
+    where(:yaml_value, :default, :expected_value) do
+      [
+        ['a', 'b', 'a'],
+        [nil, 'b', 'b'],
+        ['a', nil, 'a'],
+        [nil, {}, {}]
+      ]
+    end
+
+    with_them do
+      it 'returns the correct value' do
+        config_data[key] = yaml_value
+
+        expect(config.fetch_from_legacy_config(key, default)).to eq(expected_value)
+      end
+    end
+  end
 end
