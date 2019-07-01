@@ -2,8 +2,8 @@
 
 `gitaly-ruby` is a 'sidecar' process for the main Gitaly service. It
 allows us to run legacy Ruby application code for which it would be
-too risky or even infeasible to port it to Go. It will also speed up
-the Gitaly migration project.
+too risky or even infeasible to port it to Go. It was introduced to
+speed up the Gitaly migration project.
 
 ## Architecture
 
@@ -34,16 +34,6 @@ tests only, without recompiling the Go parts then do the following:
 - run `make rspec` at the top level at least once, to compile Go binaries and get the test repo;
 - edit code under the current directory (`ruby`);
 - run `bundle exec rspec` in the current directory.
-
-## Vendored copy of Gitlab::Git
-
-`gitaly-ruby` contains a vendored copy of `lib/gitlab/git` from
-https://gitlab.com/gitlab-org/gitlab-ce. This allows us to share code
-between gitlab-ce / gitlab-ee and `gitaly-ruby`.
-
-To update the vendored copy of Gitlab::Git, run
-`_support/vendor-gitlab-git COMMIT_ID` from the root of the Gitaly
-repository.
 
 ## Development
 
