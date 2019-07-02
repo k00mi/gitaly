@@ -147,6 +147,18 @@ func TestFailedWikiUpdatePageDueToValidations(t *testing.T) {
 			code: codes.InvalidArgument,
 		},
 		{
+			desc: "page does not exist",
+			request: &gitalypb.WikiUpdatePageRequest{
+				Repository:    wikiRepo,
+				PagePath:      []byte("//Installing Gibaly"),
+				Title:         []byte("Installing Gitaly"),
+				Format:        "markdown",
+				CommitDetails: commitDetails,
+				Content:       []byte(""),
+			},
+			code: codes.NotFound,
+		},
+		{
 			desc: "empty title",
 			request: &gitalypb.WikiUpdatePageRequest{
 				Repository:    wikiRepo,
