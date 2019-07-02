@@ -3,6 +3,7 @@ module Gitlab
     class Wiki
       DuplicatePageError = Class.new(StandardError)
       OperationError = Class.new(StandardError)
+      PageNotFound = Class.new(GRPC::NotFound)
 
       CommitDetails = Struct.new(:user_id, :username, :name, :email, :message) do
         def to_h
@@ -48,19 +49,6 @@ module Gitlab
 
       def file(name, version)
         gollum_find_file(name, version)
-      end
-
-      # options:
-      #  :page     - The Integer page number.
-      #  :per_page - The number of items per page.
-      #  :limit    - Total number of items to return.
-      def page_versions(page_path, options = {})
-        current_page = gollum_page_by_path(page_path)
-
-        commits_from_page(current_page, options).map do |gitlab_git_commit|
-          gollum_page = gollum_wiki.page(current_page.title, gitlab_git_commit.id)
-          Gitlab::Git::WikiPageVersion.new(gitlab_git_commit, gollum_page&.format)
-        end
       end
 
       def count_page_versions(page_path)
@@ -131,11 +119,12 @@ module Gitlab
                         offset: options[:offset])
       end
 
+      # Retrieve the page at that `page_path`, raising an error if it does not exist
       def gollum_page_by_path(page_path)
         page_name = Gollum::Page.canonicalize_filename(page_path)
         page_dir = File.split(page_path).first
 
-        gollum_wiki.paged(page_name, page_dir)
+        gollum_wiki.paged(page_name, page_dir) || (raise PageNotFound, page_path)
       end
 
       def gollum_write_page(name, format, content, commit_details)
