@@ -56,7 +56,7 @@ class GitlabConfig
   end
 
   def fetch_from_legacy_config(key, default)
-    legacy_config.fetch(key, default)
+    legacy_config[key] || default
   end
 
   private
