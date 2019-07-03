@@ -92,8 +92,8 @@ func (s *server) UserFFBranch(ctx context.Context, in *gitalypb.UserFFBranchRequ
 }
 
 func validateUserMergeToRefRequest(in *gitalypb.UserMergeToRefRequest) error {
-	if len(in.Branch) == 0 {
-		return fmt.Errorf("empty branch name")
+	if len(in.FirstParentRef) == 0 && len(in.Branch) == 0 {
+		return fmt.Errorf("empty first parent ref and branch name")
 	}
 
 	if in.User == nil {
