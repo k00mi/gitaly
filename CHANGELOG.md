@@ -1,5 +1,21 @@
 # Gitaly changelog
 
+## v1.51.0
+
+#### Changed
+- Add support first_parent_ref in UserMergeToRef
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1210
+
+#### Fixed
+- More informative error states for missing pages
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1340
+- Use guard in fetch_legacy_config
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1345
+
+#### Other
+- Add HTTP clone analyzer
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1338
+
 ## v1.50.0
 
 #### Added
