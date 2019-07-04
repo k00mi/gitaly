@@ -320,8 +320,6 @@ module Gitlab
           start_repository: start_repository
         ) do |start_commit|
 
-          Gitlab::Git.check_namespace!(commit, start_repository)
-
           revert_tree_id = check_revert_content(commit, start_commit.sha)
           raise CreateTreeError unless revert_tree_id
 
@@ -491,7 +489,6 @@ module Gitlab
       # rubocop:enable Metrics/ParameterLists
 
       def with_repo_branch_commit(start_repository, start_branch_name)
-        Gitlab::Git.check_namespace!(start_repository)
         start_repository = RemoteRepository.new(start_repository) unless start_repository.is_a?(RemoteRepository)
 
         return yield nil if start_repository.empty?
@@ -618,7 +615,6 @@ module Gitlab
       end
 
       def fetch_ref(source_repository, source_ref:, target_ref:)
-        Gitlab::Git.check_namespace!(source_repository)
         source_repository = RemoteRepository.new(source_repository) unless source_repository.is_a?(RemoteRepository)
 
         args = %W[fetch --no-tags -f #{GITALY_INTERNAL_URL} #{source_ref}:#{target_ref}]
@@ -834,8 +830,6 @@ module Gitlab
           start_branch_name: start_branch_name,
           start_repository: start_repository
         ) do |start_commit|
-
-          Gitlab::Git.check_namespace!(commit, start_repository)
 
           cherry_pick_tree_id = check_cherry_pick_content(commit, start_commit.sha)
           raise CreateTreeError unless cherry_pick_tree_id
