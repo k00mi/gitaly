@@ -9,7 +9,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/alternates"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata"
-	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 )
 
 var catfileCacheCounter = prometheus.NewCounterVec(
@@ -32,12 +31,6 @@ var totalCatfileProcesses = prometheus.NewCounter(
 		Name: "gitaly_catfile_processes_total",
 		Help: "Counter of catfile processes",
 	},
-)
-
-const (
-	// CacheFeatureFlagKey is the feature flag key for catfile batch caching. This should match
-	// what is in gitlab-ce
-	CacheFeatureFlagKey = "catfile-cache"
 )
 
 func init() {
@@ -134,8 +127,7 @@ func New(ctx context.Context, repo *gitalypb.Repository) (*Batch, error) {
 	}
 
 	sessionID := metadata.GetValue(ctx, "gitaly-session-id")
-
-	if featureflag.IsDisabled(ctx, CacheFeatureFlagKey) || sessionID == "" {
+	if sessionID == "" {
 		return newBatch(ctx, repoPath, env)
 	}
 
