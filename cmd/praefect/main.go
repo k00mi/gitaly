@@ -13,22 +13,31 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
+	"gitlab.com/gitlab-org/gitaly/internal/version"
 	"gitlab.com/gitlab-org/labkit/tracing"
 )
 
 var (
-	flagConfig = flag.String("config", "", "Location for the config.toml")
-	logger     = logrus.New()
+	flagConfig  = flag.String("config", "", "Location for the config.toml")
+	flagVersion = flag.Bool("version", false, "Print version and exit")
+	logger      = logrus.New()
 
 	errNoConfigFile = errors.New("the config flag must be passed")
 )
 
 func main() {
 	flag.Parse()
+
+	// If invoked with -version
+	if *flagVersion {
+		fmt.Println(version.GetVersionString())
+		os.Exit(0)
+	}
 
 	conf, err := configure()
 	if err != nil {
@@ -73,6 +82,9 @@ func configure() (config.Config, error) {
 			http.ListenAndServe(conf.PrometheusListenAddr, promMux)
 		}()
 	}
+
+	registerServerVersionPromGauge()
+	logger.WithField("version", praefect.GetVersionString()).Info("Starting Praefect")
 
 	return conf, nil
 }
@@ -160,4 +172,20 @@ func getListeners(socketPath, listenAddr string) ([]net.Listener, error) {
 	}
 
 	return listeners, nil
+}
+
+// registerServerVersionPromGauge registers a label with the current server version
+// making it easy to see what versions of Gitaly are running across a cluster
+func registerServerVersionPromGauge() {
+	gitlabBuildInfoGauge := prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "gitlab_build_info",
+		Help: "Current build info for this GitLab Service",
+		ConstLabels: prometheus.Labels{
+			"version": praefect.GetVersion(),
+			"built":   praefect.GetBuildTime(),
+		},
+	})
+
+	prometheus.MustRegister(gitlabBuildInfoGauge)
+	gitlabBuildInfoGauge.Set(1)
 }
