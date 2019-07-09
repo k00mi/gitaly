@@ -34,17 +34,6 @@ func (o *ObjectPool) Link(ctx context.Context, repo *gitalypb.Repository) error 
 		return err
 	}
 
-	remoteName := repo.GetGlRepository()
-	for k, v := range map[string]string{
-		fmt.Sprintf("remote.%s.url", remoteName):    relPath,
-		fmt.Sprintf("remote.%s.fetch", remoteName):  fmt.Sprintf("+refs/*:refs/remotes/%s/*", remoteName),
-		fmt.Sprintf("remote.%s.tagOpt", remoteName): "--no-tags",
-	} {
-		if err := o.setConfig(ctx, k, v); err != nil {
-			return err
-		}
-	}
-
 	expectedContent := filepath.Join(relPath, "objects")
 
 	actualContent, err := ioutil.ReadFile(altPath)
