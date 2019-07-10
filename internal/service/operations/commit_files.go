@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -77,5 +78,14 @@ func validateUserCommitFilesHeader(header *gitalypb.UserCommitFilesRequestHeader
 	if len(header.GetBranchName()) == 0 {
 		return fmt.Errorf("empty BranchName")
 	}
+
+	startSha := header.GetStartSha()
+	if len(startSha) > 0 {
+		err := git.ValidateCommitID(startSha)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
