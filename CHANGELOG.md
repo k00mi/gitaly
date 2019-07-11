@@ -1,5 +1,15 @@
 # Gitaly changelog
 
+## v1.53.0
+
+#### Added
+- Expose the Praefect server version
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1358
+
+#### Changed
+- Support start_sha parameter in UserCommitFiles
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1308
+
 ## v1.52.0
 
 #### Other
