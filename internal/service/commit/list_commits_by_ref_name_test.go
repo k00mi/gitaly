@@ -1,7 +1,6 @@
 package commit
 
 import (
-	"context"
 	"io"
 	"testing"
 
@@ -29,6 +28,20 @@ func TestSuccessfulListCommitsByRefNameRequest(t *testing.T) {
 			desc: "find one commit",
 			request: &gitalypb.ListCommitsByRefNameRequest{
 				RefNames: [][]byte{[]byte("refs/heads/master")},
+			},
+			expectedIds: []string{"1e292f8fedd741b75372e19097c76d327140c312"},
+		},
+		{
+			desc: "find one commit without refs/heads/ prefix",
+			request: &gitalypb.ListCommitsByRefNameRequest{
+				RefNames: [][]byte{[]byte("master")},
+			},
+			expectedIds: []string{"1e292f8fedd741b75372e19097c76d327140c312"},
+		},
+		{
+			desc: "find HEAD commit",
+			request: &gitalypb.ListCommitsByRefNameRequest{
+				RefNames: [][]byte{[]byte("HEAD")},
 			},
 			expectedIds: []string{"1e292f8fedd741b75372e19097c76d327140c312"},
 		},
@@ -121,12 +134,11 @@ func TestSuccessfulListCommitsByRefNameRequest(t *testing.T) {
 			request := testCase.request
 			request.Repository = testRepo
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
+
 			c, err := client.ListCommitsByRefName(ctx, request)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
 			receivedCommits := consumeGetByRefNameResponse(t, c)
 			require.Len(t, receivedCommits, len(testCase.expectedIds))
@@ -144,9 +156,8 @@ func consumeGetByRefNameResponse(t *testing.T, c gitalypb.CommitService_ListComm
 		resp, err := c.Recv()
 		if err == io.EOF {
 			break
-		} else if err != nil {
-			t.Fatal(err)
 		}
+		require.NoError(t, err)
 
 		receivedCommits = append(receivedCommits, resp.GetCommits()...)
 	}
@@ -198,6 +209,7 @@ func TestSuccessfulListCommitsByRefNameLargeRequest(t *testing.T) {
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
+
 	c, err := client.ListCommitsByRefName(ctx, req)
 	require.NoError(t, err)
 
