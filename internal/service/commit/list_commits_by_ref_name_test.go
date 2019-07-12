@@ -198,7 +198,7 @@ func TestSuccessfulListCommitsByRefNameLargeRequest(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	refNames := [][]byte{} 
+	refNames := [][]byte{}
 	for _, refName := range repositoryRefNames {
 		refNames = append(refNames, []byte(refName))
 	}
