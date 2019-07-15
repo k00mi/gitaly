@@ -1,5 +1,31 @@
 # Gitaly changelog
 
+## 1.54.1
+
+- No changes.
+
+## 1.54.0 (2019-07-22)
+
+- No changes.
+
+## v1.53.0
+
+#### Added
+- Expose the Praefect server version
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1358
+
+#### Changed
+- Support start_sha parameter in UserCommitFiles
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1308
+
+## v1.52.0
+
+#### Other
+- Do not add linked repos as remotes on pool repository
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1356
+- Upgrade rouge to 3.5.1
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1355
+
 ## v1.51.0
 
 #### Changed

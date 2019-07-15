@@ -222,8 +222,8 @@ func TestUnlink(t *testing.T) {
 	require.NoError(t, pool2.Create(ctx, testRepo), "create pool 2")
 	defer pool2.Remove(ctx)
 
-	require.True(t, testhelper.RemoteExists(t, pool.FullPath(), testRepo.GlRepository), "sanity check: remote exists in pool")
-	require.True(t, testhelper.RemoteExists(t, pool.FullPath(), deletedRepo.GlRepository), "sanity check: remote exists in pool")
+	require.False(t, testhelper.RemoteExists(t, pool.FullPath(), testRepo.GlRepository), "sanity check: remote exists in pool")
+	require.False(t, testhelper.RemoteExists(t, pool.FullPath(), deletedRepo.GlRepository), "sanity check: remote exists in pool")
 
 	testCases := []struct {
 		desc string

@@ -46,7 +46,7 @@ func TestLink(t *testing.T) {
 
 	require.Equal(t, content, newContent)
 
-	require.True(t, testhelper.RemoteExists(t, pool.FullPath(), testRepo.GetGlRepository()), "pool remotes should include %v", testRepo)
+	require.False(t, testhelper.RemoteExists(t, pool.FullPath(), testRepo.GetGlRepository()), "pool remotes should not include %v", testRepo)
 }
 
 func TestLinkRemoveBitmap(t *testing.T) {
@@ -113,7 +113,7 @@ func TestUnlink(t *testing.T) {
 	require.NoError(t, pool.Create(ctx, testRepo), "create pool")
 	require.NoError(t, pool.Link(ctx, testRepo), "link test repo to pool")
 
-	require.True(t, testhelper.RemoteExists(t, pool.FullPath(), testRepo.GetGlRepository()), "pool remotes should include %v", testRepo)
+	require.False(t, testhelper.RemoteExists(t, pool.FullPath(), testRepo.GetGlRepository()), "pool remotes should include %v", testRepo)
 
 	require.NoError(t, pool.Unlink(ctx, testRepo), "unlink repo")
 	require.False(t, testhelper.RemoteExists(t, pool.FullPath(), testRepo.GetGlRepository()), "pool remotes should no longer include %v", testRepo)

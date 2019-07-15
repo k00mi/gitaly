@@ -26,6 +26,7 @@ module Gitlab
       GITALY_INTERNAL_URL = 'ssh://gitaly/internal.git'.freeze
       AUTOCRLF_VALUES = { 'true' => true, 'false' => false, 'input' => :input }.freeze
       RUGGED_KEY = :rugged_list
+      GIT_ALLOW_SHA_UPLOAD = 'uploadpack.allowAnySHA1InWant=true'.freeze
 
       NoRepository = Class.new(StandardError)
       InvalidRef = Class.new(StandardError)
@@ -455,10 +456,11 @@ module Gitlab
       # rubocop:disable Metrics/ParameterLists
       def multi_action(user, branch_name:, message:, actions:,
                        author_email: nil, author_name: nil,
-                       start_branch_name: nil, start_repository: self, force: false)
+                       start_branch_name: nil, start_sha: nil, start_repository: self, force: false)
         OperationService.new(user, self).with_branch(
           branch_name,
           start_branch_name: start_branch_name,
+          start_sha: start_sha,
           start_repository: start_repository,
           force: force
         ) do |start_commit|
@@ -488,44 +490,27 @@ module Gitlab
       end
       # rubocop:enable Metrics/ParameterLists
 
-      def with_repo_branch_commit(start_repository, start_branch_name)
+      def with_repo_branch_commit(start_repository, start_ref)
         start_repository = RemoteRepository.new(start_repository) unless start_repository.is_a?(RemoteRepository)
 
-        return yield nil if start_repository.empty?
-
-        if start_repository.same_repository?(self)
-          yield commit(start_branch_name)
-        else
-          start_commit_id = start_repository.commit_id(start_branch_name)
-
-          return yield nil unless start_commit_id
-
-          if branch_commit = commit(start_commit_id)
-            yield branch_commit
-          else
-            with_repo_tmp_commit(
-              start_repository, start_branch_name, start_commit_id
-            ) do |tmp_commit|
-              yield tmp_commit
-            end
-          end
+        if start_repository.empty?
+          return yield nil
+        elsif start_repository.same_repository?(self)
+          # Directly return the commit from this repository
+          return yield commit(start_ref)
         end
-      end
 
-      def with_repo_tmp_commit(start_repository, start_branch_name, sha)
-        source_ref = start_branch_name
+        # Find the commit from the remote repository (this triggers an RPC)
+        commit_id = start_repository.commit_id(start_ref)
+        return yield nil unless commit_id
 
-        source_ref = "#{Gitlab::Git::BRANCH_REF_PREFIX}#{source_ref}" unless Gitlab::Git.branch_ref?(source_ref)
-
-        tmp_ref = fetch_ref(
-          start_repository,
-          source_ref: source_ref,
-          target_ref: "refs/tmp/#{SecureRandom.hex}"
-        )
-
-        yield commit(sha)
-      ensure
-        delete_refs(tmp_ref) if tmp_ref
+        if existing_commit = commit(commit_id)
+          # Commit is already present (e.g. in a fork, or through a previous fetch)
+          yield existing_commit
+        else
+          fetch_sha(start_repository, commit_id)
+          yield commit(commit_id)
+        end
       end
 
       def fetch_source_branch!(source_repository, source_branch, local_ref)
@@ -614,14 +599,17 @@ module Gitlab
         end
       end
 
-      def fetch_ref(source_repository, source_ref:, target_ref:)
+      # Fetch a commit from the given source repository
+      def fetch_sha(source_repository, sha)
         source_repository = RemoteRepository.new(source_repository) unless source_repository.is_a?(RemoteRepository)
 
-        args = %W[fetch --no-tags -f #{GITALY_INTERNAL_URL} #{source_ref}:#{target_ref}]
-        message, status = run_git(args, env: source_repository.fetch_env, include_stderr: true)
-        raise Gitlab::Git::CommandError, message if status != 0
+        env = source_repository.fetch_env(git_config_options: [GIT_ALLOW_SHA_UPLOAD])
 
-        target_ref
+        args = %W[fetch --no-tags #{GITALY_INTERNAL_URL} #{sha}]
+        message, status = run_git(args, env: env, include_stderr: true)
+        raise Gitlab::Git::CommandError, message unless status.zero?
+
+        sha
       end
 
       # Lookup for rugged object by oid or ref name
