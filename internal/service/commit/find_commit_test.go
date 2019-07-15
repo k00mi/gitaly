@@ -14,7 +14,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
-	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -332,7 +331,6 @@ func benchmarkFindCommit(withCache bool, b *testing.B) {
 		revision := revisions[b.N%len(revisions)]
 		if withCache {
 			md := metadata.New(map[string]string{
-				featureflag.HeaderKey(catfile.CacheFeatureFlagKey): "true",
 				"gitaly-session-id": "abc123",
 			})
 
@@ -378,7 +376,6 @@ func TestFindCommitWithCache(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		revision := revisions[i%len(revisions)]
 		md := metadata.New(map[string]string{
-			featureflag.HeaderKey(catfile.CacheFeatureFlagKey): "true",
 			"gitaly-session-id": "abc123",
 		})
 

@@ -9,7 +9,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/alternates"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata"
-	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 )
 
 var catfileCacheCounter = prometheus.NewCounterVec(
@@ -148,8 +147,7 @@ func New(ctx context.Context, repo *gitalypb.Repository) (*Batch, error) {
 	}
 
 	sessionID := metadata.GetValue(ctx, "gitaly-session-id")
-
-	if featureflag.IsDisabled(ctx, CacheFeatureFlagKey) || sessionID == "" {
+	if sessionID == "" {
 		return newBatch(ctx, repoPath, env)
 	}
 
