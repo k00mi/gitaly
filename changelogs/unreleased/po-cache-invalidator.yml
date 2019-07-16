@@ -1,0 +1,5 @@
+---
+title: Cache invalidation via gRPC interceptor
+merge_request: 1268
+author:
+type: added
