@@ -38,7 +38,7 @@ func simulateHTTPClone(gitDir string) {
 	}
 
 	request := &bytes.Buffer{}
-	refsHeads := regexp.MustCompile(`^[a-f0-9]{44} refs/heads/`)
+	refsHeads := regexp.MustCompile(`^[a-f0-9]{44} refs/(heads|tags)/`)
 	firstLine := true
 	for _, line := range infoLines {
 		if !refsHeads.MatchString(line) {
