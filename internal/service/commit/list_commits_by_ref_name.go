@@ -4,6 +4,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly-proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/chunk"
 )
 
@@ -12,7 +13,7 @@ func (s *server) ListCommitsByRefName(in *gitalypb.ListCommitsByRefNameRequest, 
 
 	c, err := catfile.New(ctx, in.Repository)
 	if err != nil {
-		return err
+		return helper.ErrInternal(err)
 	}
 
 	sender := chunk.New(&commitsByRefNameSender{stream: stream})
@@ -23,11 +24,11 @@ func (s *server) ListCommitsByRefName(in *gitalypb.ListCommitsByRefNameRequest, 
 			continue
 		}
 		if err != nil {
-			return err
+			return helper.ErrInternal(err)
 		}
 
 		if err := sender.Send(commit); err != nil {
-			return err
+			return helper.ErrInternal(err)
 		}
 	}
 
