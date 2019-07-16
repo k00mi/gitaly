@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -190,6 +191,12 @@ func doBenchPost(cloneURL string, wants []string) {
 		}
 
 		sideBandHistogram[band]++
+
+		// Print progress data as-is
+		if band == 2 {
+			_, err := os.Stdout.Write(data[1:])
+			noError(err)
+		}
 
 		n := len(data[1:])
 		totalSize[band] += int64(n)
