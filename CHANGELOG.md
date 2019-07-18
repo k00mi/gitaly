@@ -1,5 +1,24 @@
 # Gitaly changelog
 
+## 1.55.0
+
+### Fixed (1 change)
+
+- Remove context from safe file. !1369
+
+### Added (5 changes)
+
+- Cache invalidation via gRPC interceptor. !1268
+- Add CloneFromPool RPC. !1301
+- Add support for Git 2.22. !1359
+- Disk cache object walker. !1362
+- Add ListCommitsByRefName RPC. !1365
+
+### Other (1 change)
+
+- Remove catfile cache feature flag. !1357
+
+
 ## 1.54.1
 
 - No changes.
