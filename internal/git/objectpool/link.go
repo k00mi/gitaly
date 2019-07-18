@@ -36,16 +36,19 @@ func (o *ObjectPool) Link(ctx context.Context, repo *gitalypb.Repository) error 
 
 	expectedContent := filepath.Join(relPath, "objects")
 
-	actualContent, err := ioutil.ReadFile(altPath)
+	actualContentBytes, err := ioutil.ReadFile(altPath)
 	if err == nil {
-		if text.ChompBytes(actualContent) == expectedContent {
+		actualContent := text.ChompBytes(actualContentBytes)
+		if actualContent == expectedContent {
 			return nil
 		}
 
-		return fmt.Errorf("unexpected alternates content: %q", actualContent)
+		if filepath.Clean(actualContent) != filepath.Join(o.FullPath(), "objects") {
+			return fmt.Errorf("unexpected alternates content: %q", actualContent)
+		}
 	}
 
-	if !os.IsNotExist(err) {
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
