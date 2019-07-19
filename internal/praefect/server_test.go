@@ -14,6 +14,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/grpc-proxy/proxy"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/mock"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/models"
 	"google.golang.org/grpc"
 )
 
@@ -51,7 +52,7 @@ func TestServerSimpleUnaryUnary(t *testing.T) {
 			)
 
 			datastore := praefect.NewMemoryDatastore(config.Config{
-				PrimaryServer: &config.GitalyServer{
+				PrimaryServer: &models.GitalyServer{
 					Name: "default",
 				},
 			})

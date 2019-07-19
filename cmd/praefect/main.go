@@ -16,6 +16,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
+
 	"gitlab.com/gitlab-org/gitaly/internal/praefect"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/version"
@@ -113,8 +114,6 @@ func run(listeners []net.Listener, conf config.Config) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go func() { serverErrors <- repl.ProcessBacklog(ctx) }()
-
 	allBackendServers := append(conf.SecondaryServers, conf.PrimaryServer)
 
 	for _, gitaly := range allBackendServers {
@@ -122,8 +121,12 @@ func run(listeners []net.Listener, conf config.Config) error {
 			return fmt.Errorf("failed to register %s: %s", gitaly.Name, err)
 		}
 
-		logger.WithField("gitaly listen addr", gitaly.ListenAddr).Info("registered gitaly node")
+		logger.WithField("node_name", gitaly.Name).WithField("gitaly listen addr", gitaly.ListenAddr).Info("registered gitaly node")
 	}
+
+	go func() { serverErrors <- repl.ProcessBacklog(ctx) }()
+
+	go coordinator.FailoverRotation()
 
 	select {
 	case s := <-termCh:

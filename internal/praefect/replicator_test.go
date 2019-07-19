@@ -1,7 +1,8 @@
-package praefect_test
+package praefect
 
 import (
 	"context"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -13,11 +14,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 
+	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	gitaly_config "gitlab.com/gitlab-org/gitaly/internal/config"
-	"gitlab.com/gitlab-org/gitaly/internal/praefect"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/models"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	serverPkg "gitlab.com/gitlab-org/gitaly/internal/server"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -28,11 +30,11 @@ import (
 func TestReplicatorProcessJobsWhitelist(t *testing.T) {
 	var (
 		cfg = config.Config{
-			PrimaryServer: &config.GitalyServer{
+			PrimaryServer: &models.GitalyServer{
 				Name:       "default",
 				ListenAddr: "tcp://gitaly-primary.example.com",
 			},
-			SecondaryServers: []*config.GitalyServer{
+			SecondaryServers: []*models.GitalyServer{
 				{
 					Name:       "backup1",
 					ListenAddr: "tcp://gitaly-backup1.example.com",
@@ -42,25 +44,22 @@ func TestReplicatorProcessJobsWhitelist(t *testing.T) {
 					ListenAddr: "tcp://gitaly-backup2.example.com",
 				},
 			},
-			Whitelist: []string{
-				"abcd1234",
-				"edfg5678",
-			},
+			Whitelist: []string{"abcd1234", "edfg5678"},
 		}
-		datastore   = praefect.NewMemoryDatastore(cfg)
-		coordinator = praefect.NewCoordinator(logrus.New(), datastore)
+		datastore   = NewMemoryDatastore(cfg)
+		coordinator = NewCoordinator(logrus.New(), datastore)
 		resultsCh   = make(chan result)
-		replman     = praefect.NewReplMgr(
+		replman     = NewReplMgr(
 			cfg.SecondaryServers[1].Name,
 			logrus.New(),
 			datastore,
 			coordinator,
-			praefect.WithWhitelist(cfg.Whitelist),
-			praefect.WithReplicator(&mockReplicator{resultsCh}),
+			WithWhitelist(cfg.Whitelist),
+			WithReplicator(&mockReplicator{resultsCh}),
 		)
 	)
 
-	for _, node := range []*config.GitalyServer{
+	for _, node := range []*models.GitalyServer{
 		cfg.PrimaryServer,
 		cfg.SecondaryServers[0],
 		cfg.SecondaryServers[1],
@@ -85,8 +84,8 @@ func TestReplicatorProcessJobsWhitelist(t *testing.T) {
 			result := <-resultsCh
 
 			assert.Contains(t, cfg.Whitelist, result.source.RelativePath)
-			assert.Equal(t, result.target.Storage, cfg.SecondaryServers[1].Name)
-			assert.Equal(t, result.source.Storage, cfg.PrimaryServer.Name)
+			assert.Equal(t, cfg.SecondaryServers[1].Name, result.target.Storage)
+			assert.Equal(t, cfg.PrimaryServer.Name, result.source.Storage)
 		}
 
 		cancel()
@@ -107,15 +106,15 @@ func TestReplicatorProcessJobsWhitelist(t *testing.T) {
 }
 
 type result struct {
-	source praefect.Repository
-	target praefect.Node
+	source models.Repository
+	target Node
 }
 
 type mockReplicator struct {
 	resultsCh chan<- result
 }
 
-func (mr *mockReplicator) Replicate(ctx context.Context, source praefect.Repository, target praefect.Node) error {
+func (mr *mockReplicator) Replicate(ctx context.Context, source models.Repository, target Node) error {
 	select {
 
 	case mr.resultsCh <- result{source, target}:
@@ -130,33 +129,16 @@ func (mr *mockReplicator) Replicate(ctx context.Context, source praefect.Reposit
 }
 
 func TestReplicate(t *testing.T) {
+	srv, srvSocketPath := runFullGitalyServer(t)
+	defer srv.Stop()
+
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	commitID := testhelper.CreateCommit(t, testRepoPath, "master", &testhelper.CreateCommitOpts{
-		Message: "a commit",
-	})
+	backupStorageName := "backup"
 
-	defer cleanupFn()
-	var (
-		cfg = config.Config{
-			PrimaryServer: &config.GitalyServer{
-				Name:       "default",
-				ListenAddr: "tcp://gitaly-primary.example.com",
-			},
-			SecondaryServers: []*config.GitalyServer{
-				{
-					Name:       "backup",
-					ListenAddr: "tcp://gitaly-backup1.example.com",
-				},
-			},
-			Whitelist: []string{
-				testRepo.GetRelativePath(),
-			},
-		}
-	)
-	backupDir := filepath.Join(testhelper.GitlabTestStoragePath(), "backup")
-	require.NoError(t, os.Mkdir(backupDir, os.ModeDir|0755))
+	backupDir, err := ioutil.TempDir(testhelper.GitlabTestStoragePath(), backupStorageName)
+	require.NoError(t, err)
 	defer func() {
 		os.RemoveAll(backupDir)
 	}()
@@ -167,54 +149,40 @@ func TestReplicate(t *testing.T) {
 	}()
 
 	gitaly_config.Config.Storages = append(gitaly_config.Config.Storages, gitaly_config.Storage{
-		Name: "backup",
+		Name: backupStorageName,
 		Path: backupDir,
-	}, gitaly_config.Storage{
-		Name: "default",
-		Path: testhelper.GitlabTestStoragePath(),
-	})
-
-	srv, socketPath := runFullGitalyServer(t)
-	defer srv.Stop()
-
-	datastore := praefect.NewMemoryDatastore(cfg)
-	coordinator := praefect.NewCoordinator(logrus.New(), datastore)
-
-	coordinator.RegisterNode("backup", socketPath)
-	coordinator.RegisterNode("default", socketPath)
-
-	replman := praefect.NewReplMgr(
-		cfg.SecondaryServers[0].Name,
-		logrus.New(),
-		datastore,
-		coordinator,
-		praefect.WithWhitelist([]string{testRepo.GetRelativePath()}),
+	},
+		gitaly_config.Storage{
+			Name: "default",
+			Path: testhelper.GitlabTestStoragePath(),
+		},
 	)
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	md := testhelper.GitalyServersMetadata(t, socketPath)
-	ctx = metadata.NewOutgoingContext(ctx, md)
-
-	go func() {
-		require.Error(t, context.Canceled, replman.ProcessBacklog(ctx))
-	}()
-	var tries int
-	jobs, err := datastore.GetJobs(praefect.JobStateInProgress|praefect.JobStatePending|praefect.JobStateReady, "backup", 1)
+	connOpts := []grpc.DialOption{
+		grpc.WithInsecure(),
+		grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials(testhelper.RepositoryAuthToken)),
+	}
+	conn, err := grpc.Dial(srvSocketPath, connOpts...)
 	require.NoError(t, err)
 
-	for len(jobs) > 0 {
-		if tries > 20 {
-			t.Error("exceeded timeout")
-		}
-		time.Sleep(1 * time.Second)
-		tries++
+	commitID := testhelper.CreateCommit(t, testRepoPath, "master", &testhelper.CreateCommitOpts{
+		Message: "a commit",
+	})
 
-		jobs, err = datastore.GetJobs(praefect.JobStateInProgress|praefect.JobStatePending|praefect.JobStateReady, "backup", 1)
-		require.NoError(t, err)
-	}
-	cancel()
+	ctx, err = helper.InjectGitalyServers(ctx, "default", srvSocketPath, testhelper.RepositoryAuthToken)
+	require.NoError(t, err)
+
+	var replicator defaultReplicator
+	require.NoError(t, replicator.Replicate(
+		ctx,
+		models.Repository{Storage: "default", RelativePath: testRepo.GetRelativePath()},
+		Node{
+			cc:      conn,
+			Storage: backupStorageName,
+		}))
 
 	replicatedPath := filepath.Join(backupDir, filepath.Base(testRepoPath))
 	testhelper.MustRunCommand(t, nil, "git", "-C", replicatedPath, "cat-file", "-e", commitID)

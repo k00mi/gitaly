@@ -33,3 +33,21 @@ func ExtractGitalyServers(ctx context.Context) (gitalyServersInfo storage.Gitaly
 
 	return
 }
+
+// InjectGitalyServers injects gitaly-servers metadata into an outgoing context
+func InjectGitalyServers(ctx context.Context, name, address, token string) (context.Context, error) {
+
+	gitalyServers := storage.GitalyServers{
+		name: {
+			"address": address,
+			"token":   token,
+		},
+	}
+
+	gitalyServersJSON, err := json.Marshal(gitalyServers)
+	if err != nil {
+		return nil, err
+	}
+
+	return metadata.NewOutgoingContext(ctx, metadata.Pairs("gitaly-servers", base64.StdEncoding.EncodeToString(gitalyServersJSON))), nil
+}

@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/models"
 )
 
 const (
@@ -15,7 +16,7 @@ const (
 )
 
 var (
-	repo1Primary = praefect.Repository{
+	repo1Primary = models.Repository{
 		RelativePath: proj1,
 		Storage:      stor1,
 	}
@@ -41,9 +42,16 @@ var operations = []struct {
 		},
 	},
 	{
+		desc: "set the primary for the shard",
+		opFn: func(t *testing.T, ds praefect.Datastore) {
+			err := ds.SetShardPrimary(repo1Primary, models.GitalyServer{Name: stor1})
+			require.NoError(t, err)
+		},
+	},
+	{
 		desc: "associate the replication job target with a primary",
 		opFn: func(t *testing.T, ds praefect.Datastore) {
-			err := ds.SetSecondaries(repo1Primary, []string{stor2})
+			err := ds.SetShardSecondaries(repo1Primary, []models.GitalyServer{models.GitalyServer{Name: stor2}})
 			require.NoError(t, err)
 		},
 	},
@@ -93,7 +101,7 @@ var flavors = map[string]func() praefect.Datastore{
 	"in-memory-datastore": func() praefect.Datastore {
 		return praefect.NewMemoryDatastore(
 			config.Config{
-				PrimaryServer: &config.GitalyServer{
+				PrimaryServer: &models.GitalyServer{
 					Name: "default",
 				},
 			})

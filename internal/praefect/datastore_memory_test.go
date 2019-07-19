@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/models"
 )
 
 // TestMemoryDatastoreWhitelist verifies that the in-memory datastore will
@@ -13,10 +14,10 @@ import (
 // with a configuration file specifying the shard and whitelisted repositories.
 func TestMemoryDatastoreWhitelist(t *testing.T) {
 	cfg := config.Config{
-		PrimaryServer: &config.GitalyServer{
+		PrimaryServer: &models.GitalyServer{
 			Name: "default",
 		},
-		SecondaryServers: []*config.GitalyServer{
+		SecondaryServers: []*models.GitalyServer{
 			{
 				Name: "backup-1",
 			},
@@ -24,32 +25,30 @@ func TestMemoryDatastoreWhitelist(t *testing.T) {
 				Name: "backup-2",
 			},
 		},
-		Whitelist: []string{
-			"abcd1234",
-			"5678efgh",
-		},
+		Whitelist: []string{"abcd1234", "5678efgh"},
 	}
 
 	mds := praefect.NewMemoryDatastore(cfg)
 
-	repo1 := praefect.Repository{
+	repo1 := models.Repository{
 		RelativePath: cfg.Whitelist[0],
 		Storage:      cfg.PrimaryServer.Name,
 	}
-	repo2 := praefect.Repository{
+
+	repo2 := models.Repository{
 		RelativePath: cfg.Whitelist[1],
 		Storage:      cfg.PrimaryServer.Name,
 	}
 
-	expectSecondaries := []string{
-		cfg.SecondaryServers[0].Name,
-		cfg.SecondaryServers[1].Name,
+	expectSecondaries := []models.GitalyServer{
+		models.GitalyServer{Name: cfg.SecondaryServers[0].Name},
+		models.GitalyServer{Name: cfg.SecondaryServers[1].Name},
 	}
 
-	for _, repo := range []praefect.Repository{repo1, repo2} {
-		actualSecondaries, err := mds.GetSecondaries(repo)
+	for _, repo := range []models.Repository{repo1, repo2} {
+		actualSecondaries, err := mds.GetShardSecondaries(repo)
 		require.NoError(t, err)
-		require.ElementsMatch(t, actualSecondaries, expectSecondaries)
+		require.ElementsMatch(t, expectSecondaries, actualSecondaries)
 	}
 
 	backup1 := cfg.SecondaryServers[0]

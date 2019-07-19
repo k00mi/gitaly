@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/models"
 )
 
 var (
@@ -41,9 +42,9 @@ const (
 // meant for updating the repository so that it is synced with the primary
 // copy. Scheduled indicates when a replication job should be performed.
 type ReplJob struct {
-	ID     uint64     // autoincrement ID
-	Target string     // which storage location to replicate to?
-	Source Repository // source for replication
+	ID     uint64            // autoincrement ID
+	Target string            // which storage location to replicate to?
+	Source models.Repository // source for replication
 	State  JobState
 }
 
@@ -63,15 +64,13 @@ func (b byJobID) Less(i, j int) bool { return b.replJobs[i].ID < b.replJobs[j].I
 type Datastore interface {
 	ReplJobsDatastore
 	ReplicasDatastore
-	PrimaryDatastore
+	TemporaryDatastore
 }
 
-// PrimaryDatastore manages accessing and setting the primary storage location
-type PrimaryDatastore interface {
-	// GetPrimary gets the primary storage location
-	GetPrimary() (string, error)
-	// SetPrimary sets the primary storage location
-	SetPrimary(primary string) error
+// TemporaryDatastore contains methods that will go away once we move to a SQL datastore
+type TemporaryDatastore interface {
+	GetDefaultPrimary() (models.GitalyServer, error)
+	SetDefaultPrimary(primary models.GitalyServer) error
 }
 
 // ReplicasDatastore manages accessing and setting which secondary replicas
@@ -79,11 +78,18 @@ type PrimaryDatastore interface {
 type ReplicasDatastore interface {
 	// GetSecondaries will retrieve all secondary replica storage locations for
 	// a primary replica
-	GetSecondaries(primary Repository) ([]string, error)
+	GetShardSecondaries(repo models.Repository) ([]models.GitalyServer, error)
+
+	GetShardPrimary(repo models.Repository) (models.GitalyServer, error)
 
 	// SetSecondaries will set the secondary storage locations for a repository
 	// in a primary replica.
-	SetSecondaries(primary Repository, secondaries []string) error
+	SetShardSecondaries(repo models.Repository, secondaries []models.GitalyServer) error
+
+	SetShardPrimary(repo models.Repository, primary models.GitalyServer) error
+
+	// GetRepositoriesForPrimary returns a map of all of the active shards for a given primary
+	GetRepositoriesForPrimary(primary models.GitalyServer) ([]string, error)
 }
 
 // ReplJobsDatastore represents the behavior needed for fetching and updating
@@ -92,12 +98,12 @@ type ReplJobsDatastore interface {
 	// GetJobs fetches a list of chronologically ordered replication
 	// jobs for the given storage replica. The returned list will be at most
 	// count-length.
-	GetJobs(flag JobState, storage string, count int) ([]ReplJob, error)
+	GetJobs(flag JobState, node string, count int) ([]ReplJob, error)
 
 	// CreateSecondaryJobs will create replication jobs for each secondary
 	// replica of a repository known to the datastore. A set of replication job
 	// ID's for the created jobs will be returned upon success.
-	CreateSecondaryReplJobs(source Repository) ([]uint64, error)
+	CreateSecondaryReplJobs(source models.Repository) ([]uint64, error)
 
 	// UpdateReplJob updates the state of an existing replication job
 	UpdateReplJob(jobID uint64, newState JobState) error
@@ -105,13 +111,13 @@ type ReplJobsDatastore interface {
 
 // shard is a set of primary and secondary storage replicas for a project
 type shard struct {
-	primary     string
-	secondaries []string
+	primary     models.GitalyServer
+	secondaries []models.GitalyServer
 }
 
 type jobRecord struct {
 	relativePath string // project's relative path
-	target       string
+	targetNode   string
 	state        JobState
 }
 
@@ -132,7 +138,7 @@ type MemoryDatastore struct {
 
 	primary *struct {
 		sync.RWMutex
-		storageName string
+		server models.GitalyServer
 	}
 }
 
@@ -155,22 +161,26 @@ func NewMemoryDatastore(cfg config.Config) *MemoryDatastore {
 		},
 		primary: &struct {
 			sync.RWMutex
-			storageName string
+			server models.GitalyServer
 		}{
-			storageName: cfg.PrimaryServer.Name,
+			server: models.GitalyServer{
+				Name:       cfg.PrimaryServer.Name,
+				ListenAddr: cfg.PrimaryServer.ListenAddr,
+				Token:      cfg.PrimaryServer.Token,
+			},
 		},
 	}
 
-	secondaries := make([]string, len(cfg.SecondaryServers))
+	secondaryServers := make([]models.GitalyServer, len(cfg.SecondaryServers))
 	for i, server := range cfg.SecondaryServers {
-		secondaries[i] = server.Name
+		secondaryServers[i] = *server
 	}
 
-	for _, relativePath := range cfg.Whitelist {
+	for _, repo := range cfg.Whitelist {
 		// store the configuration file specified shard
-		m.replicas.m[relativePath] = shard{
-			primary:     cfg.PrimaryServer.Name,
-			secondaries: secondaries,
+		m.replicas.m[repo] = shard{
+			primary:     *cfg.PrimaryServer,
+			secondaries: secondaryServers,
 		}
 
 		// initialize replication job queue to replicate all whitelisted repos
@@ -179,34 +189,68 @@ func NewMemoryDatastore(cfg config.Config) *MemoryDatastore {
 			m.jobs.next++
 			m.jobs.records[m.jobs.next] = jobRecord{
 				state:        JobStateReady,
-				target:       secondary.Name,
-				relativePath: relativePath,
+				targetNode:   secondary.Name,
+				relativePath: repo,
 			}
 		}
-
 	}
 
 	return m
 }
 
-// GetSecondaries will return the set of secondary storage locations for a
+// GetShardSecondaries will return the set of secondary storage locations for a
 // given repository if they exist
-func (md *MemoryDatastore) GetSecondaries(primary Repository) ([]string, error) {
+func (md *MemoryDatastore) GetShardSecondaries(primary models.Repository) ([]models.GitalyServer, error) {
 	shard, _ := md.getShard(primary.RelativePath)
 
 	return shard.secondaries, nil
 }
 
-// SetSecondaries will replace the set of replicas for a repository
-func (md *MemoryDatastore) SetSecondaries(primary Repository, secondaries []string) error {
+// SetShardSecondaries will replace the set of replicas for a repository
+func (md *MemoryDatastore) SetShardSecondaries(repo models.Repository, secondaries []models.GitalyServer) error {
 	md.replicas.Lock()
-	md.replicas.m[primary.RelativePath] = shard{
-		primary:     primary.Storage,
-		secondaries: secondaries,
-	}
-	md.replicas.Unlock()
+	defer md.replicas.Unlock()
+
+	shard := md.replicas.m[repo.RelativePath]
+	shard.secondaries = secondaries
+	md.replicas.m[repo.RelativePath] = shard
 
 	return nil
+}
+
+// SetShardPrimary sets the primary for a repository
+func (md *MemoryDatastore) SetShardPrimary(repo models.Repository, primary models.GitalyServer) error {
+	md.replicas.Lock()
+	defer md.replicas.Unlock()
+
+	shard := md.replicas.m[repo.RelativePath]
+	shard.primary = primary
+	md.replicas.m[repo.RelativePath] = shard
+
+	return nil
+}
+
+// GetShardPrimary gets the primary for a repository
+func (md *MemoryDatastore) GetShardPrimary(repo models.Repository) (models.GitalyServer, error) {
+	md.replicas.Lock()
+	defer md.replicas.Unlock()
+
+	shard := md.replicas.m[repo.RelativePath]
+	return shard.primary, nil
+}
+
+// GetRepositoriesForPrimary gets all repositories
+func (md *MemoryDatastore) GetRepositoriesForPrimary(primary models.GitalyServer) ([]string, error) {
+	md.replicas.Lock()
+	defer md.replicas.Unlock()
+
+	repositories := make([]string, 0, len(md.replicas.m))
+
+	for repository := range md.replicas.m {
+		repositories = append(repositories, repository)
+	}
+
+	return repositories, nil
 }
 
 func (md *MemoryDatastore) getShard(project string) (shard, bool) {
@@ -230,7 +274,7 @@ func (md *MemoryDatastore) GetJobs(state JobState, storage string, count int) ([
 
 	for i, record := range md.jobs.records {
 		// state is a bitmap that is a combination of one or more JobStates
-		if record.state&state != 0 && record.target == storage {
+		if record.state&state != 0 && record.targetNode == storage {
 			job, err := md.replJobFromRecord(i, record)
 			if err != nil {
 				return nil, err
@@ -261,26 +305,26 @@ func (md *MemoryDatastore) replJobFromRecord(jobID uint64, record jobRecord) (Re
 
 	return ReplJob{
 		ID: jobID,
-		Source: Repository{
+		Source: models.Repository{
 			RelativePath: record.relativePath,
-			Storage:      shard.primary,
+			Storage:      shard.primary.Name,
 		},
 		State:  record.state,
-		Target: record.target,
+		Target: record.targetNode,
 	}, nil
 }
 
-// ErrInvalidReplTarget indicates a target repository cannot be chosen because
+// ErrInvalidReplTarget indicates a targetNode repository cannot be chosen because
 // it fails preconditions for being replicatable
-var ErrInvalidReplTarget = errors.New("target repository fails preconditions for replication")
+var ErrInvalidReplTarget = errors.New("targetNode repository fails preconditions for replication")
 
 // CreateSecondaryReplJobs creates a replication job for each secondary that
 // backs the specified repository. Upon success, the job IDs will be returned.
-func (md *MemoryDatastore) CreateSecondaryReplJobs(source Repository) ([]uint64, error) {
+func (md *MemoryDatastore) CreateSecondaryReplJobs(source models.Repository) ([]uint64, error) {
 	md.jobs.Lock()
 	defer md.jobs.Unlock()
 
-	emptyRepo := Repository{}
+	emptyRepo := models.Repository{}
 	if source == emptyRepo {
 		return nil, errors.New("invalid source repository")
 	}
@@ -300,7 +344,7 @@ func (md *MemoryDatastore) CreateSecondaryReplJobs(source Repository) ([]uint64,
 
 		md.jobs.next++
 		md.jobs.records[md.jobs.next] = jobRecord{
-			target:       secondary,
+			targetNode:   secondary.Name,
 			state:        JobStatePending,
 			relativePath: source.RelativePath,
 		}
@@ -333,24 +377,34 @@ func (md *MemoryDatastore) UpdateReplJob(jobID uint64, newState JobState) error 
 }
 
 // SetPrimary sets the primary datastore location
-func (md *MemoryDatastore) SetPrimary(primary string) error {
+func (md *MemoryDatastore) SetPrimary(primary models.GitalyServer) error {
 	md.primary.Lock()
 	defer md.primary.Unlock()
 
-	md.primary.storageName = primary
+	md.primary.server = primary
 
 	return nil
 }
 
-// GetPrimary gets the primary datastore location
-func (md *MemoryDatastore) GetPrimary() (string, error) {
+// GetDefaultPrimary gets the primary datastore location
+func (md *MemoryDatastore) GetDefaultPrimary() (models.GitalyServer, error) {
 	md.primary.RLock()
 	defer md.primary.RUnlock()
 
-	storageName := md.primary.storageName
-	if storageName == "" {
-		return "", ErrPrimaryNotSet
+	primary := md.primary.server
+	if primary == (models.GitalyServer{}) {
+		return primary, ErrPrimaryNotSet
 	}
 
-	return storageName, nil
+	return primary, nil
+}
+
+// SetDefaultPrimary gets the primary datastore location
+func (md *MemoryDatastore) SetDefaultPrimary(primary models.GitalyServer) error {
+	md.primary.RLock()
+	defer md.primary.RUnlock()
+
+	md.primary.server = primary
+
+	return nil
 }
