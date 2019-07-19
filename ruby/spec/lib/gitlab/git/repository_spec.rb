@@ -543,6 +543,16 @@ describe Gitlab::Git::Repository do # rubocop:disable Metrics/BlockLength
         let(:arg_first_parent_ref) {}
       end
     end
+
+    context 'when conflicts detected' do
+      it 'raises Gitlab::Git::CommitError' do
+        allow(repository.rugged).to receive_message_chain(:merge_commits, :conflicts?) { true }
+
+        expect { repository.merge_to_ref(user, source_sha, arg_branch, target_ref, 'foo', arg_first_parent_ref) }
+          .to raise_error(Gitlab::Git::CommitError, "Failed to create merge commit for source_sha #{source_sha} and" \
+                                                    " target_sha #{branch_head} at #{target_ref}")
+      end
+    end
   end
 
   describe '#ff_merge' do

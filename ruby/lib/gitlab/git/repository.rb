@@ -277,14 +277,12 @@ module Gitlab
 
         raise InvalidRef unless ref
 
-        OperationService.new(user, self).commit_ref(target_ref, from_ref: ref) do
+        OperationService.new(user, self).commit_ref(target_ref, source_sha, from_ref: ref) do
           our_commit = ref.target
           their_commit = source_sha
 
           create_merge_commit(user, our_commit, their_commit, message)
         end
-      rescue Gitlab::Git::CommitError # when merge_index.conflicts?
-        nil
       rescue Rugged::ReferenceError, InvalidRef
         raise ArgumentError, 'Invalid merge source'
       end

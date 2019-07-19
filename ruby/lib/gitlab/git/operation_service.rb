@@ -110,15 +110,21 @@ module Gitlab
       #
       # ref - The target ref path we're committing to.
       # from_ref - The ref we're taking the HEAD commit from.
-      def commit_ref(ref, from_ref:)
+      def commit_ref(ref, source_sha, from_ref:)
         update_autocrlf_option
 
-        repository.write_ref(ref, from_ref.target)
+        target_sha = from_ref.target
+        repository.write_ref(ref, target_sha)
 
         # Make commit
         newrev = yield
 
-        raise Gitlab::Git::CommitError.new('Failed to create commit') unless newrev
+        unless newrev
+          error = "Failed to create merge commit for source_sha #{source_sha} and" \
+                  " target_sha #{target_sha} at #{ref}"
+
+          raise Gitlab::Git::CommitError.new(error)
+        end
 
         oldrev = from_ref.target
 
@@ -201,8 +207,10 @@ module Gitlab
 
         unless status.zero?
           Gitlab::GitLogger.error("'git update-ref' in #{repository.path}: #{output}")
+          ref_name = Gitlab::Git.branch_name(ref) || ref
+
           raise Gitlab::Git::CommitError.new(
-            "Could not update branch #{Gitlab::Git.branch_name(ref)}." \
+            "Could not update #{ref_name}." \
             " Please refresh and try again."
           )
         end

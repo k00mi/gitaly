@@ -1,0 +1,5 @@
+---
+title: Remove rescue of Gitlab::Git::CommitError at UserMergeToRef RPC
+merge_request: 1372
+author:
+type: other
