@@ -5,13 +5,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/models"
 )
 
 func TestConfigValidation(t *testing.T) {
-	primarySrv := &GitalyServer{"test", "localhost:23456"}
-	secondarySrvs := []*GitalyServer{
-		{"test1", "localhost:23457"},
-		{"test2", "localhost:23458"},
+	primarySrv := &models.GitalyServer{"test", "localhost:23456", "secret-token"}
+	secondarySrvs := []*models.GitalyServer{
+		{"test1", "localhost:23457", "secret-token"},
+		{"test2", "localhost:23458", "secret-token"},
 	}
 
 	testCases := []struct {
@@ -36,7 +37,7 @@ func TestConfigValidation(t *testing.T) {
 		},
 		{
 			desc:   "duplicate address",
-			config: Config{ListenAddr: "localhost:1234", PrimaryServer: primarySrv, SecondaryServers: []*GitalyServer{primarySrv}},
+			config: Config{ListenAddr: "localhost:1234", PrimaryServer: primarySrv, SecondaryServers: []*models.GitalyServer{primarySrv}},
 			err:    errDuplicateGitalyAddr,
 		},
 		{
@@ -62,11 +63,11 @@ func TestConfigParsing(t *testing.T) {
 		{
 			filePath: "testdata/config.toml",
 			expected: Config{
-				PrimaryServer: &GitalyServer{
+				PrimaryServer: &models.GitalyServer{
 					Name:       "default",
 					ListenAddr: "tcp://gitaly-primary.example.com",
 				},
-				SecondaryServers: []*GitalyServer{
+				SecondaryServers: []*models.GitalyServer{
 					{
 						Name:       "default",
 						ListenAddr: "tcp://gitaly-backup1.example.com",
@@ -76,10 +77,7 @@ func TestConfigParsing(t *testing.T) {
 						ListenAddr: "tcp://gitaly-backup2.example.com",
 					},
 				},
-				Whitelist: []string{
-					"abcd1234",
-					"edfg5678",
-				},
+				Whitelist: []string{"abcd1234", "edfg5678"},
 			},
 		},
 	}

@@ -5,7 +5,9 @@ import (
 	"os"
 
 	"github.com/BurntSushi/toml"
+
 	"gitlab.com/gitlab-org/gitaly/internal/config"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/models"
 )
 
 // Config is a container for everything found in the TOML config file
@@ -13,8 +15,8 @@ type Config struct {
 	ListenAddr string `toml:"listen_addr"`
 	SocketPath string `toml:"socket_path"`
 
-	PrimaryServer    *GitalyServer   `toml:"primary_server"`
-	SecondaryServers []*GitalyServer `toml:"secondary_server"`
+	PrimaryServer    *models.GitalyServer   `toml:"primary_server"`
+	SecondaryServers []*models.GitalyServer `toml:"secondary_server"`
 
 	// Whitelist is a list of relative project paths (paths comprised of project
 	// hashes) that are permitted to use high availability features
@@ -28,6 +30,7 @@ type Config struct {
 type GitalyServer struct {
 	Name       string `toml:"name"`
 	ListenAddr string `toml:"listen_addr" split_words:"true"`
+	Token      string `toml:"token"`
 }
 
 // FromFile loads the config for the passed file path
@@ -50,7 +53,7 @@ var (
 	errGitalyWithoutName   = errors.New("all gitaly servers must have a name")
 )
 
-var emptyServer = &GitalyServer{}
+var emptyServer = &models.GitalyServer{}
 
 // Validate establishes if the config is valid
 func (c Config) Validate() error {

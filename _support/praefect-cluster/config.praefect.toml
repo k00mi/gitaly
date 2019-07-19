@@ -6,13 +6,14 @@ listen_addr = ":2305"
 # # Praefect can listen on a socket when placed on the same machine as all clients
  #socket_path = "/etc/gitaly/praefect/socket"
 # # Praefect will only replicate whitelisted repositories
-# whitelist = ["@hashed/2c/62/2c624232cdd221771294dfbb310aca000a0df6ac8b66b696d90ef06fdefb64a3.git"]
+whitelist = ["@hashed/2c/62/2c624232cdd221771294dfbb310aca000a0df6ac8b66b696d90ef06fdefb64a3.git"]
 # # Optional: export metrics via Prometheus
 # prometheus_listen_addr = "127.0.01:10101"
 
 # # You can optionally configure Praefect to output JSON-formatted log messages to stdout
-# [logging]
+[logging]
 #   format = "json"
+  level = "info"
 # # Optional: Set log level to only log entries with that severity or above
 # # One of, in order: debug, info, warn, errror, fatal, panic
 # # Defaults to "info"
@@ -25,12 +26,15 @@ listen_addr = ":2305"
 
 [primary_server]
   name = "default"
-  listen_addr = "tcp://gitaly-primary:9999"
+#  listen_addr = "tcp://gitaly-primary:9999"
+  listen_addr = "tcp://127.0.0.1:9999"
 
 [[secondary_server]]
   name = "backup1"
-  listen_addr = "tcp://gitaly-backup-1:9999"
+#  listen_addr = "tcp://gitaly-backup-1:9999"
+  listen_addr = "tcp://127.0.0.1:9998"
 
 [[secondary_server]]
   name = "backup2"
-  listen_addr = "tcp://gitaly-backup-2:9999"
+#  listen_addr = "tcp://gitaly-backup-2:9999"
+  listen_addr = "tcp://127.0.0.1:9997"
