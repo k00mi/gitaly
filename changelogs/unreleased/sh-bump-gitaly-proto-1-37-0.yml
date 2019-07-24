@@ -1,0 +1,5 @@
+---
+title: Upgrade Ruby gitaly-proto to 1.37.0
+merge_request: 1374
+author:
+type: other
