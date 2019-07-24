@@ -4,12 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"regexp"
 	"time"
+
+	"gitlab.com/gitlab-org/gitaly/internal/git/pktline"
 )
 
 func simulateHTTPClone(gitDir string) {
@@ -38,7 +38,7 @@ func simulateHTTPClone(gitDir string) {
 	}
 
 	request := &bytes.Buffer{}
-	refsHeads := regexp.MustCompile(`^[a-f0-9]{44} refs/heads/`)
+	refsHeads := regexp.MustCompile(`^[a-f0-9]{44} refs/(heads|tags)/`)
 	firstLine := true
 	for _, line := range infoLines {
 		if !refsHeads.MatchString(line) {
@@ -66,8 +66,23 @@ func simulateHTTPClone(gitDir string) {
 	start = time.Now()
 	noError(uploadPack.Start())
 
-	n, err := io.Copy(ioutil.Discard, out)
-	noError(err)
+	var n int64
+	scanner := pktline.NewScanner(out)
+	for scanner.Scan() {
+		n += int64(len(scanner.Bytes()))
+		data := pktline.Data(scanner.Bytes())
+		if len(data) == 0 {
+			continue
+		}
+
+		// Print progress data
+		if data[0] == 2 {
+			_, err := os.Stdout.Write(data[1:])
+			noError(err)
+		}
+	}
+
+	noError(scanner.Err())
 
 	msg("simulated POST \"/git-upload-pack\" returned %s, took %v", humanBytes(n), time.Since(start))
 }
