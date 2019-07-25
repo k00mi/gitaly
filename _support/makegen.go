@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"text/template"
@@ -69,12 +70,20 @@ func (gm *gitalyMake) BuildDir() string {
 	return gm.cwd
 }
 
-func (gm *gitalyMake) Pkg() string               { return "gitlab.com/gitlab-org/gitaly" }
-func (gm *gitalyMake) GoImports() string         { return "bin/goimports" }
-func (gm *gitalyMake) GoCovMerge() string        { return "bin/gocovmerge" }
-func (gm *gitalyMake) GoLint() string            { return "bin/golint" }
-func (gm *gitalyMake) GoVendor() string          { return "bin/govendor" }
-func (gm *gitalyMake) StaticCheck() string       { return filepath.Join(gm.BuildDir(), "bin/staticcheck") }
+func (gm *gitalyMake) Pkg() string         { return "gitlab.com/gitlab-org/gitaly" }
+func (gm *gitalyMake) GoImports() string   { return "bin/goimports" }
+func (gm *gitalyMake) GoCovMerge() string  { return "bin/gocovmerge" }
+func (gm *gitalyMake) GoLint() string      { return "bin/golint" }
+func (gm *gitalyMake) GoVendor() string    { return "bin/govendor" }
+func (gm *gitalyMake) StaticCheck() string { return filepath.Join(gm.BuildDir(), "bin/staticcheck") }
+func (gm *gitalyMake) ProtoC() string      { return filepath.Join(gm.BuildDir(), "protoc/bin/protoc") }
+func (gm *gitalyMake) ProtoCGenGo() string { return filepath.Join(gm.BuildDir(), "bin/protoc-gen-go") }
+func (gm *gitalyMake) ProtoCGenGitaly() string {
+	return filepath.Join(gm.BuildDir(), "bin/protoc-gen-gitaly")
+}
+func (gm *gitalyMake) GrpcToolsRuby() string {
+	return filepath.Join(gm.BuildDir(), "bin/grpc_tools_ruby_protoc")
+}
 func (gm *gitalyMake) CoverageDir() string       { return filepath.Join(gm.BuildDir(), "cover") }
 func (gm *gitalyMake) GitalyRubyDir() string     { return filepath.Join(gm.SourceDir(), "ruby") }
 func (gm *gitalyMake) GitlabShellRelDir() string { return "ruby/gitlab-shell" }
@@ -226,7 +235,12 @@ func (gm *gitalyMake) GoFiles() []string {
 		}
 
 		if info.IsDir() && path != root {
-			if path == filepath.Join(root, "ruby") || path == filepath.Join(root, "vendor") {
+			switch path {
+			case filepath.Join(root, "ruby"):
+				return filepath.SkipDir
+			case filepath.Join(root, "vendor"):
+				return filepath.SkipDir
+			case filepath.Join(root, "proto/go"):
 				return filepath.SkipDir
 			}
 
@@ -269,6 +283,30 @@ func (gm *gitalyMake) AllPackages() []string {
 	sort.Strings(pkgs)
 
 	return pkgs
+}
+
+type protoDownloadInfo struct {
+	url    string
+	sha256 string
+}
+
+var protoCDownload = map[string]protoDownloadInfo{
+	"darwin/amd64": protoDownloadInfo{
+		url:    "https://github.com/protocolbuffers/protobuf/releases/download/v3.6.1/protoc-3.6.1-osx-x86_64.zip",
+		sha256: "0decc6ce5beed07f8c20361ddeb5ac7666f09cf34572cca530e16814093f9c0c",
+	},
+	"linux/amd64": protoDownloadInfo{
+		url:    "https://github.com/protocolbuffers/protobuf/releases/download/v3.6.1/protoc-3.6.1-linux-x86_64.zip",
+		sha256: "6003de742ea3fcf703cfec1cd4a3380fd143081a2eb0e559065563496af27807",
+	},
+}
+
+func (gm *gitalyMake) ProtoCURL() string {
+	return protoCDownload[runtime.GOOS+"/"+runtime.GOARCH].url
+}
+
+func (gm *gitalyMake) ProtoCSHA256() string {
+	return protoCDownload[runtime.GOOS+"/"+runtime.GOARCH].sha256
 }
 
 var templateText = `
@@ -518,4 +556,35 @@ docker:
 {{ end }}
 	cp {{ .SourceDir }}/Dockerfile docker/
 	docker build -t gitlab/gitaly:{{ .VersionPrefixed }} -t gitlab/gitaly:latest docker/
+
+.PHONY: proto
+proto: {{ .ProtoC }} {{ .ProtoCGenGo }} {{ .ProtoCGenGitaly }} {{ .GrpcToolsRuby }}
+	mkdir -p {{ .SourceDir }}/proto/go/gitalypb
+	rm -rf {{ .SourceDir }}/proto/go/gitalypb/*.pb.go
+	cd {{ .SourceDir }} && {{ .ProtoC }} --gitaly_out=proto_dir=./proto,gitalypb_dir=./proto/go/gitalypb:. --go_out=paths=source_relative,plugins=grpc:./proto/go/gitalypb -I./proto ./proto/*.proto
+	cd {{ .SourceDir }} && _support/generate-proto-ruby
+
+{{ .ProtoC }}: {{ .BuildDir }}/protoc.zip
+	mkdir -p {{ .BuildDir }}/protoc
+	cd {{ .BuildDir }}/protoc && unzip {{ .BuildDir }}/protoc.zip
+	touch $@
+
+{{ .BuildDir }}/protoc.zip:
+	curl -o $@.tmp --silent -L {{ .ProtoCURL }}
+	printf '{{ .ProtoCSHA256 }}  $@.tmp' | shasum -a256 -c -
+	mv $@.tmp $@
+
+{{ .ProtoCGenGo }}:
+	go get github.com/golang/protobuf/protoc-gen-go@v1.3.2
+
+{{ .ProtoCGenGitaly }}:
+	# Todo fix protoc-gen-gitaly versioning
+	go install gitlab.com/gitlab-org/gitaly-proto/go/internal/cmd/protoc-gen-gitaly
+
+{{ .GrpcToolsRuby }}:
+	gem install --bindir {{ .BuildDir }}/bin -v 1.0.1 grpc-tools
+
+no-changes:
+	# looking for changed files
+	@cd {{ .SourceDir }} && git status --porcelain | awk '{ print } END { if (NR > 0) { exit 1 } }'
 `
