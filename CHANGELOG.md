@@ -1,5 +1,35 @@
 # Gitaly changelog
 
+## v1.56.0
+
+#### Added
+- Add capability to replace certain frames in a stream
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1382
+- Gitaly proto method request factories
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1375
+
+#### Fixed
+- Unable to extract target repo when nested in oneOf field
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1377
+- Update Rugged to 0.28.2
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1384
+
+#### Other
+- Remove rescue of Gitlab::Git::CommitError at UserMergeToRef RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1372
+- Handle failover by catching SIGUSR1 signal
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1346
+- Update rouge to v3.7.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1387
+- Update msgpack to 1.3.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1381
+- Upgrade Ruby gitaly-proto to 1.37.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1374
+
+#### Performance
+- Unary gRPC interceptor for cache invalidation
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1371
+
 ## 1.55.0
 
 ### Fixed (1 change)

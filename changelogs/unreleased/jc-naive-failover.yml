@@ -1,5 +1,0 @@
----
-title: Handle failover by catching SIGUSR1 signal
-merge_request: 1346
-author:
-type: other
