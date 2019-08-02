@@ -6,47 +6,12 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	diskcache "gitlab.com/gitlab-org/gitaly/internal/cache"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
 )
-
-var (
-	rpcTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "gitaly_cacheinvalidator_rpc_total",
-			Help: "Total number of RPCs encountered by cache invalidator",
-		},
-	)
-	rpcOpTypes = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "gitaly_cacheinvalidator_optype_total",
-			Help: "Total number of operation types encountered by cache invalidator",
-		},
-		[]string{"type"},
-	)
-)
-
-func init() {
-	prometheus.MustRegister(rpcTotal)
-	prometheus.MustRegister(rpcOpTypes)
-}
-
-func countRPCType(mInfo protoregistry.MethodInfo) {
-	rpcTotal.Inc()
-
-	switch mInfo.Operation {
-	case protoregistry.OpAccessor:
-		rpcOpTypes.WithLabelValues("accessor").Inc()
-	case protoregistry.OpMutator:
-		rpcOpTypes.WithLabelValues("mutator").Inc()
-	default:
-		rpcOpTypes.WithLabelValues("unknown").Inc()
-	}
-}
 
 // Invalidator is able to invalidate parts of the cache pertinent to a
 // specific repository. Before a repo mutating operation, StartLease should
