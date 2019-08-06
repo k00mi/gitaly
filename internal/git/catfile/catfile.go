@@ -45,6 +45,9 @@ const (
 	// CacheFeatureFlagKey is the feature flag key for catfile batch caching. This should match
 	// what is in gitlab-ce
 	CacheFeatureFlagKey = "catfile-cache"
+
+	// SessionIDField is the gRPC metadata field we use to store the gitaly session ID.
+	SessionIDField = "gitaly-session-id"
 )
 
 func init() {
@@ -146,7 +149,7 @@ func New(ctx context.Context, repo *gitalypb.Repository) (*Batch, error) {
 		return nil, err
 	}
 
-	sessionID := metadata.GetValue(ctx, "gitaly-session-id")
+	sessionID := metadata.GetValue(ctx, SessionIDField)
 	if sessionID == "" {
 		return newBatch(ctx, repoPath, env)
 	}
@@ -189,7 +192,20 @@ func returnWhenDone(done <-chan struct{}, bc *batchCache, cacheKey key, c *Batch
 	bc.Add(cacheKey, c)
 }
 
-func newBatch(ctx context.Context, repoPath string, env []string) (*Batch, error) {
+var injectSpawnErrors = false
+
+type simulatedBatchSpawnError struct{}
+
+func (simulatedBatchSpawnError) Error() string { return "simulated spawn error" }
+
+func newBatch(_ctx context.Context, repoPath string, env []string) (_ *Batch, err error) {
+	ctx, cancel := context.WithCancel(_ctx)
+	defer func() {
+		if err != nil {
+			cancel()
+		}
+	}()
+
 	batch, err := newBatchProcess(ctx, repoPath, env)
 	if err != nil {
 		return nil, err
