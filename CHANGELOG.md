@@ -1,5 +1,15 @@
 # Gitaly changelog
 
+## v1.57.0
+
+#### Fixed
+- Fix Praefect's mock service protobuf Go-stub file generation
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1400
+
+#### Performance
+- Add gRPC method scope to protoregistry
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1397
+
 ## v1.56.0
 
 #### Added

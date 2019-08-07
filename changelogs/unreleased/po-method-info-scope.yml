@@ -1,5 +1,0 @@
----
-title: Add gRPC method scope to protoregistry
-merge_request: 1397
-author:
-type: performance

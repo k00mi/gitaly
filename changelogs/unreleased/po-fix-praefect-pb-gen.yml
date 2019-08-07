@@ -1,5 +1,0 @@
----
-title: Fix Praefect's mock service protobuf Go-stub file generation
-merge_request: 1400
-author:
-type: fixed
