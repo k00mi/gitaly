@@ -41,7 +41,7 @@ func TestRenameRepositorySuccess(t *testing.T) {
 	require.True(t, helper.IsGitDirectory(newDirectory), "moved Git repository has been corrupted")
 
 	// ensure the git directory that got renamed contains a sha in the seed repo
-	testhelper.MustReachGitObject(t, newDirectory, "913c66a37b4a45b9769037c55c2d238bd0942d2e")
+	testhelper.GitObjectMustExist(t, newDirectory, "913c66a37b4a45b9769037c55c2d238bd0942d2e")
 }
 
 func TestRenameRepositoryDestinationExists(t *testing.T) {
@@ -68,7 +68,7 @@ func TestRenameRepositoryDestinationExists(t *testing.T) {
 	testhelper.RequireGrpcError(t, err, codes.FailedPrecondition)
 
 	// ensure the git directory that already existed didn't get overwritten
-	testhelper.MustReachGitObject(t, destinationRepoPath, sha)
+	testhelper.GitObjectMustExist(t, destinationRepoPath, sha)
 }
 
 func TestRenameRepositoryInvalidRequest(t *testing.T) {

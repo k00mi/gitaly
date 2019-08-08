@@ -409,7 +409,7 @@ func TestSuccessfulGetAllLFSPointersRequest(t *testing.T) {
 
 	// test with go implementation
 	// TODO: remove once feature flag is removed
-	c, err = client.GetAllLFSPointers(featureflag.EnableFeatureFlag(ctx, featureflag.GetAllLFSPointersGo), request)
+	c, err = client.GetAllLFSPointers(featureflag.ContextWithFeatureFlag(ctx, featureflag.GetAllLFSPointersGo), request)
 	require.NoError(t, err)
 
 	require.ElementsMatch(t, expectedLFSPointers, getAllPointers(t, c))
