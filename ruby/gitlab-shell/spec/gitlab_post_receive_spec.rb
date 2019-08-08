@@ -15,19 +15,11 @@ describe GitlabPostReceive do
   let(:gitlab_post_receive) { GitlabPostReceive.new(gl_repository, repo_path, actor, wrongly_encoded_changes, push_options) }
   let(:broadcast_message) { "test " * 10 + "message " * 10 }
   let(:enqueued_at) { Time.new(2016, 6, 23, 6, 59) }
-  let(:new_merge_request_urls) do
-    [{
-      'branch_name' => 'new_branch',
-      'url' => 'http://localhost/dzaporozhets/gitlab-ci/merge_requests/new?merge_request%5Bsource_branch%5D=new_branch',
-      'new_merge_request' => true
-    }]
+  let(:new_merge_request_message) do
+    "To create a merge request for new_branch, visit:\n  http://localhost/dzaporozhets/gitlab-ci/merge_requests/new?merge_request%5Bsource_branch%5D=new_branch"
   end
-  let(:existing_merge_request_urls) do
-    [{
-      'branch_name' => 'feature_branch',
-      'url' => 'http://localhost/dzaporozhets/gitlab-ci/merge_requests/1',
-      'new_merge_request' => false
-    }]
+  let(:existing_merge_request_message) do
+    "View merge request for feature_branch:\n  http://localhost/dzaporozhets/gitlab-ci/merge_requests/1"
   end
 
   before do
@@ -48,15 +40,18 @@ describe GitlabPostReceive do
       let(:response) do
         {
           'reference_counter_decreased' => true,
-          'merge_request_urls' => new_merge_request_urls,
-          'broadcast_message' => broadcast_message
+          'messages' => [
+            { 'type' => 'alert', 'message' => broadcast_message },
+            { 'type' => 'basic', 'message' => new_merge_request_message },
+          ]
         }
       end
 
-      it 'prints the merge request urls and broadcast message' do
+      it 'prints the merge request message and broadcast message' do
         expect_any_instance_of(GitlabNet).to receive(:post_receive).and_return(response)
+        assert_first_newline(gitlab_post_receive)
         assert_broadcast_message_printed(gitlab_post_receive)
-        assert_new_mr_printed(gitlab_post_receive)
+        assert_basic_message(gitlab_post_receive, new_merge_request_message)
 
         expect(gitlab_post_receive.exec).to eq(true)
       end
@@ -66,8 +61,9 @@ describe GitlabPostReceive do
 
         it 'doesnt truncate url' do
           expect_any_instance_of(GitlabNet).to receive(:post_receive).and_return(response)
+          assert_first_newline(gitlab_post_receive)
           assert_broadcast_message_printed_keep_long_url_end(gitlab_post_receive)
-          assert_new_mr_printed(gitlab_post_receive)
+          assert_basic_message(gitlab_post_receive, new_merge_request_message)
 
           expect(gitlab_post_receive.exec).to eq(true)
         end
@@ -78,8 +74,9 @@ describe GitlabPostReceive do
 
         it 'doesnt truncate url' do
           expect_any_instance_of(GitlabNet).to receive(:post_receive).and_return(response)
+          assert_first_newline(gitlab_post_receive)
           assert_broadcast_message_printed_keep_long_url_start(gitlab_post_receive)
-          assert_new_mr_printed(gitlab_post_receive)
+          assert_basic_message(gitlab_post_receive, new_merge_request_message)
 
           expect(gitlab_post_receive.exec).to eq(true)
         end
@@ -90,8 +87,9 @@ describe GitlabPostReceive do
 
         it 'doesnt truncate url' do
           expect_any_instance_of(GitlabNet).to receive(:post_receive).and_return(response)
+          assert_first_newline(gitlab_post_receive)
           assert_broadcast_message_printed_keep_long_url_middle(gitlab_post_receive)
-          assert_new_mr_printed(gitlab_post_receive)
+          assert_basic_message(gitlab_post_receive, new_merge_request_message)
 
           expect(gitlab_post_receive.exec).to eq(true)
         end
@@ -102,78 +100,100 @@ describe GitlabPostReceive do
       let(:response) do
         {
           'reference_counter_decreased' => true,
-          'warnings' => 'My warning message'
+          'messages' => [
+            { 'type' => 'alert', 'message' => "WARNINGS:\nMy warning message" }
+          ]
         }
       end
 
       it 'treats the warning as a broadcast message' do
         expect_any_instance_of(GitlabNet).to receive(:post_receive).and_return(response)
-        expect(gitlab_post_receive).to receive(:print_formatted_alert_message).with("WARNINGS:\nMy warning message")
+        expect(gitlab_post_receive).to receive(:print_alert).with("WARNINGS:\nMy warning message")
         expect(gitlab_post_receive.exec).to eq(true)
       end
     end
 
     context 'when redirected message available' do
-      let(:message) { "This is a redirected message" }
       let(:response) do
         {
           'reference_counter_decreased' => true,
-          'redirected_message' => message
+          'messages' => [
+            { 'type' => 'basic', 'message' => "This is a redirected message" }
+          ]
         }
       end
 
       it 'prints redirected message' do
         expect_any_instance_of(GitlabNet).to receive(:post_receive).and_return(response)
-        assert_redirected_message_printed(gitlab_post_receive)
+        assert_first_newline(gitlab_post_receive)
+        assert_basic_message(gitlab_post_receive, "This is a redirected message")
         expect(gitlab_post_receive.exec).to eq(true)
       end
+    end
 
-      context 'when project created message is available' do
-        let(:message) { "This is a created project message" }
-        let(:response) do
-          {
-            'reference_counter_decreased' => true,
-            'project_created_message' => message
-          }
-        end
+    context 'when project created message is available' do
+      let(:response) do
+        {
+          'reference_counter_decreased' => true,
+          'messages' => [
+            { 'type' => 'basic', 'message' => "This is a created project message" }
+          ]
+        }
+      end
 
-        it 'prints project created message' do
-          expect_any_instance_of(GitlabNet).to receive(:post_receive).and_return(response)
+      it 'prints project created message' do
+        expect_any_instance_of(GitlabNet).to receive(:post_receive).and_return(response)
 
-          assert_project_created_message_printed(gitlab_post_receive)
+        assert_first_newline(gitlab_post_receive)
+        assert_basic_message(gitlab_post_receive, "This is a created project message")
 
-          expect(gitlab_post_receive.exec).to be true
-        end
+        expect(gitlab_post_receive.exec).to be true
+      end
+    end
+
+    context 'when there are zero messages' do
+      let(:response) do
+        {
+          'reference_counter_decreased' => true,
+          'messages' => []
+        }
+      end
+
+      it 'does not print anything' do
+        expect_any_instance_of(GitlabNet).to receive(:post_receive).and_return(response)
+
+        expect(gitlab_post_receive).to_not receive(:puts)
+
+        expect(gitlab_post_receive.exec).to be true
+      end
+    end
+
+    context 'when there is no messages parameter' do
+      let(:response) do
+        {
+          'reference_counter_decreased' => true
+        }
+      end
+
+      it 'does not print anything' do
+        expect_any_instance_of(GitlabNet).to receive(:post_receive).and_return(response)
+
+        expect(gitlab_post_receive).to_not receive(:puts)
+
+        expect(gitlab_post_receive.exec).to be true
       end
     end
   end
 
   private
 
-  def assert_new_mr_printed(gitlab_post_receive)
-    expect(gitlab_post_receive).to receive(:puts).ordered
-    expect(gitlab_post_receive).to receive(:puts).with(
-      "To create a merge request for new_branch, visit:"
-    ).ordered
-    expect(gitlab_post_receive).to receive(:puts).with(
-      "  http://localhost/dzaporozhets/gitlab-ci/merge_requests/new?merge_request%5Bsource_branch%5D=new_branch"
-    ).ordered
-    expect(gitlab_post_receive).to receive(:puts).ordered
-  end
-
-  def assert_existing_mr_printed(gitlab_post_receive)
-    expect(gitlab_post_receive).to receive(:puts).ordered
-    expect(gitlab_post_receive).to receive(:puts).with(
-      "View merge request for feature_branch:"
-    ).ordered
-    expect(gitlab_post_receive).to receive(:puts).with(
-      "  http://localhost/dzaporozhets/gitlab-ci/merge_requests/1"
-    ).ordered
-    expect(gitlab_post_receive).to receive(:puts).ordered
-  end
-
+  # Red herring: If you see a test failure like this, it is more likely that the
+  # content of one of the puts does not match. It probably does not mean the
+  # puts are out of order.
+  #
+  # Failure/Error: puts message
+  #   #<GitlabPostReceive:0x00007f97e0843008 ...<snip>... received :puts out of order
   def assert_broadcast_message_printed(gitlab_post_receive)
-    expect(gitlab_post_receive).to receive(:puts).ordered
     expect(gitlab_post_receive).to receive(:puts).with(
       "========================================================================"
     ).ordered
@@ -190,18 +210,10 @@ describe GitlabPostReceive do
     expect(gitlab_post_receive).to receive(:puts).with(
       "========================================================================"
     ).ordered
-  end
-
-  def assert_redirected_message_printed(gitlab_post_receive)
-    expect(gitlab_post_receive).to receive(:puts).with("This is a redirected message")
-  end
-
-  def assert_project_created_message_printed(gitlab_post_receive)
-    expect(gitlab_post_receive).to receive(:puts).with("This is a created project message")
+    expect(gitlab_post_receive).to receive(:puts).ordered
   end
 
   def assert_broadcast_message_printed_keep_long_url_end(gitlab_post_receive)
-    expect(gitlab_post_receive).to receive(:puts).ordered
     expect(gitlab_post_receive).to receive(:puts).with(
       "========================================================================"
     ).ordered
@@ -222,10 +234,10 @@ describe GitlabPostReceive do
     expect(gitlab_post_receive).to receive(:puts).with(
       "========================================================================"
     ).ordered
+    expect(gitlab_post_receive).to receive(:puts).ordered
   end
 
   def assert_broadcast_message_printed_keep_long_url_start(gitlab_post_receive)
-    expect(gitlab_post_receive).to receive(:puts).ordered
     expect(gitlab_post_receive).to receive(:puts).with(
       "========================================================================"
     ).ordered
@@ -251,10 +263,10 @@ describe GitlabPostReceive do
     expect(gitlab_post_receive).to receive(:puts).with(
       "========================================================================"
     ).ordered
+    expect(gitlab_post_receive).to receive(:puts).ordered
   end
 
   def assert_broadcast_message_printed_keep_long_url_middle(gitlab_post_receive)
-    expect(gitlab_post_receive).to receive(:puts).ordered
     expect(gitlab_post_receive).to receive(:puts).with(
       "========================================================================"
     ).ordered
@@ -280,5 +292,15 @@ describe GitlabPostReceive do
     expect(gitlab_post_receive).to receive(:puts).with(
       "========================================================================"
     ).ordered
+    expect(gitlab_post_receive).to receive(:puts).ordered
+  end
+
+  def assert_basic_message(gitlab_post_receive, message)
+    expect(gitlab_post_receive).to receive(:puts).with(message).ordered
+    expect(gitlab_post_receive).to receive(:puts).ordered
+  end
+
+  def assert_first_newline(gitlab_post_receive)
+    expect(gitlab_post_receive).to receive(:puts).ordered
   end
 end
