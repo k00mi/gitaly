@@ -1,13 +1,16 @@
 package commit
 
 import (
+	"context"
 	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 )
 
 func TestSuccessfulGetCommitSignaturesRequest(t *testing.T) {
@@ -30,11 +33,9 @@ func TestSuccessfulGetCommitSignaturesRequest(t *testing.T) {
 			"e63f41fe459e62e1228fcef60d7189127aeba95a", // has no signature
 			"0000000000000000000000000000000000000000", // does not exist
 			"a17a9f66543673edf0a3d1c6b93bdda3fe600f32", // has signature
+			"8cf8e80a5a0546e391823c250f2b26b9cf15ce88", // has signature and commit message > 4MB
 		},
 	}
-
-	c, err := client.GetCommitSignatures(ctx, request)
-	require.NoError(t, err)
 
 	expectedSignautes := []*gitalypb.GetCommitSignaturesResponse{
 		{
@@ -47,10 +48,30 @@ func TestSuccessfulGetCommitSignaturesRequest(t *testing.T) {
 			Signature:  testhelper.MustReadFile(t, "testdata/gitlab-test-commit-a17a9f66543673edf0a3d1c6b93bdda3fe600f32-signature"),
 			SignedText: testhelper.MustReadFile(t, "testdata/gitlab-test-commit-a17a9f66543673edf0a3d1c6b93bdda3fe600f32-signed-text"),
 		},
+		{
+			CommitId:   "8cf8e80a5a0546e391823c250f2b26b9cf15ce88",
+			Signature:  testhelper.MustReadFile(t, "testdata/gitaly-test-commit-8cf8e80a5a0546e391823c250f2b26b9cf15ce88-signature"),
+			SignedText: testhelper.MustReadFile(t, "testdata/gitaly-test-commit-8cf8e80a5a0546e391823c250f2b26b9cf15ce88-signed-text"),
+		},
 	}
-	fetchedSignatures := readAllSignaturesFromClient(t, c)
 
-	require.Equal(t, expectedSignautes, fetchedSignatures)
+	flagDisabled := metadata.New(map[string]string{featureflag.HeaderKey(getCommitSignaturesFeatureFlag): "false"})
+	ctxWithFlagDisabled := metadata.NewOutgoingContext(ctx, flagDisabled)
+
+	flagEnabled := metadata.New(map[string]string{featureflag.HeaderKey(getCommitSignaturesFeatureFlag): "true"})
+	ctxWithFlagEnabled := metadata.NewOutgoingContext(ctx, flagEnabled)
+
+	// Test contexts with feature flag nil, enabled and disabled
+	testContexts := []context.Context{ctx, ctxWithFlagEnabled, ctxWithFlagDisabled}
+
+	for _, context := range testContexts {
+		c, err := client.GetCommitSignatures(context, request)
+		require.NoError(t, err)
+
+		fetchedSignatures := readAllSignaturesFromClient(t, c)
+
+		require.Equal(t, expectedSignautes, fetchedSignatures)
+	}
 }
 
 func TestFailedGetCommitSignaturesRequest(t *testing.T) {
@@ -121,6 +142,7 @@ func readAllSignaturesFromClient(t *testing.T, c gitalypb.CommitService_GetCommi
 		}
 
 		currentSignature := signatures[len(signatures)-1]
+
 		if len(resp.Signature) != 0 {
 			currentSignature.Signature = append(currentSignature.Signature, resp.Signature...)
 		} else if len(resp.SignedText) != 0 {

@@ -1,0 +1,5 @@
+---
+title: Port GetCommitSignatures to Go
+merge_request: 1283
+author:
+type: added
