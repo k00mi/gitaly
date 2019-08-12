@@ -9,13 +9,19 @@ repository snapshots in SQL and object storage (e.g. S3).
 
 Key properties:
 
--   SQL decides the state of all repositories in a SnapGraph cluster
+-   SQL decides the state of all repositories in snapshot storage: if
+    there is no SQL record for a repository, it doesn't exist
 -   Git data (objects and refs) is stored as cold "snapshots" in object
     storage
 -   snapshots can have a "parent", so a repository is stored as a linked
     list of snapshots
 -   to use the repository it must first be copied down to a local
     filesystem
+
+Possible applications:
+
+-   incremental repository backups
+-   cold storage for repositories
 
 ## Primitives
 
