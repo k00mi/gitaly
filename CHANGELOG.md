@@ -1,5 +1,8 @@
 # Gitaly changelog
 
+## v1.59.0
+
+
 ## v1.58.1
 
 #### Added
