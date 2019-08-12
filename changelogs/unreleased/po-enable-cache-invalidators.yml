@@ -1,5 +1,0 @@
----
-title: Enable disk cache invalidator gRPC interceptors
-merge_request: 1373
-author:
-type: performance

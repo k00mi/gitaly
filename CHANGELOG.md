@@ -1,5 +1,25 @@
 # Gitaly changelog
 
+## v1.58.1
+
+#### Added
+- Port GetCommitSignatures to Go
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1283
+
+#### Other
+- Update gitlab-labkit to 0.4.2
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1412
+
+#### Performance
+- Enable disk cache invalidator gRPC interceptors
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1373
+
+#### Security
+- Bump nokogiri to 1.10.4
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1415
+- Fix FindCommits flag injection exploit
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/31
+
 ## v1.58.0
 
 #### Fixed
