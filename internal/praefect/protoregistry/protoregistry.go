@@ -17,7 +17,14 @@ import (
 )
 
 // GitalyProtoFileDescriptors is a slice of all gitaly registered file descriptors
-var GitalyProtoFileDescriptors []*descriptor.FileDescriptorProto
+var (
+	// GitalyProtoFileDescriptors is a slice of all gitaly registered file
+	// descriptors
+	GitalyProtoFileDescriptors []*descriptor.FileDescriptorProto
+	// GitalyProtoPreregistered is a proto registry pre-registered with all
+	// GitalyProtoFileDescriptors file descriptor protos
+	GitalyProtoPreregistered *Registry
+)
 
 func init() {
 	for _, protoName := range gitalypb.GitalyProtos {
@@ -28,6 +35,11 @@ func init() {
 		}
 
 		GitalyProtoFileDescriptors = append(GitalyProtoFileDescriptors, fd)
+	}
+
+	GitalyProtoPreregistered = New()
+	if err := GitalyProtoPreregistered.RegisterFiles(GitalyProtoFileDescriptors...); err != nil {
+		panic(err)
 	}
 }
 

@@ -13,11 +13,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	diskcache "gitlab.com/gitlab-org/gitaly/internal/cache"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/cache"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/cache/testdata"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 //go:generate make testdata/stream.pb.go
@@ -42,6 +44,8 @@ func TestInvalidators(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
+
+	ctx = enableCache(ctx)
 
 	svc := &testSvc{}
 
@@ -117,6 +121,12 @@ func TestInvalidators(t *testing.T) {
 	require.Equal(t, expectedInvalidations, mCache.(*mockCache).invalidatedRepos)
 	require.Equal(t, expectedSvcRequests, svc.repoRequests)
 	require.Equal(t, 3, mCache.(*mockCache).endedLeases.count)
+}
+
+func enableCache(ctx context.Context) context.Context {
+	return metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{
+		featureflag.HeaderKey(cache.FeatureFlag): "true",
+	}))
 }
 
 // mockCache allows us to relay back via channel which repos are being

@@ -6,47 +6,13 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	diskcache "gitlab.com/gitlab-org/gitaly/internal/cache"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
 )
-
-var (
-	rpcTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "gitaly_cacheinvalidator_rpc_total",
-			Help: "Total number of RPCs encountered by cache invalidator",
-		},
-	)
-	rpcOpTypes = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "gitaly_cacheinvalidator_optype_total",
-			Help: "Total number of operation types encountered by cache invalidator",
-		},
-		[]string{"type"},
-	)
-)
-
-func init() {
-	prometheus.MustRegister(rpcTotal)
-	prometheus.MustRegister(rpcOpTypes)
-}
-
-func countRPCType(mInfo protoregistry.MethodInfo) {
-	rpcTotal.Inc()
-
-	switch mInfo.Operation {
-	case protoregistry.OpAccessor:
-		rpcOpTypes.WithLabelValues("accessor").Inc()
-	case protoregistry.OpMutator:
-		rpcOpTypes.WithLabelValues("mutator").Inc()
-	default:
-		rpcOpTypes.WithLabelValues("unknown").Inc()
-	}
-}
 
 // Invalidator is able to invalidate parts of the cache pertinent to a
 // specific repository. Before a repo mutating operation, StartLease should
@@ -56,21 +22,38 @@ type Invalidator interface {
 	StartLease(repo *gitalypb.Repository) (diskcache.LeaseEnder, error)
 }
 
+// FeatureFlag enables the cache invalidator
+const FeatureFlag = "cache-invalidator"
+
+func methodErrLogger(method string) func(error) {
+	return func(err error) {
+		countMethodErr(method)
+		logrus.WithField("full_method_name", method).Error(err)
+	}
+}
+
 // StreamInvalidator will invalidate any mutating RPC that targets a
 // repository in a gRPC stream based RPC
 func StreamInvalidator(ci Invalidator, reg *protoregistry.Registry) grpc.StreamServerInterceptor {
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-		mInfo, err := reg.LookupMethod(info.FullMethod)
-		countRPCType(mInfo)
-		if err != nil {
-			logrus.WithField("FullMethodName", info.FullMethod).Errorf("unable to lookup method information for %+v", info)
-		}
-
-		if mInfo.Operation == protoregistry.OpAccessor {
+		if !featureflag.IsEnabled(ss.Context(), FeatureFlag) {
 			return handler(srv, ss)
 		}
 
-		handler, callback := invalidateCache(ci, mInfo, handler)
+		errLogger := methodErrLogger(info.FullMethod)
+
+		mInfo, err := reg.LookupMethod(info.FullMethod)
+		countRPCType(mInfo)
+		if err != nil {
+			errLogger(err)
+			return handler(srv, ss)
+		}
+
+		if mInfo.Scope != protoregistry.ScopeRepository || mInfo.Operation == protoregistry.OpAccessor {
+			return handler(srv, ss)
+		}
+
+		handler, callback := invalidateCache(ci, mInfo, handler, errLogger)
 		peeker := newStreamPeeker(ss, callback)
 		return handler(srv, peeker)
 	}
@@ -80,36 +63,46 @@ func StreamInvalidator(ci Invalidator, reg *protoregistry.Registry) grpc.StreamS
 // repository in a gRPC unary RPC
 func UnaryInvalidator(ci Invalidator, reg *protoregistry.Registry) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+		if !featureflag.IsEnabled(ctx, FeatureFlag) {
+			return handler(ctx, req)
+		}
+
+		errLogger := methodErrLogger(info.FullMethod)
+
 		mInfo, err := reg.LookupMethod(info.FullMethod)
 		countRPCType(mInfo)
 		if err != nil {
-			logrus.WithField("full_method_name", info.FullMethod).Errorf("unable to lookup method information for %+v", info)
+			errLogger(err)
+			return handler(ctx, req)
 		}
 
-		if mInfo.Operation == protoregistry.OpAccessor {
+		if mInfo.Scope != protoregistry.ScopeRepository || mInfo.Operation == protoregistry.OpAccessor {
 			return handler(ctx, req)
 		}
 
 		pbReq, ok := req.(proto.Message)
 		if !ok {
-			return nil, fmt.Errorf("cache invalidation expected protobuf request, but got %T", req)
+			errLogger(fmt.Errorf("expected protobuf message but got %T", req))
+			return handler(ctx, req)
 		}
 
 		target, err := mInfo.TargetRepo(pbReq)
 		if err != nil {
-			return nil, err
+			errLogger(err)
+			return handler(ctx, req)
 		}
 
 		le, err := ci.StartLease(target)
 		if err != nil {
-			return nil, err
+			errLogger(err)
+			return handler(ctx, req)
 		}
 
 		// wrap the handler to ensure the lease is always ended
 		return func() (resp interface{}, err error) {
 			defer func() {
 				if err := le.EndLease(ctx); err != nil {
-					logrus.Errorf("unable to end lease: %q", err)
+					errLogger(err)
 				}
 			}()
 			return handler(ctx, req)
@@ -117,9 +110,9 @@ func UnaryInvalidator(ci Invalidator, reg *protoregistry.Registry) grpc.UnarySer
 	}
 }
 
-type recvMsgCallback func(interface{}, error) error
+type recvMsgCallback func(interface{}, error)
 
-func invalidateCache(ci Invalidator, mInfo protoregistry.MethodInfo, handler grpc.StreamHandler) (grpc.StreamHandler, recvMsgCallback) {
+func invalidateCache(ci Invalidator, mInfo protoregistry.MethodInfo, handler grpc.StreamHandler, errLogger func(error)) (grpc.StreamHandler, recvMsgCallback) {
 	var le struct {
 		sync.RWMutex
 		diskcache.LeaseEnder
@@ -135,7 +128,7 @@ func invalidateCache(ci Invalidator, mInfo protoregistry.MethodInfo, handler grp
 				return
 			}
 			if err := le.EndLease(stream.Context()); err != nil {
-				logrus.Errorf("unable to end lease: %q", err)
+				errLogger(err)
 			}
 		}()
 		return handler(srv, stream)
@@ -143,19 +136,22 @@ func invalidateCache(ci Invalidator, mInfo protoregistry.MethodInfo, handler grp
 
 	// starts the cache lease and sets the lease ender iff the request's target
 	// repository can be determined from the first request message
-	peekerCallback := func(firstReq interface{}, err error) error {
+	peekerCallback := func(firstReq interface{}, err error) {
 		if err != nil {
-			return err
+			errLogger(err)
+			return
 		}
 
 		pbFirstReq, ok := firstReq.(proto.Message)
 		if !ok {
-			return fmt.Errorf("cache invalidation expected protobuf request, but got %T", firstReq)
+			errLogger(fmt.Errorf("cache invalidation expected protobuf request, but got %T", firstReq))
+			return
 		}
 
 		target, err := mInfo.TargetRepo(pbFirstReq)
 		if err != nil {
-			return err
+			errLogger(err)
+			return
 		}
 
 		le.Lock()
@@ -163,10 +159,9 @@ func invalidateCache(ci Invalidator, mInfo protoregistry.MethodInfo, handler grp
 
 		le.LeaseEnder, err = ci.StartLease(target)
 		if err != nil {
-			return err
+			errLogger(err)
+			return
 		}
-
-		return nil
 	}
 
 	return wrappedHandler, peekerCallback
@@ -197,11 +192,6 @@ func newStreamPeeker(stream grpc.ServerStream, callback recvMsgCallback) grpc.Se
 // that the callback is called on the first call.
 func (sp *streamPeeker) RecvMsg(m interface{}) error {
 	err := sp.ServerStream.RecvMsg(m)
-	sp.onFirstRecvOnce.Do(func() {
-		err := sp.onFirstRecvCallback(m, err)
-		if err != nil {
-			logrus.Errorf("unable to invalidate cache: %q", err)
-		}
-	})
+	sp.onFirstRecvOnce.Do(func() { sp.onFirstRecvCallback(m, err) })
 	return err
 }
