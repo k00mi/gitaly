@@ -49,9 +49,12 @@ security patches by restricting the pushes to `dev.gitlab.org` hosted origins.
 As a sanity check, you can verify your repository only points to remotes in
 `dev.gitlab.org` by running: `git remote -v`
 
-1. **Contributors:** Start your security merge request against master in Gitaly
-   in dev. Once finished and approved, **DO NOT MERGE**. Merging into master
-   will happen later after the security release is public.
+1. **Contributors:**
+   - Start your security merge request against master in Gitaly on dev.gitlab.org
+   - Your branch name should start with `security-` to prevent unwanted
+     disclosures on the public gitlab.com (this branch name pattern is protected).
+   - Once finished and approved, **DO NOT MERGE**. Merging into master
+     will happen later after the security release is public.
 1. **Contributors:** For each supported version of GitLab-CE, note what version
    of Gitaly you're backporting by opening
    [`GITALY_SERVER_VERSION`][gitaly-ce-version] and perform the following:
@@ -75,7 +78,9 @@ As a sanity check, you can verify your repository only points to remotes in
         1. Upon successful vetting of the release, the script will provide a
            command for you to actually push the tag
     1. **Contributors:** Bump `GITALY_SERVER_VERSION` on the client
-       (gitlab-rails) in each backported merge request against GitLab-CE.
+       (gitlab-rails) in each backported merge request against both
+       [GitLab-CE](https://dev.gitlab.org/gitlab/gitlabhq)
+       and [GitLab-EE](https://dev.gitlab.org/gitlab/gitlab-ee).
         - Follow the [usual security process](https://gitlab.com/gitlab-org/release/docs/blob/master/general/security/developer.md)
 1. Only after the security release occurs and the details are made public:
     1. **Contributors:** Merge in your request against master on dev.gitlab.com
