@@ -1,0 +1,5 @@
+---
+title: Add back old env vars for backwards compatibility
+merge_request: 1367
+author:
+type: other
