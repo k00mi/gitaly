@@ -28,18 +28,21 @@ func TestSuccessfulGetBlobsRequest(t *testing.T) {
 			Size: 22846,
 			Oid:  "53855584db773c3df5b5f61f72974cb298822fbb",
 			Mode: 0100644,
+			Type: gitalypb.ObjectType_BLOB,
 		},
 		{
 			Path: []byte("files/lfs/lfs_object.iso"),
 			Size: 133,
 			Oid:  "0c304a93cb8430108629bbbcaa27db3343299bc0",
 			Mode: 0100644,
+			Type: gitalypb.ObjectType_BLOB,
 		},
 		{
 			Path: []byte("files/big-lorem.txt"),
 			Size: 30602785,
 			Oid:  "c9d591740caed845a78ed529fadb3fb96c920cb2",
 			Mode: 0100644,
+			Type: gitalypb.ObjectType_BLOB,
 		},
 		{
 			Path:        []byte("six"),
@@ -47,6 +50,15 @@ func TestSuccessfulGetBlobsRequest(t *testing.T) {
 			Oid:         "409f37c4f05865e4fb208c771485f211a22c4c2d",
 			Mode:        0160000,
 			IsSubmodule: true,
+			Type:        gitalypb.ObjectType_COMMIT,
+		},
+		{
+			Path:        []byte("files"),
+			Size:        268,
+			Oid:         "21cac26406a56d724ad3eeed4f90cf9b48edb992",
+			Mode:        0040000,
+			IsSubmodule: false,
+			Type:        gitalypb.ObjectType_TREE,
 		},
 	}
 	revision := "ef16b8d2b204706bd8dc211d4011a5bffb6fc0c2"
@@ -101,10 +113,10 @@ func TestSuccessfulGetBlobsRequest(t *testing.T) {
 			require.Equal(t, 2, len(nonExistentBlobs))
 			require.Equal(t, len(expectedBlobs), len(receivedBlobs))
 
-			for i, receviedBlob := range receivedBlobs {
+			for i, receivedBlob := range receivedBlobs {
 				expectedBlob := expectedBlobs[i]
 				expectedBlob.Revision = revision
-				if !expectedBlob.IsSubmodule {
+				if !expectedBlob.IsSubmodule && expectedBlob.Type == gitalypb.ObjectType_BLOB {
 					expectedBlob.Data = testhelper.MustReadFile(t, path.Join(testRepoPath, "blobs-sandbox", string(expectedBlob.Path)))
 				}
 				if limit == 0 {
@@ -114,7 +126,7 @@ func TestSuccessfulGetBlobsRequest(t *testing.T) {
 					expectedBlob.Data = expectedBlob.Data[:limit]
 				}
 
-				require.Equal(t, expectedBlob, receviedBlob)
+				require.Equal(t, expectedBlob, receivedBlob)
 			}
 		})
 	}

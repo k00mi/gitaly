@@ -13,6 +13,11 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+var treeEntryToObjectType = map[gitalypb.TreeEntry_EntryType]gitalypb.ObjectType{
+	gitalypb.TreeEntry_BLOB:   gitalypb.ObjectType_BLOB,
+	gitalypb.TreeEntry_TREE:   gitalypb.ObjectType_TREE,
+	gitalypb.TreeEntry_COMMIT: gitalypb.ObjectType_COMMIT}
+
 func sendGetBlobsResponse(req *gitalypb.GetBlobsRequest, stream gitalypb.BlobService_GetBlobsServer, c *catfile.Batch) error {
 	tef := commit.NewTreeEntryFinder(c)
 
@@ -40,6 +45,7 @@ func sendGetBlobsResponse(req *gitalypb.GetBlobsRequest, stream gitalypb.BlobSer
 
 		if treeEntry.Type == gitalypb.TreeEntry_COMMIT {
 			response.IsSubmodule = true
+			response.Type = gitalypb.ObjectType_COMMIT
 
 			if err := stream.Send(response); err != nil {
 				return status.Errorf(codes.Unavailable, "GetBlobs: send: %v", err)
@@ -52,54 +58,74 @@ func sendGetBlobsResponse(req *gitalypb.GetBlobsRequest, stream gitalypb.BlobSer
 		if err != nil {
 			return status.Errorf(codes.Internal, "GetBlobs: %v", err)
 		}
-		if objectInfo.Type != "blob" {
-			return status.Errorf(codes.InvalidArgument, "GetBlobs: object at %s:%s is %s, not blob", revision, path, objectInfo.Type)
-		}
 
 		response.Size = objectInfo.Size
 
-		var readLimit int64
-		if req.Limit < 0 || req.Limit > objectInfo.Size {
-			readLimit = objectInfo.Size
-		} else {
-			readLimit = req.Limit
+		var ok bool
+		response.Type, ok = treeEntryToObjectType[treeEntry.Type]
+
+		if !ok {
+			continue
 		}
 
-		// For correctness it does not matter, but for performance, the order is
-		// important: first check if readlimit == 0, if not, only then create
-		// blobReader.
-		if readLimit == 0 {
+		if response.Type != gitalypb.ObjectType_BLOB {
 			if err := stream.Send(response); err != nil {
 				return status.Errorf(codes.Unavailable, "GetBlobs: send: %v", err)
 			}
 			continue
 		}
 
-		blobReader, err := c.Blob(objectInfo.Oid)
-		if err != nil {
-			return status.Errorf(codes.Internal, "GetBlobs: %v", err)
+		if err = sendBlobTreeEntry(response, stream, c, req.GetLimit()); err != nil {
+			return err
 		}
+	}
 
-		sw := streamio.NewWriter(func(p []byte) error {
-			msg := &gitalypb.GetBlobsResponse{}
-			if response != nil {
-				msg = response
-				response = nil
-			}
+	return nil
+}
 
-			msg.Data = p
+func sendBlobTreeEntry(response *gitalypb.GetBlobsResponse, stream gitalypb.BlobService_GetBlobsServer, c *catfile.Batch, limit int64) error {
 
-			return stream.Send(msg)
-		})
+	var readLimit int64
+	if limit < 0 || limit > response.Size {
+		readLimit = response.Size
+	} else {
+		readLimit = limit
+	}
 
-		_, err = io.CopyN(sw, blobReader, readLimit)
-		if err != nil {
+	// For correctness it does not matter, but for performance, the order is
+	// important: first check if readlimit == 0, if not, only then create
+	// blobReader.
+	if readLimit == 0 {
+		if err := stream.Send(response); err != nil {
 			return status.Errorf(codes.Unavailable, "GetBlobs: send: %v", err)
 		}
+		return nil
+	}
 
-		if _, err := io.Copy(ioutil.Discard, blobReader); err != nil {
-			return status.Errorf(codes.Unavailable, "GetBlobs: discarding data: %v", err)
+	blobReader, err := c.Blob(response.Oid)
+	if err != nil {
+		return status.Errorf(codes.Internal, "GetBlobs: %v", err)
+	}
+
+	sw := streamio.NewWriter(func(p []byte) error {
+		msg := &gitalypb.GetBlobsResponse{}
+		if response != nil {
+			msg = response
+			response = nil
 		}
+
+		msg.Data = p
+
+		return stream.Send(msg)
+	})
+
+	_, err = io.CopyN(sw, blobReader, readLimit)
+	if err != nil {
+		return status.Errorf(codes.Unavailable, "GetBlobs: send: %v", err)
+	}
+
+	if _, err := io.Copy(ioutil.Discard, blobReader); err != nil {
+		return status.Errorf(codes.Unavailable, "GetBlobs: discarding data: %v", err)
 	}
 
 	return nil
