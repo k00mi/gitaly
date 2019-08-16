@@ -26,4 +26,8 @@ For configuration please read [praefects configuration documentation](doc/config
 
 #### Technical explanations
 
-- [Delta Islands](doc/delta_islands.md)
+- [Delta Islands](delta_islands.md)
+
+#### Proposals
+
+- [Snapshot storage](proposals/snapshot-storage.md)
