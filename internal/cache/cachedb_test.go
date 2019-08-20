@@ -11,8 +11,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/cache"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 )
 
 func TestStreamDBNaiveKeyer(t *testing.T) {
@@ -21,7 +19,7 @@ func TestStreamDBNaiveKeyer(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	ctx = setMockMethodCtx(ctx, "InfoRefsUploadPack")
+	ctx = testhelper.SetCtxGrpcMethod(ctx, "InfoRefsUploadPack")
 
 	testRepo1, _, cleanup1 := testhelper.NewTestRepo(t)
 	defer cleanup1()
@@ -104,16 +102,3 @@ func TestStreamDBNaiveKeyer(t *testing.T) {
 	require.NoError(t, repo1Lease.EndLease(ctx))
 	expectGetMiss(req1)
 }
-
-func setMockMethodCtx(ctx context.Context, method string) context.Context {
-	return grpc.NewContextWithServerTransportStream(ctx, mockServerTransportStream{method})
-}
-
-type mockServerTransportStream struct {
-	method string
-}
-
-func (msts mockServerTransportStream) Method() string             { return msts.method }
-func (mockServerTransportStream) SetHeader(md metadata.MD) error  { return nil }
-func (mockServerTransportStream) SendHeader(md metadata.MD) error { return nil }
-func (mockServerTransportStream) SetTrailer(md metadata.MD) error { return nil }

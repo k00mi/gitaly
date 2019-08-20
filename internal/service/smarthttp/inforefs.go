@@ -16,18 +16,26 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const (
+	uploadPackSvc  = "upload-pack"
+	receivePackSvc = "receive-pack"
+)
+
 func (s *server) InfoRefsUploadPack(in *gitalypb.InfoRefsRequest, stream gitalypb.SmartHTTPService_InfoRefsUploadPackServer) error {
 	w := streamio.NewWriter(func(p []byte) error {
 		return stream.Send(&gitalypb.InfoRefsResponse{Data: p})
 	})
-	return handleInfoRefs(stream.Context(), "upload-pack", in, w)
+
+	return tryCache(stream.Context(), in, w, func(w io.Writer) error {
+		return handleInfoRefs(stream.Context(), uploadPackSvc, in, w)
+	})
 }
 
 func (s *server) InfoRefsReceivePack(in *gitalypb.InfoRefsRequest, stream gitalypb.SmartHTTPService_InfoRefsReceivePackServer) error {
 	w := streamio.NewWriter(func(p []byte) error {
 		return stream.Send(&gitalypb.InfoRefsResponse{Data: p})
 	})
-	return handleInfoRefs(stream.Context(), "receive-pack", in, w)
+	return handleInfoRefs(stream.Context(), receivePackSvc, in, w)
 }
 
 func handleInfoRefs(ctx context.Context, service string, req *gitalypb.InfoRefsRequest, w io.Writer) error {
