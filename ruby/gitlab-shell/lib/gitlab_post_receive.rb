@@ -1,14 +1,15 @@
 require_relative 'gitlab_init'
 require_relative 'gitlab_net'
 require_relative 'gitlab_metrics'
+require_relative 'message'
 require 'json'
 require 'base64'
 require 'securerandom'
 
 class GitlabPostReceive
-  attr_reader :config, :gl_repository, :repo_path, :changes, :jid
+  attr_reader :config, :gl_repository, :repo_path, :changes, :jid, :output_stream
 
-  def initialize(gl_repository, repo_path, actor, changes, push_options)
+  def initialize(gl_repository, repo_path, actor, changes, push_options, output_stream = $stdout)
     @config = GitlabConfig.new
     @gl_repository = gl_repository
     @repo_path = repo_path.strip
@@ -16,6 +17,7 @@ class GitlabPostReceive
     @changes = changes
     @push_options = push_options
     @jid = SecureRandom.hex(12)
+    @output_stream = output_stream
   end
 
   def exec
@@ -24,11 +26,11 @@ class GitlabPostReceive
     end
 
     return false unless response
-    print_formatted_alert_message(response['broadcast_message']) if response['broadcast_message']
-    print_merge_request_links(response['merge_request_urls']) if response['merge_request_urls']
-    puts response['redirected_message'] if response['redirected_message']
-    puts response['project_created_message'] if response['project_created_message']
-    print_warnings(response['warnings']) if response['warnings']
+
+    # Deprecated message format for backwards-compatibility
+    print_gitlab_12_2_messages(response)
+
+    print_messages(response['messages'])
 
     response['reference_counter_decreased']
   rescue GitlabNet::ApiUnreachableError
@@ -41,12 +43,31 @@ class GitlabPostReceive
     @api ||= GitlabNet.new
   end
 
+  # Deprecated message format for backwards-compatibility
+  def print_gitlab_12_2_messages(response)
+    if response['broadcast_message']
+      puts
+      print_alert(response['broadcast_message'])
+    end
+
+    print_merge_request_links(response['merge_request_urls']) if response['merge_request_urls']
+    puts response['redirected_message'] if response['redirected_message']
+    puts response['project_created_message'] if response['project_created_message']
+
+    if response['warnings']
+      puts
+      print_warnings(response['warnings'])
+    end
+  end
+
+  # Deprecated message format for backwards-compatibility
   def print_merge_request_links(merge_request_urls)
     return if merge_request_urls.empty?
     puts
     merge_request_urls.each { |mr| print_merge_request_link(mr) }
   end
 
+  # Deprecated message format for backwards-compatibility
   def print_merge_request_link(merge_request)
     message =
       if merge_request["new_merge_request"]
@@ -60,66 +81,32 @@ class GitlabPostReceive
     puts
   end
 
+  # Deprecated message format for backwards-compatibility
   def print_warnings(warnings)
     message = "WARNINGS:\n#{warnings}"
-    print_formatted_alert_message(message)
+    print_alert(message)
+    puts
   end
 
-  def print_formatted_alert_message(message)
-    # A standard terminal window is (at least) 80 characters wide.
-    total_width = 80
+  def print_alert(message)
+    Message.new('alert', message).print(output_stream)
+  end
 
-    # Git prefixes remote messages with "remote: ", so this width is subtracted
-    # from the width available to us.
-    total_width -= "remote: ".length # rubocop:disable Performance/FixedSize
+  def print_messages(response_messages)
+    return if response_messages.nil? || response_messages.none?
 
-    # Our centered text shouldn't start or end right at the edge of the window,
-    # so we add some horizontal padding: 2 chars on either side.
-    text_width = total_width - 2 * 2
+    puts
 
-    # Automatically wrap message at text_width (= 68) characters:
-    # Splits the message up into the longest possible chunks matching
-    # "<between 0 and text_width characters><space or end-of-line>".
+    response_messages.each do |response_message|
+      Message.new(response_message['type'], response_message['message']).print(output_stream)
 
-    msg_start_idx = 0
-    lines = []
-    while msg_start_idx < message.length
-      parsed_line = parse_broadcast_msg(message[msg_start_idx..-1], text_width)
-      msg_start_idx += parsed_line.length
-      lines.push(parsed_line.strip)
+      puts
     end
-
-    puts
-    puts "=" * total_width
-    puts
-
-    lines.each do |line|
-      line.strip!
-
-      # Center the line by calculating the left padding measured in characters.
-      line_padding = [(total_width - line.length) / 2, 0].max
-      puts((" " * line_padding) + line)
-    end
-
-    puts
-    puts "=" * total_width
   end
 
   private
 
-  def parse_broadcast_msg(msg, text_length)
-    msg ||= ""
-    # just return msg if shorter than or equal to text length
-    return msg if msg.length <= text_length
-
-    # search for word break shorter than text length
-    truncate_to_space = msg.match(/\A(.{,#{text_length}})(?=\s|$)(\s*)/).to_s
-
-    if truncate_to_space.empty?
-      # search for word break longer than text length
-      truncate_to_space = msg.match(/\A\S+/).to_s
-    end
-
-    truncate_to_space
+  def puts(*args)
+    output_stream.puts(*args)
   end
 end
