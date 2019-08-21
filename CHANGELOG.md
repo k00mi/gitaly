@@ -1,5 +1,41 @@
 # Gitaly changelog
 
+## v1.60.0
+
+#### Added
+- Praefect data model changes with replication
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1399
+- Include process PID in log messages
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1422
+
+#### Changed
+- Make it easier to add new kinds of internal post receive messages
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1410
+
+#### Fixed
+- Validate commitIDs parameter for get_commit_signatures RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1428
+
+#### Other
+- Update ffi gem to 1.11.1
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/
+- Add back old env vars for backwards compatibility
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1367
+- Pass through GOPATH to control cache location
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1436
+
+#### Performance
+- Port GetAllLFSPointers to go
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1414
+- FindTag RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1409
+- Disk cache object directory initial clear
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1424
+
+#### Security
+- Upgrade Rugged to 0.28.3.1
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1427
+
 ## v1.59.0
 
 #### Added
