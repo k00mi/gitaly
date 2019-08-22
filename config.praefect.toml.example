@@ -5,8 +5,6 @@ listen_addr = "127.0.0.1:2305"
 
 # # Praefect can listen on a socket when placed on the same machine as all clients
 # socket_path = "/home/git/gitlab/tmp/sockets/private/praefect.socket"
-# # Praefect will only replicate whitelisted repositories
-# whitelist = ["@hashed/3f/db/3fdba35f04dc8c462986c992bcf875546257113072a909c162f7e470e581e278.git"]
 # # Optional: export metrics via Prometheus
 # prometheus_listen_addr = "127.0.01:10101"
 
