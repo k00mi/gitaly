@@ -232,7 +232,8 @@ func New(ctx context.Context, cmd *exec.Cmd, stdin io.Reader, stdout, stderr io.
 	}
 
 	if stderr != nil {
-		command.stderrCloser = escapeNewlineWriter(&noopWriteCloser{stderr}, command.stderrDone, MaxStderrBytes)
+		command.stderrCloser = &noopWriteCloser{stderr}
+		close(command.stderrDone)
 	} else {
 		command.stderrCloser = escapeNewlineWriter(grpc_logrus.Extract(ctx).WriterLevel(log.ErrorLevel), command.stderrDone, MaxStderrBytes)
 	}
