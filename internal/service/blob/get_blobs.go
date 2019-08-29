@@ -1,6 +1,7 @@
 package blob
 
 import (
+	"bytes"
 	"io"
 	"io/ioutil"
 
@@ -24,6 +25,10 @@ func sendGetBlobsResponse(req *gitalypb.GetBlobsRequest, stream gitalypb.BlobSer
 	for _, revisionPath := range req.RevisionPaths {
 		revision := revisionPath.Revision
 		path := revisionPath.Path
+
+		if len(path) > 1 {
+			path = bytes.TrimRight(path, "/")
+		}
 
 		treeEntry, err := tef.FindByRevisionAndPath(revision, string(path))
 		if err != nil {
