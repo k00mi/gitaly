@@ -1,5 +1,0 @@
----
-title: Modify GetBlobs RPC to return type
-merge_request: 1445
-author:
-type: performance

@@ -1,5 +1,0 @@
----
-title: 'main: start ruby server after opening network listeners'
-merge_request: 1455
-author:
-type: fixed

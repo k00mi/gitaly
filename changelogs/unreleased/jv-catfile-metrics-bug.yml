@@ -1,5 +1,0 @@
----
-title: Fix catfile metrics counting bug
-merge_request: 1462
-author:
-type: fixed

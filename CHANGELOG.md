@@ -1,5 +1,31 @@
 # Gitaly changelog
 
+## v1.62.0
+
+#### Added
+- Praefect Realtime replication
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1423
+
+#### Fixed
+- GetAllLFSPointers: use binmode in inline Ruby script
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1454
+- Fix catfile metrics counting bug
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1462
+- main: start ruby server after opening network listeners
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1455
+
+#### Other
+- Create parent directory in RenameNamespace
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1452
+- Update Ruby gitlab-labkit to 0.5.2
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1453
+- Update logging statements to leverage structured logging better
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/
+
+#### Performance
+- Modify GetBlobs RPC to return type
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1445
+
 ## v1.61.0
 
 #### Security
