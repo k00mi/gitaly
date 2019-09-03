@@ -32,6 +32,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :mode, :int32, 5
     optional :revision, :string, 6
     optional :path, :bytes, 7
+    optional :type, :enum, 8, "gitaly.ObjectType"
   end
   add_message "gitaly.LFSPointer" do
     optional :size, :int64, 1

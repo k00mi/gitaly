@@ -85,6 +85,7 @@ message GetBlobsResponse {
   int32 mode = 5;
   string revision = 6;
   bytes path = 7;
+  ObjectType type = 8;
 }
 
 message LFSPointer {
