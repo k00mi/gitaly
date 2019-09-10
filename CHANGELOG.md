@@ -1,5 +1,20 @@
 # Gitaly changelog
 
+## v1.63.0
+
+#### Added
+- Set permission of attributes file to `0644`
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1466
+  Contributed by njkevlani
+
+#### Other
+- Add RemoveRepository RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1470
+
+#### Performance
+- FetchIntoObjectPool: pack refs after fetch
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1464
+
 ## v1.62.0
 
 #### Added

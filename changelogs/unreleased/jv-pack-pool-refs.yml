@@ -1,5 +1,0 @@
----
-title: 'FetchIntoObjectPool: pack refs after fetch'
-merge_request: 1464
-author:
-type: performance
