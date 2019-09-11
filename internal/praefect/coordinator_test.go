@@ -30,9 +30,11 @@ func TestStreamDirector(t *testing.T) {
 	datastore := NewMemoryDatastore(config.Config{
 		Nodes: []*models.Node{
 			&models.Node{
-				Address: "tcp://gitaly-primary.example.com",
-				Storage: "praefect-internal-1",
-			}, &models.Node{
+				Address:        "tcp://gitaly-primary.example.com",
+				Storage:        "praefect-internal-1",
+				DefaultPrimary: true,
+			},
+			&models.Node{
 				Address: "tcp://gitaly-backup1.example.com",
 				Storage: "praefect-internal-2",
 			}},

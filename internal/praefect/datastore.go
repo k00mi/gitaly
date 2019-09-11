@@ -69,6 +69,8 @@ type Datastore interface {
 // ReplicasDatastore manages accessing and setting which secondary replicas
 // backup a repository
 type ReplicasDatastore interface {
+	PickAPrimary() (*models.Node, error)
+
 	GetReplicas(relativePath string) ([]models.Node, error)
 
 	GetStorageNode(nodeID int) (models.Node, error)
@@ -158,6 +160,21 @@ func NewMemoryDatastore(cfg config.Config) *MemoryDatastore {
 	}
 
 	return m
+}
+
+// PickAPrimary returns the primary configured in the config file
+func (md *MemoryDatastore) PickAPrimary() (*models.Node, error) {
+	md.storageNodes.RLock()
+	defer md.storageNodes.RUnlock()
+
+	for _, node := range md.storageNodes.m {
+		if node.DefaultPrimary {
+			return &node, nil
+		}
+	}
+
+	return nil, errors.New("no default primaries found")
+
 }
 
 // GetReplicas gets the secondaries for a repository based on the relative path

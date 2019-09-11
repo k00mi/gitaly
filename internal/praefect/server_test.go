@@ -60,8 +60,9 @@ func TestServerSimpleUnaryUnary(t *testing.T) {
 			datastore := NewMemoryDatastore(config.Config{
 				Nodes: []*models.Node{
 					&models.Node{
-						ID:      1,
-						Storage: "praefect-internal-1",
+						ID:             1,
+						Storage:        "praefect-internal-1",
+						DefaultPrimary: true,
 					},
 					&models.Node{
 						ID:      2,

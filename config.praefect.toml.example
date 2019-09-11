@@ -24,6 +24,7 @@ listen_addr = "127.0.0.1:2305"
 [[node]]
   storage = "praefect-git-0"
   address = "tcp://praefect-git-0.internal"
+  primary = true
 
 [[node]]
   storage = "praefect-git-1"
