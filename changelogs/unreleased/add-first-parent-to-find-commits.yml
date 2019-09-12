@@ -1,0 +1,5 @@
+---
+title: 'FindCommits/CommitCounts: Add support for `first_parent` parameter'
+merge_request: 1463
+author: jhenkens
+type: added

@@ -266,6 +266,27 @@ func TestSuccessfulFindCommitsRequest(t *testing.T) {
 			},
 			minCommits: 90,
 		},
+		{
+			desc: "first parents",
+			request: &gitalypb.FindCommitsRequest{
+				Repository:  testRepo,
+				Revision:    []byte("e63f41fe459e62e1228fcef60d7189127aeba95a"),
+				FirstParent: true,
+				Limit:       10,
+			},
+			ids: []string{
+				"e63f41fe459e62e1228fcef60d7189127aeba95a",
+				"b83d6e391c22777fca1ed3012fce84f633d7fed0",
+				"1b12f15a11fc6e62177bef08f47bc7b5ce50b141",
+				"6907208d755b60ebeacb2e9dfea74c92c3449a1f",
+				"281d3a76f31c812dbf48abce82ccf6860adedd81",
+				"54fcc214b94e78d7a41a9a8fe6d87a5e59500e51",
+				"be93687618e4b132087f430a4d8fc3a609c9b77c",
+				"5f923865dde3436854e9ceb9cdb7815618d4e849",
+				"d2d430676773caa88cdaf7c55944073b2fd5561a",
+				"59e29889be61e6e0e5e223bfa9ac2721d31605b8",
+			},
+		},
 	}
 
 	for _, tc := range testCases {
