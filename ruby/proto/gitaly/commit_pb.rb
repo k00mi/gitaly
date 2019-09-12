@@ -58,6 +58,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :path, :bytes, 5
     optional :max_count, :int32, 6
     optional :all, :bool, 7
+    optional :first_parent, :bool, 8
   end
   add_message "gitaly.CountCommitsResponse" do
     optional :count, :int32, 1
@@ -150,6 +151,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :after, :message, 9, "google.protobuf.Timestamp"
     optional :before, :message, 10, "google.protobuf.Timestamp"
     optional :all, :bool, 11
+    optional :first_parent, :bool, 12
   end
   add_message "gitaly.FindCommitsResponse" do
     repeated :commits, :message, 1, "gitaly.GitCommit"

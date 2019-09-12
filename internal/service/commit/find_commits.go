@@ -186,6 +186,9 @@ func getLogCommandFlags(req *gitalypb.FindCommitsRequest) []string {
 	if req.GetRevision() != nil {
 		args = append(args, string(req.GetRevision()))
 	}
+	if req.GetFirstParent() {
+		args = append(args, "--first-parent")
+	}
 	if len(req.GetPaths()) > 0 {
 		args = append(args, "--")
 		for _, path := range req.GetPaths() {

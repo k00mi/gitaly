@@ -37,6 +37,9 @@ func (s *server) CountCommits(ctx context.Context, in *gitalypb.CountCommitsRequ
 	if maxCount := in.GetMaxCount(); maxCount != 0 {
 		cmdArgs = append(cmdArgs, fmt.Sprintf("--max-count=%d", maxCount))
 	}
+	if in.GetFirstParent() {
+		cmdArgs = append(cmdArgs, "--first-parent")
+	}
 	if path := in.GetPath(); path != nil {
 		cmdArgs = append(cmdArgs, "--", string(path))
 	}

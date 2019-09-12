@@ -216,6 +216,7 @@ message CountCommitsRequest {
   int32 max_count = 6;
   // all and revision are mutually exclusive
   bool all = 7;
+  bool first_parent = 8;
 }
 
 message CountCommitsResponse {
@@ -341,6 +342,7 @@ message FindCommitsRequest {
   google.protobuf.Timestamp before = 10;
   // all and revision are mutually exclusive
   bool all = 11;
+  bool first_parent = 12;
 }
 
 // A single 'page' of the result set
