@@ -1,5 +1,22 @@
 # Gitaly changelog
 
+## v1.64.0
+
+#### Added
+- Confirm checksums after replication
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1479
+- FindCommits/CommitCounts: Add support for `first_parent` parameter
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1463
+  Contributed by jhenkens
+
+#### Other
+- Update Rouge to v3.10.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1475
+
+#### Security
+- Add dedicated CI job for deprecation warnings
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1480
+
 ## v1.63.0
 
 #### Added

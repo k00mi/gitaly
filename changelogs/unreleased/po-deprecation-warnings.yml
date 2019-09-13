@@ -1,5 +1,0 @@
----
-title: Add dedicated CI job for deprecation warnings
-merge_request: 1480
-author:
-type: security
