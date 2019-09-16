@@ -85,7 +85,7 @@ func createNewServer(rubyServer *rubyserver.Server, secure bool) *grpc.Server {
 			sentryhandler.StreamLogHandler,
 			cancelhandler.Stream, // Should be below LogHandler
 			lh.StreamInterceptor(),
-			auth.StreamServerInterceptor(),
+			auth.StreamServerInterceptor(config.Config.Auth),
 			grpctracing.StreamServerTracingInterceptor(),
 			cache.StreamInvalidator(diskcache.LeaseKeyer{}, protoregistry.GitalyProtoPreregistered),
 			// Panic handler should remain last so that application panics will be
@@ -101,7 +101,7 @@ func createNewServer(rubyServer *rubyserver.Server, secure bool) *grpc.Server {
 			sentryhandler.UnaryLogHandler,
 			cancelhandler.Unary, // Should be below LogHandler
 			lh.UnaryInterceptor(),
-			auth.UnaryServerInterceptor(),
+			auth.UnaryServerInterceptor(config.Config.Auth),
 			grpctracing.UnaryServerTracingInterceptor(),
 			cache.UnaryInvalidator(diskcache.LeaseKeyer{}, protoregistry.GitalyProtoPreregistered),
 			// Panic handler should remain last so that application panics will be

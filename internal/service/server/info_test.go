@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
+	internalauth "gitlab.com/gitlab-org/gitaly/internal/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/server/auth"
@@ -15,6 +16,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/version"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -67,8 +69,9 @@ func TestGitalyServerInfo(t *testing.T) {
 }
 
 func runServer(t *testing.T) (*grpc.Server, string) {
-	streamInt := []grpc.StreamServerInterceptor{auth.StreamServerInterceptor()}
-	unaryInt := []grpc.UnaryServerInterceptor{auth.UnaryServerInterceptor()}
+	authConfig := internalauth.Config{Token: testhelper.RepositoryAuthToken}
+	streamInt := []grpc.StreamServerInterceptor{auth.StreamServerInterceptor(authConfig)}
+	unaryInt := []grpc.UnaryServerInterceptor{auth.UnaryServerInterceptor(authConfig)}
 
 	server := testhelper.NewTestGrpcServer(t, streamInt, unaryInt)
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
@@ -84,6 +87,27 @@ func runServer(t *testing.T) (*grpc.Server, string) {
 	go server.Serve(listener)
 
 	return server, "unix://" + serverSocketPath
+}
+func TestServerNoAuth(t *testing.T) {
+	srv, path := runServer(t)
+	defer srv.Stop()
+
+	connOpts := []grpc.DialOption{
+		grpc.WithInsecure(),
+	}
+
+	conn, err := grpc.Dial(path, connOpts...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	client := gitalypb.NewServerServiceClient(conn)
+	_, err = client.ServerInfo(ctx, &gitalypb.ServerInfoRequest{})
+
+	testhelper.RequireGrpcError(t, err, codes.Unauthenticated)
 }
 
 func newServerClient(t *testing.T, serverSocketPath string) (gitalypb.ServerServiceClient, *grpc.ClientConn) {

@@ -96,7 +96,7 @@ func run(listeners []net.Listener, conf config.Config) error {
 	clientConnections := conn.NewClientConnections()
 
 	for _, node := range conf.Nodes {
-		if err := clientConnections.RegisterNode(node.Storage, node.Address); err != nil {
+		if err := clientConnections.RegisterNode(node.Storage, node.Address, node.Token); err != nil {
 			return fmt.Errorf("failed to register %s: %s", node.Address, err)
 		}
 

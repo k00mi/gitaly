@@ -12,6 +12,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
+	"gitlab.com/gitlab-org/gitaly/internal/auth"
 )
 
 const (
@@ -39,7 +40,7 @@ type Cfg struct {
 	Storages                   []Storage     `toml:"storage" envconfig:"storage"`
 	Logging                    Logging       `toml:"logging" envconfig:"logging"`
 	Prometheus                 Prometheus    `toml:"prometheus"`
-	Auth                       Auth          `toml:"auth"`
+	Auth                       auth.Config   `toml:"auth"`
 	TLS                        TLS           `toml:"tls"`
 	Ruby                       Ruby          `toml:"gitaly-ruby"`
 	GitlabShell                GitlabShell   `toml:"gitlab-shell"`
@@ -285,4 +286,13 @@ func validateBinDir() error {
 	var err error
 	Config.BinDir, err = filepath.Abs(Config.BinDir)
 	return err
+}
+
+func validateToken() error {
+	if !Config.Auth.Transitioning || len(Config.Auth.Token) == 0 {
+		return nil
+	}
+
+	log.Warn("Authentication is enabled but not enforced because transitioning=true. Gitaly will accept unauthenticated requests.")
+	return nil
 }

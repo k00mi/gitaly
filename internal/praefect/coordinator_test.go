@@ -51,7 +51,7 @@ func TestStreamDirector(t *testing.T) {
 
 	address := "gitaly-primary.example.com"
 	clientConnections := conn.NewClientConnections()
-	clientConnections.RegisterNode("praefect-internal-1", fmt.Sprintf("tcp://%s", address))
+	clientConnections.RegisterNode("praefect-internal-1", fmt.Sprintf("tcp://%s", address), "token")
 
 	coordinator := NewCoordinator(log.Default(), datastore, clientConnections)
 	require.NoError(t, coordinator.RegisterProtos(protoregistry.GitalyProtoFileDescriptors...))

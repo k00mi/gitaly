@@ -1,75 +1,40 @@
-package server
+package praefect
 
 import (
-	netctx "context"
-	"crypto/x509"
-	"io/ioutil"
+	"context"
 	"net"
 	"testing"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/auth"
-	"gitlab.com/gitlab-org/gitaly/internal/config"
+	"gitlab.com/gitlab-org/gitaly/internal/log"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/conn"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/mock"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/models"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials"
-	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
-func TestSanity(t *testing.T) {
-	srv, serverSocketPath := runServer(t)
-	defer srv.Stop()
-
-	connOpts := []grpc.DialOption{
-		grpc.WithInsecure(),
-	}
-	conn, err := dial(serverSocketPath, connOpts)
-	require.NoError(t, err)
-	defer conn.Close()
-
-	require.NoError(t, healthCheck(conn))
-}
-
-func TestTLSSanity(t *testing.T) {
-	srv, addr := runSecureServer(t)
-	defer srv.Stop()
-
-	certPool, err := x509.SystemCertPool()
-	require.NoError(t, err)
-
-	cert, err := ioutil.ReadFile("testdata/gitalycert.pem")
-	require.NoError(t, err)
-
-	ok := certPool.AppendCertsFromPEM(cert)
-	require.True(t, ok)
-
-	creds := credentials.NewClientTLSFromCert(certPool, "")
-	connOpts := []grpc.DialOption{
-		grpc.WithTransportCredentials(creds),
-	}
-
-	conn, err := grpc.Dial(addr, connOpts...)
-	require.NoError(t, err)
-	defer conn.Close()
-
-	require.NoError(t, healthCheck(conn))
-}
-
 func TestAuthFailures(t *testing.T) {
-	defer func(oldAuth auth.Config) {
-		config.Config.Auth = oldAuth
-	}(config.Config.Auth)
-	config.Config.Auth.Token = "quxbaz"
+	ctx, cancel := testhelper.Context()
+	defer cancel()
 
 	testCases := []struct {
 		desc string
 		opts []grpc.DialOption
 		code codes.Code
 	}{
-		{desc: "no auth", opts: nil, code: codes.Unauthenticated},
+		{
+			desc: "no auth",
+			opts: nil,
+			code: codes.Unauthenticated,
+		},
 		{
 			desc: "invalid auth",
 			opts: []grpc.DialOption{grpc.WithPerRPCCredentials(brokenAuth{})},
@@ -88,22 +53,29 @@ func TestAuthFailures(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			srv, serverSocketPath := runServer(t)
-			defer srv.Stop()
+			srv, serverSocketPath, cleanup := runServer(t, "quxbaz", true)
+			defer srv.Shutdown(ctx)
+			defer cleanup()
 
 			connOpts := append(tc.opts, grpc.WithInsecure())
 			conn, err := dial(serverSocketPath, connOpts)
 			require.NoError(t, err, tc.desc)
 			defer conn.Close()
-			testhelper.RequireGrpcError(t, healthCheck(conn), tc.code)
+
+			cli := mock.NewSimpleServiceClient(conn)
+
+			_, err = cli.SimpleUnaryUnary(ctx, &mock.SimpleRequest{
+				Value: 1,
+			})
+
+			testhelper.RequireGrpcError(t, err, tc.code)
 		})
 	}
 }
 
 func TestAuthSuccess(t *testing.T) {
-	defer func(oldAuth auth.Config) {
-		config.Config.Auth = oldAuth
-	}(config.Config.Auth)
+	ctx, cancel := testhelper.Context()
+	defer cancel()
 
 	token := "foobar"
 
@@ -147,19 +119,25 @@ func TestAuthSuccess(t *testing.T) {
 			required: true,
 		},
 	}
+
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			config.Config.Auth.Token = tc.token
-			config.Config.Auth.Transitioning = !tc.required
-
-			srv, serverSocketPath := runServer(t)
-			defer srv.Stop()
+			srv, serverSocketPath, cleanup := runServer(t, tc.token, tc.required)
+			defer srv.Shutdown(ctx)
+			defer cleanup()
 
 			connOpts := append(tc.opts, grpc.WithInsecure())
 			conn, err := dial(serverSocketPath, connOpts)
 			require.NoError(t, err, tc.desc)
 			defer conn.Close()
-			assert.NoError(t, healthCheck(conn), tc.desc)
+
+			cli := mock.NewSimpleServiceClient(conn)
+
+			_, err = cli.SimpleUnaryUnary(ctx, &mock.SimpleRequest{
+				Value: 1,
+			})
+
+			assert.NoError(t, err, tc.desc)
 		})
 	}
 }
@@ -167,7 +145,7 @@ func TestAuthSuccess(t *testing.T) {
 type brokenAuth struct{}
 
 func (brokenAuth) RequireTransportSecurity() bool { return false }
-func (brokenAuth) GetRequestMetadata(netctx.Context, ...string) (map[string]string, error) {
+func (brokenAuth) GetRequestMetadata(context.Context, ...string) (map[string]string, error) {
 	return map[string]string{"authorization": "Bearer blablabla"}, nil
 }
 
@@ -175,39 +153,44 @@ func dial(serverSocketPath string, opts []grpc.DialOption) (*grpc.ClientConn, er
 	return grpc.Dial(serverSocketPath, opts...)
 }
 
-func healthCheck(conn *grpc.ClientConn) error {
-	ctx, cancel := testhelper.Context()
-	defer cancel()
+func runServer(t *testing.T, token string, required bool) (*Server, string, func()) {
+	backendToken := "abcxyz"
+	backend, cleanup := newMockDownstream(t, backendToken, callbackIncrement)
 
-	client := healthpb.NewHealthClient(conn)
-	_, err := client.Check(ctx, &healthpb.HealthCheckRequest{})
-	return err
-}
+	conf := config.Config{
+		Auth: auth.Config{Token: token, Transitioning: !required},
+		Nodes: []*models.Node{
+			&models.Node{
+				Storage:        "praefect-internal-0",
+				DefaultPrimary: true,
+				Address:        backend,
+			},
+		},
+	}
 
-func runServer(t *testing.T) (*grpc.Server, string) {
-	srv := NewInsecure(nil)
+	gz := proto.FileDescriptor("mock.proto")
+	fd, err := protoregistry.ExtractFileDescriptor(gz)
+	if err != nil {
+		panic(err)
+	}
+
+	logEntry := log.Default()
+	datastore := NewMemoryDatastore(conf)
+
+	clientConnections := conn.NewClientConnections()
+	clientConnections.RegisterNode("praefect-internal-0", backend, backendToken)
+
+	coordinator := NewCoordinator(logEntry, datastore, clientConnections, fd)
+
+	replMgr := NewReplMgr("praefect-internal-0", logEntry, datastore, clientConnections)
+
+	srv := NewServer(coordinator, replMgr, nil, logEntry, clientConnections, conf)
 
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 
 	listener, err := net.Listen("unix", serverSocketPath)
 	require.NoError(t, err)
-	go srv.Serve(listener)
+	go srv.Start(listener)
 
-	return srv, "unix://" + serverSocketPath
-}
-
-func runSecureServer(t *testing.T) (*grpc.Server, string) {
-	config.Config.TLS = config.TLS{
-		CertPath: "testdata/gitalycert.pem",
-		KeyPath:  "testdata/gitalykey.pem",
-	}
-
-	srv := NewSecure(nil)
-
-	listener, err := net.Listen("tcp", "localhost:9999")
-	require.NoError(t, err)
-
-	go srv.Serve(listener)
-
-	return srv, "localhost:9999"
+	return srv, "unix://" + serverSocketPath, cleanup
 }
