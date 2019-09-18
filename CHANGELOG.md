@@ -1,5 +1,21 @@
 # Gitaly changelog
 
+## v1.65.0
+
+#### Fixed
+- Replicator fixes from demo
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1487
+- Prevent nil panics in housekeeping.Perform
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1492
+- Upgrade Rouge to v3.11.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1493
+
+#### Other
+- Git Command DSL
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1476
+- Measure replication latency
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1481
+
 ## v1.64.0
 
 #### Added
