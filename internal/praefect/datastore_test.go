@@ -10,9 +10,10 @@ import (
 
 var (
 	stor1 = models.Node{
-		ID:      0,
-		Address: "tcp://address-1",
-		Storage: "praefect-storage-1",
+		ID:             0,
+		Address:        "tcp://address-1",
+		Storage:        "praefect-storage-1",
+		DefaultPrimary: true,
 	}
 	stor2 = models.Node{
 		ID:      1,

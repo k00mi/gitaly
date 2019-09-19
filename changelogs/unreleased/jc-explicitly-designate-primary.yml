@@ -1,0 +1,5 @@
+---
+title: Explicitly designate primary and replica nodes in praefect config
+merge_request: 1483
+author:
+type: other

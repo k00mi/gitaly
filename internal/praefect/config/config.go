@@ -40,6 +40,8 @@ var (
 	errDuplicateStorage     = errors.New("internal gitaly storages are not unique")
 	errGitalyWithoutAddr    = errors.New("all gitaly nodes must have an address")
 	errGitalyWithoutStorage = errors.New("all gitaly nodes must have a storage")
+	errMoreThanOnePrimary   = errors.New("only 1 node can be designated as a primary")
+	errNoPrimaries          = errors.New("no primaries designated")
 )
 
 // Validate establishes if the config is valid
@@ -48,12 +50,17 @@ func (c Config) Validate() error {
 		return errNoListener
 	}
 
-	if len(c.Nodes) == 0 {
-		return errNoGitalyServers
-	}
+	storages := make(map[string]struct{})
 
-	storages := make(map[string]struct{}, len(c.Nodes))
+	var primaries int
 	for _, node := range c.Nodes {
+		if node.DefaultPrimary {
+			primaries++
+		}
+
+		if primaries > 1 {
+			return errMoreThanOnePrimary
+		}
 		if node.Storage == "" {
 			return errGitalyWithoutStorage
 		}
@@ -67,6 +74,14 @@ func (c Config) Validate() error {
 		}
 
 		storages[node.Storage] = struct{}{}
+	}
+
+	if len(storages) == 0 {
+		return errNoGitalyServers
+	}
+
+	if primaries == 0 {
+		return errNoPrimaries
 	}
 
 	return nil

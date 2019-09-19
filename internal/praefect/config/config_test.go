@@ -10,7 +10,7 @@ import (
 
 func TestConfigValidation(t *testing.T) {
 	nodes := []*models.Node{
-		{ID: 1, Storage: "internal-1", Address: "localhost:23456", Token: "secret-token"},
+		{ID: 1, Storage: "internal-1", Address: "localhost:23456", Token: "secret-token", DefaultPrimary: true},
 		{ID: 2, Storage: "internal-2", Address: "localhost:23457", Token: "secret-token"},
 		{ID: 3, Storage: "internal-3", Address: "localhost:23458", Token: "secret-token"},
 	}
@@ -45,6 +45,16 @@ func TestConfigValidation(t *testing.T) {
 			config: Config{ListenAddr: "localhost:1234", Nodes: nodes},
 			err:    nil,
 		},
+		{
+			desc:   "No designated primaries",
+			config: Config{ListenAddr: "localhost:1234", Nodes: nodes[1:]},
+			err:    errNoPrimaries,
+		},
+		{
+			desc:   "More than 1 primary",
+			config: Config{ListenAddr: "localhost:1234", Nodes: append(nodes, &models.Node{ID: 3, Storage: "internal-4", Address: "localhost:23459", Token: "secret-token", DefaultPrimary: true})},
+			err:    errMoreThanOnePrimary,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -64,9 +74,10 @@ func TestConfigParsing(t *testing.T) {
 			filePath: "testdata/config.toml",
 			expected: Config{
 				Nodes: []*models.Node{
-					{
-						Address: "tcp://gitaly-internal-1.example.com",
-						Storage: "praefect-internal-1",
+					&models.Node{
+						Address:        "tcp://gitaly-internal-1.example.com",
+						Storage:        "praefect-internal-1",
+						DefaultPrimary: true,
 					},
 					{
 						Address: "tcp://gitaly-internal-2.example.com",

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"sort"
 	"sync"
 	"syscall"
 
@@ -167,15 +166,12 @@ func (c *Coordinator) selectPrimary(mi protoregistry.MethodInfo, targetRepo *git
 
 		if len(nodes) == 0 {
 			return nil, fmt.Errorf("no nodes serve storage %s", targetRepo.GetStorageName())
-
 		}
 
-		sort.Slice(nodes, func(i, j int) bool {
-			return nodes[i].ID < nodes[j].ID
-		})
-
-		newPrimary := nodes[0]
-		replicas := nodes[1:]
+		newPrimary, err := c.datastore.PickAPrimary()
+		if err != nil {
+			return nil, fmt.Errorf("could not choose a primary: %v", err)
+		}
 
 		// set the primary
 		if err = c.datastore.SetPrimary(targetRepo.GetRelativePath(), newPrimary.ID); err != nil {
@@ -183,13 +179,16 @@ func (c *Coordinator) selectPrimary(mi protoregistry.MethodInfo, targetRepo *git
 		}
 
 		// add replicas
-		for _, replica := range replicas {
+		for _, replica := range nodes {
+			if replica.DefaultPrimary {
+				continue
+			}
 			if err = c.datastore.AddReplica(targetRepo.GetRelativePath(), replica.ID); err != nil {
 				return nil, err
 			}
 		}
 
-		primary = &newPrimary
+		return newPrimary, nil
 	}
 
 	return primary, nil
@@ -214,6 +213,7 @@ func (c *Coordinator) createReplicaJobs(targetRepo *gitalypb.Repository) (func()
 	if err != nil {
 		return nil, err
 	}
+
 	return func() {
 		for _, jobID := range jobIDs {
 			if err := c.datastore.UpdateReplJob(jobID, JobStateReady); err != nil {
