@@ -167,6 +167,8 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :name, :string, 1
     optional :share, :float, 2
     optional :color, :string, 3
+    optional :file_count, :uint32, 4
+    optional :bytes, :uint64, 5
   end
   add_message "gitaly.RawBlameRequest" do
     optional :repository, :message, 1, "gitaly.Repository"

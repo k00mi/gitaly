@@ -360,6 +360,8 @@ message CommitLanguagesResponse {
     string name = 1;
     float share = 2;
     string color = 3;
+    uint32 file_count = 4;
+    uint64 bytes = 5;
   }
   repeated Language languages = 1;
 }

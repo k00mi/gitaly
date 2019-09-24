@@ -19,6 +19,8 @@ func init() {
 	config.RegisterHook(LoadColors)
 }
 
+var exportedEnvVars = []string{"HOME", "PATH", "GEM_HOME", "BUNDLE_PATH", "BUNDLE_APP_CONFIG"}
+
 var (
 	colorMap = make(map[string]Language)
 )
@@ -28,11 +30,19 @@ type Language struct {
 	Color string `json:"color"`
 }
 
+// CountPerLanguage represents a counter value (int) per language.
+type CountPerLanguage map[string]int
+
+// ByteCountPerLanguage represents a counter value (bytes) per language.
+type ByteCountPerLanguage map[string]uint64
+
+// FileListPerLanguage is used to parse Linguist's breakdown output to represent the list of files per language.
+type FileListPerLanguage map[string][]string
+
 // Stats returns the repository's language stats as reported by 'git-linguist'.
-func Stats(ctx context.Context, repoPath string, commitID string) (map[string]int, error) {
-	cmd := exec.Command("bundle", "exec", "bin/ruby-cd", repoPath, "git-linguist", "--commit="+commitID, "stats")
-	cmd.Dir = config.Config.Ruby.Dir
-	reader, err := command.New(ctx, cmd, nil, nil, nil, os.Environ()...)
+func Stats(ctx context.Context, repoPath string, commitID string) (ByteCountPerLanguage, error) {
+	reader, err := startGitLinguist(ctx, repoPath, commitID, "stats")
+
 	if err != nil {
 		return nil, err
 	}
@@ -42,8 +52,33 @@ func Stats(ctx context.Context, repoPath string, commitID string) (map[string]in
 		return nil, err
 	}
 
-	stats := make(map[string]int)
+	stats := make(ByteCountPerLanguage)
 	return stats, json.Unmarshal(data, &stats)
+}
+
+// FileCountStats returns the file counts per language
+func FileCountStats(ctx context.Context, repoPath string, commitID string) (CountPerLanguage, error) {
+	reader, err := startGitLinguist(ctx, repoPath, commitID, "breakdown")
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+
+	languageFiles := make(FileListPerLanguage)
+	if err := json.Unmarshal(data, &languageFiles); err != nil {
+		return nil, err
+	}
+
+	stats := make(CountPerLanguage)
+	for lang, files := range languageFiles {
+		stats[lang] = len(files)
+	}
+
+	return stats, nil
 }
 
 // Color returns the color Linguist has assigned to language.
@@ -65,6 +100,19 @@ func LoadColors(cfg config.Cfg) error {
 	defer jsonReader.Close()
 
 	return json.NewDecoder(jsonReader).Decode(&colorMap)
+}
+
+func startGitLinguist(ctx context.Context, repoPath string, commitID string, linguistCommand string) (io.Reader, error) {
+	cmd := exec.Command("bundle", "exec", "bin/ruby-cd", repoPath, "git-linguist", "--commit="+commitID, linguistCommand)
+	cmd.Dir = config.Config.Ruby.Dir
+
+	var env []string
+	reader, err := command.New(ctx, cmd, nil, nil, nil, exportEnvironment(env)...)
+	if err != nil {
+		return nil, err
+	}
+
+	return reader, nil
 }
 
 func openLanguagesJSON(cfg config.Cfg) (io.ReadCloser, error) {
@@ -105,4 +153,14 @@ func openLanguagesJSON(cfg config.Cfg) (io.ReadCloser, error) {
 	}
 
 	return os.Open(path.Join(linguistPathSymlink.Name(), "lib/linguist/languages.json"))
+}
+
+func exportEnvironment(env []string) []string {
+	for _, envVarName := range exportedEnvVars {
+		if val, ok := os.LookupEnv(envVarName); ok {
+			env = append(env, fmt.Sprintf("%s=%s", envVarName, val))
+		}
+	}
+
+	return env
 }
