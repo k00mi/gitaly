@@ -13,6 +13,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var (
@@ -65,7 +66,7 @@ func (s *handler) handler(srv interface{}, serverStream grpc.ServerStream) error
 	// little bit of gRPC internals never hurt anyone
 	fullMethodName, ok := grpc.MethodFromServerStream(serverStream)
 	if !ok {
-		return grpc.Errorf(codes.Internal, "lowLevelServerStream not exists in context")
+		return status.Errorf(codes.Internal, "lowLevelServerStream not exists in context")
 	}
 
 	peeker := newPeeker(serverStream)
@@ -106,7 +107,7 @@ func (s *handler) handler(srv interface{}, serverStream grpc.ServerStream) error
 				// to cancel the clientStream to the backend, let all of its goroutines be freed up by the CancelFunc and
 				// exit with an error to the stack
 				clientCancel()
-				return grpc.Errorf(codes.Internal, "failed proxying s2c: %v", s2cErr)
+				return status.Errorf(codes.Internal, "failed proxying s2c: %v", s2cErr)
 			}
 		case c2sErr := <-c2sErrChan:
 			// This happens when the clientStream has nothing else to offer (io.EOF), returned a gRPC error. In those two
@@ -120,7 +121,7 @@ func (s *handler) handler(srv interface{}, serverStream grpc.ServerStream) error
 			return nil
 		}
 	}
-	return grpc.Errorf(codes.Internal, "gRPC proxying should never reach this stage.")
+	return status.Errorf(codes.Internal, "gRPC proxying should never reach this stage.")
 }
 
 func (s *handler) forwardClientToServer(src grpc.ClientStream, dst grpc.ServerStream) chan error {

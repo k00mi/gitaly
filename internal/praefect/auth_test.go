@@ -158,7 +158,8 @@ func runServer(t *testing.T, token string, required bool) (*Server, string, func
 	backend, cleanup := newMockDownstream(t, backendToken, callbackIncrement)
 
 	conf := config.Config{
-		Auth: auth.Config{Token: token, Transitioning: !required},
+		VirtualStorageName: "praefect",
+		Auth:               auth.Config{Token: token, Transitioning: !required},
 		Nodes: []*models.Node{
 			&models.Node{
 				Storage:        "praefect-internal-0",
@@ -180,7 +181,7 @@ func runServer(t *testing.T, token string, required bool) (*Server, string, func
 	clientConnections := conn.NewClientConnections()
 	clientConnections.RegisterNode("praefect-internal-0", backend, backendToken)
 
-	coordinator := NewCoordinator(logEntry, datastore, clientConnections, fd)
+	coordinator := NewCoordinator(logEntry, datastore, clientConnections, conf, fd)
 
 	replMgr := NewReplMgr("praefect-internal-0", logEntry, datastore, clientConnections)
 

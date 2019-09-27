@@ -73,6 +73,7 @@ func TestConfigParsing(t *testing.T) {
 		{
 			filePath: "testdata/config.toml",
 			expected: Config{
+				VirtualStorageName: "praefect",
 				Nodes: []*models.Node{
 					&models.Node{
 						Address:        "tcp://gitaly-internal-1.example.com",

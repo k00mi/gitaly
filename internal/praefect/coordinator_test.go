@@ -28,7 +28,8 @@ func TestSecondaryRotation(t *testing.T) {
 }
 
 func TestStreamDirector(t *testing.T) {
-	datastore := NewMemoryDatastore(config.Config{
+	conf := config.Config{
+		VirtualStorageName: "praefect",
 		Nodes: []*models.Node{
 			&models.Node{
 				Address:        "tcp://gitaly-primary.example.com",
@@ -39,7 +40,8 @@ func TestStreamDirector(t *testing.T) {
 				Address: "tcp://gitaly-backup1.example.com",
 				Storage: "praefect-internal-2",
 			}},
-	})
+	}
+	datastore := NewMemoryDatastore(conf)
 
 	targetRepo := gitalypb.Repository{
 		StorageName:  "praefect",
@@ -53,7 +55,7 @@ func TestStreamDirector(t *testing.T) {
 	clientConnections := conn.NewClientConnections()
 	clientConnections.RegisterNode("praefect-internal-1", fmt.Sprintf("tcp://%s", address), "token")
 
-	coordinator := NewCoordinator(log.Default(), datastore, clientConnections)
+	coordinator := NewCoordinator(log.Default(), datastore, clientConnections, conf)
 	require.NoError(t, coordinator.RegisterProtos(protoregistry.GitalyProtoFileDescriptors...))
 
 	frame, err := proto.Marshal(&gitalypb.GarbageCollectRequest{
@@ -61,9 +63,22 @@ func TestStreamDirector(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, conn, jobUpdateFunc, err := coordinator.streamDirector(ctx, "/gitaly.RepositoryService/GarbageCollect", &mockPeeker{frame})
+	fullMethod := "/gitaly.RepositoryService/GarbageCollect"
+
+	peeker := &mockPeeker{frame}
+	_, conn, jobUpdateFunc, err := coordinator.streamDirector(ctx, fullMethod, peeker)
 	require.NoError(t, err)
 	require.Equal(t, address, conn.Target())
+
+	mi, err := coordinator.registry.LookupMethod(fullMethod)
+	require.NoError(t, err)
+
+	m, err := protoMessageFromPeeker(mi, peeker)
+	require.NoError(t, err)
+
+	rewrittenRepo, err := mi.TargetRepo(m)
+	require.NoError(t, err)
+	require.Equal(t, "praefect-internal-1", rewrittenRepo.GetStorageName(), "stream director should have rewritten the storage name")
 
 	jobs, err := datastore.GetJobs(JobStatePending, 1, 10)
 	require.NoError(t, err)
@@ -103,5 +118,7 @@ func (m *mockPeeker) Peek() ([]byte, error) {
 }
 
 func (m *mockPeeker) Modify(payload []byte) error {
+	m.frame = payload
+
 	return nil
 }

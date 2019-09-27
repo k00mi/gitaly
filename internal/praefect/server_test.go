@@ -23,7 +23,9 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/status"
 )
 
 // TestServerSimpleUnaryUnary verifies that the Praefect server is capable of
@@ -65,6 +67,7 @@ func TestServerSimpleUnaryUnary(t *testing.T) {
 			)
 
 			conf := config.Config{
+				VirtualStorageName: "praefect",
 				Nodes: []*models.Node{
 					&models.Node{
 						ID:             1,
@@ -80,10 +83,9 @@ func TestServerSimpleUnaryUnary(t *testing.T) {
 			}
 
 			datastore := NewMemoryDatastore(conf)
-
 			logEntry := log.Default()
-
 			clientCC := conn.NewClientConnections()
+			coordinator := NewCoordinator(logEntry, datastore, clientCC, conf, fd)
 
 			for id, nodeStorage := range datastore.storageNodes.m {
 				backend, cleanup := newMockDownstream(t, nodeStorage.Token, tt.callback)
@@ -93,8 +95,6 @@ func TestServerSimpleUnaryUnary(t *testing.T) {
 				nodeStorage.Address = backend
 				datastore.storageNodes.m[id] = nodeStorage
 			}
-
-			coordinator := NewCoordinator(logEntry, datastore, clientCC, fd)
 
 			replmgr := NewReplMgr(
 				storagePrimary,
@@ -186,6 +186,36 @@ func TestHealthCheck(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestRejectBadStorage(t *testing.T) {
+	conf := config.Config{
+		VirtualStorageName: "praefect",
+		Nodes: []*models.Node{
+			&models.Node{
+				DefaultPrimary: true,
+				Storage:        "praefect-internal-0",
+				Address:        "tcp::/this-doesnt-matter",
+			},
+		},
+	}
+
+	cc, srv := runFullPraefectServer(t, conf)
+	defer srv.s.Stop()
+
+	badTargetRepo := gitalypb.Repository{
+		StorageName:  "default",
+		RelativePath: "/path/to/hashed/storage",
+	}
+
+	repoClient := gitalypb.NewRepositoryServiceClient(cc)
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	_, err := repoClient.GarbageCollect(ctx, &gitalypb.GarbageCollectRequest{Repository: &badTargetRepo})
+	testhelper.RequireGrpcError(t, err, codes.InvalidArgument)
+	require.Equal(t, fmt.Sprintf("only messages for %s are allowed", conf.VirtualStorageName), status.Convert(err).Message())
+}
+
 func runFullPraefectServer(t *testing.T, conf config.Config) (*grpc.ClientConn, *Server) {
 	datastore := NewMemoryDatastore(conf)
 
@@ -200,7 +230,7 @@ func runFullPraefectServer(t *testing.T, conf config.Config) (*grpc.ClientConn, 
 		datastore.storageNodes.m[id] = nodeStorage
 	}
 
-	coordinator := NewCoordinator(logEntry, datastore, clientCC, protoregistry.GitalyProtoFileDescriptors...)
+	coordinator := NewCoordinator(logEntry, datastore, clientCC, conf, protoregistry.GitalyProtoFileDescriptors...)
 
 	replmgr := NewReplMgr(
 		"",
