@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -195,11 +197,18 @@ func TestCommandStdErr(t *testing.T) {
 
 	var stdout, stderr bytes.Buffer
 
-	cmd, err := New(ctx, exec.Command("./testdata/stderr_script.sh"), nil, &stdout, &stderr)
+	logger := logrus.New()
+	logger.SetOutput(&stderr)
+
+	ctx = ctxlogrus.ToContext(ctx, logrus.NewEntry(logger))
+
+	cmd, err := New(ctx, exec.Command("./testdata/stderr_script.sh"), nil, &stdout, nil)
 	require.NoError(t, err)
 
 	require.Error(t, cmd.Wait())
 	assert.Empty(t, stdout.Bytes())
+
+	logger.Exit(0)
 	assert.Equal(t, `hello world\nhello world\nhello world\nhello world\nhello world\n`, stderr.String())
 }
 
@@ -209,11 +218,18 @@ func TestCommandStdErrLargeOutput(t *testing.T) {
 
 	var stdout, stderr bytes.Buffer
 
-	cmd, err := New(ctx, exec.Command("./testdata/stderr_many_lines.sh"), nil, &stdout, &stderr)
+	logger := logrus.New()
+	logger.SetOutput(&stderr)
+
+	ctx = ctxlogrus.ToContext(ctx, logrus.NewEntry(logger))
+
+	cmd, err := New(ctx, exec.Command("./testdata/stderr_many_lines.sh"), nil, &stdout, nil)
 	require.NoError(t, err)
 
 	require.Error(t, cmd.Wait())
 	assert.Empty(t, stdout.Bytes())
+
+	logger.Exit(0)
 	assert.True(t, stderr.Len() <= MaxStderrBytes)
 }
 
@@ -223,11 +239,18 @@ func TestCommandStdErrBinaryNullBytes(t *testing.T) {
 
 	var stdout, stderr bytes.Buffer
 
-	cmd, err := New(ctx, exec.Command("./testdata/stderr_binary_null.sh"), nil, &stdout, &stderr)
+	logger := logrus.New()
+	logger.SetOutput(&stderr)
+
+	ctx = ctxlogrus.ToContext(ctx, logrus.NewEntry(logger))
+
+	cmd, err := New(ctx, exec.Command("./testdata/stderr_binary_null.sh"), nil, &stdout, nil)
 	require.NoError(t, err)
 
 	require.Error(t, cmd.Wait())
 	assert.Empty(t, stdout.Bytes())
+
+	logger.Exit(0)
 	assert.NotEmpty(t, stderr.Bytes())
 }
 
@@ -237,11 +260,18 @@ func TestCommandStdErrLongLine(t *testing.T) {
 
 	var stdout, stderr bytes.Buffer
 
-	cmd, err := New(ctx, exec.Command("./testdata/stderr_repeat_a.sh"), nil, &stdout, &stderr)
+	logger := logrus.New()
+	logger.SetOutput(&stderr)
+
+	ctx = ctxlogrus.ToContext(ctx, logrus.NewEntry(logger))
+
+	cmd, err := New(ctx, exec.Command("./testdata/stderr_repeat_a.sh"), nil, &stdout, nil)
 	require.NoError(t, err)
 
 	require.Error(t, cmd.Wait())
 	assert.Empty(t, stdout.Bytes())
+
+	logger.Exit(0)
 	assert.NotEmpty(t, stderr.Bytes())
 	assert.Equal(t, fmt.Sprintf("%s\\n%s", strings.Repeat("a", StderrBufferSize), strings.Repeat("b", StderrBufferSize)), stderr.String())
 }
@@ -252,10 +282,17 @@ func TestCommandStdErrMaxBytes(t *testing.T) {
 
 	var stdout, stderr bytes.Buffer
 
-	cmd, err := New(ctx, exec.Command("./testdata/stderr_max_bytes_edge_case.sh"), nil, &stdout, &stderr)
+	logger := logrus.New()
+	logger.SetOutput(&stderr)
+
+	ctx = ctxlogrus.ToContext(ctx, logrus.NewEntry(logger))
+
+	cmd, err := New(ctx, exec.Command("./testdata/stderr_max_bytes_edge_case.sh"), nil, &stdout, nil)
 	require.NoError(t, err)
 
 	require.Error(t, cmd.Wait())
 	assert.Empty(t, stdout.Bytes())
+
+	logger.Exit(0)
 	assert.NotEmpty(t, stderr.Bytes())
 }
