@@ -1,5 +1,37 @@
 # Gitaly changelog
 
+## v1.66.0
+
+#### Changed
+- Include file count and bytes in CommitLanguage response
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1482
+
+#### Fixed
+- Leave stderr alone when passed into command
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1456
+- Fix cache invalidator for Create* RPCs and health checks
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1494
+- Set split index to false
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1521
+- Ensure temp dir exists when removing a repository
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1509
+
+#### Other
+- Use safe command in HasLocalBranches
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1499
+- Explicitly designate primary and replica nodes in praefect config
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1483
+- Nested command for DSL
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1498
+- Use SafeCmd in WriteRef
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1506
+- Move cache state files to +gitaly directory
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1515
+
+#### Security
+- ConfigPair option for DSL
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1507
+
 ## v1.65.0
 
 #### Fixed
