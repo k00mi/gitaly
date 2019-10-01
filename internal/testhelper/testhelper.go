@@ -502,7 +502,21 @@ func TempDir(t *testing.T, dir, prefix string) (string, func() error) {
 	}
 }
 
-// MustReachGitObject is a test assertion that fails unless the git repo in repoPath contains sha
-func MustReachGitObject(t testing.TB, repoPath, sha string) {
-	MustRunCommand(t, nil, "git", "-C", repoPath, "cat-file", "-e", sha)
+// GitObjectMustExist is a test assertion that fails unless the git repo in repoPath contains sha
+func GitObjectMustExist(t testing.TB, repoPath, sha string) {
+	gitObjectExists(t, repoPath, sha, true)
+}
+
+// GitObjectMustNotExist is a test assertion that fails unless the git repo in repoPath contains sha
+func GitObjectMustNotExist(t testing.TB, repoPath, sha string) {
+	gitObjectExists(t, repoPath, sha, false)
+}
+
+func gitObjectExists(t testing.TB, repoPath, sha string, exists bool) {
+	cmd := exec.Command("git", "-C", repoPath, "cat-file", "-e", sha)
+	if exists {
+		require.NoError(t, cmd.Run(), "checking for object should succeed")
+		return
+	}
+	require.Error(t, cmd.Run(), "checking for object should fail")
 }

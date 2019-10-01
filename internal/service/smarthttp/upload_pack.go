@@ -7,6 +7,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 	"google.golang.org/grpc/codes"
@@ -62,6 +63,10 @@ func (s *server) PostUploadPack(stream gitalypb.SmartHTTPService_PostUploadPackS
 	}
 
 	args := []string{}
+	if featureflag.IsEnabled(ctx, featureflag.UploadPackFilter) {
+		args = append(args, "-c", "uploadpack.allowFilter=true", "-c", "uploadpack.allowAnySHA1InWant=true")
+	}
+
 	for _, params := range req.GitConfigOptions {
 		args = append(args, "-c", params)
 	}
@@ -83,6 +88,7 @@ func (s *server) PostUploadPack(stream gitalypb.SmartHTTPService_PostUploadPackS
 			deepenCount.Inc()
 			return nil
 		}
+
 		return status.Errorf(codes.Unavailable, "PostUploadPack: %v", err)
 	}
 

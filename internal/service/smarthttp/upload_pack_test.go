@@ -17,6 +17,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/pktline"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
@@ -24,12 +25,15 @@ import (
 )
 
 const (
-	clientCapabilities = `multi_ack_detailed no-done side-band-64k thin-pack include-tag ofs-delta deepen-since deepen-not agent=git/2.18.0`
+	clientCapabilities = `multi_ack_detailed no-done side-band-64k thin-pack include-tag ofs-delta deepen-since deepen-not filter agent=git/2.18.0`
 )
 
 func TestSuccessfulUploadPackRequest(t *testing.T) {
 	server, serverSocketPath := runSmartHTTPServer(t)
 	defer server.Stop()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
 
 	testRepo := testhelper.TestRepository()
 	testRepoPath, err := helper.GetRepoPath(testRepo)
@@ -76,7 +80,7 @@ func TestSuccessfulUploadPackRequest(t *testing.T) {
 			RelativePath: path.Join(remoteRepoRelativePath, ".git"),
 		},
 	}
-	responseBuffer, err := makePostUploadPackRequest(t, serverSocketPath, req, requestBuffer)
+	responseBuffer, err := makePostUploadPackRequest(ctx, t, serverSocketPath, req, requestBuffer)
 	require.NoError(t, err)
 
 	// There's no git command we can pass it this response and do the work for us (extracting pack file, ...),
@@ -93,6 +97,9 @@ func TestSuccessfulUploadPackRequest(t *testing.T) {
 func TestUploadPackRequestWithGitConfigOptions(t *testing.T) {
 	server, serverSocketPath := runSmartHTTPServer(t)
 	defer server.Stop()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
 
 	testRepo := testhelper.TestRepository()
 	testRepoPath, err := helper.GetRepoPath(testRepo)
@@ -133,7 +140,7 @@ func TestUploadPackRequestWithGitConfigOptions(t *testing.T) {
 	}
 
 	// The ref is successfully requested as it is not hidden
-	response, err := makePostUploadPackRequest(t, serverSocketPath, rpcRequest, requestBody)
+	response, err := makePostUploadPackRequest(ctx, t, serverSocketPath, rpcRequest, requestBody)
 	require.NoError(t, err)
 	_, _, count := extractPackDataFromResponse(t, response)
 	assert.Equal(t, 5, count, "pack should have 5 entries")
@@ -141,8 +148,10 @@ func TestUploadPackRequestWithGitConfigOptions(t *testing.T) {
 	// Now the ref is hidden, no packfile will be received. The git process
 	// dies with an error message: `git upload-pack: not our ref ...` but the
 	// client just sees a grpc unavailable error
-	rpcRequest.GitConfigOptions = []string{"uploadpack.hideRefs=refs/hidden"}
-	response, err = makePostUploadPackRequest(t, serverSocketPath, rpcRequest, requestBodyCopy)
+	// we need to set uploadpack.allowAnySHA1InWant=false, because if it's true then we won't encounter an error from setting
+	// uploadpack.hideRefs=refs/hidden. We are setting uploadpack.allowAnySHA1InWant=true in the RPC to enable partial clones
+	rpcRequest.GitConfigOptions = []string{"uploadpack.hideRefs=refs/hidden", "uploadpack.allowAnySHA1InWant=false"}
+	response, err = makePostUploadPackRequest(ctx, t, serverSocketPath, rpcRequest, requestBodyCopy)
 	testhelper.RequireGrpcError(t, err, codes.Unavailable)
 
 	// Remove the if clause if support is dropped for Git versions before 2.22
@@ -160,6 +169,9 @@ func TestUploadPackRequestWithGitProtocol(t *testing.T) {
 
 	server, serverSocketPath := runSmartHTTPServer(t)
 	defer server.Stop()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
 
 	testRepo := testhelper.TestRepository()
 	testRepoPath, err := helper.GetRepoPath(testRepo)
@@ -188,7 +200,7 @@ func TestUploadPackRequestWithGitProtocol(t *testing.T) {
 	}
 
 	// The ref is successfully requested as it is not hidden
-	_, err = makePostUploadPackRequest(t, serverSocketPath, rpcRequest, requestBody)
+	_, err = makePostUploadPackRequest(ctx, t, serverSocketPath, rpcRequest, requestBody)
 	require.NoError(t, err)
 
 	envData, err := testhelper.GetGitEnvData()
@@ -204,6 +216,9 @@ func TestSuccessfulUploadPackDeepenRequest(t *testing.T) {
 	server, serverSocketPath := runSmartHTTPServer(t)
 	defer server.Stop()
 
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
 	testRepo := testhelper.TestRepository()
 
 	requestBody := &bytes.Buffer{}
@@ -212,7 +227,7 @@ func TestSuccessfulUploadPackDeepenRequest(t *testing.T) {
 	pktline.WriteFlush(requestBody)
 
 	rpcRequest := &gitalypb.PostUploadPackRequest{Repository: testRepo}
-	response, err := makePostUploadPackRequest(t, serverSocketPath, rpcRequest, requestBody)
+	response, err := makePostUploadPackRequest(ctx, t, serverSocketPath, rpcRequest, requestBody)
 
 	// This assertion is the main reason this test exists.
 	assert.NoError(t, err)
@@ -231,17 +246,19 @@ func TestFailedUploadPackRequestDueToValidationError(t *testing.T) {
 
 	for _, rpcRequest := range rpcRequests {
 		t.Run(fmt.Sprintf("%v", rpcRequest), func(t *testing.T) {
-			_, err := makePostUploadPackRequest(t, serverSocketPath, &rpcRequest, bytes.NewBuffer(nil))
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			_, err := makePostUploadPackRequest(ctx, t, serverSocketPath, &rpcRequest, bytes.NewBuffer(nil))
 			testhelper.RequireGrpcError(t, err, codes.InvalidArgument)
 		})
 	}
 }
 
-func makePostUploadPackRequest(t *testing.T, serverSocketPath string, in *gitalypb.PostUploadPackRequest, body io.Reader) (*bytes.Buffer, error) {
+func makePostUploadPackRequest(ctx context.Context, t *testing.T, serverSocketPath string, in *gitalypb.PostUploadPackRequest, body io.Reader) (*bytes.Buffer, error) {
 	client, conn := newSmartHTTPClient(t, serverSocketPath)
 	defer conn.Close()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+
 	stream, err := client.PostUploadPack(ctx)
 	require.NoError(t, err)
 
@@ -289,7 +306,9 @@ func extractPackDataFromResponse(t *testing.T, buf *bytes.Buffer) ([]byte, int, 
 			pack = append(pack, data[1:]...)
 		}
 	}
+
 	require.NoError(t, scanner.Err())
+	require.NotEmpty(t, pack, "pack data should not be empty")
 
 	// The packet is structured as follows:
 	// 4 bytes for signature, here it's "PACK"
@@ -302,4 +321,101 @@ func extractPackDataFromResponse(t *testing.T, buf *bytes.Buffer) ([]byte, int, 
 	pack = pack[12:]
 
 	return pack, version, entries
+}
+
+func TestUploadPackRequestForPartialCloneSuccess(t *testing.T) {
+	server, serverSocketPath := runSmartHTTPServer(t)
+	defer server.Stop()
+
+	testRepo := testhelper.TestRepository()
+	testRepoPath, err := helper.GetRepoPath(testRepo)
+	require.NoError(t, err)
+
+	storagePath := testhelper.GitlabTestStoragePath()
+	remoteRepoRelativePath := "gitlab-test-remote"
+	localRepoRelativePath := "gitlab-test-local"
+	remoteRepoPath := path.Join(storagePath, remoteRepoRelativePath)
+	localRepoPath := path.Join(storagePath, localRepoRelativePath)
+	// Make a non-bare clone of the test repo to act as a remote one
+	testhelper.MustRunCommand(t, nil, "git", "clone", testRepoPath, remoteRepoPath)
+	// Make a bare clone of the test repo to act as a local one and to leave the original repo intact for other tests
+	testhelper.MustRunCommand(t, nil, "git", "init", "--bare", localRepoPath)
+
+	defer os.RemoveAll(localRepoPath)
+	defer os.RemoveAll(remoteRepoPath)
+
+	commitMsg := fmt.Sprintf("Testing UploadPack RPC around %d", time.Now().Unix())
+	committerName := "Scrooge McDuck"
+	committerEmail := "scrooge@mcduck.com"
+
+	testhelper.MustRunCommand(t, nil, "git", "-C", remoteRepoPath,
+		"-c", fmt.Sprintf("user.name=%s", committerName),
+		"-c", fmt.Sprintf("user.email=%s", committerEmail),
+		"commit", "--allow-empty", "-m", commitMsg)
+
+	// The commit ID we want to pull from the remote repo
+	newHead := bytes.TrimSpace(testhelper.MustRunCommand(t, nil, "git", "-C", remoteRepoPath, "rev-parse", "master"))
+	// The commit ID we want to pull from the remote repo
+
+	// UploadPack request is a "want" packet line followed by a packet flush, then many "have" packets followed by a packet flush.
+	// This is explained a bit in https://git-scm.com/book/en/v2/Git-Internals-Transfer-Protocols#_downloading_data
+
+	var requestBuffer, requestBufferForFailed bytes.Buffer
+	pktline.WriteString(&requestBuffer, fmt.Sprintf("want %s %s\n", newHead, clientCapabilities))
+	pktline.WriteString(&requestBuffer, fmt.Sprintf("filter %s\n", "blob:limit=200"))
+	pktline.WriteFlush(&requestBuffer)
+	pktline.WriteString(&requestBuffer, "done\n")
+	pktline.WriteFlush(&requestBuffer)
+
+	req := &gitalypb.PostUploadPackRequest{
+		Repository: &gitalypb.Repository{
+			StorageName:  "default",
+			RelativePath: path.Join(remoteRepoRelativePath, ".git"),
+		},
+	}
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	requestBufferForFailed = requestBuffer
+
+	_, err = makePostUploadPackRequest(ctx, t, serverSocketPath, req, &requestBufferForFailed)
+	require.Error(t, err, "trying to use filters without the feature flag should result in an error")
+
+	ctx = featureflag.ContextWithFeatureFlag(ctx, featureflag.UploadPackFilter)
+
+	responseBuffer, err := makePostUploadPackRequest(ctx, t, serverSocketPath, req, &requestBuffer)
+	require.NoError(t, err)
+
+	pack, version, entries := extractPackDataFromResponse(t, responseBuffer)
+	require.NotNil(t, pack, "Expected to find a pack file in response, found none")
+
+	testhelper.MustRunCommand(t, bytes.NewReader(pack), "git", "-C", localRepoPath, "unpack-objects", fmt.Sprintf("--pack_header=%d,%d", version, entries))
+
+	// a4a132b1b0d6720ca9254440a7ba8a6b9bbd69ec is README.md, which is a small file
+	blobLessThanLimit := "a4a132b1b0d6720ca9254440a7ba8a6b9bbd69ec"
+
+	// c1788657b95998a2f177a4f86d68a60f2a80117f is CONTRIBUTING.md, which is > 200 bytese
+	blobGreaterThanLimit := "c1788657b95998a2f177a4f86d68a60f2a80117f"
+
+	testhelper.GitObjectMustExist(t, localRepoPath, blobLessThanLimit)
+	testhelper.GitObjectMustExist(t, remoteRepoPath, blobGreaterThanLimit)
+	testhelper.GitObjectMustNotExist(t, localRepoPath, blobGreaterThanLimit)
+
+	newBranch := "new-branch"
+	newHead = []byte(testhelper.CreateCommit(t, remoteRepoPath, newBranch, &testhelper.CreateCommitOpts{
+		Message: commitMsg,
+	}))
+
+	// after we delete the branch, we have a dangling commit
+	testhelper.MustRunCommand(t, nil, "git", "-C", remoteRepoPath, "branch", "-D", newBranch)
+
+	requestBuffer.Reset()
+	pktline.WriteString(&requestBuffer, fmt.Sprintf("want %s %s\n", string(newHead), clientCapabilities))
+	// add filtering
+	pktline.WriteFlush(&requestBuffer)
+	pktline.WriteFlush(&requestBuffer)
+
+	_, err = makePostUploadPackRequest(ctx, t, serverSocketPath, req, &requestBuffer)
+	require.NoError(t, err)
 }
