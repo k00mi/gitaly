@@ -16,6 +16,7 @@ type Ruby struct {
 	RestartDelayToml           duration `toml:"restart_delay"`
 	NumWorkers                 int      `toml:"num_workers"`
 	LinguistLanguagesPath      string   `toml:"linguist_languages_path"`
+	GitConfigSearchPath        string   `toml:"git_config_search_path"`
 }
 
 // This type is a trick to let our TOML library parse durations from strings.
@@ -58,6 +59,13 @@ func ConfigureRuby() error {
 	Config.Ruby.Dir, err = filepath.Abs(Config.Ruby.Dir)
 	if err != nil {
 		return err
+	}
+
+	if len(Config.Ruby.GitConfigSearchPath) != 0 {
+		Config.Ruby.GitConfigSearchPath, err = filepath.Abs(Config.Ruby.GitConfigSearchPath)
+		if err != nil {
+			return err
+		}
 	}
 
 	return validateIsDirectory(Config.Ruby.Dir, "gitaly-ruby.dir")

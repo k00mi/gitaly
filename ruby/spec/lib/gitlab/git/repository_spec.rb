@@ -777,8 +777,24 @@ describe Gitlab::Git::Repository do # rubocop:disable Metrics/BlockLength
   end
 
   describe '#rugged' do
+    let(:git_config_path) { '/tmp/path/etc' }
+
     after do
       Thread.current[described_class::RUGGED_KEY] = nil
+    end
+
+    it 'sets Rugged search path settings' do
+      allow(Gitlab.config.git).to receive(:config_search_path).and_return(git_config_path)
+      expect(Rugged::Settings).to receive(:[]=).with('search_path_system', git_config_path)
+
+      repository.rugged
+    end
+
+    it 'does not set Rugged search path settings' do
+      allow(Gitlab.config.git).to receive(:config_search_path).and_return("")
+      expect(Rugged::Settings).not_to receive(:[]=)
+
+      repository.rugged
     end
 
     it 'stores reference in Thread.current' do
