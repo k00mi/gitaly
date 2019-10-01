@@ -76,7 +76,7 @@ dir = "/home/git/gitaly/ruby"
 #
 # # Search path for system gitconfig file (e.g. /etc, /opt/gitlab/embedded/etc)
 # # NOTE: This only affects RPCs that use Rugged.
-# git_config_search_path = "/etc"
+# rugged_git_config_search_path = "/etc"
 
 [gitlab-shell]
 # The directory where gitlab-shell is installed

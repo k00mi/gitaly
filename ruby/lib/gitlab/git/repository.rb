@@ -133,9 +133,9 @@ module Gitlab
       end
 
       def set_rugged_search_path
-        return unless Gitlab.config.git.config_search_path.present?
+        return unless Gitlab.config.git.rugged_git_config_search_path.present?
 
-        Rugged::Settings['search_path_system'] = Gitlab.config.git.config_search_path
+        Rugged::Settings['search_path_system'] = Gitlab.config.git.rugged_git_config_search_path
       end
 
       def branch_names

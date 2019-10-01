@@ -784,14 +784,14 @@ describe Gitlab::Git::Repository do # rubocop:disable Metrics/BlockLength
     end
 
     it 'sets Rugged search path settings' do
-      allow(Gitlab.config.git).to receive(:config_search_path).and_return(git_config_path)
+      allow(Gitlab.config.git).to receive(:rugged_git_config_search_path).and_return(git_config_path)
       expect(Rugged::Settings).to receive(:[]=).with('search_path_system', git_config_path)
 
       repository.rugged
     end
 
     it 'does not set Rugged search path settings' do
-      allow(Gitlab.config.git).to receive(:config_search_path).and_return("")
+      allow(Gitlab.config.git).to receive(:rugged_git_config_search_path).and_return("")
       expect(Rugged::Settings).not_to receive(:[]=)
 
       repository.rugged

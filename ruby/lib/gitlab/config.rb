@@ -36,8 +36,8 @@ module Gitlab
         @max_commit_or_tag_message_size ||= ENV['GITALY_RUBY_MAX_COMMIT_OR_TAG_MESSAGE_SIZE'].to_i
       end
 
-      def config_search_path
-        @config_search_path ||= ENV['GITALY_GIT_CONFIG_SEARCH_PATH']
+      def rugged_git_config_search_path
+        @rugged_git_config_search_path ||= ENV['GITALY_RUGGED_GIT_CONFIG_SEARCH_PATH']
       end
     end
 
