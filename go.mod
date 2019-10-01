@@ -9,7 +9,6 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/kelseyhightower/envconfig v1.3.0
-	github.com/kr/pretty v0.1.0 // indirect
 	github.com/libgit2/git2go v0.0.0-20190104134018-ecaeb7a21d47
 	github.com/prometheus/client_golang v1.0.0
 	github.com/sirupsen/logrus v1.2.0
@@ -22,6 +21,5 @@ require (
 	golang.org/x/sys v0.0.0-20190422165155-953cdadca894
 	google.golang.org/genproto v0.0.0-20181202183823-bd91e49a0898 // indirect
 	google.golang.org/grpc v1.16.0
-	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
-	gopkg.in/yaml.v2 v2.2.2 // indirect
+	gopkg.in/yaml.v2 v2.2.2
 )
