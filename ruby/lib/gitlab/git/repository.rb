@@ -123,19 +123,12 @@ module Gitlab
 
       def rugged
         @rugged ||= begin
-                      set_rugged_search_path
                       Rugged::Repository.new(path, alternates: alternate_object_directories).tap do |repo|
                         Thread.current[RUGGED_KEY] << repo if Thread.current[RUGGED_KEY]
                       end
                     end
       rescue Rugged::RepositoryError, Rugged::OSError
         raise NoRepository, 'no repository for such path'
-      end
-
-      def set_rugged_search_path
-        return unless Gitlab.config.git.rugged_git_config_search_path.present?
-
-        Rugged::Settings['search_path_system'] = Gitlab.config.git.rugged_git_config_search_path
       end
 
       def branch_names
