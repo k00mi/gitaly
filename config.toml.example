@@ -1,4 +1,6 @@
 # Example Gitaly configuration file
+# Documentation lives at https://docs.gitlab.com/ee/administration/gitaly/ and
+# https://docs.gitlab.com/ee//administration/gitaly/reference
 
 socket_path = "/home/git/gitlab/tmp/sockets/private/gitaly.socket"
 
