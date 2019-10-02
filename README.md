@@ -62,7 +62,7 @@ Gitaly uses `git`. Versions `2.21.0` and `2.22.0` are supported.
 
 ## Configuration
 
-See [configuration documentation](doc/configuration).
+The administration and reference guide is [documented in the GitLab project](https://docs.gitlab.com/ee/administration/gitaly/).
 
 ## Contributing
 

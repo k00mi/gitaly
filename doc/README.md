@@ -6,13 +6,15 @@ written in [the design doc](doc/DESIGN.md).
 #### Configuring Gitaly
 
 Running Gitaly requires it to be configured correctly, options are described in
-the [configuration documentation](doc/configuration/README.md).
+GitLab's  [configuration documentation](https://gitlab.com/gitlab-org/gitlab/blob/master/doc/administration/gitaly/index.md).
+
+The reference guide is documented in https://gitlab.com/gitlab-org/gitlab/blob/master/doc/administration/gitaly/reference.md.
 
 #### Developing Gitaly
 
 - When new to Gitaly development, start by reading the [beginners guide](doc/beginners_guide.md).
 - When developing on Gitaly-Ruby, read the [Gitaly-Ruby doc](doc/ruby_endpoint.md)
-- The Gitaly release process is descripted in [our process doc](doc/PROCESS.md)
+- The Gitaly release process is described in [our process doc](doc/PROCESS.md)
 - Tests use Git repositories too, [read more about them](doc/test_repos.md)
 
 #### Gitaly HA
