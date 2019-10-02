@@ -1,6 +1,7 @@
 package praefect
 
 import (
+	"fmt"
 	"io/ioutil"
 	"testing"
 
@@ -48,8 +49,9 @@ func TestStreamDirector(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	address := "gitaly-primary.example.com"
 	clientConnections := conn.NewClientConnections()
-	clientConnections.RegisterNode("praefect-internal-1", "tcp://gitaly-primary.example.com")
+	clientConnections.RegisterNode("praefect-internal-1", fmt.Sprintf("tcp://%s", address))
 
 	coordinator := NewCoordinator(log.Default(), datastore, clientConnections)
 	require.NoError(t, coordinator.RegisterProtos(protoregistry.GitalyProtoFileDescriptors...))
@@ -61,7 +63,7 @@ func TestStreamDirector(t *testing.T) {
 
 	_, conn, jobUpdateFunc, err := coordinator.streamDirector(ctx, "/gitaly.RepositoryService/GarbageCollect", &mockPeeker{frame})
 	require.NoError(t, err)
-	t.Logf("CONN %+v", conn)
+	require.Equal(t, address, conn.Target())
 
 	jobs, err := datastore.GetJobs(JobStatePending, 1, 10)
 	require.NoError(t, err)

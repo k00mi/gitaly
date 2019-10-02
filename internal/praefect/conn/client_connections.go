@@ -11,6 +11,12 @@ import (
 	"google.golang.org/grpc"
 )
 
+// ErrConnectionNotFound indicates the connection for a given storage has not yet been registered
+var ErrConnectionNotFound = errors.New("client connection not found")
+
+// ErrAlreadyRegistered indicates the client connection for a given storage has already been registered
+var ErrAlreadyRegistered = errors.New("client connection already registered")
+
 // ClientConnections contains ready to use grpc client connections
 type ClientConnections struct {
 	connMutex sync.RWMutex
@@ -37,15 +43,18 @@ func (c *ClientConnections) RegisterNode(storageName, listenAddr string) error {
 		return err
 	}
 
-	c.setConn(storageName, conn)
-
-	return nil
+	return c.setConn(storageName, conn)
 }
 
-func (c *ClientConnections) setConn(storageName string, conn *grpc.ClientConn) {
+func (c *ClientConnections) setConn(storageName string, conn *grpc.ClientConn) error {
 	c.connMutex.Lock()
+	if _, ok := c.nodes[storageName]; ok {
+		return ErrAlreadyRegistered
+	}
 	c.nodes[storageName] = conn
 	c.connMutex.Unlock()
+
+	return nil
 }
 
 // GetConnection gets the grpc client connection based on an address
@@ -54,7 +63,7 @@ func (c *ClientConnections) GetConnection(storageName string) (*grpc.ClientConn,
 	cc, ok := c.nodes[storageName]
 	c.connMutex.RUnlock()
 	if !ok {
-		return nil, errors.New("client connection not found")
+		return nil, ErrConnectionNotFound
 	}
 
 	return cc, nil
