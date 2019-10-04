@@ -17,7 +17,7 @@ GitLab at the correct times.
 
 | GitLab-CE Branch | Gitaly Tag/Branch | Gitaly MR          |
 |------------------|-------------------|--------------------|
-| `master`         | `v1.Y.Z`          | <MR link>          |
+| `master`         | **TBD**           | <MR link>          |
 | `12.X`           | `1-X-stable`      | <backport MR link> |
 | `12.X`           | `1-X-stable`      | <backport MR link> |
 | `12.X`           | `1-X-stable`      | <backport MR link> |
@@ -47,7 +47,7 @@ As a sanity check, you can verify your repository only points to remotes in
      the [version matrix](#version-matrix) above.
 - **Contributor**: Determine if Gitaly stable branches exist for all needed
   fixes.
-   - [ ] If all of them exist, mark the next section with a `[-]` to skip.
+   - [ ] If all of them exist, also mark the next section as complete and skip.
      Otherwise, reassign the maintainer to complete the next section.
 - **Maintainer:** If a Gitaly stable branch `X-Y-stable` in the [table above](#version-matrix)
   does not exist yet, perform the following steps in a repository cloned
@@ -70,8 +70,8 @@ As a sanity check, you can verify your repository only points to remotes in
        1. `git checkout X-Y-stable`
        1. `git pull`
        1. `_support/release X.Y.Z` (where `Z` is the new incremented patch version)
-       1. Upon successful vetting of the release, the script will provide a
-          command for you to actually push the tag
+       1. Upon successful vetting of the release, run `git push origin $TAGNAME`
+          for each tag.
     - Reassign to contributor
 - **Contributor:** Bump Gitaly in GitLab projects:
    - [ ] For each version of GitLab in the [table above](#version-matrix),
