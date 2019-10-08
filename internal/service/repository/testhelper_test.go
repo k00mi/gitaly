@@ -16,6 +16,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -43,8 +44,8 @@ func newRepositoryClient(t *testing.T, serverSocketPath string) (gitalypb.Reposi
 var NewRepositoryClient = newRepositoryClient
 
 func runRepoServer(t *testing.T) (*grpc.Server, string) {
-	streamInt := []grpc.StreamServerInterceptor{auth.StreamServerInterceptor()}
-	unaryInt := []grpc.UnaryServerInterceptor{auth.UnaryServerInterceptor()}
+	streamInt := []grpc.StreamServerInterceptor{auth.StreamServerInterceptor(config.Config.Auth)}
+	unaryInt := []grpc.UnaryServerInterceptor{auth.UnaryServerInterceptor(config.Config.Auth)}
 
 	server := testhelper.NewTestGrpcServer(t, streamInt, unaryInt)
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
@@ -60,6 +61,28 @@ func runRepoServer(t *testing.T) (*grpc.Server, string) {
 	go server.Serve(listener)
 
 	return server, "unix://" + serverSocketPath
+}
+
+func TestRepoNoAuth(t *testing.T) {
+	srv, path := runRepoServer(t)
+	defer srv.Stop()
+
+	connOpts := []grpc.DialOption{
+		grpc.WithInsecure(),
+	}
+
+	conn, err := grpc.Dial(path, connOpts...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	client := gitalypb.NewRepositoryServiceClient(conn)
+	_, err = client.CreateRepository(ctx, &gitalypb.CreateRepositoryRequest{Repository: &gitalypb.Repository{StorageName: "default", RelativePath: "new/project/path"}})
+
+	testhelper.RequireGrpcError(t, err, codes.Unauthenticated)
 }
 
 func assertModTimeAfter(t *testing.T, afterTime time.Time, paths ...string) bool {
@@ -84,7 +107,7 @@ func TestMain(m *testing.M) {
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
-	config.Config.Auth = config.Auth{Token: testhelper.RepositoryAuthToken}
+	config.Config.Auth.Token = testhelper.RepositoryAuthToken
 
 	var err error
 	config.Config.GitlabShell.Dir, err = filepath.Abs("testdata/gitlab-shell")

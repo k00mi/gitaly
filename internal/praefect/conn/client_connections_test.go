@@ -15,12 +15,12 @@ func TestRegisterNode(t *testing.T) {
 	_, err := clientConn.GetConnection(storageName)
 	require.Equal(t, ErrConnectionNotFound, err)
 
-	require.NoError(t, clientConn.RegisterNode(storageName, fmt.Sprintf("tcp://%s", tcpAddress)))
+	require.NoError(t, clientConn.RegisterNode(storageName, fmt.Sprintf("tcp://%s", tcpAddress), "token"))
 
 	conn, err := clientConn.GetConnection(storageName)
 	require.NoError(t, err)
 	require.Equal(t, tcpAddress, conn.Target())
 
-	err = clientConn.RegisterNode(storageName, "tcp://some-other-address")
+	err = clientConn.RegisterNode(storageName, "tcp://some-other-address", "token")
 	require.Equal(t, ErrAlreadyRegistered, err)
 }

@@ -7,7 +7,7 @@ import (
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"github.com/prometheus/client_golang/prometheus"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
-	"gitlab.com/gitlab-org/gitaly/internal/config"
+	internalauth "gitlab.com/gitlab-org/gitaly/internal/auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -28,45 +28,44 @@ func init() {
 }
 
 // StreamServerInterceptor checks for Gitaly bearer tokens.
-func StreamServerInterceptor() grpc.StreamServerInterceptor {
-	return grpc_auth.StreamServerInterceptor(check)
+func StreamServerInterceptor(conf internalauth.Config) grpc.StreamServerInterceptor {
+	return grpc_auth.StreamServerInterceptor(checkFunc(conf))
 }
 
 // UnaryServerInterceptor checks for Gitaly bearer tokens.
-func UnaryServerInterceptor() grpc.UnaryServerInterceptor {
-	return grpc_auth.UnaryServerInterceptor(check)
+func UnaryServerInterceptor(conf internalauth.Config) grpc.UnaryServerInterceptor {
+	return grpc_auth.UnaryServerInterceptor(checkFunc(conf))
 }
 
-func check(ctx context.Context) (context.Context, error) {
-	if len(config.Config.Auth.Token) == 0 {
-		countStatus("server disabled authentication").Inc()
-		return ctx, nil
-	}
+func checkFunc(conf internalauth.Config) func(ctx context.Context) (context.Context, error) {
+	return func(ctx context.Context) (context.Context, error) {
+		if len(conf.Token) == 0 {
+			countStatus("server disabled authentication", conf.Transitioning).Inc()
+			return ctx, nil
+		}
 
-	err := gitalyauth.CheckToken(ctx, config.Config.Auth.Token, time.Now())
-	switch status.Code(err) {
-	case codes.OK:
-		countStatus(okLabel()).Inc()
-	case codes.Unauthenticated:
-		countStatus("unauthenticated").Inc()
-	case codes.PermissionDenied:
-		countStatus("denied").Inc()
-	default:
-		countStatus("invalid").Inc()
-	}
+		err := gitalyauth.CheckToken(ctx, conf.Token, time.Now())
+		switch status.Code(err) {
+		case codes.OK:
+			countStatus(okLabel(conf.Transitioning), conf.Transitioning).Inc()
+		case codes.Unauthenticated:
+			countStatus("unauthenticated", conf.Transitioning).Inc()
+		case codes.PermissionDenied:
+			countStatus("denied", conf.Transitioning).Inc()
+		default:
+			countStatus("invalid", conf.Transitioning).Inc()
+		}
 
-	return ctx, ifEnforced(err)
+		if conf.Transitioning {
+			err = nil
+		}
+
+		return ctx, err
+	}
 }
 
-func ifEnforced(err error) error {
-	if config.Config.Auth.Transitioning {
-		return nil
-	}
-	return err
-}
-
-func okLabel() string {
-	if config.Config.Auth.Transitioning {
+func okLabel(transitioning bool) string {
+	if transitioning {
 		// This special value is an extra warning sign to administrators that
 		// authentication is currently not enforced.
 		return "would be ok"
@@ -74,9 +73,9 @@ func okLabel() string {
 	return "ok"
 }
 
-func countStatus(status string) prometheus.Counter {
+func countStatus(status string, transitioning bool) prometheus.Counter {
 	enforced := "true"
-	if config.Config.Auth.Transitioning {
+	if transitioning {
 		enforced = "false"
 	}
 	return authCount.WithLabelValues(enforced, status)

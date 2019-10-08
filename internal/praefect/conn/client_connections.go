@@ -6,7 +6,6 @@ import (
 
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	"gitlab.com/gitlab-org/gitaly/client"
-	gitalyconfig "gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/grpc-proxy/proxy"
 	"google.golang.org/grpc"
 )
@@ -32,11 +31,11 @@ func NewClientConnections() *ClientConnections {
 
 // RegisterNode will direct traffic to the supplied downstream connection when the storage location
 // is encountered.
-func (c *ClientConnections) RegisterNode(storageName, listenAddr string) error {
+func (c *ClientConnections) RegisterNode(storageName, listenAddr, token string) error {
 	conn, err := client.Dial(listenAddr,
 		[]grpc.DialOption{
 			grpc.WithDefaultCallOptions(grpc.CallCustomCodec(proxy.Codec())),
-			grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials(gitalyconfig.Config.Auth.Token)),
+			grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials(token)),
 		},
 	)
 	if err != nil {

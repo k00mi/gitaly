@@ -98,8 +98,8 @@ func TestProceessReplicationJob(t *testing.T) {
 	replicator.log = gitaly_log.Default()
 
 	clientCC := conn.NewClientConnections()
-	clientCC.RegisterNode("default", srvSocketPath)
-	clientCC.RegisterNode("backup", srvSocketPath)
+	clientCC.RegisterNode("default", srvSocketPath, gitaly_config.Config.Auth.Token)
+	clientCC.RegisterNode("backup", srvSocketPath, gitaly_config.Config.Auth.Token)
 
 	replMgr := &ReplMgr{
 		log:               gitaly_log.Default(),
@@ -178,7 +178,7 @@ func TestMain(m *testing.M) {
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
-	gitaly_config.Config.Auth = gitaly_config.Auth{Token: testhelper.RepositoryAuthToken}
+	gitaly_config.Config.Auth.Token = testhelper.RepositoryAuthToken
 
 	var err error
 	gitaly_config.Config.GitlabShell.Dir, err = filepath.Abs("testdata/gitlab-shell")

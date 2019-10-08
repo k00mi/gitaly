@@ -10,6 +10,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/client"
+	internalauth "gitlab.com/gitlab-org/gitaly/internal/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/log"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/conn"
@@ -68,10 +69,12 @@ func TestServerSimpleUnaryUnary(t *testing.T) {
 						ID:             1,
 						Storage:        "praefect-internal-1",
 						DefaultPrimary: true,
+						Token:          "abc",
 					},
 					&models.Node{
 						ID:      2,
 						Storage: "praefect-internal-2",
+						Token:   "xyz",
 					}},
 			}
 
@@ -82,10 +85,10 @@ func TestServerSimpleUnaryUnary(t *testing.T) {
 			clientCC := conn.NewClientConnections()
 
 			for id, nodeStorage := range datastore.storageNodes.m {
-				backend, cleanup := newMockDownstream(t, tt.callback)
+				backend, cleanup := newMockDownstream(t, nodeStorage.Token, tt.callback)
 				defer cleanup() // clean up mock downstream server resources
 
-				clientCC.RegisterNode(nodeStorage.Storage, backend)
+				clientCC.RegisterNode(nodeStorage.Storage, backend, nodeStorage.Token)
 				nodeStorage.Address = backend
 				datastore.storageNodes.m[id] = nodeStorage
 			}
@@ -145,10 +148,12 @@ func TestGitalyServerInfo(t *testing.T) {
 				ID:             1,
 				Storage:        "praefect-internal-1",
 				DefaultPrimary: true,
+				Token:          "abc",
 			},
 			&models.Node{
 				ID:      2,
 				Storage: "praefect-internal-2",
+				Token:   "xyz",
 			}},
 	}
 	cc, srv := runFullPraefectServer(t, conf)
@@ -175,9 +180,9 @@ func runFullPraefectServer(t *testing.T, conf config.Config) (*grpc.ClientConn, 
 
 	clientCC := conn.NewClientConnections()
 	for id, nodeStorage := range datastore.storageNodes.m {
-		_, backend := runInternalGitalyServer(t)
+		_, backend := runInternalGitalyServer(t, nodeStorage.Token)
 
-		clientCC.RegisterNode(nodeStorage.Storage, backend)
+		clientCC.RegisterNode(nodeStorage.Storage, backend, nodeStorage.Token)
 		nodeStorage.Address = backend
 		datastore.storageNodes.m[id] = nodeStorage
 	}
@@ -215,9 +220,9 @@ func runFullPraefectServer(t *testing.T, conf config.Config) (*grpc.ClientConn, 
 	return cc, prf
 }
 
-func runInternalGitalyServer(t *testing.T) (*grpc.Server, string) {
-	streamInt := []grpc.StreamServerInterceptor{auth.StreamServerInterceptor()}
-	unaryInt := []grpc.UnaryServerInterceptor{auth.UnaryServerInterceptor()}
+func runInternalGitalyServer(t *testing.T, token string) (*grpc.Server, string) {
+	streamInt := []grpc.StreamServerInterceptor{auth.StreamServerInterceptor(internalauth.Config{Token: token})}
+	unaryInt := []grpc.UnaryServerInterceptor{auth.UnaryServerInterceptor(internalauth.Config{Token: token})}
 
 	server := testhelper.NewTestGrpcServer(t, streamInt, unaryInt)
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
@@ -268,13 +273,14 @@ func dialLocalPort(tb testing.TB, port int, backend bool) *grpc.ClientConn {
 }
 
 // initializes and returns a client to downstream server, downstream server, and cleanup function
-func newMockDownstream(tb testing.TB, callback simpleUnaryUnaryCallback) (string, func()) {
+func newMockDownstream(tb testing.TB, token string, callback simpleUnaryUnaryCallback) (string, func()) {
 	// setup mock server
 	m := &mockSvc{
 		simpleUnaryUnary: callback,
 	}
 
-	srv := grpc.NewServer()
+	srv := grpc.NewServer(grpc.UnaryInterceptor(auth.UnaryServerInterceptor(internalauth.Config{Token: token})))
+
 	mock.RegisterSimpleServiceServer(srv, m)
 
 	// client to backend service
