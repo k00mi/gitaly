@@ -1,5 +1,27 @@
 # Gitaly changelog
 
+## v1.67.0
+
+#### Added
+- Adding auth to praefect
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1517
+- Don't panic, go retry
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1523
+- Allow praefect to handle ServerInfoRequest
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1527
+
+#### Fixed
+- Support configurable Git config search path for Rugged
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1526
+
+#### Other
+- Create go binary to execute hooks
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1328
+
+#### Performance
+- Allow upload pack filters with feature flag
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1411
+
 ## v1.66.0
 
 #### Changed
