@@ -171,7 +171,6 @@ func TestPopulatesProtoRegistry(t *testing.T) {
 			"SSHUploadArchive": protoregistry.OpMutator,
 		},
 		"StorageService": map[string]protoregistry.OpType{
-			"ListDirectories":       protoregistry.OpAccessor,
 			"DeleteAllRepositories": protoregistry.OpMutator,
 		},
 		"WikiService": map[string]protoregistry.OpType{
@@ -222,7 +221,7 @@ func TestMethodInfoScope(t *testing.T) {
 			scope:  protoregistry.ScopeRepository,
 		},
 		{
-			method: "/gitaly.StorageService/ListDirectories",
+			method: "/gitaly.StorageService/DeleteAllRepositories",
 			scope:  protoregistry.ScopeStorage,
 		},
 		{

@@ -14,7 +14,6 @@ module Gitaly
       self.unmarshal_class_method = :decode
       self.service_name = 'gitaly.StorageService'
 
-      rpc :ListDirectories, ListDirectoriesRequest, stream(ListDirectoriesResponse)
       rpc :DeleteAllRepositories, DeleteAllRepositoriesRequest, DeleteAllRepositoriesResponse
     end
 
