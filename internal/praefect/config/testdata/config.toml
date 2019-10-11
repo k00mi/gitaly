@@ -1,3 +1,4 @@
+virtual_storage_name = "praefect"
 listen_addr = ""
 socket_path = ""
 prometheus_listen_addr = ""

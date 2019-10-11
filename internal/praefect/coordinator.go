@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/conn"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/models"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
@@ -20,6 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/grpc-proxy/proxy"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 )
 
 // Coordinator takes care of directing client requests to the appropriate
@@ -33,10 +35,11 @@ type Coordinator struct {
 	datastore Datastore
 
 	registry *protoregistry.Registry
+	conf     config.Config
 }
 
 // NewCoordinator returns a new Coordinator that utilizes the provided logger
-func NewCoordinator(l *logrus.Entry, datastore Datastore, clientConnections *conn.ClientConnections, fileDescriptors ...*descriptor.FileDescriptorProto) *Coordinator {
+func NewCoordinator(l *logrus.Entry, datastore Datastore, clientConnections *conn.ClientConnections, conf config.Config, fileDescriptors ...*descriptor.FileDescriptorProto) *Coordinator {
 	registry := protoregistry.New()
 	registry.RegisterFiles(fileDescriptors...)
 
@@ -45,6 +48,7 @@ func NewCoordinator(l *logrus.Entry, datastore Datastore, clientConnections *con
 		datastore:   datastore,
 		registry:    registry,
 		connections: clientConnections,
+		conf:        conf,
 	}
 }
 
@@ -116,6 +120,10 @@ func (c *Coordinator) getStorageForRepositoryMessage(mi protoregistry.MethodInfo
 	targetRepo, err := mi.TargetRepo(m)
 	if err != nil {
 		return "", nil, err
+	}
+
+	if targetRepo.StorageName != c.conf.VirtualStorageName {
+		return "", nil, grpc.Errorf(codes.InvalidArgument, "only messages for %s are allowed", c.conf.VirtualStorageName)
 	}
 
 	primary, err := c.selectPrimary(mi, targetRepo)

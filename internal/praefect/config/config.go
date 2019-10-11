@@ -13,8 +13,9 @@ import (
 
 // Config is a container for everything found in the TOML config file
 type Config struct {
-	ListenAddr string `toml:"listen_addr"`
-	SocketPath string `toml:"socket_path"`
+	VirtualStorageName string `toml:"virtual_storage_name"`
+	ListenAddr         string `toml:"listen_addr"`
+	SocketPath         string `toml:"socket_path"`
 
 	Nodes []*models.Node `toml:"node"`
 
