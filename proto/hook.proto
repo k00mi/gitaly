@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package gitaly;
+
+option go_package = "gitlab.com/gitlab-org/gitaly/proto/go/gitalypb";
+
+import "shared.proto";
+
+service HookService {
+  rpc PreReceiveHook(PreReceiveHookRequest) returns (PreReceiveHookResponse) {
+    option (op_type) = {
+      op: ACCESSOR
+      target_repository_field: "1"
+    };
+  }
+  rpc PostReceiveHook(PostReceiveHookRequest) returns  (PostReceiveHookResponse) {
+    option (op_type) = {
+      op: ACCESSOR
+      target_repository_field: "1"
+    };
+  }
+  rpc UpdateHook(UpdateHookRequest) returns (UpdateHookResponse) {
+    option (op_type) = {
+      op: ACCESSOR
+      target_repository_field: "1"
+    };
+  }
+}
+
+message PreReceiveHookRequest {
+  Repository repository = 1;
+  string key_id = 2;
+  string protocol = 3;
+  bytes stdin = 4;
+}
+
+message PreReceiveHookResponse{
+  bytes stdout = 1;
+  bytes stderr = 2;
+  bool success = 3;
+}
+
+message PostReceiveHookRequest {
+  Repository repository = 1;
+  string key_id = 2;
+  bytes stdin = 3;
+}
+
+message PostReceiveHookResponse{
+  bytes stdout = 1;
+  bytes stderr = 2;
+  bool success = 3;
+}
+
+message UpdateHookRequest {
+  Repository repository = 1;
+  string key_id = 2;
+  bytes ref = 3;
+  string old_value = 4;
+  string new_value = 5;
+}
+
+message UpdateHookResponse{
+  bytes stdout = 1;
+  bytes stderr = 2;
+  bool success = 3;
+}
