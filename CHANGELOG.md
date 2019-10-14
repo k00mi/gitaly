@@ -1,5 +1,21 @@
 # Gitaly changelog
 
+## v1.68.0
+
+#### Added
+- Add virtual storage name to praefect config
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1525
+- Support health checks in Praefect
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1541
+
+#### Changed
+- Provide specifics about why a cherry-pick or revert has failed
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1543
+
+#### Other
+- Upgrade GRPC to 1.24.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1539
+
 ## v1.67.0
 
 #### Added
