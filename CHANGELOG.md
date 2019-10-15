@@ -1,5 +1,15 @@
 # Gitaly changelog
 
+## v1.69.0
+
+#### Fixed
+- Fix praefect server info to include git version, server version
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1550
+
+#### Other
+- Enable second repository to have its storage re-written
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1548
+
 ## v1.68.0
 
 #### Added
