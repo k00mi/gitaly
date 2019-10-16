@@ -170,9 +170,6 @@ func TestPopulatesProtoRegistry(t *testing.T) {
 			"SSHReceivePack":   protoregistry.OpMutator,
 			"SSHUploadArchive": protoregistry.OpMutator,
 		},
-		"StorageService": map[string]protoregistry.OpType{
-			"DeleteAllRepositories": protoregistry.OpMutator,
-		},
 		"WikiService": map[string]protoregistry.OpType{
 			"WikiGetPageVersions":  protoregistry.OpAccessor,
 			"WikiWritePage":        protoregistry.OpMutator,
@@ -219,10 +216,6 @@ func TestMethodInfoScope(t *testing.T) {
 		{
 			method: "/gitaly.RepositoryService/RepositoryExists",
 			scope:  protoregistry.ScopeRepository,
-		},
-		{
-			method: "/gitaly.StorageService/DeleteAllRepositories",
-			scope:  protoregistry.ScopeStorage,
 		},
 		{
 			method: "/gitaly.ServerService/ServerInfo",
