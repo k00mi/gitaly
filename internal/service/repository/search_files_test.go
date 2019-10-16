@@ -258,7 +258,6 @@ func TestSearchFilesByContentFailure(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-
 			stream, err := client.SearchFilesByContent(ctx, &gitalypb.SearchFilesByContentRequest{
 				Repository: tc.repo,
 				Query:      tc.query,
@@ -363,7 +362,6 @@ func TestSearchFilesByNameFailure(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-
 			stream, err := client.SearchFilesByName(ctx, &gitalypb.SearchFilesByNameRequest{
 				Repository: tc.repo,
 				Query:      tc.query,

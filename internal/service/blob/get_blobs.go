@@ -89,7 +89,6 @@ func sendGetBlobsResponse(req *gitalypb.GetBlobsRequest, stream gitalypb.BlobSer
 }
 
 func sendBlobTreeEntry(response *gitalypb.GetBlobsResponse, stream gitalypb.BlobService_GetBlobsServer, c *catfile.Batch, limit int64) error {
-
 	var readLimit int64
 	if limit < 0 || limit > response.Size {
 		readLimit = response.Size

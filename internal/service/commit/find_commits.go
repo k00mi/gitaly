@@ -49,7 +49,6 @@ func (s *server) FindCommits(req *gitalypb.FindCommitsRequest, stream gitalypb.C
 }
 
 func findCommits(ctx context.Context, req *gitalypb.FindCommitsRequest, stream gitalypb.CommitService_FindCommitsServer) error {
-
 	args := getLogCommandFlags(req)
 	logCmd, err := git.Command(ctx, req.GetRepository(), args...)
 	if err != nil {
@@ -130,6 +129,7 @@ func (s *findCommitsSender) Reset() { s.commits = nil }
 func (s *findCommitsSender) Append(it chunk.Item) {
 	s.commits = append(s.commits, it.(*gitalypb.GitCommit))
 }
+
 func (s *findCommitsSender) Send() error {
 	return s.stream.Send(&gitalypb.FindCommitsResponse{Commits: s.commits})
 }

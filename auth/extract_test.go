@@ -50,7 +50,6 @@ func TestCheckTokenV1(t *testing.T) {
 			require.Equal(t, tc.code, status.Code(err), "expected grpc code in error %v", err)
 		})
 	}
-
 }
 
 func TestCheckTokenV2(t *testing.T) {

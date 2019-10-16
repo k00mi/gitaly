@@ -29,7 +29,6 @@ func (s *server) CountDivergingCommits(ctx context.Context, req *gitalypb.CountD
 	}
 
 	return &gitalypb.CountDivergingCommitsResponse{LeftCount: left, RightCount: right}, nil
-
 }
 
 func validateCountDivergingCommitsRequest(req *gitalypb.CountDivergingCommitsRequest) error {

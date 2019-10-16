@@ -132,7 +132,6 @@ func TestFailedLastCommitForPathRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			_, err := client.LastCommitForPath(ctx, testCase.request)

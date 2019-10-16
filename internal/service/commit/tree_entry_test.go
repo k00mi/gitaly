@@ -140,7 +140,6 @@ func TestSuccessfulTreeEntry(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(fmt.Sprintf("test case: revision=%q path=%q", testCase.revision, testCase.path), func(t *testing.T) {
-
 			request := &gitalypb.TreeEntryRequest{
 				Repository: testRepo,
 				Revision:   testCase.revision,
@@ -183,7 +182,6 @@ func TestFailedTreeEntryRequestDueToValidationError(t *testing.T) {
 
 	for _, rpcRequest := range rpcRequests {
 		t.Run(fmt.Sprintf("%+v", rpcRequest), func(t *testing.T) {
-
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			c, err := client.TreeEntry(ctx, &rpcRequest)

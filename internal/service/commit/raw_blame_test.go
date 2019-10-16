@@ -45,7 +45,6 @@ func TestSuccessfulRawBlameRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(fmt.Sprintf("test case: revision=%q path=%q", testCase.revision, testCase.path), func(t *testing.T) {
-
 			request := &gitalypb.RawBlameRequest{
 				Repository: testRepo,
 				Revision:   testCase.revision,
@@ -124,7 +123,6 @@ func TestFailedRawBlameRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.description, func(t *testing.T) {
-
 			request := gitalypb.RawBlameRequest{
 				Repository: testCase.repo,
 				Revision:   testCase.revision,

@@ -118,7 +118,6 @@ func addAlternateFiles(ctx context.Context, repository *gitalypb.Repository, bui
 }
 
 func walkAndAddToBuilder(alternateObjDir string, builder *archive.TarBuilder) error {
-
 	matchWalker := archive.NewMatchWalker(objectFiles, func(path string, info os.FileInfo, err error) error {
 		fmt.Printf("walking down %v\n", path)
 		if err != nil {

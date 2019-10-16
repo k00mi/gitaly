@@ -92,7 +92,6 @@ func configure() (config.Config, error) {
 }
 
 func run(listeners []net.Listener, conf config.Config) error {
-
 	clientConnections := conn.NewClientConnections()
 
 	for _, node := range conf.Nodes {

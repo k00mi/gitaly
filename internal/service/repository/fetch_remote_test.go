@@ -183,7 +183,6 @@ func TestFetchRemoteOverHTTP(t *testing.T) {
 
 			require.Len(t, refs, 1)
 			assert.Equal(t, "master", refs[0])
-
 		})
 	}
 }

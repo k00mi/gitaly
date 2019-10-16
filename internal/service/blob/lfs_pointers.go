@@ -191,6 +191,7 @@ func (s *allLFSPointersSender) Reset() { s.lfsPointers = nil }
 func (s *allLFSPointersSender) Append(it chunk.Item) {
 	s.lfsPointers = append(s.lfsPointers, it.(*gitalypb.LFSPointer))
 }
+
 func (s *allLFSPointersSender) Send() error {
 	return s.stream.Send(&gitalypb.GetAllLFSPointersResponse{LfsPointers: s.lfsPointers})
 }

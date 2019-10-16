@@ -25,6 +25,7 @@ func (ts *findAllBranchNamesSender) Reset() { ts.branchNames = nil }
 func (ts *findAllBranchNamesSender) Append(it chunk.Item) {
 	ts.branchNames = append(ts.branchNames, []byte(it.(string)))
 }
+
 func (ts *findAllBranchNamesSender) Send() error {
 	return ts.stream.Send(&gitalypb.FindAllBranchNamesResponse{Names: ts.branchNames})
 }
@@ -45,6 +46,7 @@ func (ts *findAllTagNamesSender) Reset() { ts.tagNames = nil }
 func (ts *findAllTagNamesSender) Append(it chunk.Item) {
 	ts.tagNames = append(ts.tagNames, []byte(it.(string)))
 }
+
 func (ts *findAllTagNamesSender) Send() error {
 	return ts.stream.Send(&gitalypb.FindAllTagNamesResponse{Names: ts.tagNames})
 }

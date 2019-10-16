@@ -134,7 +134,6 @@ func TestSuccessfulUserApplyPatch(t *testing.T) {
 				require.Equal(t, string(commit.Author.Email), "patchuser@gitlab.org")
 				require.Equal(t, string(commit.Committer.Email), string(user.Email))
 			}
-
 		})
 	}
 }

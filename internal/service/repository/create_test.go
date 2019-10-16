@@ -101,6 +101,7 @@ func TestCreateRepositoryFailureInvalidArgs(t *testing.T) {
 		})
 	}
 }
+
 func TestCreateRepositoryIdempotent(t *testing.T) {
 	server, serverSocketPath := runRepoServer(t)
 	defer server.Stop()
@@ -123,5 +124,4 @@ func TestCreateRepositoryIdempotent(t *testing.T) {
 	refsAfter := strings.Split(string(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "for-each-ref")), "\n")
 
 	assert.Equal(t, refsBefore, refsAfter)
-
 }

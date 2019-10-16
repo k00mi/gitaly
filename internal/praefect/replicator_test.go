@@ -152,7 +152,6 @@ func TestConfirmReplication(t *testing.T) {
 	equal, err = replicator.confirmChecksums(ctx, gitalypb.NewRepositoryServiceClient(conn), gitalypb.NewRepositoryServiceClient(conn), testRepoA, testRepoB)
 	require.NoError(t, err)
 	require.False(t, equal)
-
 }
 
 func runFullGitalyServer(t *testing.T) (*grpc.Server, string) {

@@ -46,7 +46,6 @@ func IncomingToOutgoing(ctx context.Context) context.Context {
 
 // InjectGitalyServers injects gitaly-servers metadata into an outgoing context
 func InjectGitalyServers(ctx context.Context, name, address, token string) (context.Context, error) {
-
 	gitalyServers := storage.GitalyServers{
 		name: {
 			"address": address,

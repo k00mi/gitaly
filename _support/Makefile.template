@@ -159,17 +159,25 @@ lint: {{ .GoLint }}
 	go get golang.org/x/lint/golint@959b441ac422379a43da2230f62be024250818b0
 
 .PHONY: check-formatting
-check-formatting: {{ .GoImports }}
+check-formatting: {{ .GoImports }} {{ .BraceFmt }}
 	# goimports
-	@cd {{ .SourceDir }} && goimports -e -l {{ join .GoFiles " " }} | awk '{ print } END { if(NR>0) { print "Formatting error, run make format"; exit(1) } }'
+	@cd {{ .SourceDir }} && goimports -e -l {{ join .GoFiles " " }} | {{ .MakeFormatCheck }}
+	# bracefmt
+	@cd {{ .SourceDir }} && {{ .BraceFmt }} {{ join .GoFiles " " }} | {{ .MakeFormatCheck }}
 
 {{ .GoImports }}:
 	go get golang.org/x/tools/cmd/goimports@2538eef75904eff384a2551359968e40c207d9d2
 
+{{ .BraceFmt }}:
+	@cd {{ .SourceDir }} && go build -o $@ ./internal/cmd/bracefmt
+
 .PHONY: format
-format: {{ .GoImports }}
-	# In addition to fixing imports, goimports also formats your code in the same style as gofmt
-	# so it can be used as a replacement.
+format: {{ .GoImports }} {{ .BraceFmt }}
+	# goimports pass 1
+	@cd {{ .SourceDir }} && goimports -w -l {{ join .GoFiles " " }}
+	# bracefmt
+	@cd {{ .SourceDir }} && {{ .BraceFmt }} -w {{ join .GoFiles " " }}
+	# goimports pass 2
 	@cd {{ .SourceDir }} && goimports -w -l {{ join .GoFiles " " }}
 
 .PHONY: staticcheck

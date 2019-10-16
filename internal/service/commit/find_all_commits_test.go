@@ -261,7 +261,6 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-
 			request := testCase.request
 			request.Repository = testRepo
 
@@ -322,7 +321,6 @@ func TestFailedFindAllCommitsRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			c, err := client.FindAllCommits(ctx, testCase.request)

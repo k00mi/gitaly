@@ -54,5 +54,4 @@ func TestAddRemote(t *testing.T) {
 			require.Equal(t, tc.url, strings.TrimSpace(string(out)))
 		})
 	}
-
 }

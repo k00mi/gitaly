@@ -9,7 +9,6 @@ import (
 )
 
 func TestParser(t *testing.T) {
-
 	testCases := []struct {
 		desc string
 		in   string

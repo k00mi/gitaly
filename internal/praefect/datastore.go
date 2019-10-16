@@ -174,7 +174,6 @@ func (md *MemoryDatastore) PickAPrimary() (*models.Node, error) {
 	}
 
 	return nil, errors.New("no default primaries found")
-
 }
 
 // GetReplicas gets the secondaries for a repository based on the relative path
@@ -233,7 +232,6 @@ func (md *MemoryDatastore) GetPrimary(relativePath string) (*models.Node, error)
 		return nil, errors.New("node storage not found")
 	}
 	return &storageNode, nil
-
 }
 
 // SetPrimary sets the primary storagee node for a repository of a repository relative path

@@ -72,6 +72,7 @@ func (gm *gitalyMake) BuildDir() string {
 
 func (gm *gitalyMake) Pkg() string         { return "gitlab.com/gitlab-org/gitaly" }
 func (gm *gitalyMake) GoImports() string   { return "bin/goimports" }
+func (gm *gitalyMake) BraceFmt() string    { return filepath.Join(gm.BuildDir(), "bin/bracefmt") }
 func (gm *gitalyMake) GoCovMerge() string  { return "bin/gocovmerge" }
 func (gm *gitalyMake) GoLint() string      { return "bin/golint" }
 func (gm *gitalyMake) GoVendor() string    { return "bin/govendor" }
@@ -249,7 +250,7 @@ func (gm *gitalyMake) GoFiles() []string {
 			}
 		}
 
-		if !info.IsDir() && strings.HasSuffix(path, ".go") {
+		if !info.IsDir() && strings.HasSuffix(path, ".go") && !strings.HasSuffix(path, ".pb.go") {
 			rel, err := filepath.Rel(root, path)
 			if err != nil {
 				return err
@@ -307,6 +308,10 @@ func (gm *gitalyMake) ProtoCURL() string {
 
 func (gm *gitalyMake) ProtoCSHA256() string {
 	return protoCDownload[runtime.GOOS+"/"+runtime.GOARCH].sha256
+}
+
+func (gm *gitalyMake) MakeFormatCheck() string {
+	return `awk '{ print } END { if(NR>0) { print "Formatting error, run make format"; exit(1) } }'`
 }
 
 var templateText = func() string {

@@ -185,7 +185,6 @@ func TestFetchFromOriginRefUpdates(t *testing.T) {
 
 	looseRefs := testhelper.MustRunCommand(t, nil, "find", filepath.Join(poolPath, "refs"), "-type", "f")
 	require.Equal(t, "", string(looseRefs), "there should be no loose refs after the fetch")
-
 }
 
 func resolveRef(t *testing.T, repo string, ref string) string {

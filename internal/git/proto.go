@@ -100,7 +100,6 @@ func VersionLessThan(v1Str, v2Str string) (bool, error) {
 
 func versionLessThan(v1, v2 version) bool {
 	switch {
-
 	case v1.major < v2.major:
 		return true
 	case v1.major > v2.major:
@@ -119,7 +118,6 @@ func versionLessThan(v1, v2 version) bool {
 	default:
 		// this should only be reachable when versions are equal
 		return false
-
 	}
 }
 

@@ -118,7 +118,6 @@ func TestSuccessfulCountCommitsRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-
 			request := &gitalypb.CountCommitsRequest{Repository: testCase.repo}
 
 			if testCase.all {
@@ -184,7 +183,6 @@ func TestFailedCountCommitsRequestDueToValidationError(t *testing.T) {
 
 	for _, rpcRequest := range rpcRequests {
 		t.Run(fmt.Sprintf("%v", rpcRequest), func(t *testing.T) {
-
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			_, err := client.CountCommits(ctx, &rpcRequest)

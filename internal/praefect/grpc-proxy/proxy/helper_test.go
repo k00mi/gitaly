@@ -103,12 +103,15 @@ func (ip *interceptPinger) PingStream(stream testservice.TestService_PingStreamS
 func (ip *interceptPinger) PingEmpty(ctx context.Context, req *testservice.Empty) (*testservice.PingResponse, error) {
 	return ip.pingEmpty(ctx, req)
 }
+
 func (ip *interceptPinger) Ping(ctx context.Context, req *testservice.PingRequest) (*testservice.PingResponse, error) {
 	return ip.ping(ctx, req)
 }
+
 func (ip *interceptPinger) PingError(ctx context.Context, req *testservice.PingRequest) (*testservice.Empty, error) {
 	return ip.pingError(ctx, req)
 }
+
 func (ip *interceptPinger) PingList(req *testservice.PingRequest, stream testservice.TestService_PingListServer) error {
 	return ip.pingList(req, stream)
 }

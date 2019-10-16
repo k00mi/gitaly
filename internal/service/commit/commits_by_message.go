@@ -18,6 +18,7 @@ func (sender *commitsByMessageSender) Reset() { sender.commits = nil }
 func (sender *commitsByMessageSender) Append(it chunk.Item) {
 	sender.commits = append(sender.commits, it.(*gitalypb.GitCommit))
 }
+
 func (sender *commitsByMessageSender) Send() error {
 	return sender.stream.Send(&gitalypb.CommitsByMessageResponse{Commits: sender.commits})
 }
