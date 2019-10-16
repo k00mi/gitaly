@@ -162,7 +162,6 @@ func requireCacheValid(t *testing.T, bc *batchCache) {
 	defer bc.Unlock()
 
 	for _, ent := range bc.entries {
-
 		v := ent.value
 		require.False(t, v.isClosed(), "values in cache should not be closed: %v %v", ent, v)
 	}

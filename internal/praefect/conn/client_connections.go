@@ -66,5 +66,4 @@ func (c *ClientConnections) GetConnection(storageName string) (*grpc.ClientConn,
 	}
 
 	return cc, nil
-
 }

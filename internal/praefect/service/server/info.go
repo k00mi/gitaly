@@ -13,7 +13,6 @@ import (
 // ServerInfo sends ServerInfoRequest to all of a praefect server's internal gitaly nodes and aggregates the results into
 // a response
 func (s *Server) ServerInfo(ctx context.Context, in *gitalypb.ServerInfoRequest) (*gitalypb.ServerInfoResponse, error) {
-
 	storageStatuses := make([][]*gitalypb.ServerInfoResponse_StorageStatus, len(s.conf.Nodes))
 
 	var gitVersion, serverVersion string

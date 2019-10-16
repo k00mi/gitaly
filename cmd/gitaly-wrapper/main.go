@@ -116,7 +116,6 @@ func forwardSignals(gitaly *os.Process, log *logrus.Entry) {
 			if err := gitaly.Signal(sig); err != nil {
 				log.WithField("signal", sig).WithError(err).Error("can't forward the signal")
 			}
-
 		}
 	}()
 

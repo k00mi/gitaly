@@ -157,7 +157,6 @@ func TestListFilesFailure(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-
 			rpcRequest := gitalypb.ListFilesRequest{
 				Repository: test.repo, Revision: []byte("master"),
 			}

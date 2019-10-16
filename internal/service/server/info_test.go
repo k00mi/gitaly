@@ -88,6 +88,7 @@ func runServer(t *testing.T) (*grpc.Server, string) {
 
 	return server, "unix://" + serverSocketPath
 }
+
 func TestServerNoAuth(t *testing.T) {
 	srv, path := runServer(t)
 	defer srv.Stop()

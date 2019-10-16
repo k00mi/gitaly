@@ -72,5 +72,4 @@ func TestCloneFromPoolHTTP(t *testing.T) {
 	// we establish that the target has branches, even though (as we saw above) it has no objects.
 	testhelper.MustRunCommand(t, nil, "git", "-C", forkRepoPath, "show-ref", "--verify", "refs/heads/feature")
 	testhelper.MustRunCommand(t, nil, "git", "-C", forkRepoPath, "show-ref", "--verify", fmt.Sprintf("refs/heads/%s", newBranch))
-
 }

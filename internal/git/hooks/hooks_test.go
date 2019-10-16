@@ -33,5 +33,4 @@ func TestPath(t *testing.T) {
 
 		require.Equal(t, "/var/empty", Path())
 	})
-
 }

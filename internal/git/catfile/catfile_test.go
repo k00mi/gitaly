@@ -119,7 +119,6 @@ func TestCommit(t *testing.T) {
 			require.Equal(t, tc.output, string(contents))
 		})
 	}
-
 }
 
 func TestTag(t *testing.T) {
@@ -190,7 +189,6 @@ func TestTree(t *testing.T) {
 			require.Equal(t, tc.output, string(contents))
 		})
 	}
-
 }
 
 func TestRepeatedCalls(t *testing.T) {

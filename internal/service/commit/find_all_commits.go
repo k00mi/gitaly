@@ -22,6 +22,7 @@ func (sender *findAllCommitsSender) Reset() { sender.commits = nil }
 func (sender *findAllCommitsSender) Append(it chunk.Item) {
 	sender.commits = append(sender.commits, it.(*gitalypb.GitCommit))
 }
+
 func (sender *findAllCommitsSender) Send() error {
 	return sender.stream.Send(&gitalypb.FindAllCommitsResponse{Commits: sender.commits})
 }

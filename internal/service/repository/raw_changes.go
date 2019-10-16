@@ -107,6 +107,7 @@ func (s *rawChangesSender) Reset() { s.changes = nil }
 func (s *rawChangesSender) Append(it chunk.Item) {
 	s.changes = append(s.changes, it.(*gitalypb.GetRawChangesResponse_RawChange))
 }
+
 func (s *rawChangesSender) Send() error {
 	response := &gitalypb.GetRawChangesResponse{RawChanges: s.changes}
 	return s.stream.Send(response)

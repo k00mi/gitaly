@@ -176,7 +176,6 @@ func (bc *batchCache) lookup(k key) (int, bool) {
 		if ent.key == k {
 			return i, true
 		}
-
 	}
 
 	return -1, false

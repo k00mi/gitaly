@@ -276,7 +276,6 @@ func TestFailedMergeDueToHooks(t *testing.T) {
 			require.Equal(t, mergeBranchHeadBefore, text.ChompBytes(currentBranchHead), "branch head updated")
 		})
 	}
-
 }
 
 func TestSuccessfulUserFFBranchRequest(t *testing.T) {

@@ -312,7 +312,6 @@ func TestFailedFindBranchRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-
 			request := &gitalypb.FindBranchRequest{
 				Repository: testRepo,
 				Name:       []byte(testCase.branchName),

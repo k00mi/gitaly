@@ -42,7 +42,6 @@ func (c *rawCodec) Marshal(v interface{}) ([]byte, error) {
 		return c.parentCodec.Marshal(v)
 	}
 	return out.payload, nil
-
 }
 
 func (c *rawCodec) Unmarshal(data []byte, v interface{}) error {

@@ -195,7 +195,6 @@ func TestGarbageCollectFailure(t *testing.T) {
 			testhelper.RequireGrpcError(t, err, test.code)
 		})
 	}
-
 }
 
 func TestCleanupInvalidKeepAroundRefs(t *testing.T) {

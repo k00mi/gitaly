@@ -1076,7 +1076,6 @@ func TestInvalidFindAllBranchesRequest(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			c, err := client.FindAllBranches(ctx, &tc.request)
@@ -1421,7 +1420,6 @@ func TestSuccessfulFindTagRequest(t *testing.T) {
 	}
 
 	for _, expectedTag := range expectedTags {
-
 		rpcRequest := &gitalypb.FindTagRequest{Repository: testRepoCopy, TagName: expectedTag.Name}
 
 		resp, err := client.FindTag(ctx, rpcRequest)

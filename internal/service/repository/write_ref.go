@@ -52,7 +52,6 @@ func updateRef(ctx context.Context, req *gitalypb.WriteRefRequest) error {
 		return fmt.Errorf("error when running update-ref command: %v", err)
 	}
 	return nil
-
 }
 
 func validateWriteRefRequest(req *gitalypb.WriteRefRequest) error {

@@ -125,7 +125,6 @@ func getChecksumFunc(ctx context.Context, client gitalypb.RepositoryServiceClien
 }
 
 func (dr defaultReplicator) confirmChecksums(ctx context.Context, primaryClient, replicaClient gitalypb.RepositoryServiceClient, primary, replica *gitalypb.Repository) (bool, error) {
-
 	g, gCtx := errgroup.WithContext(ctx)
 
 	var primaryChecksum, replicaChecksum string
@@ -307,5 +306,4 @@ func (r ReplMgr) processReplJob(ctx context.Context, job ReplJob) error {
 		return err
 	}
 	return nil
-
 }

@@ -76,7 +76,6 @@ func Dial(rawAddress string, connOpts []grpc.DialOption) (*grpc.ClientConn, erro
 				PermitWithoutStream: true,
 			}),
 		)
-
 	}
 
 	conn, err := grpc.Dial(canonicalAddress, connOpts...)

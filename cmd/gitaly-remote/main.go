@@ -27,7 +27,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("error while setting remote: %v", err)
 	}
-
 }
 
 //addOrUpdate adds, or updates if exits, the remote to repository

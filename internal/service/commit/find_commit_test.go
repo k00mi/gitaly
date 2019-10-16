@@ -294,6 +294,7 @@ func TestFailedFindCommitRequest(t *testing.T) {
 func BenchmarkFindCommitNoCache(b *testing.B) {
 	benchmarkFindCommit(false, b)
 }
+
 func BenchmarkFindCommitWithCache(b *testing.B) {
 	benchmarkFindCommit(true, b)
 }

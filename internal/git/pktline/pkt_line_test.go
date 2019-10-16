@@ -60,7 +60,6 @@ func TestScanner(t *testing.T) {
 
 			if tc.fail {
 				require.Error(t, scanner.Err())
-
 			} else {
 				require.NoError(t, scanner.Err())
 			}

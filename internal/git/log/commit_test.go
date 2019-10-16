@@ -97,7 +97,6 @@ func TestParseRawCommit(t *testing.T) {
 			out, err := parseRawCommit(bytes.NewBuffer(tc.in), info)
 			require.NoError(t, err, "parse error")
 			require.Equal(t, tc.out, out)
-
 		})
 	}
 }

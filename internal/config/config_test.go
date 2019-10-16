@@ -401,7 +401,6 @@ func TestValidateShellPath(t *testing.T) {
 		} else {
 			assert.NoError(t, err)
 		}
-
 	}
 }
 

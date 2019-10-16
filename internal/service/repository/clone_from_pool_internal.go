@@ -110,7 +110,6 @@ func validateCloneFromPoolInternalRequestArgs(req *gitalypb.CloneFromPoolInterna
 }
 
 func cloneFromPool(ctx context.Context, objectPoolRepo *gitalypb.ObjectPool, repo repository.GitRepo) error {
-
 	objectPoolPath, err := helper.GetPath(objectPoolRepo.GetRepository())
 	if err != nil {
 		return fmt.Errorf("could not get object pool path: %v", err)

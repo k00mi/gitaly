@@ -316,7 +316,6 @@ func TestListDifferentPushUrlRemote(t *testing.T) {
 
 	require.Len(t, receivedRemotes, len(testCases))
 	require.ElementsMatch(t, testCases, receivedRemotes)
-
 }
 
 func TestListRemotes(t *testing.T) {
@@ -401,7 +400,6 @@ func TestListRemotes(t *testing.T) {
 			require.ElementsMatch(t, tc.remotes, receivedRemotes)
 		})
 	}
-
 }
 
 func consumeListRemotesResponse(t *testing.T, l gitalypb.RemoteService_ListRemotesClient) []*gitalypb.ListRemotesResponse_Remote {

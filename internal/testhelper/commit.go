@@ -102,7 +102,6 @@ func CommitBlobWithName(t *testing.T, testRepoPath, blobID, fileName, commitMess
 			"-c", fmt.Sprintf("user.email=%s", committerEmail),
 			"-C", testRepoPath, "commit-tree", treeID, "-m", commitMessage),
 	)
-
 }
 
 // CreateCommitOnNewBranch creates a branch and a commit, returning the commit sha and the branch name respectivelyi

@@ -143,7 +143,6 @@ func TestListConflictFilesFailedPrecondition(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-
 			request := &gitalypb.ListConflictFilesRequest{
 				Repository:     testRepo,
 				OurCommitOid:   tc.ourCommitOid,

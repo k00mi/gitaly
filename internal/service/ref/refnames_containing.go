@@ -48,6 +48,7 @@ func (bs *branchNamesContainingCommitSender) Reset() { bs.branchNames = nil }
 func (bs *branchNamesContainingCommitSender) Append(it chunk.Item) {
 	bs.branchNames = append(bs.branchNames, stripPrefix(it, "refs/heads/"))
 }
+
 func (bs *branchNamesContainingCommitSender) Send() error {
 	return bs.stream.Send(&gitalypb.ListBranchNamesContainingCommitResponse{BranchNames: bs.branchNames})
 }
@@ -77,6 +78,7 @@ func (ts *tagNamesContainingCommitSender) Reset() { ts.tagNames = nil }
 func (ts *tagNamesContainingCommitSender) Append(it chunk.Item) {
 	ts.tagNames = append(ts.tagNames, stripPrefix(it, "refs/tags/"))
 }
+
 func (ts *tagNamesContainingCommitSender) Send() error {
 	return ts.stream.Send(&gitalypb.ListTagNamesContainingCommitResponse{TagNames: ts.tagNames})
 }

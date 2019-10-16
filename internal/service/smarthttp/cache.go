@@ -61,7 +61,6 @@ func tryCache(ctx context.Context, in *gitalypb.InfoRefsRequest, w io.Writer, mi
 
 	stream, err := infoRefCache.GetStream(ctx, in.GetRepository(), in)
 	switch err {
-
 	case nil:
 		countHit()
 		logger.Info("cache hit for UploadPack response")

@@ -612,7 +612,6 @@ func TestSuccessfulCommitDiffRequestWithLimits(t *testing.T) {
 
 	for _, requestAndResult := range requestsAndResults {
 		t.Run(requestAndResult.desc, func(t *testing.T) {
-
 			request := requestAndResult.request
 			request.Repository = testRepo
 			request.LeftCommitId = leftCommit
@@ -666,7 +665,6 @@ func TestFailedCommitDiffRequestDueToValidationError(t *testing.T) {
 
 	for _, rpcRequest := range rpcRequests {
 		t.Run(fmt.Sprintf("%v", rpcRequest), func(t *testing.T) {
-
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			c, err := client.CommitDiff(ctx, &rpcRequest)
@@ -919,7 +917,6 @@ func TestFailedCommitDeltaRequestDueToValidationError(t *testing.T) {
 
 	for _, rpcRequest := range rpcRequests {
 		t.Run(fmt.Sprintf("%v", rpcRequest), func(t *testing.T) {
-
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			c, err := client.CommitDelta(ctx, &rpcRequest)

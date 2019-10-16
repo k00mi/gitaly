@@ -54,7 +54,6 @@ func TestFailedRepositorySizeRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.description, func(t *testing.T) {
-
 			request := &gitalypb.RepositorySizeRequest{
 				Repository: testCase.repo,
 			}

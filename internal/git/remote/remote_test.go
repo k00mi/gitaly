@@ -48,7 +48,6 @@ func TestRemoveRemoteDontRemoveLocalBranches(t *testing.T) {
 
 	out = testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "show-ref", "refs/heads/master")
 	require.Equal(t, masterBeforeRemove, out)
-
 }
 
 func TestRemoteExists(t *testing.T) {
