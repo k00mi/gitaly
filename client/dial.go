@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 
 	"net/url"
 
@@ -69,6 +70,10 @@ func Dial(rawAddress string, connOpts []grpc.DialOption) (*grpc.ClientConn, erro
 				}
 
 				return net.DialTimeout("unix", path, timeout)
+			}),
+			grpc.WithKeepaliveParams(keepalive.ClientParameters{
+				Time:                20 * time.Second,
+				PermitWithoutStream: true,
 			}),
 		)
 
