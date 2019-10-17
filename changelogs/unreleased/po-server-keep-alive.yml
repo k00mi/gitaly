@@ -1,5 +1,0 @@
----
-title: Lower gRPC server inactivity ping timeout
-merge_request: 1294
-author:
-type: added

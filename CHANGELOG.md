@@ -1,5 +1,17 @@
 # Gitaly changelog
 
+## vv1.70.0
+
+#### Added
+- Lower gRPC server inactivity ping timeout
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1294
+
+#### Other
+- Remove RepositoryService WriteConfig
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1558
+- Refactor praefect server tests
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1554
+
 ## v1.69.0
 
 #### Fixed
