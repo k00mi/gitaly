@@ -34,10 +34,6 @@ module Gitaly
       rpc :ListCommitsByOid, ListCommitsByOidRequest, stream(ListCommitsByOidResponse)
       rpc :ListCommitsByRefName, ListCommitsByRefNameRequest, stream(ListCommitsByRefNameResponse)
       rpc :FilterShasWithSignatures, stream(FilterShasWithSignaturesRequest), stream(FilterShasWithSignaturesResponse)
-      # ExtractCommitSignature returns a stream because the signed text may be
-      # arbitrarily large and signature verification is impossible without the
-      # full text.
-      rpc :ExtractCommitSignature, ExtractCommitSignatureRequest, stream(ExtractCommitSignatureResponse)
       rpc :GetCommitSignatures, GetCommitSignaturesRequest, stream(GetCommitSignaturesResponse)
       rpc :GetCommitMessages, GetCommitMessagesRequest, stream(GetCommitMessagesResponse)
     end
