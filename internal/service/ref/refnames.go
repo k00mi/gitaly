@@ -52,14 +52,19 @@ func (ts *findAllTagNamesSender) Send() error {
 }
 
 func listRefNames(ctx context.Context, chunker *chunk.Chunker, prefix string, repo *gitalypb.Repository, extraArgs []string) error {
-	args := []string{
-		"for-each-ref",
-		"--format=%(refname)",
+	flags := []git.Option{
+		git.Flag{"--format=%(refname)"},
 	}
-	args = append(args, extraArgs...)
-	args = append(args, prefix)
 
-	cmd, err := git.Command(ctx, repo, args...)
+	for _, arg := range extraArgs {
+		flags = append(flags, git.Flag{arg})
+	}
+
+	cmd, err := git.SafeCmd(ctx, repo, nil, git.SubCmd{
+		Name:  "for-each-ref",
+		Flags: flags,
+		Args:  []string{prefix},
+	})
 	if err != nil {
 		return err
 	}

@@ -29,7 +29,17 @@ func (s *server) FindRefName(ctx context.Context, in *gitalypb.FindRefNameReques
 
 // We assume `repo` and `commitID` and `prefix` are non-empty
 func findRefName(ctx context.Context, repo *gitalypb.Repository, commitID, prefix string) (string, error) {
-	cmd, err := git.Command(ctx, repo, "for-each-ref", "--format=%(refname)", "--count=1", prefix, "--contains", commitID)
+	flags := []git.Option{
+		git.Flag{"--format=%(refname)"},
+		git.Flag{"--count=1"},
+		git.ValueFlag{Name: "--contains", Value: commitID},
+	}
+
+	cmd, err := git.SafeCmd(ctx, repo, nil, git.SubCmd{
+		Name:  "for-each-ref",
+		Flags: flags,
+		Args:  []string{prefix},
+	})
 	if err != nil {
 		return "", err
 	}
