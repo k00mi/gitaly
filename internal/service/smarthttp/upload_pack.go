@@ -1,8 +1,11 @@
 package smarthttp
 
 import (
+	"crypto/sha1"
+	"fmt"
 	"io"
 
+	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	"github.com/prometheus/client_golang/prometheus"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
@@ -39,10 +42,14 @@ func (s *server) PostUploadPack(stream gitalypb.SmartHTTPService_PostUploadPackS
 		return err
 	}
 
-	stdinReader := streamio.NewReader(func() ([]byte, error) {
+	h := sha1.New()
+
+	stdinReader := io.TeeReader(streamio.NewReader(func() ([]byte, error) {
 		resp, err := stream.Recv()
+
 		return resp.GetData(), err
-	})
+	}), h)
+
 	pr, pw := io.Pipe()
 	defer pw.Close()
 	stdin := io.TeeReader(stdinReader, pw)
@@ -51,7 +58,10 @@ func (s *server) PostUploadPack(stream gitalypb.SmartHTTPService_PostUploadPackS
 		deepenCh <- scanDeepen(pr)
 	}()
 
+	var respBytes int64
+
 	stdout := streamio.NewWriter(func(p []byte) error {
+		respBytes += int64(len(p))
 		return stream.Send(&gitalypb.PostUploadPackResponse{Data: p})
 	})
 
@@ -93,6 +103,8 @@ func (s *server) PostUploadPack(stream gitalypb.SmartHTTPService_PostUploadPackS
 
 		return status.Errorf(codes.Unavailable, "PostUploadPack: %v", err)
 	}
+
+	grpc_logrus.Extract(ctx).WithField("request_sha", fmt.Sprintf("%x", h.Sum(nil))).WithField("response_bytes", respBytes).Info("request details")
 
 	return nil
 }
