@@ -28,6 +28,12 @@ func incrInvalidArg(subcmdName string) {
 	invalidationTotal.WithLabelValues(subcmdName).Inc()
 }
 
+// Cmd is an interface for safe git commands
+type Cmd interface {
+	ValidateArgs() ([]string, error)
+	IsCmd()
+}
+
 // SubCmd represents a specific git command
 type SubCmd struct {
 	Name        string   // e.g. "log", or "cat-file", or "worktree"
@@ -37,6 +43,9 @@ type SubCmd struct {
 }
 
 var subCmdNameRegex = regexp.MustCompile(`^[[:alnum:]]+(-[[:alnum:]]+)*$`)
+
+// IsCmd allows SubCmd to satisfy the Cmd interface
+func (sc SubCmd) IsCmd() {}
 
 // ValidateArgs checks all arguments in the sub command and validates them
 func (sc SubCmd) ValidateArgs() ([]string, error) {
@@ -185,7 +194,7 @@ func validatePositionalArg(arg string) error {
 
 // SafeCmd creates a git.Command with the given args and Repository. It
 // validates the arguments in the command before executing.
-func SafeCmd(ctx context.Context, repo repository.GitRepo, globals []Option, sc SubCmd) (*command.Command, error) {
+func SafeCmd(ctx context.Context, repo repository.GitRepo, globals []Option, sc Cmd) (*command.Command, error) {
 	args, err := combineArgs(globals, sc)
 	if err != nil {
 		return nil, err
@@ -196,7 +205,7 @@ func SafeCmd(ctx context.Context, repo repository.GitRepo, globals []Option, sc 
 
 // SafeBareCmd creates a git.Command with the given args, stdin/stdout/stderr,
 // and env. It validates the arguments in the command before executing.
-func SafeBareCmd(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer, env []string, globals []Option, sc SubCmd) (*command.Command, error) {
+func SafeBareCmd(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer, env []string, globals []Option, sc Cmd) (*command.Command, error) {
 	args, err := combineArgs(globals, sc)
 	if err != nil {
 		return nil, err
@@ -228,14 +237,14 @@ func SafeCmdWithoutRepo(ctx context.Context, globals []Option, sc SubCmd) (*comm
 	return CommandWithoutRepo(ctx, args...)
 }
 
-func combineArgs(globals []Option, sc SubCmd) (_ []string, err error) {
+func combineArgs(globals []Option, sc Cmd) (_ []string, err error) {
+	var args []string
+
 	defer func() {
-		if err != nil && IsInvalidArgErr(err) {
-			incrInvalidArg(sc.Name)
+		if err != nil && IsInvalidArgErr(err) && len(args) > 0 {
+			incrInvalidArg(args[0])
 		}
 	}()
-
-	var args []string
 
 	for _, g := range globals {
 		gargs, err := g.ValidateArgs()
