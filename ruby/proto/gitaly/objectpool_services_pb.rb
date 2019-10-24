@@ -22,6 +22,7 @@ module Gitaly
       rpc :ReduplicateRepository, ReduplicateRepositoryRequest, ReduplicateRepositoryResponse
       rpc :DisconnectGitAlternates, DisconnectGitAlternatesRequest, DisconnectGitAlternatesResponse
       rpc :FetchIntoObjectPool, FetchIntoObjectPoolRequest, FetchIntoObjectPoolResponse
+      rpc :GetObjectPool, GetObjectPoolRequest, GetObjectPoolResponse
     end
 
     Stub = Service.rpc_stub_class

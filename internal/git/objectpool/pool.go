@@ -1,10 +1,15 @@
 package objectpool
 
 import (
+	"bufio"
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
+	"path/filepath"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -110,4 +115,97 @@ func (o *ObjectPool) Init(ctx context.Context) (err error) {
 	}
 
 	return cmd.Wait()
+}
+
+// FromRepo returns an instance of ObjectPool that the repository points to
+func FromRepo(repo *gitalypb.Repository) (*ObjectPool, error) {
+	dir, err := getAlternateObjectDir(repo)
+	if err != nil {
+		return nil, err
+	}
+
+	if dir == "" {
+		return nil, nil
+	}
+
+	altPathRelativeToStorage, err := objectPathRelativeToStorage(repo, dir)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewObjectPool(repo.GetStorageName(), filepath.Dir(altPathRelativeToStorage))
+}
+
+var (
+	// ErrInvalidPoolRepository indicates the directory the alternates file points to is not a valid git repository
+	ErrInvalidPoolRepository = errors.New("object pool is not a valid git repository")
+
+	// ErrAlternateObjectDirNotExist indicates a repository does not have an alternates file
+	ErrAlternateObjectDirNotExist = errors.New("no alternates directory exists")
+)
+
+// getAlternateObjectDir returns the entry in the objects/info/attributes file if it exists
+// it will only return the first line of the file if there are multiple lines.
+func getAlternateObjectDir(repo *gitalypb.Repository) (string, error) {
+	altPath, err := git.InfoAlternatesPath(repo)
+	if err != nil {
+		return "", err
+	}
+
+	if _, err = os.Stat(altPath); err != nil {
+		if os.IsNotExist(err) {
+			return "", ErrAlternateObjectDirNotExist
+		}
+		return "", err
+	}
+
+	altFile, err := os.Open(altPath)
+	if err != nil {
+		return "", err
+	}
+	defer altFile.Close()
+
+	r := bufio.NewReader(altFile)
+	b, err := r.ReadBytes('\n')
+	if err != nil && err != io.EOF {
+		return "", fmt.Errorf("reading alternates file: %v", err)
+	}
+
+	if err == nil {
+		b = b[:len(b)-1]
+	}
+
+	if bytes.HasPrefix(b, []byte("#")) {
+		return "", ErrAlternateObjectDirNotExist
+	}
+
+	return string(b), nil
+}
+
+// objectPathRelativeToStorage takes an object path that's relative to a repository's object directory
+// and returns the path relative to the storage path of the repository.
+func objectPathRelativeToStorage(repo *gitalypb.Repository, path string) (string, error) {
+	repoPath, err := helper.GetPath(repo)
+	if err != nil {
+		return "", err
+	}
+
+	storagePath, err := helper.GetStorageByName(repo.GetStorageName())
+	if err != nil {
+		return "", err
+	}
+	objectDirPath := filepath.Join(repoPath, "objects")
+
+	poolObjectDirFullPath := filepath.Join(objectDirPath, path)
+
+	if !helper.IsGitDirectory(filepath.Dir(poolObjectDirFullPath)) {
+		return "", ErrInvalidPoolRepository
+	}
+
+	poolRelPath, err := filepath.Rel(storagePath, poolObjectDirFullPath)
+	if err != nil {
+		return "", err
+	}
+
+	return poolRelPath, nil
 }

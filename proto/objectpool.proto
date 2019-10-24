@@ -11,8 +11,7 @@ service ObjectPoolService {
     option (op_type) = {
       op: MUTATOR
       target_repository_field: "1.1"
-      additional_repository_field: "2"
-    };
+      additional_repository_field: "2" };
   }
   rpc DeleteObjectPool(DeleteObjectPoolRequest) returns (DeleteObjectPoolResponse) {
     option (op_type) = {
@@ -54,6 +53,12 @@ service ObjectPoolService {
       op: MUTATOR
       target_repository_field: "2.1"
       additional_repository_field: "1"
+    };
+  }
+  rpc GetObjectPool(GetObjectPoolRequest) returns (GetObjectPoolResponse) {
+    option (op_type) = {
+      op: ACCESSOR
+      target_repository_field: "1"
     };
   }
 }
@@ -104,3 +109,13 @@ message FetchIntoObjectPoolRequest {
   bool repack = 3;
 }
 message FetchIntoObjectPoolResponse {}
+
+message GetObjectPoolRequest {
+  Repository repository = 1;
+}
+
+message GetObjectPoolResponse {
+  ObjectPool object_pool = 1;
+}
+
+

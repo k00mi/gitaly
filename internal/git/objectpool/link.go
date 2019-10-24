@@ -1,7 +1,6 @@
 package objectpool
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -13,7 +12,6 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly/internal/git/remote"
 	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
-	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -29,23 +27,18 @@ func (o *ObjectPool) Link(ctx context.Context, repo *gitalypb.Repository) error 
 		return err
 	}
 
-	relPath, err := o.getRelativeObjectPath(repo)
+	expectedRelPath, err := o.getRelativeObjectPath(repo)
 	if err != nil {
 		return err
 	}
 
-	expectedContent := filepath.Join(relPath, "objects")
+	linked, err := o.LinkedToRepository(repo)
+	if err != nil {
+		return err
+	}
 
-	actualContentBytes, err := ioutil.ReadFile(altPath)
-	if err == nil {
-		actualContent := text.ChompBytes(actualContentBytes)
-		if actualContent == expectedContent {
-			return nil
-		}
-
-		if filepath.Clean(actualContent) != filepath.Join(o.FullPath(), "objects") {
-			return fmt.Errorf("unexpected alternates content: %q", actualContent)
-		}
+	if linked {
+		return nil
 	}
 
 	if err != nil && !os.IsNotExist(err) {
@@ -58,7 +51,7 @@ func (o *ObjectPool) Link(ctx context.Context, repo *gitalypb.Repository) error 
 	}
 	defer os.Remove(tmp.Name())
 
-	if _, err := io.WriteString(tmp, expectedContent); err != nil {
+	if _, err := io.WriteString(tmp, expectedRelPath); err != nil {
 		return err
 	}
 
@@ -142,36 +135,30 @@ func (o *ObjectPool) getRelativeObjectPath(repo *gitalypb.Repository) (string, e
 		return "", err
 	}
 
-	return relPath, nil
+	return filepath.Join(relPath, "objects"), nil
 }
 
 // LinkedToRepository tests if a repository is linked to an object pool
 func (o *ObjectPool) LinkedToRepository(repo *gitalypb.Repository) (bool, error) {
-	altPath, err := git.InfoAlternatesPath(repo)
+	relPath, err := getAlternateObjectDir(repo)
+	if err != nil {
+		if err == ErrAlternateObjectDirNotExist {
+			return false, nil
+		}
+		return false, err
+	}
+
+	expectedRelPath, err := o.getRelativeObjectPath(repo)
 	if err != nil {
 		return false, err
 	}
 
-	relPath, err := o.getRelativeObjectPath(repo)
-	if err != nil {
-		return false, err
+	if relPath == expectedRelPath {
+		return true, nil
 	}
 
-	if stat, err := os.Stat(altPath); err == nil && stat.Size() > 0 {
-		alternatesFile, err := os.Open(altPath)
-		if err != nil {
-			return false, err
-		}
-		defer alternatesFile.Close()
-
-		r := bufio.NewReader(alternatesFile)
-
-		b, err := r.ReadBytes('\n')
-		if err != nil && err != io.EOF {
-			return false, fmt.Errorf("reading alternates file: %v", err)
-		}
-
-		return string(b) == filepath.Join(relPath, "objects"), nil
+	if filepath.Clean(relPath) != filepath.Join(o.FullPath(), "objects") {
+		return false, fmt.Errorf("unexpected alternates content: %q", relPath)
 	}
 
 	return false, nil
