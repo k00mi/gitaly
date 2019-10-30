@@ -7,6 +7,7 @@ import (
 	"net"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/cancelhandler"
@@ -58,6 +59,7 @@ func NewServer(c *Coordinator, repl ReplMgr, grpcOpts []grpc.ServerOption, l *lo
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
 			grpccorrelation.StreamServerCorrelationInterceptor(), // Must be above the metadata handler
 			grpc_prometheus.StreamServerInterceptor,
+			grpc_logrus.StreamServerInterceptor(l),
 			cancelhandler.Stream, // Should be below LogHandler
 			grpctracing.StreamServerTracingInterceptor(),
 			auth.StreamServerInterceptor(conf.Auth),
@@ -69,6 +71,7 @@ func NewServer(c *Coordinator, repl ReplMgr, grpcOpts []grpc.ServerOption, l *lo
 			grpccorrelation.UnaryServerCorrelationInterceptor(), // Must be above the metadata handler
 			metadatahandler.UnaryInterceptor,
 			grpc_prometheus.UnaryServerInterceptor,
+			grpc_logrus.UnaryServerInterceptor(l),
 			cancelhandler.Unary, // Should be below LogHandler
 			grpctracing.UnaryServerTracingInterceptor(),
 			auth.UnaryServerInterceptor(conf.Auth),
