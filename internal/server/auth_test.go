@@ -13,6 +13,8 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
+	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/streamio"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -210,4 +212,67 @@ func runSecureServer(t *testing.T) (*grpc.Server, string) {
 	go srv.Serve(listener)
 
 	return srv, "localhost:9999"
+}
+
+func TestUnaryNoAuth(t *testing.T) {
+	oldToken := config.Config.Auth.Token
+	config.Config.Auth.Token = "testtoken"
+	defer func() {
+		config.Config.Auth.Token = oldToken
+	}()
+
+	srv, path := runServer(t)
+	defer srv.Stop()
+
+	connOpts := []grpc.DialOption{
+		grpc.WithInsecure(),
+	}
+
+	conn, err := grpc.Dial(path, connOpts...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	client := gitalypb.NewRepositoryServiceClient(conn)
+	_, err = client.CreateRepository(ctx, &gitalypb.CreateRepositoryRequest{Repository: &gitalypb.Repository{StorageName: "default", RelativePath: "new/project/path"}})
+
+	testhelper.RequireGrpcError(t, err, codes.Unauthenticated)
+}
+
+func TestStreamingNoAuth(t *testing.T) {
+	oldToken := config.Config.Auth.Token
+	config.Config.Auth.Token = "testtoken"
+	defer func() {
+		config.Config.Auth.Token = oldToken
+	}()
+
+	srv, path := runServer(t)
+	defer srv.Stop()
+
+	connOpts := []grpc.DialOption{
+		grpc.WithInsecure(),
+	}
+
+	conn, err := grpc.Dial(path, connOpts...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	client := gitalypb.NewRepositoryServiceClient(conn)
+	stream, err := client.GetInfoAttributes(ctx, &gitalypb.GetInfoAttributesRequest{Repository: &gitalypb.Repository{StorageName: "default", RelativePath: "new/project/path"}})
+
+	require.NoError(t, err)
+
+	_, err = ioutil.ReadAll(streamio.NewReader(func() ([]byte, error) {
+		_, err = stream.Recv()
+		return nil, err
+	}))
+
+	testhelper.RequireGrpcError(t, err, codes.Unauthenticated)
 }
