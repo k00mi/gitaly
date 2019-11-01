@@ -123,16 +123,6 @@ service CommitService {
       target_repository_field: "1"
     };
   }
-
-  // ExtractCommitSignature returns a stream because the signed text may be
-  // arbitrarily large and signature verification is impossible without the
-  // full text.
-  rpc ExtractCommitSignature(ExtractCommitSignatureRequest) returns (stream ExtractCommitSignatureResponse) {
-    option (op_type) = {
-      op: ACCESSOR
-      target_repository_field: "1"
-    };
-  }
   rpc GetCommitSignatures(GetCommitSignaturesRequest) returns (stream GetCommitSignaturesResponse) {
     option (op_type) = {
       op: ACCESSOR
