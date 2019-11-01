@@ -26,13 +26,14 @@ func (s *server) ListNewBlobs(in *gitalypb.ListNewBlobsRequest, stream gitalypb.
 
 func listNewBlobs(in *gitalypb.ListNewBlobsRequest, stream gitalypb.RefService_ListNewBlobsServer, oid string) error {
 	ctx := stream.Context()
-	cmdArgs := []string{"rev-list", oid, "--objects", "--not", "--all"}
+	cmdFlags := []git.Option{git.Flag{Name: "--objects"}, git.Flag{Name: "--not"}, git.Flag{Name: "--all"}}
 
-	if in.Limit > 0 {
-		cmdArgs = append(cmdArgs, "--max-count", fmt.Sprint(in.Limit))
+	if in.GetLimit() > 0 {
+		cmdFlags = append(cmdFlags, git.ValueFlag{Name: "--max-count", Value: fmt.Sprint(in.GetLimit())})
 	}
 
-	revList, err := git.Command(ctx, in.GetRepository(), cmdArgs...)
+	// the added ^ is to negate the oid since there is a --not option that comes earlier in the arg list
+	revList, err := git.SafeCmd(ctx, in.GetRepository(), nil, git.SubCmd{Name: "rev-list", Flags: cmdFlags, Args: []string{"^" + oid}})
 	if err != nil {
 		return err
 	}
