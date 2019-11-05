@@ -1,5 +1,33 @@
 # Gitaly changelog
 
+## v1.71.0
+
+#### Added
+- Fishy config log warning
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1570
+- Add gRPC intercept loggers to Praefect
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1573
+- Add check subcommand in gitaly-hooks
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1587
+
+#### Deprecated
+- Remove StorageService
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1544
+
+#### Other
+- Count dangling refs before/after FetchIntoObjectPool
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1585
+- Count v2 auth error return paths
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1568
+- Upgrade gRPC Ruby library to v1.24.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/
+- Adding sentry config to praefect
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1546
+- Add HookService RPCs and methods
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1553
+- Update rails-html-sanitizer and loofah gems in gitaly-ruby
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1566
+
 ## v1.70.0
 
 

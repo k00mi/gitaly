@@ -1,5 +1,0 @@
----
-title: Add gRPC intercept loggers to Praefect
-merge_request: 1573
-author:
-type: added
