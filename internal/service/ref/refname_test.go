@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -152,5 +154,65 @@ func TestFindRefNameInvalidObject(t *testing.T) {
 
 	if len(c.GetName()) > 0 {
 		t.Errorf("Expected FindRefName to return empty-string, got %q", string(c.GetName()))
+	}
+}
+
+func TestFindRefCmd(t *testing.T) {
+	testCases := []struct {
+		desc         string
+		cmd          ForEachRefCmd
+		expectedErr  error
+		expectedArgs []string
+	}{
+		{
+			desc: "wrong command",
+			cmd: ForEachRefCmd{
+				SubCmd: git.SubCmd{
+					Name: "rev-list",
+				},
+			},
+			expectedErr: ErrOnlyForEachRefAllowed,
+		},
+		{
+			desc: "post separator args not allowed",
+			cmd: ForEachRefCmd{
+				SubCmd: git.SubCmd{
+					Name:        "for-each-ref",
+					PostSepArgs: []string{"a", "b", "c"},
+				},
+			},
+			expectedErr: ErrNoPostSeparatorArgsAllowed,
+		},
+		{
+			desc: "valid for-each-ref command without post arg flags",
+			cmd: ForEachRefCmd{
+				SubCmd: git.SubCmd{
+					Name:  "for-each-ref",
+					Flags: []git.Option{git.Flag{"--tcl"}},
+					Args:  []string{"master"},
+				},
+			},
+			expectedArgs: []string{"for-each-ref", "--tcl", "master"},
+			expectedErr:  nil,
+		},
+		{
+			desc: "valid for-each-ref command with post arg flags",
+			cmd: ForEachRefCmd{
+				SubCmd: git.SubCmd{
+					Name:  "for-each-ref",
+					Flags: []git.Option{git.Flag{"--tcl"}},
+					Args:  []string{"master"},
+				},
+				PostArgFlags: []git.Option{git.ValueFlag{Name: "--contains", Value: "blahblah"}},
+			},
+			expectedArgs: []string{"for-each-ref", "--tcl", "master", "--contains", "blahblah"},
+			expectedErr:  nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		args, err := tc.cmd.ValidateArgs()
+		require.Equal(t, tc.expectedErr, err)
+		require.Equal(t, tc.expectedArgs, args)
 	}
 }
