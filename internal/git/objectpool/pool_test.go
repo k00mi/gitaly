@@ -1,8 +1,10 @@
 package objectpool
 
 import (
+	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -17,6 +19,74 @@ func TestNewObjectPool(t *testing.T) {
 
 	_, err = NewObjectPool("mepmep", testhelper.NewTestObjectPoolName(t))
 	require.Error(t, err, "creating pool in storage that does not exist should fail")
+}
+
+func TestNewFromRepoSuccess(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	relativePoolPath := testhelper.NewTestObjectPoolName(t)
+
+	pool, err := NewObjectPool(testRepo.GetStorageName(), relativePoolPath)
+	require.NoError(t, err)
+	defer pool.Remove(ctx)
+
+	defer cancel()
+	require.NoError(t, pool.Create(ctx, testRepo))
+	require.NoError(t, pool.Link(ctx, testRepo))
+
+	poolFromRepo, err := FromRepo(testRepo)
+	require.NoError(t, err)
+	require.Equal(t, relativePoolPath, poolFromRepo.relativePath)
+	require.Equal(t, pool.storageName, poolFromRepo.storageName)
+}
+
+func TestNewFromRepoNoObjectPool(t *testing.T) {
+	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	// no alternates file
+	poolFromRepo, err := FromRepo(testRepo)
+	require.Equal(t, ErrAlternateObjectDirNotExist, err)
+	require.Nil(t, poolFromRepo)
+
+	// with an alternates file
+	testCases := []struct {
+		desc        string
+		fileContent []byte
+		expectedErr error
+	}{
+		{
+			desc:        "points to non existent path",
+			fileContent: []byte("/tmp/invalid_path"),
+			expectedErr: ErrInvalidPoolRepository,
+		},
+		{
+			desc:        "empty file",
+			fileContent: nil,
+			expectedErr: nil,
+		},
+		{
+			desc:        "first line commented out",
+			fileContent: []byte("#/tmp/invalid/path"),
+			expectedErr: ErrAlternateObjectDirNotExist,
+		},
+	}
+
+	require.NoError(t, os.MkdirAll(filepath.Join(testRepoPath, "objects", "info"), 0755))
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			alternateFilePath := filepath.Join(testRepoPath, "objects", "info", "alternates")
+			require.NoError(t, ioutil.WriteFile(alternateFilePath, tc.fileContent, 0644))
+			poolFromRepo, err := FromRepo(testRepo)
+			require.Equal(t, tc.expectedErr, err)
+			require.Nil(t, poolFromRepo)
+
+			require.NoError(t, os.Remove(alternateFilePath))
+		})
+	}
 }
 
 func TestCreate(t *testing.T) {
