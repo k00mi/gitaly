@@ -108,17 +108,13 @@ func proxyRequiredOpts(director proxy.StreamDirector) []grpc.ServerOption {
 	}
 }
 
-// Start will start the praefect gRPC proxy server listening at the provided
-// listener. Function will block until the server is stopped or an
-// unrecoverable error occurs.
-func (srv *Server) Start(lis net.Listener) error {
-	srv.registerServices()
-
-	return srv.s.Serve(lis)
+// Serve starts serving requests from the listener
+func (srv *Server) Serve(l net.Listener, secure bool) error {
+	return srv.s.Serve(l)
 }
 
-// registerServices will register any services praefect needs to handle rpcs on its own
-func (srv *Server) registerServices() {
+// RegisterServices will register any services praefect needs to handle rpcs on its own
+func (srv *Server) RegisterServices() {
 	// ServerServiceServer is necessary for the ServerInfo RPC
 	gitalypb.RegisterServerServiceServer(srv.s, server.NewServer(srv.conf, srv.clientConnections))
 
@@ -142,4 +138,14 @@ func (srv *Server) Shutdown(ctx context.Context) error {
 	case <-done:
 		return nil
 	}
+}
+
+// GracefulStop stops the praefect server gracefully
+func (srv *Server) GracefulStop() {
+	srv.s.GracefulStop()
+}
+
+// Stop stops the praefect server
+func (srv *Server) Stop() {
+	srv.s.Stop()
 }
