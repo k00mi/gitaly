@@ -1,5 +1,23 @@
 # Gitaly changelog
 
+## v1.72.0
+
+#### Added
+- Propagate repository removal to Praefect backends
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1586
+- Add GetObjectPool RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1583
+- Add ReplicateRepository protocol
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1601
+
+#### Fixed
+- Fix CreateBundle scope and target_repository_field
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1597
+
+#### Performance
+- Changed files used for sparse checkout
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1611
+
 ## v1.71.0
 
 #### Added

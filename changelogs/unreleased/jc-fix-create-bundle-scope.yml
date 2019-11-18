@@ -1,5 +1,0 @@
----
-title: Fix CreateBundle scope and target_repository_field
-merge_request: 1597
-author:
-type: fixed
