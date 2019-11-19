@@ -58,6 +58,13 @@ func configure() error {
 	config.Config.SocketPath = "/bogus"
 	config.Config.GitlabShell.Dir = "/"
 
+	dir, err := ioutil.TempDir("", "internal_socket")
+	if err != nil {
+		return err
+	}
+
+	config.Config.InternalSocketDir = dir
+
 	for _, f := range []func() error{
 		ConfigureRuby,
 		config.Validate,
@@ -282,6 +289,10 @@ func ConfigureRuby() error {
 			return fmt.Errorf("could not get caller info")
 		}
 		config.Config.Ruby.Dir = path.Join(path.Dir(currentFile), "../../ruby")
+	}
+
+	if err := config.ConfigureRuby(); err != nil {
+		log.Fatalf("validate ruby config: %v", err)
 	}
 
 	return nil

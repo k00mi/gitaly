@@ -47,6 +47,11 @@ func init() {
 }
 
 func prepareSocketPath() {
+	if config.Config.InternalSocketDir != "" {
+		socketDir = config.Config.InternalSocketDir
+		return
+	}
+
 	// The socket path must be short-ish because listen(2) fails on long
 	// socket paths. We hope/expect that ioutil.TempDir creates a directory
 	// that is not too deep. We need a directory, not a tempfile, because we
@@ -64,7 +69,7 @@ func socketPath(id int) string {
 		panic("socketDir is not set")
 	}
 
-	return path.Join(filepath.Clean(socketDir), fmt.Sprintf("socket.%d", id))
+	return filepath.Join(socketDir, fmt.Sprintf("ruby.%d", id))
 }
 
 // Server represents a gitaly-ruby helper process.
@@ -91,7 +96,8 @@ func (s *Server) Stop() {
 		}
 	}
 
-	if socketDir != "" {
+	// If we use the old gitaly-ruby temp dir, we should clean up
+	if config.Config.InternalSocketDir == "" && socketDir != "" {
 		os.RemoveAll(socketDir)
 	}
 }
@@ -133,7 +139,7 @@ func (s *Server) start() error {
 		env = append(env, "SENTRY_ENVIRONMENT="+sentryEnvironment)
 	}
 
-	gitalyRuby := path.Join(cfg.Ruby.Dir, "bin/gitaly-ruby")
+	gitalyRuby := path.Join(cfg.Ruby.Dir, "bin", "gitaly-ruby")
 
 	numWorkers := cfg.Ruby.NumWorkers
 	balancer.ConfigureBuilder(numWorkers, 0)

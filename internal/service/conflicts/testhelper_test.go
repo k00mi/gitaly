@@ -1,11 +1,13 @@
 package conflicts
 
 import (
+	"io/ioutil"
 	"net"
 	"os"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -23,7 +25,14 @@ var RubyServer = &rubyserver.Server{}
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
-	hooks.Override = "/does/not/exist"
+	tempDir, err := ioutil.TempDir("", "gitaly")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	hooks.Override = tempDir + "/hooks"
+	config.Config.InternalSocketDir = tempDir + "/sock"
 
 	if err := RubyServer.Start(); err != nil {
 		log.Fatal(err)
