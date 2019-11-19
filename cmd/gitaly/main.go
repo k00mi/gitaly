@@ -92,6 +92,7 @@ func run(b *bootstrap.Bootstrap) error {
 
 	for _, c := range []starter.Config{
 		{starter.Unix, config.Config.SocketPath},
+		{starter.Unix, config.GitalyInternalSocketPath()},
 		{starter.TCP, config.Config.ListenAddr},
 		{starter.TLS, config.Config.TLSListenAddr},
 	} {

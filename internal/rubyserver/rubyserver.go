@@ -3,7 +3,6 @@ package rubyserver
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path"
@@ -14,7 +13,6 @@ import (
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
@@ -31,10 +29,6 @@ import (
 )
 
 var (
-	socketDir string
-
-	lazyInit sync.Once
-
 	// ConnectTimeout is the timeout for establishing a connection to the gitaly-ruby process.
 	ConnectTimeout = 40 * time.Second
 )
@@ -46,27 +40,10 @@ func init() {
 	}
 }
 
-func prepareSocketPath() {
-	if config.Config.InternalSocketDir != "" {
-		socketDir = config.Config.InternalSocketDir
-		return
-	}
-
-	// The socket path must be short-ish because listen(2) fails on long
-	// socket paths. We hope/expect that ioutil.TempDir creates a directory
-	// that is not too deep. We need a directory, not a tempfile, because we
-	// will later want to set its permissions to 0700. The permission change
-	// is done in the Ruby child process.
-	var err error
-	socketDir, err = ioutil.TempDir("", "gitaly-ruby")
-	if err != nil {
-		log.Fatalf("create ruby server socket directory: %v", err)
-	}
-}
-
 func socketPath(id int) string {
+	socketDir := config.InternalSocketDir()
 	if socketDir == "" {
-		panic("socketDir is not set")
+		panic("internal socket directory is missing")
 	}
 
 	return filepath.Join(socketDir, fmt.Sprintf("ruby.%d", id))
@@ -95,11 +72,6 @@ func (s *Server) Stop() {
 			w.Process.Stop()
 		}
 	}
-
-	// If we use the old gitaly-ruby temp dir, we should clean up
-	if config.Config.InternalSocketDir == "" && socketDir != "" {
-		os.RemoveAll(socketDir)
-	}
 }
 
 // Start spawns the Ruby server.
@@ -109,8 +81,6 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) start() error {
-	lazyInit.Do(prepareSocketPath)
-
 	wd, err := os.Getwd()
 	if err != nil {
 		return err
