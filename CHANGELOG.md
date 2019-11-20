@@ -1,5 +1,22 @@
 # Gitaly changelog
 
+## v1.73.0
+
+#### Added
+- Label storage name in all storage scoped requests
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1617
+  Contributed by maxmati
+- Allow socket dir for Gitaly-Ruby to be configured
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1184
+
+#### Fixed
+- Fix client keep alive for all network types
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1637
+
+#### Other
+- Move over to Labkit Healthcheck endpoint
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1448
+
 ## v1.72.0
 
 #### Added
