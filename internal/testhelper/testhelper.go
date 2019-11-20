@@ -55,6 +55,7 @@ func configure() error {
 	config.Config.Storages = []config.Storage{
 		{Name: "default", Path: GitlabTestStoragePath()},
 	}
+
 	config.Config.SocketPath = "/bogus"
 	config.Config.GitlabShell.Dir = "/"
 
@@ -288,7 +289,7 @@ func ConfigureRuby() error {
 		if !ok {
 			return fmt.Errorf("could not get caller info")
 		}
-		config.Config.Ruby.Dir = path.Join(path.Dir(currentFile), "../../ruby")
+		config.Config.Ruby.Dir = filepath.Join(filepath.Dir(currentFile), "../../ruby")
 	}
 
 	if err := config.ConfigureRuby(); err != nil {

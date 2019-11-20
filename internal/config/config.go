@@ -150,6 +150,7 @@ func Validate() error {
 		ConfigureRuby(),
 		validateBinDir(),
 		validateInternalSocketDir(),
+		validateHooks(),
 	} {
 		if err != nil {
 			return err
@@ -185,6 +186,57 @@ func validateShell() error {
 	}
 
 	return validateIsDirectory(Config.GitlabShell.Dir, "gitlab-shell.dir")
+}
+
+func checkExecutable(path string) error {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+
+	if fi.Mode()&0755 < 0755 {
+		return fmt.Errorf("not executable: %v", path)
+	}
+
+	return nil
+}
+
+type hookErrs struct {
+	errors []error
+}
+
+func (h *hookErrs) Error() string {
+	var errStrings []string
+	for _, err := range h.errors {
+		errStrings = append(errStrings, err.Error())
+	}
+
+	return strings.Join(errStrings, ", ")
+}
+
+func (h *hookErrs) Add(err error) {
+	h.errors = append(h.errors, err)
+}
+
+func validateHooks() error {
+	if os.Getenv("GITALY_TESTING_NO_GIT_HOOKS") == "1" {
+		return nil
+	}
+
+	errs := &hookErrs{}
+
+	for _, hookName := range []string{"pre-receive", "post-receive", "update"} {
+		if err := checkExecutable(filepath.Join(Config.Ruby.Dir, "git-hooks", hookName)); err != nil {
+			errs.Add(err)
+			continue
+		}
+	}
+
+	if len(errs.errors) > 0 {
+		return errs
+	}
+
+	return nil
 }
 
 func validateIsDirectory(path, name string) error {

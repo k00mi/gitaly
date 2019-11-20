@@ -326,6 +326,101 @@ func TestStoragePath(t *testing.T) {
 	}
 }
 
+type hookFileMode int
+
+const (
+	hookFileExists hookFileMode = 1 << (4 - 1 - iota)
+	hookFileExecutable
+)
+
+func setupTempHookDirs(t *testing.T, m map[string]hookFileMode) (string, func()) {
+	tempDir, err := ioutil.TempDir("", "hooks")
+	require.NoError(t, err)
+
+	for hookName, mode := range m {
+		if mode&hookFileExists > 0 {
+			path := filepath.Join(tempDir, hookName)
+			require.NoError(t, os.MkdirAll(filepath.Dir(path), 0755))
+
+			require.NoError(t, ioutil.WriteFile(filepath.Join(tempDir, hookName), nil, 0100))
+
+			if mode&hookFileExecutable > 0 {
+				require.NoError(t, os.Chmod(filepath.Join(tempDir, hookName), 0755))
+			}
+		}
+	}
+
+	return tempDir, func() { os.RemoveAll(tempDir) }
+}
+
+var (
+	fileNotExistsErrRegexSnippit  = "stat .+: no such file or directory"
+	fileNotExecutableRegexSnippit = "not executable: .+"
+)
+
+func TestValidateHooks(t *testing.T) {
+	testCases := []struct {
+		desc             string
+		expectedErrRegex string
+		hookFiles        map[string]hookFileMode
+	}{
+		{
+			desc: "everything is ✅",
+			hookFiles: map[string]hookFileMode{
+				"ruby/git-hooks/update":       hookFileExists | hookFileExecutable,
+				"ruby/git-hooks/pre-receive":  hookFileExists | hookFileExecutable,
+				"ruby/git-hooks/post-receive": hookFileExists | hookFileExecutable,
+			},
+			expectedErrRegex: "",
+		},
+		{
+			desc: "missing git-hooks",
+			hookFiles: map[string]hookFileMode{
+				"ruby/git-hooks/update":       0,
+				"ruby/git-hooks/pre-receive":  0,
+				"ruby/git-hooks/post-receive": 0,
+			},
+			expectedErrRegex: fmt.Sprintf("%s, %s, %s", fileNotExistsErrRegexSnippit, fileNotExistsErrRegexSnippit, fileNotExistsErrRegexSnippit),
+		},
+		{
+			desc: "git-hooks are not executable",
+			hookFiles: map[string]hookFileMode{
+				"ruby/git-hooks/update":       hookFileExists,
+				"ruby/git-hooks/pre-receive":  hookFileExists,
+				"ruby/git-hooks/post-receive": hookFileExists,
+			},
+			expectedErrRegex: fmt.Sprintf("%s, %s, %s", fileNotExecutableRegexSnippit, fileNotExecutableRegexSnippit, fileNotExecutableRegexSnippit),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			originalConfig := Config
+			defer func() {
+				Config = originalConfig
+			}()
+
+			tempHookDir, cleanup := setupTempHookDirs(t, tc.hookFiles)
+			defer cleanup()
+
+			Config = Cfg{
+				Ruby: Ruby{
+					Dir: filepath.Join(tempHookDir, "ruby"),
+				},
+				GitlabShell: GitlabShell{
+					Dir: filepath.Join(tempHookDir, "/gitlab-shell"),
+				},
+				BinDir: filepath.Join(tempHookDir, "/bin"),
+			}
+
+			err := validateHooks()
+			if tc.expectedErrRegex != "" {
+				require.Regexp(t, tc.expectedErrRegex, err.Error(), "error should match regexp")
+			}
+		})
+	}
+}
+
 func TestLoadGit(t *testing.T) {
 	tmpFile := configFileReader(`[git]
 bin_path = "/my/git/path"

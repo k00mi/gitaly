@@ -23,7 +23,7 @@ def main(gitaly_dir)
       dir = "#{gitaly_dir}/ruby"
 
       [gitlab-shell]
-      dir = "#{gitaly_dir}"
+      dir = "#{gitaly_dir}/ruby/gitlab-shell"
       CONFIG
               )
 
@@ -45,15 +45,22 @@ def main(gitaly_dir)
 end
 
 def wait_connect
-  loop do
+  repeats = 100
+  sleep_time = 0.1
+
+  repeats.times do
     begin
       Socket.unix(ADDR)
       return
     rescue # rubocop:disable Lint/RescueWithoutErrorClass
       print '.'
-      sleep(0.1)
+      sleep(sleep_time)
     end
   end
+
+  puts "failed to connect to gitaly after #{repeats * sleep_time}s"
+
+  abort
 end
 
 unless ARGV.count == 1
