@@ -27,6 +27,12 @@ var (
 			Help: "Total number of disk cache bytes fetched",
 		},
 	)
+	bytesLoserTotals = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "gitaly_diskcache_bytes_loser_total",
+			Help: "Total number of disk cache bytes from losing writes",
+		},
+	)
 	errTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "gitaly_diskcache_errors_total",
@@ -53,6 +59,7 @@ func init() {
 	prometheus.MustRegister(missTotals)
 	prometheus.MustRegister(bytesStoredtotals)
 	prometheus.MustRegister(bytesFetchedtotals)
+	prometheus.MustRegister(bytesLoserTotals)
 	prometheus.MustRegister(errTotal)
 	prometheus.MustRegister(walkerCheckTotal)
 	prometheus.MustRegister(walkerRemovalTotal)
@@ -73,6 +80,7 @@ var (
 	countMiss        = func() { missTotals.Inc() }
 	countWriteBytes  = func(n float64) { bytesStoredtotals.Add(n) }
 	countReadBytes   = func(n float64) { bytesFetchedtotals.Add(n) }
+	countLoserBytes  = func(n float64) { bytesLoserTotals.Add(n) }
 	countWalkRemoval = func() { walkerRemovalTotal.Inc() }
 	countWalkCheck   = func() { walkerCheckTotal.Inc() }
 )

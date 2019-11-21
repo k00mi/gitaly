@@ -2,13 +2,18 @@ package cache_test
 
 import (
 	"context"
+	"io"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/cache"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -106,4 +111,81 @@ func TestStreamDBNaiveKeyer(t *testing.T) {
 	req1.Repository.RelativePath += "-does-not-exist"
 	_, err = keyer.StartLease(req1.Repository)
 	require.NoError(t, err)
+}
+
+func injectTempStorage(t testing.TB) (string, testhelper.Cleanup) {
+	oldStorages := config.Config.Storages
+	tmpDir, err := ioutil.TempDir("", t.Name())
+	require.NoError(t, err)
+
+	name := filepath.Base(tmpDir)
+	config.Config.Storages = append(config.Config.Storages, config.Storage{
+		Name: name,
+		Path: tmpDir,
+	})
+
+	cleanup := func() {
+		config.Config.Storages = oldStorages
+		require.NoError(t, os.RemoveAll(tmpDir))
+	}
+
+	return name, cleanup
+}
+
+func TestLoserCount(t *testing.T) {
+	db := cache.NewStreamDB(cache.LeaseKeyer{})
+
+	// the test can be contaminate by other tests using the cache, so a
+	// dedicated storage location should be used
+	storageName, storageCleanup := injectTempStorage(t)
+	defer storageCleanup()
+
+	req := &gitalypb.InfoRefsRequest{
+		Repository: &gitalypb.Repository{
+			RelativePath: "test",
+			StorageName:  storageName,
+		},
+	}
+	ctx := testhelper.SetCtxGrpcMethod(context.Background(), "InfoRefsUploadPack")
+
+	leashes := []chan struct{}{make(chan struct{}), make(chan struct{}), make(chan struct{})}
+	errQ := make(chan error)
+
+	wg := &sync.WaitGroup{}
+	wg.Add(len(leashes))
+
+	// Run streams concurrently for the same repo and request
+	for _, l := range leashes {
+		go func(l chan struct{}) { errQ <- db.PutStream(ctx, req.Repository, req, leashedReader{l, wg}) }(l)
+		l <- struct{}{}
+	}
+
+	wg.Wait()
+
+	start := cache.ExportMockLoserBytes.Count()
+
+	for _, l := range leashes {
+		close(l)
+		require.NoError(t, <-errQ)
+	}
+
+	require.Equal(t, start+len(leashes)-1, cache.ExportMockLoserBytes.Count())
+}
+
+type leashedReader struct {
+	q  <-chan struct{}
+	wg *sync.WaitGroup
+}
+
+func (lr leashedReader) Read(p []byte) (n int, err error) {
+	_, ok := <-lr.q
+
+	if !ok {
+		return 0, io.EOF // on channel close
+	}
+
+	lr.wg.Done()
+	lr.wg.Wait() // wait for all other readers to sync
+
+	return 1, nil // on receive, return 1 byte read
 }

@@ -6,21 +6,57 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/golang/protobuf/proto"
 	"gitlab.com/gitlab-org/gitaly/internal/safe"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
+// maps a cache path to the number of active writers
+type activeFiles struct {
+	*sync.Mutex
+	m map[string]int
+}
+
+// trackFile returns a function that indicates if the current
+// writing of a file is the last known one, which
+// would indicate the current write is the "winner".
+func (af activeFiles) trackFile(path string) func() bool {
+	af.Lock()
+	defer af.Unlock()
+
+	af.m[path]++
+
+	return func() bool {
+		af.Lock()
+		defer af.Unlock()
+
+		af.m[path]--
+
+		winner := af.m[path] == 0
+		if winner {
+			delete(af.m, path) // reclaim memory
+		}
+
+		return winner
+	}
+}
+
 // StreamDB stores and retrieves byte streams for repository related RPCs
 type StreamDB struct {
 	ck Keyer
+	af activeFiles
 }
 
 // NewStreamDB will open the stream database at the specified file path.
 func NewStreamDB(ck Keyer) *StreamDB {
 	return &StreamDB{
 		ck: ck,
+		af: activeFiles{
+			Mutex: &sync.Mutex{},
+			m:     map[string]int{},
+		},
 	}
 }
 
@@ -79,6 +115,14 @@ func (sdb *StreamDB) PutStream(ctx context.Context, repo *gitalypb.Repository, r
 		return err
 	}
 
+	var n int64
+	isWinner := sdb.af.trackFile(reqPath)
+	defer func() {
+		if !isWinner() {
+			countLoserBytes(float64(n))
+		}
+	}()
+
 	if err := os.MkdirAll(filepath.Dir(reqPath), 0755); err != nil {
 		return err
 	}
@@ -89,13 +133,14 @@ func (sdb *StreamDB) PutStream(ctx context.Context, repo *gitalypb.Repository, r
 	}
 	defer sf.Close()
 
-	n, err := io.Copy(sf, src)
+	n, err = io.Copy(sf, src)
 	if err != nil {
 		return err
 	}
 	countWriteBytes(float64(n))
 
 	if err := sf.Commit(); err != nil {
+		errTotal.WithLabelValues("ErrSafefileCommit").Inc()
 		return err
 	}
 
