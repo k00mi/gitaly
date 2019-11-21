@@ -5,6 +5,7 @@ import "sync"
 var (
 	ExportMockRemovalCounter = new(mockCounter)
 	ExportMockCheckCounter   = new(mockCounter)
+	ExportMockLoserBytes     = new(mockCounter)
 
 	ExportDisableMoveAndClear = &disableMoveAndClear
 	ExportDisableWalker       = &disableWalker
@@ -31,4 +32,5 @@ func init() {
 	// override counter functions with our mocked version
 	countWalkRemoval = func() { ExportMockRemovalCounter.Add(1) }
 	countWalkCheck = func() { ExportMockCheckCounter.Add(1) }
+	countLoserBytes = func(n float64) { ExportMockLoserBytes.Add(int(n)) }
 }
