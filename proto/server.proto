@@ -13,6 +13,12 @@ service ServerService {
       scope_level: SERVER
     };
   }
+  rpc DiskStatistics(DiskStatisticsRequest) returns (DiskStatisticsResponse) {
+    option (op_type) = {
+      op: ACCESSOR
+      scope_level: SERVER
+    };
+  }
 }
 
 message ServerInfoRequest {}
@@ -29,4 +35,18 @@ message ServerInfoResponse {
   string server_version = 1;
   string git_version = 2;
   repeated StorageStatus storage_statuses = 3;
+}
+
+message DiskStatisticsRequest {}
+
+message DiskStatisticsResponse {
+  message StorageStatus {
+// When both available and used fields are equal 0 that means that
+// Gitaly was unable to determine storage stats.
+    string storage_name = 1;
+    int64 available = 2;
+    int64 used = 3;
+  }
+
+  repeated StorageStatus storage_statuses = 1;
 }

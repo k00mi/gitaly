@@ -19,10 +19,23 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :fs_type, :string, 4
     optional :filesystem_id, :string, 5
   end
+  add_message "gitaly.DiskStatisticsRequest" do
+  end
+  add_message "gitaly.DiskStatisticsResponse" do
+    repeated :storage_statuses, :message, 1, "gitaly.DiskStatisticsResponse.StorageStatus"
+  end
+  add_message "gitaly.DiskStatisticsResponse.StorageStatus" do
+    optional :storage_name, :string, 1
+    optional :available, :int64, 2
+    optional :used, :int64, 3
+  end
 end
 
 module Gitaly
   ServerInfoRequest = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.ServerInfoRequest").msgclass
   ServerInfoResponse = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.ServerInfoResponse").msgclass
   ServerInfoResponse::StorageStatus = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.ServerInfoResponse.StorageStatus").msgclass
+  DiskStatisticsRequest = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.DiskStatisticsRequest").msgclass
+  DiskStatisticsResponse = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.DiskStatisticsResponse").msgclass
+  DiskStatisticsResponse::StorageStatus = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.DiskStatisticsResponse.StorageStatus").msgclass
 end

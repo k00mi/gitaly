@@ -15,6 +15,7 @@ module Gitaly
       self.service_name = 'gitaly.ServerService'
 
       rpc :ServerInfo, ServerInfoRequest, ServerInfoResponse
+      rpc :DiskStatistics, DiskStatisticsRequest, DiskStatisticsResponse
     end
 
     Stub = Service.rpc_stub_class

@@ -1,0 +1,5 @@
+---
+title: Add DiskStatistics grpc method to ServerService
+merge_request: 1620
+author: maxmati
+type: added

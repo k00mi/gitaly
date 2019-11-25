@@ -110,6 +110,38 @@ func TestGitalyServerInfo(t *testing.T) {
 	}
 }
 
+func TestGitalyDiskStatistics(t *testing.T) {
+	conf := config.Config{
+		Nodes: []*models.Node{
+			{
+				ID:             1,
+				Storage:        "praefect-internal-1",
+				DefaultPrimary: true,
+				Token:          "abc",
+			},
+			{
+				ID:      2,
+				Storage: "praefect-internal-2",
+				Token:   "xyz",
+			}},
+	}
+	cc, _, cleanup := runPraefectServerWithGitaly(t, conf)
+	defer cleanup()
+
+	client := gitalypb.NewServerServiceClient(cc)
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	metadata, err := client.DiskStatistics(ctx, &gitalypb.DiskStatisticsRequest{})
+	require.NoError(t, err)
+	require.Len(t, metadata.GetStorageStatuses(), len(conf.Nodes))
+
+	for _, storageStatus := range metadata.GetStorageStatuses() {
+		require.NotNil(t, storageStatus, "none of the storage statuses should be nil")
+	}
+}
+
 func TestHealthCheck(t *testing.T) {
 	cc, _, cleanup := runPraefectServerWithGitaly(t, testConfig(1))
 	defer cleanup()
