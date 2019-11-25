@@ -1,5 +1,26 @@
 # Gitaly changelog
 
+## v1.74.0
+
+#### Added
+- Add DiskStatistics grpc method to ServerService
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1620
+  Contributed by maxmati
+- Add Praefect service
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1628
+
+#### Fixed
+- UpdateRemoteMirror: fix default branch resolution
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1641
+
+#### Other
+- Refactor datastore to its own package
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1627
+- Validate that hook files are reachable and executable
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1574
+- Upgrade charlock_holmes Ruby gem to v0.7.7
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1647
+
 ## v1.73.0
 
 #### Added
