@@ -2,7 +2,6 @@ package praefect
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -23,9 +22,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/internal/version"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
-	"google.golang.org/grpc/codes"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
-	"google.golang.org/grpc/status"
 )
 
 func TestServerRouteServerAccessor(t *testing.T) {
@@ -38,8 +35,8 @@ func TestServerRouteServerAccessor(t *testing.T) {
 		// note: a server scoped RPC will be randomly routed
 		// to an available backend server. To simplify our
 		// test, a single backend server is used.
-		backends = map[int]mock.SimpleServiceServer{
-			0: &mockSvc{
+		backends = map[string]mock.SimpleServiceServer{
+			conf.VirtualStorages[0].Nodes[0].Storage: &mockSvc{
 				serverAccessor: func(_ context.Context, req *mock.SimpleRequest) (*mock.SimpleResponse, error) {
 					reqQ <- req
 					return expectResp, nil
@@ -75,18 +72,20 @@ func TestServerRouteServerAccessor(t *testing.T) {
 
 func TestGitalyServerInfo(t *testing.T) {
 	conf := config.Config{
-		Nodes: []*models.Node{
-			&models.Node{
-				ID:             1,
-				Storage:        "praefect-internal-1",
-				DefaultPrimary: true,
-				Token:          "abc",
+		VirtualStorages: []*config.VirtualStorage{
+			&config.VirtualStorage{
+				Nodes: []*models.Node{
+					&models.Node{
+						Storage:        "praefect-internal-1",
+						DefaultPrimary: true,
+						Token:          "abc",
+					},
+					&models.Node{
+						Storage: "praefect-internal-2",
+						Token:   "xyz",
+					}},
 			},
-			&models.Node{
-				ID:      2,
-				Storage: "praefect-internal-2",
-				Token:   "xyz",
-			}},
+		},
 	}
 	cc, _, cleanup := runPraefectServerWithGitaly(t, conf)
 	defer cleanup()
@@ -98,7 +97,7 @@ func TestGitalyServerInfo(t *testing.T) {
 
 	metadata, err := client.ServerInfo(ctx, &gitalypb.ServerInfoRequest{})
 	require.NoError(t, err)
-	require.Len(t, metadata.GetStorageStatuses(), len(conf.Nodes))
+	require.Len(t, metadata.GetStorageStatuses(), len(conf.VirtualStorages[0].Nodes))
 	require.Equal(t, version.GetVersion(), metadata.GetServerVersion())
 
 	gitVersion, err := git.Version()
@@ -112,18 +111,20 @@ func TestGitalyServerInfo(t *testing.T) {
 
 func TestGitalyDiskStatistics(t *testing.T) {
 	conf := config.Config{
-		Nodes: []*models.Node{
-			{
-				ID:             1,
-				Storage:        "praefect-internal-1",
-				DefaultPrimary: true,
-				Token:          "abc",
+		VirtualStorages: []*config.VirtualStorage{
+			&config.VirtualStorage{
+				Nodes: []*models.Node{
+					{
+						Storage:        "praefect-internal-1",
+						DefaultPrimary: true,
+						Token:          "abc",
+					},
+					{
+						Storage: "praefect-internal-2",
+						Token:   "xyz",
+					}},
 			},
-			{
-				ID:      2,
-				Storage: "praefect-internal-2",
-				Token:   "xyz",
-			}},
+		},
 	}
 	cc, _, cleanup := runPraefectServerWithGitaly(t, conf)
 	defer cleanup()
@@ -156,12 +157,16 @@ func TestHealthCheck(t *testing.T) {
 
 func TestRejectBadStorage(t *testing.T) {
 	conf := config.Config{
-		VirtualStorageName: "praefect",
-		Nodes: []*models.Node{
-			&models.Node{
-				DefaultPrimary: true,
-				Storage:        "praefect-internal-0",
-				Address:        "tcp::/this-doesnt-matter",
+		VirtualStorages: []*config.VirtualStorage{
+			&config.VirtualStorage{
+				Name: "praefect",
+				Nodes: []*models.Node{
+					&models.Node{
+						DefaultPrimary: true,
+						Storage:        "praefect-internal-0",
+						Address:        "tcp::/this-doesnt-matter",
+					},
+				},
 			},
 		},
 	}
@@ -180,22 +185,39 @@ func TestRejectBadStorage(t *testing.T) {
 	defer cancel()
 
 	_, err := repoClient.GarbageCollect(ctx, &gitalypb.GarbageCollectRequest{Repository: &badTargetRepo})
-	testhelper.RequireGrpcError(t, err, codes.InvalidArgument)
-	require.Equal(t, fmt.Sprintf("only messages for %s are allowed", conf.VirtualStorageName), status.Convert(err).Message())
+	require.Error(t, err)
 }
 
 func TestWarnDuplicateAddrs(t *testing.T) {
 	conf := config.Config{
-		VirtualStorageName: "praefect",
-		Nodes: []*models.Node{
-			&models.Node{
-				DefaultPrimary: true,
-				Storage:        "praefect-internal-0",
-				Address:        "tcp::/samesies",
+		VirtualStorages: []*config.VirtualStorage{
+			&config.VirtualStorage{
+				Name: "default",
+				Nodes: []*models.Node{
+					&models.Node{
+						DefaultPrimary: true,
+						Storage:        "praefect-internal-0",
+						Address:        "tcp://abc",
+					},
+					&models.Node{
+						Storage: "praefect-internal-1",
+						Address: "tcp://xyz",
+					},
+				},
 			},
-			&models.Node{
-				Storage: "praefect-internal-1",
-				Address: "tcp::/samesies",
+			&config.VirtualStorage{
+				Name: "praefect",
+				Nodes: []*models.Node{
+					&models.Node{
+						DefaultPrimary: true,
+						Storage:        "praefect-internal-0",
+						Address:        "tcp://abc",
+					},
+					&models.Node{
+						Storage: "praefect-internal-1",
+						Address: "tcp://xyz",
+					},
+				},
 			},
 		},
 	}
@@ -205,31 +227,103 @@ func TestWarnDuplicateAddrs(t *testing.T) {
 	setupServer(t, conf, nil, logrus.NewEntry(tLogger), nil) // instantiates a praefect server and triggers warning
 
 	for _, entry := range hook.Entries {
+		require.NotContains(t, entry.Message, "more than one backend node")
+	}
+
+	conf = config.Config{
+		VirtualStorages: []*config.VirtualStorage{
+			&config.VirtualStorage{
+				Name: "praefect",
+				Nodes: []*models.Node{
+					&models.Node{
+						DefaultPrimary: true,
+						Storage:        "praefect-internal-0",
+						Address:        "tcp::/samesies",
+					},
+					&models.Node{
+						Storage: "praefect-internal-1",
+						Address: "tcp::/samesies",
+					},
+				},
+			},
+		},
+	}
+
+	tLogger, hook = test.NewNullLogger()
+
+	setupServer(t, conf, nil, logrus.NewEntry(tLogger), nil) // instantiates a praefect server and triggers warning
+
+	var found bool
+	for _, entry := range hook.Entries {
 		if strings.Contains(entry.Message, "more than one backend node") {
-			return // pass!
+			found = true
+			break
 		}
 	}
-	t.Fatal("could not find expected log message")
+	require.True(t, found, "expected to find error log")
+
+	conf = config.Config{
+		VirtualStorages: []*config.VirtualStorage{
+			&config.VirtualStorage{
+				Name: "default",
+				Nodes: []*models.Node{
+					&models.Node{
+						DefaultPrimary: true,
+						Storage:        "praefect-internal-0",
+						Address:        "tcp://abc",
+					},
+					&models.Node{
+						Storage: "praefect-internal-1",
+						Address: "tcp://xyz",
+					},
+				},
+			},
+			&config.VirtualStorage{
+				Name: "praefect",
+				Nodes: []*models.Node{
+					&models.Node{
+						DefaultPrimary: true,
+						Storage:        "praefect-internal-0",
+						Address:        "tcp://abc",
+					},
+					&models.Node{
+						Storage: "praefect-internal-2",
+						Address: "tcp://xyz",
+					},
+				},
+			},
+		},
+	}
+
+	tLogger, hook = test.NewNullLogger()
+
+	setupServer(t, conf, nil, logrus.NewEntry(tLogger), nil) // instantiates a praefect server and triggers warning
+
+	for _, entry := range hook.Entries {
+		require.NotContains(t, entry.Message, "more than one backend node")
+	}
 }
 
 func TestRepoRemoval(t *testing.T) {
 	conf := config.Config{
-		VirtualStorageName: "praefect",
-		Nodes: []*models.Node{
-			&models.Node{
-				DefaultPrimary: true,
-				Storage:        gconfig.Config.Storages[0].Name,
-				Address:        "tcp::/samesies",
-			},
-			&models.Node{
-				ID:      1,
-				Storage: "praefect-internal-1",
-				Address: "tcp::/this-doesnt-matter",
-			},
-			&models.Node{
-				ID:      2,
-				Storage: "praefect-internal-2",
-				Address: "tcp::/this-doesnt-matter",
+		VirtualStorages: []*config.VirtualStorage{
+			&config.VirtualStorage{
+				Name: "praefect",
+				Nodes: []*models.Node{
+					&models.Node{
+						DefaultPrimary: true,
+						Storage:        gconfig.Config.Storages[0].Name,
+						Address:        "tcp::/samesies",
+					},
+					&models.Node{
+						Storage: "praefect-internal-1",
+						Address: "tcp::/this-doesnt-matter",
+					},
+					&models.Node{
+						Storage: "praefect-internal-2",
+						Address: "tcp::/this-doesnt-matter",
+					},
+				},
 			},
 		},
 	}
@@ -239,11 +333,11 @@ func TestRepoRemoval(t *testing.T) {
 
 	testStorages := []gconfig.Storage{
 		{
-			Name: conf.Nodes[1].Storage,
+			Name: conf.VirtualStorages[0].Nodes[1].Storage,
 			Path: tempStoragePath(t),
 		},
 		{
-			Name: conf.Nodes[2].Storage,
+			Name: conf.VirtualStorages[0].Nodes[2].Storage,
 			Path: tempStoragePath(t),
 		},
 	}
@@ -257,9 +351,9 @@ func TestRepoRemoval(t *testing.T) {
 	tRepo, _, tCleanup := testhelper.NewTestRepo(t)
 	defer tCleanup()
 
-	_, path1, cleanup1 := cloneRepoAtStorage(t, tRepo, conf.Nodes[1].Storage)
+	_, path1, cleanup1 := cloneRepoAtStorage(t, tRepo, conf.VirtualStorages[0].Nodes[1].Storage)
 	defer cleanup1()
-	_, path2, cleanup2 := cloneRepoAtStorage(t, tRepo, conf.Nodes[2].Storage)
+	_, path2, cleanup2 := cloneRepoAtStorage(t, tRepo, conf.VirtualStorages[0].Nodes[2].Storage)
 	defer cleanup2()
 
 	// prerequisite: repos should exist at expected paths
@@ -273,7 +367,7 @@ func TestRepoRemoval(t *testing.T) {
 	defer cancel()
 
 	virtualRepo := *tRepo
-	virtualRepo.StorageName = conf.VirtualStorageName
+	virtualRepo.StorageName = conf.VirtualStorages[0].Name
 
 	rClient := gitalypb.NewRepositoryServiceClient(cc)
 

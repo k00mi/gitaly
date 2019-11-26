@@ -30,17 +30,21 @@ func TestSecondaryRotation(t *testing.T) {
 
 func TestStreamDirector(t *testing.T) {
 	conf := config.Config{
-		VirtualStorageName: "praefect",
-		Nodes: []*models.Node{
-			&models.Node{
-				Address:        "tcp://gitaly-primary.example.com",
-				Storage:        "praefect-internal-1",
-				DefaultPrimary: true,
+		VirtualStorages: []*config.VirtualStorage{
+			&config.VirtualStorage{
+				Name: "praefect",
+				Nodes: []*models.Node{
+					&models.Node{
+						Address:        "tcp://gitaly-primary.example.com",
+						Storage:        "praefect-internal-1",
+						DefaultPrimary: true,
+					},
+					&models.Node{
+						Address: "tcp://gitaly-backup1.example.com",
+						Storage: "praefect-internal-2",
+					}},
 			},
-			&models.Node{
-				Address: "tcp://gitaly-backup1.example.com",
-				Storage: "praefect-internal-2",
-			}},
+		},
 	}
 	ds := datastore.NewInMemory(conf)
 
@@ -87,13 +91,14 @@ func TestStreamDirector(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "praefect-internal-1", rewrittenRepo.GetStorageName(), "stream director should have rewritten the storage name")
 
-	jobs, err := ds.GetJobs(datastore.JobStatePending, 1, 10)
+	jobs, err := ds.GetJobs(datastore.JobStatePending, "praefect-internal-2", 10)
 	require.NoError(t, err)
 	require.Len(t, jobs, 1)
 
-	targetNode, err := ds.GetStorageNode(1)
+	targetNode, err := ds.GetStorageNode("praefect-internal-2")
 	require.NoError(t, err)
-	sourceNode, err := ds.GetStorageNode(0)
+	sourceNode, err := ds.GetStorageNode("praefect-internal-1")
+
 	require.NoError(t, err)
 
 	expectedJob := datastore.ReplJob{
@@ -109,7 +114,7 @@ func TestStreamDirector(t *testing.T) {
 
 	jobUpdateFunc()
 
-	jobs, err = coordinator.datastore.GetJobs(datastore.JobStateReady, 1, 10)
+	jobs, err = coordinator.datastore.GetJobs(datastore.JobStateReady, "praefect-internal-2", 10)
 	require.NoError(t, err)
 	require.Len(t, jobs, 1)
 

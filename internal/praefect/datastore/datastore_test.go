@@ -10,13 +10,11 @@ import (
 
 var (
 	stor1 = models.Node{
-		ID:             0,
 		Address:        "tcp://address-1",
 		Storage:        "praefect-storage-1",
 		DefaultPrimary: true,
 	}
 	stor2 = models.Node{
-		ID:      1,
 		Address: "tcp://address-2",
 		Storage: "praefect-storage-2",
 	}
@@ -36,7 +34,7 @@ var operations = []struct {
 	{
 		desc: "query an empty datastore",
 		opFn: func(t *testing.T, ds Datastore) {
-			jobs, err := ds.GetJobs(JobStatePending|JobStateReady, stor1.ID, 1)
+			jobs, err := ds.GetJobs(JobStatePending|JobStateReady, stor1.Storage, 1)
 			require.NoError(t, err)
 			require.Len(t, jobs, 0)
 		},
@@ -51,14 +49,14 @@ var operations = []struct {
 	{
 		desc: "set the primary for the repository",
 		opFn: func(t *testing.T, ds Datastore) {
-			err := ds.SetPrimary(repo1Repository.RelativePath, stor1.ID)
+			err := ds.SetPrimary(repo1Repository.RelativePath, stor1.Storage)
 			require.NoError(t, err)
 		},
 	},
 	{
 		desc: "add a secondary replica for the repository",
 		opFn: func(t *testing.T, ds Datastore) {
-			err := ds.AddReplica(repo1Repository.RelativePath, stor2.ID)
+			err := ds.AddReplica(repo1Repository.RelativePath, stor2.Storage)
 			require.NoError(t, err)
 		},
 	},
@@ -73,7 +71,7 @@ var operations = []struct {
 	{
 		desc: "fetch inserted replication jobs after primary mapped",
 		opFn: func(t *testing.T, ds Datastore) {
-			jobs, err := ds.GetJobs(JobStatePending|JobStateReady, stor2.ID, 10)
+			jobs, err := ds.GetJobs(JobStatePending|JobStateReady, stor2.Storage, 10)
 			require.NoError(t, err)
 			require.Len(t, jobs, 1)
 
@@ -102,7 +100,7 @@ var operations = []struct {
 	{
 		desc: "try fetching completed replication job",
 		opFn: func(t *testing.T, ds Datastore) {
-			jobs, err := ds.GetJobs(JobStatePending|JobStateReady, stor1.ID, 1)
+			jobs, err := ds.GetJobs(JobStatePending|JobStateReady, stor1.Storage, 1)
 			require.NoError(t, err)
 			require.Len(t, jobs, 0)
 		},
@@ -113,7 +111,11 @@ var operations = []struct {
 var flavors = map[string]func() Datastore{
 	"in-memory-datastore": func() Datastore {
 		return NewInMemory(config.Config{
-			Nodes: []*models.Node{&stor1, &stor2},
+			VirtualStorages: []*config.VirtualStorage{
+				&config.VirtualStorage{
+					Nodes: []*models.Node{&stor1, &stor2},
+				},
+			},
 		})
 	},
 }

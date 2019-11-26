@@ -71,32 +71,34 @@ func TestProceessReplicationJob(t *testing.T) {
 	)
 
 	config := config.Config{
-		Nodes: []*models.Node{
-			&models.Node{
-				ID:             0,
-				Storage:        "default",
-				Address:        srvSocketPath,
-				Token:          gitaly_config.Config.Auth.Token,
-				DefaultPrimary: true,
-			},
-			&models.Node{
-				ID:      1,
-				Storage: backupStorageName,
-				Address: srvSocketPath,
-				Token:   gitaly_config.Config.Auth.Token,
+		VirtualStorages: []*config.VirtualStorage{
+			&config.VirtualStorage{
+				Nodes: []*models.Node{
+					&models.Node{
+						Storage:        "default",
+						Address:        srvSocketPath,
+						Token:          gitaly_config.Config.Auth.Token,
+						DefaultPrimary: true,
+					},
+					&models.Node{
+						Storage: backupStorageName,
+						Address: srvSocketPath,
+						Token:   gitaly_config.Config.Auth.Token,
+					},
+				},
 			},
 		},
 	}
 
 	ds := datastore.NewInMemory(config)
 
-	ds.SetPrimary(testRepo.GetRelativePath(), 0)
-	ds.AddReplica(testRepo.GetRelativePath(), 1)
+	ds.SetPrimary(testRepo.GetRelativePath(), "default")
+	ds.AddReplica(testRepo.GetRelativePath(), backupStorageName)
 
 	_, err = ds.CreateReplicaReplJobs(testRepo.GetRelativePath(), datastore.UpdateRepo)
 	require.NoError(t, err)
 
-	jobs, err := ds.GetJobs(datastore.JobStateReady|datastore.JobStatePending, 1, 1)
+	jobs, err := ds.GetJobs(datastore.JobStateReady|datastore.JobStatePending, backupStorageName, 1)
 	require.NoError(t, err)
 	require.Len(t, jobs, 1)
 

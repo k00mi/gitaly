@@ -97,12 +97,17 @@ func configure() (config.Config, error) {
 func run(listeners []net.Listener, conf config.Config) error {
 	clientConnections := conn.NewClientConnections()
 
-	for _, node := range conf.Nodes {
-		if err := clientConnections.RegisterNode(node.Storage, node.Address, node.Token); err != nil {
-			return fmt.Errorf("failed to register %s: %s", node.Address, err)
-		}
+	for _, virtualStorage := range conf.VirtualStorages {
+		for _, node := range virtualStorage.Nodes {
+			if _, err := clientConnections.GetConnection(node.Storage); err == nil {
+				continue
+			}
+			if err := clientConnections.RegisterNode(node.Storage, node.Address, node.Token); err != nil {
+				return fmt.Errorf("failed to register %s: %s", node.Address, err)
+			}
 
-		logger.WithField("node_address", node.Address).Info("registered gitaly node")
+			logger.WithField("node_address", node.Address).Info("registered gitaly node")
+		}
 	}
 
 	var (

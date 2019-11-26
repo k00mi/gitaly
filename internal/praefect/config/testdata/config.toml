@@ -1,4 +1,3 @@
-virtual_storage_name = "praefect"
 listen_addr = ""
 socket_path = ""
 prometheus_listen_addr = ""
@@ -11,15 +10,18 @@ prometheus_listen_addr = ""
   sentry_environment = "production"
   sentry_dsn = "abcd123"
 
-[[node]]
-  address = "tcp://gitaly-internal-1.example.com"
-  storage = "praefect-internal-1"
-  primary = true
+[[virtual_storage]]
+name = "praefect"
 
-[[node]]
-  address = "tcp://gitaly-internal-2.example.com"
-  storage = "praefect-internal-2"
-
-[[node]]
-  address = "tcp://gitaly-internal-3.example.com"
-  storage = "praefect-internal-3"
+  [[virtual_storage.node]]
+    address = "tcp://gitaly-internal-1.example.com"
+    storage = "praefect-internal-1"
+    primary = true
+  
+  [[virtual_storage.node]]
+    address = "tcp://gitaly-internal-2.example.com"
+    storage = "praefect-internal-2"
+  
+  [[virtual_storage.node]]
+    address = "tcp://gitaly-internal-3.example.com"
+    storage = "praefect-internal-3"

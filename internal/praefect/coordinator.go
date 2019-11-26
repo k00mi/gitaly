@@ -22,8 +22,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/grpc-proxy/proxy"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func isDestructive(methodName string) bool {
@@ -128,15 +126,12 @@ func (c *Coordinator) getStorageForRepositoryMessage(mi protoregistry.MethodInfo
 		return "", nil, err
 	}
 
-	if targetRepo.StorageName != c.conf.VirtualStorageName {
-		return "", nil, status.Errorf(codes.InvalidArgument, "only messages for %s are allowed", c.conf.VirtualStorageName)
-	}
-
 	primary, err := c.selectPrimary(mi, targetRepo)
 	if err != nil {
 		return "", nil, err
 	}
 
+	// rewrite storage name
 	targetRepo.StorageName = primary.Storage
 
 	additionalRepo, ok, err := mi.AdditionalRepo(m)
@@ -159,6 +154,7 @@ func (c *Coordinator) getStorageForRepositoryMessage(mi protoregistry.MethodInfo
 
 	requestFinalizer := noopRequestFinalizer
 
+	// TODO: move the logic of creating replication jobs to the streamDirector method
 	if mi.Operation == protoregistry.OpMutator {
 		change := datastore.UpdateRepo
 		if isDestructive(method) {
@@ -193,13 +189,13 @@ func (c *Coordinator) selectPrimary(mi protoregistry.MethodInfo, targetRepo *git
 			return nil, fmt.Errorf("no nodes serve storage %s", targetRepo.GetStorageName())
 		}
 
-		newPrimary, err := c.datastore.PickAPrimary()
+		newPrimary, err := c.datastore.PickAPrimary(targetRepo.GetStorageName())
 		if err != nil {
 			return nil, fmt.Errorf("could not choose a primary: %v", err)
 		}
 
 		// set the primary
-		if err = c.datastore.SetPrimary(targetRepo.GetRelativePath(), newPrimary.ID); err != nil {
+		if err = c.datastore.SetPrimary(targetRepo.GetRelativePath(), newPrimary.Storage); err != nil {
 			return nil, err
 		}
 
@@ -208,7 +204,7 @@ func (c *Coordinator) selectPrimary(mi protoregistry.MethodInfo, targetRepo *git
 			if replica.DefaultPrimary {
 				continue
 			}
-			if err = c.datastore.AddReplica(targetRepo.GetRelativePath(), replica.ID); err != nil {
+			if err = c.datastore.AddReplica(targetRepo.GetRelativePath(), replica.Storage); err != nil {
 				return nil, err
 			}
 		}

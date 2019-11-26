@@ -255,14 +255,14 @@ func (r ReplMgr) ProcessBacklog(ctx context.Context) error {
 		}
 
 		for _, node := range nodes {
-			jobs, err := r.datastore.GetJobs(datastore.JobStateReady, node.ID, 10)
+			jobs, err := r.datastore.GetJobs(datastore.JobStateReady, node.Storage, 10)
 			if err != nil {
 				return err
 			}
 
 			if len(jobs) == 0 {
 				r.log.WithFields(logrus.Fields{
-					"node_id":          node.ID,
+					"node_storage":     node.Storage,
 					"recheck_interval": jobFetchInterval,
 				}).Trace("no jobs")
 
