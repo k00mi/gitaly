@@ -1,6 +1,7 @@
 package config
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,9 +13,9 @@ import (
 
 func TestConfigValidation(t *testing.T) {
 	nodes := []*models.Node{
-		{ID: 1, Storage: "internal-1", Address: "localhost:23456", Token: "secret-token", DefaultPrimary: true},
-		{ID: 2, Storage: "internal-2", Address: "localhost:23457", Token: "secret-token"},
-		{ID: 3, Storage: "internal-3", Address: "localhost:23458", Token: "secret-token"},
+		{Storage: "internal-1", Address: "localhost:23456", Token: "secret-token", DefaultPrimary: true},
+		{Storage: "internal-2", Address: "localhost:23457", Token: "secret-token"},
+		{Storage: "internal-3", Address: "localhost:23458", Token: "secret-token"},
 	}
 
 	testCases := []struct {
@@ -24,45 +25,105 @@ func TestConfigValidation(t *testing.T) {
 	}{
 		{
 			desc:   "No ListenAddr or SocketPath",
-			config: Config{ListenAddr: "", Nodes: nodes},
+			config: Config{ListenAddr: "", VirtualStorages: []*VirtualStorage{&VirtualStorage{Nodes: nodes}}},
 			err:    errNoListener,
 		},
 		{
 			desc:   "Only a SocketPath",
-			config: Config{SocketPath: "/tmp/praefect.socket", Nodes: nodes},
+			config: Config{SocketPath: "/tmp/praefect.socket", VirtualStorages: []*VirtualStorage{&VirtualStorage{Nodes: nodes}}},
 			err:    nil,
 		},
 		{
 			desc:   "No servers",
 			config: Config{ListenAddr: "localhost:1234"},
-			err:    errNoGitalyServers,
+			err:    errNoVirtualStorages,
 		},
 		{
-			desc:   "duplicate storage",
-			config: Config{ListenAddr: "localhost:1234", Nodes: append(nodes, &models.Node{Storage: nodes[0].Storage, Address: nodes[1].Address})},
-			err:    errDuplicateStorage,
+			desc: "duplicate storage",
+			config: Config{
+				ListenAddr: "localhost:1234",
+				VirtualStorages: []*VirtualStorage{
+					&VirtualStorage{Nodes: append(nodes, &models.Node{Storage: nodes[0].Storage, Address: nodes[1].Address})},
+				},
+			},
+			err: errDuplicateStorage,
 		},
 		{
 			desc:   "Valid config",
-			config: Config{ListenAddr: "localhost:1234", Nodes: nodes},
+			config: Config{ListenAddr: "localhost:1234", VirtualStorages: []*VirtualStorage{&VirtualStorage{Nodes: nodes}}},
 			err:    nil,
 		},
 		{
 			desc:   "No designated primaries",
-			config: Config{ListenAddr: "localhost:1234", Nodes: nodes[1:]},
+			config: Config{ListenAddr: "localhost:1234", VirtualStorages: []*VirtualStorage{&VirtualStorage{Nodes: nodes[1:]}}},
 			err:    errNoPrimaries,
 		},
 		{
-			desc:   "More than 1 primary",
-			config: Config{ListenAddr: "localhost:1234", Nodes: append(nodes, &models.Node{ID: 3, Storage: "internal-4", Address: "localhost:23459", Token: "secret-token", DefaultPrimary: true})},
-			err:    errMoreThanOnePrimary,
+			desc: "More than 1 primary",
+			config: Config{
+				ListenAddr: "localhost:1234",
+				VirtualStorages: []*VirtualStorage{
+					&VirtualStorage{
+						Nodes: append(nodes,
+							&models.Node{
+								Storage:        "internal-4",
+								Address:        "localhost:23459",
+								Token:          "secret-token",
+								DefaultPrimary: true,
+							}),
+					},
+				},
+			},
+			err: errMoreThanOnePrimary,
+		},
+		{
+			desc: "Node storage not unique",
+			config: Config{
+				ListenAddr: "localhost:1234",
+				VirtualStorages: []*VirtualStorage{
+					&VirtualStorage{Name: "default", Nodes: nodes},
+					&VirtualStorage{
+						Name: "backup",
+						Nodes: []*models.Node{
+							&models.Node{
+								Storage:        nodes[0].Storage,
+								Address:        "some.other.address",
+								DefaultPrimary: true},
+						},
+					},
+				},
+			},
+			err: errStorageAddressMismatch,
+		},
+		{
+			desc: "Node storage not unique",
+			config: Config{
+				ListenAddr: "localhost:1234",
+				VirtualStorages: []*VirtualStorage{
+					&VirtualStorage{Name: "default", Nodes: nodes},
+					&VirtualStorage{
+						Name: "default",
+						Nodes: []*models.Node{
+							&models.Node{
+								Storage:        nodes[0].Storage,
+								Address:        "some.other.address",
+								DefaultPrimary: true}},
+					},
+				},
+			},
+			err: errVirtualStoragesNotUnique,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
 			err := tc.config.Validate()
-			assert.Equal(t, tc.err, err)
+			if tc.err == nil {
+				assert.NoError(t, err)
+				return
+			}
+
+			assert.True(t, strings.Contains(err.Error(), tc.err.Error()))
 		})
 	}
 }
@@ -75,7 +136,6 @@ func TestConfigParsing(t *testing.T) {
 		{
 			filePath: "testdata/config.toml",
 			expected: Config{
-				VirtualStorageName: "praefect",
 				Logging: log.Config{
 					Level:  "info",
 					Format: "json",
@@ -84,19 +144,59 @@ func TestConfigParsing(t *testing.T) {
 					DSN:         "abcd123",
 					Environment: "production",
 				},
-				Nodes: []*models.Node{
-					&models.Node{
-						Address:        "tcp://gitaly-internal-1.example.com",
-						Storage:        "praefect-internal-1",
-						DefaultPrimary: true,
+				VirtualStorages: []*VirtualStorage{
+					&VirtualStorage{
+						Name: "praefect",
+						Nodes: []*models.Node{
+							&models.Node{
+								Address:        "tcp://gitaly-internal-1.example.com",
+								Storage:        "praefect-internal-1",
+								DefaultPrimary: true,
+							},
+							{
+								Address: "tcp://gitaly-internal-2.example.com",
+								Storage: "praefect-internal-2",
+							},
+							{
+								Address: "tcp://gitaly-internal-3.example.com",
+								Storage: "praefect-internal-3",
+							},
+						},
 					},
-					{
-						Address: "tcp://gitaly-internal-2.example.com",
-						Storage: "praefect-internal-2",
-					},
-					{
-						Address: "tcp://gitaly-internal-3.example.com",
-						Storage: "praefect-internal-3",
+				},
+			},
+		},
+		//TODO: Remove this test, as well as the fixture in testdata/single-virtual-storage.config.toml
+		// once omnibus and gdk are updated with support for VirtualStorages
+		{
+			filePath: "testdata/single-virtual-storage.config.toml",
+			expected: Config{
+				Logging: log.Config{
+					Level:  "info",
+					Format: "json",
+				},
+				Sentry: sentry.Config{
+					DSN:         "abcd123",
+					Environment: "production",
+				},
+				VirtualStorages: []*VirtualStorage{
+					&VirtualStorage{
+						Name: "praefect",
+						Nodes: []*models.Node{
+							&models.Node{
+								Address:        "tcp://gitaly-internal-1.example.com",
+								Storage:        "praefect-internal-1",
+								DefaultPrimary: true,
+							},
+							{
+								Address: "tcp://gitaly-internal-2.example.com",
+								Storage: "praefect-internal-2",
+							},
+							{
+								Address: "tcp://gitaly-internal-3.example.com",
+								Storage: "praefect-internal-3",
+							},
+						},
 					},
 				},
 			},

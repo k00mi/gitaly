@@ -3,24 +3,41 @@ package server
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"golang.org/x/sync/errgroup"
 
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/models"
 )
 
 // ServerInfo sends ServerInfoRequest to all of a praefect server's internal gitaly nodes and aggregates the results into
 // a response
 func (s *Server) ServerInfo(ctx context.Context, in *gitalypb.ServerInfoRequest) (*gitalypb.ServerInfoResponse, error) {
-	storageStatuses := make([][]*gitalypb.ServerInfoResponse_StorageStatus, len(s.conf.Nodes))
+	var once sync.Once
+	nodesChecked := make(map[string]struct{})
+
+	var nodes []*models.Node
+	for _, virtualStorage := range s.conf.VirtualStorages {
+		for _, node := range virtualStorage.Nodes {
+			if _, ok := nodesChecked[node.Storage]; ok {
+				continue
+			}
+
+			nodesChecked[node.Storage] = struct{}{}
+			nodes = append(nodes, node)
+		}
+	}
 
 	var gitVersion, serverVersion string
 
 	g, ctx := errgroup.WithContext(ctx)
 
-	for i, node := range s.conf.Nodes {
-		i := i // necessary since it will be used in a goroutine below
+	storageStatuses := make([][]*gitalypb.ServerInfoResponse_StorageStatus, len(nodes))
+
+	for i, node := range nodes {
+		i := i
 		node := node
 		cc, err := s.clientCC.GetConnection(node.Storage)
 		if err != nil {
@@ -36,7 +53,9 @@ func (s *Server) ServerInfo(ctx context.Context, in *gitalypb.ServerInfoRequest)
 			storageStatuses[i] = resp.GetStorageStatuses()
 
 			if node.DefaultPrimary {
-				gitVersion, serverVersion = resp.GetGitVersion(), resp.GetServerVersion()
+				once.Do(func() {
+					gitVersion, serverVersion = resp.GetGitVersion(), resp.GetServerVersion()
+				})
 			}
 
 			return nil

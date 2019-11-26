@@ -41,15 +41,10 @@ func waitUntil(t *testing.T, ch <-chan struct{}, timeout time.Duration) {
 // generates a praefect configuration with the specified number of backend
 // nodes
 func testConfig(backends int) config.Config {
-	cfg := config.Config{
-		VirtualStorageName: "praefect",
-	}
-
 	var nodes []*models.Node
 
 	for i := 0; i < backends; i++ {
 		n := &models.Node{
-			ID:      i,
 			Storage: fmt.Sprintf("praefect-internal-%d", i),
 			Token:   fmt.Sprintf("%d", i),
 		}
@@ -60,8 +55,14 @@ func testConfig(backends int) config.Config {
 
 		nodes = append(nodes, n)
 	}
-
-	cfg.Nodes = nodes
+	cfg := config.Config{
+		VirtualStorages: []*config.VirtualStorage{
+			&config.VirtualStorage{
+				Name:  "praefect",
+				Nodes: nodes,
+			},
+		},
+	}
 
 	return cfg
 }
@@ -75,7 +76,7 @@ func setupServer(t testing.TB, conf config.Config, clientCC *conn.ClientConnecti
 	)
 
 	var defaultNode *models.Node
-	for _, n := range conf.Nodes {
+	for _, n := range conf.VirtualStorages[0].Nodes {
 		if n.DefaultPrimary {
 			defaultNode = n
 		}
@@ -104,26 +105,29 @@ func setupServer(t testing.TB, conf config.Config, clientCC *conn.ClientConnecti
 // Each mock server is keyed by the corresponding index of the node in the
 // config.Nodes. There must be a 1-to-1 mapping between backend server and
 // configured storage node.
-func runPraefectServerWithMock(t *testing.T, conf config.Config, backends map[int]mock.SimpleServiceServer) (mock.SimpleServiceClient, *Server, testhelper.Cleanup) {
+// requires there to be only 1 virtual storage
+func runPraefectServerWithMock(t *testing.T, conf config.Config, backends map[string]mock.SimpleServiceServer) (mock.SimpleServiceClient, *Server, testhelper.Cleanup) {
 	clientCC := conn.NewClientConnections()
+
+	require.Len(t, conf.VirtualStorages, 1)
+	require.Equal(t, len(backends), len(conf.VirtualStorages[0].Nodes),
+		"mock server count doesn't match config nodes")
+
 	var cleanups []testhelper.Cleanup
 
-	for i, node := range conf.Nodes {
-		backend, ok := backends[i]
-		require.True(t, ok, "missing backend server for node %d", i)
+	for i, node := range conf.VirtualStorages[0].Nodes {
+		backend, ok := backends[node.Storage]
+		require.True(t, ok, "missing backend server for node %s", node.Storage)
 
 		backendAddr, cleanup := newMockDownstream(t, node.Token, backend)
 		cleanups = append(cleanups, cleanup)
 
 		clientCC.RegisterNode(node.Storage, backendAddr, node.Token)
 		node.Address = backendAddr
-		conf.Nodes[i] = node
+		conf.VirtualStorages[0].Nodes[i] = node
 	}
 
 	_, prf := setupServer(t, conf, clientCC, log.Default(), []*descriptor.FileDescriptorProto{mustLoadProtoReg(t)})
-
-	require.Equal(t, len(backends), len(conf.Nodes),
-		"mock server count doesn't match config nodes")
 
 	listener, port := listenAvailPort(t)
 	t.Logf("praefect listening on port %d", port)
@@ -154,17 +158,19 @@ func runPraefectServerWithMock(t *testing.T, conf config.Config, backends map[in
 }
 
 // runPraefectServerWithGitaly runs a praefect server with actual Gitaly nodes
+// requires exactly 1 virtual storage
 func runPraefectServerWithGitaly(t *testing.T, conf config.Config) (*grpc.ClientConn, *Server, testhelper.Cleanup) {
+	require.Len(t, conf.VirtualStorages, 1)
 	clientCC := conn.NewClientConnections()
 	var cleanups []testhelper.Cleanup
 
-	for i, node := range conf.Nodes {
+	for i, node := range conf.VirtualStorages[0].Nodes {
 		_, backendAddr, cleanup := runInternalGitalyServer(t, node.Token)
 		cleanups = append(cleanups, cleanup)
 
 		clientCC.RegisterNode(node.Storage, backendAddr, node.Token)
 		node.Address = backendAddr
-		conf.Nodes[i] = node
+		conf.VirtualStorages[0].Nodes[i] = node
 	}
 
 	ds := datastore.NewInMemory(conf)

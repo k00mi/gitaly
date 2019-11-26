@@ -166,13 +166,17 @@ func runServer(t *testing.T, token string, required bool) (*Server, string, func
 	backend, cleanup := newMockDownstream(t, backendToken, mockServer)
 
 	conf := config.Config{
-		VirtualStorageName: "praefect",
-		Auth:               auth.Config{Token: token, Transitioning: !required},
-		Nodes: []*models.Node{
-			&models.Node{
-				Storage:        "praefect-internal-0",
-				DefaultPrimary: true,
-				Address:        backend,
+		Auth: auth.Config{Token: token, Transitioning: !required},
+		VirtualStorages: []*config.VirtualStorage{
+			&config.VirtualStorage{
+				Name: "praefect",
+				Nodes: []*models.Node{
+					&models.Node{
+						Storage:        "praefect-internal-0",
+						DefaultPrimary: true,
+						Address:        backend,
+					},
+				},
 			},
 		},
 	}
