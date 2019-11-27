@@ -714,3 +714,14 @@ func TestValidateInternalSocketDir(t *testing.T) {
 		})
 	}
 }
+
+func TestInternalSocketDir(t *testing.T) {
+	defer func(internalSocketDir string) {
+		Config.InternalSocketDir = internalSocketDir
+	}(Config.InternalSocketDir)
+
+	Config.InternalSocketDir = ""
+	socketDir := InternalSocketDir()
+
+	require.NoError(t, trySocketCreation(socketDir))
+}

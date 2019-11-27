@@ -3,11 +3,13 @@ package config
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -357,6 +359,52 @@ func validateToken() error {
 	return nil
 }
 
+var (
+	lazyInit                   sync.Once
+	generatedInternalSocketDir string
+)
+
+func generateSocketPath() {
+	// The socket path must be short-ish because listen(2) fails on long
+	// socket paths. We hope/expect that ioutil.TempDir creates a directory
+	// that is not too deep. We need a directory, not a tempfile, because we
+	// will later want to set its permissions to 0700
+
+	var err error
+	generatedInternalSocketDir, err = ioutil.TempDir("", "gitaly-internal")
+	if err != nil {
+		log.Fatalf("create ruby server socket directory: %v", err)
+	}
+}
+
+// InternalSocketDir will generate a temp dir for internal sockets if one is not provided in the config
+func InternalSocketDir() string {
+	if Config.InternalSocketDir != "" {
+		return Config.InternalSocketDir
+	}
+
+	if generatedInternalSocketDir == "" {
+		lazyInit.Do(generateSocketPath)
+	}
+
+	return generatedInternalSocketDir
+}
+
+// GitalyInternalSocketPath is the path to the internal gitaly socket
+func GitalyInternalSocketPath() string {
+	socketDir := InternalSocketDir()
+	if socketDir == "" {
+		panic("internal socket directory is missing")
+	}
+
+	return filepath.Join(socketDir, "internal.sock")
+}
+
+// GeneratedInternalSocketDir returns the path to the generated internal socket directory
+func GeneratedInternalSocketDir() string {
+	return generatedInternalSocketDir
+}
+
 func validateInternalSocketDir() error {
 	if Config.InternalSocketDir == "" {
 		return nil
@@ -372,6 +420,10 @@ func validateInternalSocketDir() error {
 		return fmt.Errorf("InternalSocketDir %s is not a directory", dir)
 	}
 
+	return trySocketCreation(dir)
+}
+
+func trySocketCreation(dir string) error {
 	// To validate the socket can actually be created, we open and close a socket.
 	// Any error will be assumed persistent for when the gitaly-ruby sockets are created
 	// and thus fatal at boot time

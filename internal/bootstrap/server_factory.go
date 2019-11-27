@@ -39,6 +39,7 @@ func (s *GitalyServerFactory) Stop() {
 	}
 
 	s.ruby.Stop()
+	server.CleanupInternalSocketDir()
 }
 
 // GracefulStop stops both the secure and insecure servers gracefully
