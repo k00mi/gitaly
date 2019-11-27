@@ -1,4 +1,4 @@
-package main
+package starter
 
 import (
 	"testing"
@@ -16,7 +16,7 @@ func TestIsSecure(t *testing.T) {
 		{"tls", true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			conf := starterConfig{name: test.name}
+			conf := Config{Name: test.name}
 			require.Equal(t, test.secure, conf.isSecure())
 		})
 	}
@@ -31,7 +31,7 @@ func TestFamily(t *testing.T) {
 		{"tls", "tcp"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			conf := starterConfig{name: test.name}
+			conf := Config{Name: test.name}
 			require.Equal(t, test.family, conf.family())
 		})
 	}

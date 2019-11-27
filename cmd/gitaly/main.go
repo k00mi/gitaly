@@ -7,6 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/bootstrap"
+	"gitlab.com/gitlab-org/gitaly/internal/bootstrap/starter"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/config/sentry"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
@@ -84,21 +85,21 @@ func main() {
 // Inside here we can use deferred functions. This is needed because
 // log.Fatal bypasses deferred functions.
 func run(b *bootstrap.Bootstrap) error {
-	servers := bootstrap.NewServerFactory()
+	servers := bootstrap.NewGitalyServerFactory()
 	defer servers.Stop()
 
 	b.StopAction = servers.GracefulStop
 
-	for _, c := range []starterConfig{
-		{unix, config.Config.SocketPath},
-		{tcp, config.Config.ListenAddr},
-		{tls, config.Config.TLSListenAddr},
+	for _, c := range []starter.Config{
+		{starter.Unix, config.Config.SocketPath},
+		{starter.TCP, config.Config.ListenAddr},
+		{starter.TLS, config.Config.TLSListenAddr},
 	} {
-		if c.addr == "" {
+		if c.Addr == "" {
 			continue
 		}
 
-		b.RegisterStarter(gitalyStarter(c, servers))
+		b.RegisterStarter(starter.New(c, servers))
 	}
 
 	if addr := config.Config.PrometheusListenAddr; addr != "" {

@@ -203,7 +203,7 @@ func runServer(t *testing.T, token string, required bool) (*Server, string, func
 
 	listener, err := net.Listen("unix", serverSocketPath)
 	require.NoError(t, err)
-	go srv.Start(listener)
+	go srv.Serve(listener, false)
 
 	return srv, "unix://" + serverSocketPath, cleanup
 }

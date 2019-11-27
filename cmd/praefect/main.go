@@ -5,13 +5,11 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"net"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
-	"time"
 
+	"gitlab.com/gitlab-org/gitaly/internal/bootstrap"
+	"gitlab.com/gitlab-org/gitaly/internal/bootstrap/starter"
 	"gitlab.com/gitlab-org/gitaly/internal/config/sentry"
 	"gitlab.com/gitlab-org/gitaly/internal/log"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect"
@@ -46,12 +44,12 @@ func main() {
 		logger.Fatal(err)
 	}
 
-	listeners, err := getListeners(conf.SocketPath, conf.ListenAddr)
+	starterConfigs, err := getStarterConfigs(conf.SocketPath, conf.ListenAddr)
 	if err != nil {
 		logger.Fatalf("%s", err)
 	}
 
-	if err := run(listeners, conf); err != nil {
+	if err := run(starterConfigs, conf); err != nil {
 		logger.Fatalf("%v", err)
 	}
 }
@@ -94,7 +92,7 @@ func configure() (config.Config, error) {
 	return conf, nil
 }
 
-func run(listeners []net.Listener, conf config.Config) error {
+func run(cfgs []starter.Config, conf config.Config) error {
 	clientConnections := conn.NewClientConnections()
 
 	for _, virtualStorage := range conf.VirtualStorages {
@@ -112,74 +110,63 @@ func run(listeners []net.Listener, conf config.Config) error {
 
 	var (
 		// top level server dependencies
-		ds          = datastore.NewInMemory(conf)
-		coordinator = praefect.NewCoordinator(logger, ds, clientConnections, conf, protoregistry.GitalyProtoFileDescriptors...)
-		repl        = praefect.NewReplMgr("default", logger, ds, clientConnections)
-		srv         = praefect.NewServer(coordinator, repl, nil, logger, clientConnections, conf)
-		// signal related
-		signals      = []os.Signal{syscall.SIGTERM, syscall.SIGINT}
-		termCh       = make(chan os.Signal, len(signals))
+		ds           = datastore.NewInMemory(conf)
+		coordinator  = praefect.NewCoordinator(logger, ds, clientConnections, conf, protoregistry.GitalyProtoFileDescriptors...)
+		repl         = praefect.NewReplMgr("default", logger, ds, clientConnections)
+		srv          = praefect.NewServer(coordinator, repl, nil, logger, clientConnections, conf)
 		serverErrors = make(chan error, 1)
 	)
-
-	signal.Notify(termCh, signals...)
-
-	for _, l := range listeners {
-		go func(lis net.Listener) { serverErrors <- srv.Start(lis) }(l)
-	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	_, isWrapped := os.LookupEnv(config.EnvUpgradesEnabled)
+
+	b, err := bootstrap.New(os.Getenv(config.EnvPidFile), isWrapped)
+	if err != nil {
+		return fmt.Errorf("unable to create a bootstrap: %v", err)
+	}
+
+	srv.RegisterServices()
+
+	b.StopAction = srv.GracefulStop
+	for _, cfg := range cfgs {
+		b.RegisterStarter(starter.New(cfg, srv))
+	}
+
+	if err := b.Start(); err != nil {
+		return fmt.Errorf("unable to start the bootstrap: %v", err)
+	}
+
+	go func() { serverErrors <- b.Wait() }()
 	go func() { serverErrors <- repl.ProcessBacklog(ctx) }()
 
 	go coordinator.FailoverRotation()
 
-	select {
-	case s := <-termCh:
-		logger.WithField("signal", s).Warn("received signal, shutting down gracefully")
-		cancel() // cancels the replicator job processing
-
-		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-		if shutdownErr := srv.Shutdown(ctx); shutdownErr != nil {
-			logger.Warnf("error received during shutting down: %v", shutdownErr)
-			return shutdownErr
-		}
-	case err := <-serverErrors:
-		return err
-	}
-
-	return nil
+	return <-serverErrors
 }
 
-func getListeners(socketPath, listenAddr string) ([]net.Listener, error) {
-	var listeners []net.Listener
-
+func getStarterConfigs(socketPath, listenAddr string) ([]starter.Config, error) {
+	var cfgs []starter.Config
 	if socketPath != "" {
 		if err := os.RemoveAll(socketPath); err != nil {
 			return nil, err
 		}
 
 		cleanPath := strings.TrimPrefix(socketPath, "unix:")
-		l, err := net.Listen("unix", cleanPath)
-		if err != nil {
-			return nil, err
-		}
 
-		listeners = append(listeners, l)
+		cfgs = append(cfgs, starter.Config{Name: starter.Unix, Addr: cleanPath})
 
 		logger.WithField("address", socketPath).Info("listening on unix socket")
 	}
 
 	if listenAddr != "" {
-		l, err := net.Listen("tcp", listenAddr)
-		if err != nil {
-			return nil, err
-		}
+		cleanAddr := strings.TrimPrefix(listenAddr, "tcp://")
 
-		listeners = append(listeners, l)
+		cfgs = append(cfgs, starter.Config{Name: starter.TCP, Addr: cleanAddr})
+
 		logger.WithField("address", listenAddr).Info("listening at tcp address")
 	}
 
-	return listeners, nil
+	return cfgs, nil
 }

@@ -134,8 +134,9 @@ func runPraefectServerWithMock(t *testing.T, conf config.Config, backends map[st
 
 	errQ := make(chan error)
 
+	prf.RegisterServices()
 	go func() {
-		errQ <- prf.Start(listener)
+		errQ <- prf.Serve(listener, false)
 	}()
 
 	// dial client to praefect
@@ -200,7 +201,8 @@ func runPraefectServerWithGitaly(t *testing.T, conf config.Config) (*grpc.Client
 	errQ := make(chan error)
 	ctx, cancel := testhelper.Context()
 
-	go func() { errQ <- prf.Start(listener) }()
+	prf.RegisterServices()
+	go func() { errQ <- prf.Serve(listener, false) }()
 	go func() { errQ <- replmgr.ProcessBacklog(ctx) }()
 
 	// dial client to praefect
