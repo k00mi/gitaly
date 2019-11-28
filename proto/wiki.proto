@@ -10,51 +10,43 @@ service WikiService {
   rpc WikiGetPageVersions(WikiGetPageVersionsRequest) returns (stream WikiGetPageVersionsResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc WikiWritePage(stream WikiWritePageRequest) returns (WikiWritePageResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc WikiUpdatePage(stream WikiUpdatePageRequest) returns (WikiUpdatePageResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc WikiDeletePage(WikiDeletePageRequest) returns (WikiDeletePageResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   // WikiFindPage returns a stream because the page's raw_data field may be arbitrarily large.
   rpc WikiFindPage(WikiFindPageRequest) returns (stream WikiFindPageResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc WikiFindFile(WikiFindFileRequest) returns (stream WikiFindFileResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc WikiGetAllPages(WikiGetAllPagesRequest) returns (stream WikiGetAllPagesResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
 
   }
   rpc WikiListPages(WikiListPagesRequest) returns (stream WikiListPagesResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
 
   }
@@ -88,7 +80,7 @@ message WikiPage {
 }
 
 message WikiGetPageVersionsRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes page_path = 2;
 
   int32 page = 3;
@@ -102,7 +94,7 @@ message WikiGetPageVersionsResponse {
 // This message is sent in a stream because the 'content' field may be large.
 message WikiWritePageRequest {
   // These following fields are only present in the first message.
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes name = 2;
   string format = 3;
   WikiCommitDetails commit_details = 4;
@@ -116,7 +108,7 @@ message WikiWritePageResponse {
 
 message WikiUpdatePageRequest {
   // There fields are only present in the first message of the stream
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes page_path = 2;
   bytes title = 3;
   string format = 4;
@@ -131,7 +123,7 @@ message WikiUpdatePageResponse {
 }
 
 message WikiDeletePageRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes page_path = 2;
   WikiCommitDetails commit_details = 3;
 }
@@ -139,7 +131,7 @@ message WikiDeletePageRequest {
 message WikiDeletePageResponse {}
 
 message WikiFindPageRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes title = 2;
   bytes revision = 3;
   bytes directory = 4;
@@ -152,7 +144,7 @@ message WikiFindPageResponse {
 }
 
 message WikiFindFileRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes name = 2;
   // Optional: revision
   bytes revision = 3;
@@ -167,7 +159,7 @@ message WikiFindFileResponse {
 }
 
 message WikiGetAllPagesRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   // Passing 0 means no limit is applied
   uint32 limit = 2;
   bool direction_desc = 3;
@@ -187,7 +179,7 @@ message WikiGetAllPagesResponse {
 }
 
 message WikiListPagesRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   // Passing 0 means no limit is applied
   uint32 limit = 2;
   bool direction_desc = 3;

@@ -237,19 +237,26 @@ Additionally, all mutator RPC's require additional annotations to clearly
 indicate what is being modified:
 
 - When an RPC modifies a server-wide resource, the scope should specify `SERVER`.
+- When an RPC modifies a storage-wide resource, the scope should specify `STORAGE`.
+  - Additionally, every request should contain field marked with `storage` annotation.
 - When an RPC modifies a specific repository, the scope should specify `REPOSITORY`.
-  - Additionally, every RPC with `REPOSITORY` scope, should also specify the target repository.
+  - Additionally, every RPC with `REPOSITORY` scope, should also specify the target repository
+    and may specify the additional repository.
 
 The target repository represents the location or address of the repository
 being modified by the operation. This is needed by Praefect (Gitaly HA) in
 order to properly schedule replications to keep repository replicas up to date.
 
-The target repository annotation specifies where the target repository can be
-found in the message. The annotation looks similar to an IP address, but
-variable in length (e.g. "1", "1.1", "1.1.1"). Each dot delimited field
-represents the field number of how to traverse the protobuf request message to
-find the target repository. The target repository **must** be of protobuf
-message type `gitaly.Repository`.
+The target repository annotation marks where the target repository can be
+found in the message. The annotation is added near `gitaly.Repository` field 
+(e.g. `Repository repository = 1 [(target_repository)=true];`). If annotated field isn't
+`gitaly.Repository` type then it has to contain field annotated `[(repository)=true]` with
+correct type. Having separate `repository` annotation allows to have same field in child 
+message annotated as both `target_repository` and `additional_repository` depending on parent
+message.
+
+The additional repository is annotated similarly to target repository but annotation 
+is named `additional_repository`
 
 See our examples of [valid](go/internal/linter/testdata/valid.proto) and
 [invalid](go/internal/linter/testdata/invalid.proto) proto annotations.

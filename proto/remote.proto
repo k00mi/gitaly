@@ -10,26 +10,22 @@ service RemoteService {
     rpc AddRemote(AddRemoteRequest) returns (AddRemoteResponse) {
       option (op_type) = {
         op: MUTATOR
-        target_repository_field: "1"
       };
     }
     rpc FetchInternalRemote(FetchInternalRemoteRequest) returns (FetchInternalRemoteResponse) {
       option (op_type) = {
         op: MUTATOR
-        target_repository_field: "1"
       };
     }
     rpc RemoveRemote(RemoveRemoteRequest) returns (RemoveRemoteResponse) {
       option (op_type) = {
         op: MUTATOR
-        target_repository_field: "1"
       };
     }
 
     rpc UpdateRemoteMirror(stream UpdateRemoteMirrorRequest) returns (UpdateRemoteMirrorResponse) {
       option (op_type) = {
         op: MUTATOR
-        target_repository_field: "1"
       };
     }
     rpc FindRemoteRepository(FindRemoteRepositoryRequest) returns (FindRemoteRepositoryResponse) {
@@ -41,19 +37,17 @@ service RemoteService {
     rpc FindRemoteRootRef(FindRemoteRootRefRequest) returns (FindRemoteRootRefResponse) {
       option (op_type) = {
         op: ACCESSOR
-        target_repository_field: "1"
       };
     }
     rpc ListRemotes(ListRemotesRequest) returns (stream ListRemotesResponse) {
       option (op_type) = {
         op: ACCESSOR
-        target_repository_field: "1"
       };
     }
 }
 
 message AddRemoteRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string name = 2;
   string url = 3;
   // DEPRECATED: https://gitlab.com/gitlab-org/gitaly/proto/merge_requests/137
@@ -66,7 +60,7 @@ message AddRemoteRequest {
 message AddRemoteResponse {}
 
 message RemoveRemoteRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string name = 2;
 }
 
@@ -75,7 +69,7 @@ message RemoveRemoteResponse {
 }
 
 message FetchInternalRemoteRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   Repository remote_repository = 2;
 }
 
@@ -84,7 +78,7 @@ message FetchInternalRemoteResponse {
 }
 
 message UpdateRemoteMirrorRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string ref_name = 2;
   repeated bytes only_branches_matching = 3;
   string ssh_key = 4;
@@ -104,7 +98,7 @@ message FindRemoteRepositoryResponse {
 }
 
 message FindRemoteRootRefRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string remote = 2;
 }
 
@@ -113,7 +107,7 @@ message FindRemoteRootRefResponse {
 }
 
 message ListRemotesRequest {
-  Repository repository = 1;
+   Repository repository = 1 [(target_repository)=true];
 }
 
 message ListRemotesResponse {

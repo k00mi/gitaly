@@ -11,38 +11,33 @@ service DiffService {
   rpc CommitDiff(CommitDiffRequest) returns (stream CommitDiffResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   // Return a stream so we can divide the response in chunks of deltas
   rpc CommitDelta(CommitDeltaRequest) returns (stream CommitDeltaResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc RawDiff(RawDiffRequest) returns (stream RawDiffResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc RawPatch(RawPatchRequest) returns (stream RawPatchResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc DiffStats(DiffStatsRequest) returns (stream DiffStatsResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
 }
 
 message CommitDiffRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string left_commit_id = 2;
   string right_commit_id = 3;
   bool ignore_whitespace_change = 4;
@@ -91,7 +86,7 @@ message CommitDiffResponse {
 }
 
 message CommitDeltaRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string left_commit_id = 2;
   string right_commit_id = 3;
   repeated bytes paths = 4;
@@ -112,7 +107,7 @@ message CommitDeltaResponse {
 }
 
 message RawDiffRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string left_commit_id = 2;
   string right_commit_id = 3;
 }
@@ -122,7 +117,7 @@ message RawDiffResponse {
 }
 
 message RawPatchRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string left_commit_id = 2;
   string right_commit_id = 3;
 }
@@ -132,7 +127,7 @@ message RawPatchResponse {
 }
 
 message DiffStatsRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string left_commit_id = 2;
   string right_commit_id = 3;
 }

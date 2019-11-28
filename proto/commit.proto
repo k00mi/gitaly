@@ -11,135 +11,114 @@ service CommitService {
   rpc CommitIsAncestor(CommitIsAncestorRequest) returns (CommitIsAncestorResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc TreeEntry(TreeEntryRequest) returns (stream TreeEntryResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc CommitsBetween(CommitsBetweenRequest) returns (stream CommitsBetweenResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc CountCommits(CountCommitsRequest) returns (CountCommitsResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc CountDivergingCommits(CountDivergingCommitsRequest) returns (CountDivergingCommitsResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc GetTreeEntries(GetTreeEntriesRequest) returns (stream GetTreeEntriesResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc ListFiles(ListFilesRequest) returns (stream ListFilesResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc FindCommit(FindCommitRequest) returns (FindCommitResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc CommitStats(CommitStatsRequest) returns (CommitStatsResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   // Use a stream to paginate the result set
   rpc FindAllCommits(FindAllCommitsRequest) returns (stream FindAllCommitsResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc FindCommits(FindCommitsRequest) returns (stream FindCommitsResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc CommitLanguages(CommitLanguagesRequest) returns (CommitLanguagesResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc RawBlame(RawBlameRequest) returns (stream RawBlameResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc LastCommitForPath(LastCommitForPathRequest) returns (LastCommitForPathResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc ListLastCommitsForTree(ListLastCommitsForTreeRequest) returns (stream ListLastCommitsForTreeResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc CommitsByMessage(CommitsByMessageRequest) returns (stream CommitsByMessageResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc ListCommitsByOid(ListCommitsByOidRequest) returns (stream ListCommitsByOidResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc ListCommitsByRefName(ListCommitsByRefNameRequest) returns (stream ListCommitsByRefNameResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc FilterShasWithSignatures(stream FilterShasWithSignaturesRequest) returns (stream FilterShasWithSignaturesResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc GetCommitSignatures(GetCommitSignaturesRequest) returns (stream GetCommitSignaturesResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
 
   rpc GetCommitMessages(GetCommitMessagesRequest) returns (stream GetCommitMessagesResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
 }
 
 message CommitStatsRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes revision = 2;
 }
 
@@ -151,7 +130,7 @@ message CommitStatsResponse {
 }
 
 message CommitIsAncestorRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string ancestor_id = 2;
   string child_id = 3;
 }
@@ -161,7 +140,7 @@ message CommitIsAncestorResponse {
 }
 
 message TreeEntryRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   // commit ID or refname
   bytes revision = 2;
   // entry path relative to repository root
@@ -188,7 +167,7 @@ message TreeEntryResponse {
 }
 
 message CommitsBetweenRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes from = 2;
   bytes to = 3;
 }
@@ -198,7 +177,7 @@ message CommitsBetweenResponse {
 }
 
 message CountCommitsRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes revision = 2;
   google.protobuf.Timestamp after = 3;
   google.protobuf.Timestamp before = 4;
@@ -214,7 +193,7 @@ message CountCommitsResponse {
 }
 
 message CountDivergingCommitsRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes from = 2;
   bytes to = 3;
   reserved 4;
@@ -251,7 +230,7 @@ message TreeEntry {
 }
 
 message GetTreeEntriesRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes revision = 2;
   bytes path = 3;
   bool recursive = 4;
@@ -262,7 +241,7 @@ message GetTreeEntriesResponse {
 }
 
 message ListFilesRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes revision = 2;
 }
 
@@ -273,7 +252,7 @@ message ListFilesResponse {
 }
 
 message FindCommitRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes revision = 2;
 }
 
@@ -283,7 +262,7 @@ message FindCommitResponse {
 }
 
 message ListCommitsByOidRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   repeated string oid = 2;
 }
 
@@ -292,7 +271,7 @@ message ListCommitsByOidResponse {
 }
 
 message ListCommitsByRefNameRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   repeated bytes ref_names = 2;
 }
 
@@ -301,7 +280,7 @@ message ListCommitsByRefNameResponse {
 }
 
 message FindAllCommitsRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   // When nil, return all commits reachable by any branch in the repo
   bytes revision = 2;
   int32 max_count = 3;
@@ -320,7 +299,7 @@ message FindAllCommitsResponse {
 }
 
 message FindCommitsRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes revision = 2;
   int32 limit = 3;
   int32 offset = 4;
@@ -347,7 +326,7 @@ message FindCommitsResponse {
 }
 
 message CommitLanguagesRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes revision = 2;
 }
 
@@ -363,7 +342,7 @@ message CommitLanguagesResponse {
 }
 
 message RawBlameRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes revision = 2;
   bytes path = 3;
 }
@@ -373,7 +352,7 @@ message RawBlameResponse {
 }
 
 message LastCommitForPathRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes revision = 2;
   bytes path = 3;
 }
@@ -384,7 +363,7 @@ message LastCommitForPathResponse {
 }
 
 message ListLastCommitsForTreeRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string revision = 2;
   bytes path = 3;
 
@@ -405,7 +384,7 @@ message ListLastCommitsForTreeResponse {
 }
 
 message CommitsByMessageRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes revision = 2;
   int32 offset = 3;
   int32 limit = 4;
@@ -419,7 +398,7 @@ message CommitsByMessageResponse {
 }
 
 message FilterShasWithSignaturesRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   repeated bytes shas = 2;
 }
 
@@ -428,7 +407,7 @@ message FilterShasWithSignaturesResponse {
 }
 
 message ExtractCommitSignatureRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string commit_id = 2;
 }
 
@@ -440,7 +419,7 @@ message ExtractCommitSignatureResponse {
 }
 
 message GetCommitSignaturesRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   repeated string commit_ids = 2;
 }
 
@@ -453,7 +432,7 @@ message GetCommitSignaturesResponse {
 }
 
 message GetCommitMessagesRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   repeated string commit_ids = 2;
 }
 

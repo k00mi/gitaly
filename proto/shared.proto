@@ -27,22 +27,6 @@ message OperationMsg {
   //   - SERVER: affects the entire server and potentially all repos
   //   - STORAGE: scoped to a specific storage location and all repos within
   Scope scope_level = 2;
-
-  // If this operation modifies a repository, this field will
-  // specify the location of the Repository field within the
-  // request message. The field is specified in an OID style
-  // formatted string.
-  //
-  // For example, if the target repository is at the top level
-  // of a message at field 1, then the string will be "1"
-  //
-  // If the target repository is nested deeper in the message,
-  // then it will be necessary to specify a nested OID string.
-  //
-  // For example, the following OID refers to a target repo field
-  // nested in a one-of field, both at field one: "1.1"
-  string target_repository_field = 3;
-  string additional_repository_field = 4;
 }
 
 enum ObjectType {
@@ -66,8 +50,20 @@ extend google.protobuf.MethodOptions {
 }
 
 extend google.protobuf.FieldOptions {
-  // Random high number..
-  bool storage = 91233;
+  // Used to mark field containing name of affected storage.
+  bool storage = 91233; // Random high number..
+
+  // If this operation modifies a repository, this annotations
+  // will specify the location of the Repository field within
+  // the request message.
+  //
+  // Repository annotation is used mark field used as repository
+  // when parent message is marked as target or additional repository
+  bool repository = 91234;
+  // Used to mark target repository
+  bool target_repository = 91235;
+  // Used to mark additional repository
+  bool additional_repository = 91236;
 }
 
 message Repository {
@@ -149,5 +145,5 @@ message User {
 }
 
 message ObjectPool {
-  Repository repository = 1;
+  Repository repository = 1 [(gitaly.repository)=true];
 }

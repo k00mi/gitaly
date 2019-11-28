@@ -1,9 +1,7 @@
 package linter
 
 import (
-	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/golang/protobuf/proto"
@@ -52,30 +50,27 @@ func (ml methodLinter) validateMutator() error {
 	}
 }
 
-// TODO: add checks for storage location via valid field annotation for Gitaly HA
 func (ml methodLinter) ensureValidStorageScope() error {
-	if ml.opMsg.GetTargetRepositoryField() != "" {
-		return errors.New("storage level scoped RPC should not specify target repo")
+	if err := ml.ensureValidTargetRepository(0); err != nil {
+		return err
 	}
 
 	return ml.ensureValidStorage(1)
 }
 
 func (ml methodLinter) ensureValidServerScope() error {
-	if ml.opMsg.GetTargetRepositoryField() != "" {
-		return errors.New("server level scoped RPC should not specify target repo")
-	}
-	return ml.ensureValidStorage(0)
-}
-
-func (ml methodLinter) ensureValidRepoScope() error {
-	if err := ml.ensureValidTargetRepo(); err != nil {
+	if err := ml.ensureValidTargetRepository(0); err != nil {
 		return err
 	}
 	return ml.ensureValidStorage(0)
 }
 
-const repoTypeName = ".gitaly.Repository"
+func (ml methodLinter) ensureValidRepoScope() error {
+	if err := ml.ensureValidTargetRepository(1); err != nil {
+		return err
+	}
+	return ml.ensureValidStorage(0)
+}
 
 func (ml methodLinter) ensureValidStorage(expected int) error {
 	topLevelMsgs, err := ml.getTopLevelMsgs()
@@ -90,7 +85,17 @@ func (ml methodLinter) ensureValidStorage(expected int) error {
 
 	msgT := topLevelMsgs[reqMsgName]
 
-	storageFields, err := findStorageFields(topLevelMsgs, reqMsgName, msgT) // nolint:staticcheck
+	m := matcher{
+		match:        internal.GetStorageExtension,
+		subMatch:     nil,
+		expectedType: "",
+		topLevelMsgs: topLevelMsgs,
+	}
+
+	storageFields, err := m.findMatchingFields(reqMsgName, msgT)
+	if err != nil {
+		return err
+	}
 
 	if len(storageFields) != expected {
 		return fmt.Errorf("unexpected count of storage field %d, expected %d, found storage label at: %v", len(storageFields), expected, storageFields)
@@ -99,24 +104,87 @@ func (ml methodLinter) ensureValidStorage(expected int) error {
 	return nil
 }
 
-func findStorageFields(topLevelMsgs map[string]*descriptor.DescriptorProto, prefix string, t *descriptor.DescriptorProto) ([]string, error) {
+func (ml methodLinter) ensureValidTargetRepository(expected int) error {
+	topLevelMsgs, err := ml.getTopLevelMsgs()
+	if err != nil {
+		return err
+	}
+
+	reqMsgName, err := lastName(ml.methodDesc.GetInputType())
+	if err != nil {
+		return err
+	}
+
+	msgT := topLevelMsgs[reqMsgName]
+
+	m := matcher{
+		match:        internal.GetTargetRepositoryExtension,
+		subMatch:     internal.GetRepositoryExtension,
+		expectedType: ".gitaly.Repository",
+		topLevelMsgs: topLevelMsgs,
+	}
+
+	storageFields, err := m.findMatchingFields(reqMsgName, msgT)
+	if err != nil {
+		return err
+	}
+
+	if len(storageFields) != expected {
+		return fmt.Errorf("unexpected count of target_repository fields %d, expected %d, found target_repository label at: %v", len(storageFields), expected, storageFields)
+	}
+
+	return nil
+}
+
+func (ml methodLinter) getTopLevelMsgs() (map[string]*descriptor.DescriptorProto, error) {
+	topLevelMsgs := map[string]*descriptor.DescriptorProto{}
+	types, err := getFileTypes(ml.fileDesc.GetName())
+	if err != nil {
+		return nil, err
+	}
+	for _, msg := range types {
+		topLevelMsgs[msg.GetName()] = msg
+	}
+	return topLevelMsgs, nil
+}
+
+type matcher struct {
+	match        func(*descriptor.FieldDescriptorProto) (bool, error)
+	subMatch     func(*descriptor.FieldDescriptorProto) (bool, error)
+	expectedType string
+	topLevelMsgs map[string]*descriptor.DescriptorProto
+}
+
+func (m matcher) findMatchingFields(prefix string, t *descriptor.DescriptorProto) ([]string, error) {
 	var storageFields []string
 	for _, f := range t.GetField() {
-		storage, err := internal.GetStorageExtension(f)
+		subMatcher := m
+		fullName := prefix + "." + f.GetName()
+
+		match, err := m.match(f)
 		if err != nil {
 			return nil, err
 		}
-		if storage {
-			storageFields = append(storageFields, prefix+"."+f.GetName())
+
+		if match {
+			if f.GetTypeName() == m.expectedType {
+				storageFields = append(storageFields, fullName)
+				continue
+			} else if m.subMatch == nil {
+				return nil, fmt.Errorf("wrong type of field %s, expected %s, got %s", fullName, m.expectedType, f.GetTypeName())
+			} else {
+				subMatcher.match = m.subMatch
+				subMatcher.subMatch = nil
+			}
 		}
 
-		childMsg, err := findChildMsg(topLevelMsgs, t, f)
+		childMsg, err := findChildMsg(m.topLevelMsgs, t, f)
 		if err != nil {
 			return nil, err
 		}
 
 		if childMsg != nil {
-			nestedStorageFields, err := findStorageFields(topLevelMsgs, prefix+"."+f.GetName(), childMsg)
+			nestedStorageFields, err := subMatcher.findMatchingFields(fullName, childMsg)
 			if err != nil {
 				return nil, err
 			}
@@ -152,111 +220,23 @@ func findChildMsg(topLevelMsgs map[string]*descriptor.DescriptorProto, t *descri
 	return nil, fmt.Errorf("could not find message type %q", msgName)
 }
 
-func (ml methodLinter) ensureValidTargetRepo() error {
-	if ml.opMsg.GetTargetRepositoryField() == "" {
-		return errors.New("missing target repository field")
-	}
-
-	oids, err := parseOID(ml.opMsg.GetTargetRepositoryField())
-	if err != nil {
-		return err
-	}
-
-	topLevelMsgs, err := ml.getTopLevelMsgs()
-	if err != nil {
-		return err
-	}
-
-	reqMsgName, err := lastName(ml.methodDesc.GetInputType())
-	if err != nil {
-		return err
-	}
-
-	msgT := topLevelMsgs[reqMsgName]
-	targetType := ""
-	visited := 0
-
-	// TODO: Improve code quality by removing OID_FIELDS and MSG_FIELDS labels
-OID_FIELDS:
-	for i, fieldNo := range oids {
-		fields := msgT.GetField()
-	MSG_FIELDS:
-		for _, f := range fields {
-			if f.GetNumber() == int32(fieldNo) {
-				visited++
-
-				targetType = f.GetTypeName()
-				if targetType == "" {
-					// primitives like int32 don't have TypeName
-					targetType = f.GetType().String()
-				}
-
-				// if last OID, we're done
-				if i == len(oids)-1 {
-					break OID_FIELDS
-				}
-
-				// if not last OID, descend into next nested message
-				const msgPrimitive = "TYPE_MESSAGE"
-				if primitive := f.GetType().String(); primitive != msgPrimitive {
-					return fmt.Errorf(
-						"expected %d-th field of OID %+v to be %s, but got %s",
-						i+1, oids, msgPrimitive, primitive,
-					)
-				}
-
-				msgName, err := lastName(f.GetTypeName())
-				if err != nil {
-					return err
-				}
-
-				// first check if field refers to a nested type
-				for _, nestedType := range msgT.GetNestedType() {
-					if msgName == nestedType.GetName() {
-						msgT = nestedType
-						break MSG_FIELDS
-					}
-				}
-
-				// then, check if field refers to a top level type
-				var ok bool
-				msgT, ok = topLevelMsgs[msgName]
-				if !ok {
-					return fmt.Errorf(
-						"could not find message type %q for %d-th element %d of target OID %+v",
-						msgName, i+1, fieldNo, oids,
-					)
-				}
-				break
-			}
-		}
-	}
-
-	if visited != len(oids) {
-		return fmt.Errorf("target repo OID %+v does not exist in request message", oids)
-	}
-
-	if targetType != repoTypeName {
-		return fmt.Errorf(
-			"unexpected type %s (expected %s) for target repo field addressed by %+v",
-			targetType, repoTypeName, oids,
-		)
-	}
-
-	return nil
-}
-
-func (ml methodLinter) getTopLevelMsgs() (map[string]*descriptor.DescriptorProto, error) {
-	sharedMsgs, err := getSharedTypes()
+func getFileTypes(filename string) ([]*descriptor.DescriptorProto, error) {
+	sharedFD, err := internal.ExtractFile(proto.FileDescriptor(filename))
 	if err != nil {
 		return nil, err
 	}
 
-	topLevelMsgs := map[string]*descriptor.DescriptorProto{}
-	for _, msg := range append(ml.fileDesc.GetMessageType(), sharedMsgs...) {
-		topLevelMsgs[msg.GetName()] = msg
+	types := sharedFD.GetMessageType()
+
+	for _, dep := range sharedFD.Dependency {
+		depTypes, err := getFileTypes(dep)
+		if err != nil {
+			return nil, err
+		}
+		types = append(types, depTypes...)
 	}
-	return topLevelMsgs, err
+
+	return types, nil
 }
 
 func lastName(inputType string) (string, error) {
@@ -268,39 +248,4 @@ func lastName(inputType string) (string, error) {
 	}
 
 	return msgName, nil
-}
-
-// parses a string like "1.1" and returns a slice of ints
-func parseOID(rawFieldUID string) ([]int, error) {
-	fieldNoStrs := strings.Split(rawFieldUID, ".")
-
-	if len(fieldNoStrs) < 1 {
-		return nil,
-			fmt.Errorf("OID string contains no field numbers: %s", fieldNoStrs)
-	}
-
-	fieldNos := make([]int, len(fieldNoStrs))
-
-	for i, fieldNoStr := range fieldNoStrs {
-		fieldNo, err := strconv.Atoi(fieldNoStr)
-		if err != nil {
-			return nil,
-				fmt.Errorf("unable to parse target field OID %s: %s", rawFieldUID, err)
-		}
-		if fieldNo < 1 {
-			return nil, errors.New("zero is an invalid field number")
-		}
-		fieldNos[i] = fieldNo
-	}
-
-	return fieldNos, nil
-}
-
-func getSharedTypes() ([]*descriptor.DescriptorProto, error) {
-	sharedFD, err := internal.ExtractFile(proto.FileDescriptor("shared.proto"))
-	if err != nil {
-		return nil, err
-	}
-
-	return sharedFD.GetMessageType(), nil
 }

@@ -10,104 +10,88 @@ service OperationService {
   rpc UserCreateBranch(UserCreateBranchRequest) returns (UserCreateBranchResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc UserUpdateBranch(UserUpdateBranchRequest) returns (UserUpdateBranchResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc UserDeleteBranch(UserDeleteBranchRequest) returns (UserDeleteBranchResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc UserCreateTag(UserCreateTagRequest) returns (UserCreateTagResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc UserDeleteTag(UserDeleteTagRequest) returns (UserDeleteTagResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc UserMergeToRef(UserMergeToRefRequest) returns (UserMergeToRefResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc UserMergeBranch(stream UserMergeBranchRequest) returns (stream UserMergeBranchResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc UserFFBranch(UserFFBranchRequest) returns (UserFFBranchResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc UserCherryPick(UserCherryPickRequest) returns (UserCherryPickResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc UserCommitFiles(stream UserCommitFilesRequest) returns (UserCommitFilesResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1.1"
     };
   }
   rpc UserRebase(UserRebaseRequest) returns (UserRebaseResponse) {
     option deprecated = true;
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc UserRebaseConfirmable(stream UserRebaseConfirmableRequest) returns (stream UserRebaseConfirmableResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1.1"
     };
   }
   rpc UserRevert(UserRevertRequest) returns (UserRevertResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc UserSquash(UserSquashRequest) returns (UserSquashResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc UserApplyPatch(stream UserApplyPatchRequest) returns (UserApplyPatchResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1.1"
     };
   }
   rpc UserUpdateSubmodule(UserUpdateSubmoduleRequest) returns (UserUpdateSubmoduleResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
 }
 
 message UserCreateBranchRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes branch_name = 2;
   User user = 3;
   bytes start_point = 4;
@@ -121,7 +105,7 @@ message UserCreateBranchResponse {
 }
 
 message UserUpdateBranchRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes branch_name = 2;
   User user = 3;
   bytes newrev = 4;
@@ -133,7 +117,7 @@ message UserUpdateBranchResponse {
 }
 
 message UserDeleteBranchRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes branch_name = 2;
   User user = 3;
 }
@@ -143,7 +127,7 @@ message UserDeleteBranchResponse {
 }
 
 message UserDeleteTagRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes tag_name = 2;
   User user = 3;
 }
@@ -153,7 +137,7 @@ message UserDeleteTagResponse {
 }
 
 message UserCreateTagRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes tag_name = 2;
   User user = 3;
   bytes target_revision = 4;
@@ -168,7 +152,7 @@ message UserCreateTagResponse {
 
 message UserMergeBranchRequest {
   // First message
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   User user = 2;
   string commit_id = 3;
   bytes branch = 4;
@@ -196,7 +180,7 @@ message UserMergeToRefRequest {
   // new commit. The first parent of the merge commit (the main line) is taken
   // from first_parent_ref. The second parent is specified by its commit ID in source_sha.
   // If target_ref already exists it will be overwritten.
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   User user = 2;
   string source_sha = 3;
   // branch is deprecated in favor of `first_parent_ref`.
@@ -221,7 +205,7 @@ message OperationBranchUpdate {
 }
 
 message UserFFBranchRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   User user = 2;
   string commit_id = 3;
   bytes branch = 4;
@@ -233,7 +217,7 @@ message UserFFBranchResponse {
 }
 
 message UserCherryPickRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   User user = 2;
   GitCommit commit = 3;
   bytes branch_name = 4;
@@ -257,7 +241,7 @@ message UserCherryPickResponse {
 }
 
 message UserRevertRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   User user = 2;
   GitCommit commit = 3;
   bytes branch_name = 4;
@@ -308,7 +292,7 @@ message UserCommitFilesAction {
 }
 
 message UserCommitFilesRequestHeader {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   User user = 2;
   bytes branch_name = 3;
   bytes commit_message = 4;
@@ -339,7 +323,7 @@ message UserCommitFilesResponse {
 message UserRebaseRequest {
   option deprecated = true;
 
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   User user = 2;
   string rebase_id = 3;
   bytes branch = 4;
@@ -359,7 +343,7 @@ message UserRebaseResponse {
 
 message UserRebaseConfirmableRequest {
   message Header {
-    Repository repository = 1;
+    Repository repository = 1 [(target_repository)=true];
     User user = 2;
     string rebase_id = 3;
     bytes branch = 4;
@@ -393,7 +377,7 @@ message UserRebaseConfirmableResponse {
 }
 
 message UserSquashRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   User user = 2;
   string squash_id = 3;
   bytes branch = 4 [deprecated=true];
@@ -413,7 +397,7 @@ message UserSquashResponse {
 
 message UserApplyPatchRequest {
   message Header {
-    Repository repository = 1;
+    Repository repository = 1 [(target_repository)=true];
     User user = 2;
     bytes target_branch = 3;
   }
@@ -429,7 +413,7 @@ message UserApplyPatchResponse {
 }
 
 message UserUpdateSubmoduleRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   User user = 2;
   string commit_sha = 3;
   bytes branch = 4;
