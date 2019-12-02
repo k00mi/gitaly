@@ -1,5 +1,35 @@
 # Gitaly changelog
 
+## v1.75.0
+
+#### Changed
+- Praefect multiple virtual storage
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1606
+
+#### Fixed
+- Gitaly feature flags are broken: convert underscores to dashes
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1659
+- Allow internal fetches to see all hidden references
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1640
+- SSHUpload{Pack,Archive}: fix timeout tests
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1664
+- Restore gitaly_connections_total prometheus metric
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1657
+
+#### Other
+- Add labkit healthcheck
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1646
+- Configure logging as early as possible
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1666
+- Use internal socket dir for internal gitaly socket
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1642
+- Leverage the bootstrap package to support Praefect zero downtime deploys
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1638
+
+#### Security
+- Limit the negotiation phase for certain Gitaly RPCs
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/
+
 ## v1.74.0
 
 #### Added

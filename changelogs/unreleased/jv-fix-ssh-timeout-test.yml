@@ -1,5 +1,0 @@
----
-title: 'SSHUpload{Pack,Archive}: fix timeout tests'
-merge_request: 1664
-author:
-type: fixed
