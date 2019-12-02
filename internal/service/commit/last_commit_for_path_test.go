@@ -37,8 +37,9 @@ func TestSuccessfulLastCommitForPathRequest(t *testing.T) {
 			Date:     &timestamp.Timestamp{Seconds: 1393491451},
 			Timezone: []byte("+0200"),
 		},
-		ParentIds: []string{"6f6d7e7ed97bb5f0054f2b1df789b39ca89b6ff9"},
-		BodySize:  86,
+		ParentIds:     []string{"6f6d7e7ed97bb5f0054f2b1df789b39ca89b6ff9"},
+		BodySize:      86,
+		SignatureType: gitalypb.SignatureType_PGP,
 	}
 
 	testCases := []struct {

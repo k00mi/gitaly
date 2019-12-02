@@ -37,6 +37,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :committer, :message, 5, "gitaly.CommitAuthor"
     repeated :parent_ids, :string, 6
     optional :body_size, :int64, 7
+    optional :signature_type, :enum, 8, "gitaly.SignatureType"
   end
   add_message "gitaly.CommitAuthor" do
     optional :name, :bytes, 1
@@ -58,6 +59,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :message, :bytes, 4
     optional :message_size, :int64, 5
     optional :tagger, :message, 6, "gitaly.CommitAuthor"
+    optional :signature_type, :enum, 7, "gitaly.SignatureType"
   end
   add_message "gitaly.User" do
     optional :gl_id, :string, 1
@@ -75,6 +77,11 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     value :TREE, 3
     value :TAG, 4
   end
+  add_enum "gitaly.SignatureType" do
+    value :NONE, 0
+    value :PGP, 1
+    value :X509, 2
+  end
 end
 
 module Gitaly
@@ -90,4 +97,5 @@ module Gitaly
   User = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.User").msgclass
   ObjectPool = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.ObjectPool").msgclass
   ObjectType = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.ObjectType").enummodule
+  SignatureType = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.SignatureType").enummodule
 end

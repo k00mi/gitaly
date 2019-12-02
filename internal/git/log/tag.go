@@ -119,6 +119,14 @@ func buildAnnotatedTag(b *catfile.Batch, tagID, name string, header *tagHeader, 
 		}
 	}
 
+	// tags contain the signature block in the message:
+	// https://github.com/git/git/blob/master/Documentation/technical/signature-format.txt#L12
+	index := bytes.Index([]byte(tag.Message), []byte("-----BEGIN"))
+	if index > 0 {
+		signature := string(tag.Message[index : bytes.Index(tag.Message[index:], []byte("\n"))+index])
+		tag.SignatureType = detectSignatureType(signature)
+	}
+
 	tag.Tagger = parseCommitAuthor(header.tagger)
 
 	return tag, nil

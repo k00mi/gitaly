@@ -56,6 +56,7 @@ var (
 				Date:     &timestamp.Timestamp{Seconds: 1393491698},
 				Timezone: []byte("+0200"),
 			},
+			SignatureType: gitalypb.SignatureType_PGP,
 		},
 		"refs/heads/'test'": {
 			Id:        "e56497bb5f03a90a51293fc6d516788730953899",

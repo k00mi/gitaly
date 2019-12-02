@@ -117,6 +117,8 @@ func buildCommit(header, body []byte, info *catfile.ObjectInfo) (*gitalypb.GitCo
 			commit.Author = parseCommitAuthor(headerSplit[1])
 		case "committer":
 			commit.Committer = parseCommitAuthor(headerSplit[1])
+		case "gpgsig":
+			commit.SignatureType = detectSignatureType(headerSplit[1])
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -167,4 +169,17 @@ func parseCommitAuthor(line string) *gitalypb.CommitAuthor {
 
 func subjectFromBody(body []byte) []byte {
 	return bytes.TrimRight(bytes.SplitN(body, []byte("\n"), 2)[0], "\r\n")
+}
+
+func detectSignatureType(line string) gitalypb.SignatureType {
+	switch strings.TrimSuffix(line, "\n") {
+	case "-----BEGIN SIGNED MESSAGE-----":
+		return gitalypb.SignatureType_X509
+	case "-----BEGIN PGP MESSAGE-----":
+		return gitalypb.SignatureType_PGP
+	case "-----BEGIN PGP SIGNATURE-----":
+		return gitalypb.SignatureType_PGP
+	default:
+		return gitalypb.SignatureType_NONE
+	}
 }

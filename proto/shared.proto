@@ -53,6 +53,13 @@ enum ObjectType {
   TAG = 4;
 }
 
+enum SignatureType {
+  NONE = 0;
+  PGP = 1;
+  X509 = 2;
+  // maybe add X509+TSA or other combinations at a later step
+}
+
 extend google.protobuf.MethodOptions {
   // Random high number..
   OperationMsg op_type = 82303;
@@ -101,6 +108,7 @@ message GitCommit {
   // but its size will be set in body_size so we can know if
   // a commit had a body in the first place.
   int64 body_size = 7;
+  SignatureType signature_type = 8;
 }
 
 message CommitAuthor {
@@ -130,6 +138,7 @@ message Tag {
   bytes message = 4;
   int64 message_size = 5;
   CommitAuthor tagger = 6;
+  SignatureType signature_type = 7;
 }
 
 message User {

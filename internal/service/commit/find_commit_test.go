@@ -91,8 +91,9 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 					Date:     &timestamp.Timestamp{Seconds: 1393491261},
 					Timezone: []byte("+0200"),
 				},
-				ParentIds: []string{"d14d6c0abdd253381df51a723d58691b2ee1ab08"},
-				BodySize:  84,
+				ParentIds:     []string{"d14d6c0abdd253381df51a723d58691b2ee1ab08"},
+				BodySize:      84,
+				SignatureType: gitalypb.SignatureType_PGP,
 			},
 		},
 		{
