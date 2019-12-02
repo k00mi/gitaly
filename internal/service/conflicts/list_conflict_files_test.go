@@ -65,21 +65,19 @@ end
 	expectedFiles := []*conflictFile{
 		{
 			header: &gitalypb.ConflictFileHeader{
-				Repository: testRepo,
-				CommitOid:  ourCommitOid,
-				OurMode:    int32(0100644),
-				OurPath:    []byte("encoding/codagé"),
-				TheirPath:  []byte("encoding/codagé"),
+				CommitOid: ourCommitOid,
+				OurMode:   int32(0100644),
+				OurPath:   []byte("encoding/codagé"),
+				TheirPath: []byte("encoding/codagé"),
 			},
 			content: []byte(conflictContent1),
 		},
 		{
 			header: &gitalypb.ConflictFileHeader{
-				Repository: testRepo,
-				CommitOid:  ourCommitOid,
-				OurMode:    int32(0100644),
-				OurPath:    []byte("files/ruby/feature.rb"),
-				TheirPath:  []byte("files/ruby/feature.rb"),
+				CommitOid: ourCommitOid,
+				OurMode:   int32(0100644),
+				OurPath:   []byte("files/ruby/feature.rb"),
+				TheirPath: []byte("files/ruby/feature.rb"),
 			},
 			content: []byte(conflictContent2),
 		},

@@ -28,7 +28,7 @@ message ListConflictFilesRequest {
 }
 
 message ConflictFileHeader {
-  Repository repository = 1;
+  reserved 1;
   string commit_oid = 2;
   bytes their_path = 3;
   bytes our_path = 4;
