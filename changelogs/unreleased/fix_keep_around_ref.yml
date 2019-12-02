@@ -1,0 +1,5 @@
+---
+title: Allow internal fetches to see all hidden references
+merge_request: 1640
+author:
+type: fixed

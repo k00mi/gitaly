@@ -11,11 +11,20 @@ import (
 	"google.golang.org/grpc"
 )
 
+const (
+	// GitConfigShowAllRefs is a git-config option.
+	// We have to use a negative transfer.hideRefs since this is the only way
+	// to undo an already set parameter: https://www.spinics.net/lists/git/msg256772.html
+	GitConfigShowAllRefs = "transfer.hideRefs=!refs"
+)
+
 func uploadPack(ctx context.Context, conn *grpc.ClientConn, req string) (int32, error) {
 	var request gitalypb.SSHUploadPackRequest
 	if err := jsonpb.UnmarshalString(req, &request); err != nil {
 		return 0, fmt.Errorf("json unmarshal: %v", err)
 	}
+
+	request.GitConfigOptions = append([]string{GitConfigShowAllRefs}, request.GitConfigOptions...)
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
