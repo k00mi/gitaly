@@ -13,8 +13,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var maxTreeEntries = 1000
-
 func validateGetTreeEntriesRequest(in *gitalypb.GetTreeEntriesRequest) error {
 	if err := git.ValidateRevision(in.Revision); err != nil {
 		return err
@@ -35,17 +33,18 @@ func populateFlatPath(c *catfile.Batch, entries []*gitalypb.TreeEntry) error {
 			continue
 		}
 
-		for {
-			subentries, err := treeEntries(c, entry.CommitOid, string(entry.FlatPath), "", false)
+		for i := 1; i < defaultFlatTreeRecursion; i++ {
+			subEntries, err := treeEntries(c, entry.CommitOid, string(entry.FlatPath), "", false)
 
 			if err != nil {
 				return err
 			}
-			if len(subentries) != 1 || subentries[0].Type != gitalypb.TreeEntry_TREE {
+
+			if len(subEntries) != 1 || subEntries[0].Type != gitalypb.TreeEntry_TREE {
 				break
 			}
 
-			entry.FlatPath = subentries[0].Path
+			entry.FlatPath = subEntries[0].Path
 		}
 	}
 
@@ -66,7 +65,9 @@ func sendTreeEntries(stream gitalypb.CommitService_GetTreeEntriesServer, c *catf
 
 	sender := chunk.New(&treeEntriesSender{stream: stream})
 	for _, e := range entries {
-		sender.Send(e)
+		if err := sender.Send(e); err != nil {
+			return err
+		}
 	}
 
 	return sender.Flush()

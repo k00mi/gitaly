@@ -6,9 +6,11 @@ import (
 	"io"
 	"os"
 	"path"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
@@ -81,13 +83,6 @@ func TestSuccessfulGetTreeEntriesWithCurlyBraces(t *testing.T) {
 }
 
 func TestSuccessfulGetTreeEntries(t *testing.T) {
-	//  Force entries to be sliced to test that behaviour
-	oldMaxTreeEntries := maxTreeEntries
-	maxTreeEntries = 1
-	defer func() {
-		maxTreeEntries = oldMaxTreeEntries
-	}()
-
 	commitID := "d25b6d94034242f3930dfcfeb6d8d9aac3583992"
 	rootOid := "21bdc8af908562ae485ed46d71dd5426c08b084a"
 
@@ -412,6 +407,59 @@ func getTreeEntriesFromTreeEntryClient(t *testing.T, client gitalypb.CommitServi
 		entries = append(entries, resp.Entries...)
 	}
 	return entries
+}
+
+func TestSuccessfulGetTreeEntries_FlatPathMaxDeep_SingleFoldersStructure(t *testing.T) {
+	server, serverSocketPath := startTestServices(t)
+	defer server.Stop()
+
+	client, conn := newCommitServiceClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepoWithWorktree(t)
+	defer cleanupFn()
+
+	folderName := "1/2/3/4/5/6/7/8/9/10/11/12"
+	require.GreaterOrEqual(t, strings.Count(strings.Trim(folderName, "/"), "/"), defaultFlatTreeRecursion, "sanity check: construct folder deeper than default recursion value")
+
+	nestedFolder := path.Join(testRepoPath, folderName)
+	require.NoError(t, os.MkdirAll(nestedFolder, 0755))
+	// put single file into the deepest directory
+	testhelper.MustRunCommand(t, nil, "touch", path.Join(nestedFolder, ".gitkeep"))
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "add", "--all")
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "commit", "-m", "Deep folder struct")
+
+	commitID := text.ChompBytes(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", "HEAD"))
+	rootOid := text.ChompBytes(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", "HEAD^{tree}"))
+
+	// make request to folder that contains nothing except one folder
+	request := &gitalypb.GetTreeEntriesRequest{
+		Repository: testRepo,
+		Revision:   []byte(commitID),
+		Path:       []byte("1"),
+		Recursive:  false,
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// request entries of the tree with single-folder structure on each level
+	entriesClient, err := client.GetTreeEntries(ctx, request)
+	require.NoError(t, err)
+
+	fetchedEntries := getTreeEntriesFromTreeEntryClient(t, entriesClient)
+	// We know that there is a directory "1/2/3/4/5/6/7/8/9/10/11/12"
+	// but here we only get back "1/2/3/4/5/6/7/8/9/10/11".
+	// This proves that FlatPath recursion is bounded, which is the point of this test.
+	require.Equal(t, []*gitalypb.TreeEntry{{
+		Oid:       "c836b95b37958e7179f5a42a32b7197b5dec7321",
+		RootOid:   rootOid,
+		Path:      []byte("1/2"),
+		FlatPath:  []byte("1/2/3/4/5/6/7/8/9/10/11"),
+		Type:      gitalypb.TreeEntry_TREE,
+		Mode:      040000,
+		CommitOid: commitID,
+	}}, fetchedEntries)
 }
 
 func TestFailedGetTreeEntriesRequestDueToValidationError(t *testing.T) {
