@@ -53,7 +53,10 @@ func (tef *TreeEntryFinder) FindByRevisionAndPath(revision, path string) (*gital
 	return nil, nil
 }
 
-const oidSize = 20
+const (
+	oidSize                  = 20
+	defaultFlatTreeRecursion = 10
+)
 
 func extractEntryInfoFromTreeData(treeData *bytes.Buffer, commitOid, rootOid, rootPath string, treeInfo *catfile.ObjectInfo) ([]*gitalypb.TreeEntry, error) {
 	if len(treeInfo.Oid) == 0 {
