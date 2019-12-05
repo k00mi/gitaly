@@ -1,0 +1,5 @@
+---
+title: Start up log messages are now using structured logging too
+merge_request: 1674
+author:
+type: other
