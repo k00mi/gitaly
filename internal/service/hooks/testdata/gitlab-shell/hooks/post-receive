@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+
+# Tests inputs to post-receive
+
+abort("FAIL") if $stdin.read.empty?
+abort("FAIL") if %w[GL_ID GL_REPOSITORY].any? { |k| ENV[k].empty? }
+
+puts "OK"
