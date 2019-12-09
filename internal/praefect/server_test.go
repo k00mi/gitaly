@@ -16,9 +16,12 @@ import (
 	gconfig "gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/log"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/conn"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/mock"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/models"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/internal/version"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -83,10 +86,12 @@ func TestGitalyServerInfo(t *testing.T) {
 					&models.Node{
 						Storage: "praefect-internal-2",
 						Token:   "xyz",
-					}},
+					},
+				},
 			},
 		},
 	}
+
 	cc, _, cleanup := runPraefectServerWithGitaly(t, conf)
 	defer cleanup()
 
@@ -107,6 +112,43 @@ func TestGitalyServerInfo(t *testing.T) {
 	for _, storageStatus := range metadata.GetStorageStatuses() {
 		require.NotNil(t, storageStatus, "none of the storage statuses should be nil")
 	}
+}
+
+func TestGitalyServerInfoBadNode(t *testing.T) {
+	conf := config.Config{
+		VirtualStorages: []*config.VirtualStorage{
+			&config.VirtualStorage{
+				Nodes: []*models.Node{
+					&models.Node{
+						Storage:        "praefect-internal-1",
+						Address:        "tcp://unreachable:1234",
+						DefaultPrimary: true,
+						Token:          "abc",
+					},
+				},
+			},
+		},
+	}
+
+	clientCC := conn.NewClientConnections()
+	clientCC.RegisterNode(conf.VirtualStorages[0].Nodes[0].Storage, conf.VirtualStorages[0].Nodes[0].Address, conf.VirtualStorages[0].Nodes[0].Token)
+	_, srv := setupServer(t, conf, clientCC, log.Default(), protoregistry.GitalyProtoFileDescriptors)
+
+	listener, port := listenAvailPort(t)
+	go func() {
+		srv.RegisterServices()
+		srv.Serve(listener, false)
+	}()
+
+	cc := dialLocalPort(t, port, false)
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	client := gitalypb.NewServerServiceClient(cc)
+
+	metadata, err := client.ServerInfo(ctx, &gitalypb.ServerInfoRequest{})
+	require.NoError(t, err)
+	require.Len(t, metadata.GetStorageStatuses(), 0)
 }
 
 func TestGitalyDiskStatistics(t *testing.T) {

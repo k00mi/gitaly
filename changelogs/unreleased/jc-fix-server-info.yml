@@ -1,0 +1,5 @@
+---
+title: Log an error if praefect's server info fails to connect to a node
+merge_request: 1651
+author:
+type: other

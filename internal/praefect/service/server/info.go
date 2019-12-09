@@ -2,14 +2,14 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
-	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
+	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	"golang.org/x/sync/errgroup"
 
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/models"
+	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
 // ServerInfo sends ServerInfoRequest to all of a praefect server's internal gitaly nodes and aggregates the results into
@@ -41,13 +41,15 @@ func (s *Server) ServerInfo(ctx context.Context, in *gitalypb.ServerInfoRequest)
 		node := node
 		cc, err := s.clientCC.GetConnection(node.Storage)
 		if err != nil {
-			return nil, helper.ErrInternalf("error getting client connection for %s: %v", node.Storage, err)
+			grpc_logrus.Extract(ctx).WithField("storage", node.Storage).WithError(err).Error("error getting client connection")
+			continue
 		}
 		g.Go(func() error {
 			client := gitalypb.NewServerServiceClient(cc)
 			resp, err := client.ServerInfo(ctx, &gitalypb.ServerInfoRequest{})
 			if err != nil {
-				return fmt.Errorf("error when requesting server info from internal storage %v", node.Storage)
+				grpc_logrus.Extract(ctx).WithField("storage", node.Storage).WithError(err).Error("error getting sever info")
+				return nil
 			}
 
 			storageStatuses[i] = resp.GetStorageStatuses()
