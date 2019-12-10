@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 
@@ -28,6 +29,7 @@ type Config struct {
 	PrometheusListenAddr string            `toml:"prometheus_listen_addr"`
 	Prometheus           prometheus.Config `toml:"prometheus"`
 	Auth                 auth.Config       `toml:"auth"`
+	DB                   `toml:"database"`
 }
 
 // VirtualStorage represents a set of nodes for a storage
@@ -139,4 +141,47 @@ func (c Config) Validate() error {
 	}
 
 	return nil
+}
+
+// DB holds Postgres client configuration data.
+type DB struct {
+	Host        string `toml:"host"`
+	Port        int    `toml:"port"`
+	User        string `toml:"user"`
+	Password    string `toml:"password"`
+	DBName      string `toml:"dbname"`
+	SSLMode     string `toml:"sslmode"`
+	SSLCert     string `toml:"sslcert"`
+	SSLKey      string `toml:"sslkey"`
+	SSLRootCert string `toml:"sslrootcert"`
+}
+
+// ToPQString returns a connection string that can be passed to github.com/lib/pq.
+func (db DB) ToPQString() string {
+	var fields []string
+	if db.Port > 0 {
+		fields = append(fields, fmt.Sprintf("port=%d", db.Port))
+	}
+
+	for _, kv := range []struct{ key, value string }{
+		{"host", db.Host},
+		{"user", db.User},
+		{"password", db.Password},
+		{"dbname", db.DBName},
+		{"sslmode", db.SSLMode},
+		{"sslcert", db.SSLCert},
+		{"sslkey", db.SSLKey},
+		{"sslrootcert", db.SSLRootCert},
+	} {
+		if len(kv.value) == 0 {
+			continue
+		}
+
+		kv.value = strings.ReplaceAll(kv.value, "'", `\'`)
+		kv.value = strings.ReplaceAll(kv.value, " ", `\ `)
+
+		fields = append(fields, kv.key+"="+kv.value)
+	}
+
+	return strings.Join(fields, " ")
 }

@@ -168,6 +168,17 @@ func TestConfigParsing(t *testing.T) {
 				Prometheus: gitaly_prometheus.Config{
 					GRPCLatencyBuckets: []float64{0.1, 0.2, 0.3},
 				},
+				DB: DB{
+					Host:        "1.2.3.4",
+					Port:        5432,
+					User:        "praefect",
+					Password:    "db-secret",
+					DBName:      "praefect_production",
+					SSLMode:     "require",
+					SSLCert:     "/path/to/cert",
+					SSLKey:      "/path/to/key",
+					SSLRootCert: "/path/to/root-cert",
+				},
 			},
 		},
 		//TODO: Remove this test, as well as the fixture in testdata/single-virtual-storage.config.toml
@@ -212,6 +223,44 @@ func TestConfigParsing(t *testing.T) {
 			cfg, err := FromFile(tc.filePath)
 			require.NoError(t, err)
 			require.Equal(t, tc.expected, cfg)
+		})
+	}
+}
+
+func TestToPQString(t *testing.T) {
+	testCases := []struct {
+		desc string
+		in   DB
+		out  string
+	}{
+		{desc: "empty", in: DB{}, out: ""},
+		{
+			desc: "basic example",
+			in: DB{
+				Host:        "1.2.3.4",
+				Port:        2345,
+				User:        "praefect-user",
+				Password:    "secret",
+				DBName:      "praefect_production",
+				SSLMode:     "require",
+				SSLCert:     "/path/to/cert",
+				SSLKey:      "/path/to/key",
+				SSLRootCert: "/path/to/root-cert",
+			},
+			out: `port=2345 host=1.2.3.4 user=praefect-user password=secret dbname=praefect_production sslmode=require sslcert=/path/to/cert sslkey=/path/to/key sslrootcert=/path/to/root-cert`,
+		},
+		{
+			desc: "with spaces and quotes",
+			in: DB{
+				Password: "secret foo'bar",
+			},
+			out: `password=secret\ foo\'bar`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			require.Equal(t, tc.out, tc.in.ToPQString())
 		})
 	}
 }
