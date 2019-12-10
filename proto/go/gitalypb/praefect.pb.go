@@ -24,85 +24,93 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
-type ListRepositoriesRequest struct {
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+type RepositoryReplicasRequest struct {
+	Repository           *Repository `protobuf:"bytes,1,opt,name=repository,proto3" json:"repository,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
+	XXX_unrecognized     []byte      `json:"-"`
+	XXX_sizecache        int32       `json:"-"`
 }
 
-func (m *ListRepositoriesRequest) Reset()         { *m = ListRepositoriesRequest{} }
-func (m *ListRepositoriesRequest) String() string { return proto.CompactTextString(m) }
-func (*ListRepositoriesRequest) ProtoMessage()    {}
-func (*ListRepositoriesRequest) Descriptor() ([]byte, []int) {
+func (m *RepositoryReplicasRequest) Reset()         { *m = RepositoryReplicasRequest{} }
+func (m *RepositoryReplicasRequest) String() string { return proto.CompactTextString(m) }
+func (*RepositoryReplicasRequest) ProtoMessage()    {}
+func (*RepositoryReplicasRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_d32bf44842ead735, []int{0}
 }
 
-func (m *ListRepositoriesRequest) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_ListRepositoriesRequest.Unmarshal(m, b)
+func (m *RepositoryReplicasRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_RepositoryReplicasRequest.Unmarshal(m, b)
 }
-func (m *ListRepositoriesRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_ListRepositoriesRequest.Marshal(b, m, deterministic)
+func (m *RepositoryReplicasRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_RepositoryReplicasRequest.Marshal(b, m, deterministic)
 }
-func (m *ListRepositoriesRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ListRepositoriesRequest.Merge(m, src)
+func (m *RepositoryReplicasRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RepositoryReplicasRequest.Merge(m, src)
 }
-func (m *ListRepositoriesRequest) XXX_Size() int {
-	return xxx_messageInfo_ListRepositoriesRequest.Size(m)
+func (m *RepositoryReplicasRequest) XXX_Size() int {
+	return xxx_messageInfo_RepositoryReplicasRequest.Size(m)
 }
-func (m *ListRepositoriesRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_ListRepositoriesRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ListRepositoriesRequest proto.InternalMessageInfo
-
-type ListRepositoriesResponse struct {
-	Primary              *ListRepositoriesResponse_RepositoryDetails   `protobuf:"bytes,1,opt,name=primary,proto3" json:"primary,omitempty"`
-	Replicas             []*ListRepositoriesResponse_RepositoryDetails `protobuf:"bytes,2,rep,name=replicas,proto3" json:"replicas,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                                      `json:"-"`
-	XXX_unrecognized     []byte                                        `json:"-"`
-	XXX_sizecache        int32                                         `json:"-"`
+func (m *RepositoryReplicasRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_RepositoryReplicasRequest.DiscardUnknown(m)
 }
 
-func (m *ListRepositoriesResponse) Reset()         { *m = ListRepositoriesResponse{} }
-func (m *ListRepositoriesResponse) String() string { return proto.CompactTextString(m) }
-func (*ListRepositoriesResponse) ProtoMessage()    {}
-func (*ListRepositoriesResponse) Descriptor() ([]byte, []int) {
+var xxx_messageInfo_RepositoryReplicasRequest proto.InternalMessageInfo
+
+func (m *RepositoryReplicasRequest) GetRepository() *Repository {
+	if m != nil {
+		return m.Repository
+	}
+	return nil
+}
+
+type RepositoryReplicasResponse struct {
+	Primary              *RepositoryReplicasResponse_RepositoryDetails   `protobuf:"bytes,1,opt,name=primary,proto3" json:"primary,omitempty"`
+	Replicas             []*RepositoryReplicasResponse_RepositoryDetails `protobuf:"bytes,2,rep,name=replicas,proto3" json:"replicas,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                                        `json:"-"`
+	XXX_unrecognized     []byte                                          `json:"-"`
+	XXX_sizecache        int32                                           `json:"-"`
+}
+
+func (m *RepositoryReplicasResponse) Reset()         { *m = RepositoryReplicasResponse{} }
+func (m *RepositoryReplicasResponse) String() string { return proto.CompactTextString(m) }
+func (*RepositoryReplicasResponse) ProtoMessage()    {}
+func (*RepositoryReplicasResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_d32bf44842ead735, []int{1}
 }
 
-func (m *ListRepositoriesResponse) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_ListRepositoriesResponse.Unmarshal(m, b)
+func (m *RepositoryReplicasResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_RepositoryReplicasResponse.Unmarshal(m, b)
 }
-func (m *ListRepositoriesResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_ListRepositoriesResponse.Marshal(b, m, deterministic)
+func (m *RepositoryReplicasResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_RepositoryReplicasResponse.Marshal(b, m, deterministic)
 }
-func (m *ListRepositoriesResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ListRepositoriesResponse.Merge(m, src)
+func (m *RepositoryReplicasResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RepositoryReplicasResponse.Merge(m, src)
 }
-func (m *ListRepositoriesResponse) XXX_Size() int {
-	return xxx_messageInfo_ListRepositoriesResponse.Size(m)
+func (m *RepositoryReplicasResponse) XXX_Size() int {
+	return xxx_messageInfo_RepositoryReplicasResponse.Size(m)
 }
-func (m *ListRepositoriesResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_ListRepositoriesResponse.DiscardUnknown(m)
+func (m *RepositoryReplicasResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_RepositoryReplicasResponse.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ListRepositoriesResponse proto.InternalMessageInfo
+var xxx_messageInfo_RepositoryReplicasResponse proto.InternalMessageInfo
 
-func (m *ListRepositoriesResponse) GetPrimary() *ListRepositoriesResponse_RepositoryDetails {
+func (m *RepositoryReplicasResponse) GetPrimary() *RepositoryReplicasResponse_RepositoryDetails {
 	if m != nil {
 		return m.Primary
 	}
 	return nil
 }
 
-func (m *ListRepositoriesResponse) GetReplicas() []*ListRepositoriesResponse_RepositoryDetails {
+func (m *RepositoryReplicasResponse) GetReplicas() []*RepositoryReplicasResponse_RepositoryDetails {
 	if m != nil {
 		return m.Replicas
 	}
 	return nil
 }
 
-type ListRepositoriesResponse_RepositoryDetails struct {
+type RepositoryReplicasResponse_RepositoryDetails struct {
 	Repository           *Repository `protobuf:"bytes,1,opt,name=repository,proto3" json:"repository,omitempty"`
 	Checksum             string      `protobuf:"bytes,2,opt,name=checksum,proto3" json:"checksum,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
@@ -110,43 +118,43 @@ type ListRepositoriesResponse_RepositoryDetails struct {
 	XXX_sizecache        int32       `json:"-"`
 }
 
-func (m *ListRepositoriesResponse_RepositoryDetails) Reset() {
-	*m = ListRepositoriesResponse_RepositoryDetails{}
+func (m *RepositoryReplicasResponse_RepositoryDetails) Reset() {
+	*m = RepositoryReplicasResponse_RepositoryDetails{}
 }
-func (m *ListRepositoriesResponse_RepositoryDetails) String() string {
+func (m *RepositoryReplicasResponse_RepositoryDetails) String() string {
 	return proto.CompactTextString(m)
 }
-func (*ListRepositoriesResponse_RepositoryDetails) ProtoMessage() {}
-func (*ListRepositoriesResponse_RepositoryDetails) Descriptor() ([]byte, []int) {
+func (*RepositoryReplicasResponse_RepositoryDetails) ProtoMessage() {}
+func (*RepositoryReplicasResponse_RepositoryDetails) Descriptor() ([]byte, []int) {
 	return fileDescriptor_d32bf44842ead735, []int{1, 0}
 }
 
-func (m *ListRepositoriesResponse_RepositoryDetails) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_ListRepositoriesResponse_RepositoryDetails.Unmarshal(m, b)
+func (m *RepositoryReplicasResponse_RepositoryDetails) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_RepositoryReplicasResponse_RepositoryDetails.Unmarshal(m, b)
 }
-func (m *ListRepositoriesResponse_RepositoryDetails) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_ListRepositoriesResponse_RepositoryDetails.Marshal(b, m, deterministic)
+func (m *RepositoryReplicasResponse_RepositoryDetails) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_RepositoryReplicasResponse_RepositoryDetails.Marshal(b, m, deterministic)
 }
-func (m *ListRepositoriesResponse_RepositoryDetails) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ListRepositoriesResponse_RepositoryDetails.Merge(m, src)
+func (m *RepositoryReplicasResponse_RepositoryDetails) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RepositoryReplicasResponse_RepositoryDetails.Merge(m, src)
 }
-func (m *ListRepositoriesResponse_RepositoryDetails) XXX_Size() int {
-	return xxx_messageInfo_ListRepositoriesResponse_RepositoryDetails.Size(m)
+func (m *RepositoryReplicasResponse_RepositoryDetails) XXX_Size() int {
+	return xxx_messageInfo_RepositoryReplicasResponse_RepositoryDetails.Size(m)
 }
-func (m *ListRepositoriesResponse_RepositoryDetails) XXX_DiscardUnknown() {
-	xxx_messageInfo_ListRepositoriesResponse_RepositoryDetails.DiscardUnknown(m)
+func (m *RepositoryReplicasResponse_RepositoryDetails) XXX_DiscardUnknown() {
+	xxx_messageInfo_RepositoryReplicasResponse_RepositoryDetails.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ListRepositoriesResponse_RepositoryDetails proto.InternalMessageInfo
+var xxx_messageInfo_RepositoryReplicasResponse_RepositoryDetails proto.InternalMessageInfo
 
-func (m *ListRepositoriesResponse_RepositoryDetails) GetRepository() *Repository {
+func (m *RepositoryReplicasResponse_RepositoryDetails) GetRepository() *Repository {
 	if m != nil {
 		return m.Repository
 	}
 	return nil
 }
 
-func (m *ListRepositoriesResponse_RepositoryDetails) GetChecksum() string {
+func (m *RepositoryReplicasResponse_RepositoryDetails) GetChecksum() string {
 	if m != nil {
 		return m.Checksum
 	}
@@ -154,33 +162,33 @@ func (m *ListRepositoriesResponse_RepositoryDetails) GetChecksum() string {
 }
 
 func init() {
-	proto.RegisterType((*ListRepositoriesRequest)(nil), "gitaly.ListRepositoriesRequest")
-	proto.RegisterType((*ListRepositoriesResponse)(nil), "gitaly.ListRepositoriesResponse")
-	proto.RegisterType((*ListRepositoriesResponse_RepositoryDetails)(nil), "gitaly.ListRepositoriesResponse.RepositoryDetails")
+	proto.RegisterType((*RepositoryReplicasRequest)(nil), "gitaly.RepositoryReplicasRequest")
+	proto.RegisterType((*RepositoryReplicasResponse)(nil), "gitaly.RepositoryReplicasResponse")
+	proto.RegisterType((*RepositoryReplicasResponse_RepositoryDetails)(nil), "gitaly.RepositoryReplicasResponse.RepositoryDetails")
 }
 
 func init() { proto.RegisterFile("praefect.proto", fileDescriptor_d32bf44842ead735) }
 
 var fileDescriptor_d32bf44842ead735 = []byte{
-	// 277 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x91, 0xb1, 0x4e, 0xc3, 0x30,
-	0x10, 0x86, 0x95, 0x80, 0x4a, 0xb8, 0x22, 0x54, 0xbc, 0x10, 0xb2, 0x10, 0x75, 0xca, 0x42, 0x52,
-	0x85, 0x37, 0x40, 0x2c, 0x48, 0x15, 0x43, 0xd8, 0xd8, 0x1c, 0x73, 0x4d, 0x2d, 0x92, 0xda, 0xdc,
-	0xb9, 0x48, 0x79, 0x12, 0x26, 0x5e, 0x94, 0x09, 0x91, 0xb4, 0x01, 0x51, 0x55, 0x48, 0x6c, 0xbe,
-	0xff, 0x7e, 0x7f, 0xbe, 0xdf, 0x07, 0xa7, 0x96, 0x24, 0x2e, 0x50, 0xb9, 0xd4, 0x92, 0x71, 0x46,
-	0x8c, 0x2a, 0xed, 0x64, 0xdd, 0x46, 0x27, 0xbc, 0x94, 0x84, 0x4f, 0xbd, 0x3a, 0xbd, 0x80, 0xf3,
-	0xb9, 0x66, 0x57, 0xa0, 0x35, 0xac, 0x9d, 0x21, 0x8d, 0x5c, 0xe0, 0xcb, 0x1a, 0xd9, 0x4d, 0xdf,
-	0x7d, 0x08, 0x77, 0x7b, 0x6c, 0xcd, 0x8a, 0x51, 0xcc, 0xe1, 0xc8, 0x92, 0x6e, 0x24, 0xb5, 0xa1,
-	0x17, 0x7b, 0xc9, 0x38, 0xcf, 0xd3, 0x9e, 0x9f, 0xee, 0xbb, 0x92, 0x0e, 0x62, 0x7b, 0x8b, 0x4e,
-	0xea, 0x9a, 0x8b, 0x2d, 0x42, 0xdc, 0x43, 0x40, 0x68, 0x6b, 0xad, 0x24, 0x87, 0x7e, 0x7c, 0xf0,
-	0x4f, 0xdc, 0xc0, 0x88, 0x14, 0x9c, 0xed, 0xb4, 0x45, 0x0e, 0x40, 0x83, 0xb8, 0x99, 0x5a, 0x6c,
-	0x9f, 0xf9, 0xb6, 0x17, 0x3f, 0x5c, 0x22, 0x82, 0x40, 0x2d, 0x51, 0x3d, 0xf3, 0xba, 0x09, 0xfd,
-	0xd8, 0x4b, 0x8e, 0x8b, 0xa1, 0xce, 0x2d, 0x8c, 0xef, 0x56, 0x0b, 0xf3, 0x80, 0xf4, 0xaa, 0x15,
-	0x0a, 0x09, 0x93, 0xdf, 0xb3, 0x8a, 0xcb, 0xfd, 0x29, 0xba, 0x3f, 0x8e, 0xe2, 0xbf, 0x62, 0x4e,
-	0x83, 0x8f, 0xb7, 0xe4, 0x30, 0xf0, 0x27, 0xde, 0xcc, 0xbb, 0x99, 0x3d, 0x7e, 0xd9, 0x6b, 0x59,
-	0xa6, 0xca, 0x34, 0x59, 0x7f, 0xbc, 0x32, 0x54, 0x65, 0x3d, 0x24, 0xeb, 0x56, 0x9a, 0x55, 0x66,
-	0x53, 0xdb, 0xb2, 0x1c, 0x75, 0xd2, 0xf5, 0x67, 0x00, 0x00, 0x00, 0xff, 0xff, 0xf7, 0x02, 0xe2,
-	0xe6, 0x0d, 0x02, 0x00, 0x00,
+	// 278 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x92, 0xc1, 0x4e, 0x84, 0x30,
+	0x10, 0x86, 0x03, 0x9a, 0x15, 0x47, 0x63, 0xb4, 0x5e, 0xb0, 0x27, 0xe4, 0xc4, 0x45, 0x30, 0xe8,
+	0x13, 0x18, 0x2f, 0x5e, 0x74, 0x53, 0x6f, 0xde, 0x4a, 0x9d, 0x65, 0x1b, 0x61, 0x5b, 0xdb, 0xae,
+	0xc9, 0x26, 0xbe, 0x87, 0x0f, 0xe0, 0x5b, 0x7a, 0x32, 0x02, 0x12, 0xe2, 0x6e, 0xdc, 0x84, 0x5b,
+	0x67, 0xfe, 0x7f, 0xbe, 0x74, 0xfa, 0x17, 0x8e, 0xb4, 0xe1, 0x38, 0x43, 0xe1, 0x52, 0x6d, 0x94,
+	0x53, 0x64, 0x52, 0x4a, 0xc7, 0xab, 0x15, 0x3d, 0xb4, 0x73, 0x6e, 0xf0, 0xb9, 0xed, 0xc6, 0x0f,
+	0x70, 0xc6, 0x50, 0x2b, 0x2b, 0x9d, 0x32, 0x2b, 0x86, 0xba, 0x92, 0x82, 0x5b, 0x86, 0xaf, 0x4b,
+	0xb4, 0x8e, 0xe4, 0x00, 0xa6, 0x17, 0x43, 0x2f, 0xf2, 0x92, 0x83, 0x9c, 0xa4, 0x2d, 0x27, 0x1d,
+	0x8c, 0x0d, 0x5c, 0xf1, 0xa7, 0x0f, 0x74, 0x13, 0xd1, 0x6a, 0xb5, 0xb0, 0x48, 0xee, 0x61, 0x4f,
+	0x1b, 0x59, 0xf3, 0x9e, 0x77, 0xbd, 0x81, 0xf7, 0x67, 0x68, 0x20, 0xdd, 0xa2, 0xe3, 0xb2, 0xb2,
+	0xec, 0x17, 0x42, 0xa6, 0x10, 0x98, 0xce, 0x1e, 0xfa, 0xd1, 0xce, 0x68, 0x60, 0x4f, 0xa1, 0x02,
+	0x4e, 0xd6, 0xe4, 0x31, 0x2f, 0x41, 0x28, 0x04, 0x62, 0x8e, 0xe2, 0xc5, 0x2e, 0xeb, 0xd0, 0x8f,
+	0xbc, 0x64, 0x9f, 0xf5, 0x75, 0xfe, 0x0e, 0xa7, 0xd3, 0x2e, 0x9e, 0xbb, 0xc5, 0x4c, 0x3d, 0xa2,
+	0x79, 0x93, 0x02, 0x09, 0x02, 0x59, 0xbf, 0x35, 0x39, 0xff, 0x6f, 0xa3, 0x26, 0x29, 0x1a, 0x6f,
+	0x5f, 0x3a, 0x0e, 0xbe, 0x3e, 0x92, 0xdd, 0xc0, 0x3f, 0xf6, 0x6e, 0x2e, 0x9f, 0x7e, 0xec, 0x15,
+	0x2f, 0x52, 0xa1, 0xea, 0xac, 0x3d, 0x5e, 0x28, 0x53, 0x66, 0x2d, 0x24, 0x6b, 0xbe, 0x46, 0x56,
+	0xaa, 0xae, 0xd6, 0x45, 0x31, 0x69, 0x5a, 0x57, 0xdf, 0x01, 0x00, 0x00, 0xff, 0xff, 0x1a, 0x75,
+	0x52, 0x0b, 0x55, 0x02, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -191,101 +199,74 @@ var _ grpc.ClientConn
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion4
 
-// InfoServiceClient is the client API for InfoService service.
+// PraefectInfoServiceClient is the client API for PraefectInfoService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
-type InfoServiceClient interface {
-	ListRepositories(ctx context.Context, in *ListRepositoriesRequest, opts ...grpc.CallOption) (InfoService_ListRepositoriesClient, error)
+type PraefectInfoServiceClient interface {
+	RepositoryReplicas(ctx context.Context, in *RepositoryReplicasRequest, opts ...grpc.CallOption) (*RepositoryReplicasResponse, error)
 }
 
-type infoServiceClient struct {
+type praefectInfoServiceClient struct {
 	cc *grpc.ClientConn
 }
 
-func NewInfoServiceClient(cc *grpc.ClientConn) InfoServiceClient {
-	return &infoServiceClient{cc}
+func NewPraefectInfoServiceClient(cc *grpc.ClientConn) PraefectInfoServiceClient {
+	return &praefectInfoServiceClient{cc}
 }
 
-func (c *infoServiceClient) ListRepositories(ctx context.Context, in *ListRepositoriesRequest, opts ...grpc.CallOption) (InfoService_ListRepositoriesClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_InfoService_serviceDesc.Streams[0], "/gitaly.InfoService/ListRepositories", opts...)
+func (c *praefectInfoServiceClient) RepositoryReplicas(ctx context.Context, in *RepositoryReplicasRequest, opts ...grpc.CallOption) (*RepositoryReplicasResponse, error) {
+	out := new(RepositoryReplicasResponse)
+	err := c.cc.Invoke(ctx, "/gitaly.PraefectInfoService/RepositoryReplicas", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &infoServiceListRepositoriesClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
+	return out, nil
+}
+
+// PraefectInfoServiceServer is the server API for PraefectInfoService service.
+type PraefectInfoServiceServer interface {
+	RepositoryReplicas(context.Context, *RepositoryReplicasRequest) (*RepositoryReplicasResponse, error)
+}
+
+// UnimplementedPraefectInfoServiceServer can be embedded to have forward compatible implementations.
+type UnimplementedPraefectInfoServiceServer struct {
+}
+
+func (*UnimplementedPraefectInfoServiceServer) RepositoryReplicas(ctx context.Context, req *RepositoryReplicasRequest) (*RepositoryReplicasResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RepositoryReplicas not implemented")
+}
+
+func RegisterPraefectInfoServiceServer(s *grpc.Server, srv PraefectInfoServiceServer) {
+	s.RegisterService(&_PraefectInfoService_serviceDesc, srv)
+}
+
+func _PraefectInfoService_RepositoryReplicas_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RepositoryReplicasRequest)
+	if err := dec(in); err != nil {
 		return nil, err
 	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
+	if interceptor == nil {
+		return srv.(PraefectInfoServiceServer).RepositoryReplicas(ctx, in)
 	}
-	return x, nil
-}
-
-type InfoService_ListRepositoriesClient interface {
-	Recv() (*ListRepositoriesResponse, error)
-	grpc.ClientStream
-}
-
-type infoServiceListRepositoriesClient struct {
-	grpc.ClientStream
-}
-
-func (x *infoServiceListRepositoriesClient) Recv() (*ListRepositoriesResponse, error) {
-	m := new(ListRepositoriesResponse)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/gitaly.PraefectInfoService/RepositoryReplicas",
 	}
-	return m, nil
-}
-
-// InfoServiceServer is the server API for InfoService service.
-type InfoServiceServer interface {
-	ListRepositories(*ListRepositoriesRequest, InfoService_ListRepositoriesServer) error
-}
-
-// UnimplementedInfoServiceServer can be embedded to have forward compatible implementations.
-type UnimplementedInfoServiceServer struct {
-}
-
-func (*UnimplementedInfoServiceServer) ListRepositories(req *ListRepositoriesRequest, srv InfoService_ListRepositoriesServer) error {
-	return status.Errorf(codes.Unimplemented, "method ListRepositories not implemented")
-}
-
-func RegisterInfoServiceServer(s *grpc.Server, srv InfoServiceServer) {
-	s.RegisterService(&_InfoService_serviceDesc, srv)
-}
-
-func _InfoService_ListRepositories_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(ListRepositoriesRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PraefectInfoServiceServer).RepositoryReplicas(ctx, req.(*RepositoryReplicasRequest))
 	}
-	return srv.(InfoServiceServer).ListRepositories(m, &infoServiceListRepositoriesServer{stream})
+	return interceptor(ctx, in, info, handler)
 }
 
-type InfoService_ListRepositoriesServer interface {
-	Send(*ListRepositoriesResponse) error
-	grpc.ServerStream
-}
-
-type infoServiceListRepositoriesServer struct {
-	grpc.ServerStream
-}
-
-func (x *infoServiceListRepositoriesServer) Send(m *ListRepositoriesResponse) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-var _InfoService_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "gitaly.InfoService",
-	HandlerType: (*InfoServiceServer)(nil),
-	Methods:     []grpc.MethodDesc{},
-	Streams: []grpc.StreamDesc{
+var _PraefectInfoService_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "gitaly.PraefectInfoService",
+	HandlerType: (*PraefectInfoServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
 		{
-			StreamName:    "ListRepositories",
-			Handler:       _InfoService_ListRepositories_Handler,
-			ServerStreams: true,
+			MethodName: "RepositoryReplicas",
+			Handler:    _PraefectInfoService_RepositoryReplicas_Handler,
 		},
 	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "praefect.proto",
 }

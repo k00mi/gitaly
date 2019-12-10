@@ -5,16 +5,16 @@ require 'grpc'
 require 'praefect_pb'
 
 module Gitaly
-  module InfoService
+  module PraefectInfoService
     class Service
 
       include GRPC::GenericService
 
       self.marshal_class_method = :encode
       self.unmarshal_class_method = :decode
-      self.service_name = 'gitaly.InfoService'
+      self.service_name = 'gitaly.PraefectInfoService'
 
-      rpc :ListRepositories, ListRepositoriesRequest, stream(ListRepositoriesResponse)
+      rpc :RepositoryReplicas, RepositoryReplicasRequest, RepositoryReplicasResponse
     end
 
     Stub = Service.rpc_stub_class

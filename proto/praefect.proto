@@ -6,8 +6,8 @@ option go_package = "gitlab.com/gitlab-org/gitaly/proto/go/gitalypb";
 
 import "shared.proto";
 
-service InfoService {
-  rpc ListRepositories(ListRepositoriesRequest) returns (stream ListRepositoriesResponse) {
+service PraefectInfoService {
+  rpc RepositoryReplicas(RepositoryReplicasRequest) returns (RepositoryReplicasResponse) {
     option (op_type) = {
       op: ACCESSOR
       scope_level: SERVER
@@ -15,11 +15,13 @@ service InfoService {
   }
 }
 
-message ListRepositoriesRequest{}
+message RepositoryReplicasRequest{
+  Repository repository = 1;
+}
 
-message ListRepositoriesResponse{
+message RepositoryReplicasResponse{
   message RepositoryDetails {
-    Repository repository = 1;	
+    Repository repository = 1;
     string checksum = 2;
   };
 
