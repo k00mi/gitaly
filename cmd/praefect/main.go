@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/bootstrap"
 	"gitlab.com/gitlab-org/gitaly/internal/bootstrap/starter"
 	"gitlab.com/gitlab-org/gitaly/internal/config/sentry"
@@ -30,6 +31,8 @@ var (
 	errNoConfigFile = errors.New("the config flag must be passed")
 )
 
+const progname = "praefect"
+
 func main() {
 	flag.Parse()
 
@@ -43,6 +46,12 @@ func main() {
 	if err != nil {
 		logger.Fatal(err)
 	}
+
+	if args := flag.Args(); len(args) > 0 {
+		os.Exit(subCommand(conf, args[0], args[1:]))
+	}
+
+	logger.WithField("version", praefect.GetVersionString()).Info("Starting Praefect")
 
 	starterConfigs, err := getStarterConfigs(conf.SocketPath, conf.ListenAddr)
 	if err != nil {
@@ -86,8 +95,6 @@ func configure() (config.Config, error) {
 		}()
 	}
 
-	logger.WithField("version", praefect.GetVersionString()).Info("Starting Praefect")
-
 	sentry.ConfigureSentry(version.GetVersion(), conf.Sentry)
 
 	return conf, nil
@@ -117,6 +124,8 @@ func run(cfgs []starter.Config, conf config.Config) error {
 		srv          = praefect.NewServer(coordinator, repl, nil, logger, clientConnections, conf)
 		serverErrors = make(chan error, 1)
 	)
+
+	testSQLConnection(logger, conf)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -168,4 +177,37 @@ func getStarterConfigs(socketPath, listenAddr string) ([]starter.Config, error) 
 	}
 
 	return cfgs, nil
+}
+
+// Test Postgres connection, for diagnostic purposes only while we roll
+// out Postgres support. https://gitlab.com/gitlab-org/gitaly/issues/1755
+func testSQLConnection(logger *logrus.Entry, conf config.Config) {
+	if err := datastore.CheckPostgresVersion(conf); err != nil {
+		logger.WithError(err).Error("SQL connection check failed")
+	} else {
+		logger.Info("SQL connection check successful")
+	}
+}
+
+// subCommand returns an exit code, to be fed into os.Exit.
+func subCommand(conf config.Config, arg0 string, argRest []string) int {
+	switch arg0 {
+	case "sql-ping":
+		return sqlPing(conf)
+	default:
+		fmt.Printf("%s: unknown subcommand: %q\n", progname, arg0)
+		return 1
+	}
+}
+
+func sqlPing(conf config.Config) int {
+	const subCmd = progname + " sql-ping"
+
+	if err := datastore.CheckPostgresVersion(conf); err != nil {
+		fmt.Printf("%s: fail: %v\n", subCmd, err)
+		return 1
+	}
+
+	fmt.Printf("%s: OK\n", subCmd)
+	return 0
 }

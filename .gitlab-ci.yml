@@ -188,3 +188,18 @@ license_management:
     - sudo apt-get install -y libicu-dev libgit2-dev cmake
   variables:
     LICENSE_FINDER_CLI_OPTS: '--aggregate-paths=. ruby'
+
+praefect_sql_connect:
+  <<: *go_test_definition
+  services:
+    - postgres:9.6
+  variables:
+    POSTGRES_DB: praefect_test
+    POSTGRES_USER: praefect
+    POSTGRES_PASSWORD: sql-password
+  script:
+    - make
+    # Sanity check: direct ping with psql
+    - PGPASSWORD=$POSTGRES_PASSWORD psql -h postgres -U $POSTGRES_USER -d $POSTGRES_DB -c 'select now()'
+    - ruby -rerb -e 'ERB.new(ARGF.read).run' _support/config.praefect.toml.ci-sql-test.erb > config.praefect.toml
+    - ./praefect -config config.praefect.toml sql-ping

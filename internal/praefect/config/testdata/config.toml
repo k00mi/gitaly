@@ -28,3 +28,14 @@ name = "praefect"
 
 [prometheus]
   grpc_latency_buckets = [0.1, 0.2, 0.3] 
+
+[database]
+host = "1.2.3.4"
+port = 5432
+user = "praefect"
+password = "db-secret"
+dbname = "praefect_production"
+sslmode = "require"
+sslcert = "/path/to/cert"
+sslkey = "/path/to/key"
+sslrootcert = "/path/to/root-cert"

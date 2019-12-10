@@ -107,6 +107,35 @@ use library code from the
 [gitlab.com/gitlab-org/gitaly/client](https://gitlab.com/gitlab-org/gitaly/tree/master/client)
 package.
 
+## High Availability
+
+We are working on a high-availability (HA) solution for Gitaly based on
+asynchronous replication. A Gitaly server would be made highly available
+by assigning one or more standby servers ("secondaries") to it, each of
+which contains a full copy of all the repository data on the primary
+Gitaly server.
+
+To implement this we are building a new GitLab component called
+Praefect, which is hosted alongside the rest of Gitaly in this
+repository. As we currently envision it, Praefect will have four
+responsibilities:
+
+-   route RPC traffic to the primary Gitaly server
+-   inspect RPC traffic and mark repositories as dirty if the RPC is a
+    "mutator"
+-   ensure dirty repositories have their changes replicated to the
+    secondary Gitaly servers
+-   in the event of a failure on the primary, demote it to secondary and
+    elect a new primary
+
+Praefect has internal state: it needs to be able to "remember" which
+repositories are in need of replication, and which Gitaly server is the
+primary. [We will use Postgres to store Praefect's internal state](doc/proposals/praefect-queue-storage.md).
+
+As of December 2019 we are busy rolling out the Postgres integration in
+Praefect. The minimum supported Postgres version is 9.6, just like the
+rest of GitLab.
+
 ## Further reading
 
 More about the project and its processes is [detailed in the docs](doc/README.md).
