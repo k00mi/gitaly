@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"crypto/x509"
 	"log"
 	"net"
 	"os"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
+	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/server/auth"
@@ -17,6 +19,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -43,6 +46,22 @@ func newRepositoryClient(t *testing.T, serverSocketPath string) (gitalypb.Reposi
 
 var NewRepositoryClient = newRepositoryClient
 var RunRepoServer = runRepoServer
+
+func newSecureRepoClient(t *testing.T, serverSocketPath string, pool *x509.CertPool) (gitalypb.RepositoryServiceClient, *grpc.ClientConn) {
+	connOpts := []grpc.DialOption{
+		grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(pool, "")),
+		grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials(testhelper.RepositoryAuthToken)),
+	}
+
+	conn, err := client.Dial(serverSocketPath, connOpts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return gitalypb.NewRepositoryServiceClient(conn), conn
+}
+
+var NewSecureRepoClient = newSecureRepoClient
 
 func runRepoServer(t *testing.T) (*grpc.Server, string) {
 	streamInt := []grpc.StreamServerInterceptor{auth.StreamServerInterceptor(config.Config.Auth)}
