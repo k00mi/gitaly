@@ -1,0 +1,5 @@
+---
+title: Fix forking with custom CA in RPC CreateFork
+merge_request: 1658
+author:
+type: fixed

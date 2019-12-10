@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"os"
 	"os/exec"
 	"path"
@@ -277,6 +278,17 @@ func GetTemporaryGitalySocketFileName() string {
 	os.Remove(name)
 
 	return name
+}
+
+// GetLocalhostListener listens on the next available TCP port and returns
+// the listener and the localhost address (host:port) string.
+func GetLocalhostListener(t testing.TB) (net.Listener, string) {
+	l, err := net.Listen("tcp", "localhost:0")
+	require.NoError(t, err)
+
+	addr := fmt.Sprintf("localhost:%d", l.Addr().(*net.TCPAddr).Port)
+
+	return l, addr
 }
 
 // ConfigureRuby configures Ruby settings for test purposes at run time.

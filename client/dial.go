@@ -11,6 +11,7 @@ import (
 
 	"net/url"
 
+	gitaly_x509 "gitlab.com/gitlab-org/gitaly/internal/x509"
 	"google.golang.org/grpc"
 )
 
@@ -41,7 +42,7 @@ func Dial(rawAddress string, connOpts []grpc.DialOption) (*grpc.ClientConn, erro
 			return nil, err
 		}
 
-		certPool, err := systemCertPool()
+		certPool, err := gitaly_x509.SystemCertPool()
 		if err != nil {
 			return nil, err
 		}

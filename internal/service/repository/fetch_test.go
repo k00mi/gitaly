@@ -199,3 +199,19 @@ func runFullServer(t *testing.T) (*grpc.Server, string) {
 
 	return server, "unix://" + serverSocketPath
 }
+
+func runFullSecureServer(t *testing.T) (*grpc.Server, string, testhelper.Cleanup) {
+	server := serverPkg.NewSecure(repository.RubyServer)
+	listener, addr := testhelper.GetLocalhostListener(t)
+
+	errQ := make(chan error)
+
+	go func() { errQ <- server.Serve(listener) }()
+
+	cleanup := func() {
+		server.Stop()
+		require.NoError(t, <-errQ)
+	}
+
+	return server, "tls://" + addr, cleanup
+}

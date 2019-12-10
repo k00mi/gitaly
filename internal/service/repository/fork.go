@@ -10,6 +10,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	gitaly_x509 "gitlab.com/gitlab-org/gitaly/internal/x509"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/labkit/tracing"
 	"google.golang.org/grpc/codes"
@@ -75,6 +76,10 @@ func (s *server) CreateFork(ctx context.Context, req *gitalypb.CreateForkRequest
 		fmt.Sprintf("GITALY_PAYLOAD=%s", payload),
 		fmt.Sprintf("GITALY_TOKEN=%s", sourceRepositoryGitalyToken),
 		fmt.Sprintf("GIT_SSH_COMMAND=%s upload-pack", gitalySSHPath),
+		// Pass through the SSL_CERT_* variables that indicate which
+		// system certs to trust
+		fmt.Sprintf("%s=%s", gitaly_x509.SSLCertDir, os.Getenv(gitaly_x509.SSLCertDir)),
+		fmt.Sprintf("%s=%s", gitaly_x509.SSLCertFile, os.Getenv(gitaly_x509.SSLCertFile)),
 	}
 	env = envInjector(ctx, env)
 

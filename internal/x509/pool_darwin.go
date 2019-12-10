@@ -1,4 +1,4 @@
-package client
+package x509
 
 import (
 	"crypto/x509"
@@ -7,12 +7,12 @@ import (
 	"path"
 )
 
-// systemCertPool circumvents the fact that Go on macOS does not support
+// SystemCertPool circumvents the fact that Go on macOS does not support
 // SSL_CERT_{DIR,FILE}.
-func systemCertPool() (*x509.CertPool, error) {
+func SystemCertPool() (*x509.CertPool, error) {
 	var certPem []byte
 
-	if f := os.Getenv("SSL_CERT_FILE"); len(f) > 0 {
+	if f := os.Getenv(SSLCertFile); len(f) > 0 {
 		pem, err := ioutil.ReadFile(f)
 		if err != nil {
 			return nil, err
@@ -22,7 +22,7 @@ func systemCertPool() (*x509.CertPool, error) {
 		certPem = append(certPem, pem...)
 	}
 
-	if d := os.Getenv("SSL_CERT_DIR"); len(d) > 0 {
+	if d := os.Getenv(SSLCertDir); len(d) > 0 {
 		entries, err := ioutil.ReadDir(d)
 		if err != nil {
 			return nil, err
