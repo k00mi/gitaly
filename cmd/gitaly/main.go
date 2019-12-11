@@ -46,11 +46,6 @@ func main() {
 	flag.Usage = flagUsage
 	flag.Parse()
 
-	b, err := bootstrap.New()
-	if err != nil {
-		log.WithError(err).Fatal("init bootstrap")
-	}
-
 	// If invoked with -version
 	if *flagVersion {
 		fmt.Println(version.GetVersionString())
@@ -70,6 +65,12 @@ func main() {
 	}
 
 	config.ConfigureLogging()
+
+	b, err := bootstrap.New()
+	if err != nil {
+		log.WithError(err).Fatal("init bootstrap")
+	}
+
 	sentry.ConfigureSentry(version.GetVersion(), sentry.Config(config.Config.Logging.Sentry))
 	config.Config.Prometheus.Configure()
 	config.ConfigureConcurrencyLimits()
