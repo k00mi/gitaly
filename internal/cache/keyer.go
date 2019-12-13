@@ -13,6 +13,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
+	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/safe"
@@ -60,7 +61,7 @@ type lease struct {
 // EndLease will end the lease by removing the pending lease file and updating
 // the key file with the current lease ID.
 func (l lease) EndLease(ctx context.Context) error {
-	_, err := updateLatest(l.repo)
+	_, err := updateLatest(ctx, l.repo)
 	if err != nil {
 		return err
 	}
@@ -75,7 +76,7 @@ func (l lease) EndLease(ctx context.Context) error {
 	return nil
 }
 
-func updateLatest(repo *gitalypb.Repository) (string, error) {
+func updateLatest(ctx context.Context, repo *gitalypb.Repository) (string, error) {
 	repoStatePath, err := getRepoStatePath(repo)
 	if err != nil {
 		return "", err
@@ -104,6 +105,10 @@ func updateLatest(repo *gitalypb.Repository) (string, error) {
 	if err := latest.Commit(); err != nil {
 		return "", err
 	}
+
+	grpc_logrus.Extract(ctx).
+		WithField("diskcache", nextGenID).
+		Infof("diskcache state change")
 
 	return nextGenID, nil
 }
@@ -164,7 +169,7 @@ func (LeaseKeyer) KeyPath(ctx context.Context, repo *gitalypb.Repository, req pr
 		return "", countErr(ErrPendingExists)
 	}
 
-	genID, err := currentGenID(repo)
+	genID, err := currentGenID(ctx, repo)
 	if err != nil {
 		return "", err
 	}
@@ -262,7 +267,7 @@ func currentLeases(repo *gitalypb.Repository) ([]os.FileInfo, error) {
 	return pendings, nil
 }
 
-func currentGenID(repo *gitalypb.Repository) (string, error) {
+func currentGenID(ctx context.Context, repo *gitalypb.Repository) (string, error) {
 	repoStatePath, err := getRepoStatePath(repo)
 	if err != nil {
 		return "", err
@@ -272,7 +277,7 @@ func currentGenID(repo *gitalypb.Repository) (string, error) {
 	switch {
 	case os.IsNotExist(err):
 		// latest file doesn't exist, so create one
-		return updateLatest(repo)
+		return updateLatest(ctx, repo)
 	case err == nil:
 		return string(latestBytes), nil
 	default:
