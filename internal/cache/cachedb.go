@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/proto"
+	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/safe"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -84,6 +85,10 @@ func (sdb *StreamDB) GetStream(ctx context.Context, repo *gitalypb.Repository, r
 		return nil, err
 	}
 
+	grpc_logrus.Extract(ctx).
+		WithField("stream_path", respPath).
+		Info("getting stream")
+
 	respF, err := os.Open(respPath)
 	switch {
 	case os.IsNotExist(err):
@@ -114,6 +119,10 @@ func (sdb *StreamDB) PutStream(ctx context.Context, repo *gitalypb.Repository, r
 	if err != nil {
 		return err
 	}
+
+	grpc_logrus.Extract(ctx).
+		WithField("stream_path", reqPath).
+		Info("putting stream")
 
 	var n int64
 	isWinner := sdb.af.trackFile(reqPath)
