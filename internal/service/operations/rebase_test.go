@@ -146,6 +146,10 @@ func TestFailedRebaseUserRebaseConfirmableRequestDueToInvalidHeader(t *testing.T
 			desc: "empty RemoteBranch",
 			req:  buildHeaderRequest(testRepo, rebaseUser, "1", branchName, branchSha, testRepoCopy, ""),
 		},
+		{
+			desc: "invalid branch name",
+			req:  buildHeaderRequest(testRepo, rebaseUser, "1", branchName, branchSha, testRepoCopy, "+dev:master"),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -616,6 +620,19 @@ func TestFailedUserRebaseRequestDueToValidations(t *testing.T) {
 				BranchSha:        "38008cb17ce1466d8fec2dfa6f6ab8dcfe5cf49e",
 				RemoteRepository: testRepoCopy,
 				RemoteBranch:     nil,
+			},
+			code: codes.InvalidArgument,
+		},
+		{
+			desc: "invalid remote branch",
+			request: &gitalypb.UserRebaseRequest{
+				Repository:       testRepo,
+				User:             rebaseUser,
+				RebaseId:         "1",
+				Branch:           []byte("some-branch"),
+				BranchSha:        "38008cb17ce1466d8fec2dfa6f6ab8dcfe5cf49e",
+				RemoteRepository: testRepoCopy,
+				RemoteBranch:     []byte("+dev:master"),
 			},
 			code: codes.InvalidArgument,
 		},

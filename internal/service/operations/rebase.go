@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -77,6 +78,9 @@ func (s *server) userRebaseConfirmable(stream gitalypb.OperationService_UserReba
 	)
 }
 
+// ErrInvalidBranch indicates a branch name is invalid
+var ErrInvalidBranch = errors.New("invalid branch name")
+
 func validateUserRebaseConfirmableHeader(header *gitalypb.UserRebaseConfirmableRequest_Header) error {
 	if header.GetRepository() == nil {
 		return errors.New("empty Repository")
@@ -104,6 +108,10 @@ func validateUserRebaseConfirmableHeader(header *gitalypb.UserRebaseConfirmableR
 
 	if header.GetRemoteBranch() == nil {
 		return errors.New("empty RemoteBranch")
+	}
+
+	if err := git.ValidateRevision(header.GetRemoteBranch()); err != nil {
+		return ErrInvalidBranch
 	}
 
 	return nil
@@ -156,6 +164,10 @@ func validateUserRebaseRequest(req *gitalypb.UserRebaseRequest) error {
 
 	if req.GetRemoteBranch() == nil {
 		return errors.New("empty RemoteBranch")
+	}
+
+	if err := git.ValidateRevision(req.GetRemoteBranch()); err != nil {
+		return ErrInvalidBranch
 	}
 
 	return nil
