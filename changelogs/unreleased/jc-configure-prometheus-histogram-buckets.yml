@@ -1,5 +1,0 @@
----
-title: Move prometheus config to its own package
-merge_request: 1676
-author:
-type: other

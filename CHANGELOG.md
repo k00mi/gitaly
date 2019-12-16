@@ -1,5 +1,50 @@
 # Gitaly changelog
 
+## v1.76.0
+
+#### Added
+- ReplicateRepository RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1605
+- add signature type to GitCommit
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1635
+  Contributed by bufferoverflow
+
+#### Deprecated
+- PreFetch: remove unused RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1675
+- Upgrade to Git 2.24
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1653
+
+#### Fixed
+- Fix forking with custom CA in RPC CreateFork
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1658
+
+#### Other
+- Start up log messages are now using structured logging too
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1674
+- Log an error if praefect's server info fails to connect to a node
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1651
+- Update msgpack-ruby to v1.3.1
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1677
+- Log all diskcache state changes and stream access
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1682
+- Move prometheus config to its own package
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1676
+- Remove ruby script approach to GetAllLFSPointers
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1695
+- StreamDirector returns StreamParams
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1679
+- Move bootstrap env vars into bootstrap constructor
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1670
+
+#### Performance
+- Filter collection of SHAs which has signatures and return those SHAs: go implementation
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1672
+
+#### Security
+- Update loofah gem to v2.3.1
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1678
+
 ## v1.75.0
 
 #### Changed
