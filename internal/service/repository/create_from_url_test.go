@@ -1,10 +1,19 @@
 package repository
 
 import (
+	"encoding/base64"
+	"fmt"
 	"io/ioutil"
+	"net"
+	"net/http"
+	"net/http/cgi"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 	"testing"
+
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -28,9 +37,17 @@ func TestSuccessfulCreateRepositoryFromURLRequest(t *testing.T) {
 		StorageName:  testhelper.DefaultStorageName,
 	}
 
+	_, testRepoPath, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	user := "username123"
+	password := "password321localhost"
+	port := gitServerWithBasicAuth(t, user, password, testRepoPath)
+	url := fmt.Sprintf("http://%s:%s@localhost:%d/%s", user, password, port, filepath.Base(testRepoPath))
+
 	req := &gitalypb.CreateRepositoryFromURLRequest{
 		Repository: importedRepo,
-		Url:        "https://gitlab.com/gitlab-org/gitlab-test.git",
+		Url:        url,
 	}
 
 	_, err := client.CreateRepositoryFromURL(ctx, req)
@@ -48,6 +65,36 @@ func TestSuccessfulCreateRepositoryFromURLRequest(t *testing.T) {
 	info, err := os.Lstat(path.Join(importedRepoPath, "hooks"))
 	require.NoError(t, err)
 	require.NotEqual(t, 0, info.Mode()&os.ModeSymlink)
+}
+
+func TestCloneRepositoryFromUrlCommand(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	userInfo := "username:password"
+	repositoryFullPath := "full/path/to/repository"
+	url := fmt.Sprintf("https://%s@www.example.com/secretrepo.git", userInfo)
+
+	cmd, err := cloneFromURLCommand(ctx, url, repositoryFullPath)
+	require.NoError(t, err)
+
+	expectedScrubbedURL := "https://www.example.com/secretrepo.git"
+	expectedBasicAuthHeader := fmt.Sprintf("Authorization: Basic %s", base64.StdEncoding.EncodeToString([]byte(userInfo)))
+	expectedHeader := fmt.Sprintf("http.%s.extraHeader=%s", expectedScrubbedURL, expectedBasicAuthHeader)
+
+	var urlFound, headerFound bool
+	for _, arg := range cmd.Args() {
+		require.False(t, strings.Contains(arg, userInfo), "username and password should be scrubbed")
+		if arg == expectedScrubbedURL {
+			urlFound = true
+		}
+		if arg == expectedHeader {
+			headerFound = true
+		}
+	}
+
+	require.True(t, urlFound)
+	require.True(t, headerFound)
 }
 
 func TestFailedCreateRepositoryFromURLRequestDueToExistingTarget(t *testing.T) {
@@ -134,4 +181,37 @@ func TestPreventingRedirect(t *testing.T) {
 	require.False(t, httpServerState.serverVisitedAfterRedirect, "git command should not follow HTTP redirection")
 
 	require.Error(t, err)
+}
+
+func gitServerWithBasicAuth(t testing.TB, user, pass, repoPath string) int {
+	f, err := os.Create(filepath.Join(repoPath, "git-daemon-export-ok"))
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+
+	listener, err := net.Listen("tcp", ":0")
+	require.NoError(t, err)
+
+	s := http.Server{
+		Handler: basicAuthMiddleware(t, user, pass, &cgi.Handler{
+			Path: config.Config.Git.BinPath,
+			Dir:  "/",
+			Args: []string{"http-backend"},
+			Env: []string{
+				"GIT_PROJECT_ROOT=" + filepath.Dir(repoPath),
+			},
+		}),
+	}
+	go s.Serve(listener)
+
+	return listener.Addr().(*net.TCPAddr).Port
+}
+
+func basicAuthMiddleware(t testing.TB, user, pass string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authUser, authPass, ok := r.BasicAuth()
+		require.True(t, ok, "should contain basic auth")
+		require.Equal(t, user, authUser, "username should match")
+		require.Equal(t, pass, authPass, "password should match")
+		next.ServeHTTP(w, r)
+	})
 }
