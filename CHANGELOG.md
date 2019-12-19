@@ -1,5 +1,25 @@
 # Gitaly changelog
 
+## v1.77.0
+
+#### Changed
+- Add author to FindCommits
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1702
+- Remove get_tag_messages_go feature flag
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1698
+
+#### Fixed
+- Add back feature flag for cache invalidation
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1706
+
+#### Other
+- Sync info attributes in ReplicateRepository
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1693
+
+#### Security
+- Upgrade Rugged to v0.28.4.1
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1701
+
 ## v1.76.0
 
 #### Added
