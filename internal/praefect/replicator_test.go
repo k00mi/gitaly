@@ -141,7 +141,7 @@ func TestProcessReplicationJob(t *testing.T) {
 
 	testhelper.MustRunCommand(t, nil, "git", "-C", replicatedPath, "cat-file", "-e", commitID)
 	testhelper.MustRunCommand(t, nil, "git", "-C", replicatedPath, "gc")
-	require.Less(t, testhelper.GetGitObjectDirSize(t, replicatedPath), int64(100), "expect a small object directory")
+	require.Less(t, testhelper.GetGitPackfileDirSize(t, replicatedPath), int64(100), "expect a small pack directory")
 
 	require.Equal(t, 1, mockReplicationGauge.IncsCalled())
 	require.Equal(t, 1, mockReplicationGauge.DecsCalled())

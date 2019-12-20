@@ -566,7 +566,16 @@ type Cleanup func()
 
 // GetGitObjectDirSize gets the number of 1k blocks of a git object directory
 func GetGitObjectDirSize(t *testing.T, repoPath string) int64 {
-	cmd := exec.Command("du", "-s", "-k", filepath.Join(repoPath, "objects"))
+	return getGitDirSize(t, repoPath, "objects")
+}
+
+// GetGitPackfileDirSize gets the number of 1k blocks of a git object directory
+func GetGitPackfileDirSize(t *testing.T, repoPath string) int64 {
+	return getGitDirSize(t, repoPath, "objects", "pack")
+}
+
+func getGitDirSize(t *testing.T, repoPath string, subdirs ...string) int64 {
+	cmd := exec.Command("du", "-s", "-k", filepath.Join(append([]string{repoPath}, subdirs...)...))
 	output, err := cmd.Output()
 	require.NoError(t, err)
 	if len(output) < 2 {
