@@ -4,19 +4,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
+	"github.com/BurntSushi/toml"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
-	"gitlab.com/gitlab-org/gitaly/internal/log"
-	"gopkg.in/yaml.v2"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
+	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
+	gitalylog "gitlab.com/gitlab-org/gitaly/internal/log"
 )
 
 func main() {
-	var logger = log.NewHookLogger()
+	var logger = gitalylog.NewHookLogger()
 
 	if len(os.Args) < 2 {
 		logger.Fatal(errors.New("requires hook name"))
@@ -27,21 +28,20 @@ func main() {
 	if subCmd == "check" {
 		configPath := os.Args[2]
 
-		if err := checkGitlabAccess(configPath); err != nil {
-			os.Stderr.WriteString(err.Error())
-			os.Exit(1)
+		status, err := check(configPath)
+		if err != nil {
+			log.Fatal(err)
 		}
 
-		os.Stdout.WriteString("OK")
-		os.Exit(0)
+		os.Exit(status)
 	}
 
-	gitlabRubyDir := os.Getenv("GITALY_RUBY_DIR")
-	if gitlabRubyDir == "" {
+	gitalyRubyDir := os.Getenv("GITALY_RUBY_DIR")
+	if gitalyRubyDir == "" {
 		logger.Fatal(errors.New("GITALY_RUBY_DIR not set"))
 	}
 
-	rubyHookPath := filepath.Join(gitlabRubyDir, "gitlab-shell", "hooks", subCmd)
+	rubyHookPath := filepath.Join(gitalyRubyDir, "gitlab-shell", "hooks", subCmd)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -85,36 +85,31 @@ type HTTPSettings struct {
 	Password string `yaml:"password"`
 }
 
-func checkGitlabAccess(configPath string) error {
+func check(configPath string) (int, error) {
 	cfgFile, err := os.Open(configPath)
 	if err != nil {
-		return fmt.Errorf("error when opening config file: %v", err)
+		return 1, fmt.Errorf("error when opening config file: %v", err)
 	}
 	defer cfgFile.Close()
 
-	config := GitlabShellConfig{}
+	var c config.Cfg
 
-	if err := yaml.NewDecoder(cfgFile).Decode(&config); err != nil {
-		return fmt.Errorf("load toml: %v", err)
+	if _, err := toml.DecodeReader(cfgFile, &c); err != nil {
+		fmt.Println(err)
+		return 1, err
 	}
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/api/v4/internal/check", strings.TrimRight(config.GitlabURL, "/")), nil)
-	if err != nil {
-		return fmt.Errorf("could not create request for %s: %v", config.GitlabURL, err)
+	cmd := exec.Command(filepath.Join(c.GitlabShell.Dir, "bin", "check"))
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = append(os.Environ(), gitlabshell.EnvFromConfig(c)...)
+
+	if err = cmd.Run(); err != nil {
+		if status, ok := command.ExitStatus(err); ok {
+			return status, nil
+		}
+		return 1, err
 	}
 
-	req.SetBasicAuth(config.HTTPSettings.User, config.HTTPSettings.Password)
-
-	client := &http.Client{}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("error with request for %s: %v", config.GitlabURL, err)
-	}
-
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("FAILED. code: %d", resp.StatusCode)
-	}
-
-	return nil
+	return 0, nil
 }

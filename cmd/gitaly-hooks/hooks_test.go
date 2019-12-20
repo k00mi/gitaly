@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -14,7 +13,6 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -190,7 +188,19 @@ func TestCheckOK(t *testing.T) {
 		os.RemoveAll(tempDir)
 	}()
 
-	configPath := writeTemporaryConfigFile(t, tempDir, GitlabShellConfig{GitlabURL: ts.URL, HTTPSettings: HTTPSettings{User: user, Password: password}})
+	gitlabShellDir := filepath.Join(tempDir, "gitlab-shell")
+	binDir := filepath.Join(gitlabShellDir, "bin")
+	require.NoError(t, os.MkdirAll(gitlabShellDir, 0755))
+	require.NoError(t, os.MkdirAll(binDir, 0755))
+	cwd, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Symlink(filepath.Join(cwd, "../../ruby/gitlab-shell/bin/check"), filepath.Join(binDir, "check")))
+
+	writeShellSecretFile(t, gitlabShellDir, "the secret")
+	writeTemporaryConfigFile(t, gitlabShellDir, GitlabShellConfig{GitlabURL: ts.URL, HTTPSettings: HTTPSettings{User: user, Password: password}})
+
+	configPath, cleanup := writeTemporaryGitalyConfigFile(t, tempDir)
+	defer cleanup()
 
 	cmd := exec.Command(fmt.Sprintf("%s/gitaly-hooks", config.Config.BinDir), "check", configPath)
 
@@ -200,7 +210,8 @@ func TestCheckOK(t *testing.T) {
 
 	require.NoError(t, cmd.Run())
 	require.Empty(t, stderr.String())
-	require.Equal(t, "OK", stdout.String())
+	expectedCheckOutput := "Check GitLab API access: OK\nRedis available via internal API: OK\n"
+	require.Equal(t, expectedCheckOutput, stdout.String())
 }
 
 func TestCheckBadCreds(t *testing.T) {
@@ -215,7 +226,19 @@ func TestCheckBadCreds(t *testing.T) {
 		os.RemoveAll(tempDir)
 	}()
 
-	configPath := writeTemporaryConfigFile(t, tempDir, GitlabShellConfig{GitlabURL: ts.URL, HTTPSettings: HTTPSettings{User: user + "wrong", Password: password}})
+	gitlabShellDir := filepath.Join(tempDir, "gitlab-shell")
+	binDir := filepath.Join(gitlabShellDir, "bin")
+	require.NoError(t, os.MkdirAll(gitlabShellDir, 0755))
+	require.NoError(t, os.MkdirAll(binDir, 0755))
+	cwd, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Symlink(filepath.Join(cwd, "../../ruby/gitlab-shell/bin/check"), filepath.Join(binDir, "check")))
+
+	writeTemporaryConfigFile(t, gitlabShellDir, GitlabShellConfig{GitlabURL: ts.URL, HTTPSettings: HTTPSettings{User: user + "wrong", Password: password}})
+	writeShellSecretFile(t, gitlabShellDir, "the secret")
+
+	configPath, cleanup := writeTemporaryGitalyConfigFile(t, tempDir)
+	defer cleanup()
 
 	cmd := exec.Command(fmt.Sprintf("%s/gitaly-hooks", config.Config.BinDir), "check", configPath)
 
@@ -224,8 +247,8 @@ func TestCheckBadCreds(t *testing.T) {
 	cmd.Stdout = &stdout
 
 	require.Error(t, cmd.Run())
-	require.Equal(t, "FAILED. code: 401", stderr.String())
-	require.Empty(t, stdout.String())
+	require.Equal(t, "Check GitLab API access: ", stdout.String())
+	require.Equal(t, "FAILED. code: 401\n", stderr.String())
 }
 
 func handleAllowed(t *testing.T, secretToken string, key int, glRepository, changes string) func(w http.ResponseWriter, r *http.Request) {
@@ -280,21 +303,13 @@ func handlePostReceive(t *testing.T, secretToken string, key int, glRepository, 
 
 func handleCheck(t *testing.T, user, password string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		auth := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
-
-		if len(auth) != 2 || auth[0] != "Basic" {
+		u, p, ok := r.BasicAuth()
+		if !ok || u != user || p != password {
 			http.Error(w, "authorization failed", http.StatusUnauthorized)
 			return
 		}
 
-		payload, _ := base64.StdEncoding.DecodeString(auth[1])
-		pair := strings.SplitN(string(payload), ":", 2)
-
-		if pair[0] != user || pair[1] != password {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-
+		w.Write([]byte(`{"redis": true}`))
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -330,6 +345,19 @@ func writeTemporaryConfigFile(t *testing.T, dir string, config GitlabShellConfig
 	require.NoError(t, ioutil.WriteFile(path, out, 0644))
 
 	return path
+}
+
+func writeTemporaryGitalyConfigFile(t *testing.T, tempDir string) (string, func()) {
+	path := filepath.Join(tempDir, "config.toml")
+	contents := fmt.Sprintf(`
+[gitlab-shell]
+  dir = "%s/gitlab-shell"
+`, tempDir)
+	require.NoError(t, ioutil.WriteFile(path, []byte(contents), 0644))
+
+	return path, func() {
+		os.RemoveAll(path)
+	}
 }
 
 func env(t *testing.T, glRepo, gitlabShellDir string, key int) []string {
