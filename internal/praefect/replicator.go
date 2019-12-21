@@ -5,53 +5,16 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc"
-
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/conn"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/metrics"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/models"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
+	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
 )
-
-var (
-	replicationLatency = prometheus.NewHistogram(
-		prometheus.HistogramOpts{
-			Namespace: "gitaly",
-			Subsystem: "praefect",
-			Name:      "replication_latency",
-			Buckets:   prometheus.LinearBuckets(0, 100, 100),
-		},
-	)
-
-	replicationJobsInFlight = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Namespace: "gitaly",
-			Subsystem: "praefect",
-			Name:      "replication_jobs",
-		},
-	)
-
-	recordReplicationLatency = func(d float64) {
-		go replicationLatency.Observe(d)
-	}
-
-	incReplicationJobsInFlight = func() {
-		go replicationJobsInFlight.Inc()
-	}
-
-	decReplicationJobsInFlight = func() {
-		go replicationJobsInFlight.Dec()
-	}
-)
-
-func init() {
-	prometheus.MustRegister(replicationLatency)
-	prometheus.MustRegister(replicationJobsInFlight)
-}
 
 // Replicator performs the actual replication logic between two nodes
 type Replicator interface {
@@ -315,8 +278,8 @@ func (r ReplMgr) processReplJob(ctx context.Context, job datastore.ReplJob) {
 	}
 
 	replStart := time.Now()
-	incReplicationJobsInFlight()
-	defer decReplicationJobsInFlight()
+	metrics.IncReplicationJobsInFlight()
+	defer metrics.DecReplicationJobsInFlight()
 
 	switch job.Change {
 	case datastore.UpdateRepo:
@@ -332,7 +295,7 @@ func (r ReplMgr) processReplJob(ctx context.Context, job datastore.ReplJob) {
 	}
 
 	replDuration := time.Since(replStart)
-	recordReplicationLatency(float64(replDuration / time.Millisecond))
+	metrics.RecordReplicationLatency(float64(replDuration / time.Millisecond))
 
 	if err := r.datastore.UpdateReplJob(job.ID, datastore.JobStateComplete); err != nil {
 		l.WithError(err).Error("error when updating replication job status to complete")

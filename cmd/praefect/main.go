@@ -17,6 +17,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/conn"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/metrics"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	"gitlab.com/gitlab-org/gitaly/internal/version"
 	"gitlab.com/gitlab-org/labkit/monitoring"
@@ -85,6 +86,8 @@ func configure() (config.Config, error) {
 	if conf.PrometheusListenAddr != "" {
 		logger.WithField("address", conf.PrometheusListenAddr).Info("Starting prometheus listener")
 		conf.Prometheus.Configure()
+
+		metrics.Register(conf.Prometheus)
 
 		go func() {
 			if err := monitoring.Serve(
