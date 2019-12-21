@@ -87,8 +87,6 @@ func configure() (config.Config, error) {
 		logger.WithField("address", conf.PrometheusListenAddr).Info("Starting prometheus listener")
 		conf.Prometheus.Configure()
 
-		metrics.Register(conf.Prometheus)
-
 		go func() {
 			if err := monitoring.Serve(
 				monitoring.WithListenerAddress(conf.PrometheusListenAddr),
@@ -119,11 +117,27 @@ func run(cfgs []starter.Config, conf config.Config) error {
 		}
 	}
 
+	latencyMetric, err := metrics.RegisterReplicationLatency(conf.Prometheus)
+	if err != nil {
+		return err
+	}
+
+	queueMetric, err := metrics.RegisterReplicationJobsInFlight()
+	if err != nil {
+		return err
+	}
+
 	var (
 		// top level server dependencies
-		ds           = datastore.NewInMemory(conf)
-		coordinator  = praefect.NewCoordinator(logger, ds, clientConnections, conf, protoregistry.GitalyProtoFileDescriptors...)
-		repl         = praefect.NewReplMgr("default", logger, ds, clientConnections)
+		ds          = datastore.NewInMemory(conf)
+		coordinator = praefect.NewCoordinator(logger, ds, clientConnections, conf, protoregistry.GitalyProtoFileDescriptors...)
+		repl        = praefect.NewReplMgr(
+			"default",
+			logger,
+			ds,
+			clientConnections,
+			praefect.WithLatencyMetric(latencyMetric),
+			praefect.WithQueueMetric(queueMetric))
 		srv          = praefect.NewServer(coordinator, repl, nil, logger, clientConnections, conf)
 		serverErrors = make(chan error, 1)
 	)
