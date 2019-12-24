@@ -1,5 +1,11 @@
 # Gitaly changelog
 
+## vv1.78.0
+
+#### Changed
+- Use ReplicateRepository in replicator
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1713
+
 ## v1.77.0
 
 #### Changed
