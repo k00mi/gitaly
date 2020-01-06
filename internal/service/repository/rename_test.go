@@ -21,7 +21,7 @@ func TestRenameRepositorySuccess(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	tempDir, cleanupTempDir := testhelper.TempDir(t, "", t.Name())
+	tempDir, cleanupTempDir := testhelper.TempDir(t, t.Name())
 	defer cleanupTempDir()
 
 	destinationPath := filepath.Join(tempDir, "a", "new", "location")
