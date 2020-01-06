@@ -72,6 +72,12 @@ module Gitlab
       def committer_hash(email:, name:)
         return if email.nil? || name.nil?
 
+        # Git strips newlines and angle brackets silently.
+        # libgit2/Rugged doesn't, but aborts if angle brackets are present.
+        # See upstream issue https://github.com/libgit2/libgit2/issues/5342
+        email = email.delete("\n<>")
+        name = name.delete("\n<>")
+
         {
           email: email,
           name: name,

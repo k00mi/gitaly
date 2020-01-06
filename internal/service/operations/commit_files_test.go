@@ -332,6 +332,63 @@ func TestSuccessfulUserCommitFilesRequestStartShaRemoteRepository(t *testing.T) 
 	require.Equal(t, newTargetBranchCommit.ParentIds, []string{startCommit.Id})
 }
 
+func TestSuccessfulUserCommitFilesRequestWithSpecialCharactersInSignature(t *testing.T) {
+	server, serverSocketPath := runFullServer(t)
+	defer server.Stop()
+
+	client, conn := operations.NewOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.InitBareRepo(t)
+	defer cleanupFn()
+
+	ctxOuter, cancel := testhelper.Context()
+	defer cancel()
+
+	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
+	targetBranchName := "master"
+
+	testCases := []struct {
+		desc   string
+		user   *gitalypb.User
+		author *gitalypb.CommitAuthor // expected value
+	}{
+		{
+			desc:   "special characters at start and end",
+			user:   &gitalypb.User{Name: []byte(".,:;<>\"'\nJane Doe.,:;<>'\"\n"), Email: []byte(".,:;<>'\"\njanedoe@gitlab.com.,:;<>'\"\n")},
+			author: &gitalypb.CommitAuthor{Name: []byte("Jane Doe"), Email: []byte("janedoe@gitlab.com")},
+		},
+		{
+			desc:   "special characters in the middle",
+			user:   &gitalypb.User{Name: []byte("Ja<ne\n D>oe"), Email: []byte("ja<ne\ndoe>@gitlab.com")},
+			author: &gitalypb.CommitAuthor{Name: []byte("Jane Doe"), Email: []byte("janedoe@gitlab.com")},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			ctx := metadata.NewOutgoingContext(ctxOuter, md)
+			headerRequest := headerRequest(testRepo, tc.user, targetBranchName, commitFilesMessage)
+			setAuthorAndEmail(headerRequest, tc.user.Name, tc.user.Email)
+
+			stream, err := client.UserCommitFiles(ctx)
+			require.NoError(t, err)
+			require.NoError(t, stream.Send(headerRequest))
+
+			_, err = stream.CloseAndRecv()
+			require.NoError(t, err)
+
+			newCommit, err := log.GetCommit(ctxOuter, testRepo, targetBranchName)
+			require.NoError(t, err)
+
+			require.Equal(t, tc.author.Name, newCommit.Author.Name, "author name")
+			require.Equal(t, tc.author.Email, newCommit.Author.Email, "author email")
+			require.Equal(t, tc.author.Name, newCommit.Committer.Name, "committer name")
+			require.Equal(t, tc.author.Email, newCommit.Committer.Email, "committer email")
+		})
+	}
+}
+
 func TestFailedUserCommitFilesRequestDueToHooks(t *testing.T) {
 	server, serverSocketPath := runFullServer(t)
 	defer server.Stop()
@@ -486,6 +543,26 @@ func TestFailedUserCommitFilesRequest(t *testing.T) {
 		{
 			desc: "invalid commit ID: \"foobar\"",
 			req:  setStartSha(headerRequest(testRepo, user, branchName, commitFilesMessage), "foobar"),
+		},
+		{
+			desc: "failed to parse signature - Signature cannot have an empty name or email",
+			req:  headerRequest(testRepo, &gitalypb.User{}, branchName, commitFilesMessage),
+		},
+		{
+			desc: "failed to parse signature - Signature cannot have an empty name or email",
+			req:  headerRequest(testRepo, &gitalypb.User{Name: []byte(""), Email: []byte("")}, branchName, commitFilesMessage),
+		},
+		{
+			desc: "failed to parse signature - Signature cannot have an empty name or email",
+			req:  headerRequest(testRepo, &gitalypb.User{Name: []byte(" "), Email: []byte(" ")}, branchName, commitFilesMessage),
+		},
+		{
+			desc: "failed to parse signature - Signature cannot have an empty name or email",
+			req:  headerRequest(testRepo, &gitalypb.User{Name: []byte("Jane Doe"), Email: []byte("")}, branchName, commitFilesMessage),
+		},
+		{
+			desc: "failed to parse signature - Signature cannot have an empty name or email",
+			req:  headerRequest(testRepo, &gitalypb.User{Name: []byte(""), Email: []byte("janedoe@gitlab.com")}, branchName, commitFilesMessage),
 		},
 	}
 
