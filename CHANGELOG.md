@@ -1,5 +1,27 @@
 # Gitaly changelog
 
+## v1.79.0
+
+#### Changed
+- praefect replicator links object pool if it exists
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1718
+- Use configurable buckets for praefect replication metrics
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1719
+
+#### Fixed
+- Strip invalid characters in signatures on commit
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1709
+
+#### Other
+- Fix order of branches in git diff when preparing sparse checkout rebase
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1716
+- Fix call to testhelper.TempDir
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1730
+- Upgrade Nokogiri to 1.10.7
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1731
+- Bump Ruby to 2.6.5
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1727
+
 ## v1.78.0
 
 

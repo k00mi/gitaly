@@ -1,5 +1,0 @@
----
-title: Strip invalid characters in signatures on commit
-merge_request: 1709
-author:
-type: fixed
