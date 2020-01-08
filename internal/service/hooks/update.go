@@ -42,7 +42,7 @@ func (s *server) UpdateHook(in *gitalypb.UpdateHookRequest, stream gitalypb.Hook
 		return helper.ErrInternal(err)
 	}
 
-	if err := stream.SendMsg(&gitalypb.PreReceiveHookResponse{
+	if err := stream.SendMsg(&gitalypb.UpdateHookResponse{
 		ExitStatus: &gitalypb.ExitStatus{Value: status},
 	}); err != nil {
 		return helper.ErrInternal(err)
