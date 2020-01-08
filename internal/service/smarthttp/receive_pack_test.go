@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"os"
 	"path"
 	"path/filepath"
@@ -18,10 +19,14 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
+	hook "gitlab.com/gitlab-org/gitaly/internal/service/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/reflection"
 )
 
 func TestSuccessfulReceivePackRequest(t *testing.T) {
@@ -327,13 +332,29 @@ func TestInvalidTimezone(t *testing.T) {
 	testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "show", commit)
 }
 
-func TestPostReceivePackToHooks(t *testing.T) {
+func drainPostReceivePackResponse(stream gitalypb.SmartHTTPService_PostReceivePackClient) error {
+	var err error
+	for err == nil {
+		_, err = stream.Recv()
+	}
+	return err
+}
+
+func TestPostReceivePackToHooks_WithRPC(t *testing.T) {
+	testPostReceivePackToHooks(t, true)
+}
+
+func TestPostReceivePackToHooks_WithoutRPC(t *testing.T) {
+	testPostReceivePackToHooks(t, false)
+}
+
+func testPostReceivePackToHooks(t *testing.T, callRPC bool) {
 	secretToken := "secret token"
 	glRepository := "some_repo"
 	glID := "key-123"
 
-	socket, stop := runSmartHTTPServer(t)
-	defer stop()
+	server, socket := runSmartHTTPHookServiceServer(t)
+	defer server.Stop()
 
 	client, conn := newSmartHTTPClient(t, "unix://"+socket)
 	defer conn.Close()
@@ -341,12 +362,15 @@ func TestPostReceivePackToHooks(t *testing.T) {
 	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
 	defer cleanup()
 
-	gitlabShellDir := config.Config.GitlabShell.Dir
-	defer func() {
+	defer func(gitlabShellDir string) {
 		config.Config.GitlabShell.Dir = gitlabShellDir
-	}()
-
+	}(config.Config.GitlabShell.Dir)
 	config.Config.GitlabShell.Dir = tempGitlabShellDir
+
+	defer func(override string) {
+		hooks.Override = override
+	}(hooks.Override)
+	hooks.Override = ""
 
 	repo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
@@ -385,6 +409,10 @@ func TestPostReceivePackToHooks(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	if callRPC {
+		ctx = featureflag.OutgoingCtxWithFeatureFlag(ctx, featureflag.HooksRPC)
+	}
+
 	stream, err := client.PostReceivePack(ctx)
 	require.NoError(t, err)
 
@@ -398,12 +426,28 @@ func TestPostReceivePackToHooks(t *testing.T) {
 
 	expectedResponse := "0030\x01000eunpack ok\n0019ok refs/heads/master\n00000000"
 	require.Equal(t, expectedResponse, string(response), "Expected response to be %q, got %q", expectedResponse, response)
+	require.Error(t, drainPostReceivePackResponse(stream), io.EOF)
 }
 
-func drainPostReceivePackResponse(stream gitalypb.SmartHTTPService_PostReceivePackClient) error {
-	var err error
-	for err == nil {
-		_, err = stream.Recv()
+func runSmartHTTPHookServiceServer(t *testing.T) (*grpc.Server, string) {
+	server := testhelper.NewTestGrpcServer(t, nil, nil)
+
+	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
+	listener, err := net.Listen("unix", serverSocketPath)
+	if err != nil {
+		t.Fatal(err)
 	}
-	return err
+	internalListener, err := net.Listen("unix", config.GitalyInternalSocketPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	gitalypb.RegisterSmartHTTPServiceServer(server, NewServer())
+	gitalypb.RegisterHookServiceServer(server, hook.NewServer())
+	reflection.Register(server)
+
+	go server.Serve(listener)
+	go server.Serve(internalListener)
+
+	return server, "unix://" + serverSocketPath
 }

@@ -67,7 +67,7 @@ func TestPostReceive(t *testing.T) {
 			stdin: bytes.NewBufferString("a\nb\nc\nd\ne\nf\ng"),
 			req: gitalypb.PostReceiveHookRequest{
 				Repository:           testRepo,
-				EnvironmentVariables: []string{"GL_ID=key_id", "GL_USERNAME=username", "GL_PROTOCOL=protocol"},
+				EnvironmentVariables: []string{"GL_ID=key_id", "GL_USERNAME=username", "GL_PROTOCOL=protocol", "GL_REPOSITORY=repository"},
 				GitPushOptions:       []string{"option0", "option1"}},
 			status: 0,
 			stdout: "OK",
@@ -78,7 +78,7 @@ func TestPostReceive(t *testing.T) {
 			stdin: bytes.NewBuffer(nil),
 			req: gitalypb.PostReceiveHookRequest{
 				Repository:           testRepo,
-				EnvironmentVariables: []string{"GL_ID=key_id", "GL_USERNAME=username", "GL_PROTOCOL=protocol"},
+				EnvironmentVariables: []string{"GL_ID=key_id", "GL_USERNAME=username", "GL_PROTOCOL=protocol", "GL_REPOSITORY=repository"},
 				GitPushOptions:       []string{"option0"},
 			},
 			status: 1,
@@ -90,7 +90,7 @@ func TestPostReceive(t *testing.T) {
 			stdin: bytes.NewBufferString("a\nb\nc\nd\ne\nf\ng"),
 			req: gitalypb.PostReceiveHookRequest{
 				Repository:           testRepo,
-				EnvironmentVariables: []string{"GL_ID=", "GL_USERNAME=username", "GL_PROTOCOL=protocol"},
+				EnvironmentVariables: []string{"GL_ID=", "GL_USERNAME=username", "GL_PROTOCOL=protocol", "GL_REPOSITORY=repository"},
 				GitPushOptions:       []string{"option0"},
 			},
 			status: 1,
@@ -102,7 +102,7 @@ func TestPostReceive(t *testing.T) {
 			stdin: bytes.NewBufferString("a\nb\nc\nd\ne\nf\ng"),
 			req: gitalypb.PostReceiveHookRequest{
 				Repository:           testRepo,
-				EnvironmentVariables: []string{"GL_ID=key-123", "GL_USERNAME=", "GL_PROTOCOL=protocol"},
+				EnvironmentVariables: []string{"GL_ID=key-123", "GL_USERNAME=", "GL_PROTOCOL=protocol", "GL_REPOSITORY=repository"},
 				GitPushOptions:       []string{"option0"},
 			},
 			status: 1,
@@ -114,7 +114,7 @@ func TestPostReceive(t *testing.T) {
 			stdin: bytes.NewBufferString("a\nb\nc\nd\ne\nf\ng"),
 			req: gitalypb.PostReceiveHookRequest{
 				Repository:           testRepo,
-				EnvironmentVariables: []string{"GL_ID=key-123", "GL_USERNAME=username", "GL_PROTOCOL="},
+				EnvironmentVariables: []string{"GL_ID=key-123", "GL_USERNAME=username", "GL_PROTOCOL=", "GL_REPOSITORY=repository"},
 				GitPushOptions:       []string{"option0"},
 			},
 			status: 1,
@@ -125,12 +125,8 @@ func TestPostReceive(t *testing.T) {
 			desc:  "missing gl_repository value",
 			stdin: bytes.NewBufferString("a\nb\nc\nd\ne\nf\ng"),
 			req: gitalypb.PostReceiveHookRequest{
-				Repository: &gitalypb.Repository{
-					StorageName:  testRepo.GetStorageName(),
-					RelativePath: testRepo.GetRelativePath(),
-					GlRepository: "",
-				},
-				EnvironmentVariables: []string{"GL_ID=key-123", "GL_USERNAME=username", "GL_PROTOCOL=protocol"},
+				Repository:           testRepo,
+				EnvironmentVariables: []string{"GL_ID=key-123", "GL_USERNAME=username", "GL_PROTOCOL=protocol", "GL_REPOSITORY="},
 				GitPushOptions:       []string{"option0"},
 			},
 			status: 1,
@@ -142,7 +138,7 @@ func TestPostReceive(t *testing.T) {
 			stdin: bytes.NewBufferString("a\nb\nc\nd\ne\nf\ng"),
 			req: gitalypb.PostReceiveHookRequest{
 				Repository:           testRepo,
-				EnvironmentVariables: []string{"GL_ID=key-123", "GL_USERNAME=username", "GL_PROTOCOL=protocol"},
+				EnvironmentVariables: []string{"GL_ID=key-123", "GL_USERNAME=username", "GL_PROTOCOL=protocol", "GL_REPOSITORY=repository"},
 			},
 			status: 1,
 			stdout: "",

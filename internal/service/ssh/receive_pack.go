@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -53,7 +54,11 @@ func sshReceivePack(stream gitalypb.SSHService_SSHReceivePackServer, req *gitaly
 		return stream.Send(&gitalypb.SSHReceivePackResponse{Stderr: p})
 	})
 
-	env := append(git.HookEnv(req), "GL_PROTOCOL=ssh")
+	hookEnv, err := git.HookEnv(req)
+	if err != nil {
+		return err
+	}
+	env := append(hookEnv, "GL_PROTOCOL=ssh")
 
 	repoPath, err := helper.GetRepoPath(req.Repository)
 	if err != nil {
@@ -93,10 +98,13 @@ func sshReceivePack(stream gitalypb.SSHService_SSHReceivePackServer, req *gitaly
 
 func validateFirstReceivePackRequest(req *gitalypb.SSHReceivePackRequest) error {
 	if req.GlId == "" {
-		return fmt.Errorf("empty GlId")
+		return errors.New("empty GlId")
 	}
 	if req.Stdin != nil {
-		return fmt.Errorf("non-empty data in first request")
+		return errors.New("non-empty data in first request")
+	}
+	if req.Repository == nil {
+		return errors.New("repository is empty")
 	}
 
 	return nil

@@ -7,12 +7,17 @@ import (
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
+// StdoutStderrResponse is an interface for RPC responses that need to stream stderr and stdout
 type StdoutStderrResponse interface {
 	GetExitStatus() *gitalypb.ExitStatus
 	GetStderr() []byte
 	GetStdout() []byte
 }
 
+// Sender is a function that sends input data to the stream
+type Sender func(chan error)
+
+// Handler takes care of sending and receiving to and from the stream
 func Handler(recv func() (StdoutStderrResponse, error), send func(chan error), stdout, stderr io.Writer) (int32, error) {
 	var (
 		exitStatus int32
