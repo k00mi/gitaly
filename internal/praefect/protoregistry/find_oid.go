@@ -17,7 +17,7 @@ const (
 )
 
 // ErrTargetRepoMissing indicates that the target repo is missing or not set
-var ErrTargetRepoMissing = errors.New("target repo is not set")
+var ErrTargetRepoMissing = errors.New("empty Repository")
 
 func reflectFindRepoTarget(pbMsg proto.Message, targetOID []int) (*gitalypb.Repository, error) {
 	msgV, e := reflectFindOID(pbMsg, targetOID)

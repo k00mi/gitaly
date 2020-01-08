@@ -137,6 +137,11 @@ test:proxy:
   script:
     - make test-with-proxies
 
+test:praefect:
+  <<: *test_definition
+  script:
+    - make test-with-praefect
+
 race:
   <<: *go_test_definition
   script:

@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/BurntSushi/toml"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
@@ -32,10 +33,13 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/helper/fieldextractors"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	gitalylog "gitlab.com/gitlab-org/gitaly/internal/log"
+	praefectconfig "gitlab.com/gitlab-org/gitaly/internal/praefect/config"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/models"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
@@ -313,6 +317,121 @@ func GetGitEnvData() (string, error) {
 	return string(gitEnvBytes), nil
 }
 
+// NewTestServer instantiates a new TestServer
+func NewTestServer(srv *grpc.Server) *TestServer {
+	return &TestServer{
+		grpcServer: srv,
+	}
+}
+
+// TestServer wraps a grpc Server and handles automatically putting a praefect in front of a gitaly instance
+// if necessary
+type TestServer struct {
+	grpcServer *grpc.Server
+	socket     string
+	process    *os.Process
+}
+
+// GrpcServer returns the underlying grpc.Server
+func (p *TestServer) GrpcServer() *grpc.Server {
+	return p.grpcServer
+}
+
+// Stop will stop both the grpc server as well as the praefect process
+func (p *TestServer) Stop() {
+	p.grpcServer.Stop()
+	if p.process != nil {
+		p.process.Kill()
+	}
+}
+
+// Socket returns the socket file the test server is listening on
+func (p *TestServer) Socket() string {
+	return p.socket
+}
+
+// Start will start the grpc server as well as spawn a praefect instance if GITALY_TEST_PRAEFECT_BIN is enabled
+func (p *TestServer) Start() error {
+	gitalyServerSocketPath := GetTemporaryGitalySocketFileName()
+
+	listener, err := net.Listen("unix", gitalyServerSocketPath)
+	if err != nil {
+		return err
+	}
+
+	go p.grpcServer.Serve(listener)
+
+	if os.Getenv("GITALY_TEST_PRAEFECT_BIN") == "1" {
+		tempDir, err := ioutil.TempDir("", "praefect-test-server")
+		if err != nil {
+			return err
+		}
+
+		praefectServerSocketPath := GetTemporaryGitalySocketFileName()
+
+		configFilePath := filepath.Join(tempDir, "config.toml")
+		configFile, err := os.Create(configFilePath)
+		if err != nil {
+			return err
+		}
+		defer configFile.Close()
+
+		c := praefectconfig.Config{
+			SocketPath: praefectServerSocketPath,
+			VirtualStorages: []*praefectconfig.VirtualStorage{
+				{
+					Name: "default",
+					Nodes: []*models.Node{
+						{
+							Storage:        "default",
+							Address:        "unix:/" + gitalyServerSocketPath,
+							DefaultPrimary: true,
+						},
+					},
+				},
+			},
+		}
+
+		if err := toml.NewEncoder(configFile).Encode(&c); err != nil {
+			return err
+		}
+
+		cmd := exec.Command(os.Getenv("PRAEFECT_BIN_PATH"), "-config", configFilePath)
+		cmd.Stderr = os.Stderr
+
+		p.socket = praefectServerSocketPath
+
+		go cmd.Run()
+
+		conn, err := grpc.Dial("unix://"+praefectServerSocketPath, grpc.WithInsecure())
+
+		if err != nil {
+			return fmt.Errorf("dial: %v", err)
+		}
+		defer conn.Close()
+
+		client := healthpb.NewHealthClient(conn)
+		ctx, cancel := Context()
+		defer cancel()
+
+		for {
+			resp, err := client.Check(ctx, &healthpb.HealthCheckRequest{})
+			if err == nil && resp.Status == healthpb.HealthCheckResponse_SERVING {
+				break
+			}
+			time.Sleep(1 * time.Microsecond)
+		}
+
+		os.Remove(tempDir)
+		p.process = cmd.Process
+
+		return nil
+	}
+
+	p.socket = gitalyServerSocketPath
+	return nil
+}
+
 // NewTestGrpcServer creates a GRPC Server for testing purposes
 func NewTestGrpcServer(tb testing.TB, streamInterceptors []grpc.StreamServerInterceptor, unaryInterceptors []grpc.UnaryServerInterceptor) *grpc.Server {
 	logger := NewTestLogger(tb)
@@ -329,6 +448,25 @@ func NewTestGrpcServer(tb testing.TB, streamInterceptors []grpc.StreamServerInte
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(streamInterceptors...)),
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(unaryInterceptors...)),
 	)
+}
+
+// NewServer creates a Server for testing purposes
+func NewServer(tb testing.TB, streamInterceptors []grpc.StreamServerInterceptor, unaryInterceptors []grpc.UnaryServerInterceptor) *TestServer {
+	logger := NewTestLogger(tb)
+	logrusEntry := log.NewEntry(logger).WithField("test", tb.Name())
+
+	ctxTagger := grpc_ctxtags.WithFieldExtractorForInitialReq(fieldextractors.FieldExtractor)
+	ctxStreamTagger := grpc_ctxtags.StreamServerInterceptor(ctxTagger)
+	ctxUnaryTagger := grpc_ctxtags.UnaryServerInterceptor(ctxTagger)
+
+	streamInterceptors = append([]grpc.StreamServerInterceptor{ctxStreamTagger, grpc_logrus.StreamServerInterceptor(logrusEntry)}, streamInterceptors...)
+	unaryInterceptors = append([]grpc.UnaryServerInterceptor{ctxUnaryTagger, grpc_logrus.UnaryServerInterceptor(logrusEntry)}, unaryInterceptors...)
+
+	return NewTestServer(
+		grpc.NewServer(
+			grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(streamInterceptors...)),
+			grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(unaryInterceptors...)),
+		))
 }
 
 // MustHaveNoChildProcess panics if it finds a running or finished child

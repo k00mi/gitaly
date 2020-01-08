@@ -12,6 +12,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/sirupsen/logrus"
+	internalerrs "gitlab.com/gitlab-org/gitaly/internal/errors"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/conn"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
@@ -19,6 +20,8 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/models"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func isDestructive(methodName string) bool {
@@ -80,10 +83,14 @@ func (c *Coordinator) streamDirector(ctx context.Context, fullMethodName string,
 	var requestFinalizer func()
 	var storage string
 
+	var getRepoErr error
 	if mi.Scope == protoregistry.ScopeRepository {
-		storage, requestFinalizer, err = c.getStorageForRepositoryMessage(mi, m, peeker, fullMethodName)
-		if err != nil {
-			return nil, err
+		storage, requestFinalizer, getRepoErr = c.getStorageForRepositoryMessage(mi, m, peeker, fullMethodName)
+		if getRepoErr != nil {
+			if getRepoErr == protoregistry.ErrTargetRepoMissing {
+				return nil, status.Errorf(codes.InvalidArgument, getRepoErr.Error())
+			}
+			return nil, getRepoErr
 		}
 	} else {
 		storage, requestFinalizer, err = c.getAnyStorageNode()
@@ -185,6 +192,9 @@ func (c *Coordinator) selectPrimary(mi protoregistry.MethodInfo, targetRepo *git
 
 		newPrimary, err := c.datastore.PickAPrimary(targetRepo.GetStorageName())
 		if err != nil {
+			if err == datastore.ErrNoPrimaryForStorage {
+				return nil, status.Error(codes.InvalidArgument, internalerrs.ErrInvalidRepository.Error())
+			}
 			return nil, fmt.Errorf("could not choose a primary: %v", err)
 		}
 
