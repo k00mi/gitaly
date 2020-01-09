@@ -1,5 +1,22 @@
 # Gitaly changelog
 
+## v1.80.0
+
+#### Fixed
+- Fix DiskStatistics on OpenBSD
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1728
+  Contributed by bitgestalt
+
+#### Other
+- File walker deletes empty directories
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1721
+- FetchIntoObjectPool: log pool object and ref directory sizes
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1614
+
+#### Performance
+- Add hook rpcs
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1686
+
 ## v1.79.0
 
 #### Changed
