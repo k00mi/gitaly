@@ -61,12 +61,8 @@ test: prepare-build
 	cd $(BUILD_DIR) && $(MAKE) $@
 
 .PHONY: test-with-praefect
-test-with-praefect: build-praefect
-	cd $(BUILD_DIR) && GITALY_TEST_PRAEFECT_BIN=1 PRAEFECT_BIN_PATH="$(BUILD_DIR)/bin/praefect" $(MAKE) test
-
-.PHONY: build-praefect
-build-praefect: prepare-build
-	cd cmd/praefect && go build -o "$(BUILD_DIR)/bin/praefect"
+test-with-praefect: prepare-build
+	cd $(BUILD_DIR) && $(MAKE) $@
 
 .PHONY: test-with-proxies
 test-with-proxies: prepare-build

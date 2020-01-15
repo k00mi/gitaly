@@ -130,6 +130,12 @@ test-with-proxies: prepare-tests
 	@cd {{ .SourceDir }} &&\
 		go test -tags "$(BUILD_TAGS)" -count=1  -exec {{ .SourceDir }}/_support/bad-proxies {{ .Pkg }}/internal/rubyserver/
 
+
+.PHONY: test-with-praefect
+test-with-praefect: build prepare-tests
+	@cd {{ .SourceDir }} &&\
+	GITALY_TEST_PRAEFECT_BIN={{ .BuildDir }}/bin/praefect  go test -tags "$(BUILD_TAGS)" -count=1 {{ join .AllPackages " " }} # count=1 bypasses go 1.10 test caching
+
 .PHONY: race-go
 race-go: prepare-tests
 	@cd {{ .SourceDir }} && go test -tags "$(BUILD_TAGS)" -race {{ join .AllPackages " " }}

@@ -83,14 +83,20 @@ func (c *Coordinator) streamDirector(ctx context.Context, fullMethodName string,
 	var requestFinalizer func()
 	var storage string
 
-	var getRepoErr error
 	if mi.Scope == protoregistry.ScopeRepository {
+		var getRepoErr error
 		storage, requestFinalizer, getRepoErr = c.getStorageForRepositoryMessage(mi, m, peeker, fullMethodName)
+
+		if getRepoErr == protoregistry.ErrTargetRepoMissing {
+			return nil, status.Errorf(codes.InvalidArgument, getRepoErr.Error())
+		}
+
 		if getRepoErr != nil {
-			if getRepoErr == protoregistry.ErrTargetRepoMissing {
-				return nil, status.Errorf(codes.InvalidArgument, getRepoErr.Error())
-			}
 			return nil, getRepoErr
+		}
+
+		if storage == "" {
+			return nil, status.Error(codes.InvalidArgument, "storage not found")
 		}
 	} else {
 		storage, requestFinalizer, err = c.getAnyStorageNode()

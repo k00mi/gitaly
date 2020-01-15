@@ -470,8 +470,8 @@ func drainAllPointers(c gitalypb.BlobService_GetAllLFSPointersClient) error {
 // TestGetAllLFSPointersVerifyScope verifies that this RPC returns all LFS
 // pointers in a repository, not only ones reachable from the default branch
 func TestGetAllLFSPointersVerifyScope(t *testing.T) {
-	server, serverSocketPath := runBlobServer(t)
-	defer server.Stop()
+	stop, serverSocketPath := runBlobServer(t)
+	defer stop()
 
 	client, conn := newBlobClient(t, serverSocketPath)
 	defer conn.Close()
