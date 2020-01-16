@@ -1,5 +1,0 @@
----
-title: Call client.Dial in ClientConnection helper
-merge_request: 1749
-author:
-type: fixed

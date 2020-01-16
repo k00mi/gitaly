@@ -1,5 +1,0 @@
----
-title: Do not leak sensitive urls
-merge_request: 1710
-author:
-type: security

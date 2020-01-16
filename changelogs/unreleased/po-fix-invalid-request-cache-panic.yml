@@ -1,5 +1,0 @@
----
-title: Fix middleware to stop panicking from bad requests
-merge_request: 1747
-author:
-type: fixed

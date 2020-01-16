@@ -1,5 +1,37 @@
 # Gitaly changelog
 
+## v1.81.0
+
+#### Added
+- Allow git_push_options to be passed to UserRebaseConfirmable RPC
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1748
+- Add sql-migrate subcommand to Praefect
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1738
+
+#### Changed
+- Add snapshot replication to ReplicateRepository
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1717
+- Add exponential backoff to replication manager
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1746
+
+#### Fixed
+- Fix middleware to stop panicking from bad requests
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1747
+- Call client.Dial in ClientConnection helper
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1749
+
+#### Other
+- Log statistics of pack re-use on clone and fetch
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1743
+- Change signature of hook RPCs
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1741
+- Update loofah and crass gems to match GitLab CE/EE
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1752
+
+#### Security
+- Do not leak sensitive urls
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1710
+
 ## v1.80.0
 
 #### Fixed
