@@ -61,6 +61,7 @@ func TestProcessReplicationJob(t *testing.T) {
 	config := config.Config{
 		VirtualStorages: []*config.VirtualStorage{
 			&config.VirtualStorage{
+				Name: "default",
 				Nodes: []*models.Node{
 					&models.Node{
 						Storage:        "default",
@@ -79,9 +80,6 @@ func TestProcessReplicationJob(t *testing.T) {
 	}
 
 	ds := datastore.NewInMemory(config)
-
-	require.NoError(t, ds.SetPrimary(testRepo.GetRelativePath(), "default"))
-	require.NoError(t, ds.AddReplica(testRepo.GetRelativePath(), backupStorageName))
 
 	// create object pool on the source
 	objectPoolPath := testhelper.NewTestObjectPoolName(t)
@@ -112,7 +110,12 @@ func TestProcessReplicationJob(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, err = ds.CreateReplicaReplJobs(testRepo.GetRelativePath(), datastore.UpdateRepo)
+	primary, err := ds.GetPrimary(config.VirtualStorages[0].Name)
+	require.NoError(t, err)
+	secondaries, err := ds.GetSecondaries(config.VirtualStorages[0].Name)
+	require.NoError(t, err)
+
+	_, err = ds.CreateReplicaReplJobs(testRepo.GetRelativePath(), primary, secondaries, datastore.UpdateRepo)
 	require.NoError(t, err)
 
 	jobs, err := ds.GetJobs(datastore.JobStateReady|datastore.JobStatePending, backupStorageName, 1)

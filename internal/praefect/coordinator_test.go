@@ -102,12 +102,12 @@ func TestStreamDirector(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedJob := datastore.ReplJob{
-		Change:     datastore.UpdateRepo,
-		ID:         1,
-		TargetNode: targetNode,
-		SourceNode: sourceNode,
-		State:      datastore.JobStatePending,
-		Repository: models.Repository{RelativePath: targetRepo.RelativePath, Primary: sourceNode, Replicas: []models.Node{targetNode}},
+		Change:       datastore.UpdateRepo,
+		ID:           1,
+		TargetNode:   targetNode,
+		SourceNode:   sourceNode,
+		State:        datastore.JobStatePending,
+		RelativePath: targetRepo.RelativePath,
 	}
 
 	require.Equal(t, expectedJob, jobs[0], "ensure replication job created by stream director is correct")
