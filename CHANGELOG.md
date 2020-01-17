@@ -1,5 +1,11 @@
 # Gitaly changelog
 
+## v1.82.0
+
+#### Added
+- Praefect subcommand for checking node connections
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1700
+
 ## v1.81.0
 
 #### Added
