@@ -1,3 +1,29 @@
+// Command praefect provides a reverse-proxy server with high-availability
+// specific features for Gitaly.
+//
+// Additionally, praefect has subcommands for common tasks:
+//
+// SQL Ping
+//
+// The subcommand "sql-ping" checks if the database configured in the config
+// file is reachable:
+//
+//     praefect -config PATH_TO_CONFIG sql-ping
+//
+// SQL Migrate
+//
+// The subcommand "sql-migrate" will apply any outstanding SQL migrations.
+//
+//     praefect -config PATH_TO_CONFIG sql-migrate
+//
+// Dial Nodes
+//
+// The subcommand "dial-nodes" helps diagnose connection problems to Gitaly or
+// Praefect. The subcommand works by sourcing the connection information from
+// the config file, and then dialing and health checking the remote nodes.
+//
+//     praefect -config PATH_TO_CONFIG dial-nodes
+//
 package main
 
 import (

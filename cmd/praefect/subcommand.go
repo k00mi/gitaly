@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/signal"
 
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
@@ -10,11 +11,21 @@ import (
 
 // subCommand returns an exit code, to be fed into os.Exit.
 func subCommand(conf config.Config, arg0 string, argRest []string) int {
+	interrupt := make(chan os.Signal)
+	signal.Notify(interrupt, os.Interrupt)
+
+	go func() {
+		<-interrupt
+		os.Exit(130) // indicates program was interrupted
+	}()
+
 	switch arg0 {
 	case "sql-ping":
 		return sqlPing(conf)
 	case "sql-migrate":
 		return sqlMigrate(conf)
+	case "dial-nodes":
+		return dialNodes(conf)
 	default:
 		fmt.Printf("%s: unknown subcommand: %q\n", progname, arg0)
 		return 1
