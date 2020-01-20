@@ -219,6 +219,19 @@ praefect_sql_connect:
     - ./praefect -config config.praefect.toml sql-ping
     - ./praefect -config config.praefect.toml sql-migrate
 
+praefect_sql_test:
+  <<: *go_test_definition
+  services:
+    - postgres:9.6
+  variables:
+    PGHOST: postgres
+    PGPORT: 5432
+    PGUSER: postgres
+  script:
+    - go version
+    - git version
+    - make test-postgres
+
 lint:
   image: registry.gitlab.com/gitlab-org/gitlab-build-images:golangci-lint-alpine
   stage: test

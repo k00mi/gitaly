@@ -76,6 +76,10 @@ rspec: prepare-build
 rspec-gitlab-shell: prepare-build
 	cd $(BUILD_DIR) && $(MAKE) $@
 
+.PHONY: test-postgres
+test-postgres: prepare-build
+	cd $(BUILD_DIR) && $(MAKE) $@
+
 .PHONY: verify
 verify: prepare-build
 	cd $(BUILD_DIR) && $(MAKE) $@
