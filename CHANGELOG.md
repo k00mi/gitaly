@@ -1,5 +1,11 @@
 # Gitaly changelog
 
+## v1.83.0
+
+#### Other
+- Refine telemetry for cache walker
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1759
+
 ## v1.82.0
 
 #### Added
