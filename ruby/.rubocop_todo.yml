@@ -23,7 +23,6 @@ Lint/AmbiguousBlockAssociation:
 # Configuration parameters: AllowSafeAssignment.
 Lint/AssignmentInCondition:
   Exclude:
-    - 'lib/gitaly_server/commit_service.rb'
     - 'lib/gitaly_server/conflicts_service.rb'
     - 'lib/gitaly_server/diff_service.rb'
     - 'lib/gitaly_server/ref_service.rb'
@@ -126,7 +125,6 @@ Style/Alias:
 # Keywords: TODO, FIXME, OPTIMIZE, HACK, REVIEW
 Style/CommentAnnotation:
   Exclude:
-    - 'lib/gitaly_server/commit_service.rb'
     - 'lib/gitlab/config.rb'
 
 # Offense count: 63
@@ -211,7 +209,6 @@ Style/PreferredHashMethods:
 Style/RaiseArgs:
   Exclude:
     - 'lib/gitaly_server/client.rb'
-    - 'lib/gitaly_server/commit_service.rb'
     - 'lib/gitaly_server/conflicts_service.rb'
     - 'lib/gitaly_server/operations_service.rb'
     - 'lib/gitaly_server/ref_service.rb'
