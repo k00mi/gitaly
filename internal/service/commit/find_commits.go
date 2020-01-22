@@ -59,7 +59,7 @@ func findCommits(ctx context.Context, req *gitalypb.FindCommitsRequest, stream g
 		return fmt.Errorf("creating catfile: %v", err)
 	}
 
-	getCommits := NewGetCommits(logCmd, batch)
+	getCommits := NewGetCommits(ctx, logCmd, batch)
 
 	if calculateOffsetManually(req) {
 		getCommits.Offset(int(req.GetOffset()))
@@ -79,13 +79,15 @@ func calculateOffsetManually(req *gitalypb.FindCommitsRequest) bool {
 type GetCommits struct {
 	scanner *bufio.Scanner
 	batch   *catfile.Batch
+	ctx     context.Context
 }
 
 // NewGetCommits returns a new GetCommits object
-func NewGetCommits(cmd *command.Command, batch *catfile.Batch) *GetCommits {
+func NewGetCommits(ctx context.Context, cmd *command.Command, batch *catfile.Batch) *GetCommits {
 	return &GetCommits{
 		scanner: bufio.NewScanner(cmd),
 		batch:   batch,
+		ctx:     ctx,
 	}
 }
 
@@ -112,7 +114,7 @@ func (g *GetCommits) Offset(offset int) error {
 // Commit returns the current commit
 func (g *GetCommits) Commit() (*gitalypb.GitCommit, error) {
 	revision := strings.TrimSpace(g.scanner.Text())
-	commit, err := log.GetCommitCatfile(g.batch, revision)
+	commit, err := log.GetCommitCatfile(g.ctx, g.batch, revision)
 	if err != nil {
 		return nil, fmt.Errorf("cat-file get commit %q: %v", revision, err)
 	}

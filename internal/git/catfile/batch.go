@@ -69,7 +69,7 @@ func newBatchProcess(ctx context.Context, repo repository.GitRepo) (*batchProces
 	return b, nil
 }
 
-func (b *batchProcess) reader(revspec string, expectedType string) (io.Reader, error) {
+func (b *batchProcess) reader(revspec string, expectedType string) (*Object, error) {
 	b.Lock()
 	defer b.Unlock()
 
@@ -82,7 +82,7 @@ func (b *batchProcess) reader(revspec string, expectedType string) (io.Reader, e
 	}
 
 	if b.n != 0 {
-		return nil, fmt.Errorf("cannot create new reader: batch contains %d unread bytes", b.n)
+		return nil, fmt.Errorf("cannot create new Object: batch contains %d unread bytes", b.n)
 	}
 
 	if _, err := fmt.Fprintln(b.w, revspec); err != nil {
@@ -104,12 +104,15 @@ func (b *batchProcess) reader(revspec string, expectedType string) (io.Reader, e
 		}
 		b.n = 0
 
-		return nil, fmt.Errorf("expected %s to be a %s, got %s", oi.Oid, expectedType, oi.Type)
+		return nil, NotFoundError{error: fmt.Errorf("expected %s to be a %s, got %s", oi.Oid, expectedType, oi.Type)}
 	}
 
-	return &batchReader{
-		batchProcess: b,
-		r:            io.LimitReader(b.r, oi.Size),
+	return &Object{
+		ObjectInfo: *oi,
+		Reader: &batchReader{
+			batchProcess: b,
+			r:            io.LimitReader(b.r, oi.Size),
+		},
 	}, nil
 }
 

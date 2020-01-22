@@ -7,7 +7,10 @@ import (
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
+	"google.golang.org/grpc/metadata"
 )
 
 func TestParseRawCommit(t *testing.T) {
@@ -99,6 +102,80 @@ func TestParseRawCommit(t *testing.T) {
 			out, err := parseRawCommit(bytes.NewBuffer(tc.in), info)
 			require.NoError(t, err, "parse error")
 			require.Equal(t, tc.out, out)
+		})
+	}
+}
+
+func TestGetCommitCatfile(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	ctx = metadata.NewIncomingContext(ctx, metadata.MD{})
+	defer cancel()
+
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	const commitSha = "2d1db523e11e777e49377cfb22d368deec3f0793"
+	const commitMsg = "Correct test_env.rb path for adding branch\n"
+	const blobSha = "c60514b6d3d6bf4bec1030f70026e34dfbd69ad5"
+
+	testCases := []struct {
+		desc      string
+		revision  string
+		featureOn bool
+		errStr    string
+	}{
+		{
+			desc:      "feature off | commit",
+			revision:  commitSha,
+			featureOn: false,
+		},
+		{
+			desc:      "feature on | commit",
+			revision:  commitSha,
+			featureOn: true,
+		},
+		{
+			desc:      "feature off | not existing commit",
+			revision:  "not existing revision",
+			featureOn: false,
+			errStr:    "object not found",
+		},
+		{
+			desc:      "feature on | not existing commit",
+			revision:  "not existing revision",
+			featureOn: true,
+			errStr:    "object not found",
+		},
+		{
+			desc:      "feature off | blob sha",
+			revision:  blobSha,
+			featureOn: false,
+			errStr:    "object not found",
+		},
+		{
+			desc:      "feature on | blob sha",
+			revision:  blobSha,
+			featureOn: true,
+			errStr:    "object not found",
+		},
+	}
+
+	c, err := catfile.New(ctx, testRepo)
+	require.NoError(t, err)
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			if tc.featureOn {
+				ctx = featureflag.ContextWithFeatureFlag(ctx, featureflag.CommitWithoutBatchCheck)
+			}
+
+			c, err := GetCommitCatfile(ctx, c, tc.revision)
+
+			if tc.errStr == "" {
+				require.NoError(t, err)
+				require.Equal(t, commitMsg, string(c.Body))
+			} else {
+				require.EqualError(t, err, tc.errStr)
+			}
 		})
 	}
 }

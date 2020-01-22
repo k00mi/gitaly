@@ -6,7 +6,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// ContextWithFeatureFlag is used in tests to enablea a feature flag in the context metadata
+// ContextWithFeatureFlag is used in tests to enable a feature flag in the context metadata
 func ContextWithFeatureFlag(ctx context.Context, flag string) context.Context {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
