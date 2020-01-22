@@ -13,6 +13,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
@@ -24,11 +25,18 @@ func GetCommit(ctx context.Context, repo *gitalypb.Repository, revision string) 
 		return nil, err
 	}
 
-	return GetCommitCatfile(c, revision)
+	return GetCommitCatfile(ctx, c, revision)
 }
 
 // GetCommitCatfile looks up a commit by revision using an existing *catfile.Batch instance.
-func GetCommitCatfile(c *catfile.Batch, revision string) (*gitalypb.GitCommit, error) {
+func GetCommitCatfile(ctx context.Context, c *catfile.Batch, revision string) (*gitalypb.GitCommit, error) {
+	if featureflag.IsEnabled(ctx, featureflag.CommitWithoutBatchCheck) {
+		return getCommitCatfileNew(c, revision)
+	}
+	return getCommitCatfileOld(c, revision)
+}
+
+func getCommitCatfileOld(c *catfile.Batch, revision string) (*gitalypb.GitCommit, error) {
 	info, err := c.Info(revision + "^{commit}")
 	if err != nil {
 		return nil, err
@@ -40,6 +48,15 @@ func GetCommitCatfile(c *catfile.Batch, revision string) (*gitalypb.GitCommit, e
 	}
 
 	return parseRawCommit(r, info)
+}
+
+func getCommitCatfileNew(c *catfile.Batch, revision string) (*gitalypb.GitCommit, error) {
+	obj, err := c.Commit(revision + "^{commit}")
+	if err != nil {
+		return nil, err
+	}
+
+	return parseRawCommit(obj.Reader, &obj.ObjectInfo)
 }
 
 // GetCommitMessage looks up a commit message and returns it in its entirety.

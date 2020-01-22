@@ -2,6 +2,7 @@ package ref
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
@@ -53,8 +54,8 @@ func buildLocalBranch(name []byte, target *gitalypb.GitCommit) *gitalypb.FindLoc
 	return response
 }
 
-func buildAllBranchesBranch(c *catfile.Batch, elements [][]byte) (*gitalypb.FindAllBranchesResponse_Branch, error) {
-	target, err := log.GetCommitCatfile(c, string(elements[1]))
+func buildAllBranchesBranch(ctx context.Context, c *catfile.Batch, elements [][]byte) (*gitalypb.FindAllBranchesResponse_Branch, error) {
+	target, err := log.GetCommitCatfile(ctx, c, string(elements[1]))
 	if err != nil {
 		return nil, err
 	}
@@ -65,8 +66,8 @@ func buildAllBranchesBranch(c *catfile.Batch, elements [][]byte) (*gitalypb.Find
 	}, nil
 }
 
-func buildBranch(c *catfile.Batch, elements [][]byte) (*gitalypb.Branch, error) {
-	target, err := log.GetCommitCatfile(c, string(elements[1]))
+func buildBranch(ctx context.Context, c *catfile.Batch, elements [][]byte) (*gitalypb.Branch, error) {
+	target, err := log.GetCommitCatfile(ctx, c, string(elements[1]))
 	if err != nil {
 		return nil, err
 	}
@@ -78,6 +79,7 @@ func buildBranch(c *catfile.Batch, elements [][]byte) (*gitalypb.Branch, error) 
 }
 
 func newFindLocalBranchesWriter(stream gitalypb.RefService_FindLocalBranchesServer, c *catfile.Batch) lines.Sender {
+	ctx := stream.Context()
 	return func(refs [][]byte) error {
 		var branches []*gitalypb.FindLocalBranchResponse
 
@@ -87,7 +89,7 @@ func newFindLocalBranchesWriter(stream gitalypb.RefService_FindLocalBranchesServ
 				return err
 			}
 
-			target, err := log.GetCommitCatfile(c, string(elements[1]))
+			target, err := log.GetCommitCatfile(ctx, c, string(elements[1]))
 			if err != nil {
 				return err
 			}
@@ -99,6 +101,7 @@ func newFindLocalBranchesWriter(stream gitalypb.RefService_FindLocalBranchesServ
 }
 
 func newFindAllBranchesWriter(stream gitalypb.RefService_FindAllBranchesServer, c *catfile.Batch) lines.Sender {
+	ctx := stream.Context()
 	return func(refs [][]byte) error {
 		var branches []*gitalypb.FindAllBranchesResponse_Branch
 
@@ -107,7 +110,7 @@ func newFindAllBranchesWriter(stream gitalypb.RefService_FindAllBranchesServer, 
 			if err != nil {
 				return err
 			}
-			branch, err := buildAllBranchesBranch(c, elements)
+			branch, err := buildAllBranchesBranch(ctx, c, elements)
 			if err != nil {
 				return err
 			}
@@ -118,6 +121,7 @@ func newFindAllBranchesWriter(stream gitalypb.RefService_FindAllBranchesServer, 
 }
 
 func newFindAllRemoteBranchesWriter(stream gitalypb.RefService_FindAllRemoteBranchesServer, c *catfile.Batch) lines.Sender {
+	ctx := stream.Context()
 	return func(refs [][]byte) error {
 		var branches []*gitalypb.Branch
 
@@ -126,7 +130,7 @@ func newFindAllRemoteBranchesWriter(stream gitalypb.RefService_FindAllRemoteBran
 			if err != nil {
 				return err
 			}
-			branch, err := buildBranch(c, elements)
+			branch, err := buildBranch(ctx, c, elements)
 			if err != nil {
 				return err
 			}

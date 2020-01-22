@@ -443,7 +443,7 @@ func NewTestRepo(t testing.TB) (repo *gitalypb.Repository, repoPath string, clea
 
 // NewTestRepoWithWorktree creates a copy of the test repository with a
 // worktree. This is allows you to run normal 'non-bare' Git commands.
-func NewTestRepoWithWorktree(t *testing.T) (repo *gitalypb.Repository, repoPath string, cleanup func()) {
+func NewTestRepoWithWorktree(t testing.TB) (repo *gitalypb.Repository, repoPath string, cleanup func()) {
 	return cloneTestRepo(t, false)
 }
 

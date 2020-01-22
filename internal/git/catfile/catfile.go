@@ -89,7 +89,7 @@ func (c *Batch) Tree(revspec string) (io.Reader, error) {
 // point to a commit. To prevent this first use Info to resolve the revspec
 // and check the object type. Caller must consume the Reader before
 // making another call on C.
-func (c *Batch) Commit(revspec string) (io.Reader, error) {
+func (c *Batch) Commit(revspec string) (*Object, error) {
 	catfileLookupCounter.WithLabelValues("commit").Inc()
 	return c.batchProcess.reader(revspec, "commit")
 }

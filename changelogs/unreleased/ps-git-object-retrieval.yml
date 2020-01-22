@@ -1,0 +1,5 @@
+---
+title: 'Feature flag: look up commits without batch-check'
+merge_request: 1711
+author:
+type: added
