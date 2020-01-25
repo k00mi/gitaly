@@ -108,7 +108,7 @@ func TestSuccessfulUserSquashRequestWith3wayMerge(t *testing.T) {
 
 	commit, err := log.GetCommit(ctx, testRepo, response.SquashSha)
 	require.NoError(t, err)
-	require.Equal(t, []string{"3d05a143ac193c1a6fe4d046a6e3fe71e825258a"}, commit.ParentIds)
+	require.Equal(t, []string{"6f6d7e7ed97bb5f0054f2b1df789b39ca89b6ff9"}, commit.ParentIds)
 	require.Equal(t, author.Name, commit.Author.Name)
 	require.Equal(t, author.Email, commit.Author.Email)
 	require.Equal(t, user.Name, commit.Committer.Name)
@@ -158,7 +158,70 @@ func TestSplitIndex(t *testing.T) {
 	require.False(t, ensureSplitIndexExists(t, testRepoPath))
 }
 
-func TestFailedUserSquashRequestDueToGitError(t *testing.T) {
+func TestSquashRequestWithRenamedFiles(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	server, serverSocketPath := runOperationServiceServer(t)
+	defer server.Stop()
+
+	client, conn := NewOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepoWithWorktree(t)
+	defer cleanupFn()
+
+	originalFilename := "original-file.txt"
+	renamedFilename := "renamed-file.txt"
+
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "config", "user.name", string(author.Name))
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "config", "user.email", string(author.Email))
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "checkout", "-b", "squash-rename-test", "master")
+	require.NoError(t, ioutil.WriteFile(filepath.Join(testRepoPath, originalFilename), []byte("This is a test"), 0644))
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "add", ".")
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "commit", "-m", "test file")
+
+	startCommitID := text.ChompBytes(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", "HEAD"))
+
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "mv", originalFilename, renamedFilename)
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "commit", "-a", "-m", "renamed test file")
+
+	// Modify the original file in another branch
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "checkout", "-b", "squash-rename-branch", startCommitID)
+	require.NoError(t, ioutil.WriteFile(filepath.Join(testRepoPath, originalFilename), []byte("This is a change"), 0644))
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "commit", "-a", "-m", "test")
+
+	require.NoError(t, ioutil.WriteFile(filepath.Join(testRepoPath, originalFilename), []byte("This is another change"), 0644))
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "commit", "-a", "-m", "test")
+
+	endCommitID := text.ChompBytes(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", "HEAD"))
+
+	request := &gitalypb.UserSquashRequest{
+		Repository:    testRepo,
+		User:          user,
+		SquashId:      "1",
+		Branch:        []byte("squash-rename-test"),
+		Author:        author,
+		CommitMessage: commitMessage,
+		StartSha:      startCommitID,
+		EndSha:        endCommitID,
+	}
+
+	response, err := client.UserSquash(ctx, request)
+	require.NoError(t, err)
+	require.Empty(t, response.GetGitError())
+
+	commit, err := log.GetCommit(ctx, testRepo, response.SquashSha)
+	require.NoError(t, err)
+	require.Equal(t, []string{startCommitID}, commit.ParentIds)
+	require.Equal(t, author.Name, commit.Author.Name)
+	require.Equal(t, author.Email, commit.Author.Email)
+	require.Equal(t, user.Name, commit.Committer.Name)
+	require.Equal(t, user.Email, commit.Committer.Email)
+	require.Equal(t, commitMessage, commit.Subject)
+}
+
+func TestSuccessfulUserSquashRequestWithMissingFileOnTargetBranch(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
@@ -187,7 +250,7 @@ func TestFailedUserSquashRequestDueToGitError(t *testing.T) {
 
 	response, err := client.UserSquash(ctx, request)
 	require.NoError(t, err)
-	require.Contains(t, response.GitError, "error: large_diff_old_name.md: does not exist in index")
+	require.Empty(t, response.GetGitError())
 }
 
 func TestFailedUserSquashRequestDueToValidations(t *testing.T) {
