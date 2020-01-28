@@ -1,5 +1,43 @@
 # Gitaly changelog
 
+## v1.84.0
+
+#### Added
+- Use core delta islands to increase opportunity of pack reuse
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1775
+- Feature flag: look up commits without batch-check
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1711
+
+#### Fixed
+- Include stderr in output of worktree operations
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1787
+- Fix gitaly-hooks check command which was broken due to an incorrect implemention
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1761
+- Fix squash when target repository has a renamed file
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1786
+- Make parent directories before snapshot replication
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1767
+
+#### Other
+- Update rouge gem to 3.15.0
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1778
+- Register praefect server for grpc prom metrics
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1782
+- Update tzinfo gem to v1.2.6
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1762
+- Explicitly mention gitaly-ruby in error messages
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1776
+- Remove revision from GetAllLFSPointers request
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1771
+
+#### Security
+- Do not log entire node struct because it includes tokens
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1766
+- Replace CommandWithoutRepo usage with safe version
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1783
+- Bump go-yaml and the rack gem dependencies
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/
+
 ## v1.83.0
 
 #### Other

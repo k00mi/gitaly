@@ -1,5 +1,0 @@
----
-title: Include stderr in output of worktree operations
-merge_request: 1787
-author:
-type: fixed

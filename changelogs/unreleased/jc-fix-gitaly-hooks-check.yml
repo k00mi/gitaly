@@ -1,5 +1,0 @@
----
-title: Fix gitaly-hooks check command which was broken due to an incorrect implemention
-merge_request: 1761
-author:
-type: fixed
