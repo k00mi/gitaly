@@ -200,6 +200,11 @@ func newPendingLease(repo *gitalypb.Repository) (string, error) {
 		return "", err
 	}
 
+	lPath := latestPath(repoStatePath)
+	if err := os.Remove(lPath); err != nil && !os.IsNotExist(err) {
+		return "", err
+	}
+
 	pDir := pendingDir(repoStatePath)
 	if err := os.MkdirAll(pDir, 0755); err != nil {
 		return "", err
@@ -207,6 +212,7 @@ func newPendingLease(repo *gitalypb.Repository) (string, error) {
 
 	f, err := ioutil.TempFile(pDir, "")
 	if err != nil {
+		err = fmt.Errorf("creating pending lease failed: %v", err)
 		return "", err
 	}
 
