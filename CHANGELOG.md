@@ -1,5 +1,15 @@
 # Gitaly changelog
 
+## v1.85.0
+
+#### Deprecated
+- Revert branch field removal in UserSquashRequest message for RPC operations.UserSquash
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1792
+
+#### Other
+- Add praefect as a transparent pass through for tests
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1736
+
 ## v1.84.0
 
 #### Added
