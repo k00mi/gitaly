@@ -17,7 +17,7 @@ const (
 )
 
 // ErrTargetRepoMissing indicates that the target repo is missing or not set
-var ErrTargetRepoMissing = errors.New("target repo is not set")
+var ErrTargetRepoMissing = errors.New("empty Repository")
 
 func reflectFindRepoTarget(pbMsg proto.Message, targetOID []int) (*gitalypb.Repository, error) {
 	msgV, e := reflectFindOID(pbMsg, targetOID)
@@ -58,7 +58,7 @@ func reflectFindOID(pbMsg proto.Message, targetOID []int) (reflect.Value, error)
 		msgV, err = findProtoField(msgV, fieldNo)
 		if err != nil {
 			return reflect.Value{}, fmt.Errorf(
-				"unable to descend OID %+v into message %s: %s",
+				"unable to descend OID %+v into message %s: %v",
 				targetOID, proto.MessageName(pbMsg), err,
 			)
 		}

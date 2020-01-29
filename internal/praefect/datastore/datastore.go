@@ -179,6 +179,9 @@ func NewInMemory(cfg config.Config) *MemoryDatastore {
 	return m
 }
 
+// ErrNoPrimaryForStorage indicates a virtual storage has no primary associated with it
+var ErrNoPrimaryForStorage = errors.New("no primary for storage")
+
 // PickAPrimary returns the primary configured in the config file
 func (md *MemoryDatastore) PickAPrimary(virtualStorage string) (models.Node, error) {
 	for _, node := range md.virtualStorages[virtualStorage] {
@@ -187,7 +190,7 @@ func (md *MemoryDatastore) PickAPrimary(virtualStorage string) (models.Node, err
 		}
 	}
 
-	return models.Node{}, errors.New("no default primaries found")
+	return models.Node{}, ErrNoPrimaryForStorage
 }
 
 // GetReplicas gets the secondaries for a repository based on the relative path

@@ -13,8 +13,8 @@ import (
 )
 
 func TestSuccessfulGetLFSPointersRequest(t *testing.T) {
-	server, serverSocketPath := runBlobServer(t)
-	defer server.Stop()
+	stop, serverSocketPath := runBlobServer(t)
+	defer stop()
 
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
@@ -77,8 +77,8 @@ func TestSuccessfulGetLFSPointersRequest(t *testing.T) {
 }
 
 func TestFailedGetLFSPointersRequestDueToValidations(t *testing.T) {
-	server, serverSocketPath := runBlobServer(t)
-	defer server.Stop()
+	stop, serverSocketPath := runBlobServer(t)
+	defer stop()
 
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
@@ -125,8 +125,8 @@ func TestFailedGetLFSPointersRequestDueToValidations(t *testing.T) {
 }
 
 func TestSuccessfulGetNewLFSPointersRequest(t *testing.T) {
-	server, serverSocketPath := runBlobServer(t)
-	defer server.Stop()
+	stop, serverSocketPath := runBlobServer(t)
+	defer stop()
 
 	client, conn := newBlobClient(t, serverSocketPath)
 	defer conn.Close()
@@ -291,8 +291,8 @@ func TestSuccessfulGetNewLFSPointersRequest(t *testing.T) {
 }
 
 func TestFailedGetNewLFSPointersRequestDueToValidations(t *testing.T) {
-	server, serverSocketPath := runBlobServer(t)
-	defer server.Stop()
+	stop, serverSocketPath := runBlobServer(t)
+	defer stop()
 
 	client, conn := newBlobClient(t, serverSocketPath)
 	defer conn.Close()
@@ -352,8 +352,8 @@ func drainNewPointers(c gitalypb.BlobService_GetNewLFSPointersClient) error {
 }
 
 func TestSuccessfulGetAllLFSPointersRequest(t *testing.T) {
-	server, serverSocketPath := runBlobServer(t)
-	defer server.Stop()
+	stop, serverSocketPath := runBlobServer(t)
+	defer stop()
 
 	client, conn := newBlobClient(t, serverSocketPath)
 	defer conn.Close()
@@ -423,8 +423,8 @@ func getAllPointers(t *testing.T, c gitalypb.BlobService_GetAllLFSPointersClient
 }
 
 func TestFailedGetAllLFSPointersRequestDueToValidations(t *testing.T) {
-	server, serverSocketPath := runBlobServer(t)
-	defer server.Stop()
+	stop, serverSocketPath := runBlobServer(t)
+	defer stop()
 
 	client, conn := newBlobClient(t, serverSocketPath)
 	defer conn.Close()
@@ -470,8 +470,8 @@ func drainAllPointers(c gitalypb.BlobService_GetAllLFSPointersClient) error {
 // TestGetAllLFSPointersVerifyScope verifies that this RPC returns all LFS
 // pointers in a repository, not only ones reachable from the default branch
 func TestGetAllLFSPointersVerifyScope(t *testing.T) {
-	server, serverSocketPath := runBlobServer(t)
-	defer server.Stop()
+	stop, serverSocketPath := runBlobServer(t)
+	defer stop()
 
 	client, conn := newBlobClient(t, serverSocketPath)
 	defer conn.Close()

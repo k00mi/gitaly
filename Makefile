@@ -60,6 +60,10 @@ prepare-tests: prepare-build
 test: prepare-build
 	cd $(BUILD_DIR) && $(MAKE) $@
 
+.PHONY: test-with-praefect
+test-with-praefect: prepare-build
+	cd $(BUILD_DIR) && $(MAKE) $@
+
 .PHONY: test-with-proxies
 test-with-proxies: prepare-build
 	cd $(BUILD_DIR) && $(MAKE) $@

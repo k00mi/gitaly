@@ -2,10 +2,10 @@ package blob
 
 import (
 	"log"
-	"net"
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -23,6 +23,7 @@ func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
 	testhelper.ConfigureRuby()
+
 	if err := rubyServer.Start(); err != nil {
 		log.Fatal(err)
 	}
@@ -31,22 +32,15 @@ func testMain(m *testing.M) int {
 	return m.Run()
 }
 
-func runBlobServer(t *testing.T) (*grpc.Server, string) {
-	grpcServer := testhelper.NewTestGrpcServer(t, nil, nil)
+func runBlobServer(t *testing.T) (func(), string) {
+	srv := testhelper.NewServer(t, nil, nil)
 
-	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
-	listener, err := net.Listen("unix", serverSocketPath)
+	gitalypb.RegisterBlobServiceServer(srv.GrpcServer(), &server{ruby: rubyServer})
+	reflection.Register(srv.GrpcServer())
 
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, srv.Start())
 
-	gitalypb.RegisterBlobServiceServer(grpcServer, &server{ruby: rubyServer})
-	reflection.Register(grpcServer)
-
-	go grpcServer.Serve(listener)
-
-	return grpcServer, "unix://" + serverSocketPath
+	return srv.Stop, "unix://" + srv.Socket()
 }
 
 func newBlobClient(t *testing.T, serverSocketPath string) (gitalypb.BlobServiceClient, *grpc.ClientConn) {

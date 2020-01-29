@@ -3,6 +3,7 @@ package blob
 import (
 	"fmt"
 
+	"gitlab.com/gitlab-org/gitaly/internal/errors"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
@@ -62,7 +63,7 @@ func (s *server) GetLFSPointers(req *gitalypb.GetLFSPointersRequest, stream gita
 
 func validateGetLFSPointersRequest(req *gitalypb.GetLFSPointersRequest) error {
 	if req.GetRepository() == nil {
-		return fmt.Errorf("empty Repository")
+		return errors.ErrEmptyRepository
 	}
 
 	if len(req.GetBlobIds()) == 0 {
