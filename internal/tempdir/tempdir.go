@@ -41,13 +41,25 @@ const (
 )
 
 // CacheDir returns the path to the cache dir for a storage location
-func CacheDir(storage config.Storage) string { return filepath.Join(storage.Path, cachePrefix) }
+func CacheDir(storage config.Storage) string { return AppendCacheDir(storage.Path) }
+
+// AppendCacheDir will append the cache directory convention to the storage path
+// provided
+func AppendCacheDir(storagePath string) string { return filepath.Join(storagePath, cachePrefix) }
 
 // StateDir returns the path to the state dir for a storage location
-func StateDir(storage config.Storage) string { return filepath.Join(storage.Path, statePrefix) }
+func StateDir(storage config.Storage) string { return AppendStateDir(storage.Path) }
+
+// AppendStateDir will append the state directory convention to the storage path
+// provided
+func AppendStateDir(storagePath string) string { return filepath.Join(storagePath, statePrefix) }
 
 // TempDir returns the path to the temp dir for a storage location
-func TempDir(storage config.Storage) string { return filepath.Join(storage.Path, tmpRootPrefix) }
+func TempDir(storage config.Storage) string { return AppendTempDir(storage.Path) }
+
+// AppendTempDir will append the temp directory convention to the storage path
+// provided
+func AppendTempDir(storagePath string) string { return filepath.Join(storagePath, tmpRootPrefix) }
 
 // ForDeleteAllRepositories returns a temporary directory for the given storage. It is not context-scoped but it will get removed eventuall (after MaxAge).
 func ForDeleteAllRepositories(storageName string) (string, error) {

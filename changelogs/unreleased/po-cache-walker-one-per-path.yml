@@ -1,0 +1,5 @@
+---
+title: Fix cache walker to only walk each path once
+merge_request: 1769
+author:
+type: fixed

@@ -11,11 +11,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/internal/config"
 )
 
 func TestCleanWalkDirNotExists(t *testing.T) {
-	err := cleanWalk(config.Storage{}, "/path/that/does/not/exist")
+	err := cleanWalk("/path/that/does/not/exist")
 	assert.NoError(t, err, "cleanWalk returned an error for a non existing directory")
 }
 
@@ -47,7 +46,7 @@ func TestCleanWalkEmptyDirs(t *testing.T) {
 		}
 	}
 
-	require.NoError(t, cleanWalk(config.Storage{}, tmp))
+	require.NoError(t, cleanWalk(tmp))
 
 	actual := findFiles(t, tmp)
 	expect := `.

@@ -163,6 +163,7 @@ func pollCountersUntil(t testing.TB, expectRemovals int) {
 		if cache.ExportMockRemovalCounter.Count() == expectRemovals {
 			break
 		}
+		t.Log(cache.ExportMockRemovalCounter.Count())
 		time.Sleep(time.Millisecond)
 	}
 }

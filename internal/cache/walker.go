@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -27,7 +26,7 @@ func logWalkErr(err error, path, msg string) {
 		Warn(msg)
 }
 
-func cleanWalk(s config.Storage, path string) error {
+func cleanWalk(path string) error {
 	defer time.Sleep(100 * time.Microsecond) // relieve pressure
 
 	countWalkCheck()
@@ -44,7 +43,7 @@ func cleanWalk(s config.Storage, path string) error {
 		ePath := filepath.Join(path, e.Name())
 
 		if e.IsDir() {
-			if err := cleanWalk(s, ePath); err != nil {
+			if err := cleanWalk(ePath); err != nil {
 				return err
 			}
 			continue
@@ -76,7 +75,7 @@ func cleanWalk(s config.Storage, path string) error {
 	}
 
 	if len(files) == 0 {
-		countEmptyDir(s)
+		countEmptyDir()
 		if err := os.Remove(path); err != nil {
 			if os.IsNotExist(err) {
 				return nil
@@ -84,7 +83,7 @@ func cleanWalk(s config.Storage, path string) error {
 			logWalkErr(err, path, "unable to remove empty directory")
 			return err
 		}
-		countEmptyDirRemoval(s)
+		countEmptyDirRemoval()
 		countWalkRemoval()
 	}
 
@@ -93,13 +92,15 @@ func cleanWalk(s config.Storage, path string) error {
 
 const cleanWalkFrequency = 10 * time.Minute
 
-func walkLoop(s config.Storage, walkPath string) {
-	logrus.WithField("storage", s.Name).Infof("Starting file walker for %s", walkPath)
+func walkLoop(walkPath string) {
+	logger := logrus.WithField("path", walkPath)
+	logger.Infof("Starting file walker for %s", walkPath)
+
 	walkTick := time.NewTicker(cleanWalkFrequency)
 	dontpanic.GoForever(time.Minute, func() {
 		for {
-			if err := cleanWalk(s, walkPath); err != nil {
-				logrus.WithField("storage", s.Name).Error(err)
+			if err := cleanWalk(walkPath); err != nil {
+				logger.Error(err)
 			}
 
 			<-walkTick.C
@@ -107,13 +108,13 @@ func walkLoop(s config.Storage, walkPath string) {
 	})
 }
 
-func startCleanWalker(storage config.Storage) {
+func startCleanWalker(storagePath string) {
 	if disableWalker {
 		return
 	}
 
-	walkLoop(storage, tempdir.CacheDir(storage))
-	walkLoop(storage, tempdir.StateDir(storage))
+	walkLoop(tempdir.AppendCacheDir(storagePath))
+	walkLoop(tempdir.AppendStateDir(storagePath))
 }
 
 var (
@@ -123,15 +124,15 @@ var (
 
 // moveAndClear will move the cache to the storage location's
 // temporary folder, and then remove its contents asynchronously
-func moveAndClear(storage config.Storage) error {
+func moveAndClear(storagePath string) error {
 	if disableMoveAndClear {
 		return nil
 	}
 
-	logger := logrus.WithField("storage", storage.Name)
+	logger := logrus.WithField("path", storagePath)
 	logger.Info("clearing disk cache object folder")
 
-	tempPath := tempdir.TempDir(storage)
+	tempPath := tempdir.AppendTempDir(storagePath)
 	if err := os.MkdirAll(tempPath, 0755); err != nil {
 		return err
 	}
@@ -142,7 +143,7 @@ func moveAndClear(storage config.Storage) error {
 	}
 
 	logger.Infof("moving disk cache object folder to %s", tmpDir)
-	cachePath := tempdir.CacheDir(storage)
+	cachePath := tempdir.AppendCacheDir(storagePath)
 	if err := os.Rename(cachePath, filepath.Join(tmpDir, "moved")); err != nil {
 		if os.IsNotExist(err) {
 			logger.Info("disk cache object folder doesn't exist, no need to remove")
@@ -165,21 +166,18 @@ func moveAndClear(storage config.Storage) error {
 }
 
 func init() {
-	oncePerStorage := map[string]*sync.Once{}
-	var err error
-
 	config.RegisterHook(func(cfg config.Cfg) error {
+		pathSet := map[string]struct{}{}
 		for _, storage := range cfg.Storages {
-			if _, ok := oncePerStorage[storage.Name]; !ok {
-				oncePerStorage[storage.Name] = new(sync.Once)
-			}
-			oncePerStorage[storage.Name].Do(func() {
-				if err = moveAndClear(storage); err != nil {
-					return
-				}
-				startCleanWalker(storage)
-			})
+			pathSet[storage.Path] = struct{}{}
 		}
-		return err
+
+		for sPath := range pathSet {
+			if err := moveAndClear(sPath); err != nil {
+				return err
+			}
+			startCleanWalker(sPath)
+		}
+		return nil
 	})
 }
