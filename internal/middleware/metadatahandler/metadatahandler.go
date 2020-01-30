@@ -4,6 +4,7 @@ import (
 	"context"
 
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -18,16 +19,17 @@ var (
 			Namespace: "gitaly",
 			Subsystem: "service",
 			Name:      "client_requests_total",
-			Help:      "Counter of client requests received by client, call_site, auth version, and response code",
+			Help:      "Counter of client requests received by client, call_site, auth version, response code and deadline_type",
 		},
-		[]string{"client_name", "call_site", "auth_version", "grpc_code"},
+		[]string{"client_name", "call_site", "auth_version", "grpc_code", "deadline_type"},
 	)
 )
 
 type metadataTags struct {
-	clientName  string
-	callSite    string
-	authVersion string
+	clientName   string
+	callSite     string
+	authVersion  string
+	deadlineType string
 }
 
 func init() {
@@ -42,6 +44,9 @@ const ClientNameKey = "grpc.meta.client_name"
 
 // AuthVersionKey is the key used in ctx_tags to store the auth version
 const AuthVersionKey = "grpc.meta.auth_version"
+
+// DeadlineTypeKey is the key used in ctx_tags to store the deadline type
+const DeadlineTypeKey = "grpc.meta.deadline_type"
 
 const correlationIDKey = "correlation_id"
 
@@ -62,9 +67,10 @@ func getFromMD(md metadata.MD, header string) string {
 // using `unknown` if a value is not set
 func addMetadataTags(ctx context.Context) metadataTags {
 	metaTags := metadataTags{
-		clientName:  unknownValue,
-		callSite:    unknownValue,
-		authVersion: unknownValue,
+		clientName:   unknownValue,
+		callSite:     unknownValue,
+		authVersion:  unknownValue,
+		deadlineType: unknownValue,
 	}
 
 	md, ok := metadata.FromIncomingContext(ctx)
@@ -86,6 +92,17 @@ func addMetadataTags(ctx context.Context) metadataTags {
 		tags.Set(ClientNameKey, metadata)
 	}
 
+	metadata = getFromMD(md, "deadline_type")
+	_, deadlineSet := ctx.Deadline()
+	if !deadlineSet {
+		metaTags.deadlineType = "none"
+	} else if metadata != "" {
+		metaTags.deadlineType = metadata
+	}
+
+	// Set the deadline type in the logs
+	tags.Set(DeadlineTypeKey, metaTags.deadlineType)
+
 	authInfo, _ := gitalyauth.ExtractAuthInfo(ctx)
 	if authInfo != nil {
 		metaTags.authVersion = authInfo.Version
@@ -101,14 +118,19 @@ func addMetadataTags(ctx context.Context) metadataTags {
 	return metaTags
 }
 
+func reportWithPrometheusLabels(metaTags metadataTags, err error) {
+	grpcCode := helper.GrpcCode(err)
+	requests.WithLabelValues(metaTags.clientName, metaTags.callSite, metaTags.authVersion, grpcCode.String(), metaTags.deadlineType).Inc()
+	grpc_prometheus.WithConstLabels(prometheus.Labels{"deadline_type": metaTags.deadlineType})
+}
+
 // UnaryInterceptor returns a Unary Interceptor
 func UnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	metaTags := addMetadataTags(ctx)
 
 	res, err := handler(ctx, req)
 
-	grpcCode := helper.GrpcCode(err)
-	requests.WithLabelValues(metaTags.clientName, metaTags.callSite, metaTags.authVersion, grpcCode.String()).Inc()
+	reportWithPrometheusLabels(metaTags, err)
 
 	return res, err
 }
@@ -120,8 +142,7 @@ func StreamInterceptor(srv interface{}, stream grpc.ServerStream, info *grpc.Str
 
 	err := handler(srv, stream)
 
-	grpcCode := helper.GrpcCode(err)
-	requests.WithLabelValues(metaTags.clientName, metaTags.callSite, metaTags.authVersion, grpcCode.String()).Inc()
+	reportWithPrometheusLabels(metaTags, err)
 
 	return err
 }
