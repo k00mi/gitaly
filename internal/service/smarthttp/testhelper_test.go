@@ -23,6 +23,8 @@ func TestMain(m *testing.M) {
 func testMain(m *testing.M) int {
 	hooks.Override = "/"
 
+	testhelper.ConfigureGitalyHooksBinary()
+
 	return m.Run()
 }
 

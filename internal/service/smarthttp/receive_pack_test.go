@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -270,6 +271,79 @@ func TestFailedReceivePackRequestDueToValidationError(t *testing.T) {
 			testhelper.RequireGrpcError(t, err, codes.InvalidArgument)
 		})
 	}
+}
+
+func TestPostReceivePackToHooks(t *testing.T) {
+	secretToken := "secret token"
+	glRepository := "some_repo"
+	key := 123
+
+	server, socket := runSmartHTTPServer(t)
+	defer server.Stop()
+
+	client, conn := newSmartHTTPClient(t, "unix://"+socket)
+	defer conn.Close()
+
+	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
+	defer cleanup()
+
+	gitlabShellDir := config.Config.GitlabShell.Dir
+	defer func() {
+		config.Config.GitlabShell.Dir = gitlabShellDir
+	}()
+
+	config.Config.GitlabShell.Dir = tempGitlabShellDir
+
+	repo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	push := newTestPush(t, nil)
+	oldHead := text.ChompBytes(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", "HEAD"))
+
+	changes := fmt.Sprintf("%s %s refs/heads/master\n", oldHead, push.newHead)
+
+	c := testhelper.GitlabServerConfig{
+		User:                        "",
+		Password:                    "",
+		SecretToken:                 secretToken,
+		Key:                         key,
+		GLRepository:                glRepository,
+		Changes:                     changes,
+		PostReceiveCounterDecreased: true,
+		Protocol:                    "http",
+	}
+
+	ts := testhelper.NewGitlabTestServer(t, c)
+	defer ts.Close()
+
+	testhelper.WriteTemporaryGitlabShellConfigFile(t, tempGitlabShellDir, testhelper.GitlabShellConfig{GitlabURL: ts.URL})
+	testhelper.WriteShellSecretFile(t, tempGitlabShellDir, secretToken)
+
+	defer func(override string) {
+		hooks.Override = override
+	}(hooks.Override)
+
+	cwd, err := os.Getwd()
+	require.NoError(t, err)
+	hookDir := filepath.Join(cwd, "../../../ruby", "git-hooks")
+	hooks.Override = hookDir
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	stream, err := client.PostReceivePack(ctx)
+	require.NoError(t, err)
+
+	firstRequest := &gitalypb.PostReceivePackRequest{
+		Repository:   repo,
+		GlId:         fmt.Sprintf("key-%d", key),
+		GlRepository: glRepository,
+	}
+
+	response := doPush(t, stream, firstRequest, push.body)
+
+	expectedResponse := "0030\x01000eunpack ok\n0019ok refs/heads/master\n00000000"
+	require.Equal(t, expectedResponse, string(response), "Expected response to be %q, got %q", expectedResponse, response)
 }
 
 func drainPostReceivePackResponse(stream gitalypb.SmartHTTPService_PostReceivePackClient) error {

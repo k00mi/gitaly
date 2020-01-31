@@ -3,10 +3,13 @@ package testhelper
 import (
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 )
 
@@ -31,4 +34,22 @@ env | grep -e ^GIT -e ^GL_ > `+hookOutputFile+"\n"), 0755))
 	return hookOutputFile, func() {
 		hooks.Override = oldOverride
 	}
+}
+
+// ConfigureGitalyHooksBinary builds gitaly-hooks command for tests
+func ConfigureGitalyHooksBinary() {
+	var err error
+
+	config.Config.BinDir, err = filepath.Abs("testdata/gitaly-libexec")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	goBuildArgs := []string{
+		"build",
+		"-o",
+		path.Join(config.Config.BinDir, "gitaly-hooks"),
+		"gitlab.com/gitlab-org/gitaly/cmd/gitaly-hooks",
+	}
+	MustRunCommand(nil, nil, "go", goBuildArgs...)
 }
