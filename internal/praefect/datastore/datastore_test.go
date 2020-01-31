@@ -40,52 +40,26 @@ var operations = []struct {
 		},
 	},
 	{
-		desc: "insert first replication job before secondary mapped to primary",
+		desc: "insert replication job",
 		opFn: func(t *testing.T, ds Datastore) {
-			_, err := ds.CreateReplicaReplJobs(repo1Repository.RelativePath, UpdateRepo)
-			require.Error(t, err, ErrInvalidReplTarget)
-		},
-	},
-	{
-		desc: "set the primary for the repository",
-		opFn: func(t *testing.T, ds Datastore) {
-			err := ds.SetPrimary(repo1Repository.RelativePath, stor1.Storage)
+			_, err := ds.CreateReplicaReplJobs(repo1Repository.RelativePath, stor1, []models.Node{stor2}, UpdateRepo)
 			require.NoError(t, err)
 		},
 	},
 	{
-		desc: "add a secondary replica for the repository",
-		opFn: func(t *testing.T, ds Datastore) {
-			err := ds.AddReplica(repo1Repository.RelativePath, stor2.Storage)
-			require.NoError(t, err)
-		},
-	},
-	{
-		desc: "insert first replication job after secondary mapped to primary",
-		opFn: func(t *testing.T, ds Datastore) {
-			ids, err := ds.CreateReplicaReplJobs(repo1Repository.RelativePath, UpdateRepo)
-			require.NoError(t, err)
-			require.Equal(t, []uint64{1}, ids)
-		},
-	},
-	{
-		desc: "fetch inserted replication jobs after primary mapped",
+		desc: "fetch inserted replication jobs",
 		opFn: func(t *testing.T, ds Datastore) {
 			jobs, err := ds.GetJobs(JobStatePending|JobStateReady, stor2.Storage, 10)
 			require.NoError(t, err)
 			require.Len(t, jobs, 1)
 
 			expectedJob := ReplJob{
-				Change: UpdateRepo,
-				ID:     1,
-				Repository: models.Repository{
-					RelativePath: repo1Repository.RelativePath,
-					Primary:      stor1,
-					Replicas:     []models.Node{stor2},
-				},
-				SourceNode: stor1,
-				TargetNode: stor2,
-				State:      JobStatePending,
+				Change:       UpdateRepo,
+				ID:           1,
+				RelativePath: repo1Repository.RelativePath,
+				SourceNode:   stor1,
+				TargetNode:   stor2,
+				State:        JobStatePending,
 			}
 			require.Equal(t, expectedJob, jobs[0])
 		},
@@ -133,33 +107,4 @@ func TestDatastoreInterface(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestMemoryDatastore_GetRepository(t *testing.T) {
-	ds := NewInMemory(config.Config{
-		VirtualStorages: []*config.VirtualStorage{
-			{
-				Nodes: []*models.Node{&stor1, &stor2},
-			},
-		},
-	})
-	require.NoError(t, ds.SetPrimary(repo1Repository.RelativePath, stor1.Storage))
-	require.NoError(t, ds.AddReplica(repo1Repository.RelativePath, stor2.Storage))
-
-	repBefore, err := ds.GetRepository(repo1Repository.RelativePath)
-	require.NoError(t, err)
-
-	expRepo := models.Repository{
-		RelativePath: repo1Repository.RelativePath,
-		Primary:      stor1,
-		Replicas:     []models.Node{stor2},
-	}
-	require.Equal(t, expRepo, repBefore)
-
-	initialAddrs := repBefore.Replicas[0].Address
-	repBefore.Replicas[0].Address += "/"
-
-	repAfter, err := ds.GetRepository(repo1Repository.RelativePath)
-	require.NoError(t, err)
-	require.Equal(t, initialAddrs, repAfter.Replicas[0].Address, "modification from outside should not affect what is inside storage")
 }

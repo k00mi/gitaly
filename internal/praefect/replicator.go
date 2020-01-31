@@ -11,7 +11,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/conn"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metrics"
-	"gitlab.com/gitlab-org/gitaly/internal/praefect/models"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -32,12 +31,12 @@ type defaultReplicator struct {
 func (dr defaultReplicator) Replicate(ctx context.Context, job datastore.ReplJob, sourceCC, targetCC *grpc.ClientConn) error {
 	targetRepository := &gitalypb.Repository{
 		StorageName:  job.TargetNode.Storage,
-		RelativePath: job.Repository.RelativePath,
+		RelativePath: job.RelativePath,
 	}
 
 	sourceRepository := &gitalypb.Repository{
 		StorageName:  job.SourceNode.Storage,
-		RelativePath: job.Repository.RelativePath,
+		RelativePath: job.RelativePath,
 	}
 
 	targetRepositoryClient := gitalypb.NewRepositoryServiceClient(targetCC)
@@ -98,7 +97,7 @@ func (dr defaultReplicator) Replicate(ctx context.Context, job datastore.ReplJob
 func (dr defaultReplicator) Destroy(ctx context.Context, job datastore.ReplJob, targetCC *grpc.ClientConn) error {
 	targetRepo := &gitalypb.Repository{
 		StorageName:  job.TargetNode.Storage,
-		RelativePath: job.Repository.RelativePath,
+		RelativePath: job.RelativePath,
 	}
 
 	repoSvcClient := gitalypb.NewRepositoryServiceClient(targetCC)
@@ -213,30 +212,6 @@ func WithReplicator(r Replicator) ReplMgrOpt {
 	}
 }
 
-// ScheduleReplication will store a replication job in the datastore for later
-// execution. It filters out projects that are not whitelisted.
-// TODO: add a parameter to delay replication
-func (r ReplMgr) ScheduleReplication(ctx context.Context, repo models.Repository) error {
-	_, ok := r.whitelist[repo.RelativePath]
-	if !ok {
-		r.log.WithField(logKeyProjectPath, repo.RelativePath).
-			Infof("project %q is not whitelisted for replication", repo.RelativePath)
-		return nil
-	}
-
-	id, err := r.datastore.CreateReplicaReplJobs(repo.RelativePath, datastore.UpdateRepo)
-	if err != nil {
-		return err
-	}
-
-	r.log.WithFields(logrus.Fields{
-		logWithReplJobID: id,
-		"relative_path":  repo.RelativePath,
-	}).Info("replication job created")
-
-	return nil
-}
-
 const (
 	logWithReplJobID  = "replication_job_id"
 	logWithReplSource = "replication_job_source"
@@ -284,7 +259,7 @@ func (r ReplMgr) ProcessBacklog(ctx context.Context) error {
 					logWithReplJobID: job.ID,
 					"from_storage":   job.SourceNode.Storage,
 					"to_storage":     job.TargetNode.Storage,
-					"relative_path":  job.Repository.RelativePath,
+					"relative_path":  job.RelativePath,
 				}).Info("processing replication job")
 				r.processReplJob(ctx, job)
 			}
@@ -325,13 +300,13 @@ func (r ReplMgr) processReplJob(ctx context.Context, job datastore.ReplJob) {
 		return
 	}
 
-	sourceCC, err := r.clientConnections.GetConnection(job.Repository.Primary.Storage)
+	sourceCC, err := r.clientConnections.GetConnection(job.SourceNode.Storage)
 	if err != nil {
 		l.WithError(err).Error("unable to obtain client connection for primary node in replication job")
 		return
 	}
 
-	injectedCtx, err := helper.InjectGitalyServers(ctx, job.Repository.Primary.Storage, job.SourceNode.Address, job.SourceNode.Token)
+	injectedCtx, err := helper.InjectGitalyServers(ctx, job.SourceNode.Storage, job.SourceNode.Address, job.SourceNode.Token)
 	if err != nil {
 		l.WithError(err).Error("unable to inject Gitaly servers into context for replication job")
 		return

@@ -12,7 +12,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/sirupsen/logrus"
-	internalerrs "gitlab.com/gitlab-org/gitaly/internal/errors"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/conn"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
@@ -136,7 +135,12 @@ func (c *Coordinator) getStorageForRepositoryMessage(mi protoregistry.MethodInfo
 		return "", nil, err
 	}
 
-	primary, err := c.selectPrimary(mi, targetRepo)
+	primary, err := c.datastore.GetPrimary(targetRepo.GetStorageName())
+	if err != nil {
+		return "", nil, err
+	}
+
+	secondaries, err := c.datastore.GetSecondaries(targetRepo.GetStorageName())
 	if err != nil {
 		return "", nil, err
 	}
@@ -171,58 +175,12 @@ func (c *Coordinator) getStorageForRepositoryMessage(mi protoregistry.MethodInfo
 			change = datastore.DeleteRepo
 		}
 
-		if requestFinalizer, err = c.createReplicaJobs(targetRepo, change); err != nil {
+		if requestFinalizer, err = c.createReplicaJobs(targetRepo, primary, secondaries, change); err != nil {
 			return "", nil, err
 		}
 	}
 
 	return primary.Storage, requestFinalizer, nil
-}
-
-func (c *Coordinator) selectPrimary(mi protoregistry.MethodInfo, targetRepo *gitalypb.Repository) (*models.Node, error) {
-	primary, err := c.datastore.GetPrimary(targetRepo.GetRelativePath())
-
-	if err != nil {
-		if err != datastore.ErrPrimaryNotSet {
-			return nil, err
-		}
-		// if there are no primaries for this repository, pick one
-		nodes, err := c.datastore.GetStorageNodes()
-		if err != nil {
-			return nil, err
-		}
-
-		if len(nodes) == 0 {
-			return nil, fmt.Errorf("no nodes serve storage %s", targetRepo.GetStorageName())
-		}
-
-		newPrimary, err := c.datastore.PickAPrimary(targetRepo.GetStorageName())
-		if err != nil {
-			if err == datastore.ErrNoPrimaryForStorage {
-				return nil, status.Error(codes.InvalidArgument, internalerrs.ErrInvalidRepository.Error())
-			}
-			return nil, fmt.Errorf("could not choose a primary: %v", err)
-		}
-
-		// set the primary
-		if err = c.datastore.SetPrimary(targetRepo.GetRelativePath(), newPrimary.Storage); err != nil {
-			return nil, err
-		}
-
-		// add replicas
-		for _, replica := range nodes {
-			if replica.DefaultPrimary {
-				continue
-			}
-			if err = c.datastore.AddReplica(targetRepo.GetRelativePath(), replica.Storage); err != nil {
-				return nil, err
-			}
-		}
-
-		return &newPrimary, nil
-	}
-
-	return &primary, nil
 }
 
 func protoMessageFromPeeker(mi protoregistry.MethodInfo, peeker proxy.StreamModifier) (proto.Message, error) {
@@ -239,8 +197,8 @@ func protoMessageFromPeeker(mi protoregistry.MethodInfo, peeker proxy.StreamModi
 	return m, nil
 }
 
-func (c *Coordinator) createReplicaJobs(targetRepo *gitalypb.Repository, change datastore.ChangeType) (func(), error) {
-	jobIDs, err := c.datastore.CreateReplicaReplJobs(targetRepo.RelativePath, change)
+func (c *Coordinator) createReplicaJobs(targetRepo *gitalypb.Repository, primary models.Node, secondaries []models.Node, change datastore.ChangeType) (func(), error) {
+	jobIDs, err := c.datastore.CreateReplicaReplJobs(targetRepo.RelativePath, primary, secondaries, change)
 	if err != nil {
 		return nil, err
 	}
