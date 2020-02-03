@@ -56,27 +56,35 @@ describe Gitlab::Git::GitlabProjects do
 
   describe '#push_branches' do
     let(:remote_name) { 'remote-name' }
-    let(:branch_name) { 'master' }
     let(:env) { { 'GIT_SSH_COMMAND' => 'foo-command bar' } }
-    let(:cmd) { %W(#{Gitlab.config.git.bin_path} push -- #{remote_name} #{branch_name}) }
     let(:force) { false }
+    let(:branch_names) { 20.times.map { |i| "branch#{i}" } }
+    let(:cmd1) do
+      %W(#{Gitlab.config.git.bin_path} push -- #{remote_name}) + branch_names[0, 10]
+    end
+    let(:cmd2) do
+      %W(#{Gitlab.config.git.bin_path} push -- #{remote_name}) + branch_names[10, 10]
+    end
 
-    subject { gl_projects.push_branches(remote_name, 600, force, [branch_name], env: env) }
+    subject { gl_projects.push_branches(remote_name, 600, force, branch_names, env: env) }
 
     it 'executes the command' do
-      stub_spawn(cmd, 600, tmp_repo_path, env, success: true)
+      stub_spawn(cmd1, 600, tmp_repo_path, env, success: true)
+      stub_spawn(cmd2, 600, tmp_repo_path, env, success: true)
 
       is_expected.to be_truthy
     end
 
     it 'fails' do
-      stub_spawn(cmd, 600, tmp_repo_path, env, success: false)
+      stub_spawn(cmd1, 600, tmp_repo_path, env, success: true)
+      stub_spawn(cmd2, 600, tmp_repo_path, env, success: false)
 
       is_expected.to be_falsy
     end
 
     context 'with --force' do
-      let(:cmd) { %W(#{Gitlab.config.git.bin_path} push --force -- #{remote_name} #{branch_name}) }
+      let(:branch_names) { ['master'] }
+      let(:cmd) { %W(#{Gitlab.config.git.bin_path} push --force -- #{remote_name} #{branch_names[0]}) }
       let(:force) { true }
 
       it 'executes the command' do
@@ -150,20 +158,29 @@ describe Gitlab::Git::GitlabProjects do
 
   describe '#delete_remote_branches' do
     let(:remote_name) { 'remote-name' }
-    let(:branch_name) { 'master' }
+    let(:branch_names) { 20.times.map { |i| "branch#{i}" } }
     let(:env) { { 'GIT_SSH_COMMAND' => 'foo-command bar' } }
-    let(:cmd) { %W(#{Gitlab.config.git.bin_path} push -- #{remote_name} :#{branch_name}) }
+    let(:cmd1) do
+      %W(#{Gitlab.config.git.bin_path} push -- #{remote_name}) +
+        branch_names[0, 10].map { |b| ':' + b }
+    end
+    let(:cmd2) do
+      %W(#{Gitlab.config.git.bin_path} push -- #{remote_name}) +
+        branch_names[10, 10].map { |b| ':' + b }
+    end
 
-    subject { gl_projects.delete_remote_branches(remote_name, [branch_name], env: env) }
+    subject { gl_projects.delete_remote_branches(remote_name, branch_names, env: env) }
 
     it 'executes the command' do
-      stub_unlimited_spawn(cmd, tmp_repo_path, env, success: true)
+      stub_unlimited_spawn(cmd1, tmp_repo_path, env, success: true)
+      stub_unlimited_spawn(cmd2, tmp_repo_path, env, success: true)
 
       is_expected.to be_truthy
     end
 
     it 'fails' do
-      stub_unlimited_spawn(cmd, tmp_repo_path, env, success: false)
+      stub_unlimited_spawn(cmd1, tmp_repo_path, env, success: true)
+      stub_unlimited_spawn(cmd2, tmp_repo_path, env, success: false)
 
       is_expected.to be_falsy
     end
