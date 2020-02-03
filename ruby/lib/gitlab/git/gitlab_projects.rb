@@ -6,6 +6,8 @@ module Gitlab
       include Gitlab::Git::Popen
       include Gitlab::Utils::StrongMemoize
 
+      BRANCHES_PER_PUSH = 10
+
       # Relative path is a directory name for repository with .git at the end.
       # Example: gitlab-org/gitlab-test.git
       attr_reader :repository_relative_path
@@ -67,29 +69,36 @@ module Gitlab
       end
 
       def push_branches(remote_name, timeout, force, branch_names, env: {})
-        logger.info "Pushing branches from #{repository_absolute_path} to remote #{remote_name}: #{branch_names}"
-        cmd = %W(#{Gitlab.config.git.bin_path} push)
-        cmd << '--force' if force
-        cmd += %W(-- #{remote_name}).concat(branch_names)
+        branch_names.each_slice(BRANCHES_PER_PUSH) do |branches|
+          logger.info "Pushing #{branches.count} branches from #{repository_absolute_path} to remote #{remote_name}"
 
-        success = run_with_timeout(cmd, timeout, repository_absolute_path, env)
+          cmd = %W(#{Gitlab.config.git.bin_path} push)
+          cmd << '--force' if force
+          cmd += %W(-- #{remote_name}).concat(branches)
 
-        logger.error("Pushing branches to remote #{remote_name} failed.") unless success
+          unless run_with_timeout(cmd, timeout, repository_absolute_path, env)
+            logger.error("Pushing branches to remote #{remote_name} failed.")
+            return false
+          end
+        end
 
-        success
+        true
       end
 
       def delete_remote_branches(remote_name, branch_names, env: {})
-        branches = branch_names.map { |branch_name| ":#{branch_name}" }
+        branch_names.each_slice(BRANCHES_PER_PUSH) do |branches|
+          logger.info "Pushing #{branches.count} deleted branches from #{repository_absolute_path} to remote #{remote_name}"
 
-        logger.info "Pushing deleted branches from #{repository_absolute_path} to remote #{remote_name}: #{branch_names}"
-        cmd = %W(#{Gitlab.config.git.bin_path} push -- #{remote_name}).concat(branches)
+          cmd = %W(#{Gitlab.config.git.bin_path} push -- #{remote_name})
+          branches.each { |branch| cmd << ":#{branch}" }
 
-        success = run(cmd, repository_absolute_path, env)
+          unless run(cmd, repository_absolute_path, env)
+            logger.error("Pushing deleted branches to remote #{remote_name} failed.")
+            return false
+          end
+        end
 
-        logger.error("Pushing deleted branches to remote #{remote_name} failed.") unless success
-
-        success
+        true
       end
 
       protected
