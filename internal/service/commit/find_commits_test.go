@@ -330,6 +330,64 @@ func TestSuccessfulFindCommitsRequest(t *testing.T) {
 				"59e29889be61e6e0e5e223bfa9ac2721d31605b8",
 			},
 		},
+		{
+			// Ordering by none implies that commits appear in
+			// chronological order:
+			//
+			// git log --graph -n 6 --pretty=format:"%h" --date-order 0031876
+			// *   0031876
+			// |\
+			// * | bf6e164
+			// | * 48ca272
+			// * | 9d526f8
+			// | * 335bc94
+			// |/
+			// * 1039376
+			desc: "ordered by none",
+			request: &gitalypb.FindCommitsRequest{
+				Repository: testRepo,
+				Revision:   []byte("0031876"),
+				Order:      gitalypb.FindCommitsRequest_NONE,
+				Limit:      6,
+			},
+			ids: []string{
+				"0031876facac3f2b2702a0e53a26e89939a42209",
+				"bf6e164cac2dc32b1f391ca4290badcbe4ffc5fb",
+				"48ca272b947f49eee601639d743784a176574a09",
+				"9d526f87b82e2b2fd231ca44c95508e5e85624ca",
+				"335bc94d5b7369b10251e612158da2e4a4aaa2a5",
+				"1039376155a0d507eba0ea95c29f8f5b983ea34b",
+			},
+		},
+		{
+			// When ordering by topology, all commit children will
+			// be shown before parents:
+			//
+			// git log --graph -n 6 --pretty=format:"%h" --topo-order 0031876
+			// *   0031876
+			// |\
+			// | * 48ca272
+			// | * 335bc94
+			// * | bf6e164
+			// * | 9d526f8
+			// |/
+			// * 1039376
+			desc: "ordered by topo",
+			request: &gitalypb.FindCommitsRequest{
+				Repository: testRepo,
+				Revision:   []byte("0031876"),
+				Order:      gitalypb.FindCommitsRequest_TOPO,
+				Limit:      6,
+			},
+			ids: []string{
+				"0031876facac3f2b2702a0e53a26e89939a42209",
+				"48ca272b947f49eee601639d743784a176574a09",
+				"335bc94d5b7369b10251e612158da2e4a4aaa2a5",
+				"bf6e164cac2dc32b1f391ca4290badcbe4ffc5fb",
+				"9d526f87b82e2b2fd231ca44c95508e5e85624ca",
+				"1039376155a0d507eba0ea95c29f8f5b983ea34b",
+			},
+		},
 	}
 
 	for _, tc := range testCases {
