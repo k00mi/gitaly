@@ -271,7 +271,7 @@ func TestGetArchivePathInjection(t *testing.T) {
 		ssh-ed25519 my_super_evil_ssh_pubkey
 		#`)
 
-	_, err = fmt.Fprintf(f, evilPubKeyFile)
+	_, err = fmt.Fprint(f, evilPubKeyFile)
 	require.NoError(t, err)
 	require.NoError(t, f.Close())
 

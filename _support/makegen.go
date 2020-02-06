@@ -74,7 +74,7 @@ func (gm *gitalyMake) Pkg() string         { return "gitlab.com/gitlab-org/gital
 func (gm *gitalyMake) GoImports() string   { return "bin/goimports" }
 func (gm *gitalyMake) GitalyFmt() string   { return filepath.Join(gm.BuildDir(), "bin/gitalyfmt") }
 func (gm *gitalyMake) GoCovMerge() string  { return "bin/gocovmerge" }
-func (gm *gitalyMake) GoLint() string      { return "bin/golint" }
+func (gm *gitalyMake) GoLint() string      { return filepath.Join(gm.BuildDir(), "bin/golangci-lint") }
 func (gm *gitalyMake) GoVendor() string    { return "bin/govendor" }
 func (gm *gitalyMake) StaticCheck() string { return filepath.Join(gm.BuildDir(), "bin/staticcheck") }
 func (gm *gitalyMake) ProtoC() string      { return filepath.Join(gm.BuildDir(), "protoc/bin/protoc") }
@@ -281,17 +281,17 @@ func (gm *gitalyMake) AllPackages() []string {
 	return pkgs
 }
 
-type protoDownloadInfo struct {
+type downloadInfo struct {
 	url    string
 	sha256 string
 }
 
-var protoCDownload = map[string]protoDownloadInfo{
-	"darwin/amd64": protoDownloadInfo{
+var protoCDownload = map[string]downloadInfo{
+	"darwin/amd64": downloadInfo{
 		url:    "https://github.com/protocolbuffers/protobuf/releases/download/v3.6.1/protoc-3.6.1-osx-x86_64.zip",
 		sha256: "0decc6ce5beed07f8c20361ddeb5ac7666f09cf34572cca530e16814093f9c0c",
 	},
-	"linux/amd64": protoDownloadInfo{
+	"linux/amd64": downloadInfo{
 		url:    "https://github.com/protocolbuffers/protobuf/releases/download/v3.6.1/protoc-3.6.1-linux-x86_64.zip",
 		sha256: "6003de742ea3fcf703cfec1cd4a3380fd143081a2eb0e559065563496af27807",
 	},
@@ -307,6 +307,29 @@ func (gm *gitalyMake) ProtoCSHA256() string {
 
 func (gm *gitalyMake) MakeFormatCheck() string {
 	return `awk '{ print } END { if(NR>0) { print "Formatting error, run make format"; exit(1) } }'`
+}
+
+func (gm *gitalyMake) GolangCILintURL() string {
+	return "https://github.com/golangci/golangci-lint/releases/download/v" + gm.GolangCILintVersion() + "/" + gm.GolangCILint() + ".tar.gz"
+}
+
+func (gm *gitalyMake) GolangCILintSHA256() string {
+	switch runtime.GOOS + "/" + runtime.GOARCH {
+	case "darwin/amd64":
+		return "fcf80824c21567eb0871055711bf9bdca91cf9a081122e2a45f1d11fed754600"
+	case "linux/amd64":
+		return "109d38cdc89f271392f5a138d6782657157f9f496fd4801956efa2d0428e0cbe"
+	default:
+		return "unknown"
+	}
+}
+
+func (gm *gitalyMake) GolangCILintVersion() string {
+	return "1.22.2"
+}
+
+func (gm *gitalyMake) GolangCILint() string {
+	return fmt.Sprintf("golangci-lint-%s-%s-%s", gm.GolangCILintVersion(), runtime.GOOS, runtime.GOARCH)
 }
 
 var templateText = func() string {

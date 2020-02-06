@@ -677,7 +677,7 @@ func recvTimeout(bidi gitalypb.OperationService_UserRebaseConfirmableClient, tim
 	}
 }
 
-func buildHeaderRequest(repo *gitalypb.Repository, user *gitalypb.User, rebaseId string, branchName string, branchSha string, remoteRepo *gitalypb.Repository, remoteBranch string) *gitalypb.UserRebaseConfirmableRequest {
+func buildHeaderRequest(repo *gitalypb.Repository, user *gitalypb.User, rebaseId string, branchName string, branchSha string, remoteRepo *gitalypb.Repository, remoteBranch string) *gitalypb.UserRebaseConfirmableRequest { // nolint:golint
 	return &gitalypb.UserRebaseConfirmableRequest{
 		UserRebaseConfirmableRequestPayload: &gitalypb.UserRebaseConfirmableRequest_Header_{
 			&gitalypb.UserRebaseConfirmableRequest_Header{

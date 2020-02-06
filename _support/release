@@ -10,7 +10,7 @@ def main(version)
   end
 
   env = %w[/usr/bin/env BUNDLE_FLAGS=--no-deployment]
-  run!(env + %w[make verify smoke-test])
+  run!(env + %w[make verify lint smoke-test])
 
   puts 'Testing for changed files'
   run!(%w[git diff --quiet --exit-code])

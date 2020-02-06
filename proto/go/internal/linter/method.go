@@ -90,7 +90,7 @@ func (ml methodLinter) ensureValidStorage(expected int) error {
 
 	msgT := topLevelMsgs[reqMsgName]
 
-	storageFields, err := findStorageFields(topLevelMsgs, reqMsgName, msgT)
+	storageFields, err := findStorageFields(topLevelMsgs, reqMsgName, msgT) // nolint:staticcheck
 
 	if len(storageFields) != expected {
 		return fmt.Errorf("unexpected count of storage field %d, expected %d, found storage label at: %v", len(storageFields), expected, storageFields)
@@ -107,7 +107,7 @@ func findStorageFields(topLevelMsgs map[string]*descriptor.DescriptorProto, pref
 			return nil, err
 		}
 		if storage {
-			storageFields = append(storageFields, prefix + "." + f.GetName())
+			storageFields = append(storageFields, prefix+"."+f.GetName())
 		}
 
 		childMsg, err := findChildMsg(topLevelMsgs, t, f)
@@ -116,7 +116,7 @@ func findStorageFields(topLevelMsgs map[string]*descriptor.DescriptorProto, pref
 		}
 
 		if childMsg != nil {
-			nestedStorageFields, err := findStorageFields(topLevelMsgs, prefix + "." + f.GetName(), childMsg)
+			nestedStorageFields, err := findStorageFields(topLevelMsgs, prefix+"."+f.GetName(), childMsg)
 			if err != nil {
 				return nil, err
 			}
@@ -136,7 +136,7 @@ func findChildMsg(topLevelMsgs map[string]*descriptor.DescriptorProto, t *descri
 
 	msgName, err := lastName(f.GetTypeName())
 	if err != nil {
-		return nil,  err
+		return nil, err
 	}
 
 	for _, nestedType := range t.GetNestedType() {

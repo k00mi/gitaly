@@ -1,0 +1,32 @@
+# options for analysis running
+run:
+  # timeout for analysis, e.g. 30s, 5m, default is 1m
+  timeout: 5m
+  modules-download-mode: readonly
+
+# all available settings of specific linters
+linters-settings:
+  staticcheck:
+    checks:
+      - inherit
+
+# list of useful linters could be found at https://github.com/golangci/awesome-go-linters
+linters:
+  disable-all: true
+  enable:
+    - golint
+    - goimports # https://godoc.org/golang.org/x/tools/cmd/goimports
+    - staticcheck # https://github.com/dominikh/go-tools/tree/master/cmd/staticcheck
+    - gosimple # https://github.com/dominikh/go-tools/tree/master/cmd/gosimple
+
+issues:
+  # Excluding configuration per-path, per-linter, per-text and per-source
+  exclude-rules:
+    # Exclude some staticcheck messages
+    - linters:
+        - staticcheck
+      text: "SA1019:"
+  # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
+  max-issues-per-linter: 0
+  # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
+  max-same-issues: 0
