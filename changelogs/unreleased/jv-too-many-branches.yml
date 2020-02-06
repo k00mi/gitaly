@@ -1,5 +1,0 @@
----
-title: 'UpdateRemoteMirror: handle large number of branches'
-merge_request: 1745
-author:
-type: fixed

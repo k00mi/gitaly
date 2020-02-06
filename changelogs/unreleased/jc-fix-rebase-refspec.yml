@@ -1,5 +1,0 @@
----
-title: Validate bad branches for UserRebase and UserRebaseConfirmable
-merge_request: 1735
-author:
-type: security

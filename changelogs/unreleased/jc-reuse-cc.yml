@@ -1,5 +1,0 @@
----
-title: Cache and reuse client connection in ReplicateRepository
-merge_request: 1801
-author:
-type: fixed

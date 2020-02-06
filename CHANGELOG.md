@@ -1,5 +1,47 @@
 # Gitaly changelog
 
+## v1.86.0
+
+#### Added
+- Support FindCommitsRequest with order (--topo-order)
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1791
+- Add Node manager
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1779
+
+#### Changed
+- simplify praefect routing to primary and replication jobs
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1760
+- PostReceiveHook: add support for Git push options
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1756
+
+#### Fixed
+- Incorrect changelogs should be caught by Danger
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1811
+- Cache and reuse client connection in ReplicateRepository
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1801
+- Fix cache walker to only walk each path once
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1769
+- UpdateRemoteMirror: handle large number of branches
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1745
+
+#### Other
+- Update activesupport, gitlab-labkit, and other Ruby dependencies
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1794
+- Add deadline_type prometheus label
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1737
+- Use golangci-lint for static code analysis
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1722
+- Remove unused rubyserver in structs
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1807
+- Reenable git wire protocol v2 behind feature flag
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1797
+- Add grpc tag interceptor
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1795
+
+#### Security
+- Validate bad branches for UserRebase and UserRebaseConfirmable
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1735
+
 ## v1.85.0
 
 #### Deprecated

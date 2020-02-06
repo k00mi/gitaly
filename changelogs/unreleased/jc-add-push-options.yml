@@ -1,5 +1,0 @@
----
-title: "PostReceiveHook: add support for Git push options"
-merge_request: 1756
-author:
-type: changed
