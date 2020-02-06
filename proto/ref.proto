@@ -62,16 +62,6 @@ service RefService {
       op: ACCESSOR
     };
   }
-  rpc CreateBranch(CreateBranchRequest) returns (CreateBranchResponse) {
-    option (op_type) = {
-      op: MUTATOR
-    };
-  }
-  rpc DeleteBranch(DeleteBranchRequest) returns (DeleteBranchResponse) {
-    option (op_type) = {
-      op: MUTATOR
-    };
-  }
   rpc FindBranch(FindBranchRequest) returns (FindBranchResponse) {
     option (op_type) = {
       op: ACCESSOR

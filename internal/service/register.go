@@ -33,7 +33,7 @@ func RegisterAll(grpcServer *grpc.Server, rubyServer *rubyserver.Server) {
 	gitalypb.RegisterDiffServiceServer(grpcServer, diff.NewServer())
 	gitalypb.RegisterNamespaceServiceServer(grpcServer, namespace.NewServer())
 	gitalypb.RegisterOperationServiceServer(grpcServer, operations.NewServer(rubyServer))
-	gitalypb.RegisterRefServiceServer(grpcServer, ref.NewServer(rubyServer))
+	gitalypb.RegisterRefServiceServer(grpcServer, ref.NewServer())
 	gitalypb.RegisterRepositoryServiceServer(grpcServer, repository.NewServer(rubyServer))
 	gitalypb.RegisterSSHServiceServer(grpcServer, ssh.NewServer())
 	gitalypb.RegisterSmartHTTPServiceServer(grpcServer, smarthttp.NewServer())

@@ -6,7 +6,6 @@ require_relative 'gitlab/git.rb'
 require_relative 'gitaly_server/client.rb'
 require_relative 'gitaly_server/utils.rb'
 require_relative 'gitaly_server/blob_service.rb'
-require_relative 'gitaly_server/ref_service.rb'
 require_relative 'gitaly_server/operations_service.rb'
 require_relative 'gitaly_server/repository_service.rb'
 require_relative 'gitaly_server/wiki_service.rb'
@@ -47,7 +46,6 @@ module GitalyServer
   end
 
   def self.register_handlers(server)
-    server.handle(RefService.new)
     server.handle(OperationsService.new)
     server.handle(RepositoryService.new)
     server.handle(WikiService.new)

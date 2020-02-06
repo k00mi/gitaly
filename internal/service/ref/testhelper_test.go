@@ -7,10 +7,8 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
-	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
@@ -84,15 +82,8 @@ func TestMain(m *testing.M) {
 	os.Exit(testMain(m))
 }
 
-var rubyServer = &rubyserver.Server{}
-
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
-
-	if err := rubyServer.Start(); err != nil {
-		log.Fatal(err)
-	}
-	defer rubyServer.Stop()
 
 	// Force small messages to test that fragmenting the
 	// ref list works correctly
@@ -110,7 +101,7 @@ func runRefServiceServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	gitalypb.RegisterRefServiceServer(grpcServer, &server{ruby: rubyServer})
+	gitalypb.RegisterRefServiceServer(grpcServer, &server{})
 	reflection.Register(grpcServer)
 
 	go grpcServer.Serve(listener)

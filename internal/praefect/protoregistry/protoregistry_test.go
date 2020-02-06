@@ -97,8 +97,6 @@ func TestPopulatesProtoRegistry(t *testing.T) {
 			"FindAllTags":                     protoregistry.OpAccessor,
 			"FindAllRemoteBranches":           protoregistry.OpAccessor,
 			"RefExists":                       protoregistry.OpAccessor,
-			"CreateBranch":                    protoregistry.OpMutator,
-			"DeleteBranch":                    protoregistry.OpMutator,
 			"FindBranch":                      protoregistry.OpAccessor,
 			"DeleteRefs":                      protoregistry.OpMutator,
 			"ListBranchNamesContainingCommit": protoregistry.OpAccessor,
