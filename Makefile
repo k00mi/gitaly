@@ -80,8 +80,12 @@ rspec-gitlab-shell: prepare-build
 verify: prepare-build
 	cd $(BUILD_DIR) && $(MAKE) $@
 
-.PHONY: verify-warnings
-verify-warnings: prepare-build
+.PHONY: lint
+lint: prepare-build
+	cd $(BUILD_DIR) && $(MAKE) $@
+
+.PHONY: lint-warnings
+lint-warnings: prepare-build
 	cd $(BUILD_DIR) && $(MAKE) $@
 
 .PHONY: format

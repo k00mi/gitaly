@@ -90,7 +90,7 @@ func (s *assertingService) PingStream(stream pb.TestService_PingStreamServer) er
 		if err := stream.Send(pong); err != nil {
 			require.NoError(s.t, err, "can't fail sending back a pong")
 		}
-		counter += 1
+		counter++
 	}
 	stream.SetTrailer(metadata.Pairs(serverTrailerMdKey, "I like ending turtles."))
 	return nil

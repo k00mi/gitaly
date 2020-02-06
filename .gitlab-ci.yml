@@ -83,13 +83,6 @@ verify:
   script:
     - make verify
 
-verify-warnings:
-  <<: *ruby_definition
-  stage: test
-  script:
-    - make verify-warnings
-  allow_failure: true
-
 proto:
   <<: *ruby_definition
   stage: test
@@ -225,3 +218,33 @@ praefect_sql_connect:
     - ruby -rerb -e 'ERB.new(ARGF.read).run' _support/config.praefect.toml.ci-sql-test.erb > config.praefect.toml
     - ./praefect -config config.praefect.toml sql-ping
     - ./praefect -config config.praefect.toml sql-migrate
+
+lint:
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:golangci-lint-alpine
+  stage: test
+  before_script:
+    # this removes dependency to the github.com/libgit2/git2go: https://gitlab.com/gitlab-org/gitaly/issues/1706
+    - git rm -r --quiet cmd/gitaly-remote
+  script:
+    # Write the code coverage report to gl-code-quality-report.json
+    # and print linting issues to stdout in the format: path/to/file:line description
+    - golangci-lint run --config .golangci.yml --out-format code-climate | tee gl-code-quality-report.json | jq -r '.[] | "\(.location.path):\(.location.lines.begin) \(.description)"'
+  after_script:
+    - git checkout --quiet --no-progress HEAD cmd/gitaly-remote # restore removed code
+  artifacts:
+    reports:
+      codequality: gl-code-quality-report.json
+    paths:
+      - gl-code-quality-report.json
+
+lint-warnings:
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:golangci-lint-alpine
+  stage: test
+  before_script:
+    # this removes dependency to the github.com/libgit2/git2go: https://gitlab.com/gitlab-org/gitaly/issues/1706
+    - git rm -r --quiet cmd/gitaly-remote
+  script:
+    - golangci-lint run --config _support/golangci.warnings.yml --out-format tab
+  after_script:
+    - git checkout --quiet --no-progress HEAD cmd/gitaly-remote # restore removed code
+  allow_failure: true
