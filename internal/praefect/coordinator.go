@@ -206,6 +206,9 @@ func (c *Coordinator) createReplicaJobs(targetRepo *gitalypb.Repository, primary
 	return func() {
 		for _, jobID := range jobIDs {
 			if err := c.datastore.UpdateReplJob(jobID, datastore.JobStateReady); err != nil {
+				// TODO: in case of error the job remains in queue in 'pending' state and leads to:
+				//  - additional memory consumption
+				//  - stale state of one of the git data stores
 				c.log.WithField("job_id", jobID).WithError(err).Errorf("error when updating replication job to %d", datastore.JobStateReady)
 			}
 		}
