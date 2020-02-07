@@ -30,15 +30,29 @@ func GetOpExtension(m *descriptor.MethodDescriptorProto) (*gitalypb.OperationMsg
 	return opMsg, nil
 }
 
-// GetStorageExtension gets the OperationMsg from a method descriptor
+// GetStorageExtension gets the storage extension from a field descriptor
 func GetStorageExtension(m *descriptor.FieldDescriptorProto) (bool, error) {
+	return getBoolExtension(m, gitalypb.E_Storage)
+}
+
+// GetTargetRepositoryExtension gets the target_repository extension from a field descriptor
+func GetTargetRepositoryExtension(m *descriptor.FieldDescriptorProto) (bool, error) {
+	return getBoolExtension(m, gitalypb.E_TargetRepository)
+}
+
+// GetRepositoryExtension gets the repository extension from a field descriptor
+func GetRepositoryExtension(m *descriptor.FieldDescriptorProto) (bool, error) {
+	return getBoolExtension(m, gitalypb.E_Repository)
+}
+
+func getBoolExtension(m *descriptor.FieldDescriptorProto, extension *proto.ExtensionDesc) (bool, error) {
 	options := m.GetOptions()
 
-	if !proto.HasExtension(options, gitalypb.E_Storage) {
+	if !proto.HasExtension(options, extension) {
 		return false, nil
 	}
 
-	ext, err := proto.GetExtension(options, gitalypb.E_Storage)
+	ext, err := proto.GetExtension(options, extension)
 	if err != nil {
 		return false, err
 	}

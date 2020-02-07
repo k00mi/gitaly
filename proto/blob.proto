@@ -13,38 +13,33 @@ service BlobService {
   rpc GetBlob(GetBlobRequest) returns (stream GetBlobResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc GetBlobs(GetBlobsRequest) returns (stream GetBlobsResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc GetLFSPointers(GetLFSPointersRequest) returns (stream GetLFSPointersResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc GetNewLFSPointers(GetNewLFSPointersRequest) returns (stream GetNewLFSPointersResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc GetAllLFSPointers(GetAllLFSPointersRequest) returns (stream GetAllLFSPointersResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
 }
 
 message GetBlobRequest {
 
-  Repository repository = 1;
+  Repository repository = 1[(target_repository)=true];
   // Object ID (SHA1) of the blob we want to get
   string oid = 2;
   // Maximum number of bytes we want to receive. Use '-1' to get the full blob no matter how big.
@@ -67,7 +62,7 @@ message GetBlobsRequest {
     bytes path = 2;
   }
 
-  Repository repository = 1;
+  Repository repository = 1[(target_repository)=true];
   // Revision/Path pairs of the blobs we want to get.
   repeated RevisionPath revision_paths = 2;
   // Maximum number of bytes we want to receive. Use '-1' to get the full blobs no matter how big.
@@ -102,7 +97,7 @@ message NewBlobObject {
 
 message GetLFSPointersRequest {
 
-  Repository repository = 1;
+  Repository repository = 1[(target_repository)=true];
   repeated string blob_ids = 2;
 }
 
@@ -112,7 +107,7 @@ message GetLFSPointersResponse {
 
 message GetNewLFSPointersRequest {
 
-  Repository repository = 1;
+  Repository repository = 1[(target_repository)=true];
   bytes revision = 2;
   int32 limit = 3;
   // Note: When `not_in_all` is true, `not_in_refs` is ignored
@@ -125,7 +120,7 @@ message GetNewLFSPointersResponse {
 }
 
 message GetAllLFSPointersRequest {
-  Repository repository = 1;
+  Repository repository = 1[(target_repository)=true];
   reserved 2;
 }
 

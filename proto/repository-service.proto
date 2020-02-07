@@ -10,248 +10,208 @@ service RepositoryService {
   rpc RepositoryExists(RepositoryExistsRequest) returns (RepositoryExistsResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc RepackIncremental(RepackIncrementalRequest) returns (RepackIncrementalResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc RepackFull(RepackFullRequest) returns (RepackFullResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc GarbageCollect(GarbageCollectRequest) returns (GarbageCollectResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc RepositorySize(RepositorySizeRequest) returns (RepositorySizeResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc ApplyGitattributes(ApplyGitattributesRequest) returns (ApplyGitattributesResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc FetchRemote(FetchRemoteRequest) returns (FetchRemoteResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc CreateRepository(CreateRepositoryRequest) returns (CreateRepositoryResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc GetArchive(GetArchiveRequest) returns (stream GetArchiveResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc HasLocalBranches(HasLocalBranchesRequest) returns (HasLocalBranchesResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc FetchSourceBranch(FetchSourceBranchRequest) returns (FetchSourceBranchResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc Fsck(FsckRequest) returns (FsckResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc WriteRef(WriteRefRequest) returns (WriteRefResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc FindMergeBase(FindMergeBaseRequest) returns (FindMergeBaseResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc CreateFork(CreateForkRequest) returns (CreateForkResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc IsRebaseInProgress(IsRebaseInProgressRequest) returns (IsRebaseInProgressResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc IsSquashInProgress(IsSquashInProgressRequest) returns (IsSquashInProgressResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
 
   rpc CreateRepositoryFromURL(CreateRepositoryFromURLRequest) returns (CreateRepositoryFromURLResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc CreateBundle(CreateBundleRequest) returns (stream CreateBundleResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc CreateRepositoryFromBundle(stream CreateRepositoryFromBundleRequest) returns (CreateRepositoryFromBundleResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc DeleteConfig(DeleteConfigRequest) returns (DeleteConfigResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc FindLicense(FindLicenseRequest) returns (FindLicenseResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc GetInfoAttributes(GetInfoAttributesRequest) returns (stream GetInfoAttributesResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc CalculateChecksum(CalculateChecksumRequest) returns (CalculateChecksumResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc Cleanup(CleanupRequest) returns (CleanupResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc GetSnapshot(GetSnapshotRequest) returns (stream GetSnapshotResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc CreateRepositoryFromSnapshot(CreateRepositoryFromSnapshotRequest) returns (CreateRepositoryFromSnapshotResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc GetRawChanges(GetRawChangesRequest) returns (stream GetRawChangesResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc SearchFilesByContent(SearchFilesByContentRequest) returns (stream SearchFilesByContentResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc SearchFilesByName(SearchFilesByNameRequest) returns (stream SearchFilesByNameResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc RestoreCustomHooks(stream RestoreCustomHooksRequest) returns (RestoreCustomHooksResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc BackupCustomHooks(BackupCustomHooksRequest) returns (stream BackupCustomHooksResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc FetchHTTPRemote(FetchHTTPRemoteRequest) returns (FetchHTTPRemoteResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc GetObjectDirectorySize(GetObjectDirectorySizeRequest) returns (GetObjectDirectorySizeResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc CloneFromPool(CloneFromPoolRequest) returns (CloneFromPoolResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc CloneFromPoolInternal(CloneFromPoolInternalRequest) returns (CloneFromPoolInternalResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc RemoveRepository(RemoveRepositoryRequest) returns (RemoveRepositoryResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc RenameRepository(RenameRepositoryRequest) returns (RenameRepositoryResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
   rpc ReplicateRepository(ReplicateRepositoryRequest) returns (ReplicateRepositoryResponse) {
     option (op_type)  = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
 }
 
 message RepositoryExistsRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
 }
 
 message RepositoryExistsResponse {
@@ -259,33 +219,33 @@ message RepositoryExistsResponse {
 }
 
 message RepackIncrementalRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
 }
 
 message RepackIncrementalResponse {}
 
 message RepackFullRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bool create_bitmap = 2;
 }
 
 message RepackFullResponse {}
 
 message GarbageCollectRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bool create_bitmap = 2;
 }
 
 message GarbageCollectResponse {}
 
 message CleanupRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
 }
 
 message CleanupResponse {}
 
 message RepositorySizeRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
 }
 
 message RepositorySizeResponse {
@@ -294,14 +254,14 @@ message RepositorySizeResponse {
 }
 
 message ApplyGitattributesRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes revision = 2;
 }
 
 message ApplyGitattributesResponse {}
 
 message FetchRemoteRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string remote = 2;
   bool force = 3;
   bool no_tags = 4;
@@ -316,7 +276,7 @@ message FetchRemoteRequest {
 message FetchRemoteResponse {}
 
 message CreateRepositoryRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
 }
 
 message CreateRepositoryResponse {}
@@ -329,7 +289,7 @@ message GetArchiveRequest {
     TAR_BZ2 = 3;
   }
 
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string commit_id = 2;
   string prefix = 3;
   Format format = 4;
@@ -341,7 +301,7 @@ message GetArchiveResponse {
 }
 
 message HasLocalBranchesRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
 }
 
 message HasLocalBranchesResponse {
@@ -349,7 +309,7 @@ message HasLocalBranchesResponse {
 }
 
 message FetchSourceBranchRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   Repository source_repository = 2;
   bytes source_branch = 3;
   bytes target_ref = 4;
@@ -360,7 +320,7 @@ message FetchSourceBranchResponse {
 }
 
 message FsckRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
 }
 
 message FsckResponse {
@@ -368,7 +328,7 @@ message FsckResponse {
 }
 
 message WriteRefRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes ref = 2;
   bytes revision = 3;
   bytes old_revision = 4;
@@ -385,7 +345,7 @@ message WriteRefResponse {
 }
 
 message FindMergeBaseRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   // We use a repeated field because rugged supports finding a base
   // for more than 2 revisions, so if we needed that in the future we don't
   // need to change the protocol.
@@ -397,14 +357,14 @@ message FindMergeBaseResponse {
 }
 
 message CreateForkRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   Repository source_repository = 2;
 }
 
 message CreateForkResponse {}
 
 message IsRebaseInProgressRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string rebase_id = 2;
 }
 
@@ -413,7 +373,7 @@ message IsRebaseInProgressResponse {
 }
 
 message IsSquashInProgressRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string squash_id = 2;
 }
 
@@ -422,14 +382,14 @@ message IsSquashInProgressResponse {
 }
 
 message CreateRepositoryFromURLRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string url = 2;
 }
 
 message CreateRepositoryFromURLResponse {}
 
 message CreateBundleRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
 }
 
 message CreateBundleResponse {
@@ -437,7 +397,7 @@ message CreateBundleResponse {
 }
 
 message SetConfigRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   message Entry {
     string key = 1;
     oneof value {
@@ -452,21 +412,21 @@ message SetConfigRequest {
 message SetConfigResponse {}
 
 message DeleteConfigRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   repeated string keys = 2;
 }
 
 message DeleteConfigResponse {}
 
 message  RestoreCustomHooksRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes data = 2;
 }
 
 message RestoreCustomHooksResponse {}
 
 message BackupCustomHooksRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
 }
 
 message BackupCustomHooksResponse {
@@ -475,14 +435,14 @@ message BackupCustomHooksResponse {
 
 message CreateRepositoryFromBundleRequest {
   // Only available on the first message
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   bytes data = 2;
 }
 
 message CreateRepositoryFromBundleResponse {}
 
 message FindLicenseRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
 }
 
 message FindLicenseResponse {
@@ -490,7 +450,7 @@ message FindLicenseResponse {
 }
 
 message GetInfoAttributesRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
 }
 
 message GetInfoAttributesResponse {
@@ -498,7 +458,7 @@ message GetInfoAttributesResponse {
 }
 
 message CalculateChecksumRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
 }
 
 message CalculateChecksumResponse {
@@ -506,7 +466,7 @@ message CalculateChecksumResponse {
 }
 
 message GetSnapshotRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
 }
 
 message GetSnapshotResponse {
@@ -514,7 +474,7 @@ message GetSnapshotResponse {
 }
 
 message CreateRepositoryFromSnapshotRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string http_url = 2;
   string http_auth = 3;
 }
@@ -522,7 +482,7 @@ message CreateRepositoryFromSnapshotRequest {
 message CreateRepositoryFromSnapshotResponse {}
 
 message GetRawChangesRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string from_revision = 2;
   string to_revision = 3;
 }
@@ -560,7 +520,7 @@ message GetRawChangesResponse {
 }
 
 message SearchFilesByNameRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string query = 2;
   bytes ref = 3;
 }
@@ -570,7 +530,7 @@ message SearchFilesByNameResponse {
 }
 
 message SearchFilesByContentRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string query = 2;
   bytes ref = 3;
   bool chunked_response = 4;
@@ -590,7 +550,7 @@ message Remote {
 }
 
 message FetchHTTPRemoteRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   Remote remote = 2;
   int32 timeout = 3;
 }
@@ -598,7 +558,7 @@ message FetchHTTPRemoteRequest {
 message FetchHTTPRemoteResponse {}
 
 message GetObjectDirectorySizeRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
 }
 
 message GetObjectDirectorySizeResponse {
@@ -607,7 +567,7 @@ message GetObjectDirectorySizeResponse {
 }
 
 message CloneFromPoolRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   ObjectPool pool = 2;
   Remote remote = 3;
 }
@@ -616,7 +576,7 @@ message CloneFromPoolResponse {
 }
 
 message CloneFromPoolInternalRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   ObjectPool pool = 2;
   Repository source_repository = 3;
 }
@@ -625,13 +585,13 @@ message CloneFromPoolInternalResponse {
 }
 
 message RemoveRepositoryRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
 }
 
 message RemoveRepositoryResponse {
 }
 message RenameRepositoryRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string relative_path = 2;
 }
 
@@ -639,7 +599,7 @@ message RenameRepositoryResponse{
 }
 
 message ReplicateRepositoryRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   Repository source = 2;
 }
 

@@ -13,7 +13,6 @@ service SmartHTTPService {
   rpc InfoRefsUploadPack(InfoRefsRequest) returns (stream InfoRefsResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
 
@@ -23,7 +22,6 @@ service SmartHTTPService {
   rpc InfoRefsReceivePack(InfoRefsRequest) returns (stream InfoRefsResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
 
@@ -31,7 +29,6 @@ service SmartHTTPService {
   rpc PostUploadPack(stream PostUploadPackRequest) returns (stream PostUploadPackResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
 
@@ -39,13 +36,12 @@ service SmartHTTPService {
   rpc PostReceivePack(stream PostReceivePackRequest) returns (stream PostReceivePackResponse) {
     option (op_type) = {
       op: MUTATOR
-      target_repository_field: "1"
     };
   }
 }
 
 message InfoRefsRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   // Parameters to use with git -c (key=value pairs)
   repeated string git_config_options = 2;
 
@@ -59,7 +55,7 @@ message InfoRefsResponse {
 
 message PostUploadPackRequest {
   // repository should only be present in the first message of the stream
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   // Raw data to be copied to stdin of 'git upload-pack'
   bytes data = 2;
   // Parameters to use with git -c (key=value pairs)
@@ -76,7 +72,7 @@ message PostUploadPackResponse {
 
 message PostReceivePackRequest {
   // repository should only be present in the first message of the stream
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   // Raw data to be copied to stdin of 'git receive-pack'
   bytes data = 2;
   // gl_id, gl_repository, and gl_username become env variables, used by the Git {pre,post}-receive

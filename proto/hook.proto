@@ -10,25 +10,22 @@ service HookService {
   rpc PreReceiveHook(stream PreReceiveHookRequest) returns (stream PreReceiveHookResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc PostReceiveHook(stream PostReceiveHookRequest) returns  (stream PostReceiveHookResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
   rpc UpdateHook(UpdateHookRequest) returns (stream UpdateHookResponse) {
     option (op_type) = {
       op: ACCESSOR
-      target_repository_field: "1"
     };
   }
 }
 
 message PreReceiveHookRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string key_id = 2;
   string protocol = 3;
   bytes stdin = 4;
@@ -41,7 +38,7 @@ message PreReceiveHookResponse{
 }
 
 message PostReceiveHookRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string key_id = 2;
   bytes stdin = 3;
   repeated string git_push_options = 4;
@@ -54,7 +51,7 @@ message PostReceiveHookResponse{
 }
 
 message UpdateHookRequest {
-  Repository repository = 1;
+  Repository repository = 1 [(target_repository)=true];
   string key_id = 2;
   bytes ref = 3;
   string old_value = 4;
