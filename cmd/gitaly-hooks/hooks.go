@@ -73,18 +73,6 @@ func main() {
 	}
 }
 
-// GitlabShellConfig contains a subset of gitlabshell's config.yml
-type GitlabShellConfig struct {
-	GitlabURL    string       `yaml:"gitlab_url"`
-	HTTPSettings HTTPSettings `yaml:"http_settings"`
-}
-
-// HTTPSettings contains fields for http settings
-type HTTPSettings struct {
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-}
-
 func check(configPath string) (int, error) {
 	cfgFile, err := os.Open(configPath)
 	if err != nil {

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -86,7 +87,9 @@ func TestReceivePackPushSuccess(t *testing.T) {
 	server, serverSocketPath := runSSHServer(t)
 	defer server.Stop()
 
-	lHead, rHead, err := testCloneAndPush(t, serverSocketPath, pushParams{storageName: testRepo.GetStorageName(), glID: "user-123"})
+	glRepository := "project-456"
+
+	lHead, rHead, err := testCloneAndPush(t, serverSocketPath, pushParams{storageName: testRepo.GetStorageName(), glID: "user-123", glRepository: glRepository})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +100,7 @@ func TestReceivePackPushSuccess(t *testing.T) {
 
 	for _, env := range []string{
 		"GL_ID=user-123",
-		"GL_REPOSITORY=project-456",
+		fmt.Sprintf("GL_REPOSITORY=%s", glRepository),
 		"GL_PROTOCOL=ssh",
 		"GITALY_GITLAB_SHELL_DIR=" + "/foo/bar/gitlab-shell",
 	} {
@@ -202,7 +205,79 @@ func TestObjectPoolRefAdvertisementHidingSSH(t *testing.T) {
 	require.NotContains(t, b.String(), commitID+" .have")
 }
 
-func testCloneAndPush(t *testing.T, serverSocketPath string, params pushParams) (string, string, error) {
+func TestSSHReceivePackToHooks(t *testing.T) {
+	secretToken := "secret token"
+	glRepository := "some_repo"
+	key := 123
+
+	restore := testhelper.EnableGitProtocolV2Support()
+	defer restore()
+
+	server, serverSocketPath := runSSHServer(t)
+	defer server.Stop()
+
+	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
+	defer cleanup()
+
+	gitlabShellDir := config.Config.GitlabShell.Dir
+	defer func() {
+		config.Config.GitlabShell.Dir = gitlabShellDir
+	}()
+
+	config.Config.GitlabShell.Dir = tempGitlabShellDir
+
+	cloneDetails, cleanup := setupSSHClone(t)
+	defer cleanup()
+
+	c := testhelper.GitlabServerConfig{
+		User:                        "",
+		Password:                    "",
+		SecretToken:                 secretToken,
+		Key:                         key,
+		GLRepository:                glRepository,
+		Changes:                     fmt.Sprintf("%s %s refs/heads/master\n", string(cloneDetails.OldHead), string(cloneDetails.NewHead)),
+		PostReceiveCounterDecreased: true,
+		Protocol:                    "ssh",
+	}
+	ts := testhelper.NewGitlabTestServer(t, c)
+	defer ts.Close()
+
+	testhelper.WriteTemporaryGitlabShellConfigFile(t, tempGitlabShellDir, testhelper.GitlabShellConfig{GitlabURL: ts.URL})
+	testhelper.WriteShellSecretFile(t, tempGitlabShellDir, secretToken)
+
+	defer func(override string) {
+		hooks.Override = override
+	}(hooks.Override)
+
+	cwd, err := os.Getwd()
+	require.NoError(t, err)
+	hookDir := filepath.Join(cwd, "../../../ruby", "git-hooks")
+	hooks.Override = hookDir
+
+	lHead, rHead, err := sshPush(t, cloneDetails, serverSocketPath, pushParams{
+		storageName:  testRepo.GetStorageName(),
+		glID:         fmt.Sprintf("key-%d", key),
+		glRepository: glRepository,
+		gitProtocol:  git.ProtocolV2,
+	})
+	require.NoError(t, err)
+	require.Equal(t, lHead, rHead, "local and remote head not equal. push failed")
+
+	envData, err := testhelper.GetGitEnvData()
+
+	require.NoError(t, err)
+	require.Equal(t, fmt.Sprintf("GIT_PROTOCOL=%s\n", git.ProtocolV2), envData)
+}
+
+// SSHCloneDetails encapsulates values relevant for a test clone
+type SSHCloneDetails struct {
+	LocalRepoPath, RemoteRepoPath, TempRepo string
+	OldHead                                 []byte
+	NewHead                                 []byte
+}
+
+// setupSSHClone sets up a test clone
+func setupSSHClone(t *testing.T) (SSHCloneDetails, func()) {
 	storagePath := testhelper.GitlabTestStoragePath()
 	tempRepo := "gitlab-test-ssh-receive-pack.git"
 	testRepoPath := path.Join(storagePath, testRepo.GetRelativePath())
@@ -218,24 +293,36 @@ func testCloneAndPush(t *testing.T, serverSocketPath string, params pushParams) 
 		t.Fatal(err)
 	}
 	testhelper.MustRunCommand(t, nil, "git", "clone", remoteRepoPath, localRepoPath)
+
 	// We need git thinking we're pushing over SSH...
-	defer os.RemoveAll(remoteRepoPath)
-	defer os.RemoveAll(localRepoPath)
+	oldHead, newHead, success := makeCommit(t, localRepoPath)
+	require.True(t, success)
 
-	makeCommit(t, localRepoPath)
+	return SSHCloneDetails{
+			OldHead:        oldHead,
+			NewHead:        newHead,
+			LocalRepoPath:  localRepoPath,
+			RemoteRepoPath: remoteRepoPath,
+			TempRepo:       tempRepo,
+		}, func() {
+			os.RemoveAll(remoteRepoPath)
+			os.RemoveAll(localRepoPath)
+		}
+}
 
-	pbTempRepo := &gitalypb.Repository{StorageName: params.storageName, RelativePath: tempRepo}
+func sshPush(t *testing.T, cloneDetails SSHCloneDetails, serverSocketPath string, params pushParams) (string, string, error) {
+	pbTempRepo := &gitalypb.Repository{StorageName: params.storageName, RelativePath: cloneDetails.TempRepo}
 	pbMarshaler := &jsonpb.Marshaler{}
 	payload, err := pbMarshaler.MarshalToString(&gitalypb.SSHReceivePackRequest{
 		Repository:       pbTempRepo,
-		GlRepository:     "project-456",
+		GlRepository:     params.glRepository,
 		GlId:             params.glID,
 		GitConfigOptions: params.gitConfigOptions,
 		GitProtocol:      params.gitProtocol,
 	})
 	require.NoError(t, err)
 
-	cmd := exec.Command("git", "-C", localRepoPath, "push", "-v", "git@localhost:test/test.git", "master")
+	cmd := exec.Command("git", "-C", cloneDetails.LocalRepoPath, "push", "-v", "git@localhost:test/test.git", "master")
 	cmd.Env = []string{
 		fmt.Sprintf("GITALY_PAYLOAD=%s", payload),
 		fmt.Sprintf("GITALY_ADDRESS=%s", serverSocketPath),
@@ -244,16 +331,24 @@ func testCloneAndPush(t *testing.T, serverSocketPath string, params pushParams) 
 	}
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", "", fmt.Errorf("Error pushing: %v: %q", err, out)
-	}
-	if !cmd.ProcessState.Success() {
-		return "", "", fmt.Errorf("Failed to run `git push`: %q", out)
+		return "", "", fmt.Errorf("error pushing: %v: %q", err, out)
 	}
 
-	localHead := bytes.TrimSpace(testhelper.MustRunCommand(t, nil, "git", "-C", localRepoPath, "rev-parse", "master"))
-	remoteHead := bytes.TrimSpace(testhelper.MustRunCommand(t, nil, "git", "-C", remoteRepoPath, "rev-parse", "master"))
+	if !cmd.ProcessState.Success() {
+		return "", "", fmt.Errorf("failed to run `git push`: %q", out)
+	}
+
+	localHead := bytes.TrimSpace(testhelper.MustRunCommand(t, nil, "git", "-C", cloneDetails.LocalRepoPath, "rev-parse", "master"))
+	remoteHead := bytes.TrimSpace(testhelper.MustRunCommand(t, nil, "git", "-C", cloneDetails.RemoteRepoPath, "rev-parse", "master"))
 
 	return string(localHead), string(remoteHead), nil
+}
+
+func testCloneAndPush(t *testing.T, serverSocketPath string, params pushParams) (string, string, error) {
+	cloneDetails, cleanup := setupSSHClone(t)
+	defer cleanup()
+
+	return sshPush(t, cloneDetails, serverSocketPath, params)
 }
 
 // makeCommit creates a new commit and returns oldHead, newHead, success
@@ -281,7 +376,7 @@ func makeCommit(t *testing.T, localRepoPath string) ([]byte, []byte, bool) {
 	// The commit ID we want to push to the remote repo
 	newHead := bytes.TrimSpace(testhelper.MustRunCommand(t, nil, "git", "-C", localRepoPath, "rev-parse", "master"))
 
-	return oldHead, newHead, t.Failed()
+	return oldHead, newHead, true
 }
 
 func drainPostReceivePackResponse(stream gitalypb.SSHService_SSHReceivePackClient) error {
@@ -295,6 +390,7 @@ func drainPostReceivePackResponse(stream gitalypb.SSHService_SSHReceivePackClien
 type pushParams struct {
 	storageName      string
 	glID             string
+	glRepository     string
 	gitConfigOptions []string
 	gitProtocol      string
 }

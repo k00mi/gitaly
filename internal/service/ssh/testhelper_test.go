@@ -43,6 +43,7 @@ func testMain(m *testing.M) int {
 
 	testRepo = testhelper.TestRepository()
 
+	testhelper.ConfigureGitalyHooksBinary()
 	testhelper.ConfigureGitalySSH()
 	gitalySSHPath = path.Join(config.Config.BinDir, "gitaly-ssh")
 
