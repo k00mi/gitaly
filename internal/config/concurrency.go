@@ -12,5 +12,11 @@ func ConfigureConcurrencyLimits() {
 		maxConcurrencyPerRepoPerRPC[v.RPC] = v.MaxPerRepo
 	}
 
+	// Set default for ReplicateRepository
+	replicateRepositoryFullMethod := "/gitaly.RepositoryService/ReplicateRepository"
+	if _, ok := maxConcurrencyPerRepoPerRPC[replicateRepositoryFullMethod]; !ok {
+		maxConcurrencyPerRepoPerRPC[replicateRepositoryFullMethod] = 1
+	}
+
 	limithandler.SetMaxRepoConcurrency(maxConcurrencyPerRepoPerRPC)
 }
