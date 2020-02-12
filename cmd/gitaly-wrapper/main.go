@@ -40,8 +40,10 @@ func main() {
 
 	log.WithField("pid_file", pidFile()).Info("finding gitaly")
 	gitaly, err := findGitaly()
-	if err != nil {
+	if err != nil && !isRecoverable(err) {
 		log.WithError(err).Fatal("find gitaly")
+	} else if err != nil {
+		log.WithError(err).Error("find gitaly")
 	}
 
 	if gitaly != nil && isGitaly(gitaly, gitalyBin) {
@@ -70,9 +72,14 @@ func main() {
 	log.Error("wrapper for gitaly shutting down")
 }
 
+func isRecoverable(err error) bool {
+	_, isNumError := err.(*strconv.NumError)
+	return os.IsNotExist(err) || isNumError
+}
+
 func findGitaly() (*os.Process, error) {
 	pid, err := getPid()
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil {
 		return nil, err
 	}
 
