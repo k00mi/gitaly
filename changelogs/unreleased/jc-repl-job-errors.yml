@@ -1,5 +1,0 @@
----
-title: Praefect replicator to mark job as failed and retry failed jobs
-merge_request: 1804
-author:
-type: changed

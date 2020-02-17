@@ -1,5 +1,43 @@
 # Gitaly changelog
 
+## v1.87.0
+
+#### Added
+- Logging of repository objects statistics after repack
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1800
+- Support of basic interaction with Postgres database
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1768
+- Pass Ruby-specific feature flags to the Ruby server
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1818
+
+#### Changed
+- Wire up coordinator to use node manager
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1806
+- Enable toggling on the node manager through a config value
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1803
+- Praefect replicator to mark job as failed and retry failed jobs
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1804
+
+#### Fixed
+- Calculate praefect replication latency using seconds with float64
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1820
+- Pass in virtual storage name to repl manager
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1831
+- Return full GitCommit message as part of FindLocalBranch gRPC response.
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1827
+- Use token auth for Praefect connection checker
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1816
+- Decode user info for request authorization
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1805
+
+#### Other
+- Remove protocol v2 feature flag
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1841
+
+#### Performance
+- Skip the batch check for commits and tags
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1812
+
 ## v1.86.0
 
 #### Added
