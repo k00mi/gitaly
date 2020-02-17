@@ -1,5 +1,22 @@
 ## Gitaly Team Process
 
+### Feature flags
+
+Gitaly uses feature flags to safely roll out features in production. Feature
+flags are part of the `context.Context` of each RPC. The `featureflag` package
+will help you with flow control.
+
+Feature flags are [enabled through chatops][enable-flags]. For Gitaly, you have
+to prepend `gitaly_` to your feature flag when enabling or disabling. For example:
+to enable the feature flag "mep_mep", you run:
+
+`/chatops run feature set gitaly_mep_mep true`
+
+For customers, who don't use chatops, an [HTTP API is available][ff-api].
+
+[enable-flags]: https://docs.gitlab.com/ee/development/feature_flags/controls.html
+[ff-api]: https://docs.gitlab.com/ee/api/features.html#features-flags-api
+
 ### Gitaly Releases
 
 Gitaly uses [SemVer](https://semver.org) version numbering.
