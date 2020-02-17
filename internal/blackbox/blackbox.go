@@ -32,7 +32,7 @@ func runProbes(cfg *Config) {
 }
 
 func servePrometheus(l net.Listener) error {
-	return monitoring.Serve(
+	return monitoring.Start(
 		monitoring.WithListener(l),
 		monitoring.WithBuildInformation(version.GetVersion(), version.GetBuildTime()),
 	)

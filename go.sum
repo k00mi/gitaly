@@ -307,8 +307,8 @@ github.com/yudai/golcs v0.0.0-20170316035057-ecda9a501e82/go.mod h1:lgjkn3NuSvDf
 github.com/yudai/pp v2.0.1+incompatible/go.mod h1:PuxR/8QJ7cyCkFp/aUDS+JY727OFEZkTdatxwunjIkc=
 github.com/ziutek/mymysql v1.5.4 h1:GB0qdRGsTwQSBVYuVShFBKaXSnSnYYC2d9knnE1LHFs=
 github.com/ziutek/mymysql v1.5.4/go.mod h1:LMSpPZ6DbqWFxNCHW77HeMg9I646SAhApZ/wKdgO/C0=
-gitlab.com/gitlab-org/labkit v0.0.0-20200303165501-9cb7801f7fea h1:Nx2TF8KYu1GCKIKnrnemyq2Ed0CIHRqrE2Kx5sP/WPw=
-gitlab.com/gitlab-org/labkit v0.0.0-20200303165501-9cb7801f7fea/go.mod h1:WyFbg+j26WJmH44qGeINba3QlIVbLxepQ/+qMA2s2+U=
+gitlab.com/gitlab-org/labkit v0.0.0-20200327153541-fac94cb428e6 h1:FZ/+I7jHVKUq3ev8SmD1fD743Kb7qYkjDcsaNg887vg=
+gitlab.com/gitlab-org/labkit v0.0.0-20200327153541-fac94cb428e6/go.mod h1:WyFbg+j26WJmH44qGeINba3QlIVbLxepQ/+qMA2s2+U=
 go.opencensus.io v0.21.0/go.mod h1:mSImk1erAIZhrmZN+AvHh14ztQfjbGwt4TtuofqLduU=
 go.opencensus.io v0.22.0/go.mod h1:+kGneAE2xo2IficOXnaByMWTGM9T73dGwxeWcUqIpI8=
 go.opencensus.io v0.22.2 h1:75k/FF0Q2YM8QYo07VPddOLBslDt1MZOdEslOHvmzAs=

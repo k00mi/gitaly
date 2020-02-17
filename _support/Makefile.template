@@ -10,7 +10,7 @@ PREFIX ?= /usr/local
 INSTALL_DEST_DIR := $(DESTDIR)$(PREFIX)/bin/
 BUNDLE_FLAGS ?= {{ .BundleFlags }}
 ASSEMBLY_ROOT ?= {{ .BuildDir }}/assembly
-BUILD_TAGS := tracer_static tracer_static_jaeger
+BUILD_TAGS := tracer_static tracer_static_jaeger continuous_profiler_stackdriver
 
 unexport GOROOT
 export GOBIN = {{ .BuildDir }}/bin

@@ -117,7 +117,7 @@ func run(b *bootstrap.Bootstrap) error {
 			log.WithField("address", addr).Info("starting prometheus listener")
 
 			go func() {
-				if err := monitoring.Serve(
+				if err := monitoring.Start(
 					monitoring.WithListener(l),
 					monitoring.WithBuildInformation(
 						version.GetVersion(),

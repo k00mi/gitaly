@@ -160,6 +160,12 @@ For example, to configure Jaeger, you could use the following command:
 GITLAB_TRACING=opentracing://jaeger ./gitaly config.toml
 ```
 
+## Continuous Profiling
+
+Gitaly supports Continuous Profiling through [LabKit][] using [Stackdriver Profiler](https://cloud.google.com/profiler).
+
+For more information on how to set it up, see the [LabKit monitoring docs](https://gitlab.com/gitlab-org/labkit/-/blob/master/monitoring/doc.go).
+
 ## Presentations
 
 - [How Gitaly fits into GitLab (Youtube)](https://www.youtube.com/playlist?list=PL05JrBw4t0KqoFUiX42JG7BAc7pipMBAy) - a series of 1-hour training videos for contributors new to GitLab and Gitaly.
@@ -227,3 +233,4 @@ GITLAB_TRACING=opentracing://jaeger ./gitaly config.toml
 - [Git Paris meetup, 2017-02-22](https://docs.google.com/presentation/d/19OZUalFMIDM8WujXrrIyCuVb_oVeaUzpb-UdGThOvAo/edit?usp=sharing) a high-level overview of what our plans are and where we are.
 
 [roadmap]: https://gitlab.com/groups/gitlab-org/-/roadmap?label_name%5B%5D=Gitaly&scope=all&sort=start_date_asc&state=opened
+[LabKit]: https://gitlab.com/gitlab-org/labkit/
