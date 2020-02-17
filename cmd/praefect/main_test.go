@@ -10,7 +10,7 @@ import (
 )
 
 func TestNoConfigFlag(t *testing.T) {
-	_, err := configure()
+	_, err := initConfig()
 
 	assert.Equal(t, err, errNoConfigFile)
 }
