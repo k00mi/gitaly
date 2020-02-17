@@ -3,7 +3,6 @@ package operations
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -50,9 +49,13 @@ func TestSuccessfulMerge(t *testing.T) {
 	hooks := GitlabHooks
 	hookTempfiles := make([]string, len(hooks))
 	for i, h := range hooks {
-		hookTempfiles[i] = WriteEnvToHook(t, testRepoPath, h)
-		defer os.Remove(hookTempfiles[i])
+		var cleanup func()
+		hookTempfiles[i], cleanup = WriteEnvToCustomHook(t, testRepoPath, h)
+		defer cleanup()
 	}
+
+	cleanupSrv := SetupAndStartGitlabServer(t, mergeUser.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
 
 	mergeCommitMessage := "Merged by Gitaly"
 	firstRequest := &gitalypb.UserMergeBranchRequest{
@@ -231,11 +234,14 @@ func TestFailedMergeDueToHooks(t *testing.T) {
 
 	prepareMergeBranch(t, testRepoPath)
 
+	cleanupSrv := SetupAndStartGitlabServer(t, mergeUser.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
+
 	hookContent := []byte("#!/bin/sh\necho 'failure'\nexit 1")
 
 	for _, hookName := range gitlabPreHooks {
 		t.Run(hookName, func(t *testing.T) {
-			remove, err := OverrideHooks(hookName, hookContent)
+			remove, err := WriteCustomHook(testRepoPath, hookName, hookContent)
 			require.NoError(t, err)
 			defer remove()
 
@@ -309,6 +315,9 @@ func TestSuccessfulUserFFBranchRequest(t *testing.T) {
 
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", "-f", branchName, "6d394385cf567f80a8fd85055db1ab4c5295806f")
 	defer exec.Command("git", "-C", testRepoPath, "branch", "-d", branchName).Run()
+
+	cleanupSrv := SetupAndStartGitlabServer(t, mergeUser.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
 
 	resp, err := client.UserFFBranch(ctx, request)
 	require.NoError(t, err)
@@ -434,11 +443,14 @@ func TestFailedUserFFBranchDueToHooks(t *testing.T) {
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", "-f", branchName, "6d394385cf567f80a8fd85055db1ab4c5295806f")
 	defer exec.Command("git", "-C", testRepoPath, "branch", "-d", branchName).Run()
 
+	cleanupSrv := SetupAndStartGitlabServer(t, mergeUser.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
+
 	hookContent := []byte("#!/bin/sh\necho 'failure'\nexit 1")
 
 	for _, hookName := range gitlabPreHooks {
 		t.Run(hookName, func(t *testing.T) {
-			remove, err := OverrideHooks(hookName, hookContent)
+			remove, err := WriteCustomHook(testRepoPath, hookName, hookContent)
 			require.NoError(t, err)
 			defer remove()
 
@@ -691,7 +703,7 @@ func TestUserMergeToRefIgnoreHooksRequest(t *testing.T) {
 
 	for _, hookName := range gitlabPreHooks {
 		t.Run(hookName, func(t *testing.T) {
-			remove, err := OverrideHooks(hookName, hookContent)
+			remove, err := WriteCustomHook(testRepoPath, hookName, hookContent)
 			require.NoError(t, err)
 			defer remove()
 

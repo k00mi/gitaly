@@ -19,7 +19,7 @@ import (
 )
 
 func TestSuccessfulUserApplyPatch(t *testing.T) {
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -27,6 +27,9 @@ func TestSuccessfulUserApplyPatch(t *testing.T) {
 
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
+
+	cleanupSrv := operations.SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
@@ -139,7 +142,7 @@ func TestSuccessfulUserApplyPatch(t *testing.T) {
 }
 
 func TestFailedPatchApplyPatch(t *testing.T) {
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -147,6 +150,9 @@ func TestFailedPatchApplyPatch(t *testing.T) {
 
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
+
+	cleanupSrv := operations.SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository, "")
+	defer cleanupSrv()
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
@@ -174,7 +180,7 @@ func TestFailedPatchApplyPatch(t *testing.T) {
 }
 
 func TestFailedValidationUserApplyPatch(t *testing.T) {
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)

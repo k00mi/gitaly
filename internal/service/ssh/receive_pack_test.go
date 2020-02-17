@@ -208,7 +208,7 @@ func TestObjectPoolRefAdvertisementHidingSSH(t *testing.T) {
 func TestSSHReceivePackToHooks(t *testing.T) {
 	secretToken := "secret token"
 	glRepository := "some_repo"
-	key := 123
+	glID := "key-123"
 
 	restore := testhelper.EnableGitProtocolV2Support()
 	defer restore()
@@ -229,17 +229,16 @@ func TestSSHReceivePackToHooks(t *testing.T) {
 	cloneDetails, cleanup := setupSSHClone(t)
 	defer cleanup()
 
-	c := testhelper.GitlabServerConfig{
+	ts := testhelper.NewGitlabTestServer(t, testhelper.GitlabTestServerOptions{
 		User:                        "",
 		Password:                    "",
 		SecretToken:                 secretToken,
-		Key:                         key,
+		GLID:                        glID,
 		GLRepository:                glRepository,
 		Changes:                     fmt.Sprintf("%s %s refs/heads/master\n", string(cloneDetails.OldHead), string(cloneDetails.NewHead)),
 		PostReceiveCounterDecreased: true,
 		Protocol:                    "ssh",
-	}
-	ts := testhelper.NewGitlabTestServer(t, c)
+	})
 	defer ts.Close()
 
 	testhelper.WriteTemporaryGitlabShellConfigFile(t, tempGitlabShellDir, testhelper.GitlabShellConfig{GitlabURL: ts.URL})
@@ -256,7 +255,7 @@ func TestSSHReceivePackToHooks(t *testing.T) {
 
 	lHead, rHead, err := sshPush(t, cloneDetails, serverSocketPath, pushParams{
 		storageName:  testRepo.GetStorageName(),
-		glID:         fmt.Sprintf("key-%d", key),
+		glID:         glID,
 		glRepository: glRepository,
 		gitProtocol:  git.ProtocolV2,
 	})

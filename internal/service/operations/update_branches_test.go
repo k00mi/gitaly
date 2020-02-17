@@ -2,7 +2,8 @@ package operations
 
 import (
 	"context"
-	"os"
+	"crypto/sha1"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -24,6 +25,9 @@ func TestSuccessfulUserUpdateBranchRequest(t *testing.T) {
 
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
+
+	cleanupSrv := SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
 
 	server, serverSocketPath := runOperationServiceServer(t)
 	defer server.Stop()
@@ -62,8 +66,11 @@ func TestSuccessfulGitHooksForUserUpdateBranchRequest(t *testing.T) {
 			testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 			defer cleanupFn()
 
-			hookOutputTempPath := WriteEnvToHook(t, testRepoPath, hookName)
-			defer os.Remove(hookOutputTempPath)
+			cleanupSrv := SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+			defer cleanupSrv()
+
+			hookOutputTempPath, cleanup := WriteEnvToCustomHook(t, testRepoPath, hookName)
+			defer cleanup()
 
 			ctx, cancel := testhelper.Context()
 			defer cancel()
@@ -81,7 +88,6 @@ func TestSuccessfulGitHooksForUserUpdateBranchRequest(t *testing.T) {
 			require.Empty(t, response.PreReceiveError)
 
 			output := string(testhelper.MustReadFile(t, hookOutputTempPath))
-			require.Contains(t, output, "GL_ID="+user.GlId)
 			require.Contains(t, output, "GL_USERNAME="+user.GlUsername)
 		})
 	}
@@ -90,6 +96,9 @@ func TestSuccessfulGitHooksForUserUpdateBranchRequest(t *testing.T) {
 func TestFailedUserUpdateBranchDueToHooks(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
+
+	cleanupSrv := SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
 
 	server, serverSocketPath := runOperationServiceServer(t)
 	defer server.Stop()
@@ -109,7 +118,7 @@ func TestFailedUserUpdateBranchDueToHooks(t *testing.T) {
 	hookContent := []byte("#!/bin/sh\nprintenv | paste -sd ' ' -\nexit 1")
 
 	for _, hookName := range gitlabPreHooks {
-		remove, err := OverrideHooks(hookName, hookContent)
+		remove, err := WriteCustomHook(testRepoPath, hookName, hookContent)
 		require.NoError(t, err)
 		defer remove()
 
@@ -118,10 +127,7 @@ func TestFailedUserUpdateBranchDueToHooks(t *testing.T) {
 
 		response, err := client.UserUpdateBranch(ctx, request)
 		require.Nil(t, err)
-		require.Contains(t, response.PreReceiveError, "GL_ID="+user.GlId)
 		require.Contains(t, response.PreReceiveError, "GL_USERNAME="+user.GlUsername)
-		require.Contains(t, response.PreReceiveError, "GL_REPOSITORY="+testRepo.GlRepository)
-		require.Contains(t, response.PreReceiveError, "GL_PROTOCOL=web")
 		require.Contains(t, response.PreReceiveError, "PWD="+testRepoPath)
 	}
 }
@@ -135,6 +141,11 @@ func TestFailedUserUpdateBranchRequest(t *testing.T) {
 
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
+
+	cleanupSrv := SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
+
+	revDoesntExist := fmt.Sprintf("%x", sha1.Sum([]byte("we need a non existent sha")))
 
 	testCases := []struct {
 		desc       string
@@ -187,7 +198,7 @@ func TestFailedUserUpdateBranchRequest(t *testing.T) {
 		{
 			desc:       "non-existing newrev",
 			branchName: updateBranchName,
-			newrev:     []byte("i-dont-exist"),
+			newrev:     []byte(revDoesntExist),
 			oldrev:     oldrev,
 			user:       user,
 			code:       codes.FailedPrecondition,
@@ -196,7 +207,7 @@ func TestFailedUserUpdateBranchRequest(t *testing.T) {
 			desc:       "non-existing oldrev",
 			branchName: updateBranchName,
 			newrev:     newrev,
-			oldrev:     []byte("i-dont-exist"),
+			oldrev:     []byte(revDoesntExist),
 			user:       user,
 			code:       codes.FailedPrecondition,
 		},

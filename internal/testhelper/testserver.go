@@ -11,7 +11,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -186,18 +187,50 @@ func NewServer(tb testing.TB, streamInterceptors []grpc.StreamServerInterceptor,
 		))
 }
 
-func handleAllowed(t *testing.T, secretToken string, key int, glRepository, changes, protocol string) func(w http.ResponseWriter, r *http.Request) {
+var changeLineRegex = regexp.MustCompile("^[a-f0-9]{40} [a-f0-9]{40} refs/[^ ]+$")
+
+func handleAllowed(t *testing.T, options GitlabTestServerOptions) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		require.NoError(t, r.ParseForm())
-		require.Equal(t, http.MethodPost, r.Method)
+		require.Equal(t, http.MethodPost, r.Method, "expected http post")
 		require.Equal(t, "application/x-www-form-urlencoded", r.Header.Get("Content-Type"))
-		require.Equal(t, strconv.Itoa(key), r.Form.Get("key_id"))
-		require.Equal(t, glRepository, r.Form.Get("gl_repository"))
-		require.Equal(t, protocol, r.Form.Get("protocol"))
-		require.Equal(t, changes, r.Form.Get("changes"))
+
+		if options.GLID != "" {
+			glidSplit := strings.SplitN(options.GLID, "-", 2)
+			require.Len(t, glidSplit, 2, "number of GLID components")
+
+			switch glidSplit[0] {
+			case "user":
+				require.Equal(t, glidSplit[1], r.Form.Get("user_id"))
+			case "key":
+				require.Equal(t, glidSplit[1], r.Form.Get("key_id"))
+			case "username":
+				require.Equal(t, glidSplit[1], r.Form.Get("username"))
+			default:
+				t.Fatalf("invalid GLID: %q", options.GLID)
+			}
+		}
+
+		require.NotEmpty(t, r.Form.Get("gl_repository"), "gl_repository should not be empty")
+		if options.GLRepository != "" {
+			require.Equal(t, options.GLRepository, r.Form.Get("gl_repository"), "expected value of gl_repository should match form")
+		}
+		require.NotEmpty(t, r.Form.Get("protocol"), "protocol should not be empty")
+		if options.Protocol != "" {
+			require.Equal(t, options.Protocol, r.Form.Get("protocol"), "expected value of options.Protocol should match form")
+		}
+
+		if options.Changes != "" {
+			require.Equal(t, options.Changes, r.Form.Get("changes"), "expected value of options.Changes should match form")
+		} else {
+			changeLines := strings.Split(strings.TrimSuffix(r.Form.Get("changes"), "\n"), "\n")
+			for _, line := range changeLines {
+				require.Regexp(t, changeLineRegex, line)
+			}
+		}
 
 		w.Header().Set("Content-Type", "application/json")
-		if r.Form.Get("secret_token") == secretToken {
+		if r.Form.Get("secret_token") == options.SecretToken {
 			w.Write([]byte(`{"status":true}`))
 			return
 		}
@@ -206,13 +239,16 @@ func handleAllowed(t *testing.T, secretToken string, key int, glRepository, chan
 	}
 }
 
-func handlePreReceive(t *testing.T, secretToken, glRepository string) func(w http.ResponseWriter, r *http.Request) {
+func handlePreReceive(t *testing.T, options GitlabTestServerOptions) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		require.NoError(t, r.ParseForm())
 		require.Equal(t, http.MethodPost, r.Method)
 		require.Equal(t, "application/x-www-form-urlencoded", r.Header.Get("Content-Type"))
-		require.Equal(t, glRepository, r.Form.Get("gl_repository"))
-		require.Equal(t, secretToken, r.Form.Get("secret_token"))
+		require.NotEmpty(t, r.Form.Get("gl_repository"), "gl_repository should not be empty")
+		if options.GLRepository != "" {
+			require.Equal(t, options.GLRepository, r.Form.Get("gl_repository"), "expected value of gl_repository should match form")
+		}
+		require.Equal(t, options.SecretToken, r.Form.Get("secret_token"), "expected value of secret_token should match form")
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -220,43 +256,54 @@ func handlePreReceive(t *testing.T, secretToken, glRepository string) func(w htt
 	}
 }
 
-func handlePostReceive(t *testing.T, secretToken string, key int, glRepository, changes string, counterDecreased bool, gitPushOptions ...string) func(w http.ResponseWriter, r *http.Request) {
+func handlePostReceive(t *testing.T, options GitlabTestServerOptions) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		require.NoError(t, r.ParseForm())
 		require.Equal(t, http.MethodPost, r.Method)
 		require.Equal(t, "application/x-www-form-urlencoded", r.Header.Get("Content-Type"))
-		require.Equal(t, glRepository, r.Form.Get("gl_repository"))
-		require.Equal(t, secretToken, r.Form.Get("secret_token"))
-		require.Equal(t, fmt.Sprintf("key-%d", key), r.Form.Get("identifier"))
-		require.Equal(t, changes, r.Form.Get("changes"))
+		require.NotEmpty(t, r.Form.Get("gl_repository"))
+		if options.GLRepository != "" {
+			require.Equal(t, options.GLRepository, r.Form.Get("gl_repository"), "expected value of gl_repository should match form")
+		}
+		require.Equal(t, options.SecretToken, r.Form.Get("secret_token"), "expected value of gl_repository should match form")
 
-		if len(gitPushOptions) > 0 {
-			require.Equal(t, gitPushOptions, r.Form["push_options[]"])
+		require.NotEmpty(t, r.Form.Get("identifier"), "identifier should exist")
+		if options.GLID != "" {
+			require.Equal(t, options.GLID, r.Form.Get("identifier"), "identifier should be GLID")
 		}
 
-		w.Header().Set("Content-Type", "application/json")
+		require.NotEmpty(t, r.Form.Get("changes"), "changes should exist")
+		if options.Changes != "" {
+			require.Regexp(t, options.Changes, r.Form.Get("changes"), "expected value of changes should match form")
+		}
+
+		if len(options.GitPushOptions) > 0 {
+			require.Equal(t, options.GitPushOptions, r.Form["push_options[]"], "expected value of push_options should match form")
+		}
+
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(fmt.Sprintf(`{"reference_counter_decreased": %v}`, counterDecreased)))
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"reference_counter_decreased": %v}`, options.PostReceiveCounterDecreased)
 	}
 }
 
-func handleCheck(user, password string) func(w http.ResponseWriter, r *http.Request) {
+func handleCheck(options GitlabTestServerOptions) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		u, p, ok := r.BasicAuth()
-		if !ok || u != user || p != password {
+		if !ok || u != options.User || p != options.Password {
 			http.Error(w, "authorization failed", http.StatusUnauthorized)
 			return
 		}
 
-		w.Write([]byte(`{"redis": true}`))
 		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, `{"redis": true}`)
 	}
 }
 
-// GitlabServerConfig is a config for a mock gitlab server
-type GitlabServerConfig struct {
+// GitlabTestServerOptions is a config for a mock gitlab server containing expected values
+type GitlabTestServerOptions struct {
 	User, Password, SecretToken string
-	Key                         int
+	GLID                        string
 	GLRepository                string
 	Changes                     string
 	PostReceiveCounterDecreased bool
@@ -265,12 +312,12 @@ type GitlabServerConfig struct {
 }
 
 // NewGitlabTestServer returns a mock gitlab server that responds to the hook api endpoints
-func NewGitlabTestServer(t *testing.T, c GitlabServerConfig) *httptest.Server {
+func NewGitlabTestServer(t *testing.T, options GitlabTestServerOptions) *httptest.Server {
 	mux := http.NewServeMux()
-	mux.Handle("/api/v4/internal/allowed", http.HandlerFunc(handleAllowed(t, c.SecretToken, c.Key, c.GLRepository, c.Changes, c.Protocol)))
-	mux.Handle("/api/v4/internal/pre_receive", http.HandlerFunc(handlePreReceive(t, c.SecretToken, c.GLRepository)))
-	mux.Handle("/api/v4/internal/post_receive", http.HandlerFunc(handlePostReceive(t, c.SecretToken, c.Key, c.GLRepository, c.Changes, c.PostReceiveCounterDecreased, c.GitPushOptions...)))
-	mux.Handle("/api/v4/internal/check", http.HandlerFunc(handleCheck(c.User, c.Password)))
+	mux.Handle("/api/v4/internal/allowed", http.HandlerFunc(handleAllowed(t, options)))
+	mux.Handle("/api/v4/internal/pre_receive", http.HandlerFunc(handlePreReceive(t, options)))
+	mux.Handle("/api/v4/internal/post_receive", http.HandlerFunc(handlePostReceive(t, options)))
+	mux.Handle("/api/v4/internal/check", http.HandlerFunc(handleCheck(options)))
 
 	return httptest.NewServer(mux)
 }
@@ -315,19 +362,19 @@ func WriteTemporaryGitalyConfigFile(t *testing.T, tempDir string) (string, func(
 }
 
 // EnvForHooks generates a set of environment variables for gitaly hooks
-func EnvForHooks(t *testing.T, glRepo, gitlabShellDir string, key int, gitPushOptions ...string) []string {
+func EnvForHooks(t *testing.T, glRepo, gitlabShellDir, glID string, gitPushOptions ...string) []string {
 	rubyDir, err := filepath.Abs("../../ruby")
 	require.NoError(t, err)
 
-	return append(append(oldEnv(t, glRepo, gitlabShellDir, key), []string{
+	return append(append(oldEnv(t, glRepo, gitlabShellDir, glID), []string{
 		fmt.Sprintf("GITALY_BIN_DIR=%s", config.Config.BinDir),
 		fmt.Sprintf("GITALY_RUBY_DIR=%s", rubyDir),
 	}...), hooks.GitPushOptions(gitPushOptions)...)
 }
 
-func oldEnv(t *testing.T, glRepo, gitlabShellDir string, key int) []string {
+func oldEnv(t *testing.T, glRepo, gitlabShellDir, glID string) []string {
 	return append([]string{
-		fmt.Sprintf("GL_ID=key-%d", key),
+		fmt.Sprintf("GL_ID=%s", glID),
 		fmt.Sprintf("GL_REPOSITORY=%s", glRepo),
 		"GL_PROTOCOL=ssh",
 		fmt.Sprintf("GITALY_GITLAB_SHELL_DIR=%s", gitlabShellDir),
@@ -366,4 +413,15 @@ func NewServerWithHealth(t testing.TB, socketName string) (*grpc.Server, *health
 	go srv.Serve(lis)
 
 	return srv, healthSrvr
+}
+
+func SetupAndStartGitlabServer(t *testing.T, c *GitlabTestServerOptions) func() {
+	ts := NewGitlabTestServer(t, *c)
+
+	WriteTemporaryGitlabShellConfigFile(t, config.Config.GitlabShell.Dir, GitlabShellConfig{GitlabURL: ts.URL})
+	WriteShellSecretFile(t, config.Config.GitlabShell.Dir, c.SecretToken)
+
+	return func() {
+		ts.Close()
+	}
 }

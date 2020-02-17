@@ -276,7 +276,7 @@ func TestFailedReceivePackRequestDueToValidationError(t *testing.T) {
 func TestPostReceivePackToHooks(t *testing.T) {
 	secretToken := "secret token"
 	glRepository := "some_repo"
-	key := 123
+	glID := "key-123"
 
 	server, socket := runSmartHTTPServer(t)
 	defer server.Stop()
@@ -302,18 +302,16 @@ func TestPostReceivePackToHooks(t *testing.T) {
 
 	changes := fmt.Sprintf("%s %s refs/heads/master\n", oldHead, push.newHead)
 
-	c := testhelper.GitlabServerConfig{
+	ts := testhelper.NewGitlabTestServer(t, testhelper.GitlabTestServerOptions{
 		User:                        "",
 		Password:                    "",
 		SecretToken:                 secretToken,
-		Key:                         key,
+		GLID:                        glID,
 		GLRepository:                glRepository,
 		Changes:                     changes,
 		PostReceiveCounterDecreased: true,
 		Protocol:                    "http",
-	}
-
-	ts := testhelper.NewGitlabTestServer(t, c)
+	})
 	defer ts.Close()
 
 	testhelper.WriteTemporaryGitlabShellConfigFile(t, tempGitlabShellDir, testhelper.GitlabShellConfig{GitlabURL: ts.URL})
@@ -336,7 +334,7 @@ func TestPostReceivePackToHooks(t *testing.T) {
 
 	firstRequest := &gitalypb.PostReceivePackRequest{
 		Repository:   repo,
-		GlId:         fmt.Sprintf("key-%d", key),
+		GlId:         glID,
 		GlRepository: glRepository,
 	}
 

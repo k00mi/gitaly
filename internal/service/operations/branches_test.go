@@ -2,7 +2,6 @@ package operations
 
 import (
 	"context"
-	"os"
 	"os/exec"
 	"testing"
 
@@ -29,6 +28,9 @@ func TestSuccessfulUserCreateBranchRequest(t *testing.T) {
 	startPoint := "c7fbe50c7c7419d9701eebe64b1fdacc3df5b9dd"
 	startPointCommit, err := log.GetCommit(ctx, testRepo, startPoint)
 	require.NoError(t, err)
+
+	cleanupSrv := SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
 
 	testCases := []struct {
 		desc           string
@@ -79,6 +81,9 @@ func TestSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
+	cleanupSrv := SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
+
 	server, serverSocketPath := runOperationServiceServer(t)
 	defer server.Stop()
 
@@ -97,7 +102,8 @@ func TestSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T) {
 		t.Run(hookName, func(t *testing.T) {
 			defer exec.Command("git", "-C", testRepoPath, "branch", "-D", branchName).Run()
 
-			hookOutputTempPath := WriteEnvToHook(t, testRepoPath, hookName)
+			hookOutputTempPath, cleanup := WriteEnvToCustomHook(t, testRepoPath, hookName)
+			defer cleanup()
 
 			ctx, cancel := testhelper.Context()
 			defer cancel()
@@ -107,7 +113,6 @@ func TestSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T) {
 			require.Empty(t, response.PreReceiveError)
 
 			output := string(testhelper.MustReadFile(t, hookOutputTempPath))
-			require.Contains(t, output, "GL_ID="+user.GlId)
 			require.Contains(t, output, "GL_USERNAME="+user.GlUsername)
 		})
 	}
@@ -116,6 +121,9 @@ func TestSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T) {
 func TestFailedUserCreateBranchDueToHooks(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
+
+	cleanupSrv := SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
 
 	server, serverSocketPath := runOperationServiceServer(t)
 	defer server.Stop()
@@ -134,7 +142,7 @@ func TestFailedUserCreateBranchDueToHooks(t *testing.T) {
 	hookContent := []byte("#!/bin/sh\nprintenv | paste -sd ' ' -\nexit 1")
 
 	for _, hookName := range gitlabPreHooks {
-		remove, err := OverrideHooks(hookName, hookContent)
+		remove, err := WriteCustomHook(testRepoPath, hookName, hookContent)
 		require.NoError(t, err)
 		defer remove()
 
@@ -143,11 +151,7 @@ func TestFailedUserCreateBranchDueToHooks(t *testing.T) {
 
 		response, err := client.UserCreateBranch(ctx, request)
 		require.Nil(t, err)
-		require.Contains(t, response.PreReceiveError, "GL_ID="+user.GlId)
 		require.Contains(t, response.PreReceiveError, "GL_USERNAME="+user.GlUsername)
-		require.Contains(t, response.PreReceiveError, "GL_REPOSITORY="+testRepo.GlRepository)
-		require.Contains(t, response.PreReceiveError, "GL_PROTOCOL=web")
-		require.Contains(t, response.PreReceiveError, "PWD="+testRepoPath)
 	}
 }
 
@@ -160,6 +164,9 @@ func TestFailedUserCreateBranchRequest(t *testing.T) {
 
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
+
+	cleanupSrv := SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
 
 	testCases := []struct {
 		desc       string
@@ -240,6 +247,9 @@ func TestSuccessfulUserDeleteBranchRequest(t *testing.T) {
 		GlId:  "user-123",
 	}
 
+	cleanupSrv := SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
+
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", branchNameInput)
 
 	request := &gitalypb.UserDeleteBranchRequest{
@@ -275,6 +285,9 @@ func TestSuccessfulGitHooksForUserDeleteBranchRequest(t *testing.T) {
 		GlUsername: "johndoe",
 	}
 
+	cleanupSrv := SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
+
 	request := &gitalypb.UserDeleteBranchRequest{
 		Repository: testRepo,
 		BranchName: []byte(branchNameInput),
@@ -285,8 +298,8 @@ func TestSuccessfulGitHooksForUserDeleteBranchRequest(t *testing.T) {
 		t.Run(hookName, func(t *testing.T) {
 			testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", branchNameInput)
 
-			hookOutputTempPath := WriteEnvToHook(t, testRepoPath, hookName)
-			defer os.Remove(hookOutputTempPath)
+			hookOutputTempPath, cleanup := WriteEnvToCustomHook(t, testRepoPath, hookName)
+			defer cleanup()
 
 			ctx, cancel := testhelper.Context()
 			defer cancel()
@@ -295,7 +308,6 @@ func TestSuccessfulGitHooksForUserDeleteBranchRequest(t *testing.T) {
 			require.NoError(t, err)
 
 			output := testhelper.MustReadFile(t, hookOutputTempPath)
-			require.Contains(t, string(output), "GL_ID=user-123")
 			require.Contains(t, string(output), "GL_USERNAME=johndoe")
 		})
 	}
@@ -380,6 +392,9 @@ func TestFailedUserDeleteBranchDueToHooks(t *testing.T) {
 		GlId:  "user-123",
 	}
 
+	cleanupSrv := SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
+
 	request := &gitalypb.UserDeleteBranchRequest{
 		Repository: testRepo,
 		BranchName: []byte(branchNameInput),
@@ -390,7 +405,7 @@ func TestFailedUserDeleteBranchDueToHooks(t *testing.T) {
 
 	for _, hookName := range gitlabPreHooks {
 		t.Run(hookName, func(t *testing.T) {
-			remove, err := OverrideHooks(hookName, hookContent)
+			remove, err := WriteCustomHook(testRepoPath, hookName, hookContent)
 			require.NoError(t, err)
 			defer remove()
 

@@ -2,7 +2,6 @@ package operations_test
 
 import (
 	"net"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -20,7 +19,7 @@ func TestSuccessfulUserCherryPickRequest(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -46,6 +45,9 @@ func TestSuccessfulUserCherryPickRequest(t *testing.T) {
 
 	testRepoCopy, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
+
+	cleanupSrv := operations.SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
 
 	testCases := []struct {
 		desc         string
@@ -129,7 +131,7 @@ func TestSuccessfulGitHooksForUserCherryPickRequest(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -147,6 +149,9 @@ func TestSuccessfulGitHooksForUserCherryPickRequest(t *testing.T) {
 		GlId:  "user-123",
 	}
 
+	cleanupSrv := operations.SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
+
 	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab")
 	require.NoError(t, err)
 
@@ -158,22 +163,23 @@ func TestSuccessfulGitHooksForUserCherryPickRequest(t *testing.T) {
 		Message:    []byte("Cherry-picking " + cherryPickedCommit.Id),
 	}
 
+	var hookOutputFiles []string
 	for _, hookName := range operations.GitlabHooks {
-		t.Run(hookName, func(t *testing.T) {
-			hookOutputTempPath := operations.WriteEnvToHook(t, testRepoPath, hookName)
-			defer os.Remove(hookOutputTempPath)
+		hookOutputTempPath, cleanup := operations.WriteEnvToCustomHook(t, testRepoPath, hookName)
+		defer cleanup()
+		hookOutputFiles = append(hookOutputFiles, hookOutputTempPath)
+	}
 
-			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
-			ctx := metadata.NewOutgoingContext(ctxOuter, md)
+	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
+	ctx := metadata.NewOutgoingContext(ctxOuter, md)
 
-			response, err := client.UserCherryPick(ctx, request)
-			require.NoError(t, err)
-			require.Empty(t, response.PreReceiveError)
+	response, err := client.UserCherryPick(ctx, request)
+	require.NoError(t, err)
+	require.Empty(t, response.PreReceiveError)
 
-			output := string(testhelper.MustReadFile(t, hookOutputTempPath))
-			require.Contains(t, output, "GL_ID="+user.GlId)
-			require.Contains(t, output, "GL_USERNAME="+user.GlUsername)
-		})
+	for _, file := range hookOutputFiles {
+		output := string(testhelper.MustReadFile(t, file))
+		require.Contains(t, output, "GL_USERNAME="+user.GlUsername)
 	}
 }
 
@@ -181,7 +187,7 @@ func TestFailedUserCherryPickRequestDueToValidations(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -267,7 +273,7 @@ func TestFailedUserCherryPickRequestDueToPreReceiveError(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -285,6 +291,9 @@ func TestFailedUserCherryPickRequestDueToPreReceiveError(t *testing.T) {
 		GlId:  "user-123",
 	}
 
+	cleanupSrv := operations.SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
+
 	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab")
 	require.NoError(t, err)
 
@@ -300,7 +309,7 @@ func TestFailedUserCherryPickRequestDueToPreReceiveError(t *testing.T) {
 
 	for _, hookName := range operations.GitlabPreHooks {
 		t.Run(hookName, func(t *testing.T) {
-			remove, err := operations.OverrideHooks(hookName, hookContent)
+			remove, err := operations.WriteCustomHook(testRepoPath, hookName, hookContent)
 			require.NoError(t, err)
 			defer remove()
 
@@ -318,7 +327,7 @@ func TestFailedUserCherryPickRequestDueToCreateTreeError(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -361,7 +370,7 @@ func TestFailedUserCherryPickRequestDueToCommitError(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -401,7 +410,7 @@ func TestFailedUserCherryPickRequestDueToCommitError(t *testing.T) {
 	require.Equal(t, "Branch diverged", response.CommitError)
 }
 
-func runFullServer(t *testing.T) (*grpc.Server, string) {
+func runFullServerWithHooks(t *testing.T) (*grpc.Server, string) {
 	server := serverPkg.NewInsecure(operations.RubyServer)
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 

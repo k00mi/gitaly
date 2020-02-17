@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -34,7 +35,7 @@ func TestHooksPrePostReceive(t *testing.T) {
 	defer cleanupFn()
 
 	secretToken := "secret token"
-	key := 1234
+	glID := "key-1234"
 	glRepository := "some_repo"
 
 	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
@@ -44,11 +45,11 @@ func TestHooksPrePostReceive(t *testing.T) {
 
 	gitPushOptions := []string{"gitpushoption1", "gitpushoption2"}
 
-	c := testhelper.GitlabServerConfig{
+	c := testhelper.GitlabTestServerOptions{
 		User:                        "",
 		Password:                    "",
 		SecretToken:                 secretToken,
-		Key:                         key,
+		GLID:                        glID,
 		GLRepository:                glRepository,
 		Changes:                     changes,
 		PostReceiveCounterDecreased: true,
@@ -82,7 +83,7 @@ func TestHooksPrePostReceive(t *testing.T) {
 				t,
 				glRepository,
 				tempGitlabShellDir,
-				key,
+				glID,
 				gitPushOptions...,
 			)
 			cmd.Dir = testRepoPath
@@ -95,7 +96,7 @@ func TestHooksPrePostReceive(t *testing.T) {
 }
 
 func TestHooksUpdate(t *testing.T) {
-	key := 1234
+	glID := "key-1234"
 	glRepository := "some_repo"
 
 	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
@@ -126,7 +127,7 @@ func TestHooksUpdate(t *testing.T) {
 	updateHookPath, err := filepath.Abs("../../ruby/git-hooks/update")
 	require.NoError(t, err)
 	cmd := exec.Command(updateHookPath, refval, oldval, newval)
-	cmd.Env = testhelper.EnvForHooks(t, glRepository, tempGitlabShellDir, key)
+	cmd.Env = testhelper.EnvForHooks(t, glRepository, tempGitlabShellDir, glID)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	cmd.Dir = testRepoPath
@@ -148,8 +149,9 @@ func TestHooksUpdate(t *testing.T) {
 
 func TestHooksPostReceiveFailed(t *testing.T) {
 	secretToken := "secret token"
-	key := 1234
+	glID := "key-1234"
 	glRepository := "some_repo"
+	changes := "oldhead newhead"
 
 	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
 	defer cleanup()
@@ -161,13 +163,13 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 	// send back {"reference_counter_increased": false}, indicating something went wrong
 	// with the call
 
-	c := testhelper.GitlabServerConfig{
+	c := testhelper.GitlabTestServerOptions{
 		User:                        "",
 		Password:                    "",
 		SecretToken:                 secretToken,
-		Key:                         key,
+		Changes:                     changes,
+		GLID:                        glID,
 		GLRepository:                glRepository,
-		Changes:                     "",
 		PostReceiveCounterDecreased: false,
 		Protocol:                    "ssh",
 	}
@@ -189,9 +191,10 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 	postReceiveHookPath, err := filepath.Abs("../../ruby/git-hooks/post-receive")
 	require.NoError(t, err)
 	cmd := exec.Command(postReceiveHookPath)
-	cmd.Env = testhelper.EnvForHooks(t, glRepository, tempGitlabShellDir, key)
+	cmd.Env = testhelper.EnvForHooks(t, glRepository, tempGitlabShellDir, glID)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
+	cmd.Stdin = bytes.NewBuffer([]byte(changes))
 	cmd.Dir = testRepoPath
 
 	err = cmd.Run()
@@ -205,19 +208,20 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 
 func TestHooksNotAllowed(t *testing.T) {
 	secretToken := "secret token"
-	key := 1234
+	glID := "key-1234"
 	glRepository := "some_repo"
+	changes := "oldhead newhead"
 
 	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
 	defer cleanup()
 
-	c := testhelper.GitlabServerConfig{
+	c := testhelper.GitlabTestServerOptions{
 		User:                        "",
 		Password:                    "",
 		SecretToken:                 secretToken,
-		Key:                         key,
+		GLID:                        glID,
 		GLRepository:                glRepository,
-		Changes:                     "",
+		Changes:                     changes,
 		PostReceiveCounterDecreased: true,
 		Protocol:                    "ssh",
 	}
@@ -243,7 +247,8 @@ func TestHooksNotAllowed(t *testing.T) {
 	cmd := exec.Command(preReceiveHookPath)
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
-	cmd.Env = testhelper.EnvForHooks(t, glRepository, tempGitlabShellDir, key)
+	cmd.Stdin = strings.NewReader(changes)
+	cmd.Env = testhelper.EnvForHooks(t, glRepository, tempGitlabShellDir, glID)
 	cmd.Dir = testRepoPath
 
 	require.Error(t, cmd.Run())
@@ -254,11 +259,10 @@ func TestHooksNotAllowed(t *testing.T) {
 func TestCheckOK(t *testing.T) {
 	user, password := "user123", "password321"
 
-	c := testhelper.GitlabServerConfig{
+	c := testhelper.GitlabTestServerOptions{
 		User:                        user,
 		Password:                    password,
 		SecretToken:                 "",
-		Key:                         0,
 		GLRepository:                "",
 		Changes:                     "",
 		PostReceiveCounterDecreased: false,
@@ -302,11 +306,10 @@ func TestCheckOK(t *testing.T) {
 func TestCheckBadCreds(t *testing.T) {
 	user, password := "user123", "password321"
 
-	c := testhelper.GitlabServerConfig{
+	c := testhelper.GitlabTestServerOptions{
 		User:                        user,
 		Password:                    password,
 		SecretToken:                 "",
-		Key:                         0,
 		GLRepository:                "",
 		Changes:                     "",
 		PostReceiveCounterDecreased: false,

@@ -25,14 +25,17 @@ var (
 )
 
 func TestSuccessfulUserCommitFilesRequest(t *testing.T) {
-	server, serverSocketPath := runFullServer(t)
+	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	cleanupSrv := operations.SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
+
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
 	defer conn.Close()
-
-	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
-	defer cleanupFn()
 
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
@@ -134,7 +137,7 @@ func TestSuccessfulUserCommitFilesRequest(t *testing.T) {
 }
 
 func TestSuccessfulUserCommitFilesRequestMove(t *testing.T) {
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -161,6 +164,9 @@ func TestSuccessfulUserCommitFilesRequestMove(t *testing.T) {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 			defer cleanupFn()
+
+			cleanupSrv := operations.SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+			defer cleanupSrv()
 
 			origFileContent := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "show", branchName+":"+previousFilePath)
 			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
@@ -197,7 +203,7 @@ func TestSuccessfulUserCommitFilesRequestMove(t *testing.T) {
 }
 
 func TestSuccessfulUserCommitFilesRequestForceCommit(t *testing.T) {
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -215,6 +221,9 @@ func TestSuccessfulUserCommitFilesRequestForceCommit(t *testing.T) {
 	authorEmail := []byte("janedoe@gitlab.com")
 	targetBranchName := "feature"
 	startBranchName := []byte("master")
+
+	cleanupSrv := operations.SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
 
 	startBranchCommit, err := log.GetCommit(ctxOuter, testRepo, string(startBranchName))
 	require.NoError(t, err)
@@ -249,7 +258,7 @@ func TestSuccessfulUserCommitFilesRequestForceCommit(t *testing.T) {
 }
 
 func TestSuccessfulUserCommitFilesRequestStartSha(t *testing.T) {
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -271,6 +280,9 @@ func TestSuccessfulUserCommitFilesRequestStartSha(t *testing.T) {
 	headerRequest := headerRequest(testRepo, user, targetBranchName, commitFilesMessage)
 	setStartSha(headerRequest, startCommit.Id)
 
+	cleanupSrv := operations.SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
+
 	stream, err := client.UserCommitFiles(ctx)
 	require.NoError(t, err)
 	require.NoError(t, stream.Send(headerRequest))
@@ -289,7 +301,7 @@ func TestSuccessfulUserCommitFilesRequestStartSha(t *testing.T) {
 }
 
 func TestSuccessfulUserCommitFilesRequestStartShaRemoteRepository(t *testing.T) {
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -315,6 +327,9 @@ func TestSuccessfulUserCommitFilesRequestStartShaRemoteRepository(t *testing.T) 
 	setStartSha(headerRequest, startCommit.Id)
 	setStartRepository(headerRequest, testRepo)
 
+	cleanupSrv := operations.SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
+
 	stream, err := client.UserCommitFiles(ctx)
 	require.NoError(t, err)
 	require.NoError(t, stream.Send(headerRequest))
@@ -333,7 +348,7 @@ func TestSuccessfulUserCommitFilesRequestStartShaRemoteRepository(t *testing.T) 
 }
 
 func TestSuccessfulUserCommitFilesRequestWithSpecialCharactersInSignature(t *testing.T) {
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -342,11 +357,16 @@ func TestSuccessfulUserCommitFilesRequestWithSpecialCharactersInSignature(t *tes
 	testRepo, _, cleanupFn := testhelper.InitBareRepo(t)
 	defer cleanupFn()
 
+	glID := "key-123"
+
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
 	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
 	targetBranchName := "master"
+
+	cleanupSrv := operations.SetupAndStartGitlabServer(t, glID, testRepo.GlRepository)
+	defer cleanupSrv()
 
 	testCases := []struct {
 		desc   string
@@ -355,12 +375,12 @@ func TestSuccessfulUserCommitFilesRequestWithSpecialCharactersInSignature(t *tes
 	}{
 		{
 			desc:   "special characters at start and end",
-			user:   &gitalypb.User{Name: []byte(".,:;<>\"'\nJane Doe.,:;<>'\"\n"), Email: []byte(".,:;<>'\"\njanedoe@gitlab.com.,:;<>'\"\n")},
+			user:   &gitalypb.User{Name: []byte(".,:;<>\"'\nJane Doe.,:;<>'\"\n"), Email: []byte(".,:;<>'\"\njanedoe@gitlab.com.,:;<>'\"\n"), GlId: glID},
 			author: &gitalypb.CommitAuthor{Name: []byte("Jane Doe"), Email: []byte("janedoe@gitlab.com")},
 		},
 		{
 			desc:   "special characters in the middle",
-			user:   &gitalypb.User{Name: []byte("Ja<ne\n D>oe"), Email: []byte("ja<ne\ndoe>@gitlab.com")},
+			user:   &gitalypb.User{Name: []byte("Ja<ne\n D>oe"), Email: []byte("ja<ne\ndoe>@gitlab.com"), GlId: glID},
 			author: &gitalypb.CommitAuthor{Name: []byte("Jane Doe"), Email: []byte("janedoe@gitlab.com")},
 		},
 	}
@@ -390,13 +410,13 @@ func TestSuccessfulUserCommitFilesRequestWithSpecialCharactersInSignature(t *tes
 }
 
 func TestFailedUserCommitFilesRequestDueToHooks(t *testing.T) {
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
 	defer conn.Close()
 
-	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
 	ctxOuter, cancel := testhelper.Context()
@@ -409,12 +429,14 @@ func TestFailedUserCommitFilesRequestDueToHooks(t *testing.T) {
 	actionsRequest2 := actionContentRequest("My content")
 	hookContent := []byte("#!/bin/sh\nprintenv | paste -sd ' ' -\nexit 1")
 
+	cleanupSrv := operations.SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
+
 	for _, hookName := range operations.GitlabPreHooks {
 		t.Run(hookName, func(t *testing.T) {
-			remove, err := operations.OverrideHooks(hookName, hookContent)
+			remove, err := operations.WriteCustomHook(testRepoPath, hookName, hookContent)
 			require.NoError(t, err)
 			defer remove()
-
 			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
 			ctx := metadata.NewOutgoingContext(ctxOuter, md)
 			stream, err := client.UserCommitFiles(ctx)
@@ -433,7 +455,7 @@ func TestFailedUserCommitFilesRequestDueToHooks(t *testing.T) {
 }
 
 func TestFailedUserCommitFilesRequestDueToIndexError(t *testing.T) {
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -441,6 +463,9 @@ func TestFailedUserCommitFilesRequestDueToIndexError(t *testing.T) {
 
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
+
+	cleanupSrv := operations.SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
 
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
@@ -505,7 +530,7 @@ func TestFailedUserCommitFilesRequestDueToIndexError(t *testing.T) {
 }
 
 func TestFailedUserCommitFilesRequest(t *testing.T) {
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -520,6 +545,10 @@ func TestFailedUserCommitFilesRequest(t *testing.T) {
 	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
 	ctx := metadata.NewOutgoingContext(ctxOuter, md)
 	branchName := "feature"
+
+	cleanupSrv := operations.SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
+
 	testCases := []struct {
 		desc string
 		req  *gitalypb.UserCommitFilesRequest
