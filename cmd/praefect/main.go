@@ -70,16 +70,19 @@ func main() {
 		os.Exit(0)
 	}
 
-	conf, err := configure()
+	conf, err := initConfig()
 	if err != nil {
-		logger.Fatal(err)
+		printfErr("%s: configuration error: %v\n", progname, err)
+		os.Exit(1)
 	}
 
 	if args := flag.Args(); len(args) > 0 {
 		os.Exit(subCommand(conf, args[0], args[1:]))
 	}
 
-	logger.WithField("version", praefect.GetVersionString()).Info("Starting Praefect")
+	configure(conf)
+
+	logger.WithField("version", praefect.GetVersionString()).Info("Starting " + progname)
 
 	starterConfigs, err := getStarterConfigs(conf.SocketPath, conf.ListenAddr)
 	if err != nil {
@@ -91,7 +94,7 @@ func main() {
 	}
 }
 
-func configure() (config.Config, error) {
+func initConfig() (config.Config, error) {
 	var conf config.Config
 
 	if *flagConfig == "" {
@@ -104,11 +107,16 @@ func configure() (config.Config, error) {
 	}
 
 	if err := conf.Validate(); err != nil {
-		return conf, err
+		return config.Config{}, err
 	}
 
-	logger = conf.ConfigureLogger()
-	tracing.Initialize(tracing.WithServiceName("praefect"))
+	return conf, nil
+}
+
+func configure(conf config.Config) {
+	conf.ConfigureLogger()
+
+	tracing.Initialize(tracing.WithServiceName(progname))
 
 	if conf.PrometheusListenAddr != "" {
 		logger.WithField("address", conf.PrometheusListenAddr).Info("Starting prometheus listener")
@@ -124,8 +132,6 @@ func configure() (config.Config, error) {
 	}
 
 	sentry.ConfigureSentry(version.GetVersion(), conf.Sentry)
-
-	return conf, nil
 }
 
 func run(cfgs []starter.Config, conf config.Config) error {

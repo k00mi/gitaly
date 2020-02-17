@@ -27,7 +27,7 @@ func subCommand(conf config.Config, arg0 string, argRest []string) int {
 	case "dial-nodes":
 		return dialNodes(conf)
 	default:
-		fmt.Printf("%s: unknown subcommand: %q\n", progname, arg0)
+		printfErr("%s: unknown subcommand: %q\n", progname, arg0)
 		return 1
 	}
 }
