@@ -43,6 +43,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore/glsql"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metrics"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
@@ -225,7 +226,19 @@ func getStarterConfigs(socketPath, listenAddr string) ([]starter.Config, error) 
 // Test Postgres connection, for diagnostic purposes only while we roll
 // out Postgres support. https://gitlab.com/gitlab-org/gitaly/issues/1755
 func testSQLConnection(logger *logrus.Entry, conf config.Config) {
-	if err := datastore.CheckPostgresVersion(conf); err != nil {
+	db, err := glsql.OpenDB(conf.DB)
+	if err != nil {
+		logger.WithError(err).Error("SQL connection open failed")
+		return
+	}
+
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.WithError(err).Error("SQL connection close failed")
+		}
+	}()
+
+	if err := datastore.CheckPostgresVersion(db); err != nil {
 		logger.WithError(err).Error("SQL connection check failed")
 	} else {
 		logger.Info("SQL connection check successful")

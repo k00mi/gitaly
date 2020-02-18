@@ -40,6 +40,14 @@ func (db DB) Truncate(t testing.TB, tables ...string) {
 	require.NoError(t, err, "database truncation failed: %s", tables)
 }
 
+func (db DB) RequireRowsInTable(t *testing.T, tname string, n int) {
+	t.Helper()
+
+	var count int
+	require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM "+tname).Scan(&count))
+	require.Equal(t, n, count, "unexpected amount of rows in table: %d instead of %d", count, n)
+}
+
 // Close removes schema if it was used and releases connection pool.
 func (db DB) Close() error {
 	if err := db.DB.Close(); err != nil {
