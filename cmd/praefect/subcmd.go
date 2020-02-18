@@ -1,12 +1,14 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"os/signal"
 
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore/glsql"
 )
 
 const invocationPrefix = progname + " -config CONFIG_TOML"
@@ -39,7 +41,13 @@ func subCommand(conf config.Config, arg0 string, argRest []string) int {
 func sqlPing(conf config.Config) int {
 	const subCmd = progname + " sql-ping"
 
-	if err := datastore.CheckPostgresVersion(conf); err != nil {
+	db, clean, code := openDB(conf.DB)
+	if code != 0 {
+		return code
+	}
+	defer clean()
+
+	if err := datastore.CheckPostgresVersion(db); err != nil {
 		printfErr("%s: fail: %v\n", subCmd, err)
 		return 1
 	}
@@ -51,7 +59,13 @@ func sqlPing(conf config.Config) int {
 func sqlMigrate(conf config.Config) int {
 	const subCmd = progname + " sql-migrate"
 
-	n, err := datastore.Migrate(conf)
+	db, clean, code := openDB(conf.DB)
+	if code != 0 {
+		return code
+	}
+	defer clean()
+
+	n, err := glsql.Migrate(db)
 	if err != nil {
 		printfErr("%s: fail: %v\n", subCmd, err)
 		return 1
@@ -59,6 +73,22 @@ func sqlMigrate(conf config.Config) int {
 
 	fmt.Printf("%s: OK (applied %d migrations)\n", subCmd, n)
 	return 0
+}
+
+func openDB(conf config.DB) (*sql.DB, func(), int) {
+	db, err := glsql.OpenDB(conf)
+	if err != nil {
+		printfErr("sql open: %v\n", err)
+		return nil, nil, 1
+	}
+
+	clean := func() {
+		if err := db.Close(); err != nil {
+			printfErr("sql close: %v\n", err)
+		}
+	}
+
+	return db, clean, 0
 }
 
 func printfErr(format string, a ...interface{}) (int, error) {
