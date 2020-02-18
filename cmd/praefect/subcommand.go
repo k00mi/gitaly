@@ -9,6 +9,8 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
 )
 
+const invocationPrefix = progname + " -config CONFIG_TOML"
+
 // subCommand returns an exit code, to be fed into os.Exit.
 func subCommand(conf config.Config, arg0 string, argRest []string) int {
 	interrupt := make(chan os.Signal)
@@ -24,6 +26,8 @@ func subCommand(conf config.Config, arg0 string, argRest []string) int {
 		return sqlPing(conf)
 	case "sql-migrate":
 		return sqlMigrate(conf)
+	case subCmdSQLMigrateDown:
+		return sqlMigrateDown(conf, argRest)
 	case "dial-nodes":
 		return dialNodes(conf)
 	default:

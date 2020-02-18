@@ -41,6 +41,8 @@ func CheckPostgresVersion(conf config.Config) error {
 
 func openDB(conf config.Config) (*sql.DB, error) { return sql.Open("postgres", conf.DB.ToPQString()) }
 
+const sqlMigrateDialect = "postgres"
+
 // Migrate will apply all pending SQL migrations
 func Migrate(conf config.Config) (int, error) {
 	db, err := openDB(conf)
@@ -49,7 +51,41 @@ func Migrate(conf config.Config) (int, error) {
 	}
 	defer db.Close()
 
-	migrationSource := &migrate.MemoryMigrationSource{Migrations: migrations.All()}
+	return migrate.Exec(db, sqlMigrateDialect, migrationSource(), migrate.Up)
+}
 
-	return migrate.Exec(db, "postgres", migrationSource, migrate.Up)
+// MigrateDownPlan does a dry run for rolling back at most max migrations.
+func MigrateDownPlan(conf config.Config, max int) ([]string, error) {
+	db, err := openDB(conf)
+	if err != nil {
+		return nil, fmt.Errorf("sql open: %v", err)
+	}
+	defer db.Close()
+
+	planned, _, err := migrate.PlanMigration(db, sqlMigrateDialect, migrationSource(), migrate.Down, max)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []string
+	for _, m := range planned {
+		result = append(result, m.Id)
+	}
+
+	return result, nil
+}
+
+// MigrateDown rolls back at most max migrations.
+func MigrateDown(conf config.Config, max int) (int, error) {
+	db, err := openDB(conf)
+	if err != nil {
+		return 0, fmt.Errorf("sql open: %v", err)
+	}
+	defer db.Close()
+
+	return migrate.ExecMax(db, sqlMigrateDialect, migrationSource(), migrate.Down, max)
+}
+
+func migrationSource() *migrate.MemoryMigrationSource {
+	return &migrate.MemoryMigrationSource{Migrations: migrations.All()}
 }
