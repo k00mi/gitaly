@@ -7,6 +7,7 @@ import (
 
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"github.com/prometheus/client_golang/prometheus"
+	"gitlab.com/gitlab-org/gitaly/internal/log"
 )
 
 const (
@@ -36,11 +37,19 @@ type RequestWithGitProtocol interface {
 // AddGitProtocolEnv checks whether the request has Git protocol v2
 // and sets this in the environment.
 func AddGitProtocolEnv(ctx context.Context, req RequestWithGitProtocol, env []string) []string {
-	protocol := "v0"
+	var protocol string
 
-	if req.GetGitProtocol() == ProtocolV2 {
+	switch gp := req.GetGitProtocol(); gp {
+	case ProtocolV2:
 		env = append(env, fmt.Sprintf("GIT_PROTOCOL=%s", ProtocolV2))
 		protocol = "v2"
+	case "":
+		protocol = "v0"
+	default:
+		log.Default().
+			WithField("git_protocol", gp).
+			Warn("invalid git protocol requested")
+		protocol = "invalid"
 	}
 
 	service, method := methodFromContext(ctx)
