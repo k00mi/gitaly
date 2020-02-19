@@ -25,7 +25,6 @@ Lint/AssignmentInCondition:
   Exclude:
     - 'lib/gitaly_server/conflicts_service.rb'
     - 'lib/gitaly_server/diff_service.rb'
-    - 'lib/gitaly_server/ref_service.rb'
     - 'lib/gitaly_server/wiki_service.rb'
     - 'lib/gitlab/git/repository.rb'
     - 'lib/gitlab/version_info.rb'
@@ -159,12 +158,6 @@ Style/ModuleFunction:
   Exclude:
     - 'lib/gitlab/encoding_helper.rb'
 
-# Offense count: 1
-# Cop supports --auto-correct.
-Style/MultilineIfModifier:
-  Exclude:
-    - 'lib/gitaly_server/ref_service.rb'
-
 # Offense count: 3
 # Cop supports --auto-correct.
 # Configuration parameters: EnforcedOctalStyle.
@@ -211,7 +204,6 @@ Style/RaiseArgs:
     - 'lib/gitaly_server/client.rb'
     - 'lib/gitaly_server/conflicts_service.rb'
     - 'lib/gitaly_server/operations_service.rb'
-    - 'lib/gitaly_server/ref_service.rb'
     - 'lib/gitaly_server/repository_service.rb'
     - 'lib/gitlab/git/operation_service.rb'
     - 'lib/gitlab/git/remote_repository.rb'
@@ -222,14 +214,6 @@ Style/RedundantSelf:
   Exclude:
     - 'lib/gitlab/git.rb'
     - 'lib/gitlab/git/blob.rb'
-
-# Offense count: 1
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, AllowInnerSlashes.
-# SupportedStyles: slashes, percent_r, mixed
-Style/RegexpLiteral:
-  Exclude:
-    - 'lib/gitaly_server/ref_service.rb'
 
 # Offense count: 17
 # Cop supports --auto-correct.

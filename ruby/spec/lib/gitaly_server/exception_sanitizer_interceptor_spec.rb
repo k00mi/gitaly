@@ -1,8 +1,8 @@
 require 'spec_helper'
-
 require_relative '../../../lib/gitaly_server/exception_sanitizer_interceptor.rb'
+
 describe GitalyServer::ExceptionSanitizerInterceptor do
-  let(:meth) { GitalyServer::RefService.instance_method(:create_branch) }
+  let(:meth) { GitalyServer::OperationsService.instance_method(:user_create_branch) }
   let(:ex) { StandardError.new("error: failed to push some refs to 'https://fO0BA7:HunTer!@github.com/ruby/ruby.git'") }
   let(:ex_sanitized_message) { "error: failed to push some refs to 'https://[FILTERED]@github.com/ruby/ruby.git'" }
   let(:call) { double(metadata: {}) }
