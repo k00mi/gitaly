@@ -1,5 +1,16 @@
 # Gitaly changelog
 
+## 12.8.0
+
+### Added (1 change)
+
+- Add praefect client prometheus interceptor. !1836
+
+### Other (1 change)
+
+- Praefect sub-commands: avoid garbage in logs. !1819
+
+
 ## v1.87.0
 
 #### Added
