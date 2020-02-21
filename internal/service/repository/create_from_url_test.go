@@ -4,16 +4,13 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
-	"net/http/cgi"
 	"os"
 	"path"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -40,7 +37,9 @@ func TestSuccessfulCreateRepositoryFromURLRequest(t *testing.T) {
 
 	user := "username123"
 	password := "password321localhost"
-	port := gitServerWithBasicAuth(t, user, password, testRepoPath)
+	port, stopGitServer := gitServerWithBasicAuth(t, user, password, testRepoPath)
+	defer stopGitServer()
+
 	url := fmt.Sprintf("http://%s:%s@localhost:%d/%s", user, password, port, filepath.Base(testRepoPath))
 
 	req := &gitalypb.CreateRepositoryFromURLRequest{
@@ -172,35 +171,16 @@ func TestPreventingRedirect(t *testing.T) {
 	require.Error(t, err)
 }
 
-func gitServerWithBasicAuth(t testing.TB, user, pass, repoPath string) int {
-	f, err := os.Create(filepath.Join(repoPath, "git-daemon-export-ok"))
-	require.NoError(t, err)
-	require.NoError(t, f.Close())
-
-	listener, err := net.Listen("tcp", ":0")
-	require.NoError(t, err)
-
-	s := http.Server{
-		Handler: basicAuthMiddleware(t, user, pass, &cgi.Handler{
-			Path: config.Config.Git.BinPath,
-			Dir:  "/",
-			Args: []string{"http-backend"},
-			Env: []string{
-				"GIT_PROJECT_ROOT=" + filepath.Dir(repoPath),
-			},
-		}),
-	}
-	go s.Serve(listener)
-
-	return listener.Addr().(*net.TCPAddr).Port
+func gitServerWithBasicAuth(t testing.TB, user, pass, repoPath string) (int, func() error) {
+	return testhelper.GitServer(t, repoPath, basicAuthMiddleware(t, user, pass))
 }
 
-func basicAuthMiddleware(t testing.TB, user, pass string, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func basicAuthMiddleware(t testing.TB, user, pass string) func(http.ResponseWriter, *http.Request, http.Handler) {
+	return func(w http.ResponseWriter, r *http.Request, next http.Handler) {
 		authUser, authPass, ok := r.BasicAuth()
 		require.True(t, ok, "should contain basic auth")
 		require.Equal(t, user, authUser, "username should match")
 		require.Equal(t, pass, authPass, "password should match")
 		next.ServeHTTP(w, r)
-	})
+	}
 }
