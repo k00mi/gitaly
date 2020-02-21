@@ -2,6 +2,7 @@
 
 ## 12.8.0
 
+- No changes.
 ### Added (1 change)
 
 - Add praefect client prometheus interceptor. !1836
