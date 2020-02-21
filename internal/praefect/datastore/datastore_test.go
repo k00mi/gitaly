@@ -42,43 +42,73 @@ var operations = []struct {
 		},
 	},
 	{
-		desc: "insert replication job",
+		desc: "insert replication job for Update",
 		opFn: func(t *testing.T, ds Datastore) {
-			_, err := ds.CreateReplicaReplJobs(repo1Repository.RelativePath, stor1.Storage, []string{stor2.Storage}, UpdateRepo)
+			_, err := ds.CreateReplicaReplJobs(repo1Repository.RelativePath, stor1.Storage, []string{stor2.Storage}, UpdateRepo, nil)
+			require.NoError(t, err)
+		},
+	},
+	{
+		desc: "insert replication job for Rename",
+		opFn: func(t *testing.T, ds Datastore) {
+			_, err := ds.CreateReplicaReplJobs(repo1Repository.RelativePath, stor1.Storage, []string{stor2.Storage}, RenameRepo, Params{"RelativePath": "/data/dir/repo"})
 			require.NoError(t, err)
 		},
 	},
 	{
 		desc: "fetch inserted replication jobs",
 		opFn: func(t *testing.T, ds Datastore) {
-			jobs, err := ds.GetJobs(JobStatePending|JobStateReady, stor2.Storage, 10)
+			jobs, err := ds.GetJobs(JobStatePending, stor2.Storage, 10)
 			require.NoError(t, err)
-			require.Len(t, jobs, 1)
+			require.Len(t, jobs, 2)
 
-			expectedJob := ReplJob{
-				Change:       UpdateRepo,
-				ID:           1,
-				RelativePath: repo1Repository.RelativePath,
-				SourceNode:   stor1,
-				TargetNode:   stor2,
-				State:        JobStatePending,
+			expectedJobs := []ReplJob{
+				{
+					Change:       UpdateRepo,
+					ID:           1,
+					RelativePath: repo1Repository.RelativePath,
+					SourceNode:   stor1,
+					TargetNode:   stor2,
+					State:        JobStatePending,
+					Params:       nil,
+				},
+				{
+					Change:       RenameRepo,
+					ID:           2,
+					RelativePath: repo1Repository.RelativePath,
+					SourceNode:   stor1,
+					TargetNode:   stor2,
+					State:        JobStatePending,
+					Params:       Params{"RelativePath": "/data/dir/repo"},
+				},
 			}
-			require.Equal(t, expectedJob, jobs[0])
+			require.ElementsMatch(t, expectedJobs, jobs)
 		},
 	},
 	{
-		desc: "mark replication job done",
+		desc: "mark Update replication job as done",
 		opFn: func(t *testing.T, ds Datastore) {
 			err := ds.UpdateReplJobState(1, JobStateComplete)
 			require.NoError(t, err)
 		},
 	},
 	{
-		desc: "try fetching completed replication job",
+		desc: "try fetching pending replication jobs",
 		opFn: func(t *testing.T, ds Datastore) {
-			jobs, err := ds.GetJobs(JobStatePending|JobStateReady, stor1.Storage, 1)
+			jobs, err := ds.GetJobs(JobStatePending, stor2.Storage, 1)
 			require.NoError(t, err)
-			require.Len(t, jobs, 0)
+			require.Len(t, jobs, 1)
+
+			completed := ReplJob{
+				Change:       RenameRepo,
+				ID:           2,
+				RelativePath: repo1Repository.RelativePath,
+				SourceNode:   stor1,
+				TargetNode:   stor2,
+				State:        JobStatePending,
+				Params:       Params{"RelativePath": "/data/dir/repo"},
+			}
+			require.Equal(t, completed, jobs[0])
 		},
 	},
 }

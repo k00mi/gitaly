@@ -1,6 +1,7 @@
 package praefect
 
 import (
+	"context"
 	"io/ioutil"
 	"log"
 	"net"
@@ -13,6 +14,7 @@ import (
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	gitaly_config "gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git/objectpool"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/models"
@@ -122,7 +124,7 @@ func TestProcessReplicationJob(t *testing.T) {
 	for _, secondary := range secondaries {
 		secondaryStorages = append(secondaryStorages, secondary.Storage)
 	}
-	_, err = ds.CreateReplicaReplJobs(testRepo.GetRelativePath(), primary.Storage, secondaryStorages, datastore.UpdateRepo)
+	_, err = ds.CreateReplicaReplJobs(testRepo.GetRelativePath(), primary.Storage, secondaryStorages, datastore.UpdateRepo, nil)
 	require.NoError(t, err)
 
 	jobs, err := ds.GetJobs(datastore.JobStateReady|datastore.JobStatePending, backupStorageName, 1)
@@ -268,7 +270,7 @@ func TestProcessBacklog_FailedJobs(t *testing.T) {
 	)
 
 	ds := datastore.NewInMemory(config)
-	ids, err := ds.CreateReplicaReplJobs(testRepo.GetRelativePath(), primary.Storage, []string{secondary.Storage}, datastore.UpdateRepo)
+	ids, err := ds.CreateReplicaReplJobs(testRepo.GetRelativePath(), primary.Storage, []string{secondary.Storage}, datastore.UpdateRepo, nil)
 	require.NoError(t, err)
 	require.Len(t, ids, 1)
 
@@ -367,13 +369,44 @@ func TestProcessBacklog_Success(t *testing.T) {
 	)
 
 	ds := datastore.NewInMemory(config)
-	ids, err := ds.CreateReplicaReplJobs(testRepo.GetRelativePath(), primary.Storage, []string{secondary.Storage}, datastore.UpdateRepo)
+
+	var jobIDs []uint64
+
+	// Update replication job
+	idsUpdate1, err := ds.CreateReplicaReplJobs(testRepo.GetRelativePath(), primary.Storage, []string{secondary.Storage}, datastore.UpdateRepo, nil)
 	require.NoError(t, err)
-	require.Len(t, ids, 1)
+	require.Len(t, idsUpdate1, 1)
+	jobIDs = append(jobIDs, idsUpdate1...)
+
+	// Update replication job
+	idsUpdate2, err := ds.CreateReplicaReplJobs(testRepo.GetRelativePath(), primary.Storage, []string{secondary.Storage}, datastore.UpdateRepo, nil)
+	require.NoError(t, err)
+	require.Len(t, idsUpdate2, 1)
+	jobIDs = append(jobIDs, idsUpdate2...)
+
+	renameTo1 := filepath.Join(testRepo.GetRelativePath(), "..", filepath.Base(testRepo.GetRelativePath())+"-mv1")
+	fullNewPath1 := filepath.Join(backupDir, renameTo1)
+
+	renameTo2 := filepath.Join(renameTo1, "..", filepath.Base(testRepo.GetRelativePath())+"-mv2")
+	fullNewPath2 := filepath.Join(backupDir, renameTo2)
+
+	// Rename replication job
+	idsRename1, err := ds.CreateReplicaReplJobs(testRepo.GetRelativePath(), primary.Storage, []string{secondary.Storage}, datastore.RenameRepo, datastore.Params{"RelativePath": renameTo1})
+	require.NoError(t, err)
+	require.Len(t, idsRename1, 1)
+	jobIDs = append(jobIDs, idsRename1...)
+
+	// Rename replication job
+	idsRename2, err := ds.CreateReplicaReplJobs(renameTo1, primary.Storage, []string{secondary.Storage}, datastore.RenameRepo, datastore.Params{"RelativePath": renameTo2})
+	require.NoError(t, err)
+	require.Len(t, idsRename2, 1)
+	jobIDs = append(jobIDs, idsRename2...)
 
 	entry := testhelper.DiscardTestEntry(t)
 
-	require.NoError(t, ds.UpdateReplJobState(ids[0], datastore.JobStateReady))
+	for _, id := range jobIDs {
+		require.NoError(t, ds.UpdateReplJobState(id, datastore.JobStateReady))
+	}
 
 	nodeMgr, err := nodes.NewManager(entry, config)
 	require.NoError(t, err)
@@ -381,7 +414,9 @@ func TestProcessBacklog_Success(t *testing.T) {
 	replMgr := NewReplMgr("default", entry, ds, nodeMgr)
 	replMgr.replJobTimeout = 5 * time.Second
 
-	go replMgr.ProcessBacklog(ctx, noopBackoffFunc)
+	go func() {
+		require.Equal(t, context.Canceled, replMgr.ProcessBacklog(ctx, noopBackoffFunc), "backlog processing failed")
+	}()
 
 	timeLimit := time.NewTimer(5 * time.Second)
 	ticker := time.NewTicker(1 * time.Second)
@@ -401,6 +436,10 @@ TestJobSucceeds:
 			t.Fatal("time limit expired for job to complete")
 		}
 	}
+
+	_, serr := os.Stat(fullNewPath1)
+	require.True(t, os.IsNotExist(serr), "repository must be moved from %q to the new location", fullNewPath1)
+	require.True(t, helper.IsGitDirectory(fullNewPath2), "repository must exist at new last RenameRepository location")
 }
 
 func TestBackoff(t *testing.T) {

@@ -2,6 +2,7 @@ package praefect
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -22,6 +23,8 @@ type Replicator interface {
 	Replicate(ctx context.Context, job datastore.ReplJob, source, target *grpc.ClientConn) error
 	// Destroy will remove the target repo on the specified target connection
 	Destroy(ctx context.Context, job datastore.ReplJob, target *grpc.ClientConn) error
+	// Rename will rename(move) the target repo on the specified target connection
+	Rename(ctx context.Context, job datastore.ReplJob, target *grpc.ClientConn) error
 }
 
 type defaultReplicator struct {
@@ -104,6 +107,32 @@ func (dr defaultReplicator) Destroy(ctx context.Context, job datastore.ReplJob, 
 
 	_, err := repoSvcClient.RemoveRepository(ctx, &gitalypb.RemoveRepositoryRequest{
 		Repository: targetRepo,
+	})
+
+	return err
+}
+
+func (dr defaultReplicator) Rename(ctx context.Context, job datastore.ReplJob, targetCC *grpc.ClientConn) error {
+	targetRepo := &gitalypb.Repository{
+		StorageName:  job.TargetNode.Storage,
+		RelativePath: job.RelativePath,
+	}
+
+	repoSvcClient := gitalypb.NewRepositoryServiceClient(targetCC)
+
+	val, found := job.Params["RelativePath"]
+	if !found {
+		return errors.New("no 'RelativePath' parameter for rename")
+	}
+
+	relativePath, ok := val.(string)
+	if !ok {
+		return fmt.Errorf("parameter 'RelativePath' has unexpected type: %T", relativePath)
+	}
+
+	_, err := repoSvcClient.RenameRepository(ctx, &gitalypb.RenameRepositoryRequest{
+		Repository:   targetRepo,
+		RelativePath: relativePath,
 	})
 
 	return err
@@ -283,7 +312,12 @@ func (r ReplMgr) ProcessBacklog(ctx context.Context, b BackoffFunc) error {
 
 				totalJobs += len(jobs)
 
-				reposReplicated := make(map[string]struct{})
+				type replicatedKey struct {
+					change                   datastore.ChangeType
+					repoPath, source, target string
+				}
+				reposReplicated := make(map[replicatedKey]struct{})
+
 				for _, job := range jobs {
 					if job.Attempts >= maxAttempts {
 						if err := r.datastore.UpdateReplJobState(job.ID, datastore.JobStateDead); err != nil {
@@ -292,11 +326,26 @@ func (r ReplMgr) ProcessBacklog(ctx context.Context, b BackoffFunc) error {
 						continue
 					}
 
-					if _, ok := reposReplicated[job.RelativePath]; ok {
-						if err := r.datastore.UpdateReplJobState(job.ID, datastore.JobStateCancelled); err != nil {
-							r.log.WithError(err).Error("error when updating replication job status to cancelled")
+					var replicationKey replicatedKey
+					switch job.Change {
+					// this optimization could be done only for Update and Delete replication jobs as we treat them as idempotent
+					// Update - there is no much profit from executing multiple fetches for the same target from the same source one by one
+					// Delete - there is no way how we could remove already removed repository
+					// that is why those Jobs needs to be tracked and marked as Cancelled (removed from queue without execution).
+					case datastore.UpdateRepo, datastore.DeleteRepo:
+						replicationKey = replicatedKey{
+							change:   job.Change,
+							repoPath: job.RelativePath,
+							source:   job.SourceNode.Storage,
+							target:   job.TargetNode.Storage,
 						}
-						continue
+
+						if _, ok := reposReplicated[replicationKey]; ok {
+							if err := r.datastore.UpdateReplJobState(job.ID, datastore.JobStateCancelled); err != nil {
+								r.log.WithError(err).Error("error when updating replication job status to cancelled")
+							}
+							continue
+						}
 					}
 
 					if err = r.processReplJob(ctx, job, primary.GetConnection(), secondary.GetConnection()); err != nil {
@@ -311,7 +360,7 @@ func (r ReplMgr) ProcessBacklog(ctx context.Context, b BackoffFunc) error {
 						continue
 					}
 
-					reposReplicated[job.RelativePath] = struct{}{}
+					reposReplicated[replicationKey] = struct{}{}
 				}
 			}
 		} else {
@@ -377,6 +426,8 @@ func (r ReplMgr) processReplJob(ctx context.Context, job datastore.ReplJob, sour
 		err = r.replicator.Replicate(injectedCtx, job, sourceCC, targetCC)
 	case datastore.DeleteRepo:
 		err = r.replicator.Destroy(injectedCtx, job, targetCC)
+	case datastore.RenameRepo:
+		err = r.replicator.Rename(injectedCtx, job, targetCC)
 	default:
 		err = fmt.Errorf("unknown replication change type encountered: %d", job.Change)
 	}
