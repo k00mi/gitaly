@@ -20,7 +20,8 @@ var (
 		Address: "tcp://address-2",
 		Storage: "praefect-storage-2",
 	}
-	proj1 = "abcd1234" // imagine this is a legit project hash
+	proj1         = "abcd1234" // imagine this is a legit project hash
+	correlationID = "1"
 )
 
 var (
@@ -44,7 +45,7 @@ var operations = []struct {
 	{
 		desc: "insert replication job",
 		opFn: func(t *testing.T, ds Datastore) {
-			_, err := ds.CreateReplicaReplJobs(repo1Repository.RelativePath, stor1.Storage, []string{stor2.Storage}, UpdateRepo)
+			_, err := ds.CreateReplicaReplJobs(correlationID, repo1Repository.RelativePath, stor1.Storage, []string{stor2.Storage}, UpdateRepo)
 			require.NoError(t, err)
 		},
 	},
@@ -56,12 +57,13 @@ var operations = []struct {
 			require.Len(t, jobs, 1)
 
 			expectedJob := ReplJob{
-				Change:       UpdateRepo,
-				ID:           1,
-				RelativePath: repo1Repository.RelativePath,
-				SourceNode:   stor1,
-				TargetNode:   stor2,
-				State:        JobStatePending,
+				Change:        UpdateRepo,
+				ID:            1,
+				RelativePath:  repo1Repository.RelativePath,
+				SourceNode:    stor1,
+				TargetNode:    stor2,
+				State:         JobStatePending,
+				CorrelationID: correlationID,
 			}
 			require.Equal(t, expectedJob, jobs[0])
 		},

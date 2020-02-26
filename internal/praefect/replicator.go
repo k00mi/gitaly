@@ -12,6 +12,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metrics"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
+	"gitlab.com/gitlab-org/labkit/correlation"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
@@ -40,6 +41,11 @@ func (dr defaultReplicator) Replicate(ctx context.Context, job datastore.ReplJob
 	}
 
 	targetRepositoryClient := gitalypb.NewRepositoryServiceClient(targetCC)
+
+	if job.CorrelationID == "" {
+		return fmt.Errorf("replication job %d missing correlation ID", job.ID)
+	}
+	ctx = correlation.ContextWithCorrelation(ctx, job.CorrelationID)
 
 	if _, err := targetRepositoryClient.ReplicateRepository(ctx, &gitalypb.ReplicateRepositoryRequest{
 		Source:     sourceRepository,

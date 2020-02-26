@@ -14,6 +14,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
+	"gitlab.com/gitlab-org/labkit/correlation"
 )
 
 var testLogger = logrus.New()
@@ -74,7 +75,7 @@ func TestStreamDirector(t *testing.T) {
 	fullMethod := "/gitaly.ObjectPoolService/FetchIntoObjectPool"
 
 	peeker := &mockPeeker{frame}
-	streamParams, err := coordinator.streamDirector(ctx, fullMethod, peeker)
+	streamParams, err := coordinator.streamDirector(correlation.ContextWithCorrelation(ctx, "1"), fullMethod, peeker)
 	require.NoError(t, err)
 	require.Equal(t, address, streamParams.Conn().Target())
 
@@ -103,12 +104,13 @@ func TestStreamDirector(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedJob := datastore.ReplJob{
-		Change:       datastore.UpdateRepo,
-		ID:           1,
-		TargetNode:   targetNode,
-		SourceNode:   sourceNode,
-		State:        datastore.JobStatePending,
-		RelativePath: targetRepo.RelativePath,
+		Change:        datastore.UpdateRepo,
+		ID:            1,
+		TargetNode:    targetNode,
+		SourceNode:    sourceNode,
+		State:         datastore.JobStatePending,
+		RelativePath:  targetRepo.RelativePath,
+		CorrelationID: "1",
 	}
 
 	require.Equal(t, expectedJob, jobs[0], "ensure replication job created by stream director is correct")
