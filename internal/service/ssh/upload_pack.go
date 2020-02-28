@@ -29,6 +29,7 @@ func (s *server) SSHUploadPack(stream gitalypb.SSHService_SSHUploadPackServer) e
 	grpc_logrus.Extract(stream.Context()).WithFields(log.Fields{
 		"GlRepository":     repository,
 		"GitConfigOptions": req.GitConfigOptions,
+		"GitProtocol":      req.GitProtocol,
 	}).Debug("SSHUploadPack")
 
 	if err = validateFirstUploadPackRequest(req); err != nil {
