@@ -1,0 +1,5 @@
+---
+title: Handle ambiguous refs in CommitLanguages
+merge_request: 1829
+author:
+type: fixed

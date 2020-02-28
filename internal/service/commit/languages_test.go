@@ -142,6 +142,29 @@ func TestInvalidCommitLanguagesRequestRevision(t *testing.T) {
 	testhelper.RequireGrpcError(t, err, codes.InvalidArgument)
 }
 
+func TestAmbiguousRefCommitLanguagesRequestRevision(t *testing.T) {
+	server, serverSocketPath := startTestServices(t)
+	defer server.Stop()
+
+	client, conn := newCommitServiceClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	// gitlab-test repo has both a branch and a tag named 'v1.1.0'
+	// b83d6e391c22777fca1ed3012fce84f633d7fed0 refs/heads/v1.1.0
+	// 8a2a6eb295bb170b34c24c76c49ed0e9b2eaf34b refs/tags/v1.1.0
+	_, err := client.CommitLanguages(ctx, &gitalypb.CommitLanguagesRequest{
+		Repository: testRepo,
+		Revision:   []byte("v1.1.0"),
+	})
+	require.NoError(t, err)
+}
+
 func EnableLinguistFileCountStatsFeatureFlag(ctx context.Context) context.Context {
 	return metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{
 		featureflag.HeaderKey(featureflag.LinguistFileCountStats): "true",

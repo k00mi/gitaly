@@ -1,11 +1,16 @@
 package commit
 
 import (
+	"bufio"
+	"bytes"
 	"context"
-	"io/ioutil"
+	"errors"
+	"fmt"
 	"sort"
+	"strings"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/git/alternates"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/linguist"
@@ -15,6 +20,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+var errAmbigRef = errors.New("ambiguous reference")
 
 func (*server) CommitLanguages(ctx context.Context, req *gitalypb.CommitLanguagesRequest) (*gitalypb.CommitLanguagesResponse, error) {
 	repo := req.Repository
@@ -92,15 +99,75 @@ func (ls languageSorter) Swap(i, j int)      { ls[i], ls[j] = ls[j], ls[i] }
 func (ls languageSorter) Less(i, j int) bool { return ls[i].Share > ls[j].Share }
 
 func lookupRevision(ctx context.Context, repo *gitalypb.Repository, revision string) (string, error) {
-	revParse, err := git.SafeCmd(ctx, repo, nil, git.SubCmd{Name: "rev-parse", Args: []string{revision}})
+	repoPath, env, err := alternates.PathAndEnv(repo)
 	if err != nil {
 		return "", err
 	}
 
-	revParseBytes, err := ioutil.ReadAll(revParse)
+	rev, err := checkRevision(ctx, repoPath, env, revision)
+	if err != nil {
+		switch err {
+		case errAmbigRef:
+			fullRev, err := disambiguateRevision(ctx, repo, revision)
+			if err != nil {
+				return "", err
+			}
+
+			rev, err = checkRevision(ctx, repoPath, env, fullRev)
+			if err != nil {
+				return "", err
+			}
+		default:
+			return "", err
+		}
+	}
+
+	return rev, nil
+}
+
+func checkRevision(ctx context.Context, repoPath string, env []string, revision string) (string, error) {
+	opts := []git.Option{git.ValueFlag{"-C", repoPath}}
+	var stdout, stderr bytes.Buffer
+
+	revParse, err := git.SafeBareCmd(ctx, nil, &stdout, &stderr, env, opts,
+		git.SubCmd{Name: "rev-parse", Args: []string{revision}},
+	)
+
 	if err != nil {
 		return "", err
 	}
 
-	return text.ChompBytes(revParseBytes), nil
+	if err = revParse.Wait(); err != nil {
+		errMsg := strings.Split(stderr.String(), "\n")[0]
+		return "", fmt.Errorf("%v: %v", err, errMsg)
+	}
+
+	if strings.HasSuffix(stderr.String(), "refname '"+revision+"' is ambiguous.\n") {
+		return "", errAmbigRef
+	}
+
+	return text.ChompBytes(stdout.Bytes()), nil
+}
+
+func disambiguateRevision(ctx context.Context, repo *gitalypb.Repository, revision string) (string, error) {
+	cmd, err := git.SafeCmd(ctx, repo, nil, git.SubCmd{
+		Name:  "for-each-ref",
+		Flags: []git.Option{git.Flag{"--format=%(refname)"}},
+		Args:  []string{"**/" + revision},
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	scanner := bufio.NewScanner(cmd)
+	for scanner.Scan() {
+		refName := scanner.Text()
+
+		if strings.HasPrefix(refName, "refs/heads") {
+			return refName, nil
+		}
+	}
+
+	return "", fmt.Errorf("branch %v not found", revision)
 }
