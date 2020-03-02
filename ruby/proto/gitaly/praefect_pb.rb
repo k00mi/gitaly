@@ -5,20 +5,21 @@ require 'google/protobuf'
 
 require 'shared_pb'
 Google::Protobuf::DescriptorPool.generated_pool.build do
-  add_message "gitaly.ListRepositoriesRequest" do
+  add_message "gitaly.RepositoryReplicasRequest" do
+    optional :repository, :message, 1, "gitaly.Repository"
   end
-  add_message "gitaly.ListRepositoriesResponse" do
-    optional :primary, :message, 1, "gitaly.ListRepositoriesResponse.RepositoryDetails"
-    repeated :replicas, :message, 2, "gitaly.ListRepositoriesResponse.RepositoryDetails"
+  add_message "gitaly.RepositoryReplicasResponse" do
+    optional :primary, :message, 1, "gitaly.RepositoryReplicasResponse.RepositoryDetails"
+    repeated :replicas, :message, 2, "gitaly.RepositoryReplicasResponse.RepositoryDetails"
   end
-  add_message "gitaly.ListRepositoriesResponse.RepositoryDetails" do
+  add_message "gitaly.RepositoryReplicasResponse.RepositoryDetails" do
     optional :repository, :message, 1, "gitaly.Repository"
     optional :checksum, :string, 2
   end
 end
 
 module Gitaly
-  ListRepositoriesRequest = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.ListRepositoriesRequest").msgclass
-  ListRepositoriesResponse = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.ListRepositoriesResponse").msgclass
-  ListRepositoriesResponse::RepositoryDetails = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.ListRepositoriesResponse.RepositoryDetails").msgclass
+  RepositoryReplicasRequest = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.RepositoryReplicasRequest").msgclass
+  RepositoryReplicasResponse = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.RepositoryReplicasResponse").msgclass
+  RepositoryReplicasResponse::RepositoryDetails = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.RepositoryReplicasResponse.RepositoryDetails").msgclass
 end

@@ -21,6 +21,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/middleware"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/service/info"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/service/server"
 	"gitlab.com/gitlab-org/gitaly/internal/server/auth"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -124,7 +125,7 @@ func (srv *Server) Serve(l net.Listener, secure bool) error {
 func (srv *Server) RegisterServices(nm nodes.Manager, conf config.Config) {
 	// ServerServiceServer is necessary for the ServerInfo RPC
 	gitalypb.RegisterServerServiceServer(srv.s, server.NewServer(conf, nm))
-
+	gitalypb.RegisterPraefectInfoServiceServer(srv.s, info.NewServer(nm))
 	healthpb.RegisterHealthServer(srv.s, health.NewServer())
 
 	grpc_prometheus.Register(srv.s)
