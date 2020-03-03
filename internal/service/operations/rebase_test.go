@@ -5,7 +5,6 @@ package operations_test
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -35,7 +34,7 @@ func TestSuccessfulUserRebaseConfirmableRequest(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -47,6 +46,9 @@ func TestSuccessfulUserRebaseConfirmableRequest(t *testing.T) {
 	testRepoCopy, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
+	cleanupSrv := operations.SetupAndStartGitlabServer(t, rebaseUser.GlId, testRepo.GlRepository, pushOptions...)
+	defer cleanupSrv()
+
 	branchSha := getBranchSha(t, testRepoPath, branchName)
 
 	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
@@ -55,10 +57,10 @@ func TestSuccessfulUserRebaseConfirmableRequest(t *testing.T) {
 	rebaseStream, err := client.UserRebaseConfirmable(ctx)
 	require.NoError(t, err)
 
-	preReceiveHookOutputPath := operations.WriteEnvToHook(t, testRepoPath, "pre-receive")
-	postReceiveHookOutputPath := operations.WriteEnvToHook(t, testRepoPath, "post-receive")
-	defer os.Remove(preReceiveHookOutputPath)
-	defer os.Remove(postReceiveHookOutputPath)
+	preReceiveHookOutputPath, removePreReceive := operations.WriteEnvToCustomHook(t, testRepoPath, "pre-receive")
+	postReceiveHookOutputPath, removePostReceive := operations.WriteEnvToCustomHook(t, testRepoPath, "post-receive")
+	defer removePreReceive()
+	defer removePostReceive()
 
 	headerRequest := buildHeaderRequest(testRepo, rebaseUser, "1", branchName, branchSha, testRepoCopy, "master")
 	headerRequest.GetHeader().GitPushOptions = pushOptions
@@ -101,7 +103,7 @@ func TestFailedRebaseUserRebaseConfirmableRequestDueToInvalidHeader(t *testing.T
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -109,6 +111,9 @@ func TestFailedRebaseUserRebaseConfirmableRequestDueToInvalidHeader(t *testing.T
 
 	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
+
+	cleanupSrv := operations.SetupAndStartGitlabServer(t, rebaseUser.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
 
 	testRepoCopy, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
@@ -171,7 +176,7 @@ func TestAbortedUserRebaseConfirmable(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -195,6 +200,9 @@ func TestAbortedUserRebaseConfirmable(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 			defer cleanup()
+
+			cleanupSrv := operations.SetupAndStartGitlabServer(t, rebaseUser.GlId, testRepo.GlRepository)
+			defer cleanupSrv()
 
 			testRepoCopy, _, cleanup := testhelper.NewTestRepo(t)
 			defer cleanup()
@@ -239,7 +247,7 @@ func TestFailedUserRebaseConfirmableDueToApplyBeingFalse(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -250,6 +258,9 @@ func TestFailedUserRebaseConfirmableDueToApplyBeingFalse(t *testing.T) {
 
 	testRepoCopy, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
+
+	cleanupSrv := operations.SetupAndStartGitlabServer(t, rebaseUser.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
 
 	branchSha := getBranchSha(t, testRepoPath, branchName)
 
@@ -285,7 +296,7 @@ func TestFailedUserRebaseConfirmableRequestDueToPreReceiveError(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -297,13 +308,16 @@ func TestFailedUserRebaseConfirmableRequestDueToPreReceiveError(t *testing.T) {
 	testRepoCopy, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
+	cleanupSrv := operations.SetupAndStartGitlabServer(t, rebaseUser.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
+
 	branchSha := getBranchSha(t, testRepoPath, branchName)
 
 	hookContent := []byte("#!/bin/sh\necho 'failure'\nexit 1")
 
 	for i, hookName := range operations.GitlabPreHooks {
 		t.Run(hookName, func(t *testing.T) {
-			remove, err := operations.OverrideHooks(hookName, hookContent)
+			remove, err := operations.WriteCustomHook(testRepoPath, hookName, hookContent)
 			require.NoError(t, err, "set up hooks override")
 			defer remove()
 
@@ -347,7 +361,7 @@ func TestFailedUserRebaseConfirmableDueToGitError(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)

@@ -1,7 +1,6 @@
 package operations_test
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -17,7 +16,7 @@ func TestSuccessfulUserRevertRequest(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -37,6 +36,9 @@ func TestSuccessfulUserRevertRequest(t *testing.T) {
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
 	}
+
+	cleanupSrv := operations.SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
 
 	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, "d59c60028b053793cecfb4022de34602e1a9218e")
 	require.NoError(t, err)
@@ -126,7 +128,7 @@ func TestSuccessfulGitHooksForUserRevertRequest(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -139,10 +141,14 @@ func TestSuccessfulGitHooksForUserRevertRequest(t *testing.T) {
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", destinationBranch, "master")
 
 	user := &gitalypb.User{
-		Name:  []byte("Ahmad Sherif"),
-		Email: []byte("ahmad@gitlab.com"),
-		GlId:  "user-123",
+		Name:       []byte("Ahmad Sherif"),
+		Email:      []byte("ahmad@gitlab.com"),
+		GlId:       "user-123",
+		GlUsername: "username-223",
 	}
+
+	cleanupSrv := operations.SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
 
 	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, "d59c60028b053793cecfb4022de34602e1a9218e")
 	require.NoError(t, err)
@@ -155,22 +161,23 @@ func TestSuccessfulGitHooksForUserRevertRequest(t *testing.T) {
 		Message:    []byte("Reverting " + revertedCommit.Id),
 	}
 
+	var hookOutputFiles []string
 	for _, hookName := range operations.GitlabHooks {
-		t.Run(hookName, func(t *testing.T) {
-			hookOutputTempPath := operations.WriteEnvToHook(t, testRepoPath, hookName)
-			defer os.Remove(hookOutputTempPath)
+		hookOutputTempPath, cleanup := operations.WriteEnvToCustomHook(t, testRepoPath, hookName)
+		defer cleanup()
+		hookOutputFiles = append(hookOutputFiles, hookOutputTempPath)
+	}
 
-			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
-			ctx := metadata.NewOutgoingContext(ctxOuter, md)
+	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
+	ctx := metadata.NewOutgoingContext(ctxOuter, md)
 
-			response, err := client.UserRevert(ctx, request)
-			require.NoError(t, err)
-			require.Empty(t, response.PreReceiveError)
+	response, err := client.UserRevert(ctx, request)
+	require.NoError(t, err)
+	require.Empty(t, response.PreReceiveError)
 
-			output := string(testhelper.MustReadFile(t, hookOutputTempPath))
-			require.Contains(t, output, "GL_ID="+user.GlId)
-			require.Contains(t, output, "GL_USERNAME="+user.GlUsername)
-		})
+	for _, file := range hookOutputFiles {
+		output := string(testhelper.MustReadFile(t, file))
+		require.Contains(t, output, "GL_USERNAME="+user.GlUsername)
 	}
 }
 
@@ -178,7 +185,7 @@ func TestFailedUserRevertRequestDueToValidations(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -264,7 +271,7 @@ func TestFailedUserRevertRequestDueToPreReceiveError(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -282,6 +289,9 @@ func TestFailedUserRevertRequestDueToPreReceiveError(t *testing.T) {
 		GlId:  "user-123",
 	}
 
+	cleanupSrv := operations.SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
+
 	revertedCommit, err := log.GetCommit(ctxOuter, testRepo, "d59c60028b053793cecfb4022de34602e1a9218e")
 	require.NoError(t, err)
 
@@ -297,7 +307,7 @@ func TestFailedUserRevertRequestDueToPreReceiveError(t *testing.T) {
 
 	for _, hookName := range operations.GitlabPreHooks {
 		t.Run(hookName, func(t *testing.T) {
-			remove, err := operations.OverrideHooks(hookName, hookContent)
+			remove, err := operations.WriteCustomHook(testRepoPath, hookName, hookContent)
 			require.NoError(t, err)
 			defer remove()
 
@@ -315,7 +325,7 @@ func TestFailedUserRevertRequestDueToCreateTreeError(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)
@@ -358,7 +368,7 @@ func TestFailedUserRevertRequestDueToCommitError(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	server, serverSocketPath := runFullServer(t)
+	server, serverSocketPath := runFullServerWithHooks(t)
 	defer server.Stop()
 
 	client, conn := operations.NewOperationClient(t, serverSocketPath)

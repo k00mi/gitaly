@@ -5,12 +5,12 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -33,8 +33,7 @@ var (
 )
 
 func init() {
-	copy(GitlabHooks, gitlabPreHooks)
-	GitlabHooks = append(GitlabHooks, gitlabPostHooks...)
+	GitlabHooks = append(GitlabHooks, append(gitlabPreHooks, gitlabPostHooks...)...)
 }
 
 func TestMain(m *testing.M) {
@@ -44,15 +43,21 @@ func TestMain(m *testing.M) {
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
-	hookDir, err := ioutil.TempDir("", "gitaly-tmp-hooks")
+	cwd, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer os.RemoveAll(hookDir)
+	gitlabShellDir := filepath.Join(cwd, "testdata", "gitlab-shell")
+	os.RemoveAll(gitlabShellDir)
 
-	hooks.Override = hookDir
+	if err := os.MkdirAll(gitlabShellDir, 0755); err != nil {
+		log.Fatal(err)
+	}
+
+	config.Config.GitlabShell.Dir = filepath.Join(cwd, "testdata", "gitlab-shell")
 
 	testhelper.ConfigureGitalySSH()
+	testhelper.ConfigureGitalyHooksBinary()
 
 	if err := RubyServer.Start(); err != nil {
 		log.Fatal(err)
@@ -95,23 +100,42 @@ var NewOperationClient = newOperationClient
 
 // The callee is responsible for clean up of the specific hook, testMain removes
 // the hook dir
-func WriteEnvToHook(t *testing.T, repoPath, hookName string) string {
+func WriteEnvToCustomHook(t *testing.T, repoPath, hookName string) (string, func()) {
 	hookOutputTemp, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
 	require.NoError(t, hookOutputTemp.Close())
 
 	hookContent := fmt.Sprintf("#!/bin/sh\n/usr/bin/env > %s\n", hookOutputTemp.Name())
 
-	_, err = OverrideHooks(hookName, []byte(hookContent))
+	cleanupCustomHook, err := WriteCustomHook(repoPath, hookName, []byte(hookContent))
 	require.NoError(t, err)
 
-	return hookOutputTemp.Name()
+	return hookOutputTemp.Name(), func() {
+		cleanupCustomHook()
+		os.Remove(hookOutputTemp.Name())
+	}
 }
 
-// When testing hooks, the content for one specific hook can be defined, to simulate
-// behaviours on different hook content
-func OverrideHooks(name string, content []byte) (func(), error) {
-	fullPath := path.Join(hooks.Path(), name)
+// write a hook in the repo/path.git/custom_hooks directory
+func WriteCustomHook(repoPath, name string, content []byte) (func(), error) {
+	fullPath := filepath.Join(repoPath, "custom_hooks", name)
+	fullpathDir := filepath.Dir(fullPath)
+	if err := os.MkdirAll(fullpathDir, 0755); err != nil {
+		return func() {}, err
+	}
 
-	return func() { os.Remove(fullPath) }, ioutil.WriteFile(fullPath, content, 0755)
+	return func() {
+		os.RemoveAll(fullpathDir)
+	}, ioutil.WriteFile(fullPath, content, 0755)
+}
+
+func SetupAndStartGitlabServer(t *testing.T, glID, glRepository string, gitPushOptions ...string) func() {
+	return testhelper.SetupAndStartGitlabServer(t, &testhelper.GitlabTestServerOptions{
+		SecretToken:                 "secretToken",
+		GLID:                        glID,
+		GLRepository:                glRepository,
+		PostReceiveCounterDecreased: true,
+		Protocol:                    "web",
+		GitPushOptions:              gitPushOptions,
+	})
 }

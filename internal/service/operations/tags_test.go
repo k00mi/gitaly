@@ -1,7 +1,6 @@
 package operations
 
 import (
-	"os"
 	"os/exec"
 	"testing"
 
@@ -38,6 +37,9 @@ func TestSuccessfulUserDeleteTagRequest(t *testing.T) {
 
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", tagNameInput)
 
+	cleanupSrv := SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
+
 	request := &gitalypb.UserDeleteTagRequest{
 		Repository: testRepo,
 		TagName:    []byte(tagNameInput),
@@ -61,6 +63,9 @@ func TestSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
+	cleanupSrv := SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
+
 	tagNameInput := "to-be-déleted-soon-tag"
 	defer exec.Command("git", "-C", testRepoPath, "tag", "-d", tagNameInput).Run()
 
@@ -81,8 +86,8 @@ func TestSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T) {
 		t.Run(hookName, func(t *testing.T) {
 			testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", tagNameInput)
 
-			hookOutputTempPath := WriteEnvToHook(t, testRepoPath, hookName)
-			defer os.Remove(hookOutputTempPath)
+			hookOutputTempPath, cleanup := WriteEnvToCustomHook(t, testRepoPath, hookName)
+			defer cleanup()
 
 			ctx, cancel := testhelper.Context()
 			defer cancel()
@@ -91,7 +96,6 @@ func TestSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T) {
 			require.NoError(t, err)
 
 			output := testhelper.MustReadFile(t, hookOutputTempPath)
-			require.Contains(t, string(output), "GL_ID=user-123")
 			require.Contains(t, string(output), "GL_USERNAME=johndoe")
 		})
 	}
@@ -155,11 +159,14 @@ func TestSuccessfulUserCreateTagRequest(t *testing.T) {
 		t.Run(testCase.desc, func(t *testing.T) {
 			request := &gitalypb.UserCreateTagRequest{
 				Repository:     testRepo,
-				TagName:        []byte(inputTagName),
+				TagName:        []byte(testCase.tagName),
 				TargetRevision: []byte(testCase.targetRevision),
 				User:           user,
 				Message:        []byte(testCase.message),
 			}
+
+			cleanupSrv := SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+			defer cleanupSrv()
 
 			ctx, cancel := testhelper.Context()
 			defer cancel()
@@ -197,6 +204,10 @@ func TestSuccessfulGitHooksForUserCreateTagRequest(t *testing.T) {
 		GlId:       "user-123",
 		GlUsername: "johndoe",
 	}
+
+	cleanupSrv := SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
+
 	request := &gitalypb.UserCreateTagRequest{
 		Repository:     testRepo,
 		TagName:        []byte(tagName),
@@ -208,8 +219,8 @@ func TestSuccessfulGitHooksForUserCreateTagRequest(t *testing.T) {
 		t.Run(hookName, func(t *testing.T) {
 			defer exec.Command("git", "-C", testRepoPath, "tag", "-d", tagName).Run()
 
-			hookOutputTempPath := WriteEnvToHook(t, testRepoPath, hookName)
-			defer os.Remove(hookOutputTempPath)
+			hookOutputTempPath, cleanup := WriteEnvToCustomHook(t, testRepoPath, hookName)
+			defer cleanup()
 
 			ctx, cancel := testhelper.Context()
 			defer cancel()
@@ -219,7 +230,6 @@ func TestSuccessfulGitHooksForUserCreateTagRequest(t *testing.T) {
 			require.Empty(t, response.PreReceiveError)
 
 			output := string(testhelper.MustReadFile(t, hookOutputTempPath))
-			require.Contains(t, output, "GL_ID="+user.GlId)
 			require.Contains(t, output, "GL_USERNAME="+user.GlUsername)
 		})
 	}
@@ -304,6 +314,9 @@ func TestFailedUserDeleteTagDueToHooks(t *testing.T) {
 		GlId:  "user-123",
 	}
 
+	cleanupSrv := SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
+
 	request := &gitalypb.UserDeleteTagRequest{
 		Repository: testRepo,
 		TagName:    []byte(tagNameInput),
@@ -314,7 +327,7 @@ func TestFailedUserDeleteTagDueToHooks(t *testing.T) {
 
 	for _, hookName := range gitlabPreHooks {
 		t.Run(hookName, func(t *testing.T) {
-			remove, err := OverrideHooks(hookName, hookContent)
+			remove, err := WriteCustomHook(testRepoPath, hookName, hookContent)
 			require.NoError(t, err)
 			defer remove()
 
@@ -338,7 +351,7 @@ func TestFailedUserCreateTagDueToHooks(t *testing.T) {
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
 
-	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
 	user := &gitalypb.User{
@@ -347,6 +360,10 @@ func TestFailedUserCreateTagDueToHooks(t *testing.T) {
 		GlId:       "user-123",
 		GlUsername: "johndoe",
 	}
+
+	cleanupSrv := SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
+
 	request := &gitalypb.UserCreateTagRequest{
 		Repository:     testRepo,
 		TagName:        []byte("new-tag"),
@@ -357,7 +374,7 @@ func TestFailedUserCreateTagDueToHooks(t *testing.T) {
 	hookContent := []byte("#!/bin/sh\necho GL_ID=$GL_ID\nexit 1")
 
 	for _, hookName := range gitlabPreHooks {
-		remove, err := OverrideHooks(hookName, hookContent)
+		remove, err := WriteCustomHook(testRepoPath, hookName, hookContent)
 		require.NoError(t, err)
 		defer remove()
 
@@ -385,6 +402,9 @@ func TestFailedUserCreateTagRequestDueToTagExistence(t *testing.T) {
 		Email: []byte("ahmad@gitlab.com"),
 		GlId:  "user-123",
 	}
+
+	cleanupSrv := SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
 
 	testCase := struct {
 		tagName        string

@@ -23,6 +23,9 @@ func TestSuccessfulUserUpdateSubmoduleRequest(t *testing.T) {
 	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
+	cleanupSrv := SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
+
 	commitMessage := []byte("Update Submodule message")
 
 	testCases := []struct {
@@ -271,6 +274,9 @@ func TestFailedUserUpdateSubmoduleRequestDueToSameReference(t *testing.T) {
 
 	testRepo, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
+
+	cleanupSrv := SetupAndStartGitlabServer(t, user.GlId, testRepo.GlRepository)
+	defer cleanupSrv()
 
 	request := &gitalypb.UserUpdateSubmoduleRequest{
 		Repository:    testRepo,
