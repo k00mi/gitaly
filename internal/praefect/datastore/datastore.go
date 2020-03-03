@@ -51,7 +51,12 @@ const (
 	UpdateRepo ChangeType = iota + 1
 	// DeleteRepo is when a replication deletes a repo
 	DeleteRepo
+	// RenameRepo is when a replication renames repo
+	RenameRepo
 )
+
+// Params represent additional set of parameters required for replication job.
+type Params map[string]interface{}
 
 // ReplJob is an instance of a queued replication job. A replication job is
 // meant for updating the repository so that it is synced with the primary
@@ -63,6 +68,7 @@ type ReplJob struct {
 	RelativePath           string      // source for replication
 	State                  JobState
 	Attempts               int
+	Params                 Params // additional information required to run the job
 }
 
 // replJobs provides sort manipulation behavior
@@ -108,7 +114,7 @@ type ReplJobsDatastore interface {
 	// CreateReplicaReplJobs will create replication jobs for each secondary
 	// replica of a repository known to the datastore. A set of replication job
 	// ID's for the created jobs will be returned upon success.
-	CreateReplicaReplJobs(relativePath string, primaryStorage string, secondaryStorages []string, change ChangeType) ([]uint64, error)
+	CreateReplicaReplJobs(relativePath, primaryStorage string, secondaryStorages []string, change ChangeType, params Params) ([]uint64, error)
 
 	// UpdateReplJobState updates the state of an existing replication job
 	UpdateReplJobState(jobID uint64, newState JobState) error
@@ -117,11 +123,13 @@ type ReplJobsDatastore interface {
 }
 
 type jobRecord struct {
-	change                               ChangeType
-	relativePath                         string // project's relative path
-	targetNodeStorage, sourceNodeStorage string
-	state                                JobState
-	attempts                             int
+	change            ChangeType
+	relativePath      string // project's relative path
+	targetNodeStorage string
+	sourceNodeStorage string
+	state             JobState
+	attempts          int
+	params            Params
 }
 
 // MemoryDatastore is a simple datastore that isn't persisted to disk. It is
@@ -293,6 +301,7 @@ func (md *MemoryDatastore) replJobFromRecord(jobID uint64, record jobRecord) (Re
 		State:        record.state,
 		TargetNode:   targetNode,
 		Attempts:     record.attempts,
+		Params:       record.params,
 	}, nil
 }
 
@@ -302,7 +311,13 @@ var ErrInvalidReplTarget = errors.New("targetStorage repository fails preconditi
 
 // CreateReplicaReplJobs creates a replication job for each secondary that
 // backs the specified repository. Upon success, the job IDs will be returned.
-func (md *MemoryDatastore) CreateReplicaReplJobs(relativePath string, primaryStorage string, secondaryStorages []string, change ChangeType) ([]uint64, error) {
+func (md *MemoryDatastore) CreateReplicaReplJobs(
+	relativePath,
+	primaryStorage string,
+	secondaryStorages []string,
+	change ChangeType,
+	params Params,
+) ([]uint64, error) {
 	md.jobs.Lock()
 	defer md.jobs.Unlock()
 
@@ -321,6 +336,7 @@ func (md *MemoryDatastore) CreateReplicaReplJobs(relativePath string, primarySto
 			state:             JobStatePending,
 			relativePath:      relativePath,
 			sourceNodeStorage: primaryStorage,
+			params:            params,
 		}
 
 		jobIDs = append(jobIDs, nextID)

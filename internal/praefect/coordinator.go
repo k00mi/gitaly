@@ -2,6 +2,7 @@ package praefect
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/sirupsen/logrus"
@@ -15,8 +16,20 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func isDestructive(methodName string) bool {
-	return methodName == "/gitaly.RepositoryService/RemoveRepository"
+// getReplicationDetails determines the type of job and additional details based on the method name and incoming message
+func getReplicationDetails(methodName string, m proto.Message) (datastore.ChangeType, datastore.Params, error) {
+	switch methodName {
+	case "/gitaly.RepositoryService/RemoveRepository":
+		return datastore.DeleteRepo, nil, nil
+	case "/gitaly.RepositoryService/RenameRepository":
+		req, ok := m.(*gitalypb.RenameRepositoryRequest)
+		if !ok {
+			return 0, nil, fmt.Errorf("protocol changed: for method %q expected  message type '%T', got '%T'", methodName, req, m)
+		}
+		return datastore.RenameRepo, datastore.Params{"RelativePath": req.RelativePath}, nil
+	default:
+		return datastore.UpdateRepo, nil, nil
+	}
 }
 
 // Coordinator takes care of directing client requests to the appropriate
@@ -71,9 +84,9 @@ func (c *Coordinator) directRepositoryScopedMessage(ctx context.Context, mi prot
 	var requestFinalizer func()
 
 	if mi.Operation == protoregistry.OpMutator {
-		change := datastore.UpdateRepo
-		if isDestructive(fullMethodName) {
-			change = datastore.DeleteRepo
+		change, params, err := getReplicationDetails(fullMethodName, m)
+		if err != nil {
+			return nil, err
 		}
 
 		secondaries, err := shard.GetSecondaries()
@@ -81,7 +94,7 @@ func (c *Coordinator) directRepositoryScopedMessage(ctx context.Context, mi prot
 			return nil, err
 		}
 
-		if requestFinalizer, err = c.createReplicaJobs(targetRepo, primary, secondaries, change); err != nil {
+		if requestFinalizer, err = c.createReplicaJobs(targetRepo, primary, secondaries, change, params); err != nil {
 			return nil, err
 		}
 	}
@@ -169,12 +182,18 @@ func protoMessageFromPeeker(mi protoregistry.MethodInfo, peeker proxy.StreamModi
 	return m, nil
 }
 
-func (c *Coordinator) createReplicaJobs(targetRepo *gitalypb.Repository, primary nodes.Node, secondaries []nodes.Node, change datastore.ChangeType) (func(), error) {
+func (c *Coordinator) createReplicaJobs(
+	targetRepo *gitalypb.Repository,
+	primary nodes.Node,
+	secondaries []nodes.Node,
+	change datastore.ChangeType,
+	params datastore.Params,
+) (func(), error) {
 	var secondaryStorages []string
 	for _, secondary := range secondaries {
 		secondaryStorages = append(secondaryStorages, secondary.GetStorage())
 	}
-	jobIDs, err := c.datastore.CreateReplicaReplJobs(targetRepo.RelativePath, primary.GetStorage(), secondaryStorages, change)
+	jobIDs, err := c.datastore.CreateReplicaReplJobs(targetRepo.RelativePath, primary.GetStorage(), secondaryStorages, change, params)
 	if err != nil {
 		return nil, err
 	}

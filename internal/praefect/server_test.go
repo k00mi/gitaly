@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +17,7 @@ import (
 	gconfig "gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/mock"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/models"
@@ -442,17 +444,124 @@ func pollUntilRemoved(t testing.TB, path string, deadline <-chan time.Time) {
 			require.Failf(t, "unable to detect path removal for %s", path)
 		default:
 			_, err := os.Stat(path)
-			switch {
-			case err != nil && os.IsNotExist(err):
+			if os.IsNotExist(err) {
 				return
-			case err == nil:
-				break
-			default:
-				require.Failf(t, "unexpected error while checking path %s", path)
 			}
+			require.NoError(t, err, "unexpected error while checking path %s", path)
 		}
 		time.Sleep(time.Millisecond)
 	}
+}
+
+func TestRepoRename(t *testing.T) {
+	oldStorages := gconfig.Config.Storages
+	defer func() { gconfig.Config.Storages = oldStorages }()
+
+	conf := config.Config{
+		VirtualStorages: []*config.VirtualStorage{
+			{
+				Name: "praefect",
+				Nodes: []*models.Node{
+					0: {
+						DefaultPrimary: true,
+						Storage:        gconfig.Config.Storages[0].Name,
+						Address:        "tcp::/this-doesnt-matter",
+					},
+					1: {
+						Storage: "gitaly-1",
+						Address: "tcp::/this-doesnt-matter",
+					},
+					2: {
+						Storage: "gitaly-2",
+						Address: "tcp::/this-doesnt-matter",
+					},
+				},
+			},
+		},
+	}
+
+	virtualStorage := conf.VirtualStorages[0]
+	testStorages := []gconfig.Storage{
+		{
+			Name: virtualStorage.Nodes[1].Storage,
+			Path: tempStoragePath(t),
+		},
+		{
+			Name: virtualStorage.Nodes[2].Storage,
+			Path: tempStoragePath(t),
+		},
+	}
+
+	gconfig.Config.Storages = append(gconfig.Config.Storages, testStorages...)
+	defer func() {
+		for _, s := range testStorages {
+			require.NoError(t, os.RemoveAll(s.Path))
+		}
+	}()
+
+	require.Len(t, gconfig.Config.Storages, 3, "1 default storage and 2 replicas of it")
+
+	// repo0 is a template that is used to create replica set by cloning it into other storage (directories)
+	repo0, path0, cleanup0 := testhelper.NewTestRepo(t)
+	defer cleanup0()
+
+	_, path1, cleanup1 := cloneRepoAtStorage(t, repo0, virtualStorage.Nodes[1].Storage)
+	defer cleanup1()
+
+	_, path2, cleanup2 := cloneRepoAtStorage(t, repo0, virtualStorage.Nodes[2].Storage)
+	defer cleanup2()
+
+	cc, _, cleanup := runPraefectServerWithGitaly(t, conf)
+	defer cleanup()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	// virtualRepo is a virtual repository all requests to it would be applied to the underline Gitaly nodes behind it
+	virtualRepo := &(*repo0)
+	virtualRepo.StorageName = virtualStorage.Name
+
+	repoServiceClient := gitalypb.NewRepositoryServiceClient(cc)
+
+	newName, err := text.RandomHex(20)
+	require.NoError(t, err)
+
+	expNewPath0 := filepath.Join(gconfig.Config.Storages[0].Path, newName)
+	expNewPath1 := filepath.Join(gconfig.Config.Storages[1].Path, newName)
+	expNewPath2 := filepath.Join(gconfig.Config.Storages[2].Path, newName)
+
+	require.NoError(t, os.RemoveAll(expNewPath0), "target dir must not exist before renaming")
+	require.NoError(t, os.RemoveAll(expNewPath1), "target dir must not exist before renaming")
+	require.NoError(t, os.RemoveAll(expNewPath2), "target dir must not exist before renaming")
+
+	_, err = repoServiceClient.RenameRepository(ctx, &gitalypb.RenameRepositoryRequest{
+		Repository:   virtualRepo,
+		RelativePath: newName,
+	})
+	require.NoError(t, err)
+
+	resp, err := repoServiceClient.RepositoryExists(ctx, &gitalypb.RepositoryExistsRequest{
+		Repository: virtualRepo,
+	})
+	require.NoError(t, err)
+	require.False(t, resp.GetExists(), "repo with old name must gone")
+
+	// as we renamed the repo we need to update RelativePath before we could check if it exists
+	renamedVirtualRepo := &(*virtualRepo)
+	renamedVirtualRepo.RelativePath = newName
+	resp, err = repoServiceClient.RepositoryExists(ctx, &gitalypb.RepositoryExistsRequest{
+		Repository: renamedVirtualRepo,
+	})
+	require.NoError(t, err)
+	require.True(t, resp.GetExists(), "repo with new name must exist")
+	require.DirExists(t, expNewPath0, "must be renamed on secondary from %q to %q", path0, expNewPath0)
+
+	// the renaming of the repo on the secondary servers is not deterministic
+	// since it relies on eventually consistent replication
+	pollUntilRemoved(t, path1, time.After(10*time.Second))
+	require.DirExists(t, expNewPath1, "must be renamed on secondary from %q to %q", path1, expNewPath1)
+	pollUntilRemoved(t, path2, time.After(10*time.Second))
+	require.DirExists(t, expNewPath2, "must be renamed on secondary from %q to %q", path2, expNewPath2)
 }
 
 func tempStoragePath(t testing.TB) string {
