@@ -46,7 +46,7 @@ func TestOpenDB(t *testing.T) {
 }
 
 func TestTxQuery_MultipleOperationsSuccess(t *testing.T) {
-	db := GetDB(t)
+	db := getDB(t)
 	defer createBasicTable(t, db, "work_unit_test")()
 
 	ctx, cancel := testhelper.Context()
@@ -76,7 +76,7 @@ func TestTxQuery_MultipleOperationsSuccess(t *testing.T) {
 }
 
 func TestTxQuery_FailedOperationInTheMiddle(t *testing.T) {
-	db := GetDB(t)
+	db := getDB(t)
 	defer createBasicTable(t, db, "work_unit_test")()
 
 	ctx, cancel := testhelper.Context()
@@ -118,7 +118,7 @@ func TestTxQuery_FailedOperationInTheMiddle(t *testing.T) {
 }
 
 func TestTxQuery_ContextHandled(t *testing.T) {
-	db := GetDB(t)
+	db := getDB(t)
 
 	defer createBasicTable(t, db, "work_unit_test")()
 
@@ -155,7 +155,7 @@ func TestTxQuery_ContextHandled(t *testing.T) {
 }
 
 func TestTxQuery_FailedToCommit(t *testing.T) {
-	db := GetDB(t)
+	db := getDB(t)
 	defer createBasicTable(t, db, "work_unit_test")()
 
 	ctx, cancel := testhelper.Context()
@@ -189,7 +189,7 @@ func TestTxQuery_FailedToCommit(t *testing.T) {
 }
 
 func TestTxQuery_FailedToRollbackWithFailedOperation(t *testing.T) {
-	db := GetDB(t)
+	db := getDB(t)
 	defer createBasicTable(t, db, "work_unit_test")()
 
 	ctx, cancel := testhelper.Context()
@@ -237,7 +237,7 @@ func TestTxQuery_FailedToRollbackWithFailedOperation(t *testing.T) {
 }
 
 func TestTxQuery_FailedToCommitWithFailedOperation(t *testing.T) {
-	db := GetDB(t)
+	db := getDB(t)
 	defer createBasicTable(t, db, "work_unit_test")()
 
 	ctx, cancel := testhelper.Context()
@@ -294,4 +294,91 @@ func createBasicTable(t *testing.T, db DB, tname string) func() {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + tname)
 		require.NoError(t, err)
 	}
+}
+
+func TestUint64sToInterfaces(t *testing.T) {
+	for _, tc := range []struct {
+		From []uint64
+		Exp  []interface{}
+	}{
+		{From: nil, Exp: nil},
+		{From: []uint64{1}, Exp: []interface{}{uint64(1)}},
+		{From: []uint64{2, 3, 0}, Exp: []interface{}{uint64(2), uint64(3), uint64(0)}},
+	} {
+		t.Run("", func(t *testing.T) {
+			require.Equal(t, tc.Exp, Uint64sToInterfaces(tc.From...))
+		})
+	}
+}
+
+func TestUint64Provider(t *testing.T) {
+	var provider Uint64Provider
+
+	dst1 := provider.To()
+	require.Equal(t, []interface{}{new(uint64)}, dst1, "must be a single value holder")
+	val1 := dst1[0].(*uint64)
+	*val1 = uint64(100)
+
+	dst2 := provider.To()
+	require.Equal(t, []interface{}{new(uint64)}, dst2, "must be a single value holder")
+	val2 := dst2[0].(*uint64)
+	*val2 = uint64(200)
+
+	require.Equal(t, []uint64{100, 200}, provider.Values())
+
+	dst3 := provider.To()
+	val3 := dst3[0].(*uint64)
+	*val3 = uint64(300)
+
+	require.Equal(t, []uint64{100, 200, 300}, provider.Values())
+}
+
+func TestParamsAssembler(t *testing.T) {
+	assembler := NewParamsAssembler()
+
+	require.Equal(t, "$1", assembler.AddParam(1))
+	require.Equal(t, []interface{}{1}, assembler.Params())
+
+	require.Equal(t, "$2", assembler.AddParam('a'))
+	require.Equal(t, []interface{}{1, 'a'}, assembler.Params())
+
+	require.Equal(t, "$3,$4", assembler.AddParams([]interface{}{"b", uint64(4)}))
+	require.Equal(t, []interface{}{1, 'a', "b", uint64(4)}, assembler.Params())
+}
+
+func TestGeneratePlaceholders(t *testing.T) {
+	for _, tc := range []struct {
+		Start, Count int
+		Exp          string
+	}{
+		{Start: -1, Count: -1, Exp: "$1"},
+		{Start: 0, Count: -1, Exp: "$1"},
+		{Start: 0, Count: 0, Exp: "$1"},
+		{Start: 1, Count: 0, Exp: "$1"},
+		{Start: 1, Count: 1, Exp: "$1"},
+		{Start: 5, Count: 3, Exp: "$5,$6,$7"},
+		{Start: 5, Count: -1, Exp: "$5"},
+	} {
+		t.Run("", func(t *testing.T) {
+			require.Equal(t, tc.Exp, GeneratePlaceholders(tc.Start, tc.Count))
+		})
+	}
+}
+
+func TestScanAll(t *testing.T) {
+	db := getDB(t)
+
+	var ids Uint64Provider
+	notEmptyRows, err := db.Query("SELECT id FROM (VALUES (1), (200), (300500)) AS t(id)")
+	require.NoError(t, err)
+
+	require.NoError(t, ScanAll(notEmptyRows, &ids))
+	require.Equal(t, []uint64{1, 200, 300500}, ids.Values())
+
+	var nothing Uint64Provider
+	emptyRows, err := db.Query("SELECT id FROM (VALUES (1), (200), (300500)) AS t(id) WHERE id < 0")
+	require.NoError(t, err)
+
+	require.NoError(t, ScanAll(emptyRows, &nothing))
+	require.Equal(t, ([]uint64)(nil), nothing.Values())
 }

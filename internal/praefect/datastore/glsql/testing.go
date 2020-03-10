@@ -30,7 +30,7 @@ type DB struct {
 func (db DB) Truncate(t testing.TB, tables ...string) {
 	t.Helper()
 
-	tmpl := strings.Repeat("TRUNCATE TABLE %q RESTART IDENTITY;\n", len(tables))
+	tmpl := strings.Repeat("TRUNCATE TABLE %q RESTART IDENTITY CASCADE;\n", len(tables))
 	params := make([]interface{}, len(tables))
 	for i, table := range tables {
 		params[i] = table
@@ -48,6 +48,14 @@ func (db DB) RequireRowsInTable(t *testing.T, tname string, n int) {
 	require.Equal(t, n, count, "unexpected amount of rows in table: %d instead of %d", count, n)
 }
 
+func (db DB) TruncateAll(t testing.TB) {
+	db.Truncate(t,
+		"gitaly_replication_queue_job_lock",
+		"gitaly_replication_queue",
+		"gitaly_replication_queue_lock",
+	)
+}
+
 // Close removes schema if it was used and releases connection pool.
 func (db DB) Close() error {
 	if err := db.DB.Close(); err != nil {
@@ -59,25 +67,29 @@ func (db DB) Close() error {
 // GetDB returns a wrapper around the database connection pool.
 // Must be used only for testing.
 // The new database 'gitaly_test' will be re-created for each package that uses this function.
-// The best place to call it is in individual testing functions
+// Each call will also truncate all tables with their identities restarted if any.
+// The best place to call it is in individual testing functions.
 // It uses env vars:
 //   PGHOST - required, URL/socket/dir
 //   PGPORT - required, binding port
 //   PGUSER - optional, user - `$ whoami` would be used if not provided
-func GetDB(t testing.TB) DB {
+func GetDB(t testing.TB, database string) DB {
 	t.Helper()
 
 	testDBInitOnce.Do(func() {
-		sqlDB := initGitalyTestDB(t)
+		sqlDB := initGitalyTestDB(t, database)
 
 		_, mErr := Migrate(sqlDB)
 		require.NoError(t, mErr, "failed to run database migration")
 		testDB = DB{DB: sqlDB}
 	})
+
+	testDB.TruncateAll(t)
+
 	return testDB
 }
 
-func initGitalyTestDB(t testing.TB) *sql.DB {
+func initGitalyTestDB(t testing.TB, database string) *sql.DB {
 	t.Helper()
 
 	host, hostFound := os.LookupEnv("PGHOST")
@@ -101,17 +113,21 @@ func initGitalyTestDB(t testing.TB) *sql.DB {
 	require.NoError(t, oErr, "failed to connect to 'postgres' database")
 	defer func() { require.NoError(t, postgresDB.Close()) }()
 
-	_, dErr := postgresDB.Exec("DROP DATABASE IF EXISTS gitaly_test")
+	rows, tErr := postgresDB.Query("SELECT PG_TERMINATE_BACKEND(pid) FROM PG_STAT_ACTIVITY WHERE datname = '" + database + "'")
+	require.NoError(t, tErr)
+	require.NoError(t, rows.Close())
+
+	_, dErr := postgresDB.Exec("DROP DATABASE IF EXISTS " + database)
 	require.NoError(t, dErr, "failed to drop 'gitaly_test' database")
 
-	_, cErr := postgresDB.Exec("CREATE DATABASE gitaly_test WITH ENCODING 'UTF8'")
-	require.NoError(t, cErr, "failed to create 'gitaly_test' database")
+	_, cErr := postgresDB.Exec("CREATE DATABASE " + database + " WITH ENCODING 'UTF8'")
+	require.NoErrorf(t, cErr, "failed to create %q database", database)
 	require.NoError(t, postgresDB.Close(), "error on closing connection to 'postgres' database")
 
 	// connect to the testing database
-	dbCfg.DBName = "gitaly_test"
+	dbCfg.DBName = database
 	gitalyTestDB, err := OpenDB(dbCfg)
-	require.NoError(t, err, "failed to connect to 'gitaly_test' database")
+	require.NoErrorf(t, err, "failed to connect to %q database", database)
 	return gitalyTestDB
 }
 

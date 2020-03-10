@@ -1,0 +1,5 @@
+---
+title: 'Praefect: Move replication queue to database'
+merge_request: 1865
+author:
+type: added
