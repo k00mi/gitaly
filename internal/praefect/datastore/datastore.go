@@ -55,7 +55,21 @@ const (
 	RenameRepo
 )
 
-// Params represent additional set of parameters required for replication job.
+func (ct ChangeType) String() string {
+	switch ct {
+	case UpdateRepo:
+		return "update"
+	case DeleteRepo:
+		return "delete"
+	case RenameRepo:
+		return "rename"
+	default:
+		return "UNDEFINED"
+	}
+}
+
+// Params represent additional information required to process event after fetching it from storage.
+// It must be JSON encodable/decodable to persist it without problems.
 type Params map[string]interface{}
 
 // ReplJob is an instance of a queued replication job. A replication job is

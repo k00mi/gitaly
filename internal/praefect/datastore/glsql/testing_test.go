@@ -9,7 +9,7 @@ import (
 )
 
 func TestDB_Truncate(t *testing.T) {
-	db := GetDB(t)
+	db := getDB(t)
 
 	_, err := db.Exec("CREATE TABLE truncate_tbl(id BIGSERIAL PRIMARY KEY)")
 	require.NoError(t, err)
