@@ -208,14 +208,7 @@ func TestSearchFilesByContentLargeFile(t *testing.T) {
 }
 
 func TestSearchFilesByContentFailure(t *testing.T) {
-	ctx, cancel := testhelper.Context()
-	defer cancel()
-
-	server, serverSocketPath := runRepoServer(t)
-	defer server.Stop()
-
-	client, conn := newRepositoryClient(t, serverSocketPath)
-	defer conn.Close()
+	server := NewServer(RubyServer)
 
 	testRepo, _, cleanupRepo := testhelper.NewTestRepo(t)
 	defer cleanupRepo()
@@ -258,14 +251,12 @@ func TestSearchFilesByContentFailure(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			stream, err := client.SearchFilesByContent(ctx, &gitalypb.SearchFilesByContentRequest{
+			err := server.SearchFilesByContent(&gitalypb.SearchFilesByContentRequest{
 				Repository: tc.repo,
 				Query:      tc.query,
 				Ref:        []byte(tc.ref),
-			})
-			require.NoError(t, err)
+			}, nil)
 
-			_, err = consumeFilenameByContentChunked(stream)
 			testhelper.RequireGrpcError(t, err, tc.code)
 			require.Contains(t, err.Error(), tc.msg)
 		})

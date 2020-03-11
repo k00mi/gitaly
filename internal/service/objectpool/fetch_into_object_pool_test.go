@@ -116,11 +116,7 @@ func TestFetchIntoObjectPool_CollectLogStatistics(t *testing.T) {
 }
 
 func TestFetchIntoObjectPool_Failure(t *testing.T) {
-	server, serverSocketPath := runObjectPoolServer(t)
-	defer server.Stop()
-
-	client, conn := newObjectPoolClient(t, serverSocketPath)
-	defer conn.Close()
+	server := NewServer()
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
@@ -169,7 +165,7 @@ func TestFetchIntoObjectPool_Failure(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			_, err := client.FetchIntoObjectPool(ctx, tc.request)
+			_, err := server.FetchIntoObjectPool(ctx, tc.request)
 			require.Error(t, err)
 			testhelper.RequireGrpcError(t, err, tc.code)
 			assert.Contains(t, err.Error(), tc.errMsg)

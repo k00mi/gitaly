@@ -67,10 +67,7 @@ func TestFetchRemoteSuccess(t *testing.T) {
 }
 
 func TestFetchRemoteFailure(t *testing.T) {
-	server, serverSocketPath := runRepoServer(t)
-	defer server.Stop()
-
-	client, _ := newRepositoryClient(t, serverSocketPath)
+	server := NewServer(RubyServer)
 
 	tests := []struct {
 		desc string
@@ -91,7 +88,7 @@ func TestFetchRemoteFailure(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			resp, err := client.FetchRemote(ctx, tc.req)
+			resp, err := server.FetchRemote(ctx, tc.req)
 			testhelper.RequireGrpcError(t, err, tc.code)
 			require.Contains(t, err.Error(), tc.err)
 			assert.Nil(t, resp)

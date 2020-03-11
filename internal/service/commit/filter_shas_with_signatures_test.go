@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
-	"google.golang.org/grpc/codes"
 )
 
 func TestFilterShasWithSignaturesSuccessful(t *testing.T) {
@@ -66,23 +65,7 @@ func TestFilterShasWithSignaturesSuccessful(t *testing.T) {
 }
 
 func TestFilterShasWithSignaturesValidationError(t *testing.T) {
-	ctx, cancel := testhelper.Context()
-	defer cancel()
-
-	server, serverSocketPath := startTestServices(t)
-	defer server.Stop()
-
-	client, conn := newCommitServiceClient(t, serverSocketPath)
-	defer conn.Close()
-
-	stream, err := client.FilterShasWithSignatures(ctx)
-	require.NoError(t, err)
-
-	require.NoError(t, stream.Send(&gitalypb.FilterShasWithSignaturesRequest{}))
-	require.NoError(t, stream.CloseSend())
-
-	_, err = recvFSWS(stream)
-	testhelper.RequireGrpcError(t, err, codes.InvalidArgument)
+	err := validateFirstFilterShasWithSignaturesRequest(&gitalypb.FilterShasWithSignaturesRequest{})
 	require.Contains(t, err.Error(), "no repository given")
 }
 
