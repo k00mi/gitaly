@@ -1,7 +1,6 @@
 package ssh
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -15,6 +14,7 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
@@ -245,7 +245,7 @@ func testClone(t *testing.T, serverSocketPath, storageName, relativePath, localR
 	cmd.Env = []string{
 		fmt.Sprintf("GITALY_ADDRESS=%s", serverSocketPath),
 		fmt.Sprintf("GITALY_PAYLOAD=%s", payload),
-		fmt.Sprintf("PATH=%s", ".:"+os.Getenv("PATH")),
+		fmt.Sprintf("PATH=.:%s", os.Getenv("PATH")),
 		fmt.Sprintf(`GIT_SSH_COMMAND=%s upload-pack`, gitalySSHPath),
 	}
 
@@ -260,13 +260,13 @@ func testClone(t *testing.T, serverSocketPath, storageName, relativePath, localR
 	storagePath := testhelper.GitlabTestStoragePath()
 	testRepoPath := path.Join(storagePath, testRepo.GetRelativePath())
 
-	remoteHead := bytes.TrimSpace(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", "master"))
-	localHead := bytes.TrimSpace(testhelper.MustRunCommand(t, nil, "git", "-C", localRepoPath, "rev-parse", "master"))
+	remoteHead := text.ChompBytes(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", "master"))
+	localHead := text.ChompBytes(testhelper.MustRunCommand(t, nil, "git", "-C", localRepoPath, "rev-parse", "master"))
 
-	remoteTags := bytes.TrimSpace(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag"))
-	localTags := bytes.TrimSpace(testhelper.MustRunCommand(t, nil, "git", "-C", localRepoPath, "tag"))
+	remoteTags := text.ChompBytes(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag"))
+	localTags := text.ChompBytes(testhelper.MustRunCommand(t, nil, "git", "-C", localRepoPath, "tag"))
 
-	return string(localHead), string(remoteHead), string(localTags), string(remoteTags), nil
+	return localHead, remoteHead, localTags, remoteTags, nil
 }
 
 func testPostUploadPackFailedResponse(t *testing.T, stream gitalypb.SSHService_SSHUploadPackClient) error {
