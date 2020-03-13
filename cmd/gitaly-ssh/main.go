@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	"gitlab.com/gitlab-org/gitaly/client"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	grpccorrelation "gitlab.com/gitlab-org/labkit/correlation/grpc"
 	"gitlab.com/gitlab-org/labkit/tracing"
 	grpctracing "gitlab.com/gitlab-org/labkit/tracing/grpc"
@@ -27,6 +29,9 @@ type gitalySSHCommand struct {
 	address string
 	// Marshalled gRPC payload to pass to the remote server
 	payload string
+	// Comma separated list of feature flags that shall be enabled on the
+	// remote server
+	featureFlags string
 }
 
 // GITALY_ADDRESS="tcp://1.2.3.4:9999" or "unix:/var/run/gitaly.sock"
@@ -56,10 +61,11 @@ func main() {
 	}
 
 	cmd := gitalySSHCommand{
-		packer:     packer,
-		workingDir: os.Getenv("GITALY_WD"),
-		address:    os.Getenv("GITALY_ADDRESS"),
-		payload:    os.Getenv("GITALY_PAYLOAD"),
+		packer:       packer,
+		workingDir:   os.Getenv("GITALY_WD"),
+		address:      os.Getenv("GITALY_ADDRESS"),
+		payload:      os.Getenv("GITALY_PAYLOAD"),
+		featureFlags: os.Getenv("GITALY_FEATUREFLAGS"),
 	}
 
 	code, err := cmd.run()
@@ -77,6 +83,12 @@ func (cmd gitalySSHCommand) run() (int, error) {
 
 	ctx, finished := tracing.ExtractFromEnv(context.Background())
 	defer finished()
+
+	if cmd.featureFlags != "" {
+		for _, flag := range strings.Split(cmd.featureFlags, ",") {
+			ctx = featureflag.OutgoingCtxWithFeatureFlag(ctx, flag)
+		}
+	}
 
 	if cmd.workingDir != "" {
 		if err := os.Chdir(cmd.workingDir); err != nil {
