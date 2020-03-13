@@ -24,6 +24,7 @@ type cloneCommand struct {
 	command      *exec.Cmd
 	repository   *gitalypb.Repository
 	server       string
+	featureFlags []string
 	gitConfig    string
 	gitProtocol  string
 }
@@ -44,6 +45,7 @@ func (cmd cloneCommand) execute(t *testing.T) error {
 	cmd.command.Env = []string{
 		fmt.Sprintf("GITALY_ADDRESS=%s", cmd.server),
 		fmt.Sprintf("GITALY_PAYLOAD=%s", payload),
+		fmt.Sprintf("GITALY_FEATUREFLAGS=%s", strings.Join(cmd.featureFlags, ",")),
 		fmt.Sprintf("PATH=.:%s", os.Getenv("PATH")),
 		fmt.Sprintf(`GIT_SSH_COMMAND=%s upload-pack`, gitalySSHPath),
 	}
