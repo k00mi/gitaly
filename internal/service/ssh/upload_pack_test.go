@@ -59,13 +59,11 @@ func (cmd cloneCommand) execute(t *testing.T) error {
 	return nil
 }
 
-func (cmd cloneCommand) test(t *testing.T, localRepoPath string) (string, string, string, string, error) {
+func (cmd cloneCommand) test(t *testing.T, localRepoPath string) (string, string, string, string) {
 	defer os.RemoveAll(localRepoPath)
 
 	err := cmd.execute(t)
-	if err != nil {
-		return "", "", "", "", err
-	}
+	require.NoError(t, err)
 
 	storagePath := testhelper.GitlabTestStoragePath()
 	testRepoPath := path.Join(storagePath, testRepo.GetRelativePath())
@@ -76,7 +74,7 @@ func (cmd cloneCommand) test(t *testing.T, localRepoPath string) (string, string
 	remoteTags := text.ChompBytes(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag"))
 	localTags := text.ChompBytes(testhelper.MustRunCommand(t, nil, "git", "-C", localRepoPath, "tag"))
 
-	return localHead, remoteHead, localTags, remoteTags, nil
+	return localHead, remoteHead, localTags, remoteTags
 }
 
 func TestFailedUploadPackRequestDueToTimeout(t *testing.T) {
@@ -211,9 +209,7 @@ func TestUploadPackCloneSuccess(t *testing.T) {
 				command:    tc.cmd,
 				server:     serverSocketPath,
 			}
-
-			lHead, rHead, _, _, err := cmd.test(t, localRepoPath)
-			require.NoError(t, err, "clone failed")
+			lHead, rHead, _, _ := cmd.test(t, localRepoPath)
 			require.Equal(t, lHead, rHead, "local and remote head not equal")
 		})
 	}
@@ -251,8 +247,7 @@ func TestUploadPackCloneSuccessWithGitProtocol(t *testing.T) {
 				gitProtocol: git.ProtocolV2,
 			}
 
-			lHead, rHead, _, _, err := cmd.test(t, localRepoPath)
-			require.NoError(t, err, "clone failed")
+			lHead, rHead, _, _ := cmd.test(t, localRepoPath)
 			require.Equal(t, lHead, rHead, "local and remote head not equal")
 
 			envData, err := testhelper.GetGitEnvData()
@@ -275,11 +270,8 @@ func TestUploadPackCloneHideTags(t *testing.T) {
 		server:     serverSocketPath,
 		gitConfig:  "transfer.hideRefs=refs/tags",
 	}
-	_, _, lTags, rTags, err := cmd.test(t, localRepoPath)
+	_, _, lTags, rTags := cmd.test(t, localRepoPath)
 
-	if err != nil {
-		t.Fatalf("clone failed: %v", err)
-	}
 	if lTags == rTags {
 		t.Fatalf("local and remote tags are equal. clone failed: %q != %q", lTags, rTags)
 	}
@@ -302,10 +294,8 @@ func TestUploadPackCloneFailure(t *testing.T) {
 		command: exec.Command("git", "clone", "git@localhost:test/test.git", localRepoPath),
 		server:  serverSocketPath,
 	}
-	_, _, _, _, err := cmd.test(t, localRepoPath)
-	if err == nil {
-		t.Fatalf("clone didn't fail")
-	}
+	err := cmd.execute(t)
+	require.Error(t, err, "clone didn't fail")
 }
 
 func testPostUploadPackFailedResponse(t *testing.T, stream gitalypb.SSHService_SSHUploadPackClient) error {
