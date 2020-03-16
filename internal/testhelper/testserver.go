@@ -2,6 +2,7 @@ package testhelper
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -293,6 +294,28 @@ func handleAllowed(t *testing.T, options GitlabTestServerOptions) func(w http.Re
 				require.Regexp(t, changeLineRegex, line)
 			}
 		}
+		env := r.Form.Get("env")
+		require.NotEmpty(t, env)
+
+		var gitVars struct {
+			GitAlternateObjectDirsRel []string `json:"GIT_ALTERNATE_OBJECT_DIRECTORIES_RELATIVE"`
+			GitObjectDirRel           string   `json:"GIT_OBJECT_DIRECTORY_RELATIVE"`
+		}
+		require.NoError(t, json.Unmarshal([]byte(env), &gitVars))
+
+		if options.GitObjectDir != "" {
+			relObjectDir, err := filepath.Rel(options.RepoPath, options.GitObjectDir)
+			require.NoError(t, err)
+			require.Equal(t, relObjectDir, gitVars.GitObjectDirRel)
+		}
+		if len(options.GitAlternateObjectDirs) > 0 {
+			require.Len(t, gitVars.GitAlternateObjectDirsRel, len(options.GitAlternateObjectDirs))
+			for i, gitAlterateObjectDir := range options.GitAlternateObjectDirs {
+				relAltObjectDir, err := filepath.Rel(options.RepoPath, gitAlterateObjectDir)
+				require.NoError(t, err)
+				require.Equal(t, relAltObjectDir, gitVars.GitAlternateObjectDirsRel[i])
+			}
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		if r.Form.Get("secret_token") == options.SecretToken {
@@ -374,6 +397,9 @@ type GitlabTestServerOptions struct {
 	PostReceiveCounterDecreased bool
 	Protocol                    string
 	GitPushOptions              []string
+	GitObjectDir                string
+	GitAlternateObjectDirs      []string
+	RepoPath                    string
 }
 
 // NewGitlabTestServer returns a mock gitlab server that responds to the hook api endpoints
@@ -427,7 +453,8 @@ func WriteTemporaryGitalyConfigFile(t *testing.T, tempDir string) (string, func(
 }
 
 type GlHookValues struct {
-	GLID, GLUsername, GLRepo, GLProtocol string
+	GLID, GLUsername, GLRepo, GLProtocol, GitObjectDir string
+	GitAlternateObjectDirs                             []string
 }
 
 // EnvForHooks generates a set of environment variables for gitaly hooks
@@ -435,7 +462,7 @@ func EnvForHooks(t *testing.T, gitlabShellDir string, glHookValues GlHookValues,
 	rubyDir, err := filepath.Abs("../../ruby")
 	require.NoError(t, err)
 
-	return append(append([]string{
+	env := append(append([]string{
 		fmt.Sprintf("GITALY_BIN_DIR=%s", config.Config.BinDir),
 		fmt.Sprintf("GITALY_RUBY_DIR=%s", rubyDir),
 		fmt.Sprintf("GL_ID=%s", glHookValues.GLID),
@@ -447,6 +474,15 @@ func EnvForHooks(t *testing.T, gitlabShellDir string, glHookValues GlHookValues,
 		"GITALY_LOG_LEVEL=info",
 		"GITALY_LOG_FORMAT=json",
 	}, os.Environ()...), hooks.GitPushOptions(gitPushOptions)...)
+
+	if glHookValues.GitObjectDir != "" {
+		env = append(env, fmt.Sprintf("GIT_OBJECT_DIRECTORY=%s", glHookValues.GitObjectDir))
+	}
+	if len(glHookValues.GitAlternateObjectDirs) > 0 {
+		env = append(env, fmt.Sprintf("GIT_ALTERNATE_OBJECT_DIRECTORIES=%s", strings.Join(glHookValues.GitAlternateObjectDirs, ":")))
+	}
+
+	return env
 }
 
 // WriteShellSecretFile writes a .gitlab_shell_secret file in the specified directory

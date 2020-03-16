@@ -244,6 +244,8 @@ func TestSSHReceivePackToHooks(t *testing.T) {
 	testhelper.WriteTemporaryGitlabShellConfigFile(t, tempGitlabShellDir, testhelper.GitlabShellConfig{GitlabURL: ts.URL})
 	testhelper.WriteShellSecretFile(t, tempGitlabShellDir, secretToken)
 
+	testhelper.WriteCustomHook(cloneDetails.RemoteRepoPath, "pre-receive", []byte(testhelper.CheckNewObjectExists))
+
 	defer func(override string) {
 		hooks.Override = override
 	}(hooks.Override)
