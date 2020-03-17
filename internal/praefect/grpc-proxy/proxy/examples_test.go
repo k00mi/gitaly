@@ -49,10 +49,10 @@ func ExampleStreamDirector() {
 			// Decide on which backend to dial
 			if val, exists := md[":authority"]; exists && val[0] == "staging.api.example.com" {
 				// Make sure we use DialContext so the dialing can be cancelled/time out together with the context.
-				conn, err := grpc.DialContext(ctx, "api-service.staging.svc.local", grpc.WithCodec(proxy.NewCodec()))
+				conn, err := grpc.DialContext(ctx, "api-service.staging.svc.local", grpc.WithDefaultCallOptions(grpc.ForceCodec(proxy.NewCodec())))
 				return proxy.NewStreamParameters(ctx, conn, nil, nil), err
 			} else if val, exists := md[":authority"]; exists && val[0] == "api.example.com" {
-				conn, err := grpc.DialContext(ctx, "api-service.prod.svc.local", grpc.WithCodec(proxy.NewCodec()))
+				conn, err := grpc.DialContext(ctx, "api-service.prod.svc.local", grpc.WithDefaultCallOptions(grpc.ForceCodec(proxy.NewCodec())))
 				return proxy.NewStreamParameters(ctx, conn, nil, nil), err
 			}
 		}

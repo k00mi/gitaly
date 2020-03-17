@@ -38,7 +38,7 @@ func newBackendPinger(tb testing.TB, ctx context.Context) (*grpc.ClientConn, *in
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
 		grpc.WithDefaultCallOptions(
-			grpc.CallCustomCodec(proxy.NewCodec()),
+			grpc.ForceCodec(proxy.NewCodec()),
 		),
 	)
 	require.NoError(tb, err)
