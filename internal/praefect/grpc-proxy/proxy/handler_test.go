@@ -1,10 +1,6 @@
 // Copyright 2017 Michal Witkowski. All Rights Reserved.
 // See LICENSE for licensing terms.
 
-// TODO: remove the following linter override when the deprecations are fixed
-// in issue https://gitlab.com/gitlab-org/gitaly/issues/1663
-//lint:file-ignore SA1019 Ignore all gRPC deprecations until issue #1663
-
 package proxy_test
 
 import (
@@ -52,8 +48,22 @@ const (
 	countListResponses = 20
 )
 
+type testLogger struct {
+	*log.Logger
+}
+
+func (l *testLogger) Write(p []byte) (int, error) {
+	if err := l.Output(1, string(p)); err != nil {
+		return 0, err
+	}
+	return -1, nil
+}
+
 func TestMain(m *testing.M) {
-	grpclog.SetLogger(log.New(os.Stderr, "grpc: ", log.LstdFlags))
+	logger := &testLogger{
+		log.New(os.Stderr, "grpc: ", log.LstdFlags),
+	}
+	grpclog.SetLoggerV2(grpclog.NewLoggerV2(logger, nil, nil))
 	m.Run()
 	os.Exit(0)
 }
