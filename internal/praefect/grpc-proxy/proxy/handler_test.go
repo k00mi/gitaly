@@ -38,6 +38,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -79,7 +80,7 @@ func (s *assertingService) Ping(ctx context.Context, ping *pb.PingRequest) (*pb.
 }
 
 func (s *assertingService) PingError(ctx context.Context, ping *pb.PingRequest) (*pb.Empty, error) {
-	return nil, grpc.Errorf(codes.ResourceExhausted, "Userspace error.")
+	return nil, status.Errorf(codes.ResourceExhausted, "Userspace error.")
 }
 
 func (s *assertingService) PingList(ping *pb.PingRequest, stream pb.TestService_PingListServer) error {
@@ -180,8 +181,8 @@ func (s *ProxyHappySuite) TestPingErrorPropagatesAppError() {
 
 	_, err = s.testClient.PingError(s.ctx(), &pb.PingRequest{Value: "foo"})
 	require.Error(s.T(), err, "PingError should never succeed")
-	assert.Equal(s.T(), codes.ResourceExhausted, grpc.Code(err))
-	assert.Equal(s.T(), "Userspace error.", grpc.ErrorDesc(err))
+	assert.Equal(s.T(), codes.ResourceExhausted, status.Code(err))
+	assert.Equal(s.T(), "Userspace error.", status.Convert(err).Message())
 	require.Equal(s.T(), 1, sentryTriggered, "sentry must not be triggered because errors from remote must be just propagated")
 }
 
@@ -190,8 +191,8 @@ func (s *ProxyHappySuite) TestDirectorErrorIsPropagated() {
 	ctx := metadata.NewOutgoingContext(s.ctx(), metadata.Pairs(rejectingMdKey, "true"))
 	_, err := s.testClient.Ping(ctx, &pb.PingRequest{Value: "foo"})
 	require.Error(s.T(), err, "Director should reject this RPC")
-	assert.Equal(s.T(), codes.PermissionDenied, grpc.Code(err))
-	assert.Equal(s.T(), "testing rejection", grpc.ErrorDesc(err))
+	assert.Equal(s.T(), codes.PermissionDenied, status.Code(err))
+	assert.Equal(s.T(), "testing rejection", status.Convert(err).Message())
 }
 
 func (s *ProxyHappySuite) TestPingStream_FullDuplexWorks() {
@@ -245,7 +246,7 @@ func (s *ProxyHappySuite) SetupSuite() {
 		md, ok := metadata.FromIncomingContext(ctx)
 		if ok {
 			if _, exists := md[rejectingMdKey]; exists {
-				return proxy.NewStreamParameters(ctx, nil, nil, nil), grpc.Errorf(codes.PermissionDenied, "testing rejection")
+				return proxy.NewStreamParameters(ctx, nil, nil, nil), status.Errorf(codes.PermissionDenied, "testing rejection")
 			}
 		}
 		// Explicitly copy the metadata, otherwise the tests will fail.

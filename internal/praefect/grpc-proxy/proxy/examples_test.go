@@ -15,6 +15,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 var (
@@ -42,7 +43,7 @@ func ExampleStreamDirector() {
 	director = func(ctx context.Context, fullMethodName string, _ proxy.StreamModifier) (*proxy.StreamParameters, error) {
 		// Make sure we never forward internal services.
 		if strings.HasPrefix(fullMethodName, "/com.example.internal.") {
-			return nil, grpc.Errorf(codes.Unimplemented, "Unknown method")
+			return nil, status.Errorf(codes.Unimplemented, "Unknown method")
 		}
 		md, ok := metadata.FromIncomingContext(ctx)
 		if ok {
@@ -56,6 +57,6 @@ func ExampleStreamDirector() {
 				return proxy.NewStreamParameters(ctx, conn, nil, nil), err
 			}
 		}
-		return nil, grpc.Errorf(codes.Unimplemented, "Unknown method")
+		return nil, status.Errorf(codes.Unimplemented, "Unknown method")
 	}
 }
