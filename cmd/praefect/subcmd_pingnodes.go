@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -10,6 +11,7 @@ import (
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
+	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
@@ -99,6 +101,61 @@ func (npr *nodePing) healthCheck(cc *grpc.ClientConn) (grpc_health_v1.HealthChec
 	return resp.GetStatus(), nil
 }
 
+func (npr *nodePing) isConsistent(cc *grpc.ClientConn) bool {
+	praefect := gitalypb.NewServerServiceClient(cc)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if len(npr.storages) == 0 {
+		npr.log("ERROR: current configuration has no storages")
+		return false
+	}
+
+	resp, err := praefect.ServerInfo(ctx, &gitalypb.ServerInfoRequest{})
+	if err != nil {
+		npr.log("ERROR: failed to receive state from the remote: %v", err)
+		return false
+	}
+
+	if len(resp.StorageStatuses) == 0 {
+		npr.log("ERROR: remote has no configured storages")
+		return false
+	}
+
+	storagesSet := make(map[string]bool, len(resp.StorageStatuses))
+
+	knownStoragesSet := make(map[string]bool, len(npr.storages))
+	for k := range npr.storages {
+		knownStoragesSet[k] = true
+	}
+
+	consistent := true
+	for _, status := range resp.StorageStatuses {
+		if storagesSet[status.StorageName] {
+			npr.log("ERROR: remote has duplicated storage: %q", status.StorageName)
+			consistent = false
+			continue
+		}
+		storagesSet[status.StorageName] = true
+
+		if status.Readable && status.Writeable {
+			npr.log("SUCCESS: %q is served by Gitaly", status.StorageName)
+			delete(knownStoragesSet, status.StorageName) // storage found
+		} else {
+			npr.log("ERROR: storage %q is not readable or writable", status.StorageName)
+			consistent = false
+		}
+	}
+
+	for storage := range knownStoragesSet {
+		npr.log("ERROR: configured storage was not reported by remote: %q", storage)
+		consistent = false
+	}
+
+	return consistent
+}
+
 func (npr *nodePing) log(msg string, args ...interface{}) {
 	log.Printf("[%s]: %s", npr.address, fmt.Sprintf(msg, args...))
 }
@@ -129,5 +186,14 @@ func (npr *nodePing) checkNode() {
 		npr.log("ERROR: %v", npr.err)
 		return
 	}
+
 	npr.log("SUCCESS: node is healthy!")
+
+	npr.log("checking consistency...")
+	if !npr.isConsistent(cc) {
+		npr.err = errors.New("consistency check failed")
+		npr.log("ERROR: %v", npr.err)
+		return
+	}
+	npr.log("SUCCESS: node is consistent!")
 }
