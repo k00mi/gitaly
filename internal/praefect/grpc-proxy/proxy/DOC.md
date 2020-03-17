@@ -19,16 +19,16 @@ See examples on documented functions.
 #### func  Codec
 
 ```go
-func Codec() grpc.Codec
+func NewCodec() Codec
 ```
-Codec returns a proxying grpc.Codec with the default protobuf codec as parent.
+Codec returns a proxying Codec with the default protobuf codec as parent.
 
 See CodecWithParent.
 
 #### func  CodecWithParent
 
 ```go
-func CodecWithParent(fallback grpc.Codec) grpc.Codec
+func CodecWithParent(fallback grpc.Codec) Codec
 ```
 CodecWithParent returns a proxying grpc.Codec with a user provided codec as
 parent.

@@ -35,9 +35,9 @@ director = func(ctx context.Context, fullMethodName string) (*grpc.ClientConn, e
         // Decide on which backend to dial
         if val, exists := md[":authority"]; exists && val[0] == "staging.api.example.com" {
             // Make sure we use DialContext so the dialing can be cancelled/time out together with the context.
-            return grpc.DialContext(ctx, "api-service.staging.svc.local", grpc.WithCodec(proxy.Codec()))
+            return grpc.DialContext(ctx, "api-service.staging.svc.local", grpc.WithCodec(proxy.NewCodec()))
         } else if val, exists := md[":authority"]; exists && val[0] == "api.example.com" {
-            return grpc.DialContext(ctx, "api-service.prod.svc.local", grpc.WithCodec(proxy.Codec()))
+            return grpc.DialContext(ctx, "api-service.prod.svc.local", grpc.WithCodec(proxy.NewCodec()))
         }
     }
     return nil, grpc.Errorf(codes.Unimplemented, "Unknown method")
@@ -48,7 +48,7 @@ locally:
 
 ```go
 server := grpc.NewServer(
-    grpc.CustomCodec(proxy.Codec()),
+    grpc.CustomCodec(proxy.NewCodec()),
     grpc.UnknownServiceHandler(proxy.TransparentHandler(director)))
 pb_test.RegisterTestServiceServer(server, &testImpl{})
 ```
