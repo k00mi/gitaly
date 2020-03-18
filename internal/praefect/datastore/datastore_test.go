@@ -20,7 +20,8 @@ var (
 		Address: "tcp://address-2",
 		Storage: "praefect-storage-2",
 	}
-	proj1 = "abcd1234" // imagine this is a legit project hash
+	proj1         = "abcd1234" // imagine this is a legit project hash
+	correlationID = "my-correlation-id"
 )
 
 var (
@@ -44,14 +45,14 @@ var operations = []struct {
 	{
 		desc: "insert replication job for Update",
 		opFn: func(t *testing.T, ds Datastore) {
-			_, err := ds.CreateReplicaReplJobs(repo1Repository.RelativePath, stor1.Storage, []string{stor2.Storage}, UpdateRepo, nil)
+			_, err := ds.CreateReplicaReplJobs(correlationID, repo1Repository.RelativePath, stor1.Storage, []string{stor2.Storage}, UpdateRepo, nil)
 			require.NoError(t, err)
 		},
 	},
 	{
 		desc: "insert replication job for Rename",
 		opFn: func(t *testing.T, ds Datastore) {
-			_, err := ds.CreateReplicaReplJobs(repo1Repository.RelativePath, stor1.Storage, []string{stor2.Storage}, RenameRepo, Params{"RelativePath": "/data/dir/repo"})
+			_, err := ds.CreateReplicaReplJobs(correlationID, repo1Repository.RelativePath, stor1.Storage, []string{stor2.Storage}, RenameRepo, Params{"RelativePath": "/data/dir/repo"})
 			require.NoError(t, err)
 		},
 	},
@@ -64,22 +65,24 @@ var operations = []struct {
 
 			expectedJobs := []ReplJob{
 				{
-					Change:       UpdateRepo,
-					ID:           1,
-					RelativePath: repo1Repository.RelativePath,
-					SourceNode:   stor1,
-					TargetNode:   stor2,
-					State:        JobStatePending,
-					Params:       nil,
+					Change:        UpdateRepo,
+					ID:            1,
+					RelativePath:  repo1Repository.RelativePath,
+					SourceNode:    stor1,
+					TargetNode:    stor2,
+					State:         JobStatePending,
+					Params:        nil,
+					CorrelationID: correlationID,
 				},
 				{
-					Change:       RenameRepo,
-					ID:           2,
-					RelativePath: repo1Repository.RelativePath,
-					SourceNode:   stor1,
-					TargetNode:   stor2,
-					State:        JobStatePending,
-					Params:       Params{"RelativePath": "/data/dir/repo"},
+					Change:        RenameRepo,
+					ID:            2,
+					RelativePath:  repo1Repository.RelativePath,
+					SourceNode:    stor1,
+					TargetNode:    stor2,
+					State:         JobStatePending,
+					Params:        Params{"RelativePath": "/data/dir/repo"},
+					CorrelationID: correlationID,
 				},
 			}
 			require.ElementsMatch(t, expectedJobs, jobs)
@@ -100,13 +103,14 @@ var operations = []struct {
 			require.Len(t, jobs, 1)
 
 			completed := ReplJob{
-				Change:       RenameRepo,
-				ID:           2,
-				RelativePath: repo1Repository.RelativePath,
-				SourceNode:   stor1,
-				TargetNode:   stor2,
-				State:        JobStatePending,
-				Params:       Params{"RelativePath": "/data/dir/repo"},
+				Change:        RenameRepo,
+				ID:            2,
+				RelativePath:  repo1Repository.RelativePath,
+				SourceNode:    stor1,
+				TargetNode:    stor2,
+				State:         JobStatePending,
+				Params:        Params{"RelativePath": "/data/dir/repo"},
+				CorrelationID: correlationID,
 			}
 			require.Equal(t, completed, jobs[0])
 		},

@@ -15,6 +15,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/grpc-proxy/proxy"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metrics"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/models"
+	correlation "gitlab.com/gitlab-org/labkit/correlation/grpc"
 	grpctracing "gitlab.com/gitlab-org/labkit/tracing/grpc"
 	"google.golang.org/grpc"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
@@ -95,10 +96,12 @@ func NewManager(log *logrus.Entry, c config.Config, dialOpts ...grpc.DialOption)
 						grpc.WithStreamInterceptor(grpc_middleware.ChainStreamClient(
 							grpc_prometheus.StreamClientInterceptor,
 							grpctracing.StreamClientTracingInterceptor(),
+							correlation.StreamClientCorrelationInterceptor(),
 						)),
 						grpc.WithUnaryInterceptor(grpc_middleware.ChainUnaryClient(
 							grpc_prometheus.UnaryClientInterceptor,
 							grpctracing.UnaryClientTracingInterceptor(),
+							correlation.UnaryClientCorrelationInterceptor(),
 						)),
 					}, dialOpts...),
 			)

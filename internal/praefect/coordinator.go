@@ -13,6 +13,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
+	"gitlab.com/gitlab-org/labkit/correlation"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -102,7 +103,7 @@ func (c *Coordinator) directRepositoryScopedMessage(ctx context.Context, mi prot
 			return nil, err
 		}
 
-		if requestFinalizer, err = c.createReplicaJobs(targetRepo, primary, secondaries, change, params); err != nil {
+		if requestFinalizer, err = c.createReplicaJobs(ctx, targetRepo, primary, secondaries, change, params); err != nil {
 			return nil, err
 		}
 	}
@@ -194,6 +195,7 @@ func protoMessageFromPeeker(mi protoregistry.MethodInfo, peeker proxy.StreamModi
 }
 
 func (c *Coordinator) createReplicaJobs(
+	ctx context.Context,
 	targetRepo *gitalypb.Repository,
 	primary nodes.Node,
 	secondaries []nodes.Node,
@@ -204,7 +206,10 @@ func (c *Coordinator) createReplicaJobs(
 	for _, secondary := range secondaries {
 		secondaryStorages = append(secondaryStorages, secondary.GetStorage())
 	}
-	jobIDs, err := c.datastore.CreateReplicaReplJobs(targetRepo.RelativePath, primary.GetStorage(), secondaryStorages, change, params)
+
+	corrID := c.ensureCorrelationID(ctx, targetRepo)
+
+	jobIDs, err := c.datastore.CreateReplicaReplJobs(corrID, targetRepo.RelativePath, primary.GetStorage(), secondaryStorages, change, params)
 	if err != nil {
 		return nil, err
 	}
@@ -219,4 +224,17 @@ func (c *Coordinator) createReplicaJobs(
 			}
 		}
 	}, nil
+}
+
+func (c *Coordinator) ensureCorrelationID(ctx context.Context, targetRepo *gitalypb.Repository) string {
+	corrID := correlation.ExtractFromContext(ctx)
+	if corrID == "" {
+		var err error
+		corrID, err = correlation.RandomID()
+		if err != nil {
+			c.log.WithError(err).Error("unable to generate correlation ID")
+			corrID = generatePseudorandomCorrelationID(targetRepo)
+		}
+	}
+	return corrID
 }
