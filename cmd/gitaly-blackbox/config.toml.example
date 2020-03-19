@@ -1,0 +1,15 @@
+prometheus_listen_addr = ":9687"
+
+# Sleep time in main probe loop, in seconds
+# sleep = 500
+
+[logging]
+# format = "json"
+
+[[probe]]
+name = "gitlab-test"
+url = "https://gitlab.com/gitlab-org/gitlab-test.git"
+
+[[probe]]
+name = "gitaly"
+url = "https://gitlab.com/gitlab-org/gitaly.git"
