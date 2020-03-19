@@ -190,6 +190,10 @@ func (cl *Clone) doGet(ctx context.Context) error {
 	}
 	defer resp.Body.Close()
 
+	if code := resp.StatusCode; code < 200 || code >= 400 {
+		return fmt.Errorf("git http get: unexpected http status: %d", code)
+	}
+
 	cl.Get.responseHeader = time.Since(cl.Get.start)
 	cl.Get.httpStatus = resp.StatusCode
 	cl.printInteractive("response code: %d", resp.StatusCode)
@@ -314,6 +318,10 @@ func (cl *Clone) doPost(ctx context.Context) error {
 		return err
 	}
 	defer resp.Body.Close()
+
+	if code := resp.StatusCode; code < 200 || code >= 400 {
+		return fmt.Errorf("git http post: unexpected http status: %d", code)
+	}
 
 	cl.Post.responseHeader = time.Since(cl.Post.start)
 	cl.Post.httpStatus = resp.StatusCode
