@@ -127,6 +127,9 @@ func (d *ReferenceDiscovery) Parse(body io.Reader) error {
 	if len(d.Caps) == 0 {
 		return errors.New("received no capabilities")
 	}
+	if state != referenceDiscoveryExpectEnd {
+		return errors.New("discovery ended prematurely")
+	}
 
 	d.LastPacket = time.Now()
 

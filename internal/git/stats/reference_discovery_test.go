@@ -67,3 +67,13 @@ func TestInvalidRefFail(t *testing.T) {
 	_, err := ParseReferenceDiscovery(buf)
 	require.Error(t, err)
 }
+
+func TestMissingTrailingFlushFails(t *testing.T) {
+	buf := &bytes.Buffer{}
+	pktline.WriteString(buf, "# service=git-upload-pack\n")
+	pktline.WriteFlush(buf)
+	pktline.WriteString(buf, oid1+" HEAD\x00caps")
+
+	d := ReferenceDiscovery{}
+	require.Error(t, d.Parse(buf))
+}
