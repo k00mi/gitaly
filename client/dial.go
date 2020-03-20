@@ -25,8 +25,7 @@ const (
 	unixConnection
 )
 
-// Dial gitaly
-func Dial(rawAddress string, connOpts []grpc.DialOption) (*grpc.ClientConn, error) {
+func DialContext(ctx context.Context, rawAddress string, connOpts []grpc.DialOption) (*grpc.ClientConn, error) {
 	var canonicalAddress string
 	var err error
 
@@ -80,12 +79,16 @@ func Dial(rawAddress string, connOpts []grpc.DialOption) (*grpc.ClientConn, erro
 		PermitWithoutStream: true,
 	}))
 
-	conn, err := grpc.Dial(canonicalAddress, connOpts...)
+	conn, err := grpc.DialContext(ctx, canonicalAddress, connOpts...)
 	if err != nil {
 		return nil, err
 	}
 
 	return conn, nil
+}
+
+func Dial(rawAddress string, connOpts []grpc.DialOption) (*grpc.ClientConn, error) {
+	return DialContext(context.Background(), rawAddress, connOpts)
 }
 
 func getConnectionType(rawAddress string) connectionType {

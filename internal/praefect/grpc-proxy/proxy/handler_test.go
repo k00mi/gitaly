@@ -280,7 +280,10 @@ func (s *ProxyHappySuite) SetupSuite() {
 		s.proxy.Serve(s.proxyListener)
 	}()
 
-	clientConn, err := grpc.Dial(strings.Replace(s.proxyListener.Addr().String(), "127.0.0.1", "localhost", 1), grpc.WithInsecure(), grpc.WithTimeout(1*time.Second))
+	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
+	defer cancel()
+
+	clientConn, err := grpc.DialContext(ctx, strings.Replace(s.proxyListener.Addr().String(), "127.0.0.1", "localhost", 1), grpc.WithInsecure())
 	require.NoError(s.T(), err, "must not error on deferred client Dial")
 	s.testClient = pb.NewTestServiceClient(clientConn)
 }
