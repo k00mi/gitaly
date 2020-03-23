@@ -10,11 +10,20 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var errInvalidPoolDir = helper.ErrInvalidArgument(objectpool.ErrInvalidPoolDir)
+var (
+	errInvalidPoolDir = helper.ErrInvalidArgument(objectpool.ErrInvalidPoolDir)
+
+	// errMissingOriginRepository is returned when the request is missing the
+	// origin repository.
+	errMissingOriginRepository = helper.ErrInvalidArgumentf("no origin repository")
+
+	// errMissingPool is returned when the request is missing the object pool.
+	errMissingPool = helper.ErrInvalidArgumentf("no object pool repository")
+)
 
 func (s *server) CreateObjectPool(ctx context.Context, in *gitalypb.CreateObjectPoolRequest) (*gitalypb.CreateObjectPoolResponse, error) {
 	if in.GetOrigin() == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "no origin repository")
+		return nil, errMissingOriginRepository
 	}
 
 	pool, err := poolForRequest(in)
@@ -55,7 +64,7 @@ func poolForRequest(req poolRequest) (*objectpool.ObjectPool, error) {
 
 	poolRepo := reqPool.GetRepository()
 	if poolRepo == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "no object pool repository")
+		return nil, errMissingPool
 	}
 
 	pool, err := objectpool.NewObjectPool(poolRepo.GetStorageName(), poolRepo.GetRelativePath())
