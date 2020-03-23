@@ -22,26 +22,19 @@ type Reference struct {
 
 // ReferenceDiscovery contains information about a reference discovery session.
 type ReferenceDiscovery struct {
-	// firstPacket tracks the time when the first pktline was received
-	firstPacket time.Time
-	// lastPacket tracks the time when the last pktline was received
-	lastPacket time.Time
-	// payloadSize tracks the size of all pktlines' data
-	payloadSize int64
-	// packets tracks the total number of packets consumed
-	packets int
-	// refs contains all announced references
-	refs []Reference
-	// caps contains all supported capabilities
-	caps []string
+	// FirstPacket tracks the time when the first pktline was received
+	FirstPacket time.Time
+	// LastPacket tracks the time when the last pktline was received
+	LastPacket time.Time
+	// PayloadSize tracks the size of all pktlines' data
+	PayloadSize int64
+	// Packets tracks the total number of packets consumed
+	Packets int
+	// Refs contains all announced references
+	Refs []Reference
+	// Caps contains all supported capabilities
+	Caps []string
 }
-
-func (d *ReferenceDiscovery) FirstPacket() time.Time { return d.firstPacket }
-func (d *ReferenceDiscovery) LastPacket() time.Time  { return d.lastPacket }
-func (d *ReferenceDiscovery) PayloadSize() int64     { return d.payloadSize }
-func (d *ReferenceDiscovery) Packets() int           { return d.packets }
-func (d *ReferenceDiscovery) Refs() []Reference      { return d.refs }
-func (d *ReferenceDiscovery) Caps() []string         { return d.caps }
 
 type referenceDiscoveryState int
 
@@ -76,14 +69,14 @@ func (d *ReferenceDiscovery) Parse(body io.Reader) error {
 	state := referenceDiscoveryExpectService
 	scanner := pktline.NewScanner(body)
 
-	for ; scanner.Scan(); d.packets++ {
+	for ; scanner.Scan(); d.Packets++ {
 		pkt := scanner.Bytes()
 		data := text.ChompBytes(pktline.Data(pkt))
-		d.payloadSize += int64(len(data))
+		d.PayloadSize += int64(len(data))
 
 		switch state {
 		case referenceDiscoveryExpectService:
-			d.firstPacket = time.Now()
+			d.FirstPacket = time.Now()
 			if data != "# service=git-upload-pack" {
 				return fmt.Errorf("unexpected header %q", data)
 			}
@@ -105,8 +98,8 @@ func (d *ReferenceDiscovery) Parse(body io.Reader) error {
 			if len(ref) != 2 {
 				return errors.New("invalid reference line")
 			}
-			d.refs = append(d.refs, Reference{Oid: ref[0], Name: ref[1]})
-			d.caps = strings.Split(string(split[1]), " ")
+			d.Refs = append(d.Refs, Reference{Oid: ref[0], Name: ref[1]})
+			d.Caps = strings.Split(string(split[1]), " ")
 
 			state = referenceDiscoveryExpectRef
 		case referenceDiscoveryExpectRef:
@@ -119,7 +112,7 @@ func (d *ReferenceDiscovery) Parse(body io.Reader) error {
 			if len(split) != 2 {
 				return errors.New("invalid reference line")
 			}
-			d.refs = append(d.refs, Reference{Oid: split[0], Name: split[1]})
+			d.Refs = append(d.Refs, Reference{Oid: split[0], Name: split[1]})
 		case referenceDiscoveryExpectEnd:
 			return errors.New("received packet after flush")
 		}
@@ -128,14 +121,14 @@ func (d *ReferenceDiscovery) Parse(body io.Reader) error {
 	if err := scanner.Err(); err != nil {
 		return err
 	}
-	if len(d.refs) == 0 {
+	if len(d.Refs) == 0 {
 		return errors.New("received no references")
 	}
-	if len(d.caps) == 0 {
+	if len(d.Caps) == 0 {
 		return errors.New("received no capabilities")
 	}
 
-	d.lastPacket = time.Now()
+	d.LastPacket = time.Now()
 
 	return nil
 }

@@ -58,8 +58,8 @@ type Get struct {
 
 func (g *Get) ResponseHeader() time.Duration { return g.responseHeader }
 func (g *Get) HTTPStatus() int               { return g.httpStatus }
-func (g *Get) FirstGitPacket() time.Duration { return g.FirstPacket().Sub(g.start) }
-func (g *Get) ResponseBody() time.Duration   { return g.LastPacket().Sub(g.start) }
+func (g *Get) FirstGitPacket() time.Duration { return g.FirstPacket.Sub(g.start) }
+func (g *Get) ResponseBody() time.Duration   { return g.LastPacket.Sub(g.start) }
 
 func (cl *Clone) doGet(ctx context.Context) error {
 	req, err := http.NewRequest("GET", cl.URL+"/info/refs?service=git-upload-pack", nil)
@@ -116,7 +116,7 @@ func (cl *Clone) doGet(ctx context.Context) error {
 		return err
 	}
 
-	for _, ref := range cl.Get.Refs() {
+	for _, ref := range cl.Get.Refs {
 		if strings.HasPrefix(ref.Name, "refs/heads/") || strings.HasPrefix(ref.Name, "refs/tags/") {
 			cl.wants = append(cl.wants, ref.Oid)
 		}

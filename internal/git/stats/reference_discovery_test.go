@@ -17,8 +17,8 @@ func TestSingleRefParses(t *testing.T) {
 
 	d, err := ParseReferenceDiscovery(buf)
 	require.NoError(t, err)
-	require.Equal(t, []string{"capability"}, d.Caps())
-	require.Equal(t, []Reference{{Oid: oid1, Name: "HEAD"}}, d.Refs())
+	require.Equal(t, []string{"capability"}, d.Caps)
+	require.Equal(t, []Reference{{Oid: oid1, Name: "HEAD"}}, d.Refs)
 }
 
 func TestMultipleRefsAndCapsParse(t *testing.T) {
@@ -31,8 +31,8 @@ func TestMultipleRefsAndCapsParse(t *testing.T) {
 
 	d, err := ParseReferenceDiscovery(buf)
 	require.NoError(t, err)
-	require.Equal(t, []string{"first", "second"}, d.Caps())
-	require.Equal(t, []Reference{{Oid: oid1, Name: "HEAD"}, {Oid: oid2, Name: "refs/heads/master"}}, d.Refs())
+	require.Equal(t, []string{"first", "second"}, d.Caps)
+	require.Equal(t, []Reference{{Oid: oid1, Name: "HEAD"}, {Oid: oid2, Name: "refs/heads/master"}}, d.Refs)
 }
 
 func TestInvalidHeaderFails(t *testing.T) {
