@@ -1,5 +1,0 @@
----
-title: 'Replication: propagate RenameRepository RPC to Praefect secondaries'
-merge_request: 1853
-author:
-type: changed

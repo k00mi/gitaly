@@ -1,5 +1,0 @@
----
-title: 'Praefect: add sql-migrate-down subcommand'
-merge_request: 1770
-author:
-type: added
