@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -46,6 +47,8 @@ func TestHooksPrePostReceive(t *testing.T) {
 	changes := "abc"
 
 	gitPushOptions := []string{"gitpushoption1", "gitpushoption2"}
+	gitObjectDir := filepath.Join(testRepoPath, "objects", "temp")
+	gitAlternateObjectDirs := []string{(filepath.Join(testRepoPath, "objects"))}
 
 	c := testhelper.GitlabTestServerOptions{
 		User:                        "",
@@ -57,6 +60,9 @@ func TestHooksPrePostReceive(t *testing.T) {
 		PostReceiveCounterDecreased: true,
 		Protocol:                    "ssh",
 		GitPushOptions:              gitPushOptions,
+		GitObjectDir:                gitObjectDir,
+		GitAlternateObjectDirs:      gitAlternateObjectDirs,
+		RepoPath:                    testRepoPath,
 	}
 
 	ts := testhelper.NewGitlabTestServer(t, c)
@@ -70,6 +76,9 @@ func TestHooksPrePostReceive(t *testing.T) {
 
 	testhelper.WriteTemporaryGitlabShellConfigFile(t, tempGitlabShellDir, testhelper.GitlabShellConfig{GitlabURL: ts.URL})
 	testhelper.WriteShellSecretFile(t, tempGitlabShellDir, secretToken)
+
+	gitObjectDirRegex := regexp.MustCompile(`(?m)^GIT_OBJECT_DIRECTORY=(.*)$`)
+	gitAlternateObjectDirRegex := regexp.MustCompile(`(?m)^GIT_ALTERNATE_OBJECT_DIRECTORIES=(.*)$`)
 
 	for _, hook := range []string{"pre-receive", "post-receive"} {
 		t.Run(hook, func(t *testing.T) {
@@ -88,10 +97,12 @@ func TestHooksPrePostReceive(t *testing.T) {
 				t,
 				tempGitlabShellDir,
 				testhelper.GlHookValues{
-					GLID:       glID,
-					GLUsername: glUsername,
-					GLRepo:     glRepository,
-					GLProtocol: glProtocol,
+					GLID:                   glID,
+					GLUsername:             glUsername,
+					GLRepo:                 glRepository,
+					GLProtocol:             glProtocol,
+					GitObjectDir:           c.GitObjectDir,
+					GitAlternateObjectDirs: c.GitAlternateObjectDirs,
 				},
 				gitPushOptions...,
 			)
@@ -108,6 +119,14 @@ func TestHooksPrePostReceive(t *testing.T) {
 			if hook != "pre-receive" {
 				require.Contains(t, output, "GL_PROTOCOL="+glProtocol)
 			}
+
+			gitObjectDirMatches := gitObjectDirRegex.FindStringSubmatch(output)
+			require.Len(t, gitObjectDirMatches, 2)
+			require.Equal(t, gitObjectDir, gitObjectDirMatches[1])
+
+			gitAlternateObjectDirMatches := gitAlternateObjectDirRegex.FindStringSubmatch(output)
+			require.Len(t, gitAlternateObjectDirMatches, 2)
+			require.Equal(t, strings.Join(gitAlternateObjectDirs, ":"), gitAlternateObjectDirMatches[1])
 		})
 	}
 }
