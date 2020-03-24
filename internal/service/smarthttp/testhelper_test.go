@@ -28,10 +28,10 @@ func testMain(m *testing.M) int {
 	return m.Run()
 }
 
-func runSmartHTTPServer(t *testing.T) (string, func()) {
+func runSmartHTTPServer(t *testing.T, serverOpts ...ServerOpt) (string, func()) {
 	srv := testhelper.NewServer(t, nil, nil)
 
-	gitalypb.RegisterSmartHTTPServiceServer(srv.GrpcServer(), NewServer())
+	gitalypb.RegisterSmartHTTPServiceServer(srv.GrpcServer(), NewServer(serverOpts...))
 	reflection.Register(srv.GrpcServer())
 
 	require.NoError(t, srv.Start())

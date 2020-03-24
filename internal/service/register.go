@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/prometheus/client_golang/prometheus"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/service/blob"
@@ -26,9 +27,25 @@ import (
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
+var (
+	smarthttpDeepensMetric = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: "gitaly",
+			Subsystem: "smarthttp",
+			Name:      "deepen_requests_total",
+			Help:      "Number of git-upload-pack requests processed that contained a 'deepen' message",
+		},
+	)
+)
+
+func init() {
+	prometheus.MustRegister(smarthttpDeepensMetric)
+}
+
 // RegisterAll will register all the known grpc services with
 // the specified grpc service instance
 func RegisterAll(grpcServer *grpc.Server, rubyServer *rubyserver.Server) {
+
 	gitalypb.RegisterBlobServiceServer(grpcServer, blob.NewServer(rubyServer))
 	gitalypb.RegisterCleanupServiceServer(grpcServer, cleanup.NewServer())
 	gitalypb.RegisterCommitServiceServer(grpcServer, commit.NewServer())
@@ -38,7 +55,7 @@ func RegisterAll(grpcServer *grpc.Server, rubyServer *rubyserver.Server) {
 	gitalypb.RegisterRefServiceServer(grpcServer, ref.NewServer())
 	gitalypb.RegisterRepositoryServiceServer(grpcServer, repository.NewServer(rubyServer, config.GitalyInternalSocketPath()))
 	gitalypb.RegisterSSHServiceServer(grpcServer, ssh.NewServer())
-	gitalypb.RegisterSmartHTTPServiceServer(grpcServer, smarthttp.NewServer())
+	gitalypb.RegisterSmartHTTPServiceServer(grpcServer, smarthttp.NewServer(smarthttp.WithDeepensMetric(smarthttpDeepensMetric)))
 	gitalypb.RegisterWikiServiceServer(grpcServer, wiki.NewServer(rubyServer))
 	gitalypb.RegisterConflictsServiceServer(grpcServer, conflicts.NewServer(rubyServer))
 	gitalypb.RegisterRemoteServiceServer(grpcServer, remote.NewServer(rubyServer))
