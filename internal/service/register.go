@@ -36,10 +36,32 @@ var (
 			Help:      "Number of git-upload-pack requests processed that contained a 'deepen' message",
 		},
 	)
+
+	smarthttpFiltersMetric = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: "gitaly",
+			Subsystem: "smarthttp",
+			Name:      "filter_requests_total",
+			Help:      "Number of git-upload-pack requests processed that contained a 'filter' message",
+		},
+	)
+
+	smarthttpHavesMetric = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: "gitaly",
+			Subsystem: "smarthttp",
+			Name:      "haves_requests_total",
+			Help:      "Number of git-upload-pack requests processed that contained a 'have' message",
+		},
+	)
 )
 
 func init() {
-	prometheus.MustRegister(smarthttpDeepensMetric)
+	prometheus.MustRegister(
+		smarthttpDeepensMetric,
+		smarthttpFiltersMetric,
+		smarthttpHavesMetric,
+	)
 }
 
 // RegisterAll will register all the known grpc services with
@@ -55,7 +77,11 @@ func RegisterAll(grpcServer *grpc.Server, rubyServer *rubyserver.Server) {
 	gitalypb.RegisterRefServiceServer(grpcServer, ref.NewServer())
 	gitalypb.RegisterRepositoryServiceServer(grpcServer, repository.NewServer(rubyServer, config.GitalyInternalSocketPath()))
 	gitalypb.RegisterSSHServiceServer(grpcServer, ssh.NewServer())
-	gitalypb.RegisterSmartHTTPServiceServer(grpcServer, smarthttp.NewServer(smarthttp.WithDeepensMetric(smarthttpDeepensMetric)))
+	gitalypb.RegisterSmartHTTPServiceServer(grpcServer, smarthttp.NewServer(
+		smarthttp.WithDeepensMetric(smarthttpDeepensMetric),
+		smarthttp.WithFiltersMetric(smarthttpFiltersMetric),
+		smarthttp.WithHavesMetric(smarthttpHavesMetric),
+	))
 	gitalypb.RegisterWikiServiceServer(grpcServer, wiki.NewServer(rubyServer))
 	gitalypb.RegisterConflictsServiceServer(grpcServer, conflicts.NewServer(rubyServer))
 	gitalypb.RegisterRemoteServiceServer(grpcServer, remote.NewServer(rubyServer))

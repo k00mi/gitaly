@@ -8,6 +8,8 @@ import (
 
 type server struct {
 	deepensMetric metrics.Counter
+	filtersMetric metrics.Counter
+	havesMetric   metrics.Counter
 	gitalypb.UnimplementedSmartHTTPServiceServer
 }
 
@@ -15,6 +17,8 @@ type server struct {
 func NewServer(serverOpts ...ServerOpt) gitalypb.SmartHTTPServiceServer {
 	s := &server{
 		deepensMetric: prometheus.NewCounter(prometheus.CounterOpts{}),
+		filtersMetric: prometheus.NewCounter(prometheus.CounterOpts{}),
+		havesMetric:   prometheus.NewCounter(prometheus.CounterOpts{}),
 	}
 
 	for _, serverOpt := range serverOpts {
@@ -30,5 +34,17 @@ type ServerOpt func(s *server)
 func WithDeepensMetric(c metrics.Counter) ServerOpt {
 	return func(s *server) {
 		s.deepensMetric = c
+	}
+}
+
+func WithFiltersMetric(c metrics.Counter) ServerOpt {
+	return func(s *server) {
+		s.filtersMetric = c
+	}
+}
+
+func WithHavesMetric(c metrics.Counter) ServerOpt {
+	return func(s *server) {
+		s.havesMetric = c
 	}
 }

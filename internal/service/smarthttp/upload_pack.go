@@ -44,10 +44,24 @@ func (s *server) PostUploadPack(stream gitalypb.SmartHTTPService_PostUploadPackS
 	statsCh := make(chan stats.PackfileNegotiation, 1)
 	go func() {
 		defer close(statsCh)
-		stats := stats.PackfileNegotiation{}
-		if err := stats.Parse(pr); err == nil {
-			statsCh <- stats
+
+		stats, err := stats.ParsePackfileNegotiation(pr)
+		if err != nil {
+			grpc_logrus.Extract(stream.Context()).WithError(err).Debug("failed parsing packfile negotiation")
+			return
 		}
+
+		if stats.Deepen != "" {
+			s.deepensMetric.Inc()
+		}
+		if stats.Filter != "" {
+			s.filtersMetric.Inc()
+		}
+		if len(stats.Haves) > 0 {
+			s.havesMetric.Inc()
+		}
+
+		statsCh <- stats
 	}()
 
 	var respBytes int64
@@ -98,7 +112,6 @@ func (s *server) PostUploadPack(stream gitalypb.SmartHTTPService_PostUploadPackS
 			// We have seen a 'deepen' message in the request. It is expected that
 			// git-upload-pack has a non-zero exit status: don't treat this as an
 			// error.
-			s.deepensMetric.Inc()
 			return nil
 		}
 
