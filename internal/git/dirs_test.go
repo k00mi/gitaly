@@ -1,6 +1,9 @@
 package git
 
 import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -11,8 +14,7 @@ func TestObjectDirs(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	expected := []string{
-		"testdata/objdirs/repo0/objects",
+	altObjDirs := []string{
 		"testdata/objdirs/repo1/objects",
 		"testdata/objdirs/repo2/objects",
 		"testdata/objdirs/repo3/objects",
@@ -21,8 +23,56 @@ func TestObjectDirs(t *testing.T) {
 		"testdata/objdirs/repoB/objects",
 	}
 
-	out, err := ObjectDirectories(ctx, "testdata/objdirs/repo0")
-	require.NoError(t, err)
+	repo := "testdata/objdirs/repo0"
+	objDirs := append([]string{filepath.Join(repo, "objects")}, altObjDirs...)
 
-	require.Equal(t, expected, out)
+	out, err := ObjectDirectories(ctx, "testdata/objdirs", repo)
+	require.NoError(t, err)
+	require.Equal(t, objDirs, out)
+}
+
+func TestObjectDirsNoAlternates(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	repo := "testdata/objdirs/no-alternates"
+	out, err := ObjectDirectories(ctx, "testdata/objdirs", repo)
+	require.NoError(t, err)
+	require.Equal(t, []string{filepath.Join(repo, "objects")}, out)
+}
+
+func TestObjectDirsOutsideStorage(t *testing.T) {
+	tmp, clean := testhelper.TempDir(t, "")
+	defer clean()
+
+	storageRoot := filepath.Join(tmp, "storage-root")
+	repoPath := filepath.Join(storageRoot, "repo")
+	alternatesFile := filepath.Join(repoPath, "objects", "info", "alternates")
+	altObjDir := filepath.Join(tmp, "outside-storage", "objects")
+	require.NoError(t, os.MkdirAll(filepath.Dir(alternatesFile), 0700))
+	expectedErr := alternateOutsideStorageError(altObjDir)
+
+	for _, tc := range []struct {
+		desc       string
+		alternates string
+	}{
+		{
+			desc:       "relative path",
+			alternates: "../../../outside-storage/objects",
+		},
+		{
+			desc:       "absolute path",
+			alternates: altObjDir,
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			require.NoError(t, ioutil.WriteFile(alternatesFile, []byte(tc.alternates), 0600))
+			out, err := ObjectDirectories(ctx, storageRoot, repoPath)
+			require.Equal(t, expectedErr, err)
+			require.Nil(t, out)
+		})
+	}
 }
