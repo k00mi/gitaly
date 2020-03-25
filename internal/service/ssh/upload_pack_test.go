@@ -17,6 +17,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper/promtest"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
 )
@@ -185,22 +186,31 @@ func TestFailedUploadPackRequestDueToValidationError(t *testing.T) {
 }
 
 func TestUploadPackCloneSuccess(t *testing.T) {
-	serverSocketPath, stop := runSSHServer(t)
+	deepen := &promtest.MockCounter{}
+	filter := &promtest.MockCounter{}
+	haves := &promtest.MockCounter{}
+
+	serverSocketPath, stop := runSSHServer(
+		t, WithDeepensMetric(deepen), WithFiltersMetric(filter), WithHavesMetric(haves),
+	)
 	defer stop()
 
 	localRepoPath := path.Join(testRepoRoot, "gitlab-test-upload-pack-local")
 
 	tests := []struct {
-		cmd  *exec.Cmd
-		desc string
+		cmd    *exec.Cmd
+		desc   string
+		deepen float64
 	}{
 		{
-			cmd:  exec.Command("git", "clone", "git@localhost:test/test.git", localRepoPath),
-			desc: "full clone",
+			cmd:    exec.Command("git", "clone", "git@localhost:test/test.git", localRepoPath),
+			desc:   "full clone",
+			deepen: 0,
 		},
 		{
-			cmd:  exec.Command("git", "clone", "--depth", "1", "git@localhost:test/test.git", localRepoPath),
-			desc: "shallow clone",
+			cmd:    exec.Command("git", "clone", "--depth", "1", "git@localhost:test/test.git", localRepoPath),
+			desc:   "shallow clone",
+			deepen: 1,
 		},
 	}
 
@@ -213,6 +223,10 @@ func TestUploadPackCloneSuccess(t *testing.T) {
 			}
 			lHead, rHead, _, _ := cmd.test(t, localRepoPath)
 			require.Equal(t, lHead, rHead, "local and remote head not equal")
+
+			require.Equal(t, deepen.Value(), tc.deepen)
+			require.Equal(t, filter.Value(), 0.0)
+			require.Equal(t, haves.Value(), 0.0)
 		})
 	}
 }

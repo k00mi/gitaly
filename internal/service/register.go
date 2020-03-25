@@ -54,6 +54,33 @@ var (
 			Help:      "Number of git-upload-pack requests processed that contained a 'have' message",
 		},
 	)
+
+	sshDeepensMetric = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: "gitaly",
+			Subsystem: "ssh",
+			Name:      "deepen_requests_total",
+			Help:      "Number of git-upload-pack requests processed that contained a 'deepen' message",
+		},
+	)
+
+	sshFiltersMetric = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: "gitaly",
+			Subsystem: "ssh",
+			Name:      "filter_requests_total",
+			Help:      "Number of git-upload-pack requests processed that contained a 'filter' message",
+		},
+	)
+
+	sshHavesMetric = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: "gitaly",
+			Subsystem: "ssh",
+			Name:      "haves_requests_total",
+			Help:      "Number of git-upload-pack requests processed that contained a 'have' message",
+		},
+	)
 )
 
 func init() {
@@ -61,13 +88,15 @@ func init() {
 		smarthttpDeepensMetric,
 		smarthttpFiltersMetric,
 		smarthttpHavesMetric,
+		sshDeepensMetric,
+		sshFiltersMetric,
+		sshHavesMetric,
 	)
 }
 
 // RegisterAll will register all the known grpc services with
 // the specified grpc service instance
 func RegisterAll(grpcServer *grpc.Server, rubyServer *rubyserver.Server) {
-
 	gitalypb.RegisterBlobServiceServer(grpcServer, blob.NewServer(rubyServer))
 	gitalypb.RegisterCleanupServiceServer(grpcServer, cleanup.NewServer())
 	gitalypb.RegisterCommitServiceServer(grpcServer, commit.NewServer())
@@ -76,7 +105,11 @@ func RegisterAll(grpcServer *grpc.Server, rubyServer *rubyserver.Server) {
 	gitalypb.RegisterOperationServiceServer(grpcServer, operations.NewServer(rubyServer))
 	gitalypb.RegisterRefServiceServer(grpcServer, ref.NewServer())
 	gitalypb.RegisterRepositoryServiceServer(grpcServer, repository.NewServer(rubyServer, config.GitalyInternalSocketPath()))
-	gitalypb.RegisterSSHServiceServer(grpcServer, ssh.NewServer())
+	gitalypb.RegisterSSHServiceServer(grpcServer, ssh.NewServer(
+		ssh.WithDeepensMetric(sshDeepensMetric),
+		ssh.WithHavesMetric(sshHavesMetric),
+		ssh.WithFiltersMetric(sshFiltersMetric),
+	))
 	gitalypb.RegisterSmartHTTPServiceServer(grpcServer, smarthttp.NewServer(
 		smarthttp.WithDeepensMetric(smarthttpDeepensMetric),
 		smarthttp.WithFiltersMetric(smarthttpFiltersMetric),
