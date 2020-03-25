@@ -18,6 +18,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/archive"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
@@ -154,6 +155,16 @@ func TestGetSnapshotWithDedupeSoftFailures(t *testing.T) {
 	_, err = getSnapshot(t, req)
 	assert.NoError(t, err)
 	require.NoError(t, os.Remove(alternatesPath))
+
+	// write alternates file to point outside storage root
+	storageRoot, err := helper.GetStorageByName(testRepo.GetStorageName())
+	require.NoError(t, err)
+	require.NoError(t, ioutil.WriteFile(alternatesPath, []byte(filepath.Join(storageRoot, "..")), 0600))
+
+	_, err = getSnapshot(t, &gitalypb.GetSnapshotRequest{Repository: testRepo})
+	assert.NoError(t, err)
+	require.NoError(t, os.Remove(alternatesPath))
+
 	// write alternates file with bad permissions
 	require.NoError(t, ioutil.WriteFile(alternatesPath, []byte(fmt.Sprintf("%s\n", alternateObjPath)), 0000))
 	_, err = getSnapshot(t, req)

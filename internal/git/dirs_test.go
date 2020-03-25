@@ -29,6 +29,10 @@ func TestObjectDirs(t *testing.T) {
 	out, err := ObjectDirectories(ctx, "testdata/objdirs", repo)
 	require.NoError(t, err)
 	require.Equal(t, objDirs, out)
+
+	out, err = AlternateObjectDirectories(ctx, "testdata/objdirs", repo)
+	require.NoError(t, err)
+	require.Equal(t, altObjDirs, out)
 }
 
 func TestObjectDirsNoAlternates(t *testing.T) {
@@ -39,6 +43,10 @@ func TestObjectDirsNoAlternates(t *testing.T) {
 	out, err := ObjectDirectories(ctx, "testdata/objdirs", repo)
 	require.NoError(t, err)
 	require.Equal(t, []string{filepath.Join(repo, "objects")}, out)
+
+	out, err = AlternateObjectDirectories(ctx, "testdata/objdirs", repo)
+	require.NoError(t, err)
+	require.Equal(t, []string{}, out)
 }
 
 func TestObjectDirsOutsideStorage(t *testing.T) {
@@ -48,7 +56,7 @@ func TestObjectDirsOutsideStorage(t *testing.T) {
 	storageRoot := filepath.Join(tmp, "storage-root")
 	repoPath := filepath.Join(storageRoot, "repo")
 	alternatesFile := filepath.Join(repoPath, "objects", "info", "alternates")
-	altObjDir := filepath.Join(tmp, "outside-storage", "objects")
+	altObjDir := filepath.Join(tmp, "outside-storage-sibling", "objects")
 	require.NoError(t, os.MkdirAll(filepath.Dir(alternatesFile), 0700))
 	expectedErr := alternateOutsideStorageError(altObjDir)
 
@@ -58,7 +66,7 @@ func TestObjectDirsOutsideStorage(t *testing.T) {
 	}{
 		{
 			desc:       "relative path",
-			alternates: "../../../outside-storage/objects",
+			alternates: "../../../outside-storage-sibling/objects",
 		},
 		{
 			desc:       "absolute path",

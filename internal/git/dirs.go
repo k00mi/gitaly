@@ -29,9 +29,22 @@ func ObjectDirectories(ctx context.Context, storageRoot, repoPath string) ([]str
 	return altObjectDirs(ctx, storageRoot+string(os.PathSeparator), objDir, 0)
 }
 
+// AlternateObjectDirectories reads the alternates file of the repository and returns absolute paths
+// to its alternate object directories, if any. The returned directories are verified to exist and that
+// they are within the storage root. The alternate directories are returned recursively, not only the
+// immediate alternates.
+func AlternateObjectDirectories(ctx context.Context, storageRoot, repoPath string) ([]string, error) {
+	dirs, err := ObjectDirectories(ctx, storageRoot, repoPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// first directory is the repository's own object dir
+	return dirs[1:], nil
+}
+
 func altObjectDirs(ctx context.Context, storagePrefix, objDir string, depth int) ([]string, error) {
 	logEntry := grpc_logrus.Extract(ctx)
-
 	const maxAlternatesDepth = 5 // Taken from https://github.com/git/git/blob/v2.23.0/sha1-file.c#L575
 	if depth > maxAlternatesDepth {
 		logEntry.WithField("objdir", objDir).Warn("ignoring deeply nested alternate object directory")
