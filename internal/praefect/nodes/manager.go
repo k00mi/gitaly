@@ -91,7 +91,7 @@ func NewManager(log *logrus.Entry, c config.Config, latencyHistogram metrics.His
 			conn, err := client.Dial(node.Address,
 				append(
 					[]grpc.DialOption{
-						grpc.WithDefaultCallOptions(grpc.CallCustomCodec(proxy.Codec())),
+						grpc.WithDefaultCallOptions(grpc.ForceCodec(proxy.NewCodec())),
 						grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials(node.Token)),
 						grpc.WithStreamInterceptor(grpc_middleware.ChainStreamClient(
 							grpc_prometheus.StreamClientInterceptor,

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -102,9 +103,11 @@ func printfErr(format string, a ...interface{}) (int, error) {
 }
 
 func subCmdDial(addr, token string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+	ctx, cancel := context.WithTimeout(context.TODO(), 30*time.Second)
+	defer cancel()
+
 	opts = append(opts,
 		grpc.WithBlock(),
-		grpc.WithTimeout(30*time.Second),
 	)
 
 	if len(token) > 0 {
@@ -115,5 +118,5 @@ func subCmdDial(addr, token string, opts ...grpc.DialOption) (*grpc.ClientConn, 
 		)
 	}
 
-	return client.Dial(addr, opts)
+	return client.DialContext(ctx, addr, opts)
 }

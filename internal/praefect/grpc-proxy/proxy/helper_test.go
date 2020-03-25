@@ -38,7 +38,7 @@ func newBackendPinger(tb testing.TB, ctx context.Context) (*grpc.ClientConn, *in
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
 		grpc.WithDefaultCallOptions(
-			grpc.CallCustomCodec(proxy.Codec()),
+			grpc.ForceCodec(proxy.NewCodec()),
 		),
 	)
 	require.NoError(tb, err)
@@ -54,7 +54,7 @@ func newBackendPinger(tb testing.TB, ctx context.Context) (*grpc.ClientConn, *in
 
 func newProxy(tb testing.TB, ctx context.Context, director proxy.StreamDirector, svc, method string) (*grpc.ClientConn, func()) { //nolint:golint
 	proxySrvr := grpc.NewServer(
-		grpc.CustomCodec(proxy.Codec()),
+		grpc.CustomCodec(proxy.NewCodec()),
 		grpc.UnknownServiceHandler(proxy.TransparentHandler(director)),
 	)
 

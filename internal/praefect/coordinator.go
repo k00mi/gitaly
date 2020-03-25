@@ -161,7 +161,7 @@ func (c *Coordinator) rewriteStorageForRepositoryMessage(mi protoregistry.Method
 		additionalRepo.StorageName = primaryStorage
 	}
 
-	b, err := proxy.Codec().Marshal(m)
+	b, err := proxy.NewCodec().Marshal(m)
 	if err != nil {
 		return err
 	}

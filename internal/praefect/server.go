@@ -112,7 +112,7 @@ func NewServer(director proxy.StreamDirector, l *logrus.Entry, r *protoregistry.
 
 func proxyRequiredOpts(director proxy.StreamDirector) []grpc.ServerOption {
 	return []grpc.ServerOption{
-		grpc.CustomCodec(proxy.Codec()),
+		grpc.CustomCodec(proxy.NewCodec()),
 		grpc.UnknownServiceHandler(proxy.TransparentHandler(director)),
 	}
 }

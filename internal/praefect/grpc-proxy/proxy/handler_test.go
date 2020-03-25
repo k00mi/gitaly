@@ -1,10 +1,6 @@
 // Copyright 2017 Michal Witkowski. All Rights Reserved.
 // See LICENSE for licensing terms.
 
-// TODO: remove the following linter override when the deprecations are fixed
-// in issue https://gitlab.com/gitlab-org/gitaly/issues/1663
-//lint:file-ignore SA1019 Ignore all gRPC deprecations until issue #1663
-
 package proxy_test
 
 import (
@@ -38,6 +34,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -51,8 +48,22 @@ const (
 	countListResponses = 20
 )
 
+type testLogger struct {
+	*log.Logger
+}
+
+func (l *testLogger) Write(p []byte) (int, error) {
+	if err := l.Output(1, string(p)); err != nil {
+		return 0, err
+	}
+	return -1, nil
+}
+
 func TestMain(m *testing.M) {
-	grpclog.SetLogger(log.New(os.Stderr, "grpc: ", log.LstdFlags))
+	logger := &testLogger{
+		log.New(os.Stderr, "grpc: ", log.LstdFlags),
+	}
+	grpclog.SetLoggerV2(grpclog.NewLoggerV2(logger, nil, nil))
 	m.Run()
 	os.Exit(0)
 }
@@ -79,7 +90,7 @@ func (s *assertingService) Ping(ctx context.Context, ping *pb.PingRequest) (*pb.
 }
 
 func (s *assertingService) PingError(ctx context.Context, ping *pb.PingRequest) (*pb.Empty, error) {
-	return nil, grpc.Errorf(codes.ResourceExhausted, "Userspace error.")
+	return nil, status.Errorf(codes.ResourceExhausted, "Userspace error.")
 }
 
 func (s *assertingService) PingList(ping *pb.PingRequest, stream pb.TestService_PingListServer) error {
@@ -180,8 +191,8 @@ func (s *ProxyHappySuite) TestPingErrorPropagatesAppError() {
 
 	_, err = s.testClient.PingError(s.ctx(), &pb.PingRequest{Value: "foo"})
 	require.Error(s.T(), err, "PingError should never succeed")
-	assert.Equal(s.T(), codes.ResourceExhausted, grpc.Code(err))
-	assert.Equal(s.T(), "Userspace error.", grpc.ErrorDesc(err))
+	assert.Equal(s.T(), codes.ResourceExhausted, status.Code(err))
+	assert.Equal(s.T(), "Userspace error.", status.Convert(err).Message())
 	require.Equal(s.T(), 1, sentryTriggered, "sentry must not be triggered because errors from remote must be just propagated")
 }
 
@@ -190,8 +201,8 @@ func (s *ProxyHappySuite) TestDirectorErrorIsPropagated() {
 	ctx := metadata.NewOutgoingContext(s.ctx(), metadata.Pairs(rejectingMdKey, "true"))
 	_, err := s.testClient.Ping(ctx, &pb.PingRequest{Value: "foo"})
 	require.Error(s.T(), err, "Director should reject this RPC")
-	assert.Equal(s.T(), codes.PermissionDenied, grpc.Code(err))
-	assert.Equal(s.T(), "testing rejection", grpc.ErrorDesc(err))
+	assert.Equal(s.T(), codes.PermissionDenied, status.Code(err))
+	assert.Equal(s.T(), "testing rejection", status.Convert(err).Message())
 }
 
 func (s *ProxyHappySuite) TestPingStream_FullDuplexWorks() {
@@ -239,13 +250,13 @@ func (s *ProxyHappySuite) SetupSuite() {
 	pb.RegisterTestServiceServer(s.server, &assertingService{t: s.T()})
 
 	// Setup of the proxy's Director.
-	s.serverClientConn, err = grpc.Dial(s.serverListener.Addr().String(), grpc.WithInsecure(), grpc.WithCodec(proxy.Codec()))
+	s.serverClientConn, err = grpc.Dial(s.serverListener.Addr().String(), grpc.WithInsecure(), grpc.WithDefaultCallOptions(grpc.ForceCodec(proxy.NewCodec())))
 	require.NoError(s.T(), err, "must not error on deferred client Dial")
 	director := func(ctx context.Context, fullName string, _ proxy.StreamModifier) (*proxy.StreamParameters, error) {
 		md, ok := metadata.FromIncomingContext(ctx)
 		if ok {
 			if _, exists := md[rejectingMdKey]; exists {
-				return proxy.NewStreamParameters(ctx, nil, nil, nil), grpc.Errorf(codes.PermissionDenied, "testing rejection")
+				return proxy.NewStreamParameters(ctx, nil, nil, nil), status.Errorf(codes.PermissionDenied, "testing rejection")
 			}
 		}
 		// Explicitly copy the metadata, otherwise the tests will fail.
@@ -253,7 +264,7 @@ func (s *ProxyHappySuite) SetupSuite() {
 	}
 
 	s.proxy = grpc.NewServer(
-		grpc.CustomCodec(proxy.Codec()),
+		grpc.CustomCodec(proxy.NewCodec()),
 		grpc.StreamInterceptor(
 			grpc_middleware.ChainStreamServer(
 				// context tags usage is required by sentryhandler.StreamLogHandler
@@ -279,7 +290,10 @@ func (s *ProxyHappySuite) SetupSuite() {
 		s.proxy.Serve(s.proxyListener)
 	}()
 
-	clientConn, err := grpc.Dial(strings.Replace(s.proxyListener.Addr().String(), "127.0.0.1", "localhost", 1), grpc.WithInsecure(), grpc.WithTimeout(1*time.Second))
+	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
+	defer cancel()
+
+	clientConn, err := grpc.DialContext(ctx, strings.Replace(s.proxyListener.Addr().String(), "127.0.0.1", "localhost", 1), grpc.WithInsecure())
 	require.NoError(s.T(), err, "must not error on deferred client Dial")
 	s.testClient = pb.NewTestServiceClient(clientConn)
 }
@@ -311,7 +325,7 @@ func TestRegisterStreamHandlers(t *testing.T) {
 	directorCalledError := errors.New("director was called")
 
 	server := grpc.NewServer(
-		grpc.CustomCodec(proxy.Codec()),
+		grpc.CustomCodec(proxy.NewCodec()),
 		grpc.UnknownServiceHandler(proxy.TransparentHandler(func(ctx context.Context, fullMethodName string, peeker proxy.StreamModifier) (*proxy.StreamParameters, error) {
 			return nil, directorCalledError
 		})),
