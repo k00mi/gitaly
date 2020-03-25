@@ -10,10 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git/objectpool"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
-	"google.golang.org/grpc/codes"
 )
 
 func TestCreate(t *testing.T) {
@@ -83,21 +81,21 @@ func TestUnsuccessfulCreate(t *testing.T) {
 	testCases := []struct {
 		desc    string
 		request *gitalypb.CreateObjectPoolRequest
-		code    codes.Code
+		error   error
 	}{
 		{
 			desc: "no origin repository",
 			request: &gitalypb.CreateObjectPoolRequest{
 				ObjectPool: pool.ToProto(),
 			},
-			code: codes.InvalidArgument,
+			error: errMissingOriginRepository,
 		},
 		{
 			desc: "no object pool",
 			request: &gitalypb.CreateObjectPoolRequest{
 				Origin: testRepo,
 			},
-			code: codes.InvalidArgument,
+			error: errMissingPool,
 		},
 		{
 			desc: "outside pools directory",
@@ -110,7 +108,7 @@ func TestUnsuccessfulCreate(t *testing.T) {
 					},
 				},
 			},
-			code: codes.InvalidArgument,
+			error: errInvalidPoolDir,
 		},
 		{
 			desc: "path must be lowercase",
@@ -123,7 +121,7 @@ func TestUnsuccessfulCreate(t *testing.T) {
 					},
 				},
 			},
-			code: codes.InvalidArgument,
+			error: errInvalidPoolDir,
 		},
 		{
 			desc: "subdirectories must match first four pool digits",
@@ -136,14 +134,27 @@ func TestUnsuccessfulCreate(t *testing.T) {
 					},
 				},
 			},
-			code: codes.InvalidArgument,
+			error: errInvalidPoolDir,
+		},
+		{
+			desc: "pool path traversal fails",
+			request: &gitalypb.CreateObjectPoolRequest{
+				Origin: testRepo,
+				ObjectPool: &gitalypb.ObjectPool{
+					Repository: &gitalypb.Repository{
+						StorageName:  "default",
+						RelativePath: validPoolPath + "/..",
+					},
+				},
+			},
+			error: errInvalidPoolDir,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
 			_, err := client.CreateObjectPool(ctx, tc.request)
-			require.Equal(t, tc.code, helper.GrpcCode(err))
+			require.Equal(t, tc.error, err)
 		})
 	}
 }
