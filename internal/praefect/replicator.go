@@ -13,6 +13,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metrics"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
+	grpccorrelation "gitlab.com/gitlab-org/labkit/correlation/grpc"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
@@ -82,6 +83,10 @@ func (dr defaultReplicator) Replicate(ctx context.Context, job datastore.ReplJob
 
 	// TODO: Do something meaninful with the result of confirmChecksums if checksums do not match
 	if !checksumsMatch {
+		metrics.ChecksumMismatchCounter.WithLabelValues(
+			targetRepository.GetStorageName(),
+			sourceRepository.GetStorageName(),
+		).Inc()
 		dr.log.WithFields(logrus.Fields{
 			"primary": sourceRepository,
 			"replica": targetRepository,
@@ -245,6 +250,7 @@ const (
 	logWithReplJobID  = "replication_job_id"
 	logWithReplSource = "replication_job_source"
 	logWithReplTarget = "replication_job_target"
+	logWithCorrID     = "replication_correlation_id"
 )
 
 type backoff func() time.Duration
@@ -389,7 +395,8 @@ func (r ReplMgr) processReplJob(ctx context.Context, job datastore.ReplJob, sour
 	l := r.log.
 		WithField(logWithReplJobID, job.ID).
 		WithField(logWithReplSource, job.SourceNode).
-		WithField(logWithReplTarget, job.TargetNode)
+		WithField(logWithReplTarget, job.TargetNode).
+		WithField(logWithCorrID, job.CorrelationID)
 
 	if err := r.datastore.UpdateReplJobState(job.ID, datastore.JobStateInProgress); err != nil {
 		l.WithError(err).Error("unable to update replication job to in progress")
@@ -416,6 +423,11 @@ func (r ReplMgr) processReplJob(ctx context.Context, job datastore.ReplJob, sour
 		l.WithError(err).Error("unable to inject Gitaly servers into context for replication job")
 		return err
 	}
+
+	if job.CorrelationID == "" {
+		l.Warn("replication job missing correlation ID")
+	}
+	injectedCtx = grpccorrelation.InjectToOutgoingContext(injectedCtx, job.CorrelationID)
 
 	replStart := time.Now()
 	r.replQueueMetric.Inc()

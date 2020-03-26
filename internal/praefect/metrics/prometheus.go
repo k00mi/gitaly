@@ -20,6 +20,21 @@ func RegisterReplicationLatency(conf promconfig.Config) (Histogram, error) {
 	return replicationLatency, prometheus.Register(replicationLatency)
 }
 
+// RegisterNodeLatency creates and registers a prometheus histogram to
+// observe internal node latency
+func RegisterNodeLatency(conf promconfig.Config) (HistogramVec, error) {
+	nodeLatency := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: "gitaly",
+			Subsystem: "praefect",
+			Name:      "node_latency",
+			Buckets:   conf.GRPCLatencyBuckets,
+		}, []string{"gitaly_storage"},
+	)
+
+	return nodeLatency, prometheus.Register(nodeLatency)
+}
+
 // RegisterReplicationJobsInFlight creates and registers a gauge
 // to track the size of the replication queue
 func RegisterReplicationJobsInFlight() (Gauge, error) {
@@ -49,9 +64,20 @@ var PrimaryGauge = prometheus.NewGaugeVec(
 	}, []string{"virtual_storage", "gitaly_storage"},
 )
 
+var ChecksumMismatchCounter = prometheus.NewCounterVec(
+	prometheus.CounterOpts{
+		Namespace: "gitaly",
+		Subsystem: "praefect",
+		Name:      "checksum_mismatch_total",
+	}, []string{"target", "source"},
+)
+
 func init() {
-	prometheus.MustRegister(MethodTypeCounter)
-	prometheus.MustRegister(PrimaryGauge)
+	prometheus.MustRegister(
+		MethodTypeCounter,
+		PrimaryGauge,
+		ChecksumMismatchCounter,
+	)
 }
 
 // Gauge is a subset of a prometheus Gauge
@@ -63,4 +89,8 @@ type Gauge interface {
 // Histogram is a subset of a prometheus Histogram
 type Histogram interface {
 	Observe(float64)
+}
+
+type HistogramVec interface {
+	WithLabelValues(lvs ...string) prometheus.Observer
 }

@@ -1,0 +1,5 @@
+---
+title: Add gitaly-blackbox prometheus exporter
+merge_request: 1860
+author:
+type: added

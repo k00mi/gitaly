@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/client"
+	gconfig "gitlab.com/gitlab-org/gitaly/internal/config"
 	internalauth "gitlab.com/gitlab-org/gitaly/internal/config/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/log"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
@@ -22,11 +23,13 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/server/auth"
+	"gitlab.com/gitlab-org/gitaly/internal/service/internalgitaly"
 	"gitlab.com/gitlab-org/gitaly/internal/service/repository"
 	gitalyserver "gitlab.com/gitlab-org/gitaly/internal/service/server"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper/promtest"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
+	correlation "gitlab.com/gitlab-org/labkit/correlation/grpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
@@ -114,7 +117,7 @@ func runPraefectServerWithMock(t *testing.T, conf config.Config, backends map[st
 		conf.VirtualStorages[0].Nodes[i] = node
 	}
 
-	nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf)
+	nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 	nodeMgr.Start(1*time.Millisecond, 5*time.Millisecond)
 
@@ -128,7 +131,7 @@ func runPraefectServerWithMock(t *testing.T, conf config.Config, backends map[st
 
 	errQ := make(chan error)
 
-	prf.RegisterServices(nodeMgr, conf)
+	prf.RegisterServices(nodeMgr, conf, nil)
 	go func() {
 		errQ <- prf.Serve(listener, false)
 	}()
@@ -175,7 +178,7 @@ func runPraefectServerWithGitaly(t *testing.T, conf config.Config) (*grpc.Client
 	ds := datastore.NewInMemory(conf)
 	logEntry := log.Default()
 
-	nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf)
+	nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 	nodeMgr.Start(1*time.Millisecond, 5*time.Millisecond)
 
@@ -204,7 +207,7 @@ func runPraefectServerWithGitaly(t *testing.T, conf config.Config) (*grpc.Client
 	errQ := make(chan error)
 	ctx, cancel := testhelper.Context()
 
-	prf.RegisterServices(nodeMgr, conf)
+	prf.RegisterServices(nodeMgr, conf, ds)
 	go func() { errQ <- prf.Serve(listener, false) }()
 	go func() { errQ <- replmgr.ProcessBacklog(ctx, noopBackoffFunc) }()
 
@@ -216,7 +219,8 @@ func runPraefectServerWithGitaly(t *testing.T, conf config.Config) (*grpc.Client
 			cu()
 		}
 
-		ctx, _ := context.WithTimeout(ctx, time.Second)
+		ctx, timed := context.WithTimeout(ctx, time.Second)
+		defer timed()
 		require.NoError(t, prf.Shutdown(ctx))
 		require.NoError(t, <-errQ)
 
@@ -246,6 +250,7 @@ func runInternalGitalyServer(t *testing.T, token string) (*grpc.Server, string, 
 
 	gitalypb.RegisterServerServiceServer(server, gitalyserver.NewServer())
 	gitalypb.RegisterRepositoryServiceServer(server, repository.NewServer(rubyServer, internalSocket))
+	gitalypb.RegisterInternalGitalyServer(server, internalgitaly.NewServer(gconfig.Config.Storages))
 	healthpb.RegisterHealthServer(server, health.NewServer())
 
 	errQ := make(chan error)
@@ -283,11 +288,13 @@ func listenAvailPort(tb testing.TB) (net.Listener, int) {
 func dialLocalPort(tb testing.TB, port int, backend bool) *grpc.ClientConn {
 	opts := []grpc.DialOption{
 		grpc.WithBlock(),
+		grpc.WithUnaryInterceptor(correlation.UnaryClientCorrelationInterceptor()),
+		grpc.WithStreamInterceptor(correlation.StreamClientCorrelationInterceptor()),
 	}
 	if backend {
 		opts = append(
 			opts,
-			grpc.WithDefaultCallOptions(grpc.CallCustomCodec(proxy.Codec())),
+			grpc.WithDefaultCallOptions(grpc.ForceCodec(proxy.NewCodec())),
 		)
 	}
 

@@ -32,6 +32,8 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+const correlationID = "my-correlation-id"
+
 func TestProcessReplicationJob(t *testing.T) {
 	srv, srvSocketPath := runFullGitalyServer(t)
 	defer srv.Stop()
@@ -124,7 +126,7 @@ func TestProcessReplicationJob(t *testing.T) {
 	for _, secondary := range secondaries {
 		secondaryStorages = append(secondaryStorages, secondary.Storage)
 	}
-	_, err = ds.CreateReplicaReplJobs(testRepo.GetRelativePath(), primary.Storage, secondaryStorages, datastore.UpdateRepo, nil)
+	_, err = ds.CreateReplicaReplJobs(correlationID, testRepo.GetRelativePath(), primary.Storage, secondaryStorages, datastore.UpdateRepo, nil)
 	require.NoError(t, err)
 
 	jobs, err := ds.GetJobs([]datastore.JobState{datastore.JobStateReady, datastore.JobStatePending}, backupStorageName, 1)
@@ -139,7 +141,7 @@ func TestProcessReplicationJob(t *testing.T) {
 	entry := testhelper.DiscardTestEntry(t)
 	replicator.log = entry
 
-	nodeMgr, err := nodes.NewManager(entry, config)
+	nodeMgr, err := nodes.NewManager(entry, config, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 	nodeMgr.Start(1*time.Millisecond, 5*time.Millisecond)
 
@@ -270,7 +272,7 @@ func TestProcessBacklog_FailedJobs(t *testing.T) {
 	)
 
 	ds := datastore.NewInMemory(config)
-	ids, err := ds.CreateReplicaReplJobs(testRepo.GetRelativePath(), primary.Storage, []string{secondary.Storage}, datastore.UpdateRepo, nil)
+	ids, err := ds.CreateReplicaReplJobs(correlationID, testRepo.GetRelativePath(), primary.Storage, []string{secondary.Storage}, datastore.UpdateRepo, nil)
 	require.NoError(t, err)
 	require.Len(t, ids, 1)
 
@@ -278,7 +280,7 @@ func TestProcessBacklog_FailedJobs(t *testing.T) {
 
 	require.NoError(t, ds.UpdateReplJobState(ids[0], datastore.JobStateReady))
 
-	nodeMgr, err := nodes.NewManager(entry, config)
+	nodeMgr, err := nodes.NewManager(entry, config, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 
 	replMgr := NewReplMgr("default", entry, ds, nodeMgr)
@@ -373,13 +375,13 @@ func TestProcessBacklog_Success(t *testing.T) {
 	var jobIDs []uint64
 
 	// Update replication job
-	idsUpdate1, err := ds.CreateReplicaReplJobs(testRepo.GetRelativePath(), primary.Storage, []string{secondary.Storage}, datastore.UpdateRepo, nil)
+	idsUpdate1, err := ds.CreateReplicaReplJobs(correlationID, testRepo.GetRelativePath(), primary.Storage, []string{secondary.Storage}, datastore.UpdateRepo, nil)
 	require.NoError(t, err)
 	require.Len(t, idsUpdate1, 1)
 	jobIDs = append(jobIDs, idsUpdate1...)
 
 	// Update replication job
-	idsUpdate2, err := ds.CreateReplicaReplJobs(testRepo.GetRelativePath(), primary.Storage, []string{secondary.Storage}, datastore.UpdateRepo, nil)
+	idsUpdate2, err := ds.CreateReplicaReplJobs(correlationID, testRepo.GetRelativePath(), primary.Storage, []string{secondary.Storage}, datastore.UpdateRepo, nil)
 	require.NoError(t, err)
 	require.Len(t, idsUpdate2, 1)
 	jobIDs = append(jobIDs, idsUpdate2...)
@@ -391,13 +393,13 @@ func TestProcessBacklog_Success(t *testing.T) {
 	fullNewPath2 := filepath.Join(backupDir, renameTo2)
 
 	// Rename replication job
-	idsRename1, err := ds.CreateReplicaReplJobs(testRepo.GetRelativePath(), primary.Storage, []string{secondary.Storage}, datastore.RenameRepo, datastore.Params{"RelativePath": renameTo1})
+	idsRename1, err := ds.CreateReplicaReplJobs(correlationID, testRepo.GetRelativePath(), primary.Storage, []string{secondary.Storage}, datastore.RenameRepo, datastore.Params{"RelativePath": renameTo1})
 	require.NoError(t, err)
 	require.Len(t, idsRename1, 1)
 	jobIDs = append(jobIDs, idsRename1...)
 
 	// Rename replication job
-	idsRename2, err := ds.CreateReplicaReplJobs(renameTo1, primary.Storage, []string{secondary.Storage}, datastore.RenameRepo, datastore.Params{"RelativePath": renameTo2})
+	idsRename2, err := ds.CreateReplicaReplJobs(correlationID, renameTo1, primary.Storage, []string{secondary.Storage}, datastore.RenameRepo, datastore.Params{"RelativePath": renameTo2})
 	require.NoError(t, err)
 	require.Len(t, idsRename2, 1)
 	jobIDs = append(jobIDs, idsRename2...)
@@ -408,7 +410,7 @@ func TestProcessBacklog_Success(t *testing.T) {
 		require.NoError(t, ds.UpdateReplJobState(id, datastore.JobStateReady))
 	}
 
-	nodeMgr, err := nodes.NewManager(entry, config)
+	nodeMgr, err := nodes.NewManager(entry, config, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 
 	replMgr := NewReplMgr("default", entry, ds, nodeMgr)

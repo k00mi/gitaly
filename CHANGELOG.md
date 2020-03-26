@@ -1,5 +1,71 @@
 # Gitaly changelog
 
+## 12.9.1
+
+- No changes.
+
+## 12.9.0
+
+### Security (1 change)
+
+- Validate object pool relative paths to prevent path traversal attacks. !1900
+
+### Fixed (11 changes, 1 of them is from the community)
+
+- Handle malformed PID file. !1825 (maxmati)
+- Handle ambiguous refs in CommitLanguages. !1829
+- Enforce diff.noprefix=false for generating Git diffs. !1854
+- Fix expected porcelain output for PushResults. !1862
+- Properly account for tags in PushResults. !1874
+- ReplicateRepository error when result from FetchInternalRemote is false. !1879
+- Praefect should not emit Gitaly errors to Sentry. !1880
+- Task proto has dependency to already generated source code. !1884
+- Explicit error what type of path can't be read. !1891
+- Allow filters when advertising refs. !1894
+- Fix gitaly-ruby not starting on case-sensitive filesystems. !1939
+
+### Changed (6 changes)
+
+- Change ListRepositories RPC to RepostoryReplicas. !1692
+- Remove deprecated UserRebase RPC. !1851
+- Replication: propagate RenameRepository RPC to Praefect secondaries. !1853
+- Add node gauge that keeps track of node status. !1904
+- Praefect: use enum values for job states. !1906
+- Use millisecond precision for time in JSON logs.
+
+### Performance (1 change)
+
+- Use Rugged::Repository#bare over #new. !1920
+
+### Added (11 changes)
+
+- Praefect: add sql-migrate-down subcommand. !1770
+- Praefect SQL: support of transactions. !1815
+- Optionally keep divergent refs when mirroring. !1828
+- Push with the --porcelain flag and parse output of failed pushes. !1845
+- Internal RPC for walking Gitaly repos. !1855
+- Praefect: Move replication queue to database. !1865
+- Add basic auth support to clone analyzer. !1866
+- Praefect ping-node must verify storage locations are served. !1881
+- Support partial clones with SSH transports. !1893
+- Add storage name to healthcheck error log. !1934
+- Always use V2 tokens in gitaly auth client.
+
+### Other (7 changes)
+
+- Bypass praefect server in tests that check the error message. !1799
+- Set default concurrency limit for ReplicateRepository. !1822
+- Fix example Praefect config file for virtual storage changes. !1856
+- Add correlation ID to Praefect replication jobs. !1869
+- Remove dependency on the outdated golang.org/x/net package. !1882
+- Upgrade parser gem to v2.7.0.4. !1935
+- Simplify loading of required Ruby files. !1942
+
+
+## 12.8.7
+
+- No changes.
+
 ## 12.8.6
 
 - No changes.
@@ -35,6 +101,10 @@
 
 - Praefect sub-commands: avoid garbage in logs. !1819
 
+
+## 12.7.8
+
+- No changes.
 
 ## 12.7.7
 

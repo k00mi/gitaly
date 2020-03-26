@@ -1,5 +1,0 @@
----
-title: Use millisecond precision for time in JSON logs
-merge_request:
-author:
-type: changed

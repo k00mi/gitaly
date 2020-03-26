@@ -28,7 +28,7 @@ require_relative "#{dir}/git/repository_mirroring.rb"
 
 # Require all .rb files we can find in the gitlab lib directory
 Dir["#{dir}/**/*.rb"].sort.each do |ruby_file|
-  require_relative ruby_file.sub(dir, '').sub(%r{^/*}, '')
+  require File.expand_path(ruby_file)
 end
 
 class String

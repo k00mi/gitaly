@@ -24,6 +24,25 @@
 //
 //     praefect -config PATH_TO_CONFIG dial-nodes
 //
+// Reconcile
+//
+// The subcommand "reconcile" performs a consistency check of a backend storage
+// against the primary or another storage in the same virtual storage group.
+//
+//     praefect -config PATH_TO_CONFIG reconcile -virtual <vstorage> -target <t-storage> [-reference <r-storage>]
+//
+// "-virtual" specifies which virtual storage the target and reference
+// belong to.
+//
+// "-target" specifies the storage name of the backend Gitaly you wish to
+// reconcile.
+//
+// "-reference" is an optional argument that specifies which storage location to
+// check the target against. If an inconsistency is found, the target will
+// attempt to repair itself using the reference as the source of truth. If the
+// reference storage is omitted, Praefect will perform the check against the
+// current primary. If the primary is the same as the target, an error will
+// occur.
 package main
 
 import (
@@ -136,11 +155,10 @@ func configure(conf config.Config) {
 }
 
 func run(cfgs []starter.Config, conf config.Config) error {
-	nodeManager, err := nodes.NewManager(logger, conf)
+	nodeLatencyHistogram, err := metrics.RegisterNodeLatency(conf.Prometheus)
 	if err != nil {
 		return err
 	}
-	nodeManager.Start(1*time.Second, 3*time.Second)
 
 	latencyMetric, err := metrics.RegisterReplicationLatency(conf.Prometheus)
 	if err != nil {
@@ -151,6 +169,12 @@ func run(cfgs []starter.Config, conf config.Config) error {
 	if err != nil {
 		return err
 	}
+
+	nodeManager, err := nodes.NewManager(logger, conf, nodeLatencyHistogram)
+	if err != nil {
+		return err
+	}
+	nodeManager.Start(1*time.Second, 3*time.Second)
 
 	registry := protoregistry.New()
 	if err = registry.RegisterFiles(protoregistry.GitalyProtoFileDescriptors...); err != nil {
@@ -183,7 +207,7 @@ func run(cfgs []starter.Config, conf config.Config) error {
 		return fmt.Errorf("unable to create a bootstrap: %v", err)
 	}
 
-	srv.RegisterServices(nodeManager, conf)
+	srv.RegisterServices(nodeManager, conf, ds)
 
 	b.StopAction = srv.GracefulStop
 	for _, cfg := range cfgs {

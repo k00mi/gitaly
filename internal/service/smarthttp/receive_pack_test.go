@@ -31,8 +31,8 @@ func TestSuccessfulReceivePackRequest(t *testing.T) {
 	hookOutputFile, cleanup := testhelper.CaptureHookEnv(t)
 	defer cleanup()
 
-	server, serverSocketPath := runSmartHTTPServer(t)
-	defer server.Stop()
+	serverSocketPath, stop := runSmartHTTPServer(t)
+	defer stop()
 
 	repo, repoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
@@ -73,8 +73,8 @@ func TestSuccessfulReceivePackRequestWithGitProtocol(t *testing.T) {
 	restore := testhelper.EnableGitProtocolV2Support()
 	defer restore()
 
-	server, serverSocketPath := runSmartHTTPServer(t)
-	defer server.Stop()
+	serverSocketPath, stop := runSmartHTTPServer(t)
+	defer stop()
 
 	repo, repoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
@@ -102,8 +102,8 @@ func TestSuccessfulReceivePackRequestWithGitProtocol(t *testing.T) {
 }
 
 func TestFailedReceivePackRequestWithGitOpts(t *testing.T) {
-	server, serverSocketPath := runSmartHTTPServer(t)
-	defer server.Stop()
+	serverSocketPath, stop := runSmartHTTPServer(t)
+	defer stop()
 
 	repo, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
@@ -138,8 +138,8 @@ func TestFailedReceivePackRequestDueToHooksFailure(t *testing.T) {
 	hookContent := []byte("#!/bin/sh\nexit 1")
 	ioutil.WriteFile(path.Join(hooks.Path(), "pre-receive"), hookContent, 0755)
 
-	server, serverSocketPath := runSmartHTTPServer(t)
-	defer server.Stop()
+	serverSocketPath, stop := runSmartHTTPServer(t)
+	defer stop()
 
 	repo, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
@@ -244,8 +244,8 @@ func createCommit(t *testing.T, repoPath string, fileContents []byte) (oldHead s
 }
 
 func TestFailedReceivePackRequestDueToValidationError(t *testing.T) {
-	server, serverSocketPath := runSmartHTTPServer(t)
-	defer server.Stop()
+	serverSocketPath, stop := runSmartHTTPServer(t)
+	defer stop()
 
 	client, conn := newSmartHTTPClient(t, serverSocketPath)
 	defer conn.Close()
@@ -273,13 +273,67 @@ func TestFailedReceivePackRequestDueToValidationError(t *testing.T) {
 	}
 }
 
+func TestInvalidTimezone(t *testing.T) {
+	_, localRepoPath, localCleanup := testhelper.NewTestRepoWithWorktree(t)
+	defer localCleanup()
+
+	head := text.ChompBytes(testhelper.MustRunCommand(t, nil, "git", "-C", localRepoPath, "rev-parse", "HEAD"))
+	tree := text.ChompBytes(testhelper.MustRunCommand(t, nil, "git", "-C", localRepoPath, "rev-parse", "HEAD^{tree}"))
+
+	buf := new(bytes.Buffer)
+	buf.WriteString("tree " + tree + "\n")
+	buf.WriteString("parent " + head + "\n")
+	buf.WriteString("author Au Thor <author@example.com> 1313584730 +051800\n")
+	buf.WriteString("committer Au Thor <author@example.com> 1313584730 +051800\n")
+	buf.WriteString("\n")
+	buf.WriteString("Commit message\n")
+	commit := text.ChompBytes(testhelper.MustRunCommand(t, buf, "git", "-C", localRepoPath, "hash-object", "-t", "commit", "--stdin", "-w"))
+
+	stdin := strings.NewReader(fmt.Sprintf("^%s\n%s\n", head, commit))
+	pack := testhelper.MustRunCommand(t, stdin, "git", "-C", localRepoPath, "pack-objects", "--stdout", "--revs", "--thin", "--delta-base-offset", "-q")
+
+	pkt := fmt.Sprintf("%s %s refs/heads/master\x00 %s", head, commit, "report-status side-band-64k agent=git/2.12.0")
+	body := &bytes.Buffer{}
+	fmt.Fprintf(body, "%04x%s%s", len(pkt)+4, pkt, pktFlushStr)
+	body.Write(pack)
+
+	_, cleanup := testhelper.CaptureHookEnv(t)
+	defer cleanup()
+
+	socket, stop := runSmartHTTPServer(t)
+	defer stop()
+
+	repo, repoPath, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	client, conn := newSmartHTTPClient(t, socket)
+	defer conn.Close()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	stream, err := client.PostReceivePack(ctx)
+	require.NoError(t, err)
+	firstRequest := &gitalypb.PostReceivePackRequest{
+		Repository:       repo,
+		GlId:             "user-123",
+		GlRepository:     "project-456",
+		GitConfigOptions: []string{"receive.fsckObjects=true"},
+	}
+	response := doPush(t, stream, firstRequest, body)
+
+	expectedResponse := "0030\x01000eunpack ok\n0019ok refs/heads/master\n00000000"
+	require.Equal(t, expectedResponse, string(response), "Expected response to be %q, got %q", expectedResponse, response)
+	testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "show", commit)
+}
+
 func TestPostReceivePackToHooks(t *testing.T) {
 	secretToken := "secret token"
 	glRepository := "some_repo"
 	glID := "key-123"
 
-	server, socket := runSmartHTTPServer(t)
-	defer server.Stop()
+	socket, stop := runSmartHTTPServer(t)
+	defer stop()
 
 	client, conn := newSmartHTTPClient(t, "unix://"+socket)
 	defer conn.Close()
@@ -316,6 +370,8 @@ func TestPostReceivePackToHooks(t *testing.T) {
 
 	testhelper.WriteTemporaryGitlabShellConfigFile(t, tempGitlabShellDir, testhelper.GitlabShellConfig{GitlabURL: ts.URL})
 	testhelper.WriteShellSecretFile(t, tempGitlabShellDir, secretToken)
+
+	testhelper.WriteCustomHook(testRepoPath, "pre-receive", []byte(testhelper.CheckNewObjectExists))
 
 	defer func(override string) {
 		hooks.Override = override

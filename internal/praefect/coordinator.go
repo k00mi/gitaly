@@ -13,6 +13,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
+	"gitlab.com/gitlab-org/labkit/correlation"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -58,10 +59,7 @@ func NewCoordinator(l logrus.FieldLogger, ds datastore.Datastore, nodeMgr nodes.
 func (c *Coordinator) directRepositoryScopedMessage(ctx context.Context, mi protoregistry.MethodInfo, peeker proxy.StreamModifier, fullMethodName string, m proto.Message) (*proxy.StreamParameters, error) {
 	targetRepo, err := mi.TargetRepo(m)
 	if err != nil {
-		if err == protoregistry.ErrTargetRepoMissing {
-			return nil, helper.ErrInvalidArgument(err)
-		}
-		return nil, err
+		return nil, helper.ErrInvalidArgument(err)
 	}
 
 	if targetRepo.StorageName == "" || targetRepo.RelativePath == "" {
@@ -82,10 +80,6 @@ func (c *Coordinator) directRepositoryScopedMessage(ctx context.Context, mi prot
 	}
 
 	if err = c.rewriteStorageForRepositoryMessage(mi, m, peeker, primary.GetStorage()); err != nil {
-		if err == protoregistry.ErrTargetRepoMissing {
-			return nil, helper.ErrInvalidArgument(err)
-		}
-
 		return nil, err
 	}
 
@@ -102,7 +96,7 @@ func (c *Coordinator) directRepositoryScopedMessage(ctx context.Context, mi prot
 			return nil, err
 		}
 
-		if requestFinalizer, err = c.createReplicaJobs(targetRepo, primary, secondaries, change, params); err != nil {
+		if requestFinalizer, err = c.createReplicaJobs(ctx, targetRepo, primary, secondaries, change, params); err != nil {
 			return nil, err
 		}
 	}
@@ -152,7 +146,7 @@ func (c *Coordinator) StreamDirector(ctx context.Context, fullMethodName string,
 func (c *Coordinator) rewriteStorageForRepositoryMessage(mi protoregistry.MethodInfo, m proto.Message, peeker proxy.StreamModifier, primaryStorage string) error {
 	targetRepo, err := mi.TargetRepo(m)
 	if err != nil {
-		return err
+		return helper.ErrInvalidArgument(err)
 	}
 
 	// rewrite storage name
@@ -160,14 +154,14 @@ func (c *Coordinator) rewriteStorageForRepositoryMessage(mi protoregistry.Method
 
 	additionalRepo, ok, err := mi.AdditionalRepo(m)
 	if err != nil {
-		return err
+		return helper.ErrInvalidArgument(err)
 	}
 
 	if ok {
 		additionalRepo.StorageName = primaryStorage
 	}
 
-	b, err := proxy.Codec().Marshal(m)
+	b, err := proxy.NewCodec().Marshal(m)
 	if err != nil {
 		return err
 	}
@@ -194,6 +188,7 @@ func protoMessageFromPeeker(mi protoregistry.MethodInfo, peeker proxy.StreamModi
 }
 
 func (c *Coordinator) createReplicaJobs(
+	ctx context.Context,
 	targetRepo *gitalypb.Repository,
 	primary nodes.Node,
 	secondaries []nodes.Node,
@@ -204,7 +199,10 @@ func (c *Coordinator) createReplicaJobs(
 	for _, secondary := range secondaries {
 		secondaryStorages = append(secondaryStorages, secondary.GetStorage())
 	}
-	jobIDs, err := c.datastore.CreateReplicaReplJobs(targetRepo.RelativePath, primary.GetStorage(), secondaryStorages, change, params)
+
+	corrID := c.ensureCorrelationID(ctx, targetRepo)
+
+	jobIDs, err := c.datastore.CreateReplicaReplJobs(corrID, targetRepo.RelativePath, primary.GetStorage(), secondaryStorages, change, params)
 	if err != nil {
 		return nil, err
 	}
@@ -219,4 +217,17 @@ func (c *Coordinator) createReplicaJobs(
 			}
 		}
 	}, nil
+}
+
+func (c *Coordinator) ensureCorrelationID(ctx context.Context, targetRepo *gitalypb.Repository) string {
+	corrID := correlation.ExtractFromContext(ctx)
+	if corrID == "" {
+		var err error
+		corrID, err = correlation.RandomID()
+		if err != nil {
+			c.log.WithError(err).Error("unable to generate correlation ID")
+			corrID = generatePseudorandomCorrelationID(targetRepo)
+		}
+	}
+	return corrID
 }
