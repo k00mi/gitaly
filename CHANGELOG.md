@@ -102,6 +102,10 @@
 - Praefect sub-commands: avoid garbage in logs. !1819
 
 
+## 12.7.8
+
+- No changes.
+
 ## 12.7.7
 
 - No changes.
