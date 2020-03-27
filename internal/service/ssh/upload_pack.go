@@ -3,12 +3,15 @@ package ssh
 import (
 	"context"
 	"fmt"
+	"io"
+	"sync"
 
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/pktline"
+	"gitlab.com/gitlab-org/gitaly/internal/git/stats"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/service/inspect"
@@ -83,6 +86,34 @@ func (s *server) sshUploadPack(stream gitalypb.SSHService_SSHUploadPackServer, r
 		globalOpts = append(globalOpts, git.ValueFlag{"-c", o})
 	}
 
+	pr, pw := io.Pipe()
+	defer pw.Close()
+	stdin = io.TeeReader(stdin, pw)
+	wg := sync.WaitGroup{}
+
+	wg.Add(1)
+	go func() {
+		defer func() {
+			wg.Done()
+			pr.Close()
+		}()
+
+		stats, err := stats.ParsePackfileNegotiation(pr)
+		if err != nil {
+			grpc_logrus.Extract(stream.Context()).WithError(err).Debug("failed parsing packfile negotiation")
+			return
+		}
+		if stats.Deepen != "" {
+			s.deepensMetric.Inc()
+		}
+		if stats.Filter != "" {
+			s.filtersMetric.Inc()
+		}
+		if len(stats.Haves) > 0 {
+			s.havesMetric.Inc()
+		}
+	}()
+
 	cmd, monitor, err := monitorStdinCommand(ctx, stdin, stdout, stderr, env, globalOpts, git.SubCmd{
 		Name: "upload-pack",
 		Args: []string{repoPath},
@@ -107,6 +138,9 @@ func (s *server) sshUploadPack(stream gitalypb.SSHService_SSHUploadPackServer, r
 		}
 		return fmt.Errorf("cmd wait: %v", err)
 	}
+
+	pw.Close()
+	wg.Wait()
 
 	return nil
 }

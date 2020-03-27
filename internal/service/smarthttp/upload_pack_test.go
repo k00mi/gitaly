@@ -19,6 +19,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper/promtest"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 	"google.golang.org/grpc/codes"
@@ -29,7 +30,11 @@ const (
 )
 
 func TestSuccessfulUploadPackRequest(t *testing.T) {
-	serverSocketPath, stop := runSmartHTTPServer(t)
+	haves := &promtest.MockCounter{}
+
+	serverSocketPath, stop := runSmartHTTPServer(
+		t, WithHavesMetric(haves),
+	)
 	defer stop()
 
 	ctx, cancel := testhelper.Context()
@@ -92,6 +97,8 @@ func TestSuccessfulUploadPackRequest(t *testing.T) {
 
 	// The fact that this command succeeds means that we got the commit correctly, no further checks should be needed.
 	testhelper.MustRunCommand(t, nil, "git", "-C", localRepoPath, "show", string(newHead))
+
+	require.Equal(t, 1.0, haves.Value())
 }
 
 func TestUploadPackRequestWithGitConfigOptions(t *testing.T) {
@@ -324,7 +331,11 @@ func extractPackDataFromResponse(t *testing.T, buf *bytes.Buffer) ([]byte, int, 
 }
 
 func TestUploadPackRequestForPartialCloneSuccess(t *testing.T) {
-	serverSocketPath, stop := runSmartHTTPServer(t)
+	filter := &promtest.MockCounter{}
+
+	serverSocketPath, stop := runSmartHTTPServer(
+		t, WithFiltersMetric(filter),
+	)
 	defer stop()
 
 	testRepo := testhelper.TestRepository()
@@ -418,4 +429,6 @@ func TestUploadPackRequestForPartialCloneSuccess(t *testing.T) {
 
 	_, err = makePostUploadPackRequest(ctx, t, serverSocketPath, req, &requestBuffer)
 	require.NoError(t, err)
+
+	require.Equal(t, 2.0, filter.Value())
 }

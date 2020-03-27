@@ -6,7 +6,6 @@ import (
 	"io"
 
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
-	"github.com/prometheus/client_golang/prometheus"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/stats"
@@ -18,19 +17,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
-
-var (
-	deepenCount = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "gitaly_smarthttp_deepen_requests_total",
-			Help: "Number of git-upload-pack requests processed that contained a 'deepen' message",
-		},
-	)
-)
-
-func init() {
-	prometheus.MustRegister(deepenCount)
-}
 
 func (s *server) PostUploadPack(stream gitalypb.SmartHTTPService_PostUploadPackServer) error {
 	ctx := stream.Context()
@@ -58,10 +44,24 @@ func (s *server) PostUploadPack(stream gitalypb.SmartHTTPService_PostUploadPackS
 	statsCh := make(chan stats.PackfileNegotiation, 1)
 	go func() {
 		defer close(statsCh)
-		stats := stats.PackfileNegotiation{}
-		if err := stats.Parse(pr); err == nil {
-			statsCh <- stats
+
+		stats, err := stats.ParsePackfileNegotiation(pr)
+		if err != nil {
+			grpc_logrus.Extract(stream.Context()).WithError(err).Debug("failed parsing packfile negotiation")
+			return
 		}
+
+		if stats.Deepen != "" {
+			s.deepensMetric.Inc()
+		}
+		if stats.Filter != "" {
+			s.filtersMetric.Inc()
+		}
+		if len(stats.Haves) > 0 {
+			s.havesMetric.Inc()
+		}
+
+		statsCh <- stats
 	}()
 
 	var respBytes int64
@@ -112,7 +112,6 @@ func (s *server) PostUploadPack(stream gitalypb.SmartHTTPService_PostUploadPackS
 			// We have seen a 'deepen' message in the request. It is expected that
 			// git-upload-pack has a non-zero exit status: don't treat this as an
 			// error.
-			deepenCount.Inc()
 			return nil
 		}
 
