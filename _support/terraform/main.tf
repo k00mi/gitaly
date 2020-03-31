@@ -14,7 +14,9 @@ variable "startup_script" {
   EOF
 }
 variable "gitaly_machine_type" { default = "n1-standard-2" }
+variable "praefect_machine_type" { default = "n1-standard-1" }
 variable "gitaly_disk_size" { default = "100" }
+variable "praefect_disk_size" { default = "10" }
 variable "praefect_sql_password" { }
 
 provider "google" {
@@ -42,9 +44,14 @@ resource "google_sql_database_instance" "praefect_sql" {
     ip_configuration{
       ipv4_enabled = true
 
-      authorized_networks {
-        name = "praefect"
-        value = google_compute_instance.praefect.network_interface[0].access_config[0].nat_ip
+      dynamic "authorized_networks" {
+        for_each = google_compute_instance.praefect
+        iterator = praefect
+
+        content {
+          name = "praefect-${praefect.key}"
+          value = praefect.value.network_interface[0].access_config[0].nat_ip
+        }
       }
     }
   }
@@ -97,12 +104,14 @@ output "gitlab_external_ip" {
 }
 
 resource "google_compute_instance" "praefect" {
-  name         = format("%s-praefect", var.praefect_demo_cluster_name)
-  machine_type = "n1-standard-1"
+  count = 1
+  name         =  "${var.praefect_demo_cluster_name}-praefect-${count.index + 1}"
+  machine_type = var.praefect_machine_type
 
   boot_disk {
     initialize_params {
       image = var.os_image
+      size = var.praefect_disk_size
     }
   }
 
@@ -118,10 +127,17 @@ resource "google_compute_instance" "praefect" {
 }
 
 output "praefect_internal_ip" {
-  value = google_compute_instance.praefect.network_interface[0].network_ip
+  value = {
+    for instance in google_compute_instance.praefect:
+    instance.name => instance.network_interface[0].network_ip
+  }
 }
+
 output "praefect_ssh_ip" {
-  value = google_compute_instance.praefect.network_interface[0].access_config[0].nat_ip
+  value = {
+    for instance in google_compute_instance.praefect:
+    instance.name => instance.network_interface[0].access_config[0].nat_ip
+  }
 }
 
 resource "google_compute_instance" "gitaly" {
