@@ -1,6 +1,7 @@
 package nodes
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -30,21 +31,25 @@ func TestNodeStatus(t *testing.T) {
 	storageName := "default"
 	cs := newConnectionStatus(models.Node{Storage: storageName}, cc, testhelper.DiscardTestEntry(t), mockHistogramVec)
 
-	require.False(t, cs.isHealthy())
-
 	var expectedLabels [][]string
 	for i := 0; i < healthcheckThreshold; i++ {
-		cs.check()
+		ctx := context.Background()
+		status, err := cs.check(ctx)
+
+		require.NoError(t, err)
+		require.True(t, status)
 		expectedLabels = append(expectedLabels, []string{storageName})
 	}
-	require.True(t, cs.isHealthy())
+
 	require.Equal(t, expectedLabels, mockHistogramVec.LabelsCalled())
 	require.Len(t, mockHistogramVec.Observer().Observed(), healthcheckThreshold)
 
 	healthSvr.SetServingStatus("", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
 
-	cs.check()
-	require.False(t, cs.isHealthy())
+	ctx := context.Background()
+	status, err := cs.check(ctx)
+	require.NoError(t, err)
+	require.False(t, status)
 }
 
 func TestNodeManager(t *testing.T) {
