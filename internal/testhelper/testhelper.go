@@ -591,6 +591,10 @@ func GitObjectMustNotExist(t TB, repoPath, sha string) {
 
 func gitObjectExists(t TB, repoPath, sha string, exists bool) {
 	cmd := exec.Command("git", "-C", repoPath, "cat-file", "-e", sha)
+	cmd.Env = []string{
+		"GIT_ALLOW_PROTOCOL=", // To prevent partial clone reaching remote repo over SSH
+	}
+
 	if exists {
 		require.NoError(t, cmd.Run(), "checking for object should succeed")
 		return
