@@ -92,52 +92,80 @@ func TestGetSnapshotSuccess(t *testing.T) {
 }
 
 func TestGetSnapshotWithDedupe(t *testing.T) {
-	testRepo, repoPath, cleanup := testhelper.NewTestRepoWithWorktree(t)
-	defer cleanup()
+	for _, tc := range []struct {
+		desc              string
+		alternatePathFunc func(t *testing.T, objDir string) string
+	}{
+		{
+			desc:              "subdirectory",
+			alternatePathFunc: func(*testing.T, string) string { return "./alt-objects" },
+		},
+		{
+			desc: "absolute path",
+			alternatePathFunc: func(*testing.T, string) string {
+				return filepath.Join(testhelper.GitlabTestStoragePath(), testhelper.NewTestObjectPoolName(t), "objects")
+			},
+		},
+		{
+			desc: "relative path",
+			alternatePathFunc: func(t *testing.T, objDir string) string {
+				altObjDir, err := filepath.Rel(objDir, filepath.Join(
+					testhelper.GitlabTestStoragePath(), testhelper.NewTestObjectPoolName(t), "objects",
+				))
+				require.NoError(t, err)
+				return altObjDir
+			},
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			testRepo, repoPath, cleanup := testhelper.NewTestRepoWithWorktree(t)
+			defer cleanup()
 
-	ctx, cancel := testhelper.Context()
-	defer cancel()
+			ctx, cancel := testhelper.Context()
+			defer cancel()
 
-	committerName := "Scrooge McDuck"
-	committerEmail := "scrooge@mcduck.com"
+			const committerName = "Scrooge McDuck"
+			const committerEmail = "scrooge@mcduck.com"
 
-	cmd := exec.Command("git", "-C", repoPath,
-		"-c", fmt.Sprintf("user.name=%s", committerName),
-		"-c", fmt.Sprintf("user.email=%s", committerEmail),
-		"commit", "--allow-empty", "-m", "An empty commit")
-	alternateObjDir := "./alt-objects"
-	commitSha := testhelper.CreateCommitInAlternateObjectDirectory(t, repoPath, alternateObjDir, cmd)
-	originalAlternatesCommit := string(commitSha)
+			cmd := exec.Command("git", "-C", repoPath,
+				"-c", fmt.Sprintf("user.name=%s", committerName),
+				"-c", fmt.Sprintf("user.email=%s", committerEmail),
+				"commit", "--allow-empty", "-m", "An empty commit")
+			alternateObjDir := tc.alternatePathFunc(t, filepath.Join(repoPath, "objects"))
+			commitSha := testhelper.CreateCommitInAlternateObjectDirectory(t, repoPath, alternateObjDir, cmd)
+			originalAlternatesCommit := string(commitSha)
 
-	// ensure commit cannot be found in current repository
-	c, err := catfile.New(ctx, testRepo)
-	require.NoError(t, err)
-	_, err = c.Info(originalAlternatesCommit)
-	require.True(t, catfile.IsNotFound(err))
+			// ensure commit cannot be found in current repository
+			c, err := catfile.New(ctx, testRepo)
+			require.NoError(t, err)
+			_, err = c.Info(originalAlternatesCommit)
+			require.True(t, catfile.IsNotFound(err))
 
-	// write alternates file to point to alt objects folder
-	alternatesPath, err := git.InfoAlternatesPath(testRepo)
-	require.NoError(t, err)
-	require.NoError(t, ioutil.WriteFile(alternatesPath, []byte(path.Join(repoPath, ".git", fmt.Sprintf("%s\n", alternateObjDir))), 0644))
+			// write alternates file to point to alt objects folder
+			alternatesPath, err := git.InfoAlternatesPath(testRepo)
+			require.NoError(t, err)
+			require.NoError(t, ioutil.WriteFile(alternatesPath, []byte(path.Join(repoPath, ".git", fmt.Sprintf("%s\n", alternateObjDir))), 0644))
 
-	// write another commit and ensure we can find it
-	cmd = exec.Command("git", "-C", repoPath,
-		"-c", fmt.Sprintf("user.name=%s", committerName),
-		"-c", fmt.Sprintf("user.email=%s", committerEmail),
-		"commit", "--allow-empty", "-m", "Another empty commit")
-	commitSha = testhelper.CreateCommitInAlternateObjectDirectory(t, repoPath, alternateObjDir, cmd)
+			// write another commit and ensure we can find it
+			cmd = exec.Command("git", "-C", repoPath,
+				"-c", fmt.Sprintf("user.name=%s", committerName),
+				"-c", fmt.Sprintf("user.email=%s", committerEmail),
+				"commit", "--allow-empty", "-m", "Another empty commit")
+			commitSha = testhelper.CreateCommitInAlternateObjectDirectory(t, repoPath, alternateObjDir, cmd)
 
-	c, err = catfile.New(ctx, testRepo)
-	require.NoError(t, err)
-	_, err = c.Info(string(commitSha))
-	require.NoError(t, err)
+			c, err = catfile.New(ctx, testRepo)
+			require.NoError(t, err)
+			_, err = c.Info(string(commitSha))
+			require.NoError(t, err)
 
-	_, repoCopyPath, cleanupCopy := copyRepoUsingSnapshot(t, testRepo)
-	defer cleanupCopy()
+			_, repoCopyPath, cleanupCopy := copyRepoUsingSnapshot(t, testRepo)
+			defer cleanupCopy()
 
-	// ensure the sha committed to the alternates directory can be accessed
-	testhelper.MustRunCommand(t, nil, "git", "-C", repoCopyPath, "cat-file", "-p", originalAlternatesCommit)
-	testhelper.MustRunCommand(t, nil, "git", "-C", repoCopyPath, "fsck")
+			// ensure the sha committed to the alternates directory can be accessed
+			testhelper.MustRunCommand(t, nil, "git", "-C", repoCopyPath, "cat-file", "-p", originalAlternatesCommit)
+			testhelper.MustRunCommand(t, nil, "git", "-C", repoCopyPath, "fsck")
+		})
+	}
 }
 
 func TestGetSnapshotWithDedupeSoftFailures(t *testing.T) {
