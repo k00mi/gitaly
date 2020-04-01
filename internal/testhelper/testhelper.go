@@ -406,7 +406,7 @@ func InitRepoWithWorktree(t TB) (*gitalypb.Repository, string, func()) {
 
 func initRepo(t TB, bare bool) (*gitalypb.Repository, string, func()) {
 	storagePath := GitlabTestStoragePath()
-	relativePath := NewRepositoryName(t)
+	relativePath := NewRepositoryName(t, bare)
 	repoPath := filepath.Join(storagePath, relativePath)
 
 	args := []string{"init"}
@@ -437,7 +437,7 @@ func NewTestRepoWithWorktree(t TB) (repo *gitalypb.Repository, repoPath string, 
 
 func cloneTestRepo(t TB, bare bool) (repo *gitalypb.Repository, repoPath string, cleanup func()) {
 	storagePath := GitlabTestStoragePath()
-	relativePath := NewRepositoryName(t)
+	relativePath := NewRepositoryName(t, bare)
 	repoPath = filepath.Join(storagePath, relativePath)
 
 	repo = CreateRepo(t, storagePath, relativePath)
@@ -507,19 +507,24 @@ func newDiskHash(t TB) string {
 	// as the directory path
 	b, err := text.RandomHex(sha256.Size)
 	require.NoError(t, err)
-	return filepath.Join(b[0:2], b[2:4], fmt.Sprintf("%s.git", b))
+	return filepath.Join(b[0:2], b[2:4], b)
 }
 
 // NewRepositoryName returns a random repository hash
-// in format '@hashed/[0-9a-f]{2}/[0-9a-f]{2}/[0-9a-f]{64}.git'.
-func NewRepositoryName(t TB) string {
-	return filepath.Join("@hashed", newDiskHash(t))
+// in format '@hashed/[0-9a-f]{2}/[0-9a-f]{2}/[0-9a-f]{64}(.git)?'.
+func NewRepositoryName(t TB, bare bool) string {
+	suffix := ""
+	if bare {
+		suffix = ".git"
+	}
+
+	return filepath.Join("@hashed", newDiskHash(t)+suffix)
 }
 
 // NewTestObjectPoolName returns a random pool repository name
 // in format '@pools/[0-9a-z]{2}/[0-9a-z]{2}/[0-9a-z]{64}.git'.
 func NewTestObjectPoolName(t TB) string {
-	return filepath.Join("@pools", newDiskHash(t))
+	return filepath.Join("@pools", newDiskHash(t)+".git")
 }
 
 // CreateLooseRef creates a ref that points to master
