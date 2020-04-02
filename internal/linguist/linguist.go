@@ -41,14 +41,17 @@ type FileListPerLanguage map[string][]string
 
 // Stats returns the repository's language stats as reported by 'git-linguist'.
 func Stats(ctx context.Context, repoPath string, commitID string) (ByteCountPerLanguage, error) {
-	reader, err := startGitLinguist(ctx, repoPath, commitID, "stats")
-
+	cmd, err := startGitLinguist(ctx, repoPath, commitID, "stats")
 	if err != nil {
 		return nil, err
 	}
 
-	data, err := ioutil.ReadAll(reader)
+	data, err := ioutil.ReadAll(cmd)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := cmd.Wait(); err != nil {
 		return nil, err
 	}
 
@@ -102,17 +105,17 @@ func LoadColors(cfg config.Cfg) error {
 	return json.NewDecoder(jsonReader).Decode(&colorMap)
 }
 
-func startGitLinguist(ctx context.Context, repoPath string, commitID string, linguistCommand string) (io.Reader, error) {
+func startGitLinguist(ctx context.Context, repoPath string, commitID string, linguistCommand string) (*command.Command, error) {
 	cmd := exec.Command("bundle", "exec", "bin/ruby-cd", repoPath, "git-linguist", "--commit="+commitID, linguistCommand)
 	cmd.Dir = config.Config.Ruby.Dir
 
 	var env []string
-	reader, err := command.New(ctx, cmd, nil, nil, nil, exportEnvironment(env)...)
+	internalCmd, err := command.New(ctx, cmd, nil, nil, nil, exportEnvironment(env)...)
 	if err != nil {
 		return nil, err
 	}
 
-	return reader, nil
+	return internalCmd, nil
 }
 
 func openLanguagesJSON(cfg config.Cfg) (io.ReadCloser, error) {
