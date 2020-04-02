@@ -1,0 +1,5 @@
+---
+title: 'UserCreateTag: pass tag object to hooks when creating annotated tag'
+merge_request: 1956
+author:
+type: fixed

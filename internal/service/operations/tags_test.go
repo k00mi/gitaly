@@ -1,7 +1,10 @@
 package operations
 
 import (
+	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -125,12 +128,18 @@ func TestSuccessfulUserCreateTagRequest(t *testing.T) {
 	}
 	inputTagName := "to-be-créated-soon"
 
+	cwd, err := os.Getwd()
+	require.NoError(t, err)
+	preReceiveHook := filepath.Join(cwd, "testdata/pre-receive-expect-object-type")
+	updateHook := filepath.Join(cwd, "testdata/update-expect-object-type")
+
 	testCases := []struct {
-		desc           string
-		tagName        string
-		message        string
-		targetRevision string
-		expectedTag    *gitalypb.Tag
+		desc               string
+		tagName            string
+		message            string
+		targetRevision     string
+		expectedTag        *gitalypb.Tag
+		expectedObjectType string
 	}{
 		{
 			desc:           "lightweight tag",
@@ -140,6 +149,7 @@ func TestSuccessfulUserCreateTagRequest(t *testing.T) {
 				Name:         []byte(inputTagName),
 				TargetCommit: targetRevisionCommit,
 			},
+			expectedObjectType: "commit",
 		},
 		{
 			desc:           "annotated tag",
@@ -152,11 +162,21 @@ func TestSuccessfulUserCreateTagRequest(t *testing.T) {
 				Message:      []byte("This is an annotated tag"),
 				MessageSize:  24,
 			},
+			expectedObjectType: "tag",
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
+			for hook, content := range map[string]string{
+				"pre-receive": fmt.Sprintf("#!/bin/sh\n%s %s \"$@\"", preReceiveHook, testCase.expectedObjectType),
+				"update":      fmt.Sprintf("#!/bin/sh\n%s %s \"$@\"", updateHook, testCase.expectedObjectType),
+			} {
+				hookCleanup, err := testhelper.WriteCustomHook(testRepoPath, hook, []byte(content))
+				require.NoError(t, err)
+				defer hookCleanup()
+			}
+
 			request := &gitalypb.UserCreateTagRequest{
 				Repository:     testRepo,
 				TagName:        []byte(testCase.tagName),
@@ -172,14 +192,15 @@ func TestSuccessfulUserCreateTagRequest(t *testing.T) {
 			defer cancel()
 
 			response, err := client.UserCreateTag(ctx, request)
+			require.NoError(t, err, "error from calling RPC")
+			require.Empty(t, response.PreReceiveError, "PreReceiveError must be empty, signalling the push was accepted")
+
 			defer exec.Command("git", "-C", testRepoPath, "tag", "-d", inputTagName).Run()
 
 			id := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", inputTagName)
 			testCase.expectedTag.Id = text.ChompBytes(id)
 
-			require.NoError(t, err)
 			require.Equal(t, testCase.expectedTag, response.Tag)
-			require.Empty(t, response.PreReceiveError)
 
 			tag := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag")
 			require.Contains(t, string(tag), inputTagName)

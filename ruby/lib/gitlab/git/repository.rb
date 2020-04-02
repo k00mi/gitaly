@@ -219,21 +219,29 @@ module Gitlab
         target_object = Ref.dereference_object(lookup(target))
         raise InvalidRef, "target not found: #{target}" unless target_object
 
-        options = nil # Use nil, not the empty hash. Rugged cares about this.
+        target_oid = target_object.oid
+        operation_service = Gitlab::Git::OperationService.new(user, self)
+
         if message
-          options = {
+          operation_service.add_annotated_tag(
+            tag_name,
+            target_oid,
             message: message,
             tagger: Gitlab::Git.committer_hash(email: user.email, name: user.name)
-          }
+          )
+        else
+          operation_service.add_lightweight_tag(tag_name, target_oid)
         end
-
-        Gitlab::Git::OperationService.new(user, self).add_tag(tag_name, target_object.oid, options)
 
         find_tag(tag_name)
       rescue Rugged::ReferenceError => ex
         raise InvalidRef, ex
-      rescue Rugged::TagError
-        raise TagExistsError
+      rescue Gitlab::Git::CommitError => ex
+        if find_tag(tag_name)
+          raise TagExistsError
+        else
+          raise ex
+        end
       end
 
       def update_branch(branch_name, user:, newrev:, oldrev:, push_options: nil)
