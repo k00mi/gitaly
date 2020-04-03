@@ -17,7 +17,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.4.0
 	github.com/tinylib/msgp v1.1.0 // indirect
-	gitlab.com/gitlab-org/labkit v0.0.0-20200303165501-9cb7801f7fea
+	gitlab.com/gitlab-org/labkit v0.0.0-20200327153541-fac94cb428e6
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	golang.org/x/sys v0.0.0-20200113162924-86b910548bc1
 	google.golang.org/grpc v1.24.0

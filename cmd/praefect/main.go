@@ -144,7 +144,7 @@ func configure(conf config.Config) {
 		conf.Prometheus.Configure()
 
 		go func() {
-			if err := monitoring.Serve(
+			if err := monitoring.Start(
 				monitoring.WithListenerAddress(conf.PrometheusListenAddr),
 				monitoring.WithBuildInformation(praefect.GetVersion(), praefect.GetBuildTime())); err != nil {
 				logger.WithError(err).Errorf("Unable to start healthcheck listener: %v", conf.PrometheusListenAddr)
