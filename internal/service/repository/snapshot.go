@@ -1,16 +1,13 @@
 package repository
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
-	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/archive"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -81,39 +78,28 @@ func (s *server) GetSnapshot(in *gitalypb.GetSnapshotRequest, stream gitalypb.Re
 }
 
 func addAlternateFiles(ctx context.Context, repository *gitalypb.Repository, builder *archive.TarBuilder) error {
-	alternateFilePath, err := git.InfoAlternatesPath(repository)
+	storageRoot, err := helper.GetStorageByName(repository.GetStorageName())
 	if err != nil {
-		return fmt.Errorf("error when getting alternates file path: %v", err)
+		return err
 	}
 
-	if stat, err := os.Stat(alternateFilePath); err == nil && stat.Size() > 0 {
-		alternatesFile, err := os.Open(alternateFilePath)
-		if err != nil {
-			grpc_logrus.Extract(ctx).WithField("error", err).Warn("error opening alternates file")
-			return nil
-		}
-		defer alternatesFile.Close()
+	repoPath, err := helper.GetRepoPath(repository)
+	if err != nil {
+		return err
+	}
 
-		alternateObjDir, err := bufio.NewReader(alternatesFile).ReadString('\n')
-		if err != nil && err != io.EOF {
-			grpc_logrus.Extract(ctx).WithField("error", err).Warn("error reading alternates file")
-			return nil
-		}
+	altObjDirs, err := git.AlternateObjectDirectories(ctx, storageRoot, repoPath)
+	if err != nil {
+		grpc_logrus.Extract(ctx).WithField("error", err).Warn("error getting alternate object directories")
+		return nil
+	}
 
-		if err == nil {
-			alternateObjDir = alternateObjDir[:len(alternateObjDir)-1]
-		}
-
-		if stat, err := os.Stat(alternateObjDir); err != nil || !stat.IsDir() {
-			grpc_logrus.Extract(ctx).WithFields(
-				log.Fields{"error": err, "object_dir": alternateObjDir}).Warn("error reading alternate objects directory")
-			return nil
-		}
-
-		if err := walkAndAddToBuilder(alternateObjDir, builder); err != nil {
+	for _, altObjDir := range altObjDirs {
+		if err := walkAndAddToBuilder(altObjDir, builder); err != nil {
 			return fmt.Errorf("walking alternates file: %v", err)
 		}
 	}
+
 	return nil
 }
 

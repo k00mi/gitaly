@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -10,24 +11,40 @@ import (
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 )
 
+// alternateOutsideStorageError is returned when an alternates file contains an
+// alternate which is not within the storage's root.
+type alternateOutsideStorageError string
+
+func (path alternateOutsideStorageError) Error() string {
+	return fmt.Sprintf("alternate %q is outside the storage root", string(path))
+}
+
 // ObjectDirectories looks for Git object directories, including
 // alternates specified in objects/info/alternates.
 //
 // CAVEAT Git supports quoted strings in here, but we do not. We should
 // never need those on a Gitaly server.
-func ObjectDirectories(ctx context.Context, repoPath string) ([]string, error) {
+func ObjectDirectories(ctx context.Context, storageRoot, repoPath string) ([]string, error) {
 	objDir := filepath.Join(repoPath, "objects")
-	dirs, err := altObjectDirs(ctx, objDir, 0)
+	return altObjectDirs(ctx, storageRoot+string(os.PathSeparator), objDir, 0)
+}
+
+// AlternateObjectDirectories reads the alternates file of the repository and returns absolute paths
+// to its alternate object directories, if any. The returned directories are verified to exist and that
+// they are within the storage root. The alternate directories are returned recursively, not only the
+// immediate alternates.
+func AlternateObjectDirectories(ctx context.Context, storageRoot, repoPath string) ([]string, error) {
+	dirs, err := ObjectDirectories(ctx, storageRoot, repoPath)
 	if err != nil {
 		return nil, err
 	}
 
-	return dirs, nil
+	// first directory is the repository's own object dir
+	return dirs[1:], nil
 }
 
-func altObjectDirs(ctx context.Context, objDir string, depth int) ([]string, error) {
+func altObjectDirs(ctx context.Context, storagePrefix, objDir string, depth int) ([]string, error) {
 	logEntry := grpc_logrus.Extract(ctx)
-
 	const maxAlternatesDepth = 5 // Taken from https://github.com/git/git/blob/v2.23.0/sha1-file.c#L575
 	if depth > maxAlternatesDepth {
 		logEntry.WithField("objdir", objDir).Warn("ignoring deeply nested alternate object directory")
@@ -65,7 +82,11 @@ func altObjectDirs(ctx context.Context, objDir string, depth int) ([]string, err
 			newDir = filepath.Join(objDir, newDir)
 		}
 
-		nestedDirs, err := altObjectDirs(ctx, newDir, depth+1)
+		if !strings.HasPrefix(newDir, storagePrefix) {
+			return nil, alternateOutsideStorageError(newDir)
+		}
+
+		nestedDirs, err := altObjectDirs(ctx, storagePrefix, newDir, depth+1)
 		if err != nil {
 			return nil, err
 		}

@@ -10,6 +10,8 @@ import (
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"github.com/prometheus/client_golang/prometheus"
 	"gitlab.com/gitlab-org/gitaly/internal/git/packfile"
+	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
 var badBitmapRequestCount = prometheus.NewCounterVec(
@@ -25,10 +27,22 @@ func init() { prometheus.MustRegister(badBitmapRequestCount) }
 // WarnIfTooManyBitmaps checks for too many (more than one) bitmaps in
 // repoPath, and if it finds any, it logs a warning. This is to help us
 // investigate https://gitlab.com/gitlab-org/gitaly/issues/1728.
-func WarnIfTooManyBitmaps(ctx context.Context, repoPath string) {
+func WarnIfTooManyBitmaps(ctx context.Context, repo repository.GitRepo) {
 	logEntry := grpc_logrus.Extract(ctx)
 
-	objdirs, err := ObjectDirectories(ctx, repoPath)
+	storageRoot, err := helper.GetStorageByName(repo.GetStorageName())
+	if err != nil {
+		logEntry.WithError(err).Info("bitmap check failed")
+		return
+	}
+
+	repoPath, err := helper.GetRepoPath(repo)
+	if err != nil {
+		logEntry.WithError(err).Info("bitmap check failed")
+		return
+	}
+
+	objdirs, err := ObjectDirectories(ctx, storageRoot, repoPath)
 	if err != nil {
 		logEntry.WithError(err).Info("bitmap check failed")
 		return
