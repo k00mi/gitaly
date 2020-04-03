@@ -116,4 +116,5 @@ func (n *PackfileNegotiation) UpdateMetrics(metrics *prometheus.CounterVec) {
 		if len(n.Haves) > 0 {
 			metrics.WithLabelValues("have").Inc()
 		}
+		metrics.WithLabelValues("total").Inc()
 }
