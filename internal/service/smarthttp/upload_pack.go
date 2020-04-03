@@ -52,13 +52,13 @@ func (s *server) PostUploadPack(stream gitalypb.SmartHTTPService_PostUploadPackS
 		}
 
 		if stats.Deepen != "" {
-			s.deepensMetric.Inc()
+			s.packfileNegotiationMetrics.WithLabelValues("deepen").Inc()
 		}
 		if stats.Filter != "" {
-			s.filtersMetric.Inc()
+			s.packfileNegotiationMetrics.WithLabelValues("filter").Inc()
 		}
 		if len(stats.Haves) > 0 {
-			s.havesMetric.Inc()
+			s.packfileNegotiationMetrics.WithLabelValues("have").Inc()
 		}
 
 		statsCh <- stats
