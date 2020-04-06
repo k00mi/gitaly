@@ -252,3 +252,15 @@ lint:
   # and it stops further development process, so it is temporary measure.
   # Must be fixed under: https://gitlab.com/gitlab-org/gitaly/-/issues/2605
   allow_failure: true
+
+code_navigation:
+  allow_failure: true
+  script:
+    - go get github.com/sourcegraph/lsif-go/cmd/lsif-go
+    - gem install lsif_parser
+    - ~/go/bin/lsif-go
+    - lsif_parser dump.lsif $PWD
+    - mv dump.lsif.tmp lsif
+  artifacts:
+    paths:
+      - lsif/
