@@ -48,6 +48,7 @@ func TestSuccessfulUpdateRemoteMirrorRequest(t *testing.T) {
 		// on 'HEAD' as the default branch). By making HEAD point to something
 		// invalid, we ensure this gets handled correctly.
 		{"symbolic-ref", "HEAD", "refs/does/not/exist"},
+		{"tag", "--delete", "v1.1.0"}, // v1.1.0 is ambiguous, maps to a branch and a tag in gitlab-test repository
 	}
 
 	for _, args := range setupCommands {
@@ -93,6 +94,8 @@ func TestSuccessfulUpdateRemoteMirrorRequest(t *testing.T) {
 	require.Contains(t, mirrorRefs, "60ecb67744cb56576c30214ff52294f8ce2def98 commit\trefs/tags/new-tag")
 	require.Contains(t, mirrorRefs, newTagOid+" tag\trefs/tags/v1.0.0")
 	require.NotContains(t, mirrorRefs, "refs/tags/v0.0.1")
+	require.Contains(t, mirrorRefs, "refs/heads/v1.1.0")
+	require.NotContains(t, mirrorRefs, "refs/tags/v1.1.0")
 }
 
 func TestSuccessfulUpdateRemoteMirrorRequestWithWildcards(t *testing.T) {
@@ -123,6 +126,7 @@ func TestSuccessfulUpdateRemoteMirrorRequestWithWildcards(t *testing.T) {
 		{"update-ref", "refs/heads/feature", "0b4bc9a49b562e85de7cc9e834518ea6828729b9"},     // Update branch
 		// Scoped to the project, so will be removed after
 		{"branch", "-D", "not-merged-branch"}, // Delete branch
+		{"tag", "--delete", "v1.1.0"},         // v1.1.0 is ambiguous, maps to a branch and a tag in gitlab-test repository
 	}
 
 	testhelper.CreateTag(t, testRepoPath, "new-tag", "60ecb67744cb56576c30214ff52294f8ce2def98", nil) // Add tag
@@ -170,6 +174,8 @@ func TestSuccessfulUpdateRemoteMirrorRequestWithWildcards(t *testing.T) {
 	require.Contains(t, mirrorRefs, "60ecb67744cb56576c30214ff52294f8ce2def98 commit\trefs/tags/new-tag")
 	require.Contains(t, mirrorRefs, newTagOid+" tag\trefs/tags/v1.0.0")
 	require.NotContains(t, mirrorRefs, "refs/tags/v1.2.0")
+	require.Contains(t, mirrorRefs, "refs/heads/v1.1.0")
+	require.NotContains(t, mirrorRefs, "refs/tags/v1.1.0")
 }
 
 func TestSuccessfulUpdateRemoteMirrorRequestWithKeepDivergentRefs(t *testing.T) {

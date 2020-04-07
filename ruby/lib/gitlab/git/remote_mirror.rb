@@ -59,7 +59,8 @@ module Gitlab
         refs.each_with_object({}) do |ref, refs|
           next if match_refs && !include_ref?(ref.name)
 
-          refs[ref.name] = ref
+          key = ref.is_a?(Gitlab::Git::Tag) ? ref.refname : ref.name
+          refs[key] = ref
         end
       end
 
