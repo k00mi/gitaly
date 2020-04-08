@@ -2,11 +2,11 @@ package hook
 
 import (
 	"errors"
-	"fmt"
 	"os/exec"
 	"path/filepath"
 
 	"gitlab.com/gitlab-org/gitaly/internal/config"
+	"gitlab.com/gitlab-org/gitaly/internal/git/alternates"
 	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -19,8 +19,15 @@ type hookRequest interface {
 }
 
 func hookRequestEnv(req hookRequest) []string {
-	return append(gitlabshell.Env(),
-		append(req.GetEnvironmentVariables(), fmt.Sprintf("GL_REPOSITORY=%s", req.GetRepository().GetGlRepository()))...)
+	return append(gitlabshell.Env(), req.GetEnvironmentVariables()...)
+}
+
+func preReceiveEnv(req hookRequest) ([]string, error) {
+	_, env, err := alternates.PathAndEnv(req.GetRepository())
+	if err != nil {
+		return nil, err
+	}
+	return append(hookRequestEnv(req), env...), nil
 }
 
 func gitlabShellHook(hookName string) string {
@@ -52,12 +59,17 @@ func (s *server) PreReceiveHook(stream gitalypb.HookService_PreReceiveHookServer
 	c := exec.Command(gitlabShellHook("pre-receive"))
 	c.Dir = repoPath
 
+	env, err := preReceiveEnv(firstRequest)
+	if err != nil {
+		return helper.ErrInternal(err)
+	}
+
 	status, err := streamCommandResponse(
 		stream.Context(),
 		stdin,
 		stdout, stderr,
 		c,
-		hookRequestEnv(firstRequest),
+		env,
 	)
 
 	if err != nil {

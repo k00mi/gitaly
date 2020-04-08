@@ -1,10 +1,13 @@
 package smarthttp
 
 import (
+	"log"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -23,6 +26,13 @@ func TestMain(m *testing.M) {
 
 func testMain(m *testing.M) int {
 	hooks.Override = "/"
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	config.Config.Ruby.Dir = filepath.Join(cwd, "../../../ruby")
 
 	testhelper.ConfigureGitalyHooksBinary()
 

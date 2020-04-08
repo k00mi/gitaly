@@ -42,7 +42,11 @@ func (s *server) PostReceivePack(stream gitalypb.SmartHTTPService_PostReceivePac
 		return stream.Send(&gitalypb.PostReceivePackResponse{Data: p})
 	})
 
-	env := append(git.HookEnv(req), "GL_PROTOCOL=http")
+	hookEnv, err := git.HookEnv(req)
+	if err != nil {
+		return err
+	}
+	env := append(hookEnv, "GL_PROTOCOL=http")
 
 	repoPath, err := helper.GetRepoPath(req.Repository)
 	if err != nil {
@@ -81,6 +85,9 @@ func validateReceivePackRequest(req *gitalypb.PostReceivePackRequest) error {
 	}
 	if req.Data != nil {
 		return status.Errorf(codes.InvalidArgument, "PostReceivePack: non-empty Data")
+	}
+	if req.Repository == nil {
+		return helper.ErrInvalidArgumentf("PostReceivePack: empty Repository")
 	}
 
 	return nil

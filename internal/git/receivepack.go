@@ -3,8 +3,11 @@ package git
 import (
 	"fmt"
 
+	"github.com/golang/protobuf/jsonpb"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
+	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
 // ReceivePackRequest abstracts away the different requests that end up
@@ -13,16 +16,26 @@ type ReceivePackRequest interface {
 	GetGlId() string
 	GetGlUsername() string
 	GetGlRepository() string
+	GetRepository() *gitalypb.Repository
 }
+
+var jsonpbMarshaller = &jsonpb.Marshaler{}
 
 // HookEnv is information we pass down to the Git hooks during
 // git-receive-pack.
-func HookEnv(req ReceivePackRequest) []string {
+func HookEnv(req ReceivePackRequest) ([]string, error) {
+	repo, err := jsonpbMarshaller.MarshalToString(req.GetRepository())
+	if err != nil {
+		return nil, err
+	}
+
 	return append([]string{
 		fmt.Sprintf("GL_ID=%s", req.GetGlId()),
 		fmt.Sprintf("GL_USERNAME=%s", req.GetGlUsername()),
 		fmt.Sprintf("GL_REPOSITORY=%s", req.GetGlRepository()),
-	}, gitlabshell.Env()...)
+		fmt.Sprintf("GITALY_SOCKET=" + config.GitalyInternalSocketPath()),
+		fmt.Sprintf("GITALY_REPO=%s", repo),
+	}, gitlabshell.Env()...), nil
 }
 
 // ReceivePackConfig contains config options we want to enforce when

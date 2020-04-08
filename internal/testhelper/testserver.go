@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/golang/protobuf/jsonpb"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
@@ -30,6 +31,7 @@ import (
 	praefectconfig "gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/models"
 	serverauth "gitlab.com/gitlab-org/gitaly/internal/server/auth"
+	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
@@ -463,9 +465,14 @@ type GlHookValues struct {
 	GitAlternateObjectDirs                             []string
 }
 
+var jsonpbMarshaller jsonpb.Marshaler
+
 // EnvForHooks generates a set of environment variables for gitaly hooks
-func EnvForHooks(t TB, gitlabShellDir string, glHookValues GlHookValues, gitPushOptions ...string) []string {
+func EnvForHooks(t TB, gitlabShellDir, gitalySocket string, repo *gitalypb.Repository, glHookValues GlHookValues, gitPushOptions ...string) []string {
 	rubyDir, err := filepath.Abs("../../ruby")
+	require.NoError(t, err)
+
+	repoString, err := jsonpbMarshaller.MarshalToString(repo)
 	require.NoError(t, err)
 
 	env := append(append([]string{
@@ -475,6 +482,8 @@ func EnvForHooks(t TB, gitlabShellDir string, glHookValues GlHookValues, gitPush
 		fmt.Sprintf("GL_REPOSITORY=%s", glHookValues.GLRepo),
 		fmt.Sprintf("GL_PROTOCOL=%s", glHookValues.GLProtocol),
 		fmt.Sprintf("GL_USERNAME=%s", glHookValues.GLUsername),
+		fmt.Sprintf("GITALY_SOCKET=%s", gitalySocket),
+		fmt.Sprintf("GITALY_REPO=%v", repoString),
 		fmt.Sprintf("GITALY_GITLAB_SHELL_DIR=%s", gitlabShellDir),
 		fmt.Sprintf("GITALY_LOG_DIR=%s", gitlabShellDir),
 		"GITALY_LOG_LEVEL=info",
