@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
@@ -20,7 +20,7 @@ func (s *server) SSHReceivePack(stream gitalypb.SSHService_SSHReceivePackServer)
 		return helper.ErrInternal(err)
 	}
 
-	grpc_logrus.Extract(stream.Context()).WithFields(log.Fields{
+	ctxlogrus.Extract(stream.Context()).WithFields(log.Fields{
 		"GlID":             req.GlId,
 		"GlRepository":     req.GlRepository,
 		"GlUsername":       req.GlUsername,
