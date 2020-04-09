@@ -468,7 +468,7 @@ type GlHookValues struct {
 var jsonpbMarshaller jsonpb.Marshaler
 
 // EnvForHooks generates a set of environment variables for gitaly hooks
-func EnvForHooks(t TB, gitlabShellDir, gitalySocket string, repo *gitalypb.Repository, glHookValues GlHookValues, gitPushOptions ...string) []string {
+func EnvForHooks(t TB, gitlabShellDir, gitalySocket, gitalyToken string, repo *gitalypb.Repository, glHookValues GlHookValues, gitPushOptions ...string) []string {
 	rubyDir, err := filepath.Abs("../../ruby")
 	require.NoError(t, err)
 
@@ -483,6 +483,7 @@ func EnvForHooks(t TB, gitlabShellDir, gitalySocket string, repo *gitalypb.Repos
 		fmt.Sprintf("GL_PROTOCOL=%s", glHookValues.GLProtocol),
 		fmt.Sprintf("GL_USERNAME=%s", glHookValues.GLUsername),
 		fmt.Sprintf("GITALY_SOCKET=%s", gitalySocket),
+		fmt.Sprintf("GITALY_TOKEN=%s", gitalyToken),
 		fmt.Sprintf("GITALY_REPO=%v", repoString),
 		fmt.Sprintf("GITALY_GITLAB_SHELL_DIR=%s", gitlabShellDir),
 		fmt.Sprintf("GITALY_LOG_DIR=%s", gitlabShellDir),
