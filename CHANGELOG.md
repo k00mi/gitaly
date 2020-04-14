@@ -66,6 +66,10 @@
 - Simplify loading of required Ruby files. !1942
 
 
+## 12.8.9
+
+- No changes.
+
 ## 12.8.7
 
 - No changes.
