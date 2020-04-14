@@ -11,6 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	hook "gitlab.com/gitlab-org/gitaly/internal/service/hooks"
@@ -63,6 +64,11 @@ func testMain(m *testing.M) int {
 	testhelper.ConfigureGitalySSH()
 	testhelper.ConfigureGitalyHooksBinary()
 
+	defer func(token string) {
+		config.Config.Auth.Token = token
+	}(config.Config.Auth.Token)
+	config.Config.Auth.Token = testhelper.RepositoryAuthToken
+
 	if err := RubyServer.Start(); err != nil {
 		log.Fatal(err)
 	}
@@ -72,7 +78,7 @@ func testMain(m *testing.M) int {
 }
 
 func runOperationServiceServer(t *testing.T) (string, func()) {
-	srv := testhelper.NewServer(t, nil, nil)
+	srv := testhelper.NewServerWithAuth(t, nil, nil, config.Config.Auth.Token)
 
 	gitalypb.RegisterOperationServiceServer(srv.GrpcServer(), &server{ruby: RubyServer})
 	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hook.NewServer())
@@ -94,6 +100,7 @@ func runOperationServiceServer(t *testing.T) (string, func()) {
 func newOperationClient(t *testing.T, serverSocketPath string) (gitalypb.OperationServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
+		grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials(config.Config.Auth.Token)),
 	}
 	conn, err := grpc.Dial(serverSocketPath, connOpts...)
 	if err != nil {
