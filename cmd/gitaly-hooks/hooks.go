@@ -203,7 +203,7 @@ func gitalyFromEnv() (*grpc.ClientConn, error) {
 
 	dialOpts := client.DefaultDialOpts
 	if gitalyToken != "" {
-		dialOpts = append(dialOpts, grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials(gitalyToken)))
+		dialOpts = append(dialOpts, grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(gitalyToken)))
 	}
 
 	conn, err := client.Dial("unix://"+gitalySocket, dialOpts)

@@ -9,14 +9,6 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-// RPCCredentials can be used with grpc.WithPerRPCCredentials to create a
-// grpc.DialOption that uses v1 Gitaly authentication for authentication
-// with a Gitaly server. The shared secret must match the one used on the
-// Gitaly server.
-func RPCCredentials(sharedSecret string) credentials.PerRPCCredentials {
-	return &rpcCredentialsV2{sharedSecret: sharedSecret}
-}
-
 // RPCCredentialsV2 can be used with grpc.WithPerRPCCredentials to create
 // a grpc.DialOption that inserts an V2 (HMAC) token with the current
 // timestamp for authentication with a Gitaly server. The shared secret
