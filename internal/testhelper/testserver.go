@@ -202,7 +202,7 @@ func (p *TestServer) Start() error {
 
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 	if p.token != "" {
-		opts = append(opts, grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials(p.token)))
+		opts = append(opts, grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(p.token)))
 	}
 
 	conn, err := grpc.Dial("unix://"+praefectServerSocketPath, opts...)

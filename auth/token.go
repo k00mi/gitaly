@@ -4,9 +4,8 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
-	"crypto/subtle"
-	"encoding/base64"
 	"encoding/hex"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -58,27 +57,13 @@ func CheckToken(ctx context.Context, secret string, targetTime time.Time) error 
 		return errUnauthenticated
 	}
 
-	switch authInfo.Version {
-	case "v1":
-		decodedToken, err := base64.StdEncoding.DecodeString(authInfo.Message)
-		if err != nil {
-			return errUnauthenticated
-		}
-
-		if tokensEqual(decodedToken, []byte(secret)) {
-			return nil
-		}
-	case "v2":
+	if authInfo.Version == "v2" {
 		if v2HmacInfoValid(authInfo.Message, authInfo.SignedMessage, []byte(secret), targetTime, timestampThreshold) {
 			return nil
 		}
 	}
 
 	return errDenied
-}
-
-func tokensEqual(tok1, tok2 []byte) bool {
-	return subtle.ConstantTimeCompare(tok1, tok2) == 1
 }
 
 // ExtractAuthInfo returns an `AuthInfo` with the data extracted from `ctx`
@@ -91,10 +76,8 @@ func ExtractAuthInfo(ctx context.Context) (*AuthInfo, error) {
 
 	split := strings.SplitN(token, ".", 3)
 
-	// v1 is base64-encoded using base64.StdEncoding, which cannot contain a ".".
-	// A v1 token cannot slip through here.
 	if len(split) != 3 {
-		return &AuthInfo{Version: "v1", Message: token}, nil
+		return nil, fmt.Errorf("invalid token format")
 	}
 
 	version, sig, msg := split[0], split[1], split[2]

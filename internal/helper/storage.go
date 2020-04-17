@@ -84,7 +84,7 @@ func InjectGitalyServers(ctx context.Context, name, address, token string) (cont
 func DialServer(gitalyServer map[string]string) (*grpc.ClientConn, error) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
-		grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials(gitalyServer["token"])),
+		grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(gitalyServer["token"])),
 	}
 
 	conn, err := client.Dial(gitalyServer["address"], connOpts)

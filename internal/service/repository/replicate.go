@@ -271,7 +271,7 @@ func (s *server) getOrCreateConnection(address, token string) (*grpc.ClientConn,
 	connOpts := []grpc.DialOption{grpc.WithInsecure()}
 
 	if token != "" {
-		connOpts = append(connOpts, grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials(token)))
+		connOpts = append(connOpts, grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(token)))
 	}
 
 	cc, ok = s.connsByAddress[address]
