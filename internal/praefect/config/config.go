@@ -148,20 +148,21 @@ func (c Config) NeedsSQL() bool {
 
 // DB holds Postgres client configuration data.
 type DB struct {
-	Host        string `toml:"host"`
-	Port        int    `toml:"port"`
-	User        string `toml:"user"`
-	Password    string `toml:"password"`
-	DBName      string `toml:"dbname"`
-	SSLMode     string `toml:"sslmode"`
-	SSLCert     string `toml:"sslcert"`
-	SSLKey      string `toml:"sslkey"`
-	SSLRootCert string `toml:"sslrootcert"`
+	Host                         string `toml:"host"`
+	Port                         int    `toml:"port"`
+	User                         string `toml:"user"`
+	Password                     string `toml:"password"`
+	DBName                       string `toml:"dbname"`
+	SSLMode                      string `toml:"sslmode"`
+	SSLCert                      string `toml:"sslcert"`
+	SSLKey                       string `toml:"sslkey"`
+	SSLRootCert                  string `toml:"sslrootcert"`
+	StatementTimeoutMilliseconds int    `toml:"default_timeout_ms"`
 }
 
 // ToPQString returns a connection string that can be passed to github.com/lib/pq.
 func (db DB) ToPQString() string {
-	var fields []string
+	fields := []string{fmt.Sprintf("statement_timeout=%d", db.StatementTimeoutMilliseconds)}
 	if db.Port > 0 {
 		fields = append(fields, fmt.Sprintf("port=%d", db.Port))
 	}

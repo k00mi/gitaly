@@ -3,6 +3,7 @@ package nodes
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metrics"
@@ -342,17 +344,60 @@ func (s *sqlElector) demotePrimary() error {
 }
 
 func (s *sqlElector) electNewPrimary(candidates []*sqlCandidate) error {
-	// Arbitrarily pick the first candidate from the list. Note that the
-	// candidate list has already been ranked in order of highest number
-	// of Praefect nodes that have reached it and the name of the
-	// Praefect identifier.
-	newPrimary := candidates[0]
+	if len(candidates) == 0 {
+		return errors.New("candidates cannot be empty")
+	}
+
+	candidateStorages := make([]string, 0, len(candidates))
+
+	for _, candidate := range candidates {
+		candidateStorages = append(candidateStorages, candidate.GetStorage())
+	}
+
+	q := `SELECT target_node_storage
+	      FROM (
+	          SELECT
+	              CASE
+	                  WHEN rq.state IN ('ready', 'in_progress') THEN 1
+	                  WHEN rq.state IN ('failed', 'dead') THEN 2
+	                  ELSE 0
+	              END AS incomplete_count,
+	              rq.job->>'target_node_storage' AS target_node_storage
+	          FROM replication_queue AS rq
+	          JOIN (
+	          	SELECT
+	          		job->>'target_node_storage' AS target_node_storage,
+	          		MAX(updated_at) AS updated_at
+	          	FROM replication_queue
+	          	WHERE state = 'completed' AND job->>'target_node_storage' = ANY ($1)
+	          	GROUP BY job->>'target_node_storage'
+	          ) latest ON rq.job->>'target_node_storage' = latest.target_node_storage AND rq.updated_at >= latest.updated_at
+	      ) AS t
+	      GROUP BY target_node_storage
+	      ORDER BY SUM(incomplete_count)
+	      FETCH FIRST ROW ONLY
+`
+	rows, err := s.db.Query(q, pq.Array(candidateStorages))
+	if err != nil {
+		return fmt.Errorf("executing query for ordering candidate nodes: %w", err)
+	}
+	defer rows.Close()
+
+	newPrimaryStorage := candidateStorages[0]
+	for rows.Next() {
+		rows.Scan(&newPrimaryStorage)
+		break
+	}
+
+	if err = rows.Err(); err != nil {
+		return fmt.Errorf("getting rows for ordering candidate nodes: %w", err)
+	}
 
 	// read_only is set only when a row already exists in the table. This avoids new shards, which
 	// do not yet have a row in the table, from starting in read-only mode. In a failover scenario,
 	// a row already exists in the table denoting the previous primary, and thus the shard should
 	// be switched to read-only mode.
-	const q = `INSERT INTO shard_primaries (elected_by_praefect, shard_name, node_name, elected_at)
+	q = `INSERT INTO shard_primaries (elected_by_praefect, shard_name, node_name, elected_at)
 	SELECT $1::VARCHAR, $2::VARCHAR, $3::VARCHAR, NOW()
 	WHERE $3 != COALESCE((SELECT node_name FROM shard_primaries WHERE shard_name = $2::VARCHAR), '')
 	ON CONFLICT (shard_name)
@@ -361,8 +406,9 @@ func (s *sqlElector) electNewPrimary(candidates []*sqlCandidate) error {
 				, elected_at = EXCLUDED.elected_at
 				, read_only = true
 				, demoted = false
+	   WHERE shard_primaries.elected_at < now() - $4::INTERVAL SECOND
 	`
-	_, err := s.db.Exec(q, s.praefectName, s.shardName, newPrimary.GetStorage())
+	_, err = s.db.Exec(q, s.praefectName, s.shardName, newPrimaryStorage, s.failoverSeconds)
 
 	if err != nil {
 		s.log.Errorf("error updating new primary: %s", err)
