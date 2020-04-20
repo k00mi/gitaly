@@ -87,7 +87,9 @@ message UpdateRemoteMirrorRequest {
   bool keep_divergent_refs = 6;
 }
 
-message UpdateRemoteMirrorResponse {}
+message UpdateRemoteMirrorResponse {
+  repeated bytes divergent_refs = 1;
+}
 
 message FindRemoteRepositoryRequest {
   string remote = 1;

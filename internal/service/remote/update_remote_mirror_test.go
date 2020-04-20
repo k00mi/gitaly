@@ -223,8 +223,9 @@ func TestSuccessfulUpdateRemoteMirrorRequestWithKeepDivergentRefs(t *testing.T) 
 	require.NoError(t, err)
 	require.NoError(t, stream.Send(firstRequest))
 
-	_, err = stream.CloseAndRecv()
+	response, err := stream.CloseAndRecv()
 	require.NoError(t, err)
+	require.ElementsMatch(t, response.DivergentRefs, [][]byte{[]byte("refs/heads/master")})
 
 	mirrorRefs := string(testhelper.MustRunCommand(t, nil, "git", "-C", mirrorPath, "for-each-ref"))
 

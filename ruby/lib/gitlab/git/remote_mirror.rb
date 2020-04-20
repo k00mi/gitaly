@@ -3,12 +3,19 @@ module Gitlab
     class RemoteMirror
       attr_reader :repository, :remote_name, :ssh_auth, :only_branches_matching
 
+      # An Array of local refnames that have diverged on the remote
+      #
+      # Only populated when `keep_divergent_refs` is enabled
+      attr_reader :divergent_refs
+
       def initialize(repository, remote_name, ssh_auth:, only_branches_matching:, keep_divergent_refs:)
         @repository = repository
         @remote_name = remote_name
         @ssh_auth = ssh_auth
         @only_branches_matching = only_branches_matching
         @keep_divergent_refs = keep_divergent_refs
+
+        @divergent_refs = []
       end
 
       def update
@@ -71,7 +78,12 @@ module Gitlab
             false
           elsif @keep_divergent_refs
             # Mirror the ref if its remote counterpart hasn't diverged
-            repository.ancestor?(remote_target&.id, local_target&.id)
+            if repository.ancestor?(remote_target&.id, local_target&.id)
+              true
+            else
+              @divergent_refs << ref.refname
+              false
+            end
           else
             # Attempt to overwrite whatever's on the remote; push rules and
             # protected branches may still prevent this

@@ -2,6 +2,9 @@ module GitalyServer
   class RemoteService < Gitaly::RemoteService::Service
     include Utils
 
+    # Maximum number of divergent refs to return in UpdateRemoteMirrorResponse
+    DIVERGENT_REF_LIMIT = 100
+
     def add_remote(request, call)
       repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
 
@@ -38,7 +41,9 @@ module GitalyServer
 
       remote_mirror.update
 
-      Gitaly::UpdateRemoteMirrorResponse.new
+      Gitaly::UpdateRemoteMirrorResponse.new(
+        divergent_refs: remote_mirror.divergent_refs.take(DIVERGENT_REF_LIMIT)
+      )
     end
   end
 end

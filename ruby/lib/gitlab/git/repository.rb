@@ -181,7 +181,7 @@ module Gitlab
 
           target_commit = Gitlab::Git::Commit.find(self, ref.target)
           Gitlab::Git::Tag.new(self,
-                               name: ref.name,
+                               name: ref.canonical_name,
                                target: ref.target,
                                target_commit: target_commit,
                                message: message)
@@ -543,7 +543,7 @@ module Gitlab
         rugged_ref = rugged.branches[name]
         if rugged_ref
           target_commit = Gitlab::Git::Commit.find(self, rugged_ref.target)
-          Gitlab::Git::Branch.new(self, rugged_ref.name, rugged_ref.target, target_commit)
+          Gitlab::Git::Branch.new(self, rugged_ref.canonical_name, rugged_ref.target, target_commit)
         end
       end
 
@@ -552,7 +552,7 @@ module Gitlab
 
         return unless rugged_ref
 
-        Gitlab::Git::Ref.new(self, rugged_ref.name, rugged_ref.target, rugged_ref.target_id)
+        Gitlab::Git::Ref.new(self, rugged_ref.canonical_name, rugged_ref.target, rugged_ref.target_id)
       end
 
       # Delete the specified branch from the repository
@@ -798,7 +798,7 @@ module Gitlab
         branches = rugged.branches.each(filter).map do |rugged_ref|
           begin
             target_commit = Gitlab::Git::Commit.find(self, rugged_ref.target)
-            Gitlab::Git::Branch.new(self, rugged_ref.name, rugged_ref.target, target_commit)
+            Gitlab::Git::Branch.new(self, rugged_ref.canonical_name, rugged_ref.target, target_commit)
           rescue Rugged::ReferenceError
             # Omit invalid branch
           end
