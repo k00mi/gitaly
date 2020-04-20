@@ -38,6 +38,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
       optional :keep_divergent_refs, :bool, 6
     end
     add_message "gitaly.UpdateRemoteMirrorResponse" do
+      repeated :divergent_refs, :bytes, 1
     end
     add_message "gitaly.FindRemoteRepositoryRequest" do
       optional :remote, :string, 1

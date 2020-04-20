@@ -5,6 +5,9 @@ module Gitlab
     class Ref
       include Gitlab::EncodingHelper
 
+      # Canonical refname, including `refs/heads|tags/` prefix
+      attr_reader :refname
+
       # Branch or tag name
       # without "refs/tags|heads" prefix
       attr_reader :name
@@ -34,6 +37,7 @@ module Gitlab
       end
 
       def initialize(_repository, name, target, dereferenced_target)
+        @refname = name
         @name = Gitlab::Git.ref_name(name)
         @dereferenced_target = dereferenced_target
         @target = if target.respond_to?(:oid)
