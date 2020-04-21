@@ -26,6 +26,23 @@ module Gitlab
           end
         end
 
+        # Run an experiment to see if ls-remote gives us the same data
+        #
+        # See https://gitlab.com/gitlab-org/gitaly/-/issues/2670
+        if feature_enabled?(:remote_branches_ls_remote)
+          ls_remote_branches = experimental_remote_branches(remote_name)
+
+          control_refs = branches.collect(&:name)
+          experiment_refs = ls_remote_branches.collect(&:name)
+
+          if control_refs != experiment_refs
+            diff = experiment_refs.difference(control_refs).map { |r| "+#{r}" }
+            diff.concat(control_refs.difference(experiment_refs).map { |r| "-#{r}" })
+
+            Rails.logger.warn("experimental_remote_branches returned differing values from control: #{diff.join(', ')}")
+          end
+        end
+
         branches
       end
 
@@ -46,6 +63,23 @@ module Gitlab
 
         rugged.config["remote.#{remote_name}.mirror"] = true
         rugged.config["remote.#{remote_name}.prune"] = true
+      end
+
+      # Experimental: Get a list of remote branches via `ls-remote`
+      def experimental_remote_branches(remote, env: {})
+        list_remote_refs(remote, env: env).map do |line|
+          target, refname = line.strip.split("\t")
+
+          if target.nil? || refname.nil?
+            Rails.logger.info("Empty or invalid list of heads for remote: #{remote}")
+            break []
+          end
+
+          next unless refname.start_with?('refs/heads/')
+
+          target_commit = Gitlab::Git::Commit.find(self, target)
+          Gitlab::Git::Branch.new(self, refname, target, target_commit)
+        end.compact
       end
 
       def remote_tags(remote, env: {})
