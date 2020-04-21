@@ -1,5 +1,0 @@
----
-title: Use reference counting in limithandler middleware
-merge_request: 1984
-author:
-type: fixed

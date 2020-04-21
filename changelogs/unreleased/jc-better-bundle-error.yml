@@ -1,5 +1,0 @@
----
-title: Explicitly check for existing repository in CreateRepositoryFromBundle
-merge_request: 1980
-author:
-type: changed
