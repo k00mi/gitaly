@@ -2,6 +2,8 @@ package internalgitaly
 
 import (
 	"io"
+	"log"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,17 +15,24 @@ import (
 )
 
 func TestWalkRepos(t *testing.T) {
-	server, serverSocketPath := runInternalGitalyServer(t)
+	testRoot, clean := testhelper.TempDir(t)
+	defer clean()
+
+	log.Printf("testRoot: %s", testRoot)
+
+	storageName := "default"
+	storageRoot := filepath.Join(testRoot, "storage")
+
+	server, serverSocketPath := runInternalGitalyServer(t, []config.Storage{
+		{Name: storageName, Path: storageRoot},
+	})
 	defer server.Stop()
 
 	client, conn := newInternalGitalyClient(t, serverSocketPath)
 	defer conn.Close()
 
-	testRepo1, _, cleanupFn1 := testhelper.NewTestRepo(t)
-	defer cleanupFn1()
-
-	testRepo2, _, cleanupFn2 := testhelper.NewTestRepo(t)
-	defer cleanupFn2()
+	testRepo1 := testhelper.NewTestRepoTo(t, storageRoot, "a")
+	testRepo2 := testhelper.NewTestRepoTo(t, storageRoot, "b")
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
@@ -40,7 +49,7 @@ func TestWalkRepos(t *testing.T) {
 	require.Equal(t, codes.NotFound, s.Code())
 
 	stream, err = client.WalkRepos(ctx, &gitalypb.WalkReposRequest{
-		StorageName: config.Config.Storages[0].Name,
+		StorageName: storageName,
 	})
 	require.NoError(t, err)
 
