@@ -4,14 +4,13 @@ import (
 	"net"
 	"testing"
 
-	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
-func runInternalGitalyServer(t *testing.T, storages []config.Storage) (*grpc.Server, string) {
+func runInternalGitalyServer(t *testing.T, srv gitalypb.InternalGitalyServer) (*grpc.Server, string) {
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 	grpcServer := testhelper.NewTestGrpcServer(t, nil, nil)
 
@@ -20,7 +19,7 @@ func runInternalGitalyServer(t *testing.T, storages []config.Storage) (*grpc.Ser
 		t.Fatal(err)
 	}
 
-	gitalypb.RegisterInternalGitalyServer(grpcServer, NewServer(storages))
+	gitalypb.RegisterInternalGitalyServer(grpcServer, srv)
 	reflection.Register(grpcServer)
 
 	go grpcServer.Serve(listener)

@@ -128,8 +128,8 @@ func GitalyServersMetadata(t testing.TB, serverSocketPath string) metadata.MD {
 	return metadata.Pairs("gitaly-servers", base64.StdEncoding.EncodeToString(gitalyServersJSON))
 }
 
-// isValidRepo checks whether a valid git repository exists at the given path.
-func isValidRepo(absolutePath string) bool {
+// isValidRepoPath checks whether a valid git repository exists at the given path.
+func isValidRepoPath(absolutePath string) bool {
 	if _, err := os.Stat(filepath.Join(absolutePath, "objects")); err != nil {
 		return false
 	}
@@ -149,7 +149,7 @@ func TestRepository() *gitalypb.Repository {
 	}
 
 	storagePath, _ := config.Config.StoragePath(repo.GetStorageName())
-	if !isValidRepo(filepath.Join(storagePath, repo.RelativePath)) {
+	if !isValidRepoPath(filepath.Join(storagePath, repo.RelativePath)) {
 		panic("Test repo not found, did you run `make prepare-tests`?")
 	}
 
@@ -482,7 +482,7 @@ func NewTestRepoWithWorktree(t testing.TB) (repo *gitalypb.Repository, repoPath 
 // It is cloned under the path by the test preparing step of make.
 func testRepositoryPath(t testing.TB) string {
 	path := filepath.Join(GitlabTestStoragePath(), TestRelativePath)
-	if !isValidRepo(path) {
+	if !isValidRepoPath(path) {
 		t.Fatalf("local clone of 'gitlab-org/gitlab-test.git' not found in %q, did you run `make prepare-tests`?", path)
 	}
 
