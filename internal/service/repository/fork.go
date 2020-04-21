@@ -4,22 +4,16 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 
-	"github.com/golang/protobuf/jsonpb"
-	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/gitalyssh"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
-	gitaly_x509 "gitlab.com/gitlab-org/gitaly/internal/x509"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
-	"gitlab.com/gitlab-org/labkit/tracing"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 const gitalyInternalURL = "ssh://gitaly/internal.git"
-
-var envInjector = tracing.NewEnvInjector()
 
 func (s *server) CreateFork(ctx context.Context, req *gitalypb.CreateForkRequest) (*gitalypb.CreateForkResponse, error) {
 	targetRepository := req.Repository
@@ -45,43 +39,10 @@ func (s *server) CreateFork(ctx context.Context, req *gitalypb.CreateForkRequest
 		return nil, status.Errorf(codes.Internal, "CreateFork: create dest dir: %v", err)
 	}
 
-	gitalyServersInfo, err := helper.ExtractGitalyServers(ctx)
+	env, err := gitalyssh.UploadPackEnv(ctx, &gitalypb.SSHUploadPackRequest{Repository: sourceRepository})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "CreateFork: extracting Gitaly servers: %v", err)
+		return nil, err
 	}
-
-	sourceRepositoryStorageInfo, ok := gitalyServersInfo[sourceRepository.StorageName]
-	if !ok {
-		return nil, status.Errorf(codes.InvalidArgument, "CreateFork: no storage info for %s", sourceRepository.StorageName)
-	}
-
-	sourceRepositoryGitalyAddress := sourceRepositoryStorageInfo["address"]
-	if sourceRepositoryGitalyAddress == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "CreateFork: empty gitaly address")
-	}
-
-	sourceRepositoryGitalyToken := sourceRepositoryStorageInfo["token"]
-
-	cloneReq := &gitalypb.SSHUploadPackRequest{Repository: sourceRepository}
-	pbMarshaler := &jsonpb.Marshaler{}
-	payload, err := pbMarshaler.MarshalToString(cloneReq)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "CreateFork: marshalling payload failed: %v", err)
-	}
-
-	gitalySSHPath := path.Join(config.Config.BinDir, "gitaly-ssh")
-
-	env := []string{
-		fmt.Sprintf("GITALY_ADDRESS=%s", sourceRepositoryGitalyAddress),
-		fmt.Sprintf("GITALY_PAYLOAD=%s", payload),
-		fmt.Sprintf("GITALY_TOKEN=%s", sourceRepositoryGitalyToken),
-		fmt.Sprintf("GIT_SSH_COMMAND=%s upload-pack", gitalySSHPath),
-		// Pass through the SSL_CERT_* variables that indicate which
-		// system certs to trust
-		fmt.Sprintf("%s=%s", gitaly_x509.SSLCertDir, os.Getenv(gitaly_x509.SSLCertDir)),
-		fmt.Sprintf("%s=%s", gitaly_x509.SSLCertFile, os.Getenv(gitaly_x509.SSLCertFile)),
-	}
-	env = envInjector(ctx, env)
 
 	cmd, err := git.SafeBareCmd(ctx, nil, nil, nil, env, nil, git.SubCmd{
 		Name:  "clone",

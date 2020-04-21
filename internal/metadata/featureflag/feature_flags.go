@@ -8,6 +8,8 @@ const (
 	LinguistFileCountStats = "linguist_file_count_stats"
 	// HooksRPC will invoke update, pre receive, and post receive hooks by using RPCs
 	HooksRPC = "hooks_rpc"
+	// GoFetchInternalRemote enables a go implementation of FetchInternalRemote
+	GoFetchInternalRemote = "go_fetch_internal_remote"
 )
 
 const (
