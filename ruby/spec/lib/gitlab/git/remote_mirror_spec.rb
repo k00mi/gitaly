@@ -27,6 +27,10 @@ describe Gitlab::Git::RemoteMirror do
     double("ref-#{name}", name: name, dereferenced_target: double(id: name))
   end
 
+  def tag(name)
+    Gitlab::Git::Tag.new(nil, name: "refs/tags/#{name}", target_commit: double(id: name))
+  end
+
   describe '#update' do
     context 'with wildcard protected branches' do
       subject(:remote_mirror) do
@@ -48,10 +52,10 @@ describe Gitlab::Git::RemoteMirror do
           .with(ref_name)
           .and_return([ref('master'), ref('obsolete-branch')])
 
-        expect(repository).to receive(:tags).and_return([ref('v1.0.0'), ref('new-tag')])
+        expect(repository).to receive(:tags).and_return([tag('v1.0.0'), tag('new-tag')])
         expect(repository).to receive(:remote_tags)
           .with(ref_name, env: env)
-          .and_return([ref('v1.0.0'), ref('obsolete-tag')])
+          .and_return([tag('v1.0.0'), tag('obsolete-tag')])
 
         expect(gitlab_projects)
           .to receive(:push_branches)
@@ -60,7 +64,7 @@ describe Gitlab::Git::RemoteMirror do
 
         expect(gitlab_projects)
           .to receive(:push_branches)
-          .with(ref_name, gl_projects_timeout, gl_projects_force, ['v1.0.0', 'new-tag'], env: env)
+          .with(ref_name, gl_projects_timeout, gl_projects_force, ['refs/tags/v1.0.0', 'refs/tags/new-tag'], env: env)
           .and_return(true)
 
         # Leave remote branches that do not match the protected branch filter
@@ -70,7 +74,7 @@ describe Gitlab::Git::RemoteMirror do
 
         expect(gitlab_projects)
           .to receive(:delete_remote_branches)
-          .with(ref_name, ['obsolete-tag'], env: env)
+          .with(ref_name, ['refs/tags/obsolete-tag'], env: env)
           .and_return(true)
 
         remote_mirror.update
@@ -86,10 +90,10 @@ describe Gitlab::Git::RemoteMirror do
         .with(ref_name)
         .and_return([ref('master'), ref('obsolete-branch')])
 
-      expect(repository).to receive(:tags).and_return([ref('v1.0.0'), ref('new-tag')])
+      expect(repository).to receive(:tags).and_return([tag('v1.0.0'), tag('new-tag')])
       expect(repository).to receive(:remote_tags)
         .with(ref_name, env: env)
-        .and_return([ref('v1.0.0'), ref('obsolete-tag')])
+        .and_return([tag('v1.0.0'), tag('obsolete-tag')])
 
       expect(gitlab_projects)
         .to receive(:push_branches)
@@ -98,7 +102,7 @@ describe Gitlab::Git::RemoteMirror do
 
       expect(gitlab_projects)
         .to receive(:push_branches)
-        .with(ref_name, gl_projects_timeout, gl_projects_force, ['v1.0.0', 'new-tag'], env: env)
+        .with(ref_name, gl_projects_timeout, gl_projects_force, ['refs/tags/v1.0.0', 'refs/tags/new-tag'], env: env)
         .and_return(true)
 
       expect(gitlab_projects)
@@ -108,7 +112,7 @@ describe Gitlab::Git::RemoteMirror do
 
       expect(gitlab_projects)
         .to receive(:delete_remote_branches)
-        .with(ref_name, ['obsolete-tag'], env: env)
+        .with(ref_name, ['refs/tags/obsolete-tag'], env: env)
         .and_return(true)
 
       remote_mirror.update

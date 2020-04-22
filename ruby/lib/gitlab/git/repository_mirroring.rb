@@ -67,22 +67,21 @@ module Gitlab
         # Each line has this format: "dc872e9fa6963f8f03da6c8f6f264d0845d6b092\trefs/tags/v1.10.0\n"
         # We want to convert it to: [{ 'v1.10.0' => 'dc872e9fa6963f8f03da6c8f6f264d0845d6b092' }, ...]
         list_remote_tags(remote, env: env).map do |line|
-          target, path = line.strip.split("\t")
+          target, refname = line.strip.split("\t")
 
           # When the remote repo does not have tags.
-          if target.nil? || path.nil?
+          if target.nil? || refname.nil?
             Rails.logger.info "Empty or invalid list of tags for remote: #{remote}"
             break []
           end
 
-          name = path.split('/', 3).last
           # We're only interested in tag references
           # See: http://stackoverflow.com/questions/15472107/when-listing-git-ls-remote-why-theres-after-the-tag-name
-          next if name =~ /\^\{\}\Z/
+          next if refname.end_with?('^{}')
 
           target_commit = Gitlab::Git::Commit.find(self, target)
           Gitlab::Git::Tag.new(self,
-                               name: name,
+                               name: refname,
                                target: target,
                                target_commit: target_commit)
         end.compact
