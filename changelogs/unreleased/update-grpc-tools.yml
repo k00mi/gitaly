@@ -1,5 +1,0 @@
----
-title: update ruby gems grpc/grpc-tools to 1.27.0 and google-protobuf to 3.11.4
-merge_request:
-author:
-type: other

@@ -1,5 +1,0 @@
----
-title: Add metric counter for mismatched checksums after replication
-merge_request: 1943
-author:
-type: added
