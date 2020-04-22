@@ -1,5 +1,115 @@
 # Gitaly changelog
 
+## v12.10.0
+
+#### Added
+- Praefect: Postgres queue implementation in use
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1989
+- Adding metrics to track which nodes are up and down
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/2019
+- RPC ConsistencyCheck and Praefect reconcile subcommand
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1903
+- Add gitaly-blackbox prometheus exporter
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1860
+- Add histogram to keep track of node healthcheck latency
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1921
+- Praefect dataloss subcommand
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/2057
+- Add metric for replication delay
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1997
+- Add a metric counting the number of negotiated packfiles
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/2011
+- Praefect: Enable Postgres binary protocol
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1995
+- Add repository profile
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1959
+- Don't push divergent remote branches with keep_divergent_refs
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1915
+- Add metric counter for mismatched checksums after replication
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1943
+- Praefect: replication event queue as a primary storage of events
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1948
+- Add SQL-based election for shard primaries
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1979
+- Propagate GarbageCollect, RepackFull, RepackIncremental to secondary nodes
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1970
+- Call hook rpcs from operations service
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/2034
+- Enable client prometheus histogram
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1987
+- Add Praefect command to show migration status
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/2041
+
+#### Changed
+- Support ignoring unknown Praefect migrations
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/2039
+- Make Praefect sql-migrate ignore unknown migrations by default
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/2058
+- Add EnvironmentVariables field in hook rpcs
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1969
+- Explicitly check for existing repository in CreateRepositoryFromBundle
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1980
+
+#### Deprecated
+- Drop support for Gitaly v1 authentication
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/2024
+- Upgrade to Git 2.26
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1983
+
+#### Fixed
+- Commit signature parsing must consume all data
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1953
+- Allow commits with invalid timezones to be pushed
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1947
+- Check for git-linguist error code
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1923
+- Praefect: avoid early request cancellation when queueing replication jobs
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/2062
+- Race condition on ProxyHeaderWhitelist
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/2025
+- UserCreateTag: pass tag object to hooks when creating annotated tag
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1956
+- Fix flaky test TestLimiter
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1965
+- Exercise Operations service tests with auth
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/2059
+- Fix localElector locking issues
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/2030
+- Pass gitaly token into gitaly-hooks
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/2035
+- Validate offset/limit for ListLastCommitsForTree
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1996
+- Use reference counting in limithandler middleware
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1984
+- Modify Praefect's server info implementation
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1991
+
+#### Other
+- Refactor Praefect node manager
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1940
+- update ruby gems grpc/grpc-tools to 1.27.0 and google-protobuf to 3.11.4
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/
+- Update parser and unparser Ruby gems
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1961
+- Remove feature flags for InfoRef cache
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/2038
+- Static code analysis: unconvert
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/2046
+
+#### Performance
+- Call Hook RPCs from gitaly-hooks binary
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1740
+
+#### Removed
+- Drop go 1.12 support
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1976
+- Remove gitaly-remote command
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1992
+
+#### Security
+- Validate content of alternates file
+  https://gitlab.com/gitlab-org/gitaly/merge_requests/1946
+
 ## 12.9.4
 
 - No changes.

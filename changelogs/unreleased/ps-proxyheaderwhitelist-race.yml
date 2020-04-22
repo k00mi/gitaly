@@ -1,5 +1,0 @@
----
-title: Race condition on ProxyHeaderWhitelist
-merge_request: 2025
-author:
-type: fixed
