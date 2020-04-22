@@ -1,0 +1,5 @@
+---
+title: Drop support for Gitaly v1 authentication
+merge_request: 2024
+author:
+type: deprecated

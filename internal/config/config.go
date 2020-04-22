@@ -199,7 +199,7 @@ func (h *hookErrs) Add(err error) {
 }
 
 func validateHooks() error {
-	if os.Getenv("GITALY_TESTING_NO_GIT_HOOKS") == "1" {
+	if SkipHooks() {
 		return nil
 	}
 
@@ -278,6 +278,10 @@ func validateStorages() error {
 	return nil
 }
 
+func SkipHooks() bool {
+	return os.Getenv("GITALY_TESTING_NO_GIT_HOOKS") == "1"
+}
+
 // SetGitPath populates the variable GitPath with the path to the `git`
 // executable. It warns if no path was specified in the configuration.
 func SetGitPath() error {
@@ -319,8 +323,7 @@ func (c Cfg) Storage(storageName string) (Storage, bool) {
 func validateBinDir() error {
 	if err := validateIsDirectory(Config.BinDir, "bin_dir"); err != nil {
 		log.WithError(err).Warn("Gitaly bin directory is not configured")
-		// TODO this must become a fatal error
-		return nil
+		return err
 	}
 
 	var err error

@@ -1,10 +1,11 @@
 package ssh
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
-	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
@@ -20,7 +21,7 @@ func (s *server) SSHReceivePack(stream gitalypb.SSHService_SSHReceivePackServer)
 		return helper.ErrInternal(err)
 	}
 
-	grpc_logrus.Extract(stream.Context()).WithFields(log.Fields{
+	ctxlogrus.Extract(stream.Context()).WithFields(log.Fields{
 		"GlID":             req.GlId,
 		"GlRepository":     req.GlRepository,
 		"GlUsername":       req.GlUsername,
@@ -53,7 +54,11 @@ func sshReceivePack(stream gitalypb.SSHService_SSHReceivePackServer, req *gitaly
 		return stream.Send(&gitalypb.SSHReceivePackResponse{Stderr: p})
 	})
 
-	env := append(git.HookEnv(req), "GL_PROTOCOL=ssh")
+	hookEnv, err := git.ReceivePackHookEnv(ctx, req)
+	if err != nil {
+		return err
+	}
+	env := append(hookEnv, "GL_PROTOCOL=ssh")
 
 	repoPath, err := helper.GetRepoPath(req.Repository)
 	if err != nil {
@@ -93,10 +98,13 @@ func sshReceivePack(stream gitalypb.SSHService_SSHReceivePackServer, req *gitaly
 
 func validateFirstReceivePackRequest(req *gitalypb.SSHReceivePackRequest) error {
 	if req.GlId == "" {
-		return fmt.Errorf("empty GlId")
+		return errors.New("empty GlId")
 	}
 	if req.Stdin != nil {
-		return fmt.Errorf("non-empty data in first request")
+		return errors.New("non-empty data in first request")
+	}
+	if req.Repository == nil {
+		return errors.New("repository is empty")
 	}
 
 	return nil

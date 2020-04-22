@@ -57,7 +57,7 @@ func TestFetchIntoObjectPool_Success(t *testing.T) {
 	require.Len(t, packFiles, 1, "ensure commits got packed")
 
 	packContents := testhelper.MustRunCommand(t, nil, "git", "-C", pool.FullPath(), "verify-pack", "-v", packFiles[0])
-	require.Contains(t, string(packContents), string(repoCommit))
+	require.Contains(t, string(packContents), repoCommit)
 
 	_, err = client.FetchIntoObjectPool(ctx, req)
 	require.NoError(t, err, "calling FetchIntoObjectPool twice should be OK")
@@ -65,12 +65,12 @@ func TestFetchIntoObjectPool_Success(t *testing.T) {
 }
 
 func TestFetchIntoObjectPool_CollectLogStatistics(t *testing.T) {
-	defer func(tl func(tb testhelper.TB) *logrus.Logger) {
+	defer func(tl func(tb testing.TB) *logrus.Logger) {
 		testhelper.NewTestLogger = tl
 	}(testhelper.NewTestLogger)
 
 	logBuffer := &bytes.Buffer{}
-	testhelper.NewTestLogger = func(tb testhelper.TB) *logrus.Logger {
+	testhelper.NewTestLogger = func(tb testing.TB) *logrus.Logger {
 		return &logrus.Logger{Out: logBuffer, Formatter: &logrus.JSONFormatter{}, Level: logrus.InfoLevel}
 	}
 

@@ -5,11 +5,10 @@ import (
 	"io"
 	"sync"
 
-	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/cache"
-	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -45,18 +44,13 @@ func init() {
 	prometheus.MustRegister(hitMissTotals)
 }
 
-// UploadPackCacheFeatureFlagKey enables cache usage in InfoRefsUploadPack RPC
-const UploadPackCacheFeatureFlagKey = "inforef-uploadpack-cache"
-
 func tryCache(ctx context.Context, in *gitalypb.InfoRefsRequest, w io.Writer, missFn func(io.Writer) error) error {
-	if !featureflag.IsEnabled(ctx, UploadPackCacheFeatureFlagKey) ||
-		!featureflag.IsEnabled(ctx, featureflag.CacheInvalidator) ||
-		len(in.GetGitConfigOptions()) > 0 ||
+	if len(in.GetGitConfigOptions()) > 0 ||
 		len(in.GetGitProtocol()) > 0 {
 		return missFn(w)
 	}
 
-	logger := grpc_logrus.Extract(ctx).WithFields(log.Fields{"service": uploadPackSvc})
+	logger := ctxlogrus.Extract(ctx).WithFields(log.Fields{"service": uploadPackSvc})
 	logger.Debug("Attempting to fetch cached response")
 	countAttempt()
 

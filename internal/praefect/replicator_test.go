@@ -148,7 +148,7 @@ func TestProcessReplicationJob(t *testing.T) {
 	entry := testhelper.DiscardTestEntry(t)
 	replicator.log = entry
 
-	nodeMgr, err := nodes.NewManager(entry, conf, promtest.NewMockHistogramVec())
+	nodeMgr, err := nodes.NewManager(entry, conf, nil, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 	nodeMgr.Start(1*time.Millisecond, 5*time.Millisecond)
 
@@ -225,7 +225,7 @@ func TestPropagateReplicationJob(t *testing.T) {
 	}
 	logEntry := testhelper.DiscardTestEntry(t)
 
-	nodeMgr, err := nodes.NewManager(logEntry, conf, promtest.NewMockHistogramVec())
+	nodeMgr, err := nodes.NewManager(logEntry, conf, nil, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 	nodeMgr.Start(1*time.Millisecond, 5*time.Millisecond)
 
@@ -393,7 +393,7 @@ func TestConfirmReplication(t *testing.T) {
 
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
-		grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials(testhelper.RepositoryAuthToken)),
+		grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(testhelper.RepositoryAuthToken)),
 	}
 	conn, err := grpc.Dial(srvSocketPath, connOpts...)
 	require.NoError(t, err)
@@ -526,7 +526,7 @@ func TestProcessBacklog_FailedJobs(t *testing.T) {
 
 	logEntry := testhelper.DiscardTestEntry(t)
 
-	nodeMgr, err := nodes.NewManager(logEntry, conf, promtest.NewMockHistogramVec())
+	nodeMgr, err := nodes.NewManager(logEntry, conf, nil, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 
 	replMgr := NewReplMgr("default", logEntry, ds, nodeMgr)
@@ -664,7 +664,7 @@ func TestProcessBacklog_Success(t *testing.T) {
 
 	logEntry := testhelper.DiscardTestEntry(t)
 
-	nodeMgr, err := nodes.NewManager(logEntry, conf, promtest.NewMockHistogramVec())
+	nodeMgr, err := nodes.NewManager(logEntry, conf, nil, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 
 	replMgr := NewReplMgr(conf.VirtualStorages[0].Name, logEntry, ds, nodeMgr)
@@ -706,7 +706,7 @@ func TestBackoff(t *testing.T) {
 }
 
 func runFullGitalyServer(t *testing.T) (*grpc.Server, string) {
-	server := serverPkg.NewInsecure(RubyServer)
+	server := serverPkg.NewInsecure(RubyServer, gitaly_config.Config)
 
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 
@@ -754,7 +754,7 @@ func newReplicationService(tb testing.TB) (*grpc.Server, string) {
 func newRepositoryClient(t *testing.T, serverSocketPath string) (gitalypb.RepositoryServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
-		grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials(testhelper.RepositoryAuthToken)),
+		grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(testhelper.RepositoryAuthToken)),
 	}
 	conn, err := grpc.Dial(serverSocketPath, connOpts...)
 	if err != nil {
@@ -767,7 +767,6 @@ func newRepositoryClient(t *testing.T, serverSocketPath string) (gitalypb.Reposi
 var RubyServer = &rubyserver.Server{}
 
 func TestMain(m *testing.M) {
-	testhelper.ConfigureGitalySSH()
 	testhelper.Configure()
 	os.Exit(testMain(m))
 }
@@ -782,6 +781,8 @@ func testMain(m *testing.M) int {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	testhelper.ConfigureGitalySSH()
 
 	if err := RubyServer.Start(); err != nil {
 		log.Fatal(err)

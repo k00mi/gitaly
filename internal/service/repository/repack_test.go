@@ -50,12 +50,12 @@ func TestRepackIncrementalSuccess(t *testing.T) {
 }
 
 func TestRepackIncrementalCollectLogStatistics(t *testing.T) {
-	defer func(tl func(tb testhelper.TB) *logrus.Logger) {
+	defer func(tl func(tb testing.TB) *logrus.Logger) {
 		testhelper.NewTestLogger = tl
 	}(testhelper.NewTestLogger)
 
 	logBuffer := &bytes.Buffer{}
-	testhelper.NewTestLogger = func(tb testhelper.TB) *logrus.Logger {
+	testhelper.NewTestLogger = func(tb testing.TB) *logrus.Logger {
 		return &logrus.Logger{Out: logBuffer, Formatter: &logrus.JSONFormatter{}, Level: logrus.InfoLevel}
 	}
 
@@ -114,7 +114,7 @@ func TestRepackLocal(t *testing.T) {
 
 	packContents := testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "verify-pack", "-v", packFiles[0])
 	require.NotContains(t, string(packContents), string(altDirsCommit))
-	require.Contains(t, string(packContents), string(repoCommit))
+	require.Contains(t, string(packContents), repoCommit)
 }
 
 func TestRepackIncrementalFailure(t *testing.T) {
@@ -199,12 +199,12 @@ func TestRepackFullSuccess(t *testing.T) {
 }
 
 func TestRepackFullCollectLogStatistics(t *testing.T) {
-	defer func(tl func(tb testhelper.TB) *logrus.Logger) {
+	defer func(tl func(tb testing.TB) *logrus.Logger) {
 		testhelper.NewTestLogger = tl
 	}(testhelper.NewTestLogger)
 
 	logBuffer := &bytes.Buffer{}
-	testhelper.NewTestLogger = func(tb testhelper.TB) *logrus.Logger {
+	testhelper.NewTestLogger = func(tb testing.TB) *logrus.Logger {
 		return &logrus.Logger{Out: logBuffer, Formatter: &logrus.JSONFormatter{}, Level: logrus.InfoLevel}
 	}
 

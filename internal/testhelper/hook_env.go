@@ -2,11 +2,12 @@ package testhelper
 
 import (
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
+	"testing"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
@@ -14,7 +15,7 @@ import (
 
 // CaptureHookEnv creates a bogus 'update' Git hook to sniff out what
 // environment variables get set for hooks.
-func CaptureHookEnv(t TB) (hookPath string, cleanup func()) {
+func CaptureHookEnv(t testing.TB) (hookPath string, cleanup func()) {
 	var err error
 	oldOverride := hooks.Override
 	hooks.Override, err = filepath.Abs("testdata/scratch/hooks")
@@ -37,11 +38,8 @@ env | grep -e ^GIT -e ^GL_ > `+hookOutputFile+"\n"), 0755))
 
 // ConfigureGitalyHooksBinary builds gitaly-hooks command for tests
 func ConfigureGitalyHooksBinary() {
-	var err error
-
-	config.Config.BinDir, err = filepath.Abs("testdata/gitaly-libexec")
-	if err != nil {
-		log.Fatal(err)
+	if config.Config.BinDir == "" {
+		log.Fatal("config.Config.BinDir must be set")
 	}
 
 	goBuildArgs := []string{

@@ -3,6 +3,7 @@ package praefect
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/sirupsen/logrus"
@@ -11,6 +12,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/grpc-proxy/proxy"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -77,6 +79,11 @@ func NewCoordinator(l logrus.FieldLogger, ds datastore.Datastore, nodeMgr nodes.
 }
 
 func (c *Coordinator) directRepositoryScopedMessage(ctx context.Context, mi protoregistry.MethodInfo, peeker proxy.StreamModifier, fullMethodName string, m proto.Message) (*proxy.StreamParameters, error) {
+	ctx, err := metadata.InjectPraefectServer(ctx, c.conf)
+	if err != nil {
+		return nil, fmt.Errorf("could not inject Praefect server")
+	}
+
 	targetRepo, err := mi.TargetRepo(m)
 	if err != nil {
 		return nil, helper.ErrInvalidArgument(err)
@@ -216,7 +223,10 @@ func (c *Coordinator) createReplicaJobs(
 	return func() {
 		correlationID := c.ensureCorrelationID(ctx, targetRepo)
 
+		var wg sync.WaitGroup
 		for _, secondary := range secondaries {
+			wg.Add(1)
+
 			event := datastore.ReplicationEvent{
 				Job: datastore.ReplicationJob{
 					Change:            change,
@@ -228,13 +238,11 @@ func (c *Coordinator) createReplicaJobs(
 				Meta: datastore.Params{metadatahandler.CorrelationIDKey: correlationID},
 			}
 
-			// TODO: it could happen that there won't be enough time to enqueue replication events
-			// do we need to create another ctx with another timeout?
-			// https://gitlab.com/gitlab-org/gitaly/-/issues/2586
 			go func() {
+				defer wg.Done()
 				_, err := c.datastore.Enqueue(ctx, event)
 				if err != nil {
-					c.log.WithFields(logrus.Fields{
+					c.log.WithError(err).WithFields(logrus.Fields{
 						logWithReplSource: event.Job.SourceNodeStorage,
 						logWithReplTarget: event.Job.TargetNodeStorage,
 						logWithReplChange: event.Job.Change,
@@ -243,6 +251,7 @@ func (c *Coordinator) createReplicaJobs(
 				}
 			}()
 		}
+		wg.Wait()
 	}
 }
 

@@ -19,6 +19,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper/promtest"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/labkit/correlation"
+	"google.golang.org/grpc/metadata"
 )
 
 var testLogger = logrus.New()
@@ -75,7 +76,7 @@ func TestStreamDirector(t *testing.T) {
 
 	entry := testhelper.DiscardTestEntry(t)
 
-	nodeMgr, err := nodes.NewManager(entry, conf, promtest.NewMockHistogramVec())
+	nodeMgr, err := nodes.NewManager(entry, conf, nil, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 	r := protoregistry.New()
 	require.NoError(t, r.RegisterFiles(protoregistry.GitalyProtoFileDescriptors...))
@@ -95,6 +96,10 @@ func TestStreamDirector(t *testing.T) {
 	streamParams, err := coordinator.StreamDirector(correlation.ContextWithCorrelation(ctx, "my-correlation-id"), fullMethod, peeker)
 	require.NoError(t, err)
 	require.Equal(t, address, streamParams.Conn().Target())
+
+	md, ok := metadata.FromOutgoingContext(streamParams.Context())
+	require.True(t, ok)
+	require.Contains(t, md, "praefect-server")
 
 	mi, err := coordinator.registry.LookupMethod(fullMethod)
 	require.NoError(t, err)
@@ -200,7 +205,7 @@ func TestAbsentCorrelationID(t *testing.T) {
 
 	entry := testhelper.DiscardTestEntry(t)
 
-	nodeMgr, err := nodes.NewManager(entry, conf, promtest.NewMockHistogramVec())
+	nodeMgr, err := nodes.NewManager(entry, conf, nil, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 
 	coordinator := NewCoordinator(entry, ds, nodeMgr, conf, protoregistry.GitalyProtoPreregistered)

@@ -14,9 +14,11 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/golang/protobuf/jsonpb"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
@@ -30,9 +32,9 @@ import (
 	praefectconfig "gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/models"
 	serverauth "gitlab.com/gitlab-org/gitaly/internal/server/auth"
+	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
-	"google.golang.org/grpc/health/grpc_health_v1"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"gopkg.in/yaml.v2"
 )
@@ -75,7 +77,7 @@ func NewTestServer(srv *grpc.Server, opts ...TestServerOpt) *TestServer {
 }
 
 // NewServerWithAuth creates a new test server with authentication
-func NewServerWithAuth(tb TB, streamInterceptors []grpc.StreamServerInterceptor, unaryInterceptors []grpc.UnaryServerInterceptor, token string, opts ...TestServerOpt) *TestServer {
+func NewServerWithAuth(tb testing.TB, streamInterceptors []grpc.StreamServerInterceptor, unaryInterceptors []grpc.UnaryServerInterceptor, token string, opts ...TestServerOpt) *TestServer {
 	if token != "" {
 		if PraefectEnabled() {
 			opts = append(opts, WithToken(token))
@@ -201,7 +203,7 @@ func (p *TestServer) Start() error {
 
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 	if p.token != "" {
-		opts = append(opts, grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials(p.token)))
+		opts = append(opts, grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(p.token)))
 	}
 
 	conn, err := grpc.Dial("unix://"+praefectServerSocketPath, opts...)
@@ -239,7 +241,7 @@ func waitForPraefectStartup(conn *grpc.ClientConn) error {
 }
 
 // NewServer creates a Server for testing purposes
-func NewServer(tb TB, streamInterceptors []grpc.StreamServerInterceptor, unaryInterceptors []grpc.UnaryServerInterceptor, opts ...TestServerOpt) *TestServer {
+func NewServer(tb testing.TB, streamInterceptors []grpc.StreamServerInterceptor, unaryInterceptors []grpc.UnaryServerInterceptor, opts ...TestServerOpt) *TestServer {
 	logger := NewTestLogger(tb)
 	logrusEntry := log.NewEntry(logger).WithField("test", tb.Name())
 
@@ -261,7 +263,7 @@ func NewServer(tb TB, streamInterceptors []grpc.StreamServerInterceptor, unaryIn
 
 var changeLineRegex = regexp.MustCompile("^[a-f0-9]{40} [a-f0-9]{40} refs/[^ ]+$")
 
-func handleAllowed(t TB, options GitlabTestServerOptions) func(w http.ResponseWriter, r *http.Request) {
+func handleAllowed(t testing.TB, options GitlabTestServerOptions) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		require.NoError(t, r.ParseForm())
 		require.Equal(t, http.MethodPost, r.Method, "expected http post")
@@ -333,7 +335,7 @@ func handleAllowed(t TB, options GitlabTestServerOptions) func(w http.ResponseWr
 	}
 }
 
-func handlePreReceive(t TB, options GitlabTestServerOptions) func(w http.ResponseWriter, r *http.Request) {
+func handlePreReceive(t testing.TB, options GitlabTestServerOptions) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		require.NoError(t, r.ParseForm())
 		require.Equal(t, http.MethodPost, r.Method)
@@ -350,7 +352,7 @@ func handlePreReceive(t TB, options GitlabTestServerOptions) func(w http.Respons
 	}
 }
 
-func handlePostReceive(t TB, options GitlabTestServerOptions) func(w http.ResponseWriter, r *http.Request) {
+func handlePostReceive(t testing.TB, options GitlabTestServerOptions) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		require.NoError(t, r.ParseForm())
 		require.Equal(t, http.MethodPost, r.Method)
@@ -409,7 +411,7 @@ type GitlabTestServerOptions struct {
 }
 
 // NewGitlabTestServer returns a mock gitlab server that responds to the hook api endpoints
-func NewGitlabTestServer(t TB, options GitlabTestServerOptions) *httptest.Server {
+func NewGitlabTestServer(t testing.TB, options GitlabTestServerOptions) *httptest.Server {
 	mux := http.NewServeMux()
 	mux.Handle("/api/v4/internal/allowed", http.HandlerFunc(handleAllowed(t, options)))
 	mux.Handle("/api/v4/internal/pre_receive", http.HandlerFunc(handlePreReceive(t, options)))
@@ -421,7 +423,7 @@ func NewGitlabTestServer(t TB, options GitlabTestServerOptions) *httptest.Server
 
 // CreateTemporaryGitlabShellDir creates a temporary gitlab shell directory. It returns the path to the directory
 // and a cleanup function
-func CreateTemporaryGitlabShellDir(t TB) (string, func()) {
+func CreateTemporaryGitlabShellDir(t testing.TB) (string, func()) {
 	tempDir, err := ioutil.TempDir("", "gitlab-shell")
 	require.NoError(t, err)
 	return tempDir, func() {
@@ -431,7 +433,7 @@ func CreateTemporaryGitlabShellDir(t TB) (string, func()) {
 
 // WriteTemporaryGitlabShellConfigFile writes a gitlab shell config.yml in a temporary directory. It returns the path
 // and a cleanup function
-func WriteTemporaryGitlabShellConfigFile(t TB, dir string, config GitlabShellConfig) (string, func()) {
+func WriteTemporaryGitlabShellConfigFile(t testing.TB, dir string, config GitlabShellConfig) (string, func()) {
 	out, err := yaml.Marshal(&config)
 	require.NoError(t, err)
 
@@ -445,7 +447,7 @@ func WriteTemporaryGitlabShellConfigFile(t TB, dir string, config GitlabShellCon
 
 // WriteTemporaryGitalyConfigFile writes a gitaly toml file into a temporary directory. It returns the path to
 // the file as well as a cleanup function
-func WriteTemporaryGitalyConfigFile(t TB, tempDir string) (string, func()) {
+func WriteTemporaryGitalyConfigFile(t testing.TB, tempDir string) (string, func()) {
 	path := filepath.Join(tempDir, "config.toml")
 	contents := fmt.Sprintf(`
 [gitlab-shell]
@@ -463,9 +465,14 @@ type GlHookValues struct {
 	GitAlternateObjectDirs                             []string
 }
 
+var jsonpbMarshaller jsonpb.Marshaler
+
 // EnvForHooks generates a set of environment variables for gitaly hooks
-func EnvForHooks(t TB, gitlabShellDir string, glHookValues GlHookValues, gitPushOptions ...string) []string {
+func EnvForHooks(t testing.TB, gitlabShellDir, gitalySocket, gitalyToken string, repo *gitalypb.Repository, glHookValues GlHookValues, gitPushOptions ...string) []string {
 	rubyDir, err := filepath.Abs("../../ruby")
+	require.NoError(t, err)
+
+	repoString, err := jsonpbMarshaller.MarshalToString(repo)
 	require.NoError(t, err)
 
 	env := append(append([]string{
@@ -475,6 +482,9 @@ func EnvForHooks(t TB, gitlabShellDir string, glHookValues GlHookValues, gitPush
 		fmt.Sprintf("GL_REPOSITORY=%s", glHookValues.GLRepo),
 		fmt.Sprintf("GL_PROTOCOL=%s", glHookValues.GLProtocol),
 		fmt.Sprintf("GL_USERNAME=%s", glHookValues.GLUsername),
+		fmt.Sprintf("GITALY_SOCKET=%s", gitalySocket),
+		fmt.Sprintf("GITALY_TOKEN=%s", gitalyToken),
+		fmt.Sprintf("GITALY_REPO=%v", repoString),
 		fmt.Sprintf("GITALY_GITLAB_SHELL_DIR=%s", gitlabShellDir),
 		fmt.Sprintf("GITALY_LOG_DIR=%s", gitlabShellDir),
 		"GITALY_LOG_LEVEL=info",
@@ -492,7 +502,7 @@ func EnvForHooks(t TB, gitlabShellDir string, glHookValues GlHookValues, gitPush
 }
 
 // WriteShellSecretFile writes a .gitlab_shell_secret file in the specified directory
-func WriteShellSecretFile(t TB, dir, secretToken string) {
+func WriteShellSecretFile(t testing.TB, dir, secretToken string) {
 	require.NoError(t, ioutil.WriteFile(filepath.Join(dir, ".gitlab_shell_secret"), []byte(secretToken), 0644))
 }
 
@@ -508,11 +518,11 @@ type HTTPSettings struct {
 	Password string `yaml:"password"`
 }
 
-func NewServerWithHealth(t TB, socketName string) (*grpc.Server, *health.Server) {
+func NewServerWithHealth(t testing.TB, socketName string) (*grpc.Server, *health.Server) {
 	srv := NewTestGrpcServer(t, nil, nil)
 	healthSrvr := health.NewServer()
-	grpc_health_v1.RegisterHealthServer(srv, healthSrvr)
-	healthSrvr.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthpb.RegisterHealthServer(srv, healthSrvr)
+	healthSrvr.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
 
 	lis, err := net.Listen("unix", socketName)
 	require.NoError(t, err)
@@ -522,7 +532,7 @@ func NewServerWithHealth(t TB, socketName string) (*grpc.Server, *health.Server)
 	return srv, healthSrvr
 }
 
-func SetupAndStartGitlabServer(t TB, c *GitlabTestServerOptions) func() {
+func SetupAndStartGitlabServer(t testing.TB, c *GitlabTestServerOptions) func() {
 	ts := NewGitlabTestServer(t, *c)
 
 	WriteTemporaryGitlabShellConfigFile(t, config.Config.GitlabShell.Dir, GitlabShellConfig{GitlabURL: ts.URL})

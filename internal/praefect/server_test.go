@@ -51,8 +51,10 @@ func TestServerRouteServerAccessor(t *testing.T) {
 		}
 	)
 
-	cli, _, cleanup := runPraefectServerWithMock(t, conf, backends)
+	cc, _, cleanup := runPraefectServerWithMock(t, conf, datastore.Datastore{}, backends)
 	defer cleanup()
+
+	cli := mock.NewSimpleServiceClient(cc)
 
 	expectReq := &mock.SimpleRequest{Value: 1}
 
@@ -105,7 +107,8 @@ func TestGitalyServerInfo(t *testing.T) {
 
 	metadata, err := client.ServerInfo(ctx, &gitalypb.ServerInfoRequest{})
 	require.NoError(t, err)
-	require.Len(t, metadata.GetStorageStatuses(), len(conf.VirtualStorages[0].Nodes))
+	require.Len(t, metadata.GetStorageStatuses(), len(conf.VirtualStorages))
+	require.Equal(t, conf.VirtualStorages[0].Name, metadata.GetStorageStatuses()[0].StorageName)
 	require.Equal(t, version.GetVersion(), metadata.GetServerVersion())
 
 	gitVersion, err := git.Version()
@@ -134,13 +137,13 @@ func TestGitalyServerInfoBadNode(t *testing.T) {
 	}
 
 	entry := testhelper.DiscardTestEntry(t)
-	nodeMgr, err := nodes.NewManager(entry, conf, promtest.NewMockHistogramVec())
+	nodeMgr, err := nodes.NewManager(entry, conf, nil, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 
 	registry := protoregistry.New()
 	require.NoError(t, registry.RegisterFiles(protoregistry.GitalyProtoFileDescriptors...))
 
-	srv := setupServer(t, conf, nodeMgr, entry, registry)
+	srv := setupServer(t, conf, nodeMgr, datastore.Datastore{}, entry, registry)
 
 	listener, port := listenAvailPort(t)
 	go func() {
@@ -275,7 +278,7 @@ func TestWarnDuplicateAddrs(t *testing.T) {
 
 	tLogger, hook := test.NewNullLogger()
 
-	setupServer(t, conf, nil, logrus.NewEntry(tLogger), nil) // instantiates a praefect server and triggers warning
+	setupServer(t, conf, nil, datastore.Datastore{}, logrus.NewEntry(tLogger), nil) // instantiates a praefect server and triggers warning
 
 	for _, entry := range hook.Entries {
 		require.NotContains(t, entry.Message, "more than one backend node")
@@ -302,7 +305,7 @@ func TestWarnDuplicateAddrs(t *testing.T) {
 
 	tLogger, hook = test.NewNullLogger()
 
-	setupServer(t, conf, nil, logrus.NewEntry(tLogger), nil) // instantiates a praefect server and triggers warning
+	setupServer(t, conf, nil, datastore.Datastore{}, logrus.NewEntry(tLogger), nil) // instantiates a praefect server and triggers warning
 
 	var found bool
 	for _, entry := range hook.Entries {
@@ -348,7 +351,7 @@ func TestWarnDuplicateAddrs(t *testing.T) {
 
 	tLogger, hook = test.NewNullLogger()
 
-	setupServer(t, conf, nil, logrus.NewEntry(tLogger), nil) // instantiates a praefect server and triggers warning
+	setupServer(t, conf, nil, datastore.Datastore{}, logrus.NewEntry(tLogger), nil) // instantiates a praefect server and triggers warning
 
 	for _, entry := range hook.Entries {
 		require.NotContains(t, entry.Message, "more than one backend node")
@@ -559,13 +562,17 @@ func TestRepoRename(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, resp.GetExists(), "repo with new name must exist")
 	require.DirExists(t, expNewPath0, "must be renamed on secondary from %q to %q", path0, expNewPath0)
+	defer func() { require.NoError(t, os.RemoveAll(expNewPath0)) }()
 
 	// the renaming of the repo on the secondary servers is not deterministic
 	// since it relies on eventually consistent replication
 	pollUntilRemoved(t, path1, time.After(10*time.Second))
 	require.DirExists(t, expNewPath1, "must be renamed on secondary from %q to %q", path1, expNewPath1)
+	defer func() { require.NoError(t, os.RemoveAll(expNewPath1)) }()
+
 	pollUntilRemoved(t, path2, time.After(10*time.Second))
 	require.DirExists(t, expNewPath2, "must be renamed on secondary from %q to %q", path2, expNewPath2)
+	defer func() { require.NoError(t, os.RemoveAll(expNewPath2)) }()
 }
 
 func tempStoragePath(t testing.TB) string {

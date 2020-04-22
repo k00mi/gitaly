@@ -79,11 +79,6 @@ func TestAuthFailures(t *testing.T) {
 		},
 		{
 			desc: "wrong secret",
-			opts: []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials("foobar"))},
-			code: codes.PermissionDenied,
-		},
-		{
-			desc: "wrong secret new auth",
 			opts: []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2("foobar"))},
 			code: codes.PermissionDenied,
 		},
@@ -117,23 +112,7 @@ func TestAuthSuccess(t *testing.T) {
 	}{
 		{desc: "no auth, not required"},
 		{
-			desc:  "v1 incorrect auth, not required",
-			opts:  []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials("incorrect"))},
-			token: token,
-		},
-		{
-			desc:  "v1 correct auth, not required",
-			opts:  []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials(token))},
-			token: token,
-		},
-		{
-			desc:     "v1 correct auth, required",
-			opts:     []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials(token))},
-			token:    token,
-			required: true,
-		},
-		{
-			desc:  "v2 correct new auth, not required",
+			desc:  "v2 correct auth, not required",
 			opts:  []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(token))},
 			token: token,
 		},
@@ -143,7 +122,7 @@ func TestAuthSuccess(t *testing.T) {
 			token: token,
 		},
 		{
-			desc:     "v2 correct new auth, required",
+			desc:     "v2 correct auth, required",
 			opts:     []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(token))},
 			token:    token,
 			required: true,
@@ -187,7 +166,7 @@ func healthCheck(conn *grpc.ClientConn) error {
 }
 
 func runServer(t *testing.T) (*grpc.Server, string) {
-	srv := NewInsecure(nil)
+	srv := NewInsecure(nil, config.Config)
 
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 
@@ -204,7 +183,7 @@ func runSecureServer(t *testing.T) (*grpc.Server, string) {
 		KeyPath:  "testdata/gitalykey.pem",
 	}
 
-	srv := NewSecure(nil)
+	srv := NewSecure(nil, config.Config)
 
 	listener, err := net.Listen("tcp", "localhost:9999")
 	require.NoError(t, err)

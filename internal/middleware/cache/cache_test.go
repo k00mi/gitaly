@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	diskcache "gitlab.com/gitlab-org/gitaly/internal/cache"
-	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/cache"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/cache/testdata"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
@@ -32,21 +31,15 @@ func TestInvalidators(t *testing.T) {
 
 	srvr := grpc.NewServer(
 		grpc.StreamInterceptor(
-			grpc.StreamServerInterceptor(
-				cache.StreamInvalidator(mCache, reg),
-			),
+			cache.StreamInvalidator(mCache, reg),
 		),
 		grpc.UnaryInterceptor(
-			grpc.UnaryServerInterceptor(
-				cache.UnaryInvalidator(mCache, reg),
-			),
+			cache.UnaryInvalidator(mCache, reg),
 		),
 	)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-
-	ctx = featureflag.OutgoingCtxWithFeatureFlag(ctx, featureflag.CacheInvalidator)
 
 	svc := &testSvc{}
 
@@ -168,7 +161,7 @@ func streamFileDesc(t testing.TB) *descriptor.FileDescriptorProto {
 	return fdp
 }
 
-func newTestSvc(t testing.TB, ctx context.Context, srvr *grpc.Server, svc testdata.TestServiceServer) (testdata.TestServiceClient, *grpc.ClientConn, func()) { //nolint:golint
+func newTestSvc(t testing.TB, ctx context.Context, srvr *grpc.Server, svc testdata.TestServiceServer) (testdata.TestServiceClient, *grpc.ClientConn, func()) {
 	healthSrvr := health.NewServer()
 	grpc_health_v1.RegisterHealthServer(srvr, healthSrvr)
 	healthSrvr.SetServingStatus("TestService", grpc_health_v1.HealthCheckResponse_SERVING)

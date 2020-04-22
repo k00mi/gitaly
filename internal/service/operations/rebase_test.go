@@ -387,7 +387,7 @@ func TestFailedUserRebaseConfirmableDueToGitError(t *testing.T) {
 
 	firstResponse, err := rebaseStream.Recv()
 	require.NoError(t, err, "receive first response")
-	require.Contains(t, firstResponse.GitError, "error: Failed to merge in the changes.")
+	require.Contains(t, firstResponse.GitError, "CONFLICT (content): Merge conflict in README.md")
 
 	err = testhelper.ReceiveEOFWithTimeout(func() error {
 		_, err = rebaseStream.Recv()
@@ -427,13 +427,13 @@ func recvTimeout(bidi gitalypb.OperationService_UserRebaseConfirmableClient, tim
 	}
 }
 
-func buildHeaderRequest(repo *gitalypb.Repository, user *gitalypb.User, rebaseId string, branchName string, branchSha string, remoteRepo *gitalypb.Repository, remoteBranch string) *gitalypb.UserRebaseConfirmableRequest { // nolint:golint
+func buildHeaderRequest(repo *gitalypb.Repository, user *gitalypb.User, rebaseID string, branchName string, branchSha string, remoteRepo *gitalypb.Repository, remoteBranch string) *gitalypb.UserRebaseConfirmableRequest {
 	return &gitalypb.UserRebaseConfirmableRequest{
 		UserRebaseConfirmableRequestPayload: &gitalypb.UserRebaseConfirmableRequest_Header_{
-			&gitalypb.UserRebaseConfirmableRequest_Header{
+			Header: &gitalypb.UserRebaseConfirmableRequest_Header{
 				Repository:       repo,
 				User:             user,
-				RebaseId:         rebaseId,
+				RebaseId:         rebaseID,
 				Branch:           []byte(branchName),
 				BranchSha:        branchSha,
 				RemoteRepository: remoteRepo,

@@ -6,8 +6,7 @@ import (
 	"os"
 	"path"
 
-	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
-	"gitlab.com/gitlab-org/gitaly/internal/config"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/fstype"
@@ -23,13 +22,13 @@ func (s *server) ServerInfo(ctx context.Context, in *gitalypb.ServerInfoRequest)
 	}
 
 	var storageStatuses []*gitalypb.ServerInfoResponse_StorageStatus
-	for _, shard := range config.Config.Storages {
+	for _, shard := range s.storages {
 		readable, writeable := shardCheck(shard.Path)
 		fsType := fstype.FileSystem(shard.Path)
 
 		gitalyMetadata, err := storage.ReadMetadataFile(shard)
 		if err != nil {
-			grpc_logrus.Extract(ctx).WithField("storage", shard).WithError(err).Error("reading gitaly metadata file")
+			ctxlogrus.Extract(ctx).WithField("storage", shard).WithError(err).Error("reading gitaly metadata file")
 		}
 
 		storageStatuses = append(storageStatuses, &gitalypb.ServerInfoResponse_StorageStatus{

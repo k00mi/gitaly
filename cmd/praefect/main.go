@@ -14,7 +14,17 @@
 //
 // The subcommand "sql-migrate" will apply any outstanding SQL migrations.
 //
-//     praefect -config PATH_TO_CONFIG sql-migrate
+//     praefect -config PATH_TO_CONFIG sql-migrate [-ignore-unknown=true|false]
+//
+// By default, the migration will ignore any unknown migrations that are
+// not known by the Praefect binary.
+//
+// "-ignore-unknown=false" will disable this behavior.
+//
+// The subcommand "sql-migrate-status" will show which SQL migrations have
+// been applied and which ones have not:
+//
+//     praefect -config PATH_TO_CONFIG sql-migrate-status
 //
 // Dial Nodes
 //
@@ -43,6 +53,20 @@
 // reference storage is omitted, Praefect will perform the check against the
 // current primary. If the primary is the same as the target, an error will
 // occur.
+//
+// Dataloss
+//
+// The subcommand "dataloss" helps identify dataloss cases during a given
+// timeframe by checking for dead replication jobs. This can be useful to
+// quantify the impact of a primary node failure.
+//
+//     praefect -config PATH_TO_CONFIG dataloss -from RFC3339_TIME -to RFC3339_TIME
+//
+// "-from" specifies the inclusive beginning of a timerange to check.
+//
+// "-to" specifies the exclusive ending of a timerange to check.
+//
+// If a timerange is not specified, dead jobs from last six hours are fetched by default.
 package main
 
 import (
@@ -83,6 +107,17 @@ var (
 const progname = "praefect"
 
 func main() {
+	flag.Usage = func() {
+		cmds := []string{}
+		for k := range subcommands {
+			cmds = append(cmds, k)
+		}
+
+		printfErr("Usage of %s:\n", progname)
+		flag.PrintDefaults()
+		printfErr("  subcommand (optional)\n")
+		printfErr("\tOne of %s\n", strings.Join(cmds, ", "))
+	}
 	flag.Parse()
 
 	// If invoked with -version
@@ -176,7 +211,18 @@ func run(cfgs []starter.Config, conf config.Config) error {
 		return err
 	}
 
-	nodeManager, err := nodes.NewManager(logger, conf, nodeLatencyHistogram)
+	var db *sql.DB
+
+	if conf.NeedsSQL() {
+		dbConn, closedb, err := initDatabase(logger, conf)
+		if err != nil {
+			return err
+		}
+		defer closedb()
+		db = dbConn
+	}
+
+	nodeManager, err := nodes.NewManager(logger, conf, db, nodeLatencyHistogram)
 	if err != nil {
 		return err
 	}
@@ -192,11 +238,6 @@ func run(cfgs []starter.Config, conf config.Config) error {
 	}
 
 	if conf.PostgresQueueEnabled {
-		db, closedb, err := initDatabase(logger, conf)
-		if err != nil {
-			return err
-		}
-		defer closedb()
 		ds.ReplicationEventQueue = datastore.NewPostgresReplicationEventQueue(db)
 	} else {
 		ds.ReplicationEventQueue = datastore.NewMemoryReplicationEventQueue()

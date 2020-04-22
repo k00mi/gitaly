@@ -1,11 +1,18 @@
 package smarthttp
 
 import (
+	"log"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
+	diskcache "gitlab.com/gitlab-org/gitaly/internal/cache"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
+	"gitlab.com/gitlab-org/gitaly/internal/middleware/cache"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
@@ -24,13 +31,29 @@ func TestMain(m *testing.M) {
 func testMain(m *testing.M) int {
 	hooks.Override = "/"
 
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	config.Config.Ruby.Dir = filepath.Join(cwd, "../../../ruby")
+
 	testhelper.ConfigureGitalyHooksBinary()
 
 	return m.Run()
 }
 
 func runSmartHTTPServer(t *testing.T, serverOpts ...ServerOpt) (string, func()) {
-	srv := testhelper.NewServer(t, nil, nil)
+	keyer := diskcache.LeaseKeyer{}
+
+	srv := testhelper.NewServer(t,
+		[]grpc.StreamServerInterceptor{
+			cache.StreamInvalidator(keyer, protoregistry.GitalyProtoPreregistered),
+		},
+		[]grpc.UnaryServerInterceptor{
+			cache.UnaryInvalidator(keyer, protoregistry.GitalyProtoPreregistered),
+		},
+	)
 
 	gitalypb.RegisterSmartHTTPServiceServer(srv.GrpcServer(), NewServer(serverOpts...))
 	reflection.Register(srv.GrpcServer())
@@ -43,6 +66,7 @@ func runSmartHTTPServer(t *testing.T, serverOpts ...ServerOpt) (string, func()) 
 func newSmartHTTPClient(t *testing.T, serverSocketPath string) (gitalypb.SmartHTTPServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
+		grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(config.Config.Auth.Token)),
 	}
 	conn, err := grpc.Dial(serverSocketPath, connOpts...)
 	if err != nil {

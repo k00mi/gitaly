@@ -11,7 +11,7 @@ INSTALL_DEST_DIR := $(DESTDIR)$(PREFIX)/bin/
 BUNDLE_FLAGS ?= {{ .BundleFlags }}
 ASSEMBLY_ROOT ?= {{ .BuildDir }}/assembly
 BUILD_TAGS := tracer_static tracer_static_jaeger continuous_profiler_stackdriver
-SHELL = /usr/bin/env bash -eo pipefail
+SHELL = /usr/bin/env bash -e
 
 unexport GOROOT
 export GOBIN = {{ .BuildDir }}/bin
@@ -100,7 +100,7 @@ test: test-go rspec rspec-gitlab-shell
 
 .PHONY: test-go
 test-go: prepare-tests {{ .GoJunitReport }}
-	@cd {{ .SourceDir }} && go test -v -tags "$(BUILD_TAGS)" -count=1 {{ join .AllPackages " " }} 2>&1 | tee >({{ .GoJunitReport }} > report-${CI_JOB_NAME}.xml)
+	@cd {{ .SourceDir }} && go test -v -tags "$(BUILD_TAGS)" -count=1 {{ join .AllPackages " " }} 2>&1 | tee >({{ .GoJunitReport }} > report-${CI_JOB_NAME}.xml) && exit $${PIPESTATUS[0]}
 
 .PHONY: test-with-proxies
 test-with-proxies: prepare-tests
@@ -115,7 +115,7 @@ test-with-praefect: build prepare-tests
 
 .PHONY: race-go
 race-go: prepare-tests {{ .GoJunitReport }}
-	@cd {{ .SourceDir }} && go test -v -tags "$(BUILD_TAGS)" -race {{ join .AllPackages " " }} 2>&1 | tee >({{ .GoJunitReport }} > report-${CI_JOB_NAME}.xml)
+	@cd {{ .SourceDir }} && go test -v -tags "$(BUILD_TAGS)" -race {{ join .AllPackages " " }} 2>&1 | tee >({{ .GoJunitReport }} > report-${CI_JOB_NAME}.xml) && exit $${PIPESTATUS[0]}
 
 .PHONY: rspec
 rspec: assemble-go prepare-tests
@@ -128,7 +128,7 @@ rspec-gitlab-shell: {{ .GitlabShellDir }}/config.yml assemble-go prepare-tests
 
 .PHONY: test-postgres
 test-postgres: prepare-tests
-	@cd {{ .SourceDir }} && go test -tags postgres -count=1 gitlab.com/gitlab-org/gitaly/internal/praefect/datastore/...
+	@cd {{ .SourceDir }} && go test -tags postgres -count=1 gitlab.com/gitlab-org/gitaly/internal/praefect/...
 
 .PHONY: verify
 verify: check-mod-tidy check-formatting notice-up-to-date check-proto rubocop
@@ -141,9 +141,8 @@ check-mod-tidy:
 .PHONY: lint
 lint: {{ .GoLint }}
 	@cd {{ .SourceDir }} && \
-	{{ .GoLint }} run --out-format tab --config .golangci.yml; \
-	EXIT_CODE=$$?;\
-	exit $$EXIT_CODE
+	{{ .GoLint }} cache clean; \
+	{{ .GoLint }} run --out-format tab --config .golangci.yml
 
 .PHONY: check-formatting
 check-formatting: {{ .GitalyFmt }}

@@ -42,11 +42,6 @@ func TestAuthFailures(t *testing.T) {
 			code: codes.Unauthenticated,
 		},
 		{
-			desc: "wrong secret",
-			opts: []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials("foobar"))},
-			code: codes.PermissionDenied,
-		},
-		{
 			desc: "wrong secret new auth",
 			opts: []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2("foobar"))},
 			code: codes.PermissionDenied,
@@ -88,23 +83,7 @@ func TestAuthSuccess(t *testing.T) {
 	}{
 		{desc: "no auth, not required"},
 		{
-			desc:  "v1 incorrect auth, not required",
-			opts:  []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials("incorrect"))},
-			token: token,
-		},
-		{
-			desc:  "v1 correct auth, not required",
-			opts:  []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials(token))},
-			token: token,
-		},
-		{
-			desc:     "v1 correct auth, required",
-			opts:     []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentials(token))},
-			token:    token,
-			required: true,
-		},
-		{
-			desc:  "v2 correct new auth, not required",
+			desc:  "v2 correct auth, not required",
 			opts:  []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(token))},
 			token: token,
 		},
@@ -114,7 +93,7 @@ func TestAuthSuccess(t *testing.T) {
 			token: token,
 		},
 		{
-			desc:     "v2 correct new auth, required",
+			desc:     "v2 correct auth, required",
 			opts:     []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(token))},
 			token:    token,
 			required: true,
@@ -194,7 +173,7 @@ func runServer(t *testing.T, token string, required bool) (*Server, string, func
 		ReplicationEventQueue: datastore.NewMemoryReplicationEventQueue(),
 	}
 
-	nodeMgr, err := nodes.NewManager(logEntry, conf, promtest.NewMockHistogramVec())
+	nodeMgr, err := nodes.NewManager(logEntry, conf, nil, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 
 	registry := protoregistry.New()

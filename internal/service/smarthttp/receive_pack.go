@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
@@ -23,7 +23,7 @@ func (s *server) PostReceivePack(stream gitalypb.SmartHTTPService_PostReceivePac
 		return err
 	}
 
-	grpc_logrus.Extract(ctx).WithFields(log.Fields{
+	ctxlogrus.Extract(ctx).WithFields(log.Fields{
 		"GlID":             req.GlId,
 		"GlRepository":     req.GlRepository,
 		"GlUsername":       req.GlUsername,
@@ -42,7 +42,11 @@ func (s *server) PostReceivePack(stream gitalypb.SmartHTTPService_PostReceivePac
 		return stream.Send(&gitalypb.PostReceivePackResponse{Data: p})
 	})
 
-	env := append(git.HookEnv(req), "GL_PROTOCOL=http")
+	hookEnv, err := git.ReceivePackHookEnv(ctx, req)
+	if err != nil {
+		return err
+	}
+	env := append(hookEnv, "GL_PROTOCOL=http")
 
 	repoPath, err := helper.GetRepoPath(req.Repository)
 	if err != nil {
@@ -81,6 +85,9 @@ func validateReceivePackRequest(req *gitalypb.PostReceivePackRequest) error {
 	}
 	if req.Data != nil {
 		return status.Errorf(codes.InvalidArgument, "PostReceivePack: non-empty Data")
+	}
+	if req.Repository == nil {
+		return helper.ErrInvalidArgumentf("PostReceivePack: empty Repository")
 	}
 
 	return nil

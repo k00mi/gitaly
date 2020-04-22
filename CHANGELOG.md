@@ -1,5 +1,13 @@
 # Gitaly changelog
 
+## 12.9.4
+
+- No changes.
+
+## 12.9.3
+
+- No changes.
+
 ## 12.9.2
 
 - No changes.
@@ -66,6 +74,10 @@
 - Simplify loading of required Ruby files. !1942
 
 
+## 12.8.9
+
+- No changes.
+
 ## 12.8.7
 
 - No changes.
@@ -105,6 +117,10 @@
 
 - Praefect sub-commands: avoid garbage in logs. !1819
 
+
+## 12.7.9
+
+- No changes.
 
 ## 12.7.8
 

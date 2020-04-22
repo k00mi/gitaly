@@ -1,12 +1,143 @@
 package datastore
 
 import (
+	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
+
+func ContractTestCountDeadReplicationJobs(t *testing.T, q ReplicationEventQueue) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	// take the time here to include the also the
+	// completed and cancelled jobs in timerange
+	beforeOldest := time.Now()
+
+	const target = "target"
+	ackJobsToDeath := func(t *testing.T) {
+		t.Helper()
+
+		for {
+			jobs, err := q.Dequeue(ctx, target, 1)
+			require.NoError(t, err)
+			if len(jobs) == 0 {
+				break
+			}
+
+			for _, job := range jobs {
+				state := JobStateFailed
+				if job.Attempt == 0 {
+					state = JobStateDead
+				}
+
+				_, err := q.Acknowledge(ctx, state, []uint64{job.ID})
+				require.NoError(t, err)
+			}
+		}
+	}
+
+	// postgres only handles timestamps with a microsecond resolution thus
+	// we have to work with the time in microsecond sized steps
+	const tick = time.Microsecond
+
+	// add some other job states to the datastore to ensure they are not counted
+	for relPath, state := range map[string]JobState{"repo/completed-job": JobStateCompleted, "repo/cancelled-job": JobStateCancelled} {
+		_, err := q.Enqueue(ctx, ReplicationEvent{Job: ReplicationJob{RelativePath: relPath, TargetNodeStorage: target}})
+		require.NoError(t, err)
+
+		jobs, err := q.Dequeue(ctx, target, 1)
+		require.NoError(t, err)
+
+		_, err = q.Acknowledge(ctx, state, []uint64{jobs[0].ID})
+		require.NoError(t, err)
+	}
+
+	oldest, err := q.Enqueue(ctx, ReplicationEvent{Job: ReplicationJob{RelativePath: "old", TargetNodeStorage: target}})
+	require.NoError(t, err)
+
+	afterOldest := oldest.CreatedAt.Add(tick)
+
+	dead, err := q.CountDeadReplicationJobs(ctx, beforeOldest, afterOldest)
+	require.NoError(t, err)
+	require.Empty(t, dead, "should not include ready jobs")
+
+	jobs, err := q.Dequeue(ctx, target, 1)
+	require.NoError(t, err)
+
+	_, err = q.Acknowledge(ctx, JobStateFailed, []uint64{jobs[0].ID})
+	require.NoError(t, err)
+
+	dead, err = q.CountDeadReplicationJobs(ctx, beforeOldest, afterOldest)
+	require.NoError(t, err)
+	require.Empty(t, dead, "should not include failed jobs")
+
+	ackJobsToDeath(t)
+	dead, err = q.CountDeadReplicationJobs(ctx, beforeOldest, afterOldest)
+	require.NoError(t, err)
+	require.Equal(t, map[string]int64{"old": 1}, dead, "should include dead job")
+
+	middle, err := q.Enqueue(ctx, ReplicationEvent{Job: ReplicationJob{RelativePath: "new", TargetNodeStorage: target}})
+	require.NoError(t, err)
+
+	ackJobsToDeath(t)
+	dead, err = q.CountDeadReplicationJobs(ctx, beforeOldest, middle.CreatedAt.Add(tick))
+	require.NoError(t, err)
+	require.Equal(t, map[string]int64{"old": 1, "new": 1}, dead, "should include both dead jobs")
+
+	newest, err := q.Enqueue(ctx, ReplicationEvent{Job: ReplicationJob{RelativePath: "new", TargetNodeStorage: target}})
+	require.NoError(t, err)
+
+	ackJobsToDeath(t)
+	dead, err = q.CountDeadReplicationJobs(ctx, beforeOldest, newest.CreatedAt.Add(tick))
+	require.NoError(t, err)
+	require.Equal(t, map[string]int64{"old": 1, "new": 2}, dead, "dead job are grouped by relative path")
+
+	dead, err = q.CountDeadReplicationJobs(ctx, middle.CreatedAt, newest.CreatedAt.Add(-tick))
+	require.NoError(t, err)
+	require.Equal(t, map[string]int64{"new": 1}, dead, "should only count the in-between dead job")
+}
+
+func TestMemoryCountDeadReplicationJobs(t *testing.T) {
+	ContractTestCountDeadReplicationJobs(t, NewMemoryReplicationEventQueue())
+}
+
+func TestMemoryCountDeadReplicationJobsLimit(t *testing.T) {
+	q := NewMemoryReplicationEventQueue().(*memoryReplicationEventQueue)
+	q.maxDeadJobs = 2
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	const target = "target"
+
+	beforeAll := time.Now()
+	for i := 0; i < q.maxDeadJobs+1; i++ {
+		job, err := q.Enqueue(ctx, ReplicationEvent{Job: ReplicationJob{RelativePath: fmt.Sprintf("job-%d", i), TargetNodeStorage: target}})
+		require.NoError(t, err)
+
+		for i := 0; i < job.Attempt; i++ {
+			_, err := q.Dequeue(ctx, target, 1)
+			require.NoError(t, err)
+
+			state := JobStateFailed
+			if i == job.Attempt-1 {
+				state = JobStateDead
+			}
+
+			_, err = q.Acknowledge(ctx, state, []uint64{job.ID})
+			require.NoError(t, err)
+		}
+	}
+
+	dead, err := q.CountDeadReplicationJobs(ctx, beforeAll, time.Now())
+	require.NoError(t, err)
+	require.Equal(t, map[string]int64{"job-1": 1, "job-2": 1}, dead, "should only include the last two dead jobs")
+}
 
 func TestMemoryReplicationEventQueue(t *testing.T) {
 	ctx, cancel := testhelper.Context()
@@ -124,7 +255,11 @@ func TestMemoryReplicationEventQueue(t *testing.T) {
 	}
 	require.Equal(t, expAttempt3, dequeuedAttempt3[0])
 
-	acknowledgedAttempt3, err := queue.Acknowledge(ctx, JobStateFailed, []uint64{event1.ID})
+	ackFailedNoAttemptsLeft, err := queue.Acknowledge(ctx, JobStateFailed, []uint64{event1.ID})
+	require.Error(t, errDeadAckedAsFailed, err)
+	require.Empty(t, ackFailedNoAttemptsLeft)
+
+	acknowledgedAttempt3, err := queue.Acknowledge(ctx, JobStateDead, []uint64{event1.ID})
 	require.NoError(t, err)
 	require.Equal(t, []uint64{event1.ID}, acknowledgedAttempt3, "one event must be acknowledged")
 

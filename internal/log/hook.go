@@ -40,3 +40,8 @@ func (h *HookLogger) Fatalf(format string, a ...interface{}) {
 	fmt.Fprintf(os.Stderr, "error executing git hook")
 	h.logger.Fatalf(format, a...)
 }
+
+// Fatalf logs a formatted error at the Fatal level
+func (h *HookLogger) Errorf(format string, a ...interface{}) {
+	h.logger.Errorf(format, a...)
+}

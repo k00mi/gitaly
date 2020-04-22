@@ -4,13 +4,13 @@ stages:
   - publish
 
 default:
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.14-git-2.24
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.14-git-2.26
   tags:
     - gitlab-org
 
 variables:
   DOCKER_DRIVER: overlay2
-  CUSTOM_IMAGE_VERSION: ruby-2.6-golang-1.13-git-2.24
+  CUSTOM_IMAGE_VERSION: ruby-2.6-golang-1.13-git-2.26
   SAST_DISABLE_DIND: "true"
   SAST_DEFAULT_ANALYZERS: "gosec"
 
@@ -97,33 +97,41 @@ proto:
 
 build:go1.14:
   <<: *build_definition
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.14-git-2.24
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.14-git-2.26
 
 build:go1.13:
   <<: *build_definition
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.13-git-2.22
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.13-git-2.24
 
 binaries_go1.14:
   <<: *assemble_definition
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.14-git-2.24
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.14-git-2.26
 
 binaries_go1.13:
   <<: *assemble_definition
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.13-git-2.22
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.13-git-2.24
+
+test:go1.14-git-2.26-ruby-2.6:
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.14-git-2.26
+  <<: *test_definition
 
 test:go1.14-git-2.24-ruby-2.6:
   image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.14-git-2.24
   <<: *test_definition
 
-test:go1.13-git-2.21-ruby-2.6:
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.13-git-2.21
+test:go1.14-git-2.22-ruby-2.6:
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.14-git-2.26
   <<: *test_definition
 
-test:go1.13-git-2.22-ruby-2.6:
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.13-git-2.22
+test:go1.13-git-2.26-ruby-2.6:
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.13-git-2.26
   <<: *test_definition
 
 test:go1.13-git-2.24-ruby-2.6:
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.13-git-2.22
+  <<: *test_definition
+
+test:go1.13-git-2.22-ruby-2.6:
   image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.13-git-2.24
   <<: *test_definition
 
@@ -245,14 +253,15 @@ praefect_sql_test:
     - make test-postgres
 
 lint:
+  # Only Go 1.13 currently officially supported
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.13-git-2.24
   stage: test
+  retry: 2
   script:
     - go version
     - make lint
-  # Temporary allowed to fail because https://github.com/golangci/golangci-lint/issues/896
-  # The job fails frequently https://gitlab.com/gitlab-org/gitaly/-/jobs/494211383
-  # and it stops further development process, so it is temporary measure.
-  # Must be fixed under: https://gitlab.com/gitlab-org/gitaly/-/issues/2605
+  # TODO: remove the allowing of failures once golangci-lint is fixed
+  # https://gitlab.com/gitlab-org/gitaly/-/issues/2652
   allow_failure: true
 
 code_navigation:

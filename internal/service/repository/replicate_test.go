@@ -25,7 +25,7 @@ import (
 )
 
 func TestReplicateRepository(t *testing.T) {
-	tmpPath, cleanup := testhelper.TempDir(t, t.Name())
+	tmpPath, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 
 	replicaPath := filepath.Join(tmpPath, "replica")
@@ -104,7 +104,7 @@ func TestReplicateRepository(t *testing.T) {
 	)
 
 	// if an unreachable object has been replicated, that means snapshot replication was used
-	testhelper.MustRunCommand(t, nil, "git", "-C", targetRepoPath, "cat-file", "-p", string(blobID))
+	testhelper.MustRunCommand(t, nil, "git", "-C", targetRepoPath, "cat-file", "-p", blobID)
 }
 
 func TestReplicateRepositoryInvalidArguments(t *testing.T) {
@@ -197,7 +197,7 @@ func TestReplicateRepositoryInvalidArguments(t *testing.T) {
 }
 
 func TestReplicateRepository_BadRepository(t *testing.T) {
-	tmpPath, cleanup := testhelper.TempDir(t, t.Name())
+	tmpPath, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 
 	replicaPath := filepath.Join(tmpPath, "replica")
@@ -254,7 +254,7 @@ func TestReplicateRepository_BadRepository(t *testing.T) {
 }
 
 func TestReplicateRepository_FailedFetchInternalRemote(t *testing.T) {
-	tmpPath, cleanup := testhelper.TempDir(t, t.Name())
+	tmpPath, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 
 	replicaPath := filepath.Join(tmpPath, "replica")

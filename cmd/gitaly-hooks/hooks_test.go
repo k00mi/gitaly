@@ -15,7 +15,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
+	hook "gitlab.com/gitlab-org/gitaly/internal/service/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
+	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
+	"google.golang.org/grpc/reflection"
 )
 
 func TestMain(m *testing.M) {
@@ -33,7 +37,7 @@ func testMain(m *testing.M) int {
 }
 
 func TestHooksPrePostReceive(t *testing.T) {
-	_, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
 	secretToken := "secret token"
@@ -80,15 +84,40 @@ func TestHooksPrePostReceive(t *testing.T) {
 
 	gitObjectDirRegex := regexp.MustCompile(`(?m)^GIT_OBJECT_DIRECTORY=(.*)$`)
 	gitAlternateObjectDirRegex := regexp.MustCompile(`(?m)^GIT_ALTERNATE_OBJECT_DIRECTORIES=(.*)$`)
+	token := "abc123"
+	socket, stop := runHookServiceServer(t, token)
+	defer stop()
 
-	for _, hook := range []string{"pre-receive", "post-receive"} {
-		t.Run(hook, func(t *testing.T) {
-			customHookOutputPath, cleanup := testhelper.WriteEnvToCustomHook(t, testRepoPath, hook)
+	testCases := []struct {
+		hookName string
+		callRPC  bool
+	}{
+		{
+			hookName: "pre-receive",
+			callRPC:  false,
+		},
+		{
+			hookName: "post-receive",
+			callRPC:  false,
+		},
+		{
+			hookName: "pre-receive",
+			callRPC:  true,
+		},
+		{
+			hookName: "post-receive",
+			callRPC:  true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("hookName: %s, calling rpc: %v", tc.hookName, tc.callRPC), func(t *testing.T) {
+			customHookOutputPath, cleanup := testhelper.WriteEnvToCustomHook(t, testRepoPath, tc.hookName)
 			defer cleanup()
 
 			var stderr, stdout bytes.Buffer
 			stdin := bytes.NewBuffer([]byte(changes))
-			hookPath, err := filepath.Abs(fmt.Sprintf("../../ruby/git-hooks/%s", hook))
+			hookPath, err := filepath.Abs(fmt.Sprintf("../../ruby/git-hooks/%s", tc.hookName))
 			require.NoError(t, err)
 			cmd := exec.Command(hookPath)
 			cmd.Stderr = &stderr
@@ -97,6 +126,9 @@ func TestHooksPrePostReceive(t *testing.T) {
 			cmd.Env = testhelper.EnvForHooks(
 				t,
 				tempGitlabShellDir,
+				socket,
+				token,
+				testRepo,
 				testhelper.GlHookValues{
 					GLID:                   glID,
 					GLUsername:             glUsername,
@@ -107,6 +139,10 @@ func TestHooksPrePostReceive(t *testing.T) {
 				},
 				gitPushOptions...,
 			)
+
+			if tc.callRPC {
+				cmd.Env = append(cmd.Env, fmt.Sprintf("%s=true", featureflag.HooksRPCEnvVar))
+			}
 			cmd.Dir = testRepoPath
 
 			require.NoError(t, cmd.Run())
@@ -117,17 +153,18 @@ func TestHooksPrePostReceive(t *testing.T) {
 			require.Contains(t, output, "GL_USERNAME="+glUsername)
 			require.Contains(t, output, "GL_ID="+glID)
 			require.Contains(t, output, "GL_REPOSITORY="+glRepository)
-			if hook != "pre-receive" {
+
+			if tc.hookName == "pre-receive" {
+				gitObjectDirMatches := gitObjectDirRegex.FindStringSubmatch(output)
+				require.Len(t, gitObjectDirMatches, 2)
+				require.Equal(t, gitObjectDir, gitObjectDirMatches[1])
+
+				gitAlternateObjectDirMatches := gitAlternateObjectDirRegex.FindStringSubmatch(output)
+				require.Len(t, gitAlternateObjectDirMatches, 2)
+				require.Equal(t, strings.Join(gitAlternateObjectDirs, ":"), gitAlternateObjectDirMatches[1])
+			} else {
 				require.Contains(t, output, "GL_PROTOCOL="+glProtocol)
 			}
-
-			gitObjectDirMatches := gitObjectDirRegex.FindStringSubmatch(output)
-			require.Len(t, gitObjectDirMatches, 2)
-			require.Equal(t, gitObjectDir, gitObjectDirMatches[1])
-
-			gitAlternateObjectDirMatches := gitAlternateObjectDirRegex.FindStringSubmatch(output)
-			require.Len(t, gitAlternateObjectDirMatches, 2)
-			require.Equal(t, strings.Join(gitAlternateObjectDirs, ":"), gitAlternateObjectDirMatches[1])
 		})
 	}
 }
@@ -142,15 +179,10 @@ func TestHooksUpdate(t *testing.T) {
 	defer cleanup()
 
 	testhelper.WriteTemporaryGitlabShellConfigFile(t, tempGitlabShellDir, testhelper.GitlabShellConfig{GitlabURL: "http://www.example.com"})
-	_, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
-	defer cleanupFn()
 
 	os.Symlink(filepath.Join(config.Config.GitlabShell.Dir, "config.yml"), filepath.Join(tempGitlabShellDir, "config.yml"))
 
 	testhelper.WriteShellSecretFile(t, tempGitlabShellDir, "the wrong token")
-
-	customHookOutputPath, cleanup := testhelper.WriteEnvToCustomHook(t, testRepoPath, "update")
-	defer cleanup()
 
 	gitlabShellDir := config.Config.GitlabShell.Dir
 	defer func() {
@@ -159,22 +191,45 @@ func TestHooksUpdate(t *testing.T) {
 
 	config.Config.GitlabShell.Dir = tempGitlabShellDir
 
+	token := "abc123"
+	socket, stop := runHookServiceServer(t, token)
+	defer stop()
+
 	require.NoError(t, os.MkdirAll(filepath.Join(tempGitlabShellDir, "hooks", "update.d"), 0755))
 	testhelper.MustRunCommand(t, nil, "cp", "testdata/update", filepath.Join(tempGitlabShellDir, "hooks", "update.d", "update"))
-	tempFilePath := filepath.Join(testRepoPath, "tempfile")
+
+	for _, callRPC := range []bool{true, false} {
+		t.Run(fmt.Sprintf("call rpc: %t", callRPC), func(t *testing.T) {
+			testHooksUpdate(t, tempGitlabShellDir, socket, token, testhelper.GlHookValues{
+				GLID:       glID,
+				GLUsername: glUsername,
+				GLRepo:     glRepository,
+				GLProtocol: glProtocol,
+			}, callRPC)
+		})
+	}
+}
+
+func testHooksUpdate(t *testing.T, gitlabShellDir, socket, token string, glValues testhelper.GlHookValues, callRPC bool) {
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
 	refval, oldval, newval := "refval", "oldval", "newval"
-	var stdout, stderr bytes.Buffer
-
 	updateHookPath, err := filepath.Abs("../../ruby/git-hooks/update")
 	require.NoError(t, err)
 	cmd := exec.Command(updateHookPath, refval, oldval, newval)
-	cmd.Env = testhelper.EnvForHooks(t, tempGitlabShellDir, testhelper.GlHookValues{
-		GLID:       glID,
-		GLUsername: glUsername,
-		GLRepo:     glRepository,
-		GLProtocol: glProtocol,
-	})
+	cmd.Env = testhelper.EnvForHooks(t, gitlabShellDir, socket, token, testRepo, glValues)
+	cmd.Dir = testRepoPath
+	tempFilePath := filepath.Join(testRepoPath, "tempfile")
+
+	customHookOutputPath, cleanup := testhelper.WriteEnvToCustomHook(t, testRepoPath, "update")
+	defer cleanup()
+
+	var stdout, stderr bytes.Buffer
+
+	if callRPC {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=true", featureflag.HooksRPCEnvVar))
+	}
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	cmd.Dir = testRepoPath
@@ -187,17 +242,16 @@ func TestHooksUpdate(t *testing.T) {
 
 	var inputs []string
 
-	f, err := os.Open(tempFilePath)
+	b, err := ioutil.ReadFile(tempFilePath)
 	require.NoError(t, err)
-	require.NoError(t, json.NewDecoder(f).Decode(&inputs))
+	require.NoError(t, json.Unmarshal(b, &inputs))
 	require.Equal(t, []string{refval, oldval, newval}, inputs)
-	require.NoError(t, f.Close())
 
 	output := string(testhelper.MustReadFile(t, customHookOutputPath))
-	require.Contains(t, output, "GL_USERNAME="+glUsername)
-	require.Contains(t, output, "GL_ID="+glID)
-	require.Contains(t, output, "GL_REPOSITORY="+glRepository)
-	require.Contains(t, output, "GL_PROTOCOL="+glProtocol)
+	require.Contains(t, output, "GL_USERNAME="+glValues.GLUsername)
+	require.Contains(t, output, "GL_ID="+glValues.GLID)
+	require.Contains(t, output, "GL_REPOSITORY="+glValues.GLRepo)
+	require.Contains(t, output, "GL_PROTOCOL="+glValues.GLProtocol)
 }
 
 func TestHooksPostReceiveFailed(t *testing.T) {
@@ -211,7 +265,7 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
 	defer cleanup()
 
-	_, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
 	// By setting the last parameter to false, the post-receive API call will
@@ -244,12 +298,16 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 	customHookOutputPath, cleanup := testhelper.WriteEnvToCustomHook(t, testRepoPath, "post-receive")
 	defer cleanup()
 
+	token := "abc123"
+	socket, stop := runHookServiceServer(t, token)
+	defer stop()
+
 	var stdout, stderr bytes.Buffer
 
 	postReceiveHookPath, err := filepath.Abs("../../ruby/git-hooks/post-receive")
 	require.NoError(t, err)
 	cmd := exec.Command(postReceiveHookPath)
-	cmd.Env = testhelper.EnvForHooks(t, tempGitlabShellDir, testhelper.GlHookValues{
+	cmd.Env = testhelper.EnvForHooks(t, tempGitlabShellDir, socket, token, testRepo, testhelper.GlHookValues{
 		GLID:       glID,
 		GLUsername: glUsername,
 		GLRepo:     glRepository,
@@ -283,6 +341,9 @@ func TestHooksNotAllowed(t *testing.T) {
 	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
 	defer cleanup()
 
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	c := testhelper.GitlabTestServerOptions{
 		User:                        "",
 		Password:                    "",
@@ -295,8 +356,6 @@ func TestHooksNotAllowed(t *testing.T) {
 	}
 	ts := testhelper.NewGitlabTestServer(t, c)
 	defer ts.Close()
-	_, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
-	defer cleanupFn()
 
 	testhelper.WriteTemporaryGitlabShellConfigFile(t, tempGitlabShellDir, testhelper.GitlabShellConfig{GitlabURL: ts.URL})
 	testhelper.WriteShellSecretFile(t, tempGitlabShellDir, "the wrong token")
@@ -310,6 +369,9 @@ func TestHooksNotAllowed(t *testing.T) {
 	defer cleanup()
 
 	config.Config.GitlabShell.Dir = tempGitlabShellDir
+	token := "abc123"
+	socket, stop := runHookServiceServer(t, token)
+	defer stop()
 
 	var stderr, stdout bytes.Buffer
 
@@ -319,7 +381,7 @@ func TestHooksNotAllowed(t *testing.T) {
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
 	cmd.Stdin = strings.NewReader(changes)
-	cmd.Env = testhelper.EnvForHooks(t, tempGitlabShellDir, testhelper.GlHookValues{
+	cmd.Env = testhelper.EnvForHooks(t, tempGitlabShellDir, socket, token, testRepo, testhelper.GlHookValues{
 		GLID:       glID,
 		GLUsername: glUsername,
 		GLRepo:     glRepository,
@@ -427,4 +489,14 @@ func TestCheckBadCreds(t *testing.T) {
 	require.Error(t, cmd.Run())
 	require.Equal(t, "Check GitLab API access: ", stdout.String())
 	require.Equal(t, "FAILED. code: 401\n", stderr.String())
+}
+
+func runHookServiceServer(t *testing.T, token string) (string, func()) {
+	server := testhelper.NewServerWithAuth(t, nil, nil, token)
+
+	gitalypb.RegisterHookServiceServer(server.GrpcServer(), hook.NewServer())
+	reflection.Register(server.GrpcServer())
+	require.NoError(t, server.Start())
+
+	return server.Socket(), server.Stop
 }
