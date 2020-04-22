@@ -3,6 +3,7 @@ package helper
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -13,7 +14,9 @@ func ContainsPathTraversal(path string) bool {
 	separator := string(os.PathSeparator)
 	return strings.HasPrefix(path, ".."+separator) ||
 		strings.Contains(path, separator+".."+separator) ||
-		strings.HasSuffix(path, separator+"..")
+		strings.HasSuffix(path, separator+"..") ||
+		filepath.IsAbs(path) ||
+		path == ".."
 }
 
 // Pattern taken from Regular Expressions Cookbook, slightly modified though
