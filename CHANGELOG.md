@@ -1,5 +1,9 @@
 # Gitaly changelog
 
+## 12.10.1
+
+- No changes.
+
 ## 12.10.0
 
 #### Added
