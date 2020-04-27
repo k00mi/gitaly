@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
@@ -63,6 +64,9 @@ func TestSuccessfulUpdateRemoteMirrorRequest(t *testing.T) {
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
+
+	// Ensure this flag doesn't alter existing behavior
+	ctx = featureflag.OutgoingCtxWithFeatureFlag(ctx, featureflag.RemoteBranchesLsRemote)
 
 	firstRequest := &gitalypb.UpdateRemoteMirrorRequest{
 		Repository:           testRepo,
@@ -150,6 +154,9 @@ func TestSuccessfulUpdateRemoteMirrorRequestWithWildcards(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	// Ensure this flag doesn't alter existing behavior
+	ctx = featureflag.OutgoingCtxWithFeatureFlag(ctx, featureflag.RemoteBranchesLsRemote)
+
 	firstRequest := &gitalypb.UpdateRemoteMirrorRequest{
 		Repository:           testRepo,
 		RefName:              remoteName,
@@ -218,6 +225,9 @@ func TestSuccessfulUpdateRemoteMirrorRequestWithKeepDivergentRefs(t *testing.T) 
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
+
+	// Ensure this flag doesn't alter existing behavior
+	ctx = featureflag.OutgoingCtxWithFeatureFlag(ctx, featureflag.RemoteBranchesLsRemote)
 
 	firstRequest := &gitalypb.UpdateRemoteMirrorRequest{
 		Repository:        testRepo,
@@ -295,6 +305,9 @@ func TestFailedUpdateRemoteMirrorRequestDueToValidation(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
+
+			// Ensure this flag doesn't alter existing behavior
+			ctx = featureflag.OutgoingCtxWithFeatureFlag(ctx, featureflag.RemoteBranchesLsRemote)
 
 			stream, err := client.UpdateRemoteMirror(ctx)
 			require.NoError(t, err)

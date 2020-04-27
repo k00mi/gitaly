@@ -12,6 +12,8 @@ const (
 	GoFetchInternalRemote = "go_fetch_internal_remote"
 	// GoUpdateHook will bypass the ruby update hook and use the go implementation of custom hooks
 	GoUpdateHook = "go_update_hook"
+	// RemoteBranchesLsRemote will use `ls-remote` for remote branches
+	RemoteBranchesLsRemote = "ruby_remote_branches_ls_remote"
 )
 
 const (
