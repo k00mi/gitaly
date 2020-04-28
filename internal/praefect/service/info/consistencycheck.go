@@ -123,6 +123,7 @@ func checksumRepo(ctx context.Context, relpath string, node nodes.Node) (string,
 }
 
 type checksumResult struct {
+	virtualStorage   string
 	relativePath     string
 	target           string
 	reference        string
@@ -130,11 +131,12 @@ type checksumResult struct {
 	referenceStorage string
 }
 
-func checksumRepos(ctx context.Context, relpathQ <-chan string, checksumResultQ chan<- checksumResult, target, reference nodes.Node) error {
+func checksumRepos(ctx context.Context, relpathQ <-chan string, checksumResultQ chan<- checksumResult, target, reference nodes.Node, virtualStorage string) error {
 	defer close(checksumResultQ)
 
 	for repoRelPath := range relpathQ {
 		cs := checksumResult{
+			virtualStorage:   virtualStorage,
 			relativePath:     repoRelPath,
 			targetStorage:    target.GetStorage(),
 			referenceStorage: reference.GetStorage(),
@@ -171,6 +173,7 @@ func scheduleReplication(ctx context.Context, csr checksumResult, q Queue, resp 
 	event, err := q.Enqueue(ctx, datastore.ReplicationEvent{
 		Job: datastore.ReplicationJob{
 			Change:            datastore.UpdateRepo,
+			VirtualStorage:    csr.virtualStorage,
 			RelativePath:      csr.relativePath,
 			TargetNodeStorage: csr.targetStorage,
 			SourceNodeStorage: csr.referenceStorage,
@@ -238,7 +241,7 @@ func (s *Server) ConsistencyCheck(req *gitalypb.ConsistencyCheckRequest, stream 
 		return walkRepos(ctx, walkerQ, reference)
 	})
 	g.Go(func() error {
-		return checksumRepos(ctx, walkerQ, checksumResultQ, target, reference)
+		return checksumRepos(ctx, walkerQ, checksumResultQ, target, reference, req.GetVirtualStorage())
 	})
 	g.Go(func() error {
 		return ensureConsistency(ctx, checksumResultQ, s.queue, stream)

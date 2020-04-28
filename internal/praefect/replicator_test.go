@@ -158,7 +158,6 @@ func TestProcessReplicationJob(t *testing.T) {
 	var mockReplicationDelayHistogramVec promtest.MockHistogramVec
 
 	replMgr := NewReplMgr(
-		"",
 		testhelper.DiscardTestEntry(t),
 		ds,
 		nodeMgr,
@@ -232,12 +231,7 @@ func TestPropagateReplicationJob(t *testing.T) {
 	require.NoError(t, registry.RegisterFiles(protoregistry.GitalyProtoFileDescriptors...))
 	coordinator := NewCoordinator(logEntry, ds, nodeMgr, txMgr, conf, registry)
 
-	replmgr := NewReplMgr(
-		conf.VirtualStorages[0].Name,
-		logEntry,
-		ds,
-		nodeMgr,
-	)
+	replmgr := NewReplMgr(logEntry, ds, nodeMgr)
 
 	prf := NewServer(
 		coordinator.StreamDirector,
@@ -289,7 +283,7 @@ func TestPropagateReplicationJob(t *testing.T) {
 
 	replCtx, cancel := testhelper.Context()
 	defer cancel()
-	go replmgr.ProcessBacklog(replCtx, noopBackoffFunc)
+	replmgr.ProcessBacklog(replCtx, noopBackoffFunc)
 
 	// ensure primary gitaly server received the expected requests
 	waitForRequest(t, primaryServer.gcChan, expectedPrimaryGcReq, 5*time.Second)
@@ -442,7 +436,7 @@ func TestProcessBacklog_FailedJobs(t *testing.T) {
 	conf := config.Config{
 		VirtualStorages: []*config.VirtualStorage{
 			{
-				Name: "default",
+				Name: "praefect",
 				Nodes: []*models.Node{
 					&primary,
 					&secondary,
@@ -467,8 +461,8 @@ func TestProcessBacklog_FailedJobs(t *testing.T) {
 	processed := make(chan struct{})
 
 	dequeues := 0
-	queueInterceptor.OnDequeue(func(ctx context.Context, target string, count int, queue datastore.ReplicationEventQueue) ([]datastore.ReplicationEvent, error) {
-		events, err := queue.Dequeue(ctx, target, count)
+	queueInterceptor.OnDequeue(func(ctx context.Context, virtual, target string, count int, queue datastore.ReplicationEventQueue) ([]datastore.ReplicationEvent, error) {
+		events, err := queue.Dequeue(ctx, virtual, target, count)
 		if len(events) > 0 {
 			dequeues++
 		}
@@ -511,6 +505,7 @@ func TestProcessBacklog_FailedJobs(t *testing.T) {
 		RelativePath:      testRepo.RelativePath,
 		TargetNodeStorage: secondary.Storage,
 		SourceNodeStorage: primary.Storage,
+		VirtualStorage:    "praefect",
 	}
 	event1, err := ds.ReplicationEventQueue.Enqueue(ctx, datastore.ReplicationEvent{Job: okJob})
 	require.NoError(t, err)
@@ -528,11 +523,8 @@ func TestProcessBacklog_FailedJobs(t *testing.T) {
 	nodeMgr, err := nodes.NewManager(logEntry, conf, nil, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 
-	replMgr := NewReplMgr("default", logEntry, ds, nodeMgr)
-
-	go func() {
-		require.Equal(t, context.Canceled, replMgr.ProcessBacklog(ctx, noopBackoffFunc), "backlog processing failed")
-	}()
+	replMgr := NewReplMgr(logEntry, ds, nodeMgr)
+	replMgr.ProcessBacklog(ctx, noopBackoffFunc)
 
 	select {
 	case <-processed:
@@ -617,6 +609,7 @@ func TestProcessBacklog_Success(t *testing.T) {
 			RelativePath:      testRepo.GetRelativePath(),
 			TargetNodeStorage: secondary.Storage,
 			SourceNodeStorage: primary.Storage,
+			VirtualStorage:    conf.VirtualStorages[0].Name,
 		},
 	}
 
@@ -639,6 +632,7 @@ func TestProcessBacklog_Success(t *testing.T) {
 			RelativePath:      testRepo.GetRelativePath(),
 			TargetNodeStorage: secondary.Storage,
 			SourceNodeStorage: primary.Storage,
+			VirtualStorage:    conf.VirtualStorages[0].Name,
 			Params:            datastore.Params{"RelativePath": renameTo1},
 		},
 	}
@@ -653,6 +647,7 @@ func TestProcessBacklog_Success(t *testing.T) {
 			RelativePath:      renameTo1,
 			TargetNodeStorage: secondary.Storage,
 			SourceNodeStorage: primary.Storage,
+			VirtualStorage:    conf.VirtualStorages[0].Name,
 			Params:            datastore.Params{"RelativePath": renameTo2},
 		},
 	}
@@ -666,11 +661,8 @@ func TestProcessBacklog_Success(t *testing.T) {
 	nodeMgr, err := nodes.NewManager(logEntry, conf, nil, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 
-	replMgr := NewReplMgr(conf.VirtualStorages[0].Name, logEntry, ds, nodeMgr)
-
-	go func() {
-		require.Equal(t, context.Canceled, replMgr.ProcessBacklog(ctx, noopBackoffFunc), "backlog processing failed")
-	}()
+	replMgr := NewReplMgr(logEntry, ds, nodeMgr)
+	replMgr.ProcessBacklog(ctx, noopBackoffFunc)
 
 	select {
 	case <-processed:

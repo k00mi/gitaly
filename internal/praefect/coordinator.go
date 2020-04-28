@@ -2,6 +2,7 @@ package praefect
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -57,6 +58,15 @@ func getReplicationDetails(methodName string, m proto.Message) (datastore.Change
 	}
 }
 
+// grpcCall is a wrapper to assemble a set of parameters that represents an gRPC call method.
+type grpcCall struct {
+	fullMethodName string
+	methodInfo     protoregistry.MethodInfo
+	msg            proto.Message
+	peeker         proxy.StreamModifier
+	targetRepo     *gitalypb.Repository
+}
+
 // Coordinator takes care of directing client requests to the appropriate
 // downstream server. The coordinator is thread safe; concurrent calls to
 // register nodes are safe.
@@ -81,43 +91,62 @@ func NewCoordinator(l logrus.FieldLogger, ds datastore.Datastore, nodeMgr nodes.
 	}
 }
 
-func (c *Coordinator) directRepositoryScopedMessage(ctx context.Context, mi protoregistry.MethodInfo, peeker proxy.StreamModifier, fullMethodName string, m proto.Message) (*proxy.StreamParameters, error) {
+func (c *Coordinator) directRepositoryScopedMessage(ctx context.Context, call grpcCall) (*proxy.StreamParameters, error) {
 	ctx, err := metadata.InjectPraefectServer(ctx, c.conf)
 	if err != nil {
-		return nil, fmt.Errorf("could not inject Praefect server")
+		return nil, fmt.Errorf("repo scoped: could not inject Praefect server: %w", err)
 	}
 
-	targetRepo, err := mi.TargetRepo(m)
+	var ps *proxy.StreamParameters
+	switch call.methodInfo.Operation {
+	case protoregistry.OpAccessor:
+		ps, err = c.accessorStreamParameters(ctx, call)
+	case protoregistry.OpMutator:
+		ps, err = c.mutatorStreamParameters(ctx, call)
+	default:
+		err = fmt.Errorf("unknown operation type: %v", call.methodInfo.Operation)
+	}
+
 	if err != nil {
-		return nil, helper.ErrInvalidArgument(err)
+		return nil, fmt.Errorf("repo scoped: %w", err)
 	}
 
-	if targetRepo.StorageName == "" || targetRepo.RelativePath == "" {
-		return nil, helper.ErrInvalidArgumentf("target repo is invalid")
-	}
+	return ps, nil
+}
 
-	shard, err := c.nodeMgr.GetShard(targetRepo.GetStorageName())
+func (c *Coordinator) accessorStreamParameters(ctx context.Context, call grpcCall) (*proxy.StreamParameters, error) {
+	virtualStorage := call.targetRepo.StorageName
+
+	shard, err := c.nodeMgr.GetShard(virtualStorage)
 	if err != nil {
-		if err == nodes.ErrVirtualStorageNotExist {
-			return nil, helper.ErrInvalidArgument(err)
-		}
-		return nil, err
+		return nil, fmt.Errorf("accessor call: get shard: %w", err)
 	}
 
-	if err = c.rewriteStorageForRepositoryMessage(mi, m, peeker, shard.Primary.GetStorage()); err != nil {
-		return nil, err
+	if err := c.rewriteStorageForRepositoryMessage(call.methodInfo, call.msg, call.peeker, shard.Primary.GetStorage()); err != nil {
+		return nil, fmt.Errorf("accessor call: rewrite storage: %w", err)
 	}
 
-	var requestFinalizer func()
+	return proxy.NewStreamParameters(ctx, shard.Primary.GetConnection(), nil, nil), nil
+}
 
-	if mi.Operation == protoregistry.OpMutator {
-		change, params, err := getReplicationDetails(fullMethodName, m)
-		if err != nil {
-			return nil, err
-		}
+func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall) (*proxy.StreamParameters, error) {
+	virtualStorage := call.targetRepo.StorageName
 
-		requestFinalizer = c.createReplicaJobs(ctx, targetRepo, shard.Primary, shard.Secondaries, change, params)
+	shard, err := c.nodeMgr.GetShard(virtualStorage)
+	if err != nil {
+		return nil, fmt.Errorf("mutator call: get shard: %w", err)
 	}
+
+	if err = c.rewriteStorageForRepositoryMessage(call.methodInfo, call.msg, call.peeker, shard.Primary.GetStorage()); err != nil {
+		return nil, fmt.Errorf("mutator call: rewrite storage: %w", err)
+	}
+
+	change, params, err := getReplicationDetails(call.fullMethodName, call.msg)
+	if err != nil {
+		return nil, fmt.Errorf("mutator call: replication details: %w", err)
+	}
+
+	requestFinalizer := c.createReplicaJobs(ctx, virtualStorage, call.targetRepo, shard.Primary, shard.Secondaries, change, params)
 
 	return proxy.NewStreamParameters(ctx, shard.Primary.GetConnection(), requestFinalizer, nil), nil
 }
@@ -139,7 +168,29 @@ func (c *Coordinator) StreamDirector(ctx context.Context, fullMethodName string,
 	}
 
 	if mi.Scope == protoregistry.ScopeRepository {
-		return c.directRepositoryScopedMessage(ctx, mi, peeker, fullMethodName, m)
+		targetRepo, err := mi.TargetRepo(m)
+		if err != nil {
+			return nil, helper.ErrInvalidArgument(fmt.Errorf("repo scoped: %w", err))
+		}
+
+		if targetRepo.StorageName == "" || targetRepo.RelativePath == "" {
+			return nil, helper.ErrInvalidArgumentf("repo scoped: target repo is invalid")
+		}
+
+		sp, err := c.directRepositoryScopedMessage(ctx, grpcCall{
+			fullMethodName: fullMethodName,
+			methodInfo:     mi,
+			msg:            m,
+			peeker:         peeker,
+			targetRepo:     targetRepo},
+		)
+		if err != nil {
+			if errors.Is(err, nodes.ErrVirtualStorageNotExist) {
+				return nil, helper.ErrInvalidArgument(err)
+			}
+			return nil, fmt.Errorf("repo scoped: %w", err)
+		}
+		return sp, nil
 	}
 
 	// TODO: remove the need to handle non repository scoped RPCs. The only remaining one is FindRemoteRepository.
@@ -147,7 +198,7 @@ func (c *Coordinator) StreamDirector(ctx context.Context, fullMethodName string,
 	// any RPC that gets proxied through praefect must be repository scoped.
 	shard, err := c.nodeMgr.GetShard(c.conf.VirtualStorages[0].Name)
 	if err != nil {
-		if err == nodes.ErrVirtualStorageNotExist {
+		if errors.Is(err, nodes.ErrVirtualStorageNotExist) {
 			return nil, status.Errorf(codes.InvalidArgument, err.Error())
 		}
 		return nil, err
@@ -202,6 +253,7 @@ func protoMessageFromPeeker(mi protoregistry.MethodInfo, peeker proxy.StreamModi
 
 func (c *Coordinator) createReplicaJobs(
 	ctx context.Context,
+	virtualStorage string,
 	targetRepo *gitalypb.Repository,
 	primary nodes.Node,
 	secondaries []nodes.Node,
@@ -219,6 +271,7 @@ func (c *Coordinator) createReplicaJobs(
 				Job: datastore.ReplicationJob{
 					Change:            change,
 					RelativePath:      targetRepo.GetRelativePath(),
+					VirtualStorage:    virtualStorage,
 					SourceNodeStorage: primary.GetStorage(),
 					TargetNodeStorage: secondary.GetStorage(),
 					Params:            params,
@@ -231,10 +284,11 @@ func (c *Coordinator) createReplicaJobs(
 				_, err := c.datastore.Enqueue(ctx, event)
 				if err != nil {
 					c.log.WithError(err).WithFields(logrus.Fields{
-						logWithReplSource: event.Job.SourceNodeStorage,
-						logWithReplTarget: event.Job.TargetNodeStorage,
-						logWithReplChange: event.Job.Change,
-						logWithReplPath:   event.Job.RelativePath,
+						logWithReplVirtual: event.Job.VirtualStorage,
+						logWithReplSource:  event.Job.SourceNodeStorage,
+						logWithReplTarget:  event.Job.TargetNodeStorage,
+						logWithReplChange:  event.Job.Change,
+						logWithReplPath:    event.Job.RelativePath,
 					}).Error("failed to persist replication event")
 				}
 			}()

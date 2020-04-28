@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -157,7 +158,7 @@ var ErrVirtualStorageNotExist = errors.New("virtual storage does not exist")
 func (n *Mgr) GetShard(virtualStorageName string) (Shard, error) {
 	strategy, ok := n.strategies[virtualStorageName]
 	if !ok {
-		return Shard{}, ErrVirtualStorageNotExist
+		return Shard{}, fmt.Errorf("virtual storage %q: %w", virtualStorageName, ErrVirtualStorageNotExist)
 	}
 
 	return strategy.GetShard()

@@ -14,10 +14,11 @@ import (
 )
 
 func TestDatalossCheck(t *testing.T) {
+	const virtualStorage = "praefect"
 	cfg := config.Config{
 		VirtualStorages: []*config.VirtualStorage{
 			{
-				Name: "praefect",
+				Name: virtualStorage,
 				Nodes: []*models.Node{
 					{
 						DefaultPrimary: true,
@@ -37,7 +38,7 @@ func TestDatalossCheck(t *testing.T) {
 	killJobs := func(t *testing.T) {
 		t.Helper()
 		for {
-			jobs, err := rq.Dequeue(ctx, targetNode, 1)
+			jobs, err := rq.Dequeue(ctx, virtualStorage, targetNode, 1)
 			require.NoError(t, err)
 			if len(jobs) == 0 {
 				// all jobs dead
@@ -56,7 +57,8 @@ func TestDatalossCheck(t *testing.T) {
 
 	beforeTimerange, err := rq.Enqueue(ctx, datastore.ReplicationEvent{
 		Job: datastore.ReplicationJob{
-			RelativePath: "repo/before-timerange",
+			RelativePath:   "repo/before-timerange",
+			VirtualStorage: virtualStorage,
 		},
 	})
 	require.NoError(t, err)
@@ -67,6 +69,7 @@ func TestDatalossCheck(t *testing.T) {
 				Job: datastore.ReplicationJob{
 					RelativePath:      relPath,
 					TargetNodeStorage: targetNode,
+					VirtualStorage:    virtualStorage,
 				},
 			})
 			require.NoError(t, err)
@@ -83,11 +86,12 @@ func TestDatalossCheck(t *testing.T) {
 			Job: datastore.ReplicationJob{
 				RelativePath:      relPath,
 				TargetNodeStorage: targetNode,
+				VirtualStorage:    virtualStorage,
 			},
 		})
 		require.NoError(t, err)
 
-		jobs, err := rq.Dequeue(ctx, targetNode, 1)
+		jobs, err := rq.Dequeue(ctx, virtualStorage, targetNode, 1)
 		require.NoError(t, err)
 
 		_, err = rq.Acknowledge(ctx, state, []uint64{jobs[0].ID})
