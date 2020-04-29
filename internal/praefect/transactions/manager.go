@@ -24,9 +24,14 @@ func NewManager() *Manager {
 	}
 }
 
+// CancelFunc is the transaction cancellation function returned by
+// `RegisterTransaction`. Calling it will cause the transaction to be removed
+// from the transaction manager.
+type CancelFunc func()
+
 // RegisterTransaction registers a new reference transaction for a set of nodes
 // taking part in the transaction.
-func (mgr *Manager) RegisterTransaction(nodes []string) (uint64, error) {
+func (mgr *Manager) RegisterTransaction(nodes []string) (uint64, CancelFunc, error) {
 	mgr.lock.Lock()
 	defer mgr.lock.Unlock()
 
@@ -34,7 +39,7 @@ func (mgr *Manager) RegisterTransaction(nodes []string) (uint64, error) {
 	// usually the primary. This limitation will be lifted at a later point
 	// to allow for real transaction voting and multi-phase commits.
 	if len(nodes) != 1 {
-		return 0, helper.ErrInvalidArgumentf("transaction requires exactly one node")
+		return 0, nil, helper.ErrInvalidArgumentf("transaction requires exactly one node")
 	}
 
 	// Use a random transaction ID. Using monotonic incrementing counters
@@ -43,12 +48,19 @@ func (mgr *Manager) RegisterTransaction(nodes []string) (uint64, error) {
 	// nodes still have in-flight transactions.
 	transactionID := rand.Uint64()
 	if _, ok := mgr.transactions[transactionID]; ok {
-		return 0, helper.ErrInternalf("transaction exists already")
+		return 0, nil, helper.ErrInternalf("transaction exists already")
 	}
-
 	mgr.transactions[transactionID] = nodes[0]
 
-	return transactionID, nil
+	return transactionID, func() {
+		mgr.cancelTransaction(transactionID)
+	}, nil
+}
+
+func (mgr *Manager) cancelTransaction(transactionID uint64) {
+	mgr.lock.Lock()
+	defer mgr.lock.Unlock()
+	delete(mgr.transactions, transactionID)
 }
 
 // StartTransaction is called by a client who's starting a reference
@@ -76,26 +88,6 @@ func (mgr *Manager) StartTransaction(transactionID uint64, node string, hash []b
 	if transaction != node {
 		return helper.ErrInternalf("invalid node for transaction: %q", node)
 	}
-
-	// Currently, only the primary node will perform transactions. We can
-	// thus just delete the transaction as soon as it starts the
-	// transaction and instruct it to commit.
-	delete(mgr.transactions, transactionID)
-
-	return nil
-}
-
-// CancelTransaction cancels a registered transaction, removing all data
-// associated with it.
-func (mgr *Manager) CancelTransaction(transactionID uint64) error {
-	mgr.lock.Lock()
-	defer mgr.lock.Unlock()
-
-	_, ok := mgr.transactions[transactionID]
-	if !ok {
-		return helper.ErrNotFound(fmt.Errorf("no such transaction: %d", transactionID))
-	}
-	delete(mgr.transactions, transactionID)
 
 	return nil
 }

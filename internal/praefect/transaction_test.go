@@ -39,9 +39,10 @@ func TestTransactionSucceeds(t *testing.T) {
 
 	client := gitalypb.NewRefTransactionClient(cc)
 
-	transactionID, err := txMgr.RegisterTransaction([]string{"node1"})
+	transactionID, cancelTransaction, err := txMgr.RegisterTransaction([]string{"node1"})
 	require.NoError(t, err)
 	require.NotZero(t, transactionID)
+	defer cancelTransaction()
 
 	hash := sha1.Sum([]byte{})
 
@@ -58,7 +59,7 @@ func TestTransactionFailsWithMultipleNodes(t *testing.T) {
 	_, txMgr, cleanup := runPraefectWithTransactionMgr(t)
 	defer cleanup()
 
-	_, err := txMgr.RegisterTransaction([]string{"node1", "node2"})
+	_, _, err := txMgr.RegisterTransaction([]string{"node1", "node2"})
 	require.Error(t, err)
 }
 
@@ -90,11 +91,11 @@ func TestTransactionCancellation(t *testing.T) {
 
 	client := gitalypb.NewRefTransactionClient(cc)
 
-	transactionID, err := txMgr.RegisterTransaction([]string{"node1"})
+	transactionID, cancelTransaction, err := txMgr.RegisterTransaction([]string{"node1"})
 	require.NoError(t, err)
 	require.NotZero(t, transactionID)
 
-	require.NoError(t, txMgr.CancelTransaction(transactionID))
+	cancelTransaction()
 
 	hash := sha1.Sum([]byte{})
 	_, err = client.StartTransaction(ctx, &gitalypb.StartTransactionRequest{
