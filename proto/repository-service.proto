@@ -23,6 +23,11 @@ service RepositoryService {
       op: MUTATOR
     };
   }
+  rpc MidxRepack(MidxRepackRequest) returns (MidxRepackResponse) {
+    option (op_type) = {
+      op: MUTATOR
+    };
+  }
   rpc GarbageCollect(GarbageCollectRequest) returns (GarbageCollectResponse) {
     option (op_type) = {
       op: MUTATOR
@@ -241,6 +246,12 @@ message RepackFullRequest {
 }
 
 message RepackFullResponse {}
+
+message MidxRepackRequest {
+  Repository repository = 1 [(target_repository)=true];
+}
+
+message MidxRepackResponse {}
 
 message GarbageCollectRequest {
   Repository repository = 1 [(target_repository)=true];

@@ -17,6 +17,7 @@ module Gitaly
       rpc :RepositoryExists, Gitaly::RepositoryExistsRequest, Gitaly::RepositoryExistsResponse
       rpc :RepackIncremental, Gitaly::RepackIncrementalRequest, Gitaly::RepackIncrementalResponse
       rpc :RepackFull, Gitaly::RepackFullRequest, Gitaly::RepackFullResponse
+      rpc :MidxRepack, Gitaly::MidxRepackRequest, Gitaly::MidxRepackResponse
       rpc :GarbageCollect, Gitaly::GarbageCollectRequest, Gitaly::GarbageCollectResponse
       rpc :WriteCommitGraph, Gitaly::WriteCommitGraphRequest, Gitaly::WriteCommitGraphResponse
       rpc :RepositorySize, Gitaly::RepositorySizeRequest, Gitaly::RepositorySizeResponse
