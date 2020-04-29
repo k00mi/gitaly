@@ -297,3 +297,21 @@ no-changes:
 
 smoke-test: all rspec
 	@cd {{ .SourceDir }} && go test ./internal/rubyserver
+
+.PHONY: download-git
+download-git:
+	@echo "Getting Git from {{ .GitArtifactUrl }}"
+	wget -P {{ .BuildDir }} -O {{ .GitBuildTarball }} {{ .GitArtifactUrl }}
+	rm -rf {{ .GitInstallDir }}
+	mkdir -p {{ .GitInstallDir }}
+	tar -C {{ .GitInstallDir }} -xvzf {{ .BuildDir }}/{{ .GitBuildTarball }}
+
+.PHONY: build-git
+build-git:
+	@echo "Getting Git from {{ .GitDefaultRepoUrl }}"
+	rm -rf {{ .GitSourceDir }} {{ .GitInstallDir }}
+	git clone {{ .GitDefaultRepoUrl }} {{ .GitSourceDir }}
+	git -C {{ .GitSourceDir }} checkout {{ .GitDefaultRev }}
+	rm -rf {{ .GitInstallDir }}
+	mkdir -p {{ .GitInstallDir }}
+	$(MAKE) -C {{ .GitSourceDir }} prefix={{ .GitDefaultPrefix }} {{ .GitBuildOptions }} install
