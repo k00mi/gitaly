@@ -326,6 +326,68 @@ func (gm *gitalyMake) IsGDK() bool {
 	return err == nil
 }
 
+// Variables used with Git
+
+func (gm *gitalyMake) GitDefaultRev() string {
+	rev := os.Getenv("GIT_REV")
+	if rev != "" {
+		return rev
+	}
+	return "master"
+}
+
+func (gm *gitalyMake) GitDefaultBuildJob() string {
+	job := os.Getenv("GIT_BUILD_JOB")
+	if job != "" {
+		return job
+	}
+	return "build"
+}
+
+func (gm *gitalyMake) GitInstallDir() string { return filepath.Join(gm.BuildDir(), "git") }
+func (gm *gitalyMake) GitBuildTarball() string { return "git_full_bins.tgz"}
+
+func (gm *gitalyMake) GitArtifactUrl() string {
+	return "https://gitlab.com/gitlab-org/gitlab-git/-/jobs/artifacts/" +
+		gm.GitDefaultRev() + "/raw/" +
+		gm.GitBuildTarball() + "?job=" +
+		gm.GitDefaultBuildJob()
+}
+
+func (gm *gitalyMake) GitDefaultRepoUrl() string {
+	url := os.Getenv("GIT_REPO_URL")
+	if url != "" {
+		return url
+	}
+	return "https://gitlab.com/gitlab-org/gitlab-git.git"
+}
+
+func (gm *gitalyMake) GitSourceDir() string { return filepath.Join(gm.BuildDir(), "src", "git") }
+
+func (gm *gitalyMake) GitBuildOptions() string {
+	buildOptions := []string{
+		"-j 8",			// use multiple parallele jobs
+		"DEVELOPER=1",		// activate developer checks
+		"CFLAGS='-O0 -g3'",	// make it easy to debug in case of crashes
+		"NO_PERL=YesPlease",
+		"NO_EXPAT=YesPlease",
+		"NO_TCLTK=YesPlease",
+		"NO_GETTEXT=YesPlease",
+		"NO_PYTHON=YesPlease",
+		"NO_INSTALL_HARDLINKS=YesPlease",
+		"NO_R_TO_GCC_LINKER=YesPlease",
+	}
+	return strings.Join(buildOptions, " ")
+}
+
+func (gm *gitalyMake) GitDefaultPrefix() string {
+	prefix := os.Getenv("GIT_PREFIX")
+	if prefix != "" {
+		return prefix
+	}
+	return gm.GitInstallDir()
+}
+
 var templateText = func() string {
 	contents, err := ioutil.ReadFile("../_support/Makefile.template")
 	if err != nil {

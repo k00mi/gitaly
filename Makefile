@@ -116,6 +116,14 @@ no-changes: prepare-build
 smoke-test: prepare-build
 	cd $(BUILD_DIR) && $(MAKE) $@
 
+.PHONY: download-git
+download-git: prepare-build
+	cd $(BUILD_DIR) && $(MAKE) $@
+
+.PHONY: build-git
+build-git: prepare-build
+	cd $(BUILD_DIR) && $(MAKE) $@
+
 .PHONY: prepare-build
 prepare-build: $(BUILD_DIR)/.ok update-makefile
 $(BUILD_DIR)/.ok:
