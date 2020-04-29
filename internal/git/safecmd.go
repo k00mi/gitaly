@@ -48,6 +48,12 @@ type SubCmd struct {
 	PostSepArgs []string // post separator (i.e. "--") positional args
 }
 
+// CmdStream represents standard input/output streams for a command
+type CmdStream struct {
+	In       io.Reader // standard input
+	Out, Err io.Writer // standard output and error
+}
+
 var subCmdNameRegex = regexp.MustCompile(`^[[:alnum:]]+(-[[:alnum:]]+)*$`)
 
 // IsCmd allows SubCmd to satisfy the Cmd interface
@@ -198,7 +204,7 @@ func SafeBareCmd(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer,
 		return nil, err
 	}
 
-	return unsafeBareCmd(ctx, stdin, stdout, stderr, env, args...)
+	return unsafeBareCmd(ctx, CmdStream{In: stdin, Out: stdout, Err: stderr}, env, args...)
 }
 
 // SafeStdinCmd creates a git.Command with the given args and Repository that is
