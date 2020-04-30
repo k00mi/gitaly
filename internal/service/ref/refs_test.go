@@ -439,6 +439,15 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 	testRepoCopy, testRepoCopyPath, cleanupFn := testhelper.NewTestRepoWithWorktree(t)
 	defer cleanupFn()
 
+	// reconstruct the v1.1.2 tag from patches to test truncated tag message
+	// with partial PGP block
+	truncatedPGPTagMsg, err := ioutil.ReadFile("testdata/truncated_pgp_msg.patch")
+	require.NoError(t, err)
+
+	truncatedPGPTagID := string(testhelper.MustRunCommand(t, bytes.NewBuffer(truncatedPGPTagMsg), "git", "-C", testRepoCopyPath, "mktag"))
+	truncatedPGPTagID = strings.TrimSpace(truncatedPGPTagID) // remove trailing newline
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoCopyPath, "update-ref", "refs/tags/pgp-long-tag-message", truncatedPGPTagID)
+
 	blobID := "faaf198af3a36dbf41961466703cc1d47c61d051"
 	commitID := "6f6d7e7ed97bb5f0054f2b1df789b39ca89b6ff9"
 
@@ -618,6 +627,20 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 			SignatureType: gitalypb.SignatureType_X509,
 		},
 		{
+			Name:         []byte("pgp-long-tag-message"),
+			Id:           truncatedPGPTagID,
+			TargetCommit: gitCommit,                     // 6f6d7e7ed97bb5f0054f2b1df789b39ca89b6ff9
+			Message:      truncatedPGPTagMsg[146:10386], // first 10240 bytes of tag message
+			MessageSize:  11148,
+			Tagger: &gitalypb.CommitAuthor{
+				Name:     []byte("Scrooge McDuck"),
+				Email:    []byte("scrooge@mcduck.com"),
+				Date:     &timestamp.Timestamp{Seconds: 1393491261},
+				Timezone: []byte("+0100"),
+			},
+			SignatureType: gitalypb.SignatureType_PGP,
+		},
+		{
 			Name:        []byte("v1.2.0"),
 			Id:          annotatedTagID,
 			Message:     []byte("Blob tag"),
@@ -664,10 +687,7 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 	}
 
 	require.Len(t, receivedTags, len(expectedTags))
-
-	for i, expectedTag := range expectedTags {
-		require.Equal(t, expectedTag, receivedTags[i])
-	}
+	require.ElementsMatch(t, expectedTags, receivedTags)
 }
 
 func TestFindAllTagNestedTags(t *testing.T) {
