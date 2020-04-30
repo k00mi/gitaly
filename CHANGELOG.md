@@ -1,5 +1,12 @@
 # Gitaly changelog
 
+## 12.10.2
+
+### Security (1 change)
+
+- gems: Upgrade nokogiri to > 1.10.7. !2128
+
+
 ## 12.10.1
 
 - No changes.
@@ -114,6 +121,13 @@
 - Validate content of alternates file
   https://gitlab.com/gitlab-org/gitaly/merge_requests/1946
 
+## 12.9.5
+
+### Security (1 change)
+
+- gems: Upgrade nokogiri to > 1.10.7. !2129
+
+
 ## 12.9.4
 
 - No changes.
@@ -186,6 +200,13 @@
 - Remove dependency on the outdated golang.org/x/net package. !1882
 - Upgrade parser gem to v2.7.0.4. !1935
 - Simplify loading of required Ruby files. !1942
+
+
+## 12.8.10
+
+### Security (1 change)
+
+- gems: Upgrade nokogiri to > 1.10.7. !2127
 
 
 ## 12.8.9
