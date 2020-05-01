@@ -104,7 +104,7 @@ output "gitlab_external_ip" {
 }
 
 resource "google_compute_instance" "praefect" {
-  count = 1
+  count = 3
   name         =  "${var.praefect_demo_cluster_name}-praefect-${count.index + 1}"
   machine_type = var.praefect_machine_type
 
@@ -124,6 +124,54 @@ resource "google_compute_instance" "praefect" {
     ssh-keys = format("%s:%s", var.ssh_user, var.ssh_pubkey)
     startup-script = var.startup_script
   }
+}
+
+resource "google_compute_instance_group" "praefect-cluster" {
+  name = "${var.praefect_demo_cluster_name}-praefect-cluster"
+
+  instances = google_compute_instance.praefect.*.self_link
+
+  named_port {
+    name = "praefect-transport"
+    port = "2305"
+  }
+}
+
+resource "google_compute_forwarding_rule" "praefect-forwarding-rule" {
+  name                  = "${var.praefect_demo_cluster_name}-praefect-lb"
+  load_balancing_scheme = "INTERNAL"
+  backend_service       = google_compute_region_backend_service.praefect-lb.self_link
+  ports                 = ["2305"]
+}
+
+resource "google_compute_region_backend_service" "praefect-lb" {
+  name             = "${var.praefect_demo_cluster_name}-praefect-lb"
+  protocol         = "TCP"
+  timeout_sec      = 10
+  session_affinity = "NONE"
+
+  backend {
+    group = google_compute_instance_group.praefect-cluster.self_link
+  }
+
+  health_checks = [
+    google_compute_health_check.praefect-healthcheck.self_link
+  ]
+}
+
+resource "google_compute_health_check" "praefect-healthcheck" {
+  name = "${var.praefect_demo_cluster_name}-praefect-healthcheck"
+
+  check_interval_sec = 5
+  timeout_sec        = 5
+
+  tcp_health_check {
+    port = "2305"
+  }
+}
+
+output "praefect_loadbalancer_ip" {
+  value = google_compute_forwarding_rule.praefect-forwarding-rule.ip_address
 }
 
 output "praefect_internal_ip" {
