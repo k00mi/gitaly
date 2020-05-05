@@ -3,10 +3,13 @@ package transactions
 import (
 	"context"
 	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"math/rand"
 	"sync"
 
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
+	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
@@ -23,6 +26,10 @@ func NewManager() *Manager {
 	return &Manager{
 		transactions: make(map[uint64]string),
 	}
+}
+
+func (mgr *Manager) log(ctx context.Context) logrus.FieldLogger {
+	return ctxlogrus.Extract(ctx).WithField("component", "transactions.Manager")
 }
 
 // CancelFunc is the transaction cancellation function returned by
@@ -53,6 +60,11 @@ func (mgr *Manager) RegisterTransaction(ctx context.Context, nodes []string) (ui
 	}
 	mgr.transactions[transactionID] = nodes[0]
 
+	mgr.log(ctx).WithFields(logrus.Fields{
+		"transaction_id": transactionID,
+		"nodes":          nodes,
+	}).Debug("RegisterTransaction")
+
 	return transactionID, func() {
 		mgr.cancelTransaction(transactionID)
 	}, nil
@@ -74,6 +86,12 @@ func (mgr *Manager) StartTransaction(ctx context.Context, transactionID uint64, 
 	mgr.lock.Lock()
 	defer mgr.lock.Unlock()
 
+	mgr.log(ctx).WithFields(logrus.Fields{
+		"transaction_id": transactionID,
+		"node":           node,
+		"hash":           hex.EncodeToString(hash),
+	}).Debug("StartTransaction")
+
 	// While the reference updates hash is not used yet, we already verify
 	// it's there. At a later point, the hash will be used to verify that
 	// all voting nodes agree on the same updates.
@@ -89,6 +107,11 @@ func (mgr *Manager) StartTransaction(ctx context.Context, transactionID uint64, 
 	if transaction != node {
 		return helper.ErrInternalf("invalid node for transaction: %q", node)
 	}
+
+	mgr.log(ctx).WithFields(logrus.Fields{
+		"transaction_id": transactionID,
+		"hash":           hex.EncodeToString(hash),
+	}).Debug("CommitTransaction")
 
 	return nil
 }
