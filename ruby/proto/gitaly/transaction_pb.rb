@@ -6,23 +6,25 @@ require 'google/protobuf'
 require 'lint_pb'
 require 'shared_pb'
 Google::Protobuf::DescriptorPool.generated_pool.build do
-  add_message "gitaly.StartTransactionRequest" do
-    optional :repository, :message, 1, "gitaly.Repository"
-    optional :transaction_id, :uint64, 2
-    optional :node, :string, 3
-    optional :reference_updates_hash, :bytes, 4
-  end
-  add_message "gitaly.StartTransactionResponse" do
-    optional :state, :enum, 1, "gitaly.StartTransactionResponse.TransactionState"
-  end
-  add_enum "gitaly.StartTransactionResponse.TransactionState" do
-    value :COMMIT, 0
-    value :ABORT, 1
+  add_file("transaction.proto", :syntax => :proto3) do
+    add_message "gitaly.StartTransactionRequest" do
+      optional :repository, :message, 1, "gitaly.Repository"
+      optional :transaction_id, :uint64, 2
+      optional :node, :string, 3
+      optional :reference_updates_hash, :bytes, 4
+    end
+    add_message "gitaly.StartTransactionResponse" do
+      optional :state, :enum, 1, "gitaly.StartTransactionResponse.TransactionState"
+    end
+    add_enum "gitaly.StartTransactionResponse.TransactionState" do
+      value :COMMIT, 0
+      value :ABORT, 1
+    end
   end
 end
 
 module Gitaly
-  StartTransactionRequest = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.StartTransactionRequest").msgclass
-  StartTransactionResponse = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.StartTransactionResponse").msgclass
-  StartTransactionResponse::TransactionState = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.StartTransactionResponse.TransactionState").enummodule
+  StartTransactionRequest = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.StartTransactionRequest").msgclass
+  StartTransactionResponse = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.StartTransactionResponse").msgclass
+  StartTransactionResponse::TransactionState = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.StartTransactionResponse.TransactionState").enummodule
 end
