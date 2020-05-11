@@ -34,7 +34,7 @@ func TestSecondaryRotation(t *testing.T) {
 	t.Skip("secondary rotation will change with the new data model")
 }
 
-func TestStreamDirector(t *testing.T) {
+func TestStreamDirectorMutator(t *testing.T) {
 	gitalySocket0, gitalySocket1 := testhelper.GetTemporaryGitalySocketFileName(), testhelper.GetTemporaryGitalySocketFileName()
 	_, healthSrv0 := testhelper.NewServerWithHealth(t, gitalySocket0)
 	_, healthSrv1 := testhelper.NewServerWithHealth(t, gitalySocket1)
@@ -42,7 +42,6 @@ func TestStreamDirector(t *testing.T) {
 	healthSrv1.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	primaryAddress, secondaryAddress := "unix://"+gitalySocket0, "unix://"+gitalySocket1
-
 	conf := config.Config{
 		VirtualStorages: []*config.VirtualStorage{
 			&config.VirtualStorage{
@@ -120,10 +119,6 @@ func TestStreamDirector(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "praefect-internal-1", rewrittenTargetRepo.GetStorageName(), "stream director should have rewritten the storage name")
 
-	rewrittenRepo, err := mi.TargetRepo(m)
-	require.NoError(t, err)
-	require.Equal(t, "praefect-internal-1", rewrittenRepo.GetStorageName(), "stream director should have rewritten the storage name")
-
 	replEventWait.Add(1) // expected only one event to be created
 	// this call creates new events in the queue and simulates usual flow of the update operation
 	streamParams.RequestFinalizer()
@@ -134,7 +129,7 @@ func TestStreamDirector(t *testing.T) {
 	require.NoError(t, err)
 
 	replEventWait.Wait() // wait until event persisted (async operation)
-	events, err := ds.ReplicationEventQueue.Dequeue(ctx, "praefect-internal-2", 10)
+	events, err := ds.ReplicationEventQueue.Dequeue(ctx, "praefect", "praefect-internal-2", 10)
 	require.NoError(t, err)
 	require.Len(t, events, 1)
 
@@ -142,11 +137,12 @@ func TestStreamDirector(t *testing.T) {
 		ID:        1,
 		State:     datastore.JobStateInProgress,
 		Attempt:   2,
-		LockID:    "praefect-internal-2|/path/to/hashed/storage",
+		LockID:    "praefect|praefect-internal-2|/path/to/hashed/storage",
 		CreatedAt: events[0].CreatedAt,
 		UpdatedAt: events[0].UpdatedAt,
 		Job: datastore.ReplicationJob{
 			Change:            datastore.UpdateRepo,
+			VirtualStorage:    conf.VirtualStorages[0].Name,
 			RelativePath:      targetRepo.RelativePath,
 			TargetNodeStorage: targetNode.Storage,
 			SourceNodeStorage: sourceNode.Storage,
@@ -154,6 +150,84 @@ func TestStreamDirector(t *testing.T) {
 		Meta: datastore.Params{metadatahandler.CorrelationIDKey: "my-correlation-id"},
 	}
 	require.Equal(t, expectedEvent, events[0], "ensure replication job created by stream director is correct")
+}
+
+func TestStreamDirectorAccessor(t *testing.T) {
+	gitalySocket0, gitalySocket1 := testhelper.GetTemporaryGitalySocketFileName(), testhelper.GetTemporaryGitalySocketFileName()
+	_, healthSrv0 := testhelper.NewServerWithHealth(t, gitalySocket0)
+	_, healthSrv1 := testhelper.NewServerWithHealth(t, gitalySocket1)
+	healthSrv0.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthSrv1.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
+
+	primaryAddress, secondaryAddress := "unix://"+gitalySocket0, "unix://"+gitalySocket1
+	conf := config.Config{
+		VirtualStorages: []*config.VirtualStorage{
+			{
+				Name: "praefect",
+				Nodes: []*models.Node{
+					{
+						Address:        primaryAddress,
+						Storage:        "praefect-internal-1",
+						DefaultPrimary: true,
+					},
+					{
+						Address: secondaryAddress,
+						Storage: "praefect-internal-2",
+					}},
+			},
+		},
+	}
+
+	ds := datastore.Datastore{
+		ReplicasDatastore:     datastore.NewInMemory(conf),
+		ReplicationEventQueue: datastore.NewMemoryReplicationEventQueue(),
+	}
+
+	targetRepo := gitalypb.Repository{
+		StorageName:  "praefect",
+		RelativePath: "/path/to/hashed/storage",
+	}
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	entry := testhelper.DiscardTestEntry(t)
+
+	nodeMgr, err := nodes.NewManager(entry, conf, nil, promtest.NewMockHistogramVec())
+	require.NoError(t, err)
+	r := protoregistry.New()
+	require.NoError(t, r.RegisterFiles(protoregistry.GitalyProtoFileDescriptors...))
+
+	txMgr := transactions.NewManager()
+
+	coordinator := NewCoordinator(entry, ds, nodeMgr, txMgr, conf, r)
+
+	frame, err := proto.Marshal(&gitalypb.FindAllBranchesRequest{Repository: &targetRepo})
+	require.NoError(t, err)
+
+	fullMethod := "/gitaly.RefService/FindAllBranches"
+
+	peeker := &mockPeeker{frame: frame}
+	streamParams, err := coordinator.StreamDirector(correlation.ContextWithCorrelation(ctx, "my-correlation-id"), fullMethod, peeker)
+	require.NoError(t, err)
+	require.Equal(t, primaryAddress, streamParams.Conn().Target())
+
+	md, ok := metadata.FromOutgoingContext(streamParams.Context())
+	require.True(t, ok)
+	require.Contains(t, md, "praefect-server")
+
+	mi, err := coordinator.registry.LookupMethod(fullMethod)
+	require.NoError(t, err)
+
+	m, err := protoMessageFromPeeker(mi, peeker)
+	require.NoError(t, err)
+
+	rewrittenTargetRepo, err := mi.TargetRepo(m)
+	require.NoError(t, err)
+	require.Equal(t, "praefect-internal-1", rewrittenTargetRepo.GetStorageName(), "stream director should have rewritten the storage name")
+
+	// must be invoked without issues
+	streamParams.RequestFinalizer()
 }
 
 type mockPeeker struct {
@@ -243,7 +317,7 @@ func TestAbsentCorrelationID(t *testing.T) {
 	streamParams.RequestFinalizer()
 
 	replEventWait.Wait() // wait until event persisted (async operation)
-	jobs, err := coordinator.datastore.Dequeue(ctx, conf.VirtualStorages[0].Nodes[1].Storage, 1)
+	jobs, err := coordinator.datastore.Dequeue(ctx, conf.VirtualStorages[0].Name, conf.VirtualStorages[0].Nodes[1].Storage, 1)
 	require.NoError(t, err)
 	require.Len(t, jobs, 1)
 

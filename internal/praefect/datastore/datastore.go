@@ -96,6 +96,7 @@ func (p Params) Value() (driver.Value, error) {
 type ReplJob struct {
 	Change                 ChangeType
 	ID                     uint64      // autoincrement ID
+	VirtualStorage         string      // virtual storage
 	TargetNode, SourceNode models.Node // which node to replicate to?
 	RelativePath           string      // source for replication
 	State                  JobState
@@ -124,6 +125,8 @@ type ReplicasDatastore interface {
 	GetStorageNode(nodeStorage string) (models.Node, error)
 
 	GetStorageNodes() ([]models.Node, error)
+	// VirtualStorages returns a list of virtual storages that are configured for this instance.
+	VirtualStorages() []string
 }
 
 // MemoryDatastore is a simple datastore that isn't persisted to disk. It is
@@ -233,4 +236,13 @@ func (md *MemoryDatastore) GetStorageNodes() ([]models.Node, error) {
 	}
 
 	return storageNodes, nil
+}
+
+// VirtualStorages returns list of virtual storages configured to be supported.
+func (md *MemoryDatastore) VirtualStorages() []string {
+	vs := make([]string, 0, len(md.virtualStorages))
+	for name := range md.virtualStorages {
+		vs = append(vs, name)
+	}
+	return vs
 }

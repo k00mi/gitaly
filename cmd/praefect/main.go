@@ -246,7 +246,6 @@ func run(cfgs []starter.Config, conf config.Config) error {
 		// top level server dependencies
 		coordinator = praefect.NewCoordinator(logger, ds, nodeManager, transactionManager, conf, registry)
 		repl        = praefect.NewReplMgr(
-			conf.VirtualStorages[0].Name,
 			logger,
 			ds,
 			nodeManager,
@@ -254,8 +253,6 @@ func run(cfgs []starter.Config, conf config.Config) error {
 			praefect.WithLatencyMetric(latencyMetric),
 			praefect.WithQueueMetric(queueMetric))
 		srv = praefect.NewServer(coordinator.StreamDirector, logger, registry, conf)
-
-		serverErrors = make(chan error, 1)
 	)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -298,12 +295,9 @@ func run(cfgs []starter.Config, conf config.Config) error {
 		return fmt.Errorf("unable to start the bootstrap: %v", err)
 	}
 
-	go func() { serverErrors <- b.Wait() }()
-	go func() {
-		serverErrors <- repl.ProcessBacklog(ctx, praefect.ExpBackoffFunc(1*time.Second, 5*time.Second))
-	}()
+	repl.ProcessBacklog(ctx, praefect.ExpBackoffFunc(1*time.Second, 5*time.Second))
 
-	return <-serverErrors
+	return b.Wait()
 }
 
 func getStarterConfigs(socketPath, listenAddr string) ([]starter.Config, error) {

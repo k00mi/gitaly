@@ -30,6 +30,7 @@ func TestPostgresReplicationEventQueue_Enqueue(t *testing.T) {
 			RelativePath:      "/project/path-1",
 			TargetNodeStorage: "gitaly-1",
 			SourceNodeStorage: "gitaly-0",
+			VirtualStorage:    "praefect",
 			Params:            nil,
 		},
 	}
@@ -38,18 +39,19 @@ func TestPostgresReplicationEventQueue_Enqueue(t *testing.T) {
 	require.NoError(t, err)
 	actualEvent.CreatedAt = time.Time{} // we need to setup it to default because it is not possible to get it beforehand for expected
 
-	expLock := LockRow{ID: "gitaly-1|/project/path-1", Acquired: false}
+	expLock := LockRow{ID: "praefect|gitaly-1|/project/path-1", Acquired: false}
 
 	expEvent := ReplicationEvent{
 		ID:      1,
 		State:   JobStateReady,
 		Attempt: 3,
-		LockID:  "gitaly-1|/project/path-1",
+		LockID:  "praefect|gitaly-1|/project/path-1",
 		Job: ReplicationJob{
 			Change:            UpdateRepo,
 			RelativePath:      "/project/path-1",
 			TargetNodeStorage: "gitaly-1",
 			SourceNodeStorage: "gitaly-0",
+			VirtualStorage:    "praefect",
 			Params:            nil,
 		},
 	}
@@ -74,6 +76,7 @@ func TestPostgresReplicationEventQueue_EnqueueMultiple(t *testing.T) {
 			RelativePath:      "/project/path-1",
 			TargetNodeStorage: "gitaly-1",
 			SourceNodeStorage: "gitaly-0",
+			VirtualStorage:    "praefect-0",
 			Params:            nil,
 		},
 	}
@@ -84,6 +87,7 @@ func TestPostgresReplicationEventQueue_EnqueueMultiple(t *testing.T) {
 			RelativePath:      "/project/path-1",
 			TargetNodeStorage: "gitaly-2",
 			SourceNodeStorage: "",
+			VirtualStorage:    "praefect-0",
 			Params:            Params{"RelativePath": "/project/path-1-renamed"},
 		},
 	}
@@ -94,6 +98,7 @@ func TestPostgresReplicationEventQueue_EnqueueMultiple(t *testing.T) {
 			RelativePath:      "/project/path-2",
 			TargetNodeStorage: "gitaly-1",
 			SourceNodeStorage: "gitaly-0",
+			VirtualStorage:    "praefect-1",
 			Params:            nil,
 		},
 	}
@@ -101,20 +106,21 @@ func TestPostgresReplicationEventQueue_EnqueueMultiple(t *testing.T) {
 	event1, err := queue.Enqueue(ctx, eventType1) // initial event
 	require.NoError(t, err)
 
-	expLock1 := LockRow{ID: "gitaly-1|/project/path-1", Acquired: false}
-	expLock2 := LockRow{ID: "gitaly-2|/project/path-1", Acquired: false}
-	expLock3 := LockRow{ID: "gitaly-1|/project/path-2", Acquired: false}
+	expLock1 := LockRow{ID: "praefect-0|gitaly-1|/project/path-1", Acquired: false}
+	expLock2 := LockRow{ID: "praefect-0|gitaly-2|/project/path-1", Acquired: false}
+	expLock3 := LockRow{ID: "praefect-1|gitaly-1|/project/path-2", Acquired: false}
 
 	expEvent1 := ReplicationEvent{
 		ID:      event1.ID,
 		State:   "ready",
 		Attempt: 3,
-		LockID:  "gitaly-1|/project/path-1",
+		LockID:  "praefect-0|gitaly-1|/project/path-1",
 		Job: ReplicationJob{
 			Change:            UpdateRepo,
 			RelativePath:      "/project/path-1",
 			TargetNodeStorage: "gitaly-1",
 			SourceNodeStorage: "gitaly-0",
+			VirtualStorage:    "praefect-0",
 			Params:            nil,
 		},
 	}
@@ -130,12 +136,13 @@ func TestPostgresReplicationEventQueue_EnqueueMultiple(t *testing.T) {
 		ID:      event2.ID,
 		State:   "ready",
 		Attempt: 3,
-		LockID:  "gitaly-1|/project/path-1",
+		LockID:  "praefect-0|gitaly-1|/project/path-1",
 		Job: ReplicationJob{
 			Change:            UpdateRepo,
 			RelativePath:      "/project/path-1",
 			TargetNodeStorage: "gitaly-1",
 			SourceNodeStorage: "gitaly-0",
+			VirtualStorage:    "praefect-0",
 			Params:            nil,
 		},
 	}
@@ -150,12 +157,13 @@ func TestPostgresReplicationEventQueue_EnqueueMultiple(t *testing.T) {
 		ID:      event3.ID,
 		State:   JobStateReady,
 		Attempt: 3,
-		LockID:  "gitaly-2|/project/path-1",
+		LockID:  "praefect-0|gitaly-2|/project/path-1",
 		Job: ReplicationJob{
 			Change:            RenameRepo,
 			RelativePath:      "/project/path-1",
 			TargetNodeStorage: "gitaly-2",
 			SourceNodeStorage: "",
+			VirtualStorage:    "praefect-0",
 			Params:            Params{"RelativePath": "/project/path-1-renamed"},
 		},
 	}
@@ -170,12 +178,13 @@ func TestPostgresReplicationEventQueue_EnqueueMultiple(t *testing.T) {
 		ID:      event4.ID,
 		State:   JobStateReady,
 		Attempt: 3,
-		LockID:  "gitaly-1|/project/path-2",
+		LockID:  "praefect-1|gitaly-1|/project/path-2",
 		Job: ReplicationJob{
 			Change:            UpdateRepo,
 			RelativePath:      "/project/path-2",
 			TargetNodeStorage: "gitaly-1",
 			SourceNodeStorage: "gitaly-0",
+			VirtualStorage:    "praefect-1",
 			Params:            nil,
 		},
 	}
@@ -200,6 +209,7 @@ func TestPostgresReplicationEventQueue_Dequeue(t *testing.T) {
 			RelativePath:      "/project/path-1",
 			TargetNodeStorage: "gitaly-1",
 			SourceNodeStorage: "gitaly-0",
+			VirtualStorage:    "praefect",
 			Params:            nil,
 		},
 	}
@@ -207,7 +217,7 @@ func TestPostgresReplicationEventQueue_Dequeue(t *testing.T) {
 	event, err := queue.Enqueue(ctx, event)
 	require.NoError(t, err, "failed to fill in event queue")
 
-	noEvents, err := queue.Dequeue(ctx, "not existing storage", 5)
+	noEvents, err := queue.Dequeue(ctx, "praefect", "not existing storage", 5)
 	require.NoError(t, err)
 	require.Len(t, noEvents, 0, "there must be no events dequeued for not existing storage")
 
@@ -219,7 +229,7 @@ func TestPostgresReplicationEventQueue_Dequeue(t *testing.T) {
 
 	expectedJobLock := JobLockRow{JobID: event.ID, LockID: event.LockID} // and there is a track if job is under processing in separate table
 
-	actual, err := queue.Dequeue(ctx, event.Job.TargetNodeStorage, 5)
+	actual, err := queue.Dequeue(ctx, event.Job.VirtualStorage, event.Job.TargetNodeStorage, 5)
 	require.NoError(t, err)
 
 	for i := range actual {
@@ -247,6 +257,7 @@ func TestPostgresReplicationEventQueue_DequeueMultiple(t *testing.T) {
 			RelativePath:      "/project/path-1",
 			TargetNodeStorage: "gitaly-1",
 			SourceNodeStorage: "gitaly-0",
+			VirtualStorage:    "praefect",
 			Params:            nil,
 		},
 	}
@@ -257,6 +268,7 @@ func TestPostgresReplicationEventQueue_DequeueMultiple(t *testing.T) {
 			RelativePath:      "/project/path-1",
 			TargetNodeStorage: "gitaly-1",
 			SourceNodeStorage: "",
+			VirtualStorage:    "praefect",
 			Params:            nil,
 		},
 	}
@@ -267,6 +279,7 @@ func TestPostgresReplicationEventQueue_DequeueMultiple(t *testing.T) {
 			RelativePath:      "/project/path-2",
 			TargetNodeStorage: "gitaly-1",
 			SourceNodeStorage: "gitaly-0",
+			VirtualStorage:    "praefect",
 			Params:            Params{"RelativePath": "/project/path-2-renamed"},
 		},
 	}
@@ -289,11 +302,11 @@ func TestPostgresReplicationEventQueue_DequeueMultiple(t *testing.T) {
 		expectedEvents1[i].Attempt = 2
 
 		expectedJobLocks1[i].JobID = expectedEvents1[i].ID
-		expectedJobLocks1[i].LockID = "gitaly-1|/project/path-1"
+		expectedJobLocks1[i].LockID = "praefect|gitaly-1|/project/path-1"
 	}
 
 	// we expect only first two types of events by limiting count to 3
-	dequeuedEvents1, err := queue.Dequeue(ctx, "gitaly-1", limitFirstN)
+	dequeuedEvents1, err := queue.Dequeue(ctx, "praefect", "gitaly-1", limitFirstN)
 	require.NoError(t, err)
 	for i := range dequeuedEvents1 {
 		dequeuedEvents1[i].UpdatedAt = nil // it is not possible to determine update_at value as it is generated on UPDATE in database
@@ -302,8 +315,8 @@ func TestPostgresReplicationEventQueue_DequeueMultiple(t *testing.T) {
 
 	requireLocks(t, ctx, db, []LockRow{
 		// there is only one single lock for all fetched events because of their 'repo' and 'target' combination
-		{ID: "gitaly-1|/project/path-1", Acquired: true},
-		{ID: "gitaly-1|/project/path-2", Acquired: false},
+		{ID: "praefect|gitaly-1|/project/path-1", Acquired: true},
+		{ID: "praefect|gitaly-1|/project/path-2", Acquired: false},
 	})
 	requireJobLocks(t, ctx, db, expectedJobLocks1)
 
@@ -314,9 +327,9 @@ func TestPostgresReplicationEventQueue_DequeueMultiple(t *testing.T) {
 	expectedEvents2[0].State = JobStateInProgress
 	expectedEvents2[0].Attempt = 2
 
-	expectedJobLocks2 := []JobLockRow{{JobID: 5, LockID: "gitaly-1|/project/path-2"}}
+	expectedJobLocks2 := []JobLockRow{{JobID: 5, LockID: "praefect|gitaly-1|/project/path-2"}}
 
-	dequeuedEvents2, err := queue.Dequeue(ctx, "gitaly-1", 100500)
+	dequeuedEvents2, err := queue.Dequeue(ctx, "praefect", "gitaly-1", 100500)
 	require.NoError(t, err)
 	require.Len(t, dequeuedEvents2, 1, "only one event must be fetched from the queue")
 
@@ -324,8 +337,8 @@ func TestPostgresReplicationEventQueue_DequeueMultiple(t *testing.T) {
 	require.Equal(t, expectedEvents2, dequeuedEvents2)
 
 	requireLocks(t, ctx, db, []LockRow{
-		{ID: "gitaly-1|/project/path-1", Acquired: true},
-		{ID: "gitaly-1|/project/path-2", Acquired: true},
+		{ID: "praefect|gitaly-1|/project/path-1", Acquired: true},
+		{ID: "praefect|gitaly-1|/project/path-2", Acquired: true},
 	})
 	requireJobLocks(t, ctx, db, append(expectedJobLocks1, expectedJobLocks2...))
 
@@ -350,6 +363,7 @@ func TestPostgresReplicationEventQueue_Acknowledge(t *testing.T) {
 			RelativePath:      "/project/path-1",
 			TargetNodeStorage: "gitaly-1",
 			SourceNodeStorage: "gitaly-0",
+			VirtualStorage:    "praefect",
 			Params:            nil,
 		},
 	}
@@ -357,7 +371,7 @@ func TestPostgresReplicationEventQueue_Acknowledge(t *testing.T) {
 	event, err := queue.Enqueue(ctx, event)
 	require.NoError(t, err, "failed to fill in event queue")
 
-	actual, err := queue.Dequeue(ctx, event.Job.TargetNodeStorage, 100)
+	actual, err := queue.Dequeue(ctx, event.Job.VirtualStorage, event.Job.TargetNodeStorage, 100)
 	require.NoError(t, err)
 
 	// as we deque events we acquire lock for processing
@@ -391,6 +405,7 @@ func TestPostgresReplicationEventQueue_AcknowledgeMultiple(t *testing.T) {
 			RelativePath:      "/project/path-1",
 			TargetNodeStorage: "gitaly-1",
 			SourceNodeStorage: "gitaly-0",
+			VirtualStorage:    "praefect",
 			Params:            nil,
 		},
 	}
@@ -401,6 +416,7 @@ func TestPostgresReplicationEventQueue_AcknowledgeMultiple(t *testing.T) {
 			RelativePath:      "/project/path-2",
 			TargetNodeStorage: "gitaly-1",
 			SourceNodeStorage: "",
+			VirtualStorage:    "praefect",
 			Params:            nil,
 		},
 	}
@@ -411,6 +427,7 @@ func TestPostgresReplicationEventQueue_AcknowledgeMultiple(t *testing.T) {
 			RelativePath:      "/project/path-3",
 			TargetNodeStorage: "gitaly-1",
 			SourceNodeStorage: "gitaly-0",
+			VirtualStorage:    "praefect",
 			Params:            nil,
 		},
 	}
@@ -421,6 +438,7 @@ func TestPostgresReplicationEventQueue_AcknowledgeMultiple(t *testing.T) {
 			RelativePath:      "/project/path-1",
 			TargetNodeStorage: "gitaly-2",
 			SourceNodeStorage: "gitaly-0",
+			VirtualStorage:    "praefect",
 			Params:            nil,
 		},
 	}
@@ -433,19 +451,19 @@ func TestPostgresReplicationEventQueue_AcknowledgeMultiple(t *testing.T) {
 	}
 
 	// we expect only first two types of events by limiting count to 3
-	dequeuedEvents1, err := queue.Dequeue(ctx, "gitaly-1", 3)
+	dequeuedEvents1, err := queue.Dequeue(ctx, "praefect", "gitaly-1", 3)
 	require.NoError(t, err)
 	require.Len(t, dequeuedEvents1, 3)
 	requireLocks(t, ctx, db, []LockRow{
-		{ID: "gitaly-1|/project/path-1", Acquired: true},
-		{ID: "gitaly-1|/project/path-2", Acquired: true},
-		{ID: "gitaly-1|/project/path-3", Acquired: false},
-		{ID: "gitaly-2|/project/path-1", Acquired: false},
+		{ID: "praefect|gitaly-1|/project/path-1", Acquired: true},
+		{ID: "praefect|gitaly-1|/project/path-2", Acquired: true},
+		{ID: "praefect|gitaly-1|/project/path-3", Acquired: false},
+		{ID: "praefect|gitaly-2|/project/path-1", Acquired: false},
 	})
 	requireJobLocks(t, ctx, db, []JobLockRow{
-		{JobID: 1, LockID: "gitaly-1|/project/path-1"},
-		{JobID: 2, LockID: "gitaly-1|/project/path-1"},
-		{JobID: 3, LockID: "gitaly-1|/project/path-2"},
+		{JobID: 1, LockID: "praefect|gitaly-1|/project/path-1"},
+		{JobID: 2, LockID: "praefect|gitaly-1|/project/path-1"},
+		{JobID: 3, LockID: "praefect|gitaly-1|/project/path-2"},
 	})
 
 	// release lock for events of second type
@@ -453,84 +471,84 @@ func TestPostgresReplicationEventQueue_AcknowledgeMultiple(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []uint64{3}, acknowledge1)
 	requireLocks(t, ctx, db, []LockRow{
-		{ID: "gitaly-1|/project/path-1", Acquired: true},
-		{ID: "gitaly-1|/project/path-2", Acquired: false},
-		{ID: "gitaly-1|/project/path-3", Acquired: false},
-		{ID: "gitaly-2|/project/path-1", Acquired: false},
+		{ID: "praefect|gitaly-1|/project/path-1", Acquired: true},
+		{ID: "praefect|gitaly-1|/project/path-2", Acquired: false},
+		{ID: "praefect|gitaly-1|/project/path-3", Acquired: false},
+		{ID: "praefect|gitaly-2|/project/path-1", Acquired: false},
 	})
 	requireJobLocks(t, ctx, db, []JobLockRow{
-		{JobID: 1, LockID: "gitaly-1|/project/path-1"},
-		{JobID: 2, LockID: "gitaly-1|/project/path-1"},
+		{JobID: 1, LockID: "praefect|gitaly-1|/project/path-1"},
+		{JobID: 2, LockID: "praefect|gitaly-1|/project/path-1"},
 	})
 
-	dequeuedEvents2, err := queue.Dequeue(ctx, "gitaly-1", 3)
+	dequeuedEvents2, err := queue.Dequeue(ctx, "praefect", "gitaly-1", 3)
 	require.NoError(t, err)
 	require.Len(t, dequeuedEvents2, 2, "expected: event of type 3 and of type 2 ('failed' will  be fetched for retry)")
 	requireLocks(t, ctx, db, []LockRow{
-		{ID: "gitaly-1|/project/path-1", Acquired: true},
-		{ID: "gitaly-1|/project/path-2", Acquired: true},
-		{ID: "gitaly-1|/project/path-3", Acquired: true},
-		{ID: "gitaly-2|/project/path-1", Acquired: false},
+		{ID: "praefect|gitaly-1|/project/path-1", Acquired: true},
+		{ID: "praefect|gitaly-1|/project/path-2", Acquired: true},
+		{ID: "praefect|gitaly-1|/project/path-3", Acquired: true},
+		{ID: "praefect|gitaly-2|/project/path-1", Acquired: false},
 	})
 	requireJobLocks(t, ctx, db, []JobLockRow{
-		{JobID: 1, LockID: "gitaly-1|/project/path-1"},
-		{JobID: 2, LockID: "gitaly-1|/project/path-1"},
-		{JobID: 5, LockID: "gitaly-1|/project/path-3"},
-		{JobID: 3, LockID: "gitaly-1|/project/path-2"},
+		{JobID: 1, LockID: "praefect|gitaly-1|/project/path-1"},
+		{JobID: 2, LockID: "praefect|gitaly-1|/project/path-1"},
+		{JobID: 5, LockID: "praefect|gitaly-1|/project/path-3"},
+		{JobID: 3, LockID: "praefect|gitaly-1|/project/path-2"},
 	})
 
 	acknowledge2, err := queue.Acknowledge(ctx, JobStateCompleted, []uint64{1, 3})
 	require.NoError(t, err)
 	require.Equal(t, []uint64{1, 3}, acknowledge2)
 	requireLocks(t, ctx, db, []LockRow{
-		{ID: "gitaly-1|/project/path-1", Acquired: true},
-		{ID: "gitaly-1|/project/path-2", Acquired: false},
-		{ID: "gitaly-1|/project/path-3", Acquired: true},
-		{ID: "gitaly-2|/project/path-1", Acquired: false},
+		{ID: "praefect|gitaly-1|/project/path-1", Acquired: true},
+		{ID: "praefect|gitaly-1|/project/path-2", Acquired: false},
+		{ID: "praefect|gitaly-1|/project/path-3", Acquired: true},
+		{ID: "praefect|gitaly-2|/project/path-1", Acquired: false},
 	})
 	requireJobLocks(t, ctx, db, []JobLockRow{
-		{JobID: 2, LockID: "gitaly-1|/project/path-1"},
-		{JobID: 5, LockID: "gitaly-1|/project/path-3"},
+		{JobID: 2, LockID: "praefect|gitaly-1|/project/path-1"},
+		{JobID: 5, LockID: "praefect|gitaly-1|/project/path-3"},
 	})
 
-	dequeuedEvents3, err := queue.Dequeue(ctx, "gitaly-2", 3)
+	dequeuedEvents3, err := queue.Dequeue(ctx, "praefect", "gitaly-2", 3)
 	require.NoError(t, err)
 	require.Len(t, dequeuedEvents3, 1, "expected: event of type 4")
 	requireLocks(t, ctx, db, []LockRow{
-		{ID: "gitaly-1|/project/path-1", Acquired: true},
-		{ID: "gitaly-1|/project/path-2", Acquired: false},
-		{ID: "gitaly-1|/project/path-3", Acquired: true},
-		{ID: "gitaly-2|/project/path-1", Acquired: true},
+		{ID: "praefect|gitaly-1|/project/path-1", Acquired: true},
+		{ID: "praefect|gitaly-1|/project/path-2", Acquired: false},
+		{ID: "praefect|gitaly-1|/project/path-3", Acquired: true},
+		{ID: "praefect|gitaly-2|/project/path-1", Acquired: true},
 	})
 	requireJobLocks(t, ctx, db, []JobLockRow{
-		{JobID: 2, LockID: "gitaly-1|/project/path-1"},
-		{JobID: 5, LockID: "gitaly-1|/project/path-3"},
-		{JobID: 7, LockID: "gitaly-2|/project/path-1"},
+		{JobID: 2, LockID: "praefect|gitaly-1|/project/path-1"},
+		{JobID: 5, LockID: "praefect|gitaly-1|/project/path-3"},
+		{JobID: 7, LockID: "praefect|gitaly-2|/project/path-1"},
 	})
 
 	acknowledged3, err := queue.Acknowledge(ctx, JobStateCompleted, []uint64{2, 5, 7})
 	require.NoError(t, err)
 	require.Equal(t, []uint64{2, 5, 7}, acknowledged3)
 	requireLocks(t, ctx, db, []LockRow{
-		{ID: "gitaly-1|/project/path-1", Acquired: false},
-		{ID: "gitaly-1|/project/path-2", Acquired: false},
-		{ID: "gitaly-1|/project/path-3", Acquired: false},
-		{ID: "gitaly-2|/project/path-1", Acquired: false},
+		{ID: "praefect|gitaly-1|/project/path-1", Acquired: false},
+		{ID: "praefect|gitaly-1|/project/path-2", Acquired: false},
+		{ID: "praefect|gitaly-1|/project/path-3", Acquired: false},
+		{ID: "praefect|gitaly-2|/project/path-1", Acquired: false},
 	})
 	requireJobLocks(t, ctx, db, nil)
 
-	dequeuedEvents4, err := queue.Dequeue(ctx, "gitaly-1", 100500)
+	dequeuedEvents4, err := queue.Dequeue(ctx, "praefect", "gitaly-1", 100500)
 	require.NoError(t, err)
 	require.Len(t, dequeuedEvents4, 2, "expected: event of type 4")
 	requireLocks(t, ctx, db, []LockRow{
-		{ID: "gitaly-1|/project/path-1", Acquired: true},
-		{ID: "gitaly-1|/project/path-2", Acquired: true},
-		{ID: "gitaly-1|/project/path-3", Acquired: false},
-		{ID: "gitaly-2|/project/path-1", Acquired: false},
+		{ID: "praefect|gitaly-1|/project/path-1", Acquired: true},
+		{ID: "praefect|gitaly-1|/project/path-2", Acquired: true},
+		{ID: "praefect|gitaly-1|/project/path-3", Acquired: false},
+		{ID: "praefect|gitaly-2|/project/path-1", Acquired: false},
 	})
 	requireJobLocks(t, ctx, db, []JobLockRow{
-		{JobID: 4, LockID: "gitaly-1|/project/path-1"},
-		{JobID: 6, LockID: "gitaly-1|/project/path-2"},
+		{JobID: 4, LockID: "praefect|gitaly-1|/project/path-1"},
+		{JobID: 6, LockID: "praefect|gitaly-1|/project/path-2"},
 	})
 
 	newEvent, err := queue.Enqueue(ctx, eventType1)
@@ -543,14 +561,14 @@ func TestPostgresReplicationEventQueue_AcknowledgeMultiple(t *testing.T) {
 	require.NoError(t, db.QueryRow("SELECT state FROM replication_queue WHERE id = $1", newEvent.ID).Scan(&newEventState))
 	require.Equal(t, "ready", newEventState, "no way to acknowledge event that is not in in_progress state(was not dequeued)")
 	requireLocks(t, ctx, db, []LockRow{
-		{ID: "gitaly-1|/project/path-1", Acquired: true},
-		{ID: "gitaly-1|/project/path-2", Acquired: true},
-		{ID: "gitaly-1|/project/path-3", Acquired: false},
-		{ID: "gitaly-2|/project/path-1", Acquired: false},
+		{ID: "praefect|gitaly-1|/project/path-1", Acquired: true},
+		{ID: "praefect|gitaly-1|/project/path-2", Acquired: true},
+		{ID: "praefect|gitaly-1|/project/path-3", Acquired: false},
+		{ID: "praefect|gitaly-2|/project/path-1", Acquired: false},
 	})
 	requireJobLocks(t, ctx, db, []JobLockRow{
-		{JobID: 4, LockID: "gitaly-1|/project/path-1"},
-		{JobID: 6, LockID: "gitaly-1|/project/path-2"},
+		{JobID: 4, LockID: "praefect|gitaly-1|/project/path-1"},
+		{JobID: 6, LockID: "praefect|gitaly-1|/project/path-2"},
 	})
 }
 
@@ -571,7 +589,7 @@ func requireEvents(t *testing.T, ctx context.Context, db glsql.DB, expected []Re
 	rows, err := db.QueryContext(ctx, sqlStmt)
 	require.NoError(t, err)
 
-	actual, err := ScanReplicationEvents(rows)
+	actual, err := scanReplicationEvents(rows)
 	require.NoError(t, err)
 	require.Equal(t, exp, actual)
 }

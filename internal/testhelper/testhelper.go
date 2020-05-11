@@ -159,6 +159,8 @@ func TestRepository() *gitalypb.Repository {
 
 // RequireGrpcError asserts the passed err is of the same code as expectedCode.
 func RequireGrpcError(t testing.TB, err error, expectedCode codes.Code) {
+	t.Helper()
+
 	if err == nil {
 		t.Fatal("Expected an error, got nil")
 	}

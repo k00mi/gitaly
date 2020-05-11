@@ -17,7 +17,7 @@ type ReplicationEventQueue interface {
 	// Enqueue puts provided event into the persistent queue.
 	Enqueue(ctx context.Context, event ReplicationEvent) (ReplicationEvent, error)
 	// Dequeue retrieves events from the persistent queue using provided limitations and filters.
-	Dequeue(ctx context.Context, nodeStorage string, count int) ([]ReplicationEvent, error)
+	Dequeue(ctx context.Context, virtualStorage, nodeStorage string, count int) ([]ReplicationEvent, error)
 	// Acknowledge updates previously dequeued events with new state releasing resources acquired for it.
 	// It only updates events that are in 'in_progress' state.
 	// It returns list of ids that was actually acknowledged.
@@ -42,6 +42,7 @@ type ReplicationJob struct {
 	RelativePath      string     `json:"relative_path"`
 	TargetNodeStorage string     `json:"target_node_storage"`
 	SourceNodeStorage string     `json:"source_node_storage"`
+	VirtualStorage    string     `json:"virtual_storage"`
 	Params            Params     `json:"params"`
 }
 
@@ -115,8 +116,8 @@ func (event *ReplicationEvent) Scan(columns []string, rows *sql.Rows) error {
 	return rows.Scan(mappings...)
 }
 
-// ScanReplicationEvents reads all rows and convert them into structs filling all the fields according to fetched columns/column aliases.
-func ScanReplicationEvents(rows *sql.Rows) (events []ReplicationEvent, err error) {
+// scanReplicationEvents reads all rows and convert them into structs filling all the fields according to fetched columns/column aliases.
+func scanReplicationEvents(rows *sql.Rows) (events []ReplicationEvent, err error) {
 	columns, err := rows.Columns()
 	if err != nil {
 		return events, err
@@ -193,29 +194,29 @@ func (rq PostgresReplicationEventQueue) Enqueue(ctx context.Context, event Repli
 	query := `
 		WITH insert_lock AS (
 			INSERT INTO replication_queue_lock(id)
-			VALUES ($1 || '|' || $2)
+			VALUES ($1 || '|' || $2 || '|' || $3)
 			ON CONFLICT (id) DO UPDATE SET id = EXCLUDED.id
 			RETURNING id
 		)
 		INSERT INTO replication_queue(lock_id, job, meta)
-		SELECT insert_lock.id, $3, $4
+		SELECT insert_lock.id, $4, $5
 		FROM insert_lock
 		RETURNING id, state, created_at, updated_at, lock_id, attempt, job, meta`
 	// this will always return a single row result (because of lock uniqueness) or an error
-	rows, err := rq.qc.QueryContext(ctx, query, event.Job.TargetNodeStorage, event.Job.RelativePath, event.Job, event.Meta)
+	rows, err := rq.qc.QueryContext(ctx, query, event.Job.VirtualStorage, event.Job.TargetNodeStorage, event.Job.RelativePath, event.Job, event.Meta)
 	if err != nil {
-		return ReplicationEvent{}, err
+		return ReplicationEvent{}, fmt.Errorf("query: %w", err)
 	}
 
-	events, err := ScanReplicationEvents(rows)
+	events, err := scanReplicationEvents(rows)
 	if err != nil {
-		return ReplicationEvent{}, err
+		return ReplicationEvent{}, fmt.Errorf("scan: %w", err)
 	}
 
 	return events[0], nil
 }
 
-func (rq PostgresReplicationEventQueue) Dequeue(ctx context.Context, nodeStorage string, count int) ([]ReplicationEvent, error) {
+func (rq PostgresReplicationEventQueue) Dequeue(ctx context.Context, virtualStorage, nodeStorage string, count int) ([]ReplicationEvent, error) {
 	query := `
 		WITH to_lock AS (
 			SELECT id
@@ -223,9 +224,12 @@ func (rq PostgresReplicationEventQueue) Dequeue(ctx context.Context, nodeStorage
 			WHERE repo_lock.acquired = FALSE AND repo_lock.id IN (
 				SELECT lock_id
 				FROM replication_queue
-				WHERE attempt > 0 AND state IN ('ready', 'failed') AND job->>'target_node_storage' = $1
+				WHERE attempt > 0
+					AND state IN ('ready', 'failed')
+					AND job->>'virtual_storage' = $1
+					AND job->>'target_node_storage' = $2
 				ORDER BY created_at
-				LIMIT $2 FOR UPDATE
+				LIMIT $3 FOR UPDATE
 			)
 			FOR UPDATE SKIP LOCKED
 		)
@@ -240,9 +244,12 @@ func (rq PostgresReplicationEventQueue) Dequeue(ctx context.Context, nodeStorage
 				AND queue.id IN (
 					SELECT id
 					FROM replication_queue
-					WHERE attempt > 0 AND state IN ('ready', 'failed') AND job->>'target_node_storage' = $1
+					WHERE attempt > 0
+						AND state IN ('ready', 'failed')
+						AND job->>'virtual_storage' = $1
+						AND job->>'target_node_storage' = $2
 					ORDER BY created_at
-					LIMIT $2
+					LIMIT $3
 				)
 			RETURNING queue.id, queue.state, queue.created_at, queue.updated_at, queue.lock_id, queue.attempt, queue.job, queue.meta
 		)
@@ -259,12 +266,17 @@ func (rq PostgresReplicationEventQueue) Dequeue(ctx context.Context, nodeStorage
 		SELECT id, state, created_at, updated_at, lock_id, attempt, job, meta
 		FROM jobs
 		ORDER BY id`
-	rows, err := rq.qc.QueryContext(ctx, query, nodeStorage, count)
+	rows, err := rq.qc.QueryContext(ctx, query, virtualStorage, nodeStorage, count)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("query: %w", err)
 	}
 
-	return ScanReplicationEvents(rows)
+	res, err := scanReplicationEvents(rows)
+	if err != nil {
+		return nil, fmt.Errorf("scan: %w", err)
+	}
+
+	return res, nil
 }
 
 // Acknowledge updates previously dequeued events with new state releasing resources acquired for it.
@@ -319,12 +331,12 @@ func (rq PostgresReplicationEventQueue) Acknowledge(ctx context.Context, state J
 		FROM existing`
 	rows, err := rq.qc.QueryContext(ctx, query, params.Params()...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("query: %w", err)
 	}
 
 	var acknowledged glsql.Uint64Provider
 	if err := glsql.ScanAll(rows, &acknowledged); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("scan: %w", err)
 	}
 
 	return acknowledged.Values(), nil
