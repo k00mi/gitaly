@@ -39,7 +39,8 @@
 // The subcommand "reconcile" performs a consistency check of a backend storage
 // against the primary or another storage in the same virtual storage group.
 //
-//     praefect -config PATH_TO_CONFIG reconcile -virtual <vstorage> -target <t-storage> [-reference <r-storage>]
+//     praefect -config PATH_TO_CONFIG reconcile -virtual <vstorage> -target
+//     <t-storage> [-reference <r-storage>] [-f]
 //
 // "-virtual" specifies which virtual storage the target and reference
 // belong to.
@@ -53,6 +54,9 @@
 // reference storage is omitted, Praefect will perform the check against the
 // current primary. If the primary is the same as the target, an error will
 // occur.
+//
+// By default, a dry-run is performed where no replications are scheduled. When
+// the flag "-f" is provided, the replications will actually schedule.
 //
 // Dataloss
 //

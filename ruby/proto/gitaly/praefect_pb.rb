@@ -29,12 +29,14 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :virtual_storage, :string, 1
     optional :target_storage, :string, 2
     optional :reference_storage, :string, 3
+    optional :disable_reconcilliation, :bool, 4
   end
   add_message "gitaly.ConsistencyCheckResponse" do
     optional :repo_relative_path, :string, 1
     optional :target_checksum, :string, 2
     optional :reference_checksum, :string, 3
     optional :repl_job_id, :uint64, 4
+    optional :reference_storage, :string, 5
   end
 end
 

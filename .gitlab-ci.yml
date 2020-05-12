@@ -94,6 +94,11 @@ proto:
   stage: test
   script:
     - make proto no-changes
+  artifacts:
+    paths:
+    - ruby/proto/gitaly/*
+    - proto/go/gitalypb/*
+    when: on_failure
 
 build:go1.14:
   <<: *build_definition

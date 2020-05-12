@@ -77,11 +77,14 @@ func TestConsistencyCheck(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	reposAreConsistent := func() (consistent bool) {
+	disableReconcilliation := true
+
+	requestConsistencyCheck := func() *gitalypb.ConsistencyCheckResponse {
 		stream, err := praefectCli.ConsistencyCheck(ctx, &gitalypb.ConsistencyCheckRequest{
-			VirtualStorage:   virtualStorage.Name,
-			ReferenceStorage: primary.Storage,
-			TargetStorage:    secondary.Storage,
+			VirtualStorage:         virtualStorage.Name,
+			ReferenceStorage:       primary.Storage,
+			TargetStorage:          secondary.Storage,
+			DisableReconcilliation: disableReconcilliation,
 		})
 		require.NoError(t, err)
 
@@ -89,24 +92,28 @@ func TestConsistencyCheck(t *testing.T) {
 		require.Len(t, responses, 1)
 
 		resp := responses[0]
+
 		require.Equal(t, repo0.RelativePath, resp.RepoRelativePath)
+		require.Equal(t, primary.Storage, resp.ReferenceStorage)
 
-		consistent = resp.TargetChecksum == resp.ReferenceChecksum
-		if !consistent {
-			require.NotZero(t, resp.ReplJobId,
-				"A replication job should be scheduled when inconsistent")
-		}
-
-		return consistent
+		return resp
 	}
 
-	require.True(t, reposAreConsistent(),
+	resp := requestConsistencyCheck()
+	require.Equal(t, resp.ReferenceChecksum, resp.TargetChecksum,
 		"both repos expected to be consistent after initial clone")
+	require.Zero(t, resp.ReplJobId)
 
 	testhelper.MustRunCommand(t, nil, "git", "-C", targetRepoPath, "update-ref", "HEAD", "spooky-stuff")
 
-	require.False(t, reposAreConsistent(),
+	resp = requestConsistencyCheck()
+	require.NotEqual(t, resp.ReferenceChecksum, resp.TargetChecksum,
 		"repos should no longer be consistent after target HEAD changed")
+	require.Zero(t, resp.ReplJobId)
+
+	disableReconcilliation = false
+	resp = requestConsistencyCheck()
+	require.NotZero(t, resp.ReplJobId)
 }
 
 func consumeConsistencyCheckResponses(t *testing.T, stream gitalypb.PraefectInfoService_ConsistencyCheckClient) []*gitalypb.ConsistencyCheckResponse {
