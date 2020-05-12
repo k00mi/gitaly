@@ -18,6 +18,8 @@ const (
 	GoUpdateHook = "go_update_hook"
 	// RemoteBranchesLsRemote will use `ls-remote` for remote branches
 	RemoteBranchesLsRemote = "ruby_remote_branches_ls_remote"
+	// ReferenceTransactions will handle Git reference updates via the transaction service for strong consistency
+	ReferenceTransactions = "reference_transactions"
 )
 
 const (

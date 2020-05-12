@@ -9,6 +9,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/metadatahandler"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
@@ -148,6 +149,24 @@ func (c *Coordinator) accessorStreamParameters(ctx context.Context, call grpcCal
 	return proxy.NewStreamParameters(ctx, node.GetConnection(), nil, nil), nil
 }
 
+func (c *Coordinator) injectTransaction(ctx context.Context, node nodes.Node) (context.Context, func(), error) {
+	// We currently only handle single-node-transactions for the primary,
+	// so we just blindly call this single node "primary".
+	nodeName := "primary"
+
+	transactionID, cancel, err := c.txMgr.RegisterTransaction(ctx, []string{nodeName})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ctx, err = metadata.InjectTransaction(ctx, transactionID, nodeName)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return ctx, cancel, nil
+}
+
 func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall, targetRepo *gitalypb.Repository) (*proxy.StreamParameters, error) {
 	virtualStorage := targetRepo.StorageName
 
@@ -169,9 +188,24 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 		return nil, fmt.Errorf("mutator call: replication details: %w", err)
 	}
 
-	requestFinalizer := c.createReplicaJobs(ctx, virtualStorage, call.targetRepo, shard.Primary, shard.Secondaries, change, params)
+	var finalizers []func()
 
-	return proxy.NewStreamParameters(ctx, shard.Primary.GetConnection(), requestFinalizer, nil), nil
+	if featureflag.IsEnabled(ctx, featureflag.ReferenceTransactions) {
+		var transactionCleanup func()
+		ctx, transactionCleanup, err = c.injectTransaction(ctx, shard.Primary)
+		if err != nil {
+			return nil, err
+		}
+		finalizers = append(finalizers, transactionCleanup)
+	}
+
+	finalizers = append(finalizers, c.createReplicaJobs(ctx, virtualStorage, call.targetRepo, shard.Primary, shard.Secondaries, change, params))
+
+	return proxy.NewStreamParameters(ctx, shard.Primary.GetConnection(), func() {
+		for _, finalizer := range finalizers {
+			finalizer()
+		}
+	}, nil), nil
 }
 
 // streamDirector determines which downstream servers receive requests
