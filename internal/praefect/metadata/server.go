@@ -8,7 +8,10 @@ import (
 	"os"
 	"strings"
 
+	"gitlab.com/gitlab-org/gitaly/auth"
+	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -115,4 +118,15 @@ func (p PraefectServer) Env() (string, error) {
 
 	encoded := base64.StdEncoding.EncodeToString(marshalled)
 	return fmt.Sprintf("%s=%s", PraefectEnvKey, encoded), nil
+}
+
+func (p PraefectServer) Dial(ctx context.Context) (*grpc.ClientConn, error) {
+	opts := []grpc.DialOption{
+		grpc.WithBlock(),
+	}
+	if p.Token != "" {
+		opts = append(opts, grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(p.Token)))
+	}
+
+	return client.DialContext(ctx, p.Address, opts)
 }
