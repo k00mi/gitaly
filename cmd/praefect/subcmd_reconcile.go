@@ -13,16 +13,18 @@ import (
 )
 
 type nodeReconciler struct {
-	conf             config.Config
-	virtualStorage   string
-	targetStorage    string
-	referenceStorage string
+	conf                  config.Config
+	virtualStorage        string
+	targetStorage         string
+	referenceStorage      string
+	disableReconciliation bool
 }
 
 type reconcileSubcommand struct {
 	virtual   string
 	target    string
 	reference string
+	force     bool
 }
 
 func (s *reconcileSubcommand) FlagSet() *flag.FlagSet {
@@ -30,15 +32,17 @@ func (s *reconcileSubcommand) FlagSet() *flag.FlagSet {
 	fs.StringVar(&s.virtual, "virtual", "", "virtual storage for target storage")
 	fs.StringVar(&s.target, "target", "", "target storage to reconcile")
 	fs.StringVar(&s.reference, "reference", "", "reference storage to reconcile (optional)")
+	fs.BoolVar(&s.force, "f", false, "actually schedule replications")
 	return fs
 }
 
 func (s *reconcileSubcommand) Exec(flags *flag.FlagSet, conf config.Config) error {
 	nr := nodeReconciler{
-		conf:             conf,
-		virtualStorage:   s.virtual,
-		targetStorage:    s.target,
-		referenceStorage: s.reference,
+		conf:                  conf,
+		virtualStorage:        s.virtual,
+		targetStorage:         s.target,
+		referenceStorage:      s.reference,
+		disableReconciliation: !s.force,
 	}
 
 	if err := nr.reconcile(); err != nil {
@@ -76,16 +80,24 @@ func (nr nodeReconciler) reconcile() error {
 
 	pCli := gitalypb.NewPraefectInfoServiceClient(cc)
 
+	if nr.disableReconciliation {
+		log.Print("Performing a DRY RUN - no changes will be made until '-f' flag is provided")
+	} else {
+		log.Print("Performing a LIVE RUN - any repositories on target that are inconsistent with reference will be overwritten with the version present on reference")
+	}
+
 	request := &gitalypb.ConsistencyCheckRequest{
-		VirtualStorage:   nr.virtualStorage,
-		TargetStorage:    nr.targetStorage,
-		ReferenceStorage: nr.referenceStorage,
+		VirtualStorage:         nr.virtualStorage,
+		TargetStorage:          nr.targetStorage,
+		ReferenceStorage:       nr.referenceStorage,
+		DisableReconcilliation: nr.disableReconciliation,
 	}
 	stream, err := pCli.ConsistencyCheck(context.TODO(), request)
 	if err != nil {
 		return err
 	}
 
+	log.Print("Checking consistency...")
 	if err := nr.consumeStream(stream); err != nil {
 		return err
 	}
@@ -134,7 +146,10 @@ func (nr nodeReconciler) validateArgs() error {
 }
 
 func (nr nodeReconciler) consumeStream(stream gitalypb.PraefectInfoService_ConsistencyCheckClient) error {
-	for {
+	var rStorage string
+	var i uint
+
+	for ; ; i++ {
 		resp, err := stream.Recv()
 		if err == io.EOF {
 			break
@@ -143,13 +158,39 @@ func (nr nodeReconciler) consumeStream(stream gitalypb.PraefectInfoService_Consi
 			return err
 		}
 
-		if resp.GetReferenceChecksum() != resp.GetTargetChecksum() {
+		if resp.ReferenceStorage != rStorage {
+			rStorage = resp.ReferenceStorage
+			log.Print("Reference storage being used: " + rStorage)
+		}
+
+		if resp.GetReferenceChecksum() == resp.GetTargetChecksum() {
+			log.Print("CONSISTENT: " + resp.GetRepoRelativePath())
+			continue
+		}
+
+		checksumPrint := func(checksum string) string {
+			if checksum == "" {
+				return "null"
+			}
+			return checksum
+		}
+
+		log.Printf(
+			"INCONSISTENT: Repo %s has checksum %s on target but checksum %s on reference storage %s",
+			resp.GetRepoRelativePath(),
+			checksumPrint(resp.GetTargetChecksum()),
+			checksumPrint(resp.GetReferenceChecksum()),
+			resp.GetReferenceStorage(),
+		)
+		if resp.GetReplJobId() != 0 {
 			log.Printf(
-				"INCONSISTENT: %s - replication scheduled: #%d",
-				resp.GetRepoRelativePath(),
+				"SCHEDULED: Replication job %d will update repo %s",
 				resp.GetReplJobId(),
+				resp.GetRepoRelativePath(),
 			)
 		}
 	}
+
+	log.Printf("FINISHED: %d repos were checked for consistency", i)
 	return nil
 }

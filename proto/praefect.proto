@@ -77,6 +77,9 @@ message ConsistencyCheckRequest {
   // against. If a reference storage is omitted, the current primary will be
   // used.
   string reference_storage = 3;
+  // Be default, reconcilliation is enabled. Disabling reconcilliation will
+  // make the request side-effect free.
+  bool disable_reconcilliation = 4;
 }
 
 message ConsistencyCheckResponse {
@@ -86,4 +89,6 @@ message ConsistencyCheckResponse {
   // If resync was enabled, then each inconsistency will schedule a replication
   // job. A replication ID is returned to track the corresponding job.
   uint64 repl_job_id = 4;
+  // If the reference storage was not specified, reply with the reference used
+  string reference_storage = 5;
 }
