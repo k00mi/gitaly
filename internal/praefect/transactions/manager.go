@@ -76,22 +76,7 @@ func (mgr *Manager) cancelTransaction(transactionID uint64) {
 	delete(mgr.transactions, transactionID)
 }
 
-// StartTransaction is called by a client who's starting a reference
-// transaction. As we currently only have primary nodes which perform reference
-// transactions, this function doesn't yet do anything of interest but will
-// always instruct the node to commit, if given valid transaction parameters.
-// In future, it will wait for all clients of a given transaction to start the
-// transaction and perform a vote.
-func (mgr *Manager) StartTransaction(ctx context.Context, transactionID uint64, node string, hash []byte) error {
-	mgr.lock.Lock()
-	defer mgr.lock.Unlock()
-
-	mgr.log(ctx).WithFields(logrus.Fields{
-		"transaction_id": transactionID,
-		"node":           node,
-		"hash":           hex.EncodeToString(hash),
-	}).Debug("StartTransaction")
-
+func (mgr *Manager) verifyTransaction(transactionID uint64, node string, hash []byte) error {
 	// While the reference updates hash is not used yet, we already verify
 	// it's there. At a later point, the hash will be used to verify that
 	// all voting nodes agree on the same updates.
@@ -108,10 +93,38 @@ func (mgr *Manager) StartTransaction(ctx context.Context, transactionID uint64, 
 		return helper.ErrInternalf("invalid node for transaction: %q", node)
 	}
 
+	return nil
+}
+
+// StartTransaction is called by a client who's starting a reference
+// transaction. As we currently only have primary nodes which perform reference
+// transactions, this function doesn't yet do anything of interest but will
+// always instruct the node to commit, if given valid transaction parameters.
+// In future, it will wait for all clients of a given transaction to start the
+// transaction and perform a vote.
+func (mgr *Manager) StartTransaction(ctx context.Context, transactionID uint64, node string, hash []byte) error {
+	mgr.lock.Lock()
+	defer mgr.lock.Unlock()
+
+	mgr.log(ctx).WithFields(logrus.Fields{
+		"transaction_id": transactionID,
+		"node":           node,
+		"hash":           hex.EncodeToString(hash),
+	}).Debug("StartTransaction")
+
+	if err := mgr.verifyTransaction(transactionID, node, hash); err != nil {
+		mgr.log(ctx).WithFields(logrus.Fields{
+			"transaction_id": transactionID,
+			"node":           node,
+			"hash":           hex.EncodeToString(hash),
+		}).WithError(err).Error("StartTransaction: transaction invalid")
+		return err
+	}
+
 	mgr.log(ctx).WithFields(logrus.Fields{
 		"transaction_id": transactionID,
 		"hash":           hex.EncodeToString(hash),
-	}).Debug("CommitTransaction")
+	}).Debug("StartTransaction: transaction committed")
 
 	return nil
 }
