@@ -123,6 +123,7 @@ func (mgr *Manager) StartTransaction(ctx context.Context, transactionID uint64, 
 
 	mgr.log(ctx).WithFields(logrus.Fields{
 		"transaction_id": transactionID,
+		"node":           node,
 		"hash":           hex.EncodeToString(hash),
 	}).Debug("StartTransaction: transaction committed")
 
