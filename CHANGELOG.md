@@ -129,6 +129,10 @@
 - Validate content of alternates file
   https://gitlab.com/gitlab-org/gitaly/merge_requests/1946
 
+## 12.9.7
+
+- No changes.
+
 ## 12.9.6
 
 - No changes.
