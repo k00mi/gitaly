@@ -84,7 +84,10 @@ func (mgr *Manager) verifyTransaction(transactionID uint64, node string, hash []
 		return helper.ErrInvalidArgumentf("invalid reference hash: %q", hash)
 	}
 
+	mgr.lock.Lock()
 	transaction, ok := mgr.transactions[transactionID]
+	mgr.lock.Unlock()
+
 	if !ok {
 		return helper.ErrNotFound(fmt.Errorf("no such transaction: %d", transactionID))
 	}
@@ -103,9 +106,6 @@ func (mgr *Manager) verifyTransaction(transactionID uint64, node string, hash []
 // In future, it will wait for all clients of a given transaction to start the
 // transaction and perform a vote.
 func (mgr *Manager) StartTransaction(ctx context.Context, transactionID uint64, node string, hash []byte) error {
-	mgr.lock.Lock()
-	defer mgr.lock.Unlock()
-
 	mgr.log(ctx).WithFields(logrus.Fields{
 		"transaction_id": transactionID,
 		"node":           node,
