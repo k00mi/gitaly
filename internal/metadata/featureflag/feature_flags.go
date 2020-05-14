@@ -15,6 +15,8 @@ var (
 	GoUpdateHook = FeatureFlag{Name: "go_update_hook", OnByDefault: false}
 	// RemoteBranchesLsRemote will use `ls-remote` for remote branches
 	RemoteBranchesLsRemote = FeatureFlag{Name: "ruby_remote_branches_ls_remote", OnByDefault: false}
+	// GoFetchSourceBranch enables a go implementation of FetchSourceBranch
+	GoFetchSourceBranch = FeatureFlag{Name: "go_fetch_source_branch", OnByDefault: false}
 	// ReferenceTransactions will handle Git reference updates via the transaction service for strong consistency
 	ReferenceTransactions = FeatureFlag{Name: "reference_transactions", OnByDefault: false}
 	// DistributedReads allows praefect to redirect accessor operations to up-to-date secondaries
