@@ -59,7 +59,19 @@ func ReceivePackHookEnv(ctx context.Context, req ReceivePackRequest) ([]string, 
 		}
 
 		env = append(env, praefectEnv)
-	} else if !errors.Is(os.ErrNotExist, err) {
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+
+	transaction, err := metadata.ExtractTransaction(ctx)
+	if err == nil {
+		transactionEnv, err := transaction.Env()
+		if err != nil {
+			return nil, err
+		}
+
+		env = append(env, transactionEnv)
+	} else if !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
 

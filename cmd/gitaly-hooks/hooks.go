@@ -108,9 +108,12 @@ func main() {
 		}
 
 		environment := glValues()
-		if env, ok := os.LookupEnv(metadata.PraefectEnvKey); ok {
-			praefectEnv := fmt.Sprintf("%s=%s", metadata.PraefectEnvKey, env)
-			environment = append(environment, praefectEnv)
+
+		for _, key := range []string{metadata.PraefectEnvKey, metadata.TransactionEnvKey} {
+			if value, ok := os.LookupEnv(key); ok {
+				env := fmt.Sprintf("%s=%s", key, value)
+				environment = append(environment, env)
+			}
 		}
 
 		if err := preReceiveHookStream.Send(&gitalypb.PreReceiveHookRequest{
