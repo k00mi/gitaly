@@ -375,6 +375,7 @@ func (gm *gitalyMake) GitBuildOptions() string {
 		"NO_PERL=YesPlease",
 		"NO_EXPAT=YesPlease",
 		"NO_TCLTK=YesPlease",
+		"NO_REGEX=YesPlease",                      // fix compilation on musl libc
 		"NO_GETTEXT=YesPlease",
 		"NO_PYTHON=YesPlease",
 		"NO_INSTALL_HARDLINKS=YesPlease",
