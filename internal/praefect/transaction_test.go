@@ -9,7 +9,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/transactions"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -18,18 +17,14 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func runPraefectWithTransactionMgr(t *testing.T, opts ...transactions.ManagerOpt) (*grpc.ClientConn, *transactions.Manager, testhelper.Cleanup) {
+func runPraefectServerAndTxMgr(t testing.TB, opts ...transactions.ManagerOpt) (*grpc.ClientConn, *transactions.Manager, testhelper.Cleanup) {
 	conf := testConfig(1)
-
-	ds := datastore.Datastore{
-		ReplicasDatastore:     datastore.NewInMemory(conf),
-		ReplicationEventQueue: datastore.NewMemoryReplicationEventQueue(),
-	}
-
 	txMgr := transactions.NewManager(opts...)
-	conn, _, cleanup := runPraefectServer(t, conf, ds, txMgr)
-
-	return conn, txMgr, cleanup
+	cc, _, cleanup := runPraefectServer(t, conf, buildOptions{
+		withTxMgr:   txMgr,
+		withNodeMgr: nullNodeMgr{}, // to suppress node address issues
+	})
+	return cc, txMgr, cleanup
 }
 
 func setupMetrics() (*prometheus.CounterVec, []transactions.ManagerOpt) {
@@ -65,8 +60,7 @@ func verifyCounterMetrics(t *testing.T, counter *prometheus.CounterVec, expected
 
 func TestTransactionSucceeds(t *testing.T) {
 	counter, opts := setupMetrics()
-
-	cc, txMgr, cleanup := runPraefectWithTransactionMgr(t, opts...)
+	cc, txMgr, cleanup := runPraefectServerAndTxMgr(t, opts...)
 	defer cleanup()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -97,7 +91,7 @@ func TestTransactionSucceeds(t *testing.T) {
 }
 
 func TestTransactionFailsWithMultipleNodes(t *testing.T) {
-	_, txMgr, cleanup := runPraefectWithTransactionMgr(t)
+	_, txMgr, cleanup := runPraefectServerAndTxMgr(t)
 	defer cleanup()
 
 	ctx, cleanup := testhelper.Context()
@@ -109,8 +103,7 @@ func TestTransactionFailsWithMultipleNodes(t *testing.T) {
 
 func TestTransactionFailures(t *testing.T) {
 	counter, opts := setupMetrics()
-
-	cc, _, cleanup := runPraefectWithTransactionMgr(t, opts...)
+	cc, _, cleanup := runPraefectServerAndTxMgr(t, opts...)
 	defer cleanup()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -135,8 +128,7 @@ func TestTransactionFailures(t *testing.T) {
 
 func TestTransactionCancellation(t *testing.T) {
 	counter, opts := setupMetrics()
-
-	cc, txMgr, cleanup := runPraefectWithTransactionMgr(t, opts...)
+	cc, txMgr, cleanup := runPraefectServerAndTxMgr(t, opts...)
 	defer cleanup()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)

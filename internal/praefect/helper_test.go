@@ -73,22 +73,16 @@ func testConfig(backends int) config.Config {
 	return cfg
 }
 
-// setupServer wires all praefect dependencies together via dependency
-// injection
-func setupServer(t testing.TB, conf config.Config, nodeMgr nodes.Manager, txMgr *transactions.Manager, ds datastore.Datastore, l *logrus.Entry, r *protoregistry.Registry) *Server {
-	coordinator := NewCoordinator(l, ds, nodeMgr, txMgr, conf, r)
-
-	var defaultNode *models.Node
-	for _, n := range conf.VirtualStorages[0].Nodes {
-		if n.DefaultPrimary {
-			defaultNode = n
+func assertPrimariesExist(t testing.TB, conf config.Config) {
+	for _, vs := range conf.VirtualStorages {
+		var defaultNode *models.Node
+		for _, n := range vs.Nodes {
+			if n.DefaultPrimary {
+				defaultNode = n
+			}
 		}
+		require.NotNil(t, defaultNode)
 	}
-	require.NotNil(t, defaultNode)
-
-	server := NewServer(coordinator.StreamDirector, l, r, conf)
-
-	return server
 }
 
 // runPraefectServer runs a praefect server with the provided mock servers.
@@ -97,67 +91,90 @@ func setupServer(t testing.TB, conf config.Config, nodeMgr nodes.Manager, txMgr 
 // configured storage node.
 // requires there to be only 1 virtual storage
 func runPraefectServerWithMock(t *testing.T, conf config.Config, ds datastore.Datastore, backends map[string]mock.SimpleServiceServer) (*grpc.ClientConn, *Server, testhelper.Cleanup) {
-	require.Len(t, conf.VirtualStorages, 1)
-	require.Equal(t, len(backends), len(conf.VirtualStorages[0].Nodes),
-		"mock server count doesn't match config nodes")
-
-	var cleanups []testhelper.Cleanup
-
-	for i, node := range conf.VirtualStorages[0].Nodes {
-		backend, ok := backends[node.Storage]
-		require.True(t, ok, "missing backend server for node %s", node.Storage)
-
-		backendAddr, cleanup := newMockDownstream(t, node.Token, backend)
-		cleanups = append(cleanups, cleanup)
-
-		node.Address = backendAddr
-		conf.VirtualStorages[0].Nodes[i] = node
-	}
-
-	nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf, nil, promtest.NewMockHistogramVec())
-	require.NoError(t, err)
-	nodeMgr.Start(1*time.Millisecond, 5*time.Millisecond)
-
-	txMgr := transactions.NewManager()
-
 	r := protoregistry.New()
 	require.NoError(t, r.RegisterFiles(mustLoadProtoReg(t)))
 
-	prf := setupServer(t, conf, nodeMgr, txMgr, ds, log.Default(), r)
-
-	listener, port := listenAvailPort(t)
-	t.Logf("praefect listening on port %d", port)
-
-	errQ := make(chan error)
-
-	prf.RegisterServices(nodeMgr, txMgr, conf, ds)
-	go func() {
-		errQ <- prf.Serve(listener, false)
-	}()
-
-	// dial client to praefect
-	cc := dialLocalPort(t, port, false)
-
-	cleanup := func() {
-		for _, cu := range cleanups {
-			cu()
-		}
-		require.NoError(t, cc.Close())
-		require.NoError(t, listener.Close())
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-
-		require.NoError(t, prf.Shutdown(ctx))
-	}
-
-	return cc, prf, cleanup
+	return runPraefectServer(t, conf, buildOptions{
+		withDatastore:   ds,
+		withBackends:    withMockBackends(t, backends),
+		withAnnotations: r,
+	})
 }
 
 func noopBackoffFunc() (backoff, backoffReset) {
 	return func() time.Duration {
 		return 0
 	}, func() {}
+}
+
+type nullNodeMgr struct{}
+
+func (nullNodeMgr) GetShard(virtualStorageName string) (nodes.Shard, error)           { return nodes.Shard{}, nil }
+func (nullNodeMgr) EnableWrites(ctx context.Context, virtualStorageName string) error { return nil }
+
+type buildOptions struct {
+	withDatastore   datastore.Datastore
+	withTxMgr       *transactions.Manager
+	withBackends    func([]*config.VirtualStorage) []testhelper.Cleanup
+	withAnnotations *protoregistry.Registry
+	withLogger      *logrus.Entry
+	withNodeMgr     nodes.Manager
+}
+
+func withMockBackends(t testing.TB, backends map[string]mock.SimpleServiceServer) func([]*config.VirtualStorage) []testhelper.Cleanup {
+	return func(virtualStorages []*config.VirtualStorage) []testhelper.Cleanup {
+		var cleanups []testhelper.Cleanup
+
+		for _, vs := range virtualStorages {
+			require.Equal(t, len(backends), len(vs.Nodes),
+				"mock server count doesn't match config nodes")
+
+			for i, node := range vs.Nodes {
+				backend, ok := backends[node.Storage]
+				require.True(t, ok, "missing backend server for node %s", node.Storage)
+
+				backendAddr, cleanup := newMockDownstream(t, node.Token, backend)
+				cleanups = append(cleanups, cleanup)
+
+				node.Address = backendAddr
+				vs.Nodes[i] = node
+			}
+		}
+
+		return cleanups
+	}
+}
+
+func flattenVirtualStoragesToStoragePath(virtualStorages []*config.VirtualStorage, storagePath string) []gconfig.Storage {
+	var storages []gconfig.Storage
+	for _, vStorage := range virtualStorages {
+		for _, node := range vStorage.Nodes {
+			storages = append(storages, gconfig.Storage{
+				Name: node.Storage,
+				Path: storagePath,
+			})
+		}
+	}
+	return storages
+}
+
+// withRealGitalyShared will configure a real Gitaly server backend for a
+// Praefect server. The same Gitaly server instance is used for all backend
+// storages.
+func withRealGitalyShared(t testing.TB) func([]*config.VirtualStorage) []testhelper.Cleanup {
+	return func(virtualStorages []*config.VirtualStorage) []testhelper.Cleanup {
+		gStorages := flattenVirtualStoragesToStoragePath(virtualStorages, testhelper.GitlabTestStoragePath())
+		_, backendAddr, cleanupGitaly := runInternalGitalyServer(t, gStorages, virtualStorages[0].Nodes[0].Token)
+
+		for _, vs := range virtualStorages {
+			for i, node := range vs.Nodes {
+				node.Address = backendAddr
+				vs.Nodes[i] = node
+			}
+		}
+
+		return []testhelper.Cleanup{cleanupGitaly}
+	}
 }
 
 func runPraefectServerWithGitaly(t *testing.T, conf config.Config) (*grpc.ClientConn, *Server, testhelper.Cleanup) {
@@ -172,51 +189,78 @@ func runPraefectServerWithGitaly(t *testing.T, conf config.Config) (*grpc.Client
 // runPraefectServerWithGitaly runs a praefect server with actual Gitaly nodes
 // requires exactly 1 virtual storage
 func runPraefectServerWithGitalyWithDatastore(t *testing.T, conf config.Config, ds datastore.Datastore) (*grpc.ClientConn, *Server, testhelper.Cleanup) {
-	return runPraefectServer(t, conf, ds, transactions.NewManager())
+	return runPraefectServer(t, conf, buildOptions{
+		withDatastore: ds,
+		withTxMgr:     transactions.NewManager(),
+		withBackends:  withRealGitalyShared(t),
+	})
 }
 
-func runPraefectServer(t *testing.T, conf config.Config, ds datastore.Datastore, txMgr *transactions.Manager) (*grpc.ClientConn, *Server, testhelper.Cleanup) {
-	require.Len(t, conf.VirtualStorages, 1)
-	var cleanups []testhelper.Cleanup
-
-	var storages []gconfig.Storage
-	for _, node := range conf.VirtualStorages[0].Nodes {
-		storages = append(storages, gconfig.Storage{
-			Name: node.Storage,
-			Path: testhelper.GitlabTestStoragePath(),
-		})
+func defaultDatastore(conf config.Config) datastore.Datastore {
+	return datastore.Datastore{
+		ReplicasDatastore:     datastore.NewInMemory(conf),
+		ReplicationEventQueue: datastore.NewMemoryReplicationEventQueue(),
 	}
+}
 
-	_, backendAddr, cleanupGitaly := runInternalGitalyServer(t, storages, conf.VirtualStorages[0].Nodes[0].Token)
-	cleanups = append(cleanups, cleanupGitaly)
+func defaultTxMgr() *transactions.Manager {
+	return transactions.NewManager()
+}
 
-	for i, node := range conf.VirtualStorages[0].Nodes {
-		node.Address = backendAddr
-		conf.VirtualStorages[0].Nodes[i] = node
-	}
-
-	logEntry := log.Default()
-
+func defaultNodeMgr(t testing.TB, conf config.Config) nodes.Manager {
 	nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf, nil, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 	nodeMgr.Start(1*time.Millisecond, 5*time.Millisecond)
+	return nodeMgr
+}
 
-	registry := protoregistry.New()
-	require.NoError(t, registry.RegisterFiles(protoregistry.GitalyProtoFileDescriptors...))
-	coordinator := NewCoordinator(logEntry, ds, nodeMgr, txMgr, conf, registry)
+func defaultAnnotations(t testing.TB) *protoregistry.Registry {
+	r := protoregistry.New()
+	require.NoError(t, r.RegisterFiles(protoregistry.GitalyProtoFileDescriptors...))
+	return r
+}
 
+func runPraefectServer(t testing.TB, conf config.Config, opt buildOptions) (*grpc.ClientConn, *Server, testhelper.Cleanup) {
+	assertPrimariesExist(t, conf)
+
+	var cleanups []testhelper.Cleanup
+
+	if opt.withDatastore == (datastore.Datastore{}) {
+		opt.withDatastore = defaultDatastore(conf)
+	}
+	if opt.withTxMgr == nil {
+		opt.withTxMgr = defaultTxMgr()
+	}
+	if opt.withBackends != nil {
+		cleanups = append(cleanups, opt.withBackends(conf.VirtualStorages)...)
+	}
+	if opt.withAnnotations == nil {
+		opt.withAnnotations = defaultAnnotations(t)
+	}
+	if opt.withLogger == nil {
+		opt.withLogger = log.Default()
+	}
+	if opt.withNodeMgr == nil {
+		opt.withNodeMgr = defaultNodeMgr(t, conf)
+	}
+
+	coordinator := NewCoordinator(
+		opt.withLogger,
+		opt.withDatastore,
+		opt.withNodeMgr,
+		opt.withTxMgr,
+		conf,
+		opt.withAnnotations,
+	)
+
+	// TODO: run a replmgr for EVERY virtual storage
 	replmgr := NewReplMgr(
-		logEntry,
-		ds,
-		nodeMgr,
+		opt.withLogger,
+		opt.withDatastore,
+		opt.withNodeMgr,
 		WithQueueMetric(&promtest.MockGauge{}),
 	)
-	prf := NewServer(
-		coordinator.StreamDirector,
-		logEntry,
-		registry,
-		conf,
-	)
+	prf := NewServer(coordinator.StreamDirector, opt.withLogger, opt.withAnnotations, conf)
 
 	listener, port := listenAvailPort(t)
 	t.Logf("proxy listening on port %d", port)
@@ -224,7 +268,7 @@ func runPraefectServer(t *testing.T, conf config.Config, ds datastore.Datastore,
 	errQ := make(chan error)
 	ctx, cancel := testhelper.Context()
 
-	prf.RegisterServices(nodeMgr, txMgr, conf, ds)
+	prf.RegisterServices(opt.withNodeMgr, opt.withTxMgr, conf, opt.withDatastore)
 	go func() { errQ <- prf.Serve(listener, false) }()
 	replmgr.ProcessBacklog(ctx, noopBackoffFunc)
 
@@ -247,7 +291,37 @@ func runPraefectServer(t *testing.T, conf config.Config, ds datastore.Datastore,
 	return cc, prf, cleanup
 }
 
-func runInternalGitalyServer(t *testing.T, storages []gconfig.Storage, token string) (*grpc.Server, string, func()) {
+// partialGitaly is a subset of Gitaly's behavior needed to properly test
+// Praefect
+type partialGitaly interface {
+	gitalypb.ServerServiceServer
+	gitalypb.RepositoryServiceServer
+	gitalypb.InternalGitalyServer
+	healthpb.HealthServer
+}
+
+func registerServices(server *grpc.Server, pg partialGitaly) {
+	gitalypb.RegisterServerServiceServer(server, pg)
+	gitalypb.RegisterRepositoryServiceServer(server, pg)
+	gitalypb.RegisterInternalGitalyServer(server, pg)
+	healthpb.RegisterHealthServer(server, pg)
+}
+
+func realGitaly(storages []gconfig.Storage, authToken, internalSocketPath string) partialGitaly {
+	return struct {
+		gitalypb.ServerServiceServer
+		gitalypb.RepositoryServiceServer
+		gitalypb.InternalGitalyServer
+		healthpb.HealthServer
+	}{
+		gitalyserver.NewServer(storages),
+		repository.NewServer(RubyServer, internalSocketPath),
+		internalgitaly.NewServer(gconfig.Config.Storages),
+		health.NewServer(),
+	}
+}
+
+func runInternalGitalyServer(t testing.TB, storages []gconfig.Storage, token string) (*grpc.Server, string, func()) {
 	streamInt := []grpc.StreamServerInterceptor{auth.StreamServerInterceptor(internalauth.Config{Token: token})}
 	unaryInt := []grpc.UnaryServerInterceptor{auth.UnaryServerInterceptor(internalauth.Config{Token: token})}
 
@@ -257,26 +331,20 @@ func runInternalGitalyServer(t *testing.T, storages []gconfig.Storage, token str
 	listener, err := net.Listen("unix", serverSocketPath)
 	require.NoError(t, err)
 
-	internalSocket := gconfig.GitalyInternalSocketPath()
-	internalListener, err := net.Listen("unix", internalSocket)
+	internalSocketPath := gconfig.GitalyInternalSocketPath()
+	internalListener, err := net.Listen("unix", internalSocketPath)
 	require.NoError(t, err)
 
-	gitalypb.RegisterServerServiceServer(server, gitalyserver.NewServer(storages))
-	gitalypb.RegisterRepositoryServiceServer(server, repository.NewServer(RubyServer, internalSocket))
-	gitalypb.RegisterInternalGitalyServer(server, internalgitaly.NewServer(gconfig.Config.Storages))
-	healthpb.RegisterHealthServer(server, health.NewServer())
+	registerServices(server, realGitaly(storages, token, internalSocketPath))
 
 	errQ := make(chan error)
 
-	go func() {
-		errQ <- server.Serve(listener)
-	}()
-	go func() {
-		errQ <- server.Serve(internalListener)
-	}()
+	go func() { errQ <- server.Serve(listener) }()
+	go func() { errQ <- server.Serve(internalListener) }()
 
 	cleanup := func() {
 		server.Stop()
+		require.NoError(t, <-errQ)
 		require.NoError(t, <-errQ)
 	}
 

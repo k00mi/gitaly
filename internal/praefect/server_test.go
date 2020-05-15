@@ -22,11 +22,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/mock"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/models"
-	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
-	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
-	"gitlab.com/gitlab-org/gitaly/internal/praefect/transactions"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-	"gitlab.com/gitlab-org/gitaly/internal/testhelper/promtest"
 	"gitlab.com/gitlab-org/gitaly/internal/version"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/health/grpc_health_v1"
@@ -155,28 +151,13 @@ func TestGitalyServerInfoBadNode(t *testing.T) {
 		},
 	}
 
-	entry := testhelper.DiscardTestEntry(t)
-	nodeMgr, err := nodes.NewManager(entry, conf, nil, promtest.NewMockHistogramVec())
-	require.NoError(t, err)
-
-	txMgr := transactions.NewManager()
-
-	registry := protoregistry.New()
-	require.NoError(t, registry.RegisterFiles(protoregistry.GitalyProtoFileDescriptors...))
-
-	srv := setupServer(t, conf, nodeMgr, txMgr, datastore.Datastore{}, entry, registry)
-
-	listener, port := listenAvailPort(t)
-	go func() {
-		srv.RegisterServices(nodeMgr, txMgr, conf, datastore.Datastore{})
-		srv.Serve(listener, false)
-	}()
-
-	cc := dialLocalPort(t, port, false)
-	ctx, cancel := testhelper.Context()
-	defer cancel()
+	cc, _, cleanup := runPraefectServer(t, conf, buildOptions{})
+	defer cleanup()
 
 	client := gitalypb.NewServerServiceClient(cc)
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
 
 	metadata, err := client.ServerInfo(ctx, &gitalypb.ServerInfoRequest{})
 	require.NoError(t, err)
@@ -299,7 +280,12 @@ func TestWarnDuplicateAddrs(t *testing.T) {
 
 	tLogger, hook := test.NewNullLogger()
 
-	setupServer(t, conf, nil, nil, datastore.Datastore{}, logrus.NewEntry(tLogger), nil) // instantiates a praefect server and triggers warning
+	// instantiate a praefect server and trigger warning
+	_, _, cleanup := runPraefectServer(t, conf, buildOptions{
+		withLogger:  logrus.NewEntry(tLogger),
+		withNodeMgr: nullNodeMgr{}, // to suppress node address issues
+	})
+	defer cleanup()
 
 	for _, entry := range hook.Entries {
 		require.NotContains(t, entry.Message, "more than one backend node")
@@ -326,7 +312,12 @@ func TestWarnDuplicateAddrs(t *testing.T) {
 
 	tLogger, hook = test.NewNullLogger()
 
-	setupServer(t, conf, nil, nil, datastore.Datastore{}, logrus.NewEntry(tLogger), nil) // instantiates a praefect server and triggers warning
+	// instantiate a praefect server and trigger warning
+	_, _, cleanup = runPraefectServer(t, conf, buildOptions{
+		withLogger:  logrus.NewEntry(tLogger),
+		withNodeMgr: nullNodeMgr{}, // to suppress node address issues
+	})
+	defer cleanup()
 
 	var found bool
 	for _, entry := range hook.Entries {
@@ -372,7 +363,11 @@ func TestWarnDuplicateAddrs(t *testing.T) {
 
 	tLogger, hook = test.NewNullLogger()
 
-	setupServer(t, conf, nil, nil, datastore.Datastore{}, logrus.NewEntry(tLogger), nil) // instantiates a praefect server and triggers warning
+	// instantiate a praefect server and trigger warning
+	_, _, cleanup = runPraefectServer(t, conf, buildOptions{
+		withLogger:  logrus.NewEntry(tLogger),
+		withNodeMgr: nullNodeMgr{}, // to suppress node address issues
+	})
 
 	for _, entry := range hook.Entries {
 		require.NotContains(t, entry.Message, "more than one backend node")
