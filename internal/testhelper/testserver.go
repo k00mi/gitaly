@@ -2,6 +2,7 @@ package testhelper
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -277,11 +279,35 @@ func NewServer(tb testing.TB, streamInterceptors []grpc.StreamServerInterceptor,
 
 var changeLineRegex = regexp.MustCompile("^[a-f0-9]{40} [a-f0-9]{40} refs/[^ ]+$")
 
+const secretHeaderName = "Gitlab-Shared-Secret"
+
+func formToMap(u url.Values) map[string]string {
+	return map[string]string{
+		"action":        u.Get("action"),
+		"gl_repository": u.Get("gl_repository"),
+		"project":       u.Get("project"),
+		"changes":       u.Get("changes"),
+		"protocol":      u.Get("protocol"),
+		"env":           u.Get("env"),
+		"username":      u.Get("username"),
+		"key_id":        u.Get("key_id"),
+		"user_id":       u.Get("user_id"),
+	}
+}
+
 func handleAllowed(t testing.TB, options GitlabTestServerOptions) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		require.NoError(t, r.ParseForm())
 		require.Equal(t, http.MethodPost, r.Method, "expected http post")
-		require.Equal(t, "application/x-www-form-urlencoded", r.Header.Get("Content-Type"))
+
+		params := make(map[string]string)
+
+		switch r.Header.Get("Content-Type") {
+		case "application/x-www-form-urlencoded":
+			params = formToMap(r.Form)
+		case "application/json":
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&params))
+		}
 
 		user, password, _ := r.BasicAuth()
 		require.Equal(t, options.User, user)
@@ -293,58 +319,79 @@ func handleAllowed(t testing.TB, options GitlabTestServerOptions) func(w http.Re
 
 			switch glidSplit[0] {
 			case "user":
-				require.Equal(t, glidSplit[1], r.Form.Get("user_id"))
+				require.Equal(t, glidSplit[1], params["user_id"])
 			case "key":
-				require.Equal(t, glidSplit[1], r.Form.Get("key_id"))
+				require.Equal(t, glidSplit[1], params["key_id"])
 			case "username":
-				require.Equal(t, glidSplit[1], r.Form.Get("username"))
+				require.Equal(t, glidSplit[1], params["username"])
 			default:
 				t.Fatalf("invalid GLID: %q", options.GLID)
 			}
 		}
 
-		require.NotEmpty(t, r.Form.Get("gl_repository"), "gl_repository should not be empty")
+		require.NotEmpty(t, params["gl_repository"], "gl_repository should not be empty")
 		if options.GLRepository != "" {
-			require.Equal(t, options.GLRepository, r.Form.Get("gl_repository"), "expected value of gl_repository should match form")
+			require.Equal(t, options.GLRepository, params["gl_repository"], "expected value of gl_repository should match form")
 		}
-		require.NotEmpty(t, r.Form.Get("protocol"), "protocol should not be empty")
+		require.NotEmpty(t, params["protocol"], "protocol should not be empty")
 		if options.Protocol != "" {
-			require.Equal(t, options.Protocol, r.Form.Get("protocol"), "expected value of options.Protocol should match form")
+			require.Equal(t, options.Protocol, params["protocol"], "expected value of options.Protocol should match form")
 		}
 
 		if options.Changes != "" {
-			require.Equal(t, options.Changes, r.Form.Get("changes"), "expected value of options.Changes should match form")
+			require.Equal(t, options.Changes, params["changes"], "expected value of options.Changes should match form")
 		} else {
-			changeLines := strings.Split(strings.TrimSuffix(r.Form.Get("changes"), "\n"), "\n")
+			changeLines := strings.Split(strings.TrimSuffix(params["changes"], "\n"), "\n")
 			for _, line := range changeLines {
 				require.Regexp(t, changeLineRegex, line)
 			}
 		}
-		env := r.Form.Get("env")
+		env := params["env"]
 		require.NotEmpty(t, env)
 
 		var gitVars struct {
 			GitAlternateObjectDirsRel []string `json:"GIT_ALTERNATE_OBJECT_DIRECTORIES_RELATIVE"`
 			GitObjectDirRel           string   `json:"GIT_OBJECT_DIRECTORY_RELATIVE"`
 		}
+
+		w.Header().Set("Content-Type", "application/json")
+
 		require.NoError(t, json.Unmarshal([]byte(env), &gitVars))
 
 		if options.GitObjectDir != "" {
 			relObjectDir, err := filepath.Rel(options.RepoPath, options.GitObjectDir)
 			require.NoError(t, err)
-			require.Equal(t, relObjectDir, gitVars.GitObjectDirRel)
+			if relObjectDir != gitVars.GitObjectDirRel {
+				w.Write([]byte(`{"status":false}`))
+				return
+			}
 		}
+
 		if len(options.GitAlternateObjectDirs) > 0 {
 			require.Len(t, gitVars.GitAlternateObjectDirsRel, len(options.GitAlternateObjectDirs))
 			for i, gitAlterateObjectDir := range options.GitAlternateObjectDirs {
 				relAltObjectDir, err := filepath.Rel(options.RepoPath, gitAlterateObjectDir)
 				require.NoError(t, err)
-				require.Equal(t, relAltObjectDir, gitVars.GitAlternateObjectDirsRel[i])
+				if relAltObjectDir != gitVars.GitAlternateObjectDirsRel[i] {
+					w.Write([]byte(`{"status":false}`))
+					return
+				}
 			}
 		}
 
-		w.Header().Set("Content-Type", "application/json")
+		var authenticated bool
 		if r.Form.Get("secret_token") == options.SecretToken {
+			authenticated = true
+		}
+
+		secretHeader, err := base64.StdEncoding.DecodeString(r.Header.Get(secretHeaderName))
+		if err == nil {
+			if string(secretHeader) == options.SecretToken {
+				authenticated = true
+			}
+		}
+
+		if authenticated {
 			w.Write([]byte(`{"status":true}`))
 			return
 		}
@@ -356,13 +403,44 @@ func handleAllowed(t testing.TB, options GitlabTestServerOptions) func(w http.Re
 func handlePreReceive(t testing.TB, options GitlabTestServerOptions) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		require.NoError(t, r.ParseForm())
-		require.Equal(t, http.MethodPost, r.Method)
-		require.Equal(t, "application/x-www-form-urlencoded", r.Header.Get("Content-Type"))
-		require.NotEmpty(t, r.Form.Get("gl_repository"), "gl_repository should not be empty")
-		if options.GLRepository != "" {
-			require.Equal(t, options.GLRepository, r.Form.Get("gl_repository"), "expected value of gl_repository should match form")
+
+		params := make(map[string]string)
+
+		switch r.Header.Get("Content-Type") {
+		case "application/x-www-form-urlencoded":
+			b, err := json.Marshal(r.Form)
+			require.NoError(t, err)
+
+			var reqForm struct {
+				GLRepository []string `json:"gl_repository"`
+			}
+
+			require.NoError(t, json.Unmarshal(b, &reqForm))
+			require.Greater(t, len(reqForm.GLRepository), 0)
+			params["gl_repository"] = reqForm.GLRepository[0]
+		case "application/json":
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&params))
 		}
-		require.Equal(t, options.SecretToken, r.Form.Get("secret_token"), "expected value of secret_token should match form")
+
+		require.Equal(t, http.MethodPost, r.Method)
+		require.NotEmpty(t, params["gl_repository"], "gl_repository should not be empty")
+		if options.GLRepository != "" {
+			require.Equal(t, options.GLRepository, params["gl_repository"], "expected value of gl_repository should match form")
+		}
+
+		var authenticated bool
+		if r.Form.Get("secret_token") == options.SecretToken {
+			authenticated = true
+		}
+
+		secretHeader, err := base64.StdEncoding.DecodeString(r.Header.Get(secretHeaderName))
+		if err == nil {
+			if string(secretHeader) == options.SecretToken {
+				authenticated = true
+			}
+		}
+
+		require.True(t, authenticated, "expected value of secret_token should request")
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -372,6 +450,7 @@ func handlePreReceive(t testing.TB, options GitlabTestServerOptions) func(w http
 
 func handlePostReceive(t testing.TB, options GitlabTestServerOptions) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
 		require.NoError(t, r.ParseForm())
 		require.Equal(t, http.MethodPost, r.Method)
 		require.Equal(t, "application/x-www-form-urlencoded", r.Header.Get("Content-Type"))

@@ -12,12 +12,13 @@ require (
 	github.com/kelseyhightower/envconfig v1.3.0
 	github.com/lib/pq v1.2.0
 	github.com/olekukonko/tablewriter v0.0.2
+	github.com/otiai10/curr v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.0.0
 	github.com/prometheus/procfs v0.0.3 // indirect
 	github.com/rubenv/sql-migrate v0.0.0-20191213152630-06338513c237
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.4.0
-	github.com/tinylib/msgp v1.1.0 // indirect
+	gitlab.com/gitlab-org/gitlab-shell v1.9.8-0.20200506213341-716e30c55e89
 	gitlab.com/gitlab-org/labkit v0.0.0-20200507062444-0149780c759d
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	golang.org/x/sys v0.0.0-20200113162924-86b910548bc1
