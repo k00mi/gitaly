@@ -107,7 +107,10 @@ func TestDatalossCheck(t *testing.T) {
 	killJobs(t)
 
 	cc, _, clean := runPraefectServerWithMock(t, cfg,
-		datastore.Datastore{ReplicationEventQueue: rq},
+		datastore.Datastore{
+			ReplicasDatastore:     datastore.NewInMemory(cfg),
+			ReplicationEventQueue: rq,
+		},
 		map[string]mock.SimpleServiceServer{
 			"not-needed": &mock.UnimplementedSimpleServiceServer{},
 		},
