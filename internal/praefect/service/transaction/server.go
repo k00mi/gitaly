@@ -19,16 +19,16 @@ func NewServer(txMgr *transactions.Manager) gitalypb.RefTransactionServer {
 	}
 }
 
-// StartTransaction is called by a client who's starting a reference
+// VoteTransaction is called by a client who's casting a vote on a reference
 // transaction, blocking until a vote across all participating nodes has been
 // completed.
-func (s *Server) StartTransaction(ctx context.Context, in *gitalypb.StartTransactionRequest) (*gitalypb.StartTransactionResponse, error) {
-	err := s.txMgr.StartTransaction(ctx, in.TransactionId, in.Node, in.ReferenceUpdatesHash)
+func (s *Server) VoteTransaction(ctx context.Context, in *gitalypb.VoteTransactionRequest) (*gitalypb.VoteTransactionResponse, error) {
+	err := s.txMgr.VoteTransaction(ctx, in.TransactionId, in.Node, in.ReferenceUpdatesHash)
 	if err != nil {
 		return nil, err
 	}
 
-	return &gitalypb.StartTransactionResponse{
-		State: gitalypb.StartTransactionResponse_COMMIT,
+	return &gitalypb.VoteTransactionResponse{
+		State: gitalypb.VoteTransactionResponse_COMMIT,
 	}, nil
 }

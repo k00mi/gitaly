@@ -75,13 +75,13 @@ func TestTransactionSucceeds(t *testing.T) {
 
 	hash := sha1.Sum([]byte{})
 
-	response, err := client.StartTransaction(ctx, &gitalypb.StartTransactionRequest{
+	response, err := client.VoteTransaction(ctx, &gitalypb.VoteTransactionRequest{
 		TransactionId:        transactionID,
 		Node:                 "node1",
 		ReferenceUpdatesHash: hash[:],
 	})
 	require.NoError(t, err)
-	require.Equal(t, gitalypb.StartTransactionResponse_COMMIT, response.State)
+	require.Equal(t, gitalypb.VoteTransactionResponse_COMMIT, response.State)
 
 	verifyCounterMetrics(t, counter, counterMetrics{
 		registered: 1,
@@ -112,7 +112,7 @@ func TestTransactionFailures(t *testing.T) {
 	client := gitalypb.NewRefTransactionClient(cc)
 
 	hash := sha1.Sum([]byte{})
-	_, err := client.StartTransaction(ctx, &gitalypb.StartTransactionRequest{
+	_, err := client.VoteTransaction(ctx, &gitalypb.VoteTransactionRequest{
 		TransactionId:        1,
 		Node:                 "node1",
 		ReferenceUpdatesHash: hash[:],
@@ -143,7 +143,7 @@ func TestTransactionCancellation(t *testing.T) {
 	cancelTransaction()
 
 	hash := sha1.Sum([]byte{})
-	_, err = client.StartTransaction(ctx, &gitalypb.StartTransactionRequest{
+	_, err = client.VoteTransaction(ctx, &gitalypb.VoteTransactionRequest{
 		TransactionId:        transactionID,
 		Node:                 "node1",
 		ReferenceUpdatesHash: hash[:],
