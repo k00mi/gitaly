@@ -2,7 +2,9 @@ package transaction
 
 import (
 	"context"
+	"errors"
 
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/transactions"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -25,7 +27,10 @@ func NewServer(txMgr *transactions.Manager) gitalypb.RefTransactionServer {
 func (s *Server) VoteTransaction(ctx context.Context, in *gitalypb.VoteTransactionRequest) (*gitalypb.VoteTransactionResponse, error) {
 	err := s.txMgr.VoteTransaction(ctx, in.TransactionId, in.Node, in.ReferenceUpdatesHash)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, transactions.ErrNotFound) {
+			return nil, helper.ErrNotFound(err)
+		}
+		return nil, helper.ErrInternal(err)
 	}
 
 	return &gitalypb.VoteTransactionResponse{

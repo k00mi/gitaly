@@ -6,6 +6,7 @@ import (
 	"crypto/sha1"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/rand"
 	"sync"
@@ -14,9 +15,10 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/prometheus/metrics"
 )
+
+var ErrNotFound = errors.New("transaction not found")
 
 // Manager handles reference transactions for Praefect. It is required in order
 // for Praefect to handle transactions directly instead of having to reach out
@@ -115,7 +117,7 @@ func (mgr *Manager) RegisterTransaction(ctx context.Context, nodes []string) (ui
 	// usually the primary. This limitation will be lifted at a later point
 	// to allow for real transaction voting and multi-phase commits.
 	if len(nodes) != 1 {
-		return 0, nil, helper.ErrInvalidArgumentf("transaction requires exactly one node")
+		return 0, nil, errors.New("transaction requires exactly one node")
 	}
 
 	// Use a random transaction ID. Using monotonic incrementing counters
@@ -124,7 +126,7 @@ func (mgr *Manager) RegisterTransaction(ctx context.Context, nodes []string) (ui
 	// nodes still have in-flight transactions.
 	transactionID := mgr.txIdGenerator.Id()
 	if _, ok := mgr.transactions[transactionID]; ok {
-		return 0, nil, helper.ErrInternalf("transaction exists already")
+		return 0, nil, errors.New("transaction exists already")
 	}
 	mgr.transactions[transactionID] = nodes[0]
 
@@ -151,7 +153,7 @@ func (mgr *Manager) verifyTransaction(transactionID uint64, node string, hash []
 	// it's there. At a later point, the hash will be used to verify that
 	// all voting nodes agree on the same updates.
 	if len(hash) != sha1.Size {
-		return helper.ErrInvalidArgumentf("invalid reference hash: %q", hash)
+		return fmt.Errorf("invalid reference hash: %q", hash)
 	}
 
 	mgr.lock.Lock()
@@ -159,11 +161,11 @@ func (mgr *Manager) verifyTransaction(transactionID uint64, node string, hash []
 	mgr.lock.Unlock()
 
 	if !ok {
-		return helper.ErrNotFound(fmt.Errorf("no such transaction: %d", transactionID))
+		return ErrNotFound
 	}
 
 	if transaction != node {
-		return helper.ErrInternalf("invalid node for transaction: %q", node)
+		return fmt.Errorf("invalid node for transaction: %q", node)
 	}
 
 	return nil
