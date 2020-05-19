@@ -1,0 +1,5 @@
+---
+title: Single-node transactions via pre-receive hook
+merge_request: 2147
+author:
+type: added

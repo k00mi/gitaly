@@ -460,3 +460,88 @@ func runSmartHTTPHookServiceServer(t *testing.T) (*grpc.Server, string) {
 
 	return server, "unix://" + serverSocketPath
 }
+
+func TestPostReceiveWithTransactions(t *testing.T) {
+	defer func(cfg config.Cfg) {
+		config.Config = cfg
+	}(config.Config)
+
+	defer func(override string) {
+		hooks.Override = override
+	}(hooks.Override)
+	hooks.Override = ""
+
+	secretToken := "secret token"
+	glID := "key-1234"
+	glRepository := "some_repo"
+	gitlabUser := "gitlab_user-1234"
+	gitlabPassword := "gitlabsecret9887"
+
+	featureSets, err := testhelper.NewFeatureSets([]string{featureflag.HooksRPC, featureflag.ReferenceTransactions})
+	require.NoError(t, err)
+
+	for _, features := range featureSets {
+		t.Run(fmt.Sprintf("features:%s", features), func(t *testing.T) {
+			repo, repoPath, cleanup := testhelper.NewTestRepo(t)
+			defer cleanup()
+
+			opts := testhelper.GitlabTestServerOptions{
+				User:         gitlabUser,
+				Password:     gitlabPassword,
+				SecretToken:  secretToken,
+				GLID:         glID,
+				GLRepository: glRepository,
+				RepoPath:     repoPath,
+			}
+
+			gitlabServer := testhelper.NewGitlabTestServer(t, opts)
+			defer gitlabServer.Close()
+
+			gitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
+			defer cleanup()
+			config.Config.GitlabShell.Dir = gitlabShellDir
+			testhelper.WriteTemporaryGitlabShellConfigFile(t,
+				gitlabShellDir,
+				testhelper.GitlabShellConfig{
+					GitlabURL: gitlabServer.URL,
+					HTTPSettings: testhelper.HTTPSettings{
+						User:     gitlabUser,
+						Password: gitlabPassword,
+					},
+				})
+			testhelper.WriteShellSecretFile(t, gitlabShellDir, secretToken)
+
+			gitalyServer := testhelper.NewServerWithAuth(t, nil, nil, config.Config.Auth.Token)
+			gitalypb.RegisterSmartHTTPServiceServer(gitalyServer.GrpcServer(), NewServer())
+			gitalypb.RegisterHookServiceServer(gitalyServer.GrpcServer(), hook.NewServer())
+			reflection.Register(gitalyServer.GrpcServer())
+			require.NoError(t, gitalyServer.Start())
+			defer gitalyServer.Stop()
+
+			internalSocket := config.GitalyInternalSocketPath()
+			internalListener, err := net.Listen("unix", internalSocket)
+			require.NoError(t, err)
+
+			go func() {
+				gitalyServer.GrpcServer().Serve(internalListener)
+			}()
+
+			client, conn := newSmartHTTPClient(t, "unix://"+gitalyServer.Socket())
+			defer conn.Close()
+
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+			ctx = features.WithParent(ctx)
+
+			stream, err := client.PostReceivePack(ctx)
+			require.NoError(t, err)
+
+			push := newTestPush(t, nil)
+			request := &gitalypb.PostReceivePackRequest{Repository: repo, GlId: glID, GlRepository: glRepository}
+			response := doPush(t, stream, request, push.body)
+
+			expectedResponse := "0030\x01000eunpack ok\n0019ok refs/heads/master\n00000000"
+			require.Equal(t, expectedResponse, string(response), "Expected response to be %q, got %q", expectedResponse, response)
+		})
+	}
+}

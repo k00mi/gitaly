@@ -6,8 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
+	"gitlab.com/gitlab-org/gitaly/auth"
+	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -79,13 +83,20 @@ func ExtractPraefectServer(ctx context.Context) (p *PraefectServer, err error) {
 // PraefectFromEnv extracts `PraefectServer` from the environment variable
 // `PraefectEnvKey`. In case the variable is not set, the function will return
 // `os.ErrNotExist`.
-func PraefectFromEnv() (*PraefectServer, error) {
-	encoded, ok := os.LookupEnv(PraefectEnvKey)
-	if !ok {
+func PraefectFromEnv(envvars []string) (*PraefectServer, error) {
+	praefectKey := fmt.Sprintf("%s=", PraefectEnvKey)
+	praefectEnv := ""
+	for _, envvar := range envvars {
+		if strings.HasPrefix(envvar, praefectKey) {
+			praefectEnv = envvar[len(praefectKey):]
+			break
+		}
+	}
+	if praefectEnv == "" {
 		return nil, os.ErrNotExist
 	}
 
-	decoded, err := base64.StdEncoding.DecodeString(encoded)
+	decoded, err := base64.StdEncoding.DecodeString(praefectEnv)
 	if err != nil {
 		return nil, fmt.Errorf("failed decoding base64: %w", err)
 	}
@@ -107,4 +118,15 @@ func (p PraefectServer) Env() (string, error) {
 
 	encoded := base64.StdEncoding.EncodeToString(marshalled)
 	return fmt.Sprintf("%s=%s", PraefectEnvKey, encoded), nil
+}
+
+func (p PraefectServer) Dial(ctx context.Context) (*grpc.ClientConn, error) {
+	opts := []grpc.DialOption{
+		grpc.WithBlock(),
+	}
+	if p.Token != "" {
+		opts = append(opts, grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(p.Token)))
+	}
+
+	return client.DialContext(ctx, p.Address, opts)
 }
