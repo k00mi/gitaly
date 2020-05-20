@@ -135,17 +135,18 @@ func (mgr *Manager) RegisterTransaction(ctx context.Context, nodes []string) (ui
 	mgr.counterMetric.WithLabelValues("registered").Inc()
 
 	return transactionID, func() {
-		mgr.cancelTransaction(transactionID)
+		mgr.cancelTransaction(transactionID, transaction)
 	}, nil
 }
 
-func (mgr *Manager) cancelTransaction(transactionID uint64) {
+func (mgr *Manager) cancelTransaction(transactionID uint64, transaction *transaction) {
 	mgr.lock.Lock()
 	defer mgr.lock.Unlock()
 	delete(mgr.transactions, transactionID)
+	transaction.cancel()
 }
 
-func (mgr *Manager) voteTransaction(transactionID uint64, node string, hash []byte) error {
+func (mgr *Manager) voteTransaction(ctx context.Context, transactionID uint64, node string, hash []byte) error {
 	mgr.lock.Lock()
 	transaction, ok := mgr.transactions[transactionID]
 	mgr.lock.Unlock()
@@ -155,6 +156,10 @@ func (mgr *Manager) voteTransaction(transactionID uint64, node string, hash []by
 	}
 
 	if err := transaction.vote(node, hash); err != nil {
+		return err
+	}
+
+	if err := transaction.collectVotes(ctx); err != nil {
 		return err
 	}
 
@@ -182,13 +187,19 @@ func (mgr *Manager) VoteTransaction(ctx context.Context, transactionID uint64, n
 		"hash":           hex.EncodeToString(hash),
 	}).Debug("VoteTransaction")
 
-	if err := mgr.voteTransaction(transactionID, node, hash); err != nil {
+	if err := mgr.voteTransaction(ctx, transactionID, node, hash); err != nil {
 		mgr.log(ctx).WithFields(logrus.Fields{
 			"transaction_id": transactionID,
 			"node":           node,
 			"hash":           hex.EncodeToString(hash),
-		}).WithError(err).Error("VoteTransaction: transaction invalid")
-		mgr.counterMetric.WithLabelValues("invalid").Inc()
+		}).WithError(err).Error("VoteTransaction: vote failed")
+
+		if errors.Is(err, ErrTransactionVoteFailed) {
+			mgr.counterMetric.WithLabelValues("aborted").Inc()
+		} else {
+			mgr.counterMetric.WithLabelValues("invalid").Inc()
+		}
+
 		return err
 	}
 

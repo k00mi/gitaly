@@ -7,6 +7,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/transactions"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
+	"google.golang.org/grpc/codes"
 )
 
 type Server struct {
@@ -27,10 +28,18 @@ func NewServer(txMgr *transactions.Manager) gitalypb.RefTransactionServer {
 func (s *Server) VoteTransaction(ctx context.Context, in *gitalypb.VoteTransactionRequest) (*gitalypb.VoteTransactionResponse, error) {
 	err := s.txMgr.VoteTransaction(ctx, in.TransactionId, in.Node, in.ReferenceUpdatesHash)
 	if err != nil {
-		if errors.Is(err, transactions.ErrNotFound) {
+		switch {
+		case errors.Is(err, transactions.ErrNotFound):
 			return nil, helper.ErrNotFound(err)
+		case errors.Is(err, transactions.ErrTransactionCanceled):
+			return nil, helper.DecorateError(codes.Canceled, err)
+		case errors.Is(err, transactions.ErrTransactionVoteFailed):
+			return &gitalypb.VoteTransactionResponse{
+				State: gitalypb.VoteTransactionResponse_ABORT,
+			}, nil
+		default:
+			return nil, helper.ErrInternal(err)
 		}
-		return nil, helper.ErrInternal(err)
 	}
 
 	return &gitalypb.VoteTransactionResponse{
