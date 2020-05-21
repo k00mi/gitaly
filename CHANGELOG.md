@@ -2,6 +2,7 @@
 
 ## 13.0.0
 
+- No changes.
 ### Security (1 change)
 
 - Improved path traversal protection. !2132
