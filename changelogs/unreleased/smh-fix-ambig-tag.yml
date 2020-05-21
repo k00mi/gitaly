@@ -1,5 +1,0 @@
----
-title: Delete tags by canonical reference name when mirroring repository
-merge_request: 2026
-author:
-type: fixed

@@ -1,5 +1,0 @@
----
-title: Fix rebase when diff contains only deleted files
-merge_request: 2109
-author:
-type: fixed

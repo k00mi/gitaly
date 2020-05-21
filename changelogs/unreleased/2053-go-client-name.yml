@@ -1,5 +1,0 @@
----
-title: Extract client name from Go GRPC client
-merge_request: 2152
-author:
-type: added

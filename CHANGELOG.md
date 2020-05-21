@@ -1,5 +1,62 @@
 # Gitaly changelog
 
+## 13.0.0
+
+### Security (1 change)
+
+- Improved path traversal protection. !2132
+
+### Fixed (16 changes, 1 of them is from the community)
+
+- Delete tags by canonical reference name when mirroring repository. !2026
+- Fix signature detection for tags. !2045 (Roger Meier)
+- Ignore repositories deleted during a file walk. !2083
+- Revert gRPC upgrade to v1.27.0 to fix issues on multiple platforms. !2088
+- Do not enable SQL elector if failover is disabled. !2091
+- cleanup commit-graph-chain.lock file after crash. !2099
+- Provide consistent view of primary and secondaries. !2105
+- Fix rebase when diff contains only deleted files. !2109
+- Praefect: proper multi-virtual storage support. !2117
+- Use tableflip with praefect prometheus listener. !2122
+- Praefect: configuration verification. !2130
+- HTTPSettings to handle bools and ints. !2142
+- Bump gitlab-markup gem to v1.7.1. !2143
+- Revert charlock holmes bump. !2154
+- Configure logging before running sub-commands. !2169
+- Allow port reuse in tableflip. !2175
+
+### Changed (9 changes)
+
+- Allow Praefect's ServerInfo RPC to succeed even if the internal gitaly node calls fail. !2067
+- Choose primary with smallest replication queue size. !2078
+- Use go update hook when feature flag is toggled. !2095
+- Modify chunker to send message based on size. !2096
+- Use separate http settings config object. !2104
+- Extract reference transaction manager from transaction service. !2114
+- Enable feature flag for go update hooks through operations service. !2120
+- Block in NewManager to wait for nodes to be up. !2134
+- Include Praefect usage in the usage ping. !2180
+
+### Added (10 changes)
+
+- Add DivergentRefs to UpdateRemoteMirrorResponse. !2028
+- Write gitlab shell config from gitaly to gitlab shell as env var. !2066
+- Implement reference transaction service. !2077
+- Reconciliation should report progress and warn user. !2084
+- Improve error messages for repository creation RPCs. !2118
+- Upgrade github-linguist to version 7.9.0. !2145
+- Single-node transactions via pre-receive hook. !2147
+- Enforce read-only status for virtual storages. !2148
+- Extract client name from Go GRPC client. !2152
+- Praefect enable-writes subcommand. !2157
+
+### Other (3 changes)
+
+- Upgrade activesupport and related Ruby gems to v6.0.2.2. !2110
+- Update ffi gem to v1.12.2. !2111
+- Update activesupport to v6.0.3 and gitlab-labkit to v0.12.0. !2178
+
+
 ## 12.10.6
 
 - No changes.
