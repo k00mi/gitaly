@@ -1,5 +1,9 @@
 # Gitaly changelog
 
+## 13.0.1
+
+- No changes.
+
 ## 13.0.0
 
 - No changes.
@@ -57,6 +61,10 @@
 - Update ffi gem to v1.12.2. !2111
 - Update activesupport to v6.0.3 and gitlab-labkit to v0.12.0. !2178
 
+
+## 12.10.7
+
+- No changes.
 
 ## 12.10.6
 
@@ -190,6 +198,10 @@
 #### Security
 - Validate content of alternates file
   https://gitlab.com/gitlab-org/gitaly/merge_requests/1946
+
+## 12.9.8
+
+- No changes.
 
 ## 12.9.7
 
