@@ -186,7 +186,7 @@ func (s *sqlElector) checkNodes(ctx context.Context) error {
 	// The attempt to elect a primary may have conflicted with another
 	// node attempting to elect a primary. We check the database again
 	// to see the current state.
-	candidate, _, err := s.lookupPrimary()
+	candidate, _, _, err := s.lookupPrimary()
 	if err != nil {
 		s.log.WithError(err).Error("error looking up primary")
 		return err
@@ -252,7 +252,7 @@ last_contact_attempt_at = NOW()`
 // GetShard gets the current status of the shard. ErrPrimaryNotHealthy
 // is returned if a primary does not exist.
 func (s *sqlElector) GetShard() (Shard, error) {
-	primary, readOnly, err := s.lookupPrimary()
+	primary, readOnly, prevWritablePrimary, err := s.lookupPrimary()
 	if err != nil {
 		return Shard{}, err
 	}
@@ -270,9 +270,10 @@ func (s *sqlElector) GetShard() (Shard, error) {
 	}
 
 	return Shard{
-		IsReadOnly:  readOnly,
-		Primary:     primary,
-		Secondaries: secondaries,
+		PreviousWritablePrimary: prevWritablePrimary,
+		IsReadOnly:              readOnly,
+		Primary:                 primary,
+		Secondaries:             secondaries,
 	}, nil
 }
 
@@ -414,6 +415,22 @@ func (s *sqlElector) electNewPrimary(candidates []*sqlCandidate) error {
 	// do not yet have a row in the table, from starting in read-only mode. In a failover scenario,
 	// a row already exists in the table denoting the previous primary, and thus the shard should
 	// be switched to read-only mode.
+	//
+	// Previous write-enabled primary is stored in `previous_writable_primary` column. We store it to determine
+	// unreplicated writes from the previous write-enabled primary to the current primary to report and
+	// automatically repair data loss cases. Read-only primaries are not stored, as they can't receive
+	// writes that could fail to be replicated to other nodes. Consider the failover scenarios:
+	//     N1 (RW) -> N2 (RO) -> N1 (RO): `previous_writable_primary` remains N1 as N1 was the only write-enabled primary
+	//                                     and thus has all the possible writes
+	//     N1 (RW) -> N2 (RW) -> N1 (RO): `previous_writable_primary` is N2 as we only store the previous write-enabled
+	//                                     primary. If writes are enable on shard with data loss, the data loss
+	//                                     is considered acknowledged.
+	//     N1 (RO) -> N2 (RW)           : `previous_writable_primary` is null as there could not have been unreplicated
+	//                                     writes from the read-only primary N1
+	//     N1 (RW) -> N2 (RW)           : `previous_writable_primary` is N1 as it might have had unreplicated writes when
+	//                                     N2 got elected
+	//     N1 (RW) -> N2 (RO) -> N3 (RW): `previous_writable_primary` is N1 as N2 was not write-enabled before the second
+	//                                    failover and thus any data missing from N3 must be on N1.
 	q = `INSERT INTO shard_primaries (elected_by_praefect, shard_name, node_name, elected_at)
 	SELECT $1::VARCHAR, $2::VARCHAR, $3::VARCHAR, NOW()
 	WHERE $3 != COALESCE((SELECT node_name FROM shard_primaries WHERE shard_name = $2::VARCHAR AND demoted = false), '')
@@ -423,10 +440,13 @@ func (s *sqlElector) electNewPrimary(candidates []*sqlCandidate) error {
 				, elected_at = EXCLUDED.elected_at
 				, read_only = $5
 				, demoted = false
+				, previous_writable_primary = CASE WHEN shard_primaries.read_only
+					THEN shard_primaries.previous_writable_primary
+					ELSE shard_primaries.node_name
+					END
 	   WHERE shard_primaries.elected_at < now() - INTERVAL '1 MICROSECOND' * $4
 	`
 	_, err = s.db.Exec(q, s.praefectName, s.shardName, newPrimaryStorage, failoverTimeout.Microseconds(), s.readOnlyAfterFailover)
-
 	if err != nil {
 		s.log.Errorf("error updating new primary: %s", err)
 		return err
@@ -491,7 +511,7 @@ func (s *sqlElector) validateAndUpdatePrimary() error {
 	}
 
 	// Check if primary is in this list
-	primaryNode, _, err := s.lookupPrimary()
+	primaryNode, _, _, err := s.lookupPrimary()
 
 	if err != nil {
 		s.log.WithError(err).Error("error looking up primary")
@@ -509,17 +529,20 @@ func (s *sqlElector) validateAndUpdatePrimary() error {
 	return nil
 }
 
-func (s *sqlElector) lookupPrimary() (*sqlCandidate, bool, error) {
-	var primaryName string
-	var readOnly bool
+func (s *sqlElector) lookupPrimary() (*sqlCandidate, bool, Node, error) {
+	var (
+		primaryName             string
+		readOnly                bool
+		prevWritablePrimaryName sql.NullString
+	)
 
-	const q = `SELECT node_name, read_only FROM shard_primaries WHERE shard_name = $1 AND demoted = false`
-	if err := s.db.QueryRow(q, s.shardName).Scan(&primaryName, &readOnly); err != nil {
+	const q = `SELECT node_name, read_only, previous_writable_primary FROM shard_primaries WHERE shard_name = $1 AND demoted = false`
+	if err := s.db.QueryRow(q, s.shardName).Scan(&primaryName, &readOnly, &prevWritablePrimaryName); err != nil {
 		if err == sql.ErrNoRows {
-			return nil, false, nil
+			return nil, false, nil, nil
 		}
 
-		return nil, false, fmt.Errorf("error looking up primary: %w", err)
+		return nil, false, nil, fmt.Errorf("error looking up primary: %w", err)
 	}
 
 	var primaryNode *sqlCandidate
@@ -527,5 +550,12 @@ func (s *sqlElector) lookupPrimary() (*sqlCandidate, bool, error) {
 		primaryNode = s.lookupNodeByName(primaryName)
 	}
 
-	return primaryNode, readOnly, nil
+	var prevWritablePrimary Node
+	if prevWritablePrimaryName.Valid {
+		if cand := s.lookupNodeByName(prevWritablePrimaryName.String); cand != nil {
+			prevWritablePrimary = cand.Node
+		}
+	}
+
+	return primaryNode, readOnly, prevWritablePrimary, nil
 }

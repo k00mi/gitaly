@@ -20,14 +20,15 @@ type nodeCandidate struct {
 // shard. It does NOT support multiple Praefect nodes or have any
 // persistence. This is used mostly for testing and development.
 type localElector struct {
-	m                     sync.RWMutex
-	failoverEnabled       bool
-	shardName             string
-	nodes                 []*nodeCandidate
-	primaryNode           *nodeCandidate
-	readOnlyAfterFailover bool
-	isReadOnly            bool
-	log                   logrus.FieldLogger
+	m                       sync.RWMutex
+	failoverEnabled         bool
+	shardName               string
+	nodes                   []*nodeCandidate
+	primaryNode             *nodeCandidate
+	readOnlyAfterFailover   bool
+	previousWritablePrimary Node
+	isReadOnly              bool
+	log                     logrus.FieldLogger
 }
 
 // healthcheckThreshold is the number of consecutive healthpb.HealthCheckResponse_SERVING necessary
@@ -148,7 +149,17 @@ func (s *localElector) checkNodes(ctx context.Context) error {
 		return ErrPrimaryNotHealthy
 	}
 
+	var previousWritablePrimary Node
+	if s.primaryNode != nil {
+		previousWritablePrimary = s.primaryNode.node
+	}
+
+	if s.isReadOnly {
+		previousWritablePrimary = s.previousWritablePrimary
+	}
+
 	s.primaryNode = newPrimary
+	s.previousWritablePrimary = previousWritablePrimary
 	s.isReadOnly = s.readOnlyAfterFailover
 
 	return nil
@@ -161,6 +172,7 @@ func (s *localElector) GetShard() (Shard, error) {
 	s.m.RLock()
 	primary := s.primaryNode
 	isReadOnly := s.isReadOnly
+	previousWritablePrimary := s.previousWritablePrimary
 	s.m.RUnlock()
 
 	if primary == nil {
@@ -179,9 +191,10 @@ func (s *localElector) GetShard() (Shard, error) {
 	}
 
 	return Shard{
-		IsReadOnly:  isReadOnly,
-		Primary:     primary.node,
-		Secondaries: secondaries,
+		PreviousWritablePrimary: previousWritablePrimary,
+		IsReadOnly:              isReadOnly,
+		Primary:                 primary.node,
+		Secondaries:             secondaries,
 	}, nil
 }
 

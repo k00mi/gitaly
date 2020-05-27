@@ -28,9 +28,12 @@ import (
 
 // Shard is a primary with a set of secondaries
 type Shard struct {
-	IsReadOnly  bool
-	Primary     Node
-	Secondaries []Node
+	// PreviousWritablePrimary is the virtual storage's previous
+	// write-enabled primary.
+	PreviousWritablePrimary Node
+	IsReadOnly              bool
+	Primary                 Node
+	Secondaries             []Node
 }
 
 func (s Shard) GetNode(storage string) (Node, error) {
