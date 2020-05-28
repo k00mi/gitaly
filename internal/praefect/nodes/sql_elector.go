@@ -529,6 +529,7 @@ func (s *sqlElector) lookupPrimary() (*sqlCandidate, bool, error) {
 	var primaryNode *sqlCandidate
 	if primaryName != "" {
 		primaryNode = s.lookupNodeByName(primaryName)
+		metrics.ReadOnlyGauge.WithLabelValues(s.shardName).Set(metrics.BoolAsFloat(readOnly))
 	}
 
 	return primaryNode, readOnly, nil
