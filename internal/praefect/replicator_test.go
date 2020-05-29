@@ -153,7 +153,8 @@ func TestProcessReplicationJob(t *testing.T) {
 	var replicator defaultReplicator
 	replicator.log = entry
 
-	var mockReplicationGauge promtest.MockGauge
+	mockReplicationGauge := promtest.NewMockStorageGauge()
+
 	var mockReplicationLatencyHistogramVec promtest.MockHistogramVec
 	var mockReplicationDelayHistogramVec promtest.MockHistogramVec
 
@@ -164,7 +165,7 @@ func TestProcessReplicationJob(t *testing.T) {
 		nodeMgr,
 		WithLatencyMetric(&mockReplicationLatencyHistogramVec),
 		WithDelayMetric(&mockReplicationDelayHistogramVec),
-		WithQueueMetric(&mockReplicationGauge),
+		WithInFlightJobsGauge(mockReplicationGauge),
 	)
 
 	replMgr.replicator = replicator

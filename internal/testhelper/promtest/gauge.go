@@ -40,3 +40,25 @@ func (m *MockGauge) Dec() {
 	m.Value--
 	m.decs++
 }
+
+// MockStorageGauge wraps a MockGauge
+type MockStorageGauge struct {
+	*MockGauge
+}
+
+// NewMockStorageGauge returns an initialized mock storage gauge
+func NewMockStorageGauge() *MockStorageGauge {
+	return &MockStorageGauge{
+		&MockGauge{},
+	}
+}
+
+// Inc will track total calls to this method while ignoring params
+func (m *MockStorageGauge) Inc(_, _ string) {
+	m.MockGauge.Inc()
+}
+
+// Dec will track total calls to this method while ignoring params
+func (m *MockStorageGauge) Dec(_, _ string) {
+	m.MockGauge.Dec()
+}

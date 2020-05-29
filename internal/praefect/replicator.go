@@ -245,17 +245,24 @@ func (dr defaultReplicator) confirmChecksums(ctx context.Context, primaryClient,
 	return primaryChecksum == replicaChecksum, nil
 }
 
+// StorageGauge is used to track the in-flight replication jobs by virtual and
+// Gitaly target storage
+type StorageGauge interface {
+	Inc(virtualStorage, gitalyStorage string)
+	Dec(virtualStorage, gitalyStorage string)
+}
+
 // ReplMgr is a replication manager for handling replication jobs
 type ReplMgr struct {
-	log               *logrus.Entry
-	queue             datastore.ReplicationEventQueue
-	nodeManager       nodes.Manager
-	virtualStorages   []string   // replicas this replicator is responsible for
-	replicator        Replicator // does the actual replication logic
-	replQueueMetric   prommetrics.Gauge
-	replLatencyMetric prommetrics.HistogramVec
-	replDelayMetric   prommetrics.HistogramVec
-	replJobTimeout    time.Duration
+	log                *logrus.Entry
+	queue              datastore.ReplicationEventQueue
+	nodeManager        nodes.Manager
+	virtualStorages    []string   // replicas this replicator is responsible for
+	replicator         Replicator // does the actual replication logic
+	replInFlightMetric StorageGauge
+	replLatencyMetric  prommetrics.HistogramVec
+	replDelayMetric    prommetrics.HistogramVec
+	replJobTimeout     time.Duration
 	// whitelist contains the project names of the repos we wish to replicate
 	whitelist map[string]struct{}
 }
@@ -263,10 +270,11 @@ type ReplMgr struct {
 // ReplMgrOpt allows a replicator to be configured with additional options
 type ReplMgrOpt func(*ReplMgr)
 
-// WithQueueMetric is an option to set the queue size prometheus metric
-func WithQueueMetric(g prommetrics.Gauge) func(*ReplMgr) {
+// WithInFlightJobsGauge is an option to set the replication jobs in-flight
+// gauge
+func WithInFlightJobsGauge(sg StorageGauge) ReplMgrOpt {
 	return func(m *ReplMgr) {
-		m.replQueueMetric = g
+		m.replInFlightMetric = sg
 	}
 }
 
@@ -296,7 +304,6 @@ func NewReplMgr(log *logrus.Entry, virtualStorages []string, queue datastore.Rep
 		nodeManager:       nodeMgr,
 		replLatencyMetric: prometheus.NewHistogramVec(prometheus.HistogramOpts{}, []string{"type"}),
 		replDelayMetric:   prometheus.NewHistogramVec(prometheus.HistogramOpts{}, []string{"type"}),
-		replQueueMetric:   prometheus.NewGauge(prometheus.GaugeOpts{}),
 	}
 
 	for _, opt := range opts {
@@ -484,8 +491,10 @@ func (r ReplMgr) processReplicationEvent(ctx context.Context, event datastore.Re
 
 	r.replDelayMetric.WithLabelValues(event.Job.Change.String()).Observe(replStart.Sub(event.CreatedAt).Seconds())
 
-	r.replQueueMetric.Inc()
-	defer r.replQueueMetric.Dec()
+	if r.replInFlightMetric != nil {
+		r.replInFlightMetric.Inc(event.Job.VirtualStorage, event.Job.TargetNodeStorage)
+		defer r.replInFlightMetric.Dec(event.Job.VirtualStorage, event.Job.TargetNodeStorage)
+	}
 
 	switch event.Job.Change {
 	case datastore.UpdateRepo:
