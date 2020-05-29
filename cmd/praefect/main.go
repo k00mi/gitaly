@@ -215,7 +215,7 @@ func run(cfgs []starter.Config, conf config.Config) error {
 		return err
 	}
 
-	queueMetric, err := metrics.RegisterReplicationJobsInFlight()
+	storageJobs, err := metrics.RegisterReplicationJobsInFlightByStorage()
 	if err != nil {
 		return err
 	}
@@ -269,7 +269,8 @@ func run(cfgs []starter.Config, conf config.Config) error {
 			nodeManager,
 			praefect.WithDelayMetric(delayMetric),
 			praefect.WithLatencyMetric(latencyMetric),
-			praefect.WithQueueMetric(queueMetric))
+			praefect.WithInFlightJobsGauge(storageJobs),
+		)
 		srv = praefect.NewServer(coordinator.StreamDirector, logger, protoregistry.GitalyProtoPreregistered, conf)
 	)
 

@@ -250,7 +250,6 @@ func runPraefectServer(t testing.TB, conf config.Config, opt buildOptions) (*grp
 		conf.VirtualStorageNames(),
 		opt.withQueue,
 		opt.withNodeMgr,
-		WithQueueMetric(&promtest.MockGauge{}),
 	)
 	prf := NewServer(coordinator.StreamDirector, opt.withLogger, opt.withAnnotations, conf)
 
