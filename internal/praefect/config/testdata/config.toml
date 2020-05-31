@@ -41,3 +41,8 @@ sslmode = "require"
 sslcert = "/path/to/cert"
 sslkey = "/path/to/key"
 sslrootcert = "/path/to/root-cert"
+
+[failover]
+error_threshold_window = "20s"
+write_error_threshold_count = 1500
+read_error_threshold_count = 100
