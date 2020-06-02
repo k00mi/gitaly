@@ -12,8 +12,6 @@ const (
 	// note: there doesn't need to be a separate gitaly ruby feature flag name. The same featureflag string can be used for both the go code
 	// and being passed into gitaly-ruby
 	GitalyRubyCallHookRPC = "call_hook_rpc"
-	// GoFetchInternalRemote enables a go implementation of FetchInternalRemote
-	GoFetchInternalRemote = "go_fetch_internal_remote"
 	// GoUpdateHook will bypass the ruby update hook and use the go implementation of custom hooks
 	GoUpdateHook = "go_update_hook"
 	// RemoteBranchesLsRemote will use `ls-remote` for remote branches
