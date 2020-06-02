@@ -369,12 +369,13 @@ func (gm *gitalyMake) GitSourceDir() string { return filepath.Join(gm.BuildDir()
 
 func (gm *gitalyMake) GitBuildOptions() string {
 	buildOptions := []string{
-		"-j 8",             // use multiple parallele jobs
-		"DEVELOPER=1",      // activate developer checks
-		"CFLAGS='-O0 -g3'", // make it easy to debug in case of crashes
+		fmt.Sprintf("-j%v", runtime.NumCPU() + 1), // use multiple parallele jobs
+		"DEVELOPER=1",                             // activate developer checks
+		"CFLAGS='-O0 -g3'",                        // make it easy to debug in case of crashes
 		"NO_PERL=YesPlease",
 		"NO_EXPAT=YesPlease",
 		"NO_TCLTK=YesPlease",
+		"NO_REGEX=YesPlease",                      // fix compilation on musl libc
 		"NO_GETTEXT=YesPlease",
 		"NO_PYTHON=YesPlease",
 		"NO_INSTALL_HARDLINKS=YesPlease",
