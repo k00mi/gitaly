@@ -46,12 +46,22 @@ func TestApplyBfgObjectMapStreamSuccess(t *testing.T) {
 		testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "update-ref", ref, headCommit.Id)
 	}
 
+	// Create some refs pointing to ref/tags/v1.0.0, simulating an unmodified
+	// commit that predates bad data being added to the repository.
+	for _, ref := range []string{
+		"refs/environments/_keep", "refs/keep-around/_keep", "refs/merge-requests/_keep",
+	} {
+		testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "update-ref", ref, tagID)
+	}
+
+	const filterRepoCommitMapHeader = "old                                      new\n"
 	objectMapData := fmt.Sprintf(
-		strings.Repeat("%s %s\n", 4),
-		headCommit.Id, headCommit.Id,
+		filterRepoCommitMapHeader+strings.Repeat("%s %s\n", 5),
+		headCommit.Id, git.NullSHA,
 		git.NullSHA, blobID,
 		git.NullSHA, tagID,
-		git.NullSHA, git.NullSHA,
+		blobID, git.NullSHA,
+		tagID, tagID,
 	)
 
 	entries, err := doStreamingRequest(ctx, t, testRepo, client, objectMapData)
@@ -65,13 +75,16 @@ func TestApplyBfgObjectMapStreamSuccess(t *testing.T) {
 	assert.Contains(t, refs, "refs/heads/_keep")
 	assert.Contains(t, refs, "refs/tags/_keep")
 	assert.Contains(t, refs, "refs/notes/_keep")
+	assert.Contains(t, refs, "refs/environments/_keep")
+	assert.Contains(t, refs, "refs/keep-around/_keep")
+	assert.Contains(t, refs, "refs/merge-requests/_keep")
 
 	// Ensure that the returned entry is correct
 	require.Len(t, entries, 4, "wrong number of entries returned")
-	requireEntry(t, entries[0], headCommit.Id, headCommit.Id, gitalypb.ObjectType_COMMIT)
+	requireEntry(t, entries[0], headCommit.Id, git.NullSHA, gitalypb.ObjectType_COMMIT)
 	requireEntry(t, entries[1], git.NullSHA, blobID, gitalypb.ObjectType_BLOB)
 	requireEntry(t, entries[2], git.NullSHA, tagID, gitalypb.ObjectType_TAG)
-	requireEntry(t, entries[3], git.NullSHA, git.NullSHA, gitalypb.ObjectType_UNKNOWN)
+	requireEntry(t, entries[3], blobID, git.NullSHA, gitalypb.ObjectType_UNKNOWN)
 }
 
 func requireEntry(t *testing.T, entry *gitalypb.ApplyBfgObjectMapStreamResponse_Entry, oldOid, newOid string, objectType gitalypb.ObjectType) {
