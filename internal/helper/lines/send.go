@@ -6,6 +6,10 @@ import (
 	"io"
 )
 
+type SenderOpts struct {
+	Delimiter []byte
+}
+
 // ItemsPerMessage establishes the threshold to flush the buffer when using the
 // `Send` function. It's a variable instead of a constant to make it possible to
 // override in tests.
@@ -15,9 +19,9 @@ var ItemsPerMessage = 20
 type Sender func([][]byte) error
 
 type writer struct {
-	sender Sender
-	lines  [][]byte
-	delim  []byte
+	sender  Sender
+	lines   [][]byte
+	options SenderOpts
 }
 
 // CopyAndAppend adds a newly allocated copy of `e` to the `s` slice. Useful to
@@ -67,14 +71,14 @@ func (w *writer) consume(r io.Reader) error {
 
 		for {
 			// delim can be multiple bytes, so we read till the end byte of it ...
-			chunk, err := buf.ReadBytes(w.delim[len(w.delim)-1])
+			chunk, err := buf.ReadBytes(w.delimiter()[len(w.delimiter())-1])
 			if err != nil && err != io.EOF {
 				return err
 			}
 
 			line = append(line, chunk...)
 			// ... then we check if the last bytes of line are the same as delim
-			if bytes.HasSuffix(line, w.delim) {
+			if bytes.HasSuffix(line, w.delimiter()) {
 				break
 			}
 
@@ -84,7 +88,7 @@ func (w *writer) consume(r io.Reader) error {
 			}
 		}
 
-		line = bytes.TrimRight(line, string(w.delim))
+		line = bytes.TrimRight(line, string(w.delimiter()))
 		if len(line) == 0 {
 			break
 		}
@@ -97,12 +101,15 @@ func (w *writer) consume(r io.Reader) error {
 	return w.flush()
 }
 
-// Send reads output from `r`, splits it at `delim`, then handles the buffered lines using `sender`.
-func Send(r io.Reader, sender Sender, delim []byte) error {
-	if len(delim) == 0 {
-		delim = []byte{'\n'}
+func (w *writer) delimiter() []byte { return w.options.Delimiter }
+
+// Send reads output from `r`, splits it at `opts.Delimiter``, then handles the
+// buffered lines using `sender`.
+func Send(r io.Reader, sender Sender, opts SenderOpts) error {
+	if len(opts.Delimiter) == 0 {
+		opts.Delimiter = []byte{'\n'}
 	}
 
-	writer := &writer{sender: sender, delim: delim}
+	writer := &writer{sender: sender, options: opts}
 	return writer.consume(r)
 }

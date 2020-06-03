@@ -32,8 +32,10 @@ var (
 )
 
 type findRefsOpts struct {
-	cmdArgs []git.Option
-	delim   []byte
+	cmdArgs   []git.Option
+	delim     []byte
+	pageToken string
+	limit     uint32
 }
 
 func findRefs(ctx context.Context, writer lines.Sender, repo *gitalypb.Repository, patterns []string, opts *findRefsOpts) error {
@@ -54,7 +56,7 @@ func findRefs(ctx context.Context, writer lines.Sender, repo *gitalypb.Repositor
 		return err
 	}
 
-	if err := lines.Send(cmd, writer, opts.delim); err != nil {
+	if err := lines.Send(cmd, writer, lines.SenderOpts{Delimiter: opts.delim}); err != nil {
 		return err
 	}
 
