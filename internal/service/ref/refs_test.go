@@ -932,6 +932,69 @@ func TestSuccessfulFindLocalBranches(t *testing.T) {
 	}
 }
 
+func TestFindLocalBranchesPagination(t *testing.T) {
+	stop, serverSocketPath := runRefServiceServer(t)
+	defer stop()
+
+	client, conn := newRefServiceClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	limit := 1
+	rpcRequest := &gitalypb.FindLocalBranchesRequest{
+		Repository: testRepo,
+		PaginationParams: &gitalypb.PaginationParameter{
+			Limit:     int32(limit),
+			PageToken: "refs/heads/gitaly/squash-test",
+		},
+	}
+	c, err := client.FindLocalBranches(ctx, rpcRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var branches []*gitalypb.FindLocalBranchResponse
+	for {
+		r, err := c.Recv()
+		if err == io.EOF {
+			break
+		}
+		require.NoError(t, err)
+		if err != nil {
+			t.Fatal(err)
+		}
+		branches = append(branches, r.GetBranches()...)
+	}
+
+	require.Len(t, branches, limit)
+
+	expectedBranch := "refs/heads/improve/awesome"
+	target := localBranches[expectedBranch]
+
+	branch := &gitalypb.FindLocalBranchResponse{
+		Name:          []byte(expectedBranch),
+		CommitId:      target.Id,
+		CommitSubject: target.Subject,
+		CommitAuthor: &gitalypb.FindLocalBranchCommitAuthor{
+			Name:  target.Author.Name,
+			Email: target.Author.Email,
+			Date:  target.Author.Date,
+		},
+		CommitCommitter: &gitalypb.FindLocalBranchCommitAuthor{
+			Name:  target.Committer.Name,
+			Email: target.Committer.Email,
+			Date:  target.Committer.Date,
+		},
+		Commit: target,
+	}
+	assertContainsLocalBranch(t, branches, branch)
+}
+
 // Test that `s` contains the elements in `relativeOrder` in that order
 // (relative to each other)
 func isOrderedSubset(subset, set []string) bool {

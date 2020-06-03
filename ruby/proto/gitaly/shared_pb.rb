@@ -55,6 +55,10 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
   add_message "gitaly.ObjectPool" do
     optional :repository, :message, 1, "gitaly.Repository"
   end
+  add_message "gitaly.PaginationParameter" do
+    optional :page_token, :string, 1
+    optional :limit, :int32, 2
+  end
   add_enum "gitaly.ObjectType" do
     value :UNKNOWN, 0
     value :COMMIT, 1
@@ -78,6 +82,7 @@ module Gitaly
   Tag = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.Tag").msgclass
   User = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.User").msgclass
   ObjectPool = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.ObjectPool").msgclass
+  PaginationParameter = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.PaginationParameter").msgclass
   ObjectType = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.ObjectType").enummodule
   SignatureType = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.SignatureType").enummodule
 end

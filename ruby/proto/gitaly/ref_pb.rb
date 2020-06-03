@@ -45,6 +45,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
   add_message "gitaly.FindLocalBranchesRequest" do
     optional :repository, :message, 1, "gitaly.Repository"
     optional :sort_by, :enum, 2, "gitaly.FindLocalBranchesRequest.SortBy"
+    optional :pagination_params, :message, 3, "gitaly.PaginationParameter"
   end
   add_enum "gitaly.FindLocalBranchesRequest.SortBy" do
     value :NAME, 0

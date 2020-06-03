@@ -35,9 +35,8 @@ func findAllRemoteBranches(req *gitalypb.FindAllRemoteBranchesRequest, stream gi
 		return err
 	}
 
-	opts := &findRefsOpts{
-		cmdArgs: args,
-	}
+	opts := paginationParamsToOpts(nil)
+	opts.cmdArgs = args
 	writer := newFindAllRemoteBranchesWriter(stream, c)
 
 	return findRefs(ctx, writer, req.GetRepository(), patterns, opts)

@@ -1,0 +1,5 @@
+---
+title: Allow pagination for FindAllLocalBranches
+merge_request: 2251
+author:
+type: added

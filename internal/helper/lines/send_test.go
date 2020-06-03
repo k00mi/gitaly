@@ -8,18 +8,59 @@ import (
 )
 
 func TestLinesSend(t *testing.T) {
-	reader := bytes.NewBufferString("mepmep foo bar")
-
-	var out [][]byte
-	sender := func(in [][]byte) error { out = in; return nil }
-	err := Send(reader, sender, SenderOpts{Delimiter: []byte(" ")})
-	require.NoError(t, err)
-
 	expected := [][]byte{
 		[]byte("mepmep"),
 		[]byte("foo"),
 		[]byte("bar"),
 	}
 
-	require.Equal(t, expected, out)
+	tcs := []struct {
+		desc        string
+		limit       int
+		isPageToken func([]byte) bool
+		output      [][]byte
+	}{
+		{
+			desc:   "high limit",
+			limit:  100,
+			output: expected,
+		},
+		{
+			desc:   "limit is 0",
+			limit:  0,
+			output: [][]byte(nil),
+		},
+		{
+			desc:   "limit 2",
+			limit:  2,
+			output: expected[0:2],
+		},
+		{
+			desc:        "skip lines",
+			limit:       100,
+			isPageToken: func(line []byte) bool { return bytes.HasPrefix(line, expected[0]) },
+			output:      expected[1:3],
+		},
+		{
+			desc:        "skip no lines",
+			limit:       100,
+			isPageToken: func(_ []byte) bool { return true },
+			output:      expected,
+		},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.desc, func(t *testing.T) {
+			reader := bytes.NewBufferString("mepmep\nfoo\nbar")
+			var out [][]byte
+			sender := func(in [][]byte) error { out = in; return nil }
+
+			err := Send(reader, sender, SenderOpts{
+				Limit:       tc.limit,
+				IsPageToken: tc.isPageToken,
+			})
+			require.NoError(t, err)
+			require.Equal(t, tc.output, out)
+		})
+	}
 }
