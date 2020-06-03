@@ -1,5 +1,12 @@
 # Gitaly changelog
 
+## 13.0.4
+
+### Fixed (1 change)
+
+- Clean configured storage paths. !2223
+
+
 ## 13.0.3
 
 - No changes.
@@ -206,6 +213,10 @@
 #### Security
 - Validate content of alternates file
   https://gitlab.com/gitlab-org/gitaly/merge_requests/1946
+
+## 12.9.9
+
+- No changes.
 
 ## 12.9.8
 
