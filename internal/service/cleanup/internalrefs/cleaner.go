@@ -19,6 +19,7 @@ var internalRefs = []string{
 	"refs/environments/",
 	"refs/keep-around/",
 	"refs/merge-requests/",
+	"refs/pipelines/",
 }
 
 // A ForEachFunc can be called for every entry in the filter-repo or BFG object

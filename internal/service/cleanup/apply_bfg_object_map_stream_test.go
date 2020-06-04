@@ -40,7 +40,7 @@ func TestApplyBfgObjectMapStreamSuccess(t *testing.T) {
 
 	// Create some refs pointing to HEAD
 	for _, ref := range []string{
-		"refs/environments/1", "refs/keep-around/1", "refs/merge-requests/1",
+		"refs/environments/1", "refs/keep-around/1", "refs/merge-requests/1", "refs/pipelines/1",
 		"refs/heads/_keep", "refs/tags/_keep", "refs/notes/_keep",
 	} {
 		testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "update-ref", ref, headCommit.Id)
@@ -49,7 +49,7 @@ func TestApplyBfgObjectMapStreamSuccess(t *testing.T) {
 	// Create some refs pointing to ref/tags/v1.0.0, simulating an unmodified
 	// commit that predates bad data being added to the repository.
 	for _, ref := range []string{
-		"refs/environments/_keep", "refs/keep-around/_keep", "refs/merge-requests/_keep",
+		"refs/environments/_keep", "refs/keep-around/_keep", "refs/merge-requests/_keep", "refs/pipelines/_keep",
 	} {
 		testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "update-ref", ref, tagID)
 	}
@@ -72,12 +72,14 @@ func TestApplyBfgObjectMapStreamSuccess(t *testing.T) {
 	assert.NotContains(t, refs, "refs/environments/1")
 	assert.NotContains(t, refs, "refs/keep-around/1")
 	assert.NotContains(t, refs, "refs/merge-requests/1")
+	assert.NotContains(t, refs, "refs/pipelines/1")
 	assert.Contains(t, refs, "refs/heads/_keep")
 	assert.Contains(t, refs, "refs/tags/_keep")
 	assert.Contains(t, refs, "refs/notes/_keep")
 	assert.Contains(t, refs, "refs/environments/_keep")
 	assert.Contains(t, refs, "refs/keep-around/_keep")
 	assert.Contains(t, refs, "refs/merge-requests/_keep")
+	assert.Contains(t, refs, "refs/pipelines/_keep")
 
 	// Ensure that the returned entry is correct
 	require.Len(t, entries, 4, "wrong number of entries returned")
