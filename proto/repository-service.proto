@@ -541,6 +541,12 @@ message SearchFilesByNameRequest {
   Repository repository = 1 [(target_repository)=true];
   string query = 2;
   bytes ref = 3;
+  // If `filter` is specified and non-empty, it will be parsed as a regular
+  // expression and used to filter the result set before it is transmitted. It is
+  // parsed using Go's `regexp` package, which is closely related to PCRE,
+  // excluding backreferences, atomic/possesive operators, and some other
+  // features. It has a maximum length of 1000 bytes.
+  string filter = 4;
 }
 
 message SearchFilesByNameResponse {

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"regexp"
 )
 
 // SenderOpts contains fields that Send() uses to determine what is considered
@@ -22,6 +23,9 @@ type SenderOpts struct {
 	// will	be called with an empty slice previous to sending the first line
 	// in order to allow sending everything right from the beginning.
 	IsPageToken func([]byte) bool
+	// Filter limits sent results to those that pass the filter. The zero
+	// value (nil) disables filtering.
+	Filter *regexp.Regexp
 }
 
 // ItemsPerMessage establishes the threshold to flush the buffer when using the
@@ -117,6 +121,10 @@ func (w *writer) consume(r io.Reader) error {
 			pastPageToken = w.options.IsPageToken(line)
 			continue
 		}
+
+		if w.filter() != nil && !w.filter().Match(line) {
+			continue
+		}
 		i++ // Only increment the counter if the result wasn't skipped
 
 		if err := w.addLine(line); err != nil {
@@ -127,7 +135,8 @@ func (w *writer) consume(r io.Reader) error {
 	return w.flush()
 }
 
-func (w *writer) delimiter() []byte { return w.options.Delimiter }
+func (w *writer) delimiter() []byte      { return w.options.Delimiter }
+func (w *writer) filter() *regexp.Regexp { return w.options.Filter }
 
 // Send reads output from `r`, splits it at `opts.Delimiter`, then handles the
 // buffered lines using `sender`.

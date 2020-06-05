@@ -2,6 +2,7 @@ package lines
 
 import (
 	"bytes"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -16,6 +17,7 @@ func TestLinesSend(t *testing.T) {
 
 	tcs := []struct {
 		desc        string
+		filter      *regexp.Regexp
 		limit       int
 		isPageToken func([]byte) bool
 		output      [][]byte
@@ -34,6 +36,12 @@ func TestLinesSend(t *testing.T) {
 			desc:   "limit 2",
 			limit:  2,
 			output: expected[0:2],
+		},
+		{
+			desc:   "filter and limit",
+			limit:  1,
+			filter: regexp.MustCompile("foo"),
+			output: expected[1:2],
 		},
 		{
 			desc:        "skip lines",
@@ -58,6 +66,7 @@ func TestLinesSend(t *testing.T) {
 			err := Send(reader, sender, SenderOpts{
 				Limit:       tc.limit,
 				IsPageToken: tc.isPageToken,
+				Filter:      tc.filter,
 			})
 			require.NoError(t, err)
 			require.Equal(t, tc.output, out)
