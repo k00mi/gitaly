@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git/gittest"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -22,6 +23,8 @@ func TestFetchFromOriginDangling(t *testing.T) {
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
+
+	ctx = testhelper.CtxWithLocator(ctx, config.NewLocator(config.Config))
 
 	require.NoError(t, pool.FetchFromOrigin(ctx, source), "seed pool")
 
@@ -95,6 +98,8 @@ func TestFetchFromOriginDeltaIslands(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	ctx = testhelper.CtxWithLocator(ctx, config.NewLocator(config.Config))
+
 	require.NoError(t, pool.FetchFromOrigin(ctx, source), "seed pool")
 	require.NoError(t, pool.Link(ctx, source))
 
@@ -120,6 +125,8 @@ func TestFetchFromOriginBitmapHashCache(t *testing.T) {
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
+
+	ctx = testhelper.CtxWithLocator(ctx, config.NewLocator(config.Config))
 
 	require.NoError(t, pool.FetchFromOrigin(ctx, source), "seed pool")
 
@@ -150,6 +157,8 @@ func TestFetchFromOriginRefUpdates(t *testing.T) {
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
+
+	ctx = testhelper.CtxWithLocator(ctx, config.NewLocator(config.Config))
 
 	require.NoError(t, pool.FetchFromOrigin(ctx, source), "seed pool")
 

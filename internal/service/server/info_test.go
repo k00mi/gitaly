@@ -46,8 +46,8 @@ func TestGitalyServerInfo(t *testing.T) {
 
 	config.Config.BinDir = tempDir
 
-	require.NoError(t, storage.WriteMetadataFile(testStorages[0]))
-	metadata, err := storage.ReadMetadataFile(testStorages[0])
+	require.NoError(t, storage.WriteMetadataFile(testStorages[0].Path))
+	metadata, err := storage.ReadMetadataFile(testStorages[0].Path)
 	require.NoError(t, err)
 
 	c, err := client.ServerInfo(ctx, &gitalypb.ServerInfoRequest{})
@@ -76,7 +76,7 @@ func runServer(t *testing.T, storages []config.Storage) (*grpc.Server, string) {
 	streamInt := []grpc.StreamServerInterceptor{auth.StreamServerInterceptor(authConfig)}
 	unaryInt := []grpc.UnaryServerInterceptor{auth.UnaryServerInterceptor(authConfig)}
 
-	server := testhelper.NewTestGrpcServer(t, streamInt, unaryInt)
+	server := testhelper.NewTestGrpcServer(t, config.Config, streamInt, unaryInt)
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 
 	listener, err := net.Listen("unix", serverSocketPath)

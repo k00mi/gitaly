@@ -15,7 +15,6 @@ import (
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	gitaly_config "gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git/objectpool"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/metadatahandler"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
@@ -28,6 +27,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/service/remote"
 	"gitlab.com/gitlab-org/gitaly/internal/service/repository"
 	"gitlab.com/gitlab-org/gitaly/internal/service/ssh"
+	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper/promtest"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -335,7 +335,7 @@ func (m *mockRepositoryServer) RepackIncremental(ctx context.Context, in *gitaly
 }
 
 func runMockRepositoryServer(t *testing.T) (*mockRepositoryServer, string, func()) {
-	server := testhelper.NewTestGrpcServer(t, nil, nil)
+	server := testhelper.NewTestGrpcServer(t, gitaly_config.Cfg{}, nil, nil)
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 
 	listener, err := net.Listen("unix", serverSocketPath)
@@ -655,7 +655,7 @@ func TestProcessBacklog_Success(t *testing.T) {
 
 	_, serr := os.Stat(fullNewPath1)
 	require.True(t, os.IsNotExist(serr), "repository must be moved from %q to the new location", fullNewPath1)
-	require.True(t, helper.IsGitDirectory(fullNewPath2), "repository must exist at new last RenameRepository location")
+	require.True(t, storage.IsGitDirectory(fullNewPath2), "repository must exist at new last RenameRepository location")
 }
 
 type mockReplicator struct {
@@ -787,7 +787,7 @@ func newReplicationService(tb testing.TB) (*grpc.Server, string) {
 	internalSocketName := gitaly_config.GitalyInternalSocketPath()
 	require.NoError(tb, os.RemoveAll(internalSocketName))
 
-	svr := testhelper.NewTestGrpcServer(tb, nil, nil)
+	svr := testhelper.NewTestGrpcServer(tb, gitaly_config.Config, nil, nil)
 
 	gitalypb.RegisterRepositoryServiceServer(svr, repository.NewServer(RubyServer, internalSocketName))
 	gitalypb.RegisterObjectPoolServiceServer(svr, objectpoolservice.NewServer())

@@ -10,6 +10,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/git/objectpool"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
@@ -186,7 +187,7 @@ func TestLinkNoPool(t *testing.T) {
 	poolRepoPath, err := helper.GetRepoPath(pool)
 	require.NoError(t, err)
 
-	assert.True(t, helper.IsGitDirectory(poolRepoPath))
+	assert.True(t, storage.IsGitDirectory(poolRepoPath))
 }
 
 func TestUnlink(t *testing.T) {

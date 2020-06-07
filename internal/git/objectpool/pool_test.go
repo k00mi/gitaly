@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
@@ -23,6 +24,9 @@ func TestNewObjectPool(t *testing.T) {
 
 func TestNewFromRepoSuccess(t *testing.T) {
 	ctx, cancel := testhelper.Context()
+
+	ctx = testhelper.CtxWithLocator(ctx, config.NewLocator(config.Config))
+
 	testRepo, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
@@ -36,18 +40,23 @@ func TestNewFromRepoSuccess(t *testing.T) {
 	require.NoError(t, pool.Create(ctx, testRepo))
 	require.NoError(t, pool.Link(ctx, testRepo))
 
-	poolFromRepo, err := FromRepo(testRepo)
+	poolFromRepo, err := FromRepo(ctx, testRepo)
 	require.NoError(t, err)
 	require.Equal(t, relativePoolPath, poolFromRepo.relativePath)
 	require.Equal(t, pool.storageName, poolFromRepo.storageName)
 }
 
 func TestNewFromRepoNoObjectPool(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	ctx = testhelper.CtxWithLocator(ctx, config.NewLocator(config.Config))
+
 	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
 	// no alternates file
-	poolFromRepo, err := FromRepo(testRepo)
+	poolFromRepo, err := FromRepo(ctx, testRepo)
 	require.Equal(t, ErrAlternateObjectDirNotExist, err)
 	require.Nil(t, poolFromRepo)
 
@@ -80,7 +89,7 @@ func TestNewFromRepoNoObjectPool(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			alternateFilePath := filepath.Join(testRepoPath, "objects", "info", "alternates")
 			require.NoError(t, ioutil.WriteFile(alternateFilePath, tc.fileContent, 0644))
-			poolFromRepo, err := FromRepo(testRepo)
+			poolFromRepo, err := FromRepo(ctx, testRepo)
 			require.Equal(t, tc.expectedErr, err)
 			require.Nil(t, poolFromRepo)
 

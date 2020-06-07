@@ -40,6 +40,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	gitalylog "gitlab.com/gitlab-org/gitaly/internal/log"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
+	"gitlab.com/gitlab-org/gitaly/internal/middleware/locator"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
@@ -369,16 +370,23 @@ func GetGitEnvData() (string, error) {
 }
 
 // NewTestGrpcServer creates a GRPC Server for testing purposes
-func NewTestGrpcServer(tb testing.TB, streamInterceptors []grpc.StreamServerInterceptor, unaryInterceptors []grpc.UnaryServerInterceptor) *grpc.Server {
+func NewTestGrpcServer(tb testing.TB, conf config.Cfg, streamInterceptors []grpc.StreamServerInterceptor, unaryInterceptors []grpc.UnaryServerInterceptor) *grpc.Server {
+	ctxTagger := grpc_ctxtags.WithFieldExtractorForInitialReq(fieldextractors.FieldExtractor)
+	cfgLocator := config.NewLocator(conf)
 	logger := NewTestLogger(tb)
 	logrusEntry := log.NewEntry(logger).WithField("test", tb.Name())
 
-	ctxTagger := grpc_ctxtags.WithFieldExtractorForInitialReq(fieldextractors.FieldExtractor)
-	ctxStreamTagger := grpc_ctxtags.StreamServerInterceptor(ctxTagger)
-	ctxUnaryTagger := grpc_ctxtags.UnaryServerInterceptor(ctxTagger)
+	streamInterceptors = append([]grpc.StreamServerInterceptor{
+		grpc_ctxtags.StreamServerInterceptor(ctxTagger),
+		locator.StreamInterceptor(cfgLocator),
+		grpc_logrus.StreamServerInterceptor(logrusEntry),
+	}, streamInterceptors...)
 
-	streamInterceptors = append([]grpc.StreamServerInterceptor{ctxStreamTagger, grpc_logrus.StreamServerInterceptor(logrusEntry)}, streamInterceptors...)
-	unaryInterceptors = append([]grpc.UnaryServerInterceptor{ctxUnaryTagger, grpc_logrus.UnaryServerInterceptor(logrusEntry)}, unaryInterceptors...)
+	unaryInterceptors = append([]grpc.UnaryServerInterceptor{
+		grpc_ctxtags.UnaryServerInterceptor(ctxTagger),
+		locator.UnaryInterceptor(cfgLocator),
+		grpc_logrus.UnaryServerInterceptor(logrusEntry),
+	}, unaryInterceptors...)
 
 	return grpc.NewServer(
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(streamInterceptors...)),
@@ -893,4 +901,15 @@ func GenerateTestCerts(t *testing.T) (string, string, Cleanup) {
 	}
 
 	return certFile.Name(), keyFile.Name(), cleanup
+}
+
+// CtxWithLocator returns a new context with injected locator.
+func CtxWithLocator(ctx context.Context, l storage.Locator) context.Context {
+	if locator.IsAtCtx(ctx) {
+		panic("locator already injected")
+	}
+
+	ctx = grpc_ctxtags.SetInContext(ctx, grpc_ctxtags.NewTags())
+	locator.SetAtCtx(ctx, l)
+	return ctx
 }

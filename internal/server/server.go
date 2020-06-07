@@ -19,6 +19,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/cache"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/cancelhandler"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/limithandler"
+	"gitlab.com/gitlab-org/gitaly/internal/middleware/locator"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/metadatahandler"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/panichandler"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/sentryhandler"
@@ -79,9 +80,12 @@ func createNewServer(rubyServer *rubyserver.Server, gitlabAPI hook.GitlabAPI, cf
 
 	lh := limithandler.New(concurrencyKeyFn)
 
+	storageLocator := config.NewLocator(cfg)
+
 	opts := []grpc.ServerOption{
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
 			grpc_ctxtags.StreamServerInterceptor(ctxTagOpts...),
+			locator.StreamInterceptor(storageLocator),
 			grpccorrelation.StreamServerCorrelationInterceptor(), // Must be above the metadata handler
 			metadatahandler.StreamInterceptor,
 			grpc_prometheus.StreamServerInterceptor,
@@ -98,6 +102,7 @@ func createNewServer(rubyServer *rubyserver.Server, gitlabAPI hook.GitlabAPI, cf
 		)),
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			grpc_ctxtags.UnaryServerInterceptor(ctxTagOpts...),
+			locator.UnaryInterceptor(storageLocator),
 			grpccorrelation.UnaryServerCorrelationInterceptor(), // Must be above the metadata handler
 			metadatahandler.UnaryInterceptor,
 			grpc_prometheus.UnaryServerInterceptor,

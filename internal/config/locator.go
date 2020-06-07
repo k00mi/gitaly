@@ -1,22 +1,32 @@
-package helper
+package config
 
 import (
 	"os"
 	"path"
 
-	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
+// NewCfgLocator returns locator based on the provided configuration struct.
+// As it creates a shallow copy of the provided struct changes made into provided struct
+// may affect result of methods implemented by it.
+func NewLocator(conf Cfg) storage.Locator {
+	return &configLocator{conf: conf}
+}
+
+type configLocator struct {
+	conf Cfg
+}
+
 // GetRepoPath returns the full path of the repository referenced by an
 // RPC Repository message. The errors returned are gRPC errors with
 // relevant error codes and should be passed back to gRPC without further
 // decoration.
-func GetRepoPath(repo repository.GitRepo) (string, error) {
-	repoPath, err := GetPath(repo)
+func (l *configLocator) GetRepoPath(repo repository.GitRepo) (string, error) {
+	repoPath, err := l.GetPath(repo)
 	if err != nil {
 		return "", err
 	}
@@ -35,8 +45,8 @@ func GetRepoPath(repo repository.GitRepo) (string, error) {
 // GetPath returns the path of the repo passed as first argument. An error is
 // returned when either the storage can't be found or the path includes
 // constructs trying to perform directory traversal.
-func GetPath(repo repository.GitRepo) (string, error) {
-	storagePath, err := GetStorageByName(repo.GetStorageName())
+func (l *configLocator) GetPath(repo repository.GitRepo) (string, error) {
+	storagePath, err := l.GetStorageByName(repo.GetStorageName())
 	if err != nil {
 		return "", err
 	}
@@ -58,12 +68,10 @@ func GetPath(repo repository.GitRepo) (string, error) {
 	return path.Join(storagePath, relativePath), nil
 }
 
-// GetStorageByName will return the path for the storage, which is fetched by
-// its key. An error is return if it cannot be found.
-func GetStorageByName(storageName string) (string, error) {
-	storagePath, ok := config.Config.StoragePath(storageName)
+func (l *configLocator) GetStorageByName(storageName string) (string, error) {
+	storagePath, ok := l.conf.StoragePath(storageName)
 	if !ok {
-		return "", status.Errorf(codes.InvalidArgument, "Storage can not be found by name '%s'", storageName)
+		return "", status.Errorf(codes.InvalidArgument, "Storage can not be found by name %q", storageName)
 	}
 
 	return storagePath, nil
@@ -73,8 +81,8 @@ func GetStorageByName(storageName string) (string, error) {
 // repository referenced by an RPC Repository message. The errors returned are
 // gRPC errors with relevant error codes and should be passed back to gRPC
 // without further decoration.
-func GetObjectDirectoryPath(repo repository.GitRepo) (string, error) {
-	repoPath, err := GetRepoPath(repo)
+func (l *configLocator) GetObjectDirectoryPath(repo repository.GitRepo) (string, error) {
+	repoPath, err := l.GetRepoPath(repo)
 	if err != nil {
 		return "", err
 	}

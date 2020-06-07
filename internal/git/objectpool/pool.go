@@ -14,6 +14,8 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/middleware/locator"
+	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
@@ -83,7 +85,7 @@ func (o *ObjectPool) IsValid() bool {
 		return false
 	}
 
-	return helper.IsGitDirectory(o.FullPath())
+	return storage.IsGitDirectory(o.FullPath())
 }
 
 // Create will create a pool for a repository and pull the required data to this
@@ -117,7 +119,7 @@ func (o *ObjectPool) Remove(ctx context.Context) (err error) {
 func (o *ObjectPool) Init(ctx context.Context) (err error) {
 	targetDir := o.FullPath()
 
-	if helper.IsGitDirectory(targetDir) {
+	if storage.IsGitDirectory(targetDir) {
 		return nil
 	}
 
@@ -138,7 +140,7 @@ func (o *ObjectPool) Init(ctx context.Context) (err error) {
 }
 
 // FromRepo returns an instance of ObjectPool that the repository points to
-func FromRepo(repo *gitalypb.Repository) (*ObjectPool, error) {
+func FromRepo(ctx context.Context, repo *gitalypb.Repository) (*ObjectPool, error) {
 	dir, err := getAlternateObjectDir(repo)
 	if err != nil {
 		return nil, err
@@ -148,7 +150,7 @@ func FromRepo(repo *gitalypb.Repository) (*ObjectPool, error) {
 		return nil, nil
 	}
 
-	altPathRelativeToStorage, err := objectPathRelativeToStorage(repo, dir)
+	altPathRelativeToStorage, err := objectPathRelativeToStorage(ctx, repo, dir)
 	if err != nil {
 		return nil, err
 	}
@@ -204,8 +206,8 @@ func getAlternateObjectDir(repo *gitalypb.Repository) (string, error) {
 
 // objectPathRelativeToStorage takes an object path that's relative to a repository's object directory
 // and returns the path relative to the storage path of the repository.
-func objectPathRelativeToStorage(repo *gitalypb.Repository, path string) (string, error) {
-	repoPath, err := helper.GetPath(repo)
+func objectPathRelativeToStorage(ctx context.Context, repo *gitalypb.Repository, path string) (string, error) {
+	repoPath, err := locator.GetFromCtx(ctx).GetPath(repo)
 	if err != nil {
 		return "", err
 	}
@@ -218,7 +220,7 @@ func objectPathRelativeToStorage(repo *gitalypb.Repository, path string) (string
 
 	poolObjectDirFullPath := filepath.Join(objectDirPath, path)
 
-	if !helper.IsGitDirectory(filepath.Dir(poolObjectDirFullPath)) {
+	if !storage.IsGitDirectory(filepath.Dir(poolObjectDirFullPath)) {
 		return "", ErrInvalidPoolRepository
 	}
 

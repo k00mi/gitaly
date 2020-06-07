@@ -4,6 +4,7 @@ import (
 	"net"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
@@ -12,7 +13,7 @@ import (
 
 func runInternalGitalyServer(t *testing.T, srv gitalypb.InternalGitalyServer) (*grpc.Server, string) {
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
-	grpcServer := testhelper.NewTestGrpcServer(t, nil, nil)
+	grpcServer := testhelper.NewTestGrpcServer(t, config.Config, nil, nil)
 
 	listener, err := net.Listen("unix", serverSocketPath)
 	if err != nil {
