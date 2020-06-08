@@ -206,6 +206,18 @@ func _headReference(ctx context.Context, repo *gitalypb.Repository) ([]byte, err
 	return headRef, nil
 }
 
+// SetDefaultBranchRef overwrites the default branch ref for the repository
+func SetDefaultBranchRef(ctx context.Context, repo *gitalypb.Repository, ref string) error {
+	cmd, err := git.SafeCmd(ctx, repo, nil, git.SubCmd{
+		Name: "symbolic-ref",
+		Args: []string{"HEAD", ref},
+	})
+	if err != nil {
+		return err
+	}
+	return cmd.Wait()
+}
+
 // DefaultBranchName looks up the name of the default branch given a repoPath
 func DefaultBranchName(ctx context.Context, repo *gitalypb.Repository) ([]byte, error) {
 	branches, err := FindBranchNames(ctx, repo)

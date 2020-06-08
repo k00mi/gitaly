@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -8,6 +9,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/gitalyssh"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/service/ref"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -49,6 +51,22 @@ func (s *server) FetchInternalRemote(ctx context.Context, req *gitalypb.FetchInt
 		// Design quirk: if the fetch fails, this RPC returns Result: false, but no error.
 		ctxlogrus.Extract(ctx).WithError(err).Warn("git fetch failed")
 		return &gitalypb.FetchInternalRemoteResponse{Result: false}, nil
+	}
+
+	remoteDefaultBranch, err := ref.DefaultBranchName(ctx, req.RemoteRepository)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "FetchInternalRemote: remote default branch: %v", err)
+	}
+
+	defaultBranch, err := ref.DefaultBranchName(ctx, req.Repository)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "FetchInternalRemote: default branch: %v", err)
+	}
+
+	if !bytes.Equal(defaultBranch, remoteDefaultBranch) {
+		if err := ref.SetDefaultBranchRef(ctx, req.Repository, string(remoteDefaultBranch)); err != nil {
+			return nil, status.Errorf(codes.Internal, "FetchInternalRemote: set default branch: %v", err)
+		}
 	}
 
 	return &gitalypb.FetchInternalRemoteResponse{Result: true}, nil
