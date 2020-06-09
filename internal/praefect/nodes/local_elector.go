@@ -125,6 +125,8 @@ func (s *localElector) checkNodes(ctx context.Context) error {
 	s.previousWritablePrimary = previousWritablePrimary
 	s.isReadOnly = s.readOnlyAfterFailover
 
+	metrics.ReadOnlyGauge.WithLabelValues(s.shardName).Set(metrics.BoolAsFloat(s.isReadOnly))
+
 	return nil
 }
 
