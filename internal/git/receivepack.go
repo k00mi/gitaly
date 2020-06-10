@@ -53,7 +53,7 @@ func ReceivePackHookEnv(ctx context.Context, req ReceivePackRequest) ([]string, 
 
 	transaction, err := metadata.ExtractTransaction(ctx)
 	if err == nil {
-		praefect, err := metadata.ExtractPraefectServer(ctx)
+		praefect, err := metadata.PraefectFromContext(ctx)
 		if err != nil {
 			return nil, err
 		}

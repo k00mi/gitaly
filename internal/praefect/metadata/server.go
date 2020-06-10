@@ -68,9 +68,9 @@ func InjectPraefectServer(ctx context.Context, conf config.Config) (context.Cont
 	return metadata.NewIncomingContext(ctx, md), nil
 }
 
-// ExtractPraefectServer extracts `PraefectServer` from an incoming context. In
+// PraefectFromContext extracts `PraefectServer` from an incoming context. In
 // case the metadata key is not set, the function will return `ErrPraefectServerNotFound`.
-func ExtractPraefectServer(ctx context.Context) (p *PraefectServer, err error) {
+func PraefectFromContext(ctx context.Context) (*PraefectServer, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return nil, ErrPraefectServerNotFound
@@ -83,14 +83,15 @@ func ExtractPraefectServer(ctx context.Context) (p *PraefectServer, err error) {
 
 	decoded, err := base64.StdEncoding.DecodeString(encoded[0])
 	if err != nil {
-		return nil, fmt.Errorf("failed decoding base64: %v", err)
+		return nil, fmt.Errorf("PraefectFromContext: %w", err)
 	}
 
-	if err := json.Unmarshal(decoded, &p); err != nil {
-		return nil, fmt.Errorf("failed unmarshalling json: %v", err)
+	var praefect PraefectServer
+	if err := json.Unmarshal(decoded, &praefect); err != nil {
+		return nil, fmt.Errorf("PraefectFromContext: %w", err)
 	}
 
-	return
+	return &praefect, nil
 }
 
 // PraefectFromEnv extracts `PraefectServer` from the environment variable
