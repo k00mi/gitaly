@@ -85,6 +85,10 @@
 - Update activesupport to v6.0.3 and gitlab-labkit to v0.12.0. !2178
 
 
+## 12.10.11
+
+- No changes.
+
 ## 12.10.10
 
 - No changes.
