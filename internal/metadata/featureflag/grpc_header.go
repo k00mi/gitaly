@@ -49,9 +49,34 @@ func isEnabled(ctx context.Context, flag string) bool {
 	return len(val) > 0 && val[0] == "true"
 }
 
-// IsDisabled is the inverse operation of IsEnabled
+func getFlagVal(ctx context.Context, flag string) (bool, string) {
+	if flag == "" {
+		return false, ""
+	}
+
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return false, ""
+	}
+
+	val, ok := md[HeaderKey(flag)]
+	if !ok {
+		return false, ""
+	}
+
+	return true, val[0]
+}
+
+// IsDisabled checks if the feature flag is explicitly disabled for the passed context.
+// Only return true if the metadata for the feature flag is set to "false"
+// For non-explicit disable, use !IsEnabled
 func IsDisabled(ctx context.Context, flag string) bool {
-	return !IsEnabled(ctx, flag)
+	ok, val := getFlagVal(ctx, flag)
+	if !ok {
+		return false
+	}
+
+	return val == "false"
 }
 
 const ffPrefix = "gitaly-feature-"
