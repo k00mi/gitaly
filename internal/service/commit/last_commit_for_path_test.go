@@ -2,9 +2,6 @@ package commit
 
 import (
 	"context"
-	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -67,6 +64,12 @@ func TestSuccessfulLastCommitForPathRequest(t *testing.T) {
 			revision: "570e7b2abdd848b95f2f578043fc23bd6f6fd24d",
 			commit:   commit,
 			path:     []byte("/"),
+		},
+		{
+			desc:     "path is '*'",
+			revision: "570e7b2abdd848b95f2f578043fc23bd6f6fd24d",
+			commit:   commit,
+			path:     []byte("*"),
 		},
 		{
 			desc:     "file does not exist in this commit",
@@ -156,23 +159,21 @@ func TestSuccessfulLastCommitWithGlobCharacters(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepoWithWorktree(t)
 	defer cleanupFn()
 
-	branch := "last-commit-test"
-	filename := filepath.Join(testRepoPath, ":wq")
-	f, err := os.Create(filename)
-	require.NoError(t, err)
-	f.WriteString("hello world\n")
-	f.Close()
+	// This is an arbitrary blob known to exist in the test repository
+	const blobID = "c60514b6d3d6bf4bec1030f70026e34dfbd69ad5"
+	path := ":wq"
 
-	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "checkout", "-b", branch, "master")
-	testhelper.MustRunCommand(t, nil, "git", "--literal-pathspecs", "-C", testRepoPath, "add", ":wq")
-	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "commit", "-a", "-m", "add file")
-
-	branchSha := getBranchSha(t, testRepoPath, branch)
+	commitID := testhelper.CommitBlobWithName(t,
+		testRepoPath,
+		blobID,
+		path,
+		"commit for filename with glob characters",
+	)
 
 	request := &gitalypb.LastCommitForPathRequest{
 		Repository:      testRepo,
-		Revision:        []byte(branchSha),
-		Path:            []byte(":wq"),
+		Revision:        []byte(commitID),
+		Path:            []byte(path),
 		LiteralPathspec: true,
 	}
 
@@ -181,10 +182,10 @@ func TestSuccessfulLastCommitWithGlobCharacters(t *testing.T) {
 	response, err := client.LastCommitForPath(ctx, request)
 	require.NoError(t, err)
 	require.NotNil(t, response.GetCommit())
-	require.Equal(t, branchSha, response.GetCommit().Id)
-}
+	require.Equal(t, commitID, response.GetCommit().Id)
 
-func getBranchSha(t *testing.T, repoPath string, branchName string) string {
-	branchSha := string(testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "rev-parse", branchName))
-	return strings.TrimSpace(branchSha)
+	request.LiteralPathspec = false
+	response, err = client.LastCommitForPath(ctx, request)
+	require.NoError(t, err)
+	require.Nil(t, response.GetCommit())
 }
