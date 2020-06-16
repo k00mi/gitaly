@@ -589,9 +589,18 @@ func handlePostReceive(options GitlabTestServerOptions) func(w http.ResponseWrit
 		}
 
 		if params["secret_token"] != options.SecretToken {
-			http.Error(w, "secret_token is invalid", http.StatusUnauthorized)
-			return
+			decodedSecret, err := base64.StdEncoding.DecodeString(r.Header.Get("Gitlab-Shared-Secret"))
+			if err != nil {
+				http.Error(w, "secret_token is invalid", http.StatusUnauthorized)
+				return
+			}
+
+			if string(decodedSecret) != options.SecretToken {
+				http.Error(w, "secret_token is invalid", http.StatusUnauthorized)
+				return
+			}
 		}
+
 		if params["identifier"] == "" {
 			http.Error(w, "identifier is empty", http.StatusUnauthorized)
 			return
@@ -615,6 +624,7 @@ func handlePostReceive(options GitlabTestServerOptions) func(w http.ResponseWrit
 				return
 			}
 		}
+
 		if len(options.GitPushOptions) > 0 {
 			pushOptions := params["push_options"].([]string)
 			if len(pushOptions) != len(options.GitPushOptions) {
@@ -630,10 +640,40 @@ func handlePostReceive(options GitlabTestServerOptions) func(w http.ResponseWrit
 			}
 		}
 
-		w.WriteHeader(http.StatusOK)
+		response := postReceiveResponse{
+			ReferenceCounterDecreased: options.PostReceiveCounterDecreased,
+		}
+
+		for _, basicMessage := range options.PostReceiveMessages {
+			response.Messages = append(response.Messages, postReceiveMessage{
+				Message: basicMessage,
+				Type:    "basic",
+			})
+		}
+
+		for _, alertMessage := range options.PostReceiveAlerts {
+			response.Messages = append(response.Messages, postReceiveMessage{
+				Message: alertMessage,
+				Type:    "alert",
+			})
+		}
+
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{"reference_counter_decreased": %v}`, options.PostReceiveCounterDecreased)
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(&response); err != nil {
+			log.Fatal(err)
+		}
 	}
+}
+
+type postReceiveResponse struct {
+	ReferenceCounterDecreased bool                 `json:"reference_counter_decreased"`
+	Messages                  []postReceiveMessage `json:"messages"`
+}
+
+type postReceiveMessage struct {
+	Message string `json:"message"`
+	Type    string `json:"type"`
 }
 
 func handleCheck(options GitlabTestServerOptions) func(w http.ResponseWriter, r *http.Request) {
@@ -656,6 +696,8 @@ type GitlabTestServerOptions struct {
 	GLRepository                string
 	Changes                     string
 	PostReceiveCounterDecreased bool
+	PostReceiveMessages         []string
+	PostReceiveAlerts           []string
 	Protocol                    string
 	GitPushOptions              []string
 	GitObjectDir                string

@@ -57,6 +57,8 @@ type GitlabAPI interface {
 	Allowed(repo *gitalypb.Repository, glRepository, glID, glProtocol, changes string) (bool, string, error)
 	// PreReceive queries the gitlab internal api /pre_receive to increase the reference counter
 	PreReceive(glRepository string) (bool, error)
+	// PostReceive queries the gitlab internal api /post_receive to decrease the reference counter
+	PostReceive(glRepository, glID, changes string, pushOptions ...string) (bool, []PostReceiveMessage, error)
 }
 
 // gitlabAPI is a wrapper around client.GitlabNetClient with API methods for gitlab git receive hooks
@@ -196,6 +198,52 @@ func (a *gitlabAPI) PreReceive(glRepository string) (bool, error) {
 	return result.ReferenceCounterIncreased, nil
 }
 
+// PostReceiveResponse is the response the GitLab internal api provides on a successful /post_receive call
+type PostReceiveResponse struct {
+	ReferenceCounterDecreased bool                 `json:"reference_counter_decreased"`
+	Messages                  []PostReceiveMessage `json:"messages"`
+}
+
+// PostReceiveMessage encapsulates a message from the /post_receive endpoint that gets printed to stdout
+type PostReceiveMessage struct {
+	Message string `json:"message"`
+	Type    string `json:"type"`
+}
+
+// PostReceive decreases the reference counter for a push for a given gl_repository through the gitlab internal API /post_receive endpoint
+func (a *gitlabAPI) PostReceive(glRepository, glID, changes string, pushOptions ...string) (bool, []PostReceiveMessage, error) {
+	resp, err := a.client.Post("/post_receive", map[string]interface{}{"gl_repository": glRepository, "identifier": glID, "changes": changes, "push_options[]": pushOptions})
+	if err != nil {
+		return false, nil, fmt.Errorf("http post to gitlab api /post_receive endpoint: %w", err)
+	}
+
+	defer func() {
+		io.Copy(ioutil.Discard, resp.Body)
+		resp.Body.Close()
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		return false, nil, fmt.Errorf("post-receive call failed with status: %d", resp.StatusCode)
+	}
+
+	mtype, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+	if err != nil {
+		return false, nil, fmt.Errorf("/post_receive endpoint respond with invalid content type: %w", err)
+	}
+
+	if mtype != "application/json" {
+		return false, nil, fmt.Errorf("/post_receive endpoint respond with unsupported content type: %s", mtype)
+	}
+
+	var result PostReceiveResponse
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return false, nil, fmt.Errorf("decoding response from /post_receive endpoint: %w", err)
+	}
+
+	return result.ReferenceCounterDecreased, result.Messages, nil
+}
+
 var glIDRegex = regexp.MustCompile(`\A[0-9]+\z`)
 
 func (a *AllowedRequest) parseAndSetGLID(glID string) error {
@@ -219,3 +267,22 @@ func (a *AllowedRequest) parseAndSetGLID(glID string) error {
 
 	return nil
 }
+
+// mockAPI is a noop gitlab API client
+type mockAPI struct {
+}
+
+func (m *mockAPI) Allowed(repo *gitalypb.Repository, glRepository, glID, glProtocol, changes string) (bool, string, error) {
+	return true, "", nil
+}
+
+func (m *mockAPI) PreReceive(glRepository string) (bool, error) {
+	return true, nil
+}
+
+func (m *mockAPI) PostReceive(glRepository, glID, changes string, gitPushOptions ...string) (bool, []PostReceiveMessage, error) {
+	return true, nil, nil
+}
+
+// GitlabAPIStub is a global mock that can be used in testing
+var GitlabAPIStub = &mockAPI{}

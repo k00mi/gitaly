@@ -32,7 +32,7 @@ func newHooksClient(t *testing.T, serverSocketPath string) (gitalypb.HookService
 }
 
 func runHooksServer(t *testing.T, hooksCfg config.Hooks) (string, func()) {
-	return runHooksServerWithAPI(t, testhelper.GitlabAPIStub, hooksCfg)
+	return runHooksServerWithAPI(t, GitlabAPIStub, hooksCfg)
 }
 
 func runHooksServerWithAPI(t *testing.T, gitlabAPI GitlabAPI, hooksCfg config.Hooks) (string, func()) {

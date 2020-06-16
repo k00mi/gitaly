@@ -16,7 +16,8 @@ var (
 	DistributedReads = FeatureFlag{Name: "distributed_reads", OnByDefault: false}
 	// GoPreReceiveHook will bypass the ruby pre-receive hook and use the go implementation
 	GoPreReceiveHook = FeatureFlag{Name: "go_prereceive_hook", OnByDefault: true}
-
+	// GoPostReceiveHook will bypass the ruby post-receive hook and use the go implementation
+	GoPostReceiveHook = FeatureFlag{Name: "go_postreceive_hook", OnByDefault: false}
 	// ReferenceTransactions will handle Git reference updates via the transaction service for strong consistency
 	ReferenceTransactions = FeatureFlag{Name: "reference_transactions", OnByDefault: false}
 	// ReferenceTransactionsOperationService will enable reference transactions for the OperationService
@@ -28,6 +29,7 @@ var (
 )
 
 const (
-	GoUpdateHookEnvVar     = "GITALY_GO_UPDATE"
-	GoPreReceiveHookEnvVar = "GITALY_GO_PRERECEIVE"
+	GoUpdateHookEnvVar      = "GITALY_GO_UPDATE"
+	GoPreReceiveHookEnvVar  = "GITALY_GO_PRERECEIVE"
+	GoPostReceiveHookEnvVar = "GITALY_GO_POSTRECEIVE"
 )

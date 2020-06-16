@@ -808,21 +808,6 @@ func NewFeatureSets(goFeatures []featureflag.FeatureFlag, rubyFeatures ...featur
 	return f, nil
 }
 
-// mockAPI is a noop gitlab API client
-type mockAPI struct {
-}
-
-func (m *mockAPI) Allowed(repo *gitalypb.Repository, glRepository, glID, glProtocol, changes string) (bool, string, error) {
-	return true, "", nil
-}
-
-func (m *mockAPI) PreReceive(glRepository string) (bool, error) {
-	return true, nil
-}
-
-// GitlabAPIStub is a global mock that can be used in testing
-var GitlabAPIStub = &mockAPI{}
-
 // ModifyEnvironment will change an environment variable and return a func suitable
 // for `defer` to change the value back.
 func ModifyEnvironment(t testing.TB, key string, value string) func() {

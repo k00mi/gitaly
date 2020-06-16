@@ -29,6 +29,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/transactions"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	serverPkg "gitlab.com/gitlab-org/gitaly/internal/server"
+	"gitlab.com/gitlab-org/gitaly/internal/service/hook"
 	objectpoolservice "gitlab.com/gitlab-org/gitaly/internal/service/objectpool"
 	"gitlab.com/gitlab-org/gitaly/internal/service/ref"
 	"gitlab.com/gitlab-org/gitaly/internal/service/remote"
@@ -766,7 +767,7 @@ func TestBackoff(t *testing.T) {
 }
 
 func runFullGitalyServer(t *testing.T) (*grpc.Server, string) {
-	server := serverPkg.NewInsecure(RubyServer, testhelper.GitlabAPIStub, gitaly_config.Config)
+	server := serverPkg.NewInsecure(RubyServer, hook.GitlabAPIStub, gitaly_config.Config)
 
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 

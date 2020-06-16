@@ -138,9 +138,15 @@ func main() {
 			logger.Fatalf("error when getting stream client for %q: %v", subCmd, err)
 		}
 
+		environment := glValues()
+
+		if os.Getenv(featureflag.GoPostReceiveHookEnvVar) == "true" {
+			environment = append(environment, fmt.Sprintf("%s=true", featureflag.GoPostReceiveHookEnvVar))
+		}
+
 		if err := postReceiveHookStream.Send(&gitalypb.PostReceiveHookRequest{
 			Repository:           repository,
-			EnvironmentVariables: glValues(),
+			EnvironmentVariables: environment,
 			GitPushOptions:       gitPushOptions(),
 		}); err != nil {
 			logger.Fatalf("error when sending request for %q: %v", subCmd, err)
