@@ -74,7 +74,7 @@ func TestStreamInterceptor(t *testing.T) {
 		grpc.CustomCodec(proxy.NewCodec()),
 		grpc.UnknownServiceHandler(proxy.TransparentHandler(func(ctx context.Context,
 			fullMethodName string,
-			peeker proxy.StreamModifier,
+			peeker proxy.StreamPeeker,
 		) (*proxy.StreamParameters, error) {
 			cc, err := grpc.Dial("unix://"+internalServerSocketPath,
 				grpc.WithDefaultCallOptions(grpc.ForceCodec(proxy.NewCodec())),
@@ -82,7 +82,9 @@ func TestStreamInterceptor(t *testing.T) {
 				grpc.WithStreamInterceptor(StreamErrorHandler(registry, errTracker, nodeName)),
 			)
 			require.NoError(t, err)
-			return proxy.NewStreamParameters(ctx, cc, func() {}, nil), nil
+			f, err := peeker.Peek()
+			require.NoError(t, err)
+			return proxy.NewStreamParameters(proxy.Destination{Conn: cc, Ctx: ctx, Msg: f}, nil, func() {}, nil), nil
 		})),
 	}
 

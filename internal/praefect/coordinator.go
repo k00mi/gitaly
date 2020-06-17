@@ -72,7 +72,6 @@ type grpcCall struct {
 	fullMethodName string
 	methodInfo     protoregistry.MethodInfo
 	msg            proto.Message
-	peeker         proxy.StreamModifier
 	targetRepo     *gitalypb.Repository
 }
 
@@ -145,13 +144,18 @@ func (c *Coordinator) accessorStreamParameters(ctx context.Context, call grpcCal
 	}
 
 	storage := node.GetStorage()
-	if err := c.rewriteStorageForRepositoryMessage(call.methodInfo, call.msg, call.peeker, storage); err != nil {
+	b, err := rewrittenRepositoryMessage(call.methodInfo, call.msg, storage)
+	if err != nil {
 		return nil, fmt.Errorf("accessor call: rewrite storage: %w", err)
 	}
 
 	metrics.ReadDistribution.WithLabelValues(virtualStorage, storage).Inc()
 
-	return proxy.NewStreamParameters(ctx, node.GetConnection(), nil, nil), nil
+	return proxy.NewStreamParameters(proxy.Destination{
+		Ctx:  helper.IncomingToOutgoing(ctx),
+		Conn: node.GetConnection(),
+		Msg:  b,
+	}, nil, nil, nil), nil
 }
 
 func (c *Coordinator) injectTransaction(ctx context.Context, node nodes.Node, primary bool) (context.Context, func(), error) {
@@ -172,6 +176,11 @@ func (c *Coordinator) injectTransaction(ctx context.Context, node nodes.Node, pr
 	return ctx, cancel, nil
 }
 
+var transactionRPCs = map[string]struct{}{
+	"/gitaly.SmartHTTPService/PostReceivePack": {},
+	"/gitaly.SSHService/SSHReceivePack":        {},
+}
+
 func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall, targetRepo *gitalypb.Repository) (*proxy.StreamParameters, error) {
 	virtualStorage := targetRepo.StorageName
 
@@ -184,7 +193,8 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 		return nil, helper.ErrPreconditionFailed(ReadOnlyStorageError(call.targetRepo.GetStorageName()))
 	}
 
-	if err = c.rewriteStorageForRepositoryMessage(call.methodInfo, call.msg, call.peeker, shard.Primary.GetStorage()); err != nil {
+	primaryMessage, err := rewrittenRepositoryMessage(call.methodInfo, call.msg, shard.Primary.GetStorage())
+	if err != nil {
 		return nil, fmt.Errorf("mutator call: rewrite storage: %w", err)
 	}
 
@@ -195,18 +205,56 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 
 	var finalizers []func()
 
-	if featureflag.IsEnabled(ctx, featureflag.ReferenceTransactions) {
-		var transactionCleanup func()
-		ctx, transactionCleanup, err = c.injectTransaction(ctx, shard.Primary, true)
+	primaryDest := proxy.Destination{
+		Ctx:  helper.IncomingToOutgoing(ctx),
+		Conn: shard.Primary.GetConnection(),
+		Msg:  primaryMessage,
+	}
+
+	var secondaryDests []proxy.Destination
+
+	if _, ok := transactionRPCs[call.fullMethodName]; ok && featureflag.IsEnabled(ctx, featureflag.ReferenceTransactions) {
+		var nodeStorages []string
+
+		for _, node := range append(shard.Secondaries, shard.Primary) {
+			nodeStorages = append(nodeStorages, node.GetStorage())
+		}
+
+		transactionID, transactionCleanup, err := c.txMgr.RegisterTransaction(ctx, nodeStorages)
+		if err != nil {
+			return nil, fmt.Errorf("registering transactions: %w", err)
+		}
+		finalizers = append(finalizers, transactionCleanup)
+
+		injectedCtx, err := metadata.InjectTransaction(ctx, transactionID, shard.Primary.GetStorage(), true)
 		if err != nil {
 			return nil, err
 		}
-		finalizers = append(finalizers, transactionCleanup)
+
+		primaryDest.Ctx = helper.IncomingToOutgoing(injectedCtx)
+
+		for _, secondary := range shard.Secondaries {
+			secondaryMsg, err := rewrittenRepositoryMessage(call.methodInfo, call.msg, secondary.GetStorage())
+			if err != nil {
+				return nil, err
+			}
+
+			injectedCtx, err := metadata.InjectTransaction(ctx, transactionID, secondary.GetStorage(), false)
+			if err != nil {
+				return nil, err
+			}
+
+			secondaryDests = append(secondaryDests, proxy.Destination{
+				Ctx:  helper.IncomingToOutgoing(injectedCtx),
+				Conn: secondary.GetConnection(),
+				Msg:  secondaryMsg,
+			})
+		}
+	} else {
+		finalizers = append(finalizers, c.createReplicaJobs(ctx, virtualStorage, call.targetRepo, shard.Primary, shard.Secondaries, change, params))
 	}
 
-	finalizers = append(finalizers, c.createReplicaJobs(ctx, virtualStorage, call.targetRepo, shard.Primary, shard.Secondaries, change, params))
-
-	return proxy.NewStreamParameters(ctx, shard.Primary.GetConnection(), func() {
+	return proxy.NewStreamParameters(primaryDest, secondaryDests, func() {
 		for _, finalizer := range finalizers {
 			finalizer()
 		}
@@ -214,7 +262,7 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 }
 
 // streamDirector determines which downstream servers receive requests
-func (c *Coordinator) StreamDirector(ctx context.Context, fullMethodName string, peeker proxy.StreamModifier) (*proxy.StreamParameters, error) {
+func (c *Coordinator) StreamDirector(ctx context.Context, fullMethodName string, peeker proxy.StreamPeeker) (*proxy.StreamParameters, error) {
 	// For phase 1, we need to route messages based on the storage location
 	// to the appropriate Gitaly node.
 	ctxlogrus.Extract(ctx).Debugf("Stream director received method %s", fullMethodName)
@@ -224,7 +272,12 @@ func (c *Coordinator) StreamDirector(ctx context.Context, fullMethodName string,
 		return nil, err
 	}
 
-	m, err := protoMessageFromPeeker(mi, peeker)
+	payload, err := peeker.Peek()
+	if err != nil {
+		return nil, err
+	}
+
+	m, err := protoMessage(mi, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -243,8 +296,8 @@ func (c *Coordinator) StreamDirector(ctx context.Context, fullMethodName string,
 			fullMethodName: fullMethodName,
 			methodInfo:     mi,
 			msg:            m,
-			peeker:         peeker,
-			targetRepo:     targetRepo},
+			targetRepo:     targetRepo,
+		},
 		)
 		if err != nil {
 			if errors.Is(err, nodes.ErrVirtualStorageNotExist) {
@@ -266,13 +319,17 @@ func (c *Coordinator) StreamDirector(ctx context.Context, fullMethodName string,
 		return nil, err
 	}
 
-	return proxy.NewStreamParameters(ctx, shard.Primary.GetConnection(), func() {}, nil), nil
+	return proxy.NewStreamParameters(proxy.Destination{
+		Ctx:  helper.IncomingToOutgoing(ctx),
+		Conn: shard.Primary.GetConnection(),
+		Msg:  payload,
+	}, nil, func() {}, nil), nil
 }
 
-func (c *Coordinator) rewriteStorageForRepositoryMessage(mi protoregistry.MethodInfo, m proto.Message, peeker proxy.StreamModifier, storage string) error {
+func rewrittenRepositoryMessage(mi protoregistry.MethodInfo, m proto.Message, storage string) ([]byte, error) {
 	targetRepo, err := mi.TargetRepo(m)
 	if err != nil {
-		return helper.ErrInvalidArgument(err)
+		return nil, helper.ErrInvalidArgument(err)
 	}
 
 	// rewrite storage name
@@ -280,7 +337,7 @@ func (c *Coordinator) rewriteStorageForRepositoryMessage(mi protoregistry.Method
 
 	additionalRepo, ok, err := mi.AdditionalRepo(m)
 	if err != nil {
-		return helper.ErrInvalidArgument(err)
+		return nil, helper.ErrInvalidArgument(err)
 	}
 
 	if ok {
@@ -289,22 +346,13 @@ func (c *Coordinator) rewriteStorageForRepositoryMessage(mi protoregistry.Method
 
 	b, err := proxy.NewCodec().Marshal(m)
 	if err != nil {
-		return err
-	}
-
-	if err = peeker.Modify(b); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func protoMessageFromPeeker(mi protoregistry.MethodInfo, peeker proxy.StreamModifier) (proto.Message, error) {
-	frame, err := peeker.Peek()
-	if err != nil {
 		return nil, err
 	}
 
+	return b, nil
+}
+
+func protoMessage(mi protoregistry.MethodInfo, frame []byte) (proto.Message, error) {
 	m, err := mi.UnmarshalRequestProto(frame)
 	if err != nil {
 		return nil, err
