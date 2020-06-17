@@ -9,7 +9,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 )
 
 func TestLanguages(t *testing.T) {
@@ -166,7 +165,5 @@ func TestAmbiguousRefCommitLanguagesRequestRevision(t *testing.T) {
 }
 
 func EnableLinguistFileCountStatsFeatureFlag(ctx context.Context) context.Context {
-	return metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{
-		featureflag.HeaderKey(featureflag.LinguistFileCountStats): "true",
-	}))
+	return featureflag.OutgoingCtxWithFeatureFlags(ctx, featureflag.LinguistFileCountStats)
 }

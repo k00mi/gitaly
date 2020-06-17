@@ -28,7 +28,7 @@ func TestSuccessfulUpdateRemoteMirrorRequest(t *testing.T) {
 	}{
 		{
 			"ls-remote",
-			featureflag.OutgoingCtxWithFeatureFlag(ctx, featureflag.RemoteBranchesLsRemote),
+			featureflag.OutgoingCtxWithFeatureFlags(ctx, featureflag.RemoteBranchesLsRemote),
 		},
 		{
 			"fetch-remote",
@@ -175,7 +175,7 @@ func TestSuccessfulUpdateRemoteMirrorRequestWithLsRemote(t *testing.T) {
 	defer cancel()
 
 	// Enable the flag to use ls-remote
-	ctx = featureflag.OutgoingCtxWithFeatureFlag(ctx, featureflag.RemoteBranchesLsRemote)
+	ctx = featureflag.OutgoingCtxWithFeatureFlags(ctx, featureflag.RemoteBranchesLsRemote)
 
 	firstRequest := &gitalypb.UpdateRemoteMirrorRequest{
 		Repository:           testRepo,
@@ -232,7 +232,7 @@ func TestSuccessfulUpdateRemoteMirrorRequestWithWildcards(t *testing.T) {
 	}{
 		{
 			"ls-remote",
-			featureflag.OutgoingCtxWithFeatureFlag(ctx, featureflag.RemoteBranchesLsRemote),
+			featureflag.OutgoingCtxWithFeatureFlags(ctx, featureflag.RemoteBranchesLsRemote),
 		},
 		{
 			"fetch-remote",
@@ -328,7 +328,7 @@ func TestSuccessfulUpdateRemoteMirrorRequestWithKeepDivergentRefs(t *testing.T) 
 	}{
 		{
 			"ls-remote",
-			featureflag.OutgoingCtxWithFeatureFlag(ctx, featureflag.RemoteBranchesLsRemote),
+			featureflag.OutgoingCtxWithFeatureFlags(ctx, featureflag.RemoteBranchesLsRemote),
 		},
 		{
 			"fetch-remote",
@@ -446,7 +446,7 @@ func TestFailedUpdateRemoteMirrorRequestDueToValidation(t *testing.T) {
 			defer cancel()
 
 			// Ensure this flag doesn't alter existing behavior
-			ctx = featureflag.OutgoingCtxWithFeatureFlag(ctx, featureflag.RemoteBranchesLsRemote)
+			ctx = featureflag.OutgoingCtxWithFeatureFlags(ctx, featureflag.RemoteBranchesLsRemote)
 
 			stream, err := client.UpdateRemoteMirror(ctx)
 			require.NoError(t, err)

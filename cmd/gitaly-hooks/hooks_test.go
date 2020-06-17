@@ -116,7 +116,7 @@ func TestHooksPrePostReceive(t *testing.T) {
 
 	hookNames := []string{"pre-receive", "post-receive"}
 
-	featureSets, err := testhelper.NewFeatureSets([]string{featureflag.GoPreReceiveHook})
+	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoPreReceiveHook})
 	require.NoError(t, err)
 
 	for _, hookName := range hookNames {
@@ -220,14 +220,12 @@ func TestHooksUpdate(t *testing.T) {
 	socket, stop := runHookServiceServer(t, token)
 	defer stop()
 
-	featureSets, err := testhelper.NewFeatureSets([]string{featureflag.GoUpdateHook})
+	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoUpdateHook})
 	require.NoError(t, err)
 
 	for _, featureSet := range featureSets {
 		t.Run(fmt.Sprintf("enabled features: %v", featureSet), func(t *testing.T) {
-			if featureSet.IsEnabled("use_gitaly_gitlabshell_config") {
-				config.Config.Hooks.CustomHooksDir = customHooksDir
-			}
+			config.Config.Hooks.CustomHooksDir = customHooksDir
 
 			testHooksUpdate(t, tempGitlabShellDir, socket, token, testhelper.GlHookValues{
 				GLID:       glID,

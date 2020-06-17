@@ -31,14 +31,14 @@ module GitalyServer
     #
     #   enabled?(:unknown_flag)
     #   => false
-    def enabled?(flag)
+    def enabled?(flag, on_by_default: false)
       flag = normalize_flag(flag)
 
-      @flags.fetch(flag, false) == 'true'
+      @flags.fetch(flag, on_by_default.to_s) == 'true'
     end
 
-    def disabled?(flag)
-      !enabled?(flag)
+    def disabled?(flag, on_by_default: false)
+      !enabled?(flag, on_by_default: on_by_default)
     end
 
     def inspect

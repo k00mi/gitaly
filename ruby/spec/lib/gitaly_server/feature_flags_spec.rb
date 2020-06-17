@@ -18,6 +18,10 @@ describe GitalyServer::FeatureFlags do
       expect(subject.enabled?(:some_feature)).to eq(true)
     end
 
+    it 'returns true for a missing flag that is on by default' do
+      expect(subject.enabled?(:feature_default_on, on_by_default: true)).to eq(true)
+    end
+
     it 'returns false for an unknown flag' do
       expect(subject.enabled?(:missing_feature)).to eq(false)
     end
@@ -36,7 +40,7 @@ describe GitalyServer::FeatureFlags do
       instance = described_class.new({})
 
       expect(instance).to receive(:enabled?)
-        .with(:some_feature)
+        .with(:some_feature, on_by_default: false)
         .and_return(false)
 
       expect(instance.disabled?(:some_feature)).to eq(true)

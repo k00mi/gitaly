@@ -38,7 +38,7 @@ type gitalySSHCommand struct {
 // GITALY_TOKEN="foobar1234"
 // GITALY_PAYLOAD="{repo...}"
 // GITALY_WD="/path/to/working-directory"
-// GITALY_FEATUREFLAGS="upload_pack_filter,hooks_rpc"
+// GITALY_FEATUREFLAGS="upload_pack_filter:false,hooks_rpc:true"
 // gitaly-ssh upload-pack <git-garbage-x2>
 func main() {
 	// < 4 since git throws on 2x garbage here
@@ -85,8 +85,12 @@ func (cmd gitalySSHCommand) run() (int, error) {
 	defer finished()
 
 	if cmd.featureFlags != "" {
-		for _, flag := range strings.Split(cmd.featureFlags, ",") {
-			ctx = featureflag.OutgoingCtxWithFeatureFlag(ctx, flag)
+		for _, flagPair := range strings.Split(cmd.featureFlags, ",") {
+			flagPairSplit := strings.SplitN(flagPair, ":", 2)
+			if len(flagPairSplit) != 2 {
+				continue
+			}
+			ctx = featureflag.OutgoingCtxWithFeatureFlagValue(ctx, featureflag.FeatureFlag{Name: flagPairSplit[0]}, flagPairSplit[1])
 		}
 	}
 

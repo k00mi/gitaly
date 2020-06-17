@@ -2,6 +2,7 @@ package featureflag
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -25,19 +26,17 @@ func init() {
 
 // IsEnabled checks if the feature flag is enabled for the passed context.
 // Only returns true if the metadata for the feature flag is set to "true"
-func IsEnabled(ctx context.Context, flag string) bool {
-	enabled := isEnabled(ctx, flag)
-	flagChecks.WithLabelValues(flag, strconv.FormatBool(enabled)).Inc()
-	return enabled
-}
-
-func isEnabled(ctx context.Context, flag string) bool {
-	val, ok := getFlagVal(ctx, flag)
+func IsEnabled(ctx context.Context, flag FeatureFlag) bool {
+	val, ok := getFlagVal(ctx, flag.Name)
 	if !ok {
-		return false
+		return flag.OnByDefault
 	}
 
-	return val == "true"
+	enabled := val == "true"
+
+	flagChecks.WithLabelValues(flag.Name, strconv.FormatBool(enabled)).Inc()
+
+	return enabled
 }
 
 func getFlagVal(ctx context.Context, flag string) (string, bool) {
@@ -62,19 +61,9 @@ func getFlagVal(ctx context.Context, flag string) (string, bool) {
 	return val[0], true
 }
 
-// IsDisabled checks if the feature flag is explicitly disabled for the passed context.
-// Only returns true if the metadata for the feature flag is set to "false"
-// For non-explicit disable, use !IsEnabled
-func IsDisabled(ctx context.Context, flag string) bool {
-	val, ok := getFlagVal(ctx, flag)
-	if !ok {
-		return false
-	}
-
-	disabled := val == "false"
-	flagChecks.WithLabelValues(flag, strconv.FormatBool(!disabled)).Inc()
-
-	return disabled
+// IsDisabled is the inverse of IsEnabled
+func IsDisabled(ctx context.Context, flag FeatureFlag) bool {
+	return !IsEnabled(ctx, flag)
 }
 
 const ffPrefix = "gitaly-feature-"
@@ -84,9 +73,9 @@ func HeaderKey(flag string) string {
 	return ffPrefix + strings.ReplaceAll(flag, "_", "-")
 }
 
-// AllEnabledFlags returns all feature flags that use the Gitaly metadata
-// prefix and are enabled. Note: results will not be sorted.
-func AllEnabledFlags(ctx context.Context) []string {
+// AllFlags returns all feature flags with their value that use the Gitaly metadata
+// prefix. Note: results will not be sorted.
+func AllFlags(ctx context.Context) []string {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return nil
@@ -98,8 +87,8 @@ func AllEnabledFlags(ctx context.Context) []string {
 		if !strings.HasPrefix(k, ffPrefix) {
 			continue
 		}
-		if len(v) > 0 && v[0] == "true" {
-			ffs = append(ffs, strings.TrimPrefix(k, ffPrefix))
+		if len(v) > 0 {
+			ffs = append(ffs, fmt.Sprintf("%s:%s", strings.TrimPrefix(k, ffPrefix), v[0]))
 		}
 	}
 

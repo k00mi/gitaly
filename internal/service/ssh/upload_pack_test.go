@@ -44,10 +44,15 @@ func (cmd cloneCommand) execute(t *testing.T) error {
 
 	require.NoError(t, err)
 
+	var flagPairs []string
+	for _, flag := range cmd.featureFlags {
+		flagPairs = append(flagPairs, fmt.Sprintf("%s:true", flag))
+	}
+
 	cmd.command.Env = []string{
 		fmt.Sprintf("GITALY_ADDRESS=%s", cmd.server),
 		fmt.Sprintf("GITALY_PAYLOAD=%s", payload),
-		fmt.Sprintf("GITALY_FEATUREFLAGS=%s", strings.Join(cmd.featureFlags, ",")),
+		fmt.Sprintf("GITALY_FEATUREFLAGS=%s", strings.Join(flagPairs, ",")),
 		fmt.Sprintf("PATH=.:%s", os.Getenv("PATH")),
 		fmt.Sprintf(`GIT_SSH_COMMAND=%s upload-pack`, gitalySSHPath),
 	}
