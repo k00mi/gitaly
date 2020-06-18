@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/bootstrap"
@@ -77,7 +78,7 @@ func main() {
 	config.ConfigureConcurrencyLimits()
 	tracing.Initialize(tracing.WithServiceName("gitaly"))
 
-	tempdir.StartCleaning()
+	tempdir.StartCleaning(time.Hour)
 
 	log.WithError(run(b)).Error("shutting down")
 }
