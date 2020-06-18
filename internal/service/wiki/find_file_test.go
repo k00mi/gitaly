@@ -144,7 +144,7 @@ func TestSuccessfulWikiFindFileRequest(t *testing.T) {
 				receivedResponse.RawData = nil
 			}
 
-			require.Equal(t, expectedResponse, receivedResponse, "mismatched response")
+			testhelper.ProtoEqual(t, expectedResponse, receivedResponse)
 			if len(expectedResponse.Name) > 0 {
 				require.Equal(t, testCase.expectedContent, receivedContent, "mismatched content")
 			}

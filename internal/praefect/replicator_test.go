@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/require"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	gitaly_config "gitlab.com/gitlab-org/gitaly/internal/config"
@@ -261,15 +261,15 @@ func TestPropagateReplicationJob(t *testing.T) {
 	require.NoError(t, err)
 
 	primaryRepository := &gitalypb.Repository{StorageName: primaryStorage, RelativePath: repositoryRelativePath}
-	expectedPrimaryGcReq := gitalypb.GarbageCollectRequest{
+	expectedPrimaryGcReq := &gitalypb.GarbageCollectRequest{
 		Repository:   primaryRepository,
 		CreateBitmap: true,
 	}
-	expectedPrimaryRepackFullReq := gitalypb.RepackFullRequest{
+	expectedPrimaryRepackFullReq := &gitalypb.RepackFullRequest{
 		Repository:   primaryRepository,
 		CreateBitmap: false,
 	}
-	expectedPrimaryRepackIncrementalReq := gitalypb.RepackIncrementalRequest{
+	expectedPrimaryRepackIncrementalReq := &gitalypb.RepackIncrementalRequest{
 		Repository: primaryRepository,
 	}
 
@@ -300,36 +300,36 @@ func TestPropagateReplicationJob(t *testing.T) {
 }
 
 type mockRepositoryServer struct {
-	gcChan, repackFullChan, repackIncrChan chan interface{}
+	gcChan, repackFullChan, repackIncrChan chan proto.Message
 
 	gitalypb.UnimplementedRepositoryServiceServer
 }
 
 func newMockRepositoryServer() *mockRepositoryServer {
 	return &mockRepositoryServer{
-		gcChan:         make(chan interface{}),
-		repackFullChan: make(chan interface{}),
-		repackIncrChan: make(chan interface{}),
+		gcChan:         make(chan proto.Message),
+		repackFullChan: make(chan proto.Message),
+		repackIncrChan: make(chan proto.Message),
 	}
 }
 
 func (m *mockRepositoryServer) GarbageCollect(ctx context.Context, in *gitalypb.GarbageCollectRequest) (*gitalypb.GarbageCollectResponse, error) {
 	go func() {
-		m.gcChan <- *in
+		m.gcChan <- in
 	}()
 	return &gitalypb.GarbageCollectResponse{}, nil
 }
 
 func (m *mockRepositoryServer) RepackFull(ctx context.Context, in *gitalypb.RepackFullRequest) (*gitalypb.RepackFullResponse, error) {
 	go func() {
-		m.repackFullChan <- *in
+		m.repackFullChan <- in
 	}()
 	return &gitalypb.RepackFullResponse{}, nil
 }
 
 func (m *mockRepositoryServer) RepackIncremental(ctx context.Context, in *gitalypb.RepackIncrementalRequest) (*gitalypb.RepackIncrementalResponse, error) {
 	go func() {
-		m.repackIncrChan <- *in
+		m.repackIncrChan <- in
 	}()
 	return &gitalypb.RepackIncrementalResponse{}, nil
 }
@@ -351,12 +351,12 @@ func runMockRepositoryServer(t *testing.T) (*mockRepositoryServer, string, func(
 	return mockServer, "unix://" + serverSocketPath, server.Stop
 }
 
-func waitForRequest(t *testing.T, ch chan interface{}, expected interface{}, timeout time.Duration) {
+func waitForRequest(t *testing.T, ch chan proto.Message, expected proto.Message, timeout time.Duration) {
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
 	select {
 	case req := <-ch:
-		assert.Equal(t, expected, req)
+		testhelper.ProtoEqual(t, expected, req)
 		close(ch)
 	case <-timer.C:
 		t.Fatal("timed out")

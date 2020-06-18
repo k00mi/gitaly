@@ -219,7 +219,7 @@ func TestFailedMergeConcurrentUpdate(t *testing.T) {
 
 	secondResponse, err := mergeBidi.Recv()
 	require.NoError(t, err, "receive second response")
-	require.Equal(t, *secondResponse, gitalypb.UserMergeBranchResponse{}, "response should be empty")
+	testhelper.ProtoEqual(t, secondResponse, &gitalypb.UserMergeBranchResponse{})
 
 	commit, err := gitlog.GetCommit(ctx, testRepo, mergeBranchName)
 	require.NoError(t, err, "get commit after RPC finished")
@@ -319,7 +319,7 @@ func TestSuccessfulUserFFBranchRequest(t *testing.T) {
 
 	resp, err := client.UserFFBranch(ctx, request)
 	require.NoError(t, err)
-	require.Equal(t, expectedResponse, resp)
+	testhelper.ProtoEqual(t, expectedResponse, resp)
 	newBranchHead := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", branchName)
 	require.Equal(t, commitID, text.ChompBytes(newBranchHead), "branch head not updated")
 }

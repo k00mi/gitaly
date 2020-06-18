@@ -69,7 +69,10 @@ func TestSuccessfulGetCommitSignaturesRequest(t *testing.T) {
 
 	fetchedSignatures := readAllSignaturesFromClient(t, c)
 
-	require.Equal(t, expectedSignatures, fetchedSignatures)
+	require.Len(t, fetchedSignatures, len(expectedSignatures))
+	for i, expected := range expectedSignatures {
+		testhelper.ProtoEqual(t, expected, fetchedSignatures[i])
+	}
 }
 
 func TestFailedGetCommitSignaturesRequest(t *testing.T) {

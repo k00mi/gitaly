@@ -93,7 +93,7 @@ func TestCreateRepositoryFromSnapshotSuccess(t *testing.T) {
 	rsp, err := createFromSnapshot(t, req)
 
 	require.NoError(t, err)
-	require.Equal(t, rsp, &gitalypb.CreateRepositoryFromSnapshotResponse{})
+	testhelper.ProtoEqual(t, rsp, &gitalypb.CreateRepositoryFromSnapshotResponse{})
 
 	require.DirExists(t, repoPath)
 	for _, entry := range entries {

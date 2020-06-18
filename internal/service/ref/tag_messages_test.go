@@ -51,7 +51,9 @@ func TestSuccessfulGetTagMessagesRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	fetchedMessages := readAllMessagesFromClient(t, c)
-	require.Equal(t, expectedMessages, fetchedMessages)
+	require.Len(t, fetchedMessages, len(expectedMessages))
+	testhelper.ProtoEqual(t, expectedMessages[0], fetchedMessages[0])
+	testhelper.ProtoEqual(t, expectedMessages[1], fetchedMessages[1])
 }
 
 func TestFailedGetTagMessagesRequest(t *testing.T) {

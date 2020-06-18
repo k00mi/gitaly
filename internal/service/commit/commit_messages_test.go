@@ -51,7 +51,9 @@ func TestSuccessfulGetCommitMessagesRequest(t *testing.T) {
 	}
 	fetchedMessages := readAllMessagesFromClient(t, c)
 
-	require.Equal(t, expectedMessages, fetchedMessages)
+	require.Len(t, fetchedMessages, len(expectedMessages))
+	testhelper.ProtoEqual(t, expectedMessages[0], fetchedMessages[0])
+	testhelper.ProtoEqual(t, expectedMessages[1], fetchedMessages[1])
 }
 
 func TestFailedGetCommitMessagesRequest(t *testing.T) {
