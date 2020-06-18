@@ -76,7 +76,7 @@ func runServer(t *testing.T, storages []config.Storage) (*grpc.Server, string) {
 	streamInt := []grpc.StreamServerInterceptor{auth.StreamServerInterceptor(authConfig)}
 	unaryInt := []grpc.UnaryServerInterceptor{auth.UnaryServerInterceptor(authConfig)}
 
-	server := testhelper.NewTestGrpcServer(t, config.Config, streamInt, unaryInt)
+	server := testhelper.NewTestGrpcServer(t, streamInt, unaryInt)
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 
 	listener, err := net.Listen("unix", serverSocketPath)

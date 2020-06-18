@@ -25,7 +25,7 @@ func testMain(m *testing.M) int {
 }
 
 func runObjectPoolServer(t *testing.T) (*grpc.Server, string) {
-	server := testhelper.NewTestGrpcServer(t, config.Config, nil, nil)
+	server := testhelper.NewTestGrpcServer(t, nil, nil)
 
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 	listener, err := net.Listen("unix", serverSocketPath)
@@ -33,7 +33,7 @@ func runObjectPoolServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	gitalypb.RegisterObjectPoolServiceServer(server, NewServer())
+	gitalypb.RegisterObjectPoolServiceServer(server, NewServer(config.NewLocator(config.Config)))
 	reflection.Register(server)
 
 	go server.Serve(listener)

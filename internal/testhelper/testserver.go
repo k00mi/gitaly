@@ -796,7 +796,7 @@ func NewServerWithHealth(t testing.TB, socketName string) (*grpc.Server, *health
 }
 
 func NewHealthServerWithListener(t testing.TB, listener net.Listener) (*grpc.Server, *health.Server) {
-	srv := NewTestGrpcServer(t, config.Cfg{}, nil, nil)
+	srv := NewTestGrpcServer(t, nil, nil)
 	healthSrvr := health.NewServer()
 	healthpb.RegisterHealthServer(srv, healthSrvr)
 	healthSrvr.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)

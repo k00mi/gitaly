@@ -92,7 +92,7 @@ func TestProcessReplicationJob(t *testing.T) {
 
 	// create object pool on the source
 	objectPoolPath := testhelper.NewTestObjectPoolName(t)
-	pool, err := objectpool.NewObjectPool(testRepo.GetStorageName(), objectPoolPath)
+	pool, err := objectpool.NewObjectPool(gitaly_config.NewLocator(gitaly_config.Config), testRepo.GetStorageName(), objectPoolPath)
 	require.NoError(t, err)
 
 	poolCtx, cancel := testhelper.Context()
@@ -335,7 +335,7 @@ func (m *mockRepositoryServer) RepackIncremental(ctx context.Context, in *gitaly
 }
 
 func runMockRepositoryServer(t *testing.T) (*mockRepositoryServer, string, func()) {
-	server := testhelper.NewTestGrpcServer(t, gitaly_config.Cfg{}, nil, nil)
+	server := testhelper.NewTestGrpcServer(t, nil, nil)
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 
 	listener, err := net.Listen("unix", serverSocketPath)
@@ -787,10 +787,11 @@ func newReplicationService(tb testing.TB) (*grpc.Server, string) {
 	internalSocketName := gitaly_config.GitalyInternalSocketPath()
 	require.NoError(tb, os.RemoveAll(internalSocketName))
 
-	svr := testhelper.NewTestGrpcServer(tb, gitaly_config.Config, nil, nil)
+	svr := testhelper.NewTestGrpcServer(tb, nil, nil)
 
-	gitalypb.RegisterRepositoryServiceServer(svr, repository.NewServer(RubyServer, internalSocketName))
-	gitalypb.RegisterObjectPoolServiceServer(svr, objectpoolservice.NewServer())
+	locator := gitaly_config.NewLocator(gitaly_config.Config)
+	gitalypb.RegisterRepositoryServiceServer(svr, repository.NewServer(RubyServer, locator, internalSocketName))
+	gitalypb.RegisterObjectPoolServiceServer(svr, objectpoolservice.NewServer(locator))
 	gitalypb.RegisterRemoteServiceServer(svr, remote.NewServer(RubyServer))
 	gitalypb.RegisterSSHServiceServer(svr, ssh.NewServer())
 	reflection.Register(svr)

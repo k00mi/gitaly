@@ -18,13 +18,11 @@ func TestFetchFromOriginDangling(t *testing.T) {
 	source, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	pool, err := NewObjectPool(source.StorageName, testhelper.NewTestObjectPoolName(t))
+	pool, err := NewObjectPool(config.NewLocator(config.Config), source.StorageName, testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
-
-	ctx = testhelper.CtxWithLocator(ctx, config.NewLocator(config.Config))
 
 	require.NoError(t, pool.FetchFromOrigin(ctx, source), "seed pool")
 
@@ -92,13 +90,11 @@ func TestFetchFromOriginDeltaIslands(t *testing.T) {
 	source, sourcePath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	pool, err := NewObjectPool(source.StorageName, testhelper.NewTestObjectPoolName(t))
+	pool, err := NewObjectPool(config.NewLocator(config.Config), source.StorageName, testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
-
-	ctx = testhelper.CtxWithLocator(ctx, config.NewLocator(config.Config))
 
 	require.NoError(t, pool.FetchFromOrigin(ctx, source), "seed pool")
 	require.NoError(t, pool.Link(ctx, source))
@@ -120,13 +116,11 @@ func TestFetchFromOriginBitmapHashCache(t *testing.T) {
 	source, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	pool, err := NewObjectPool(source.StorageName, testhelper.NewTestObjectPoolName(t))
+	pool, err := NewObjectPool(config.NewLocator(config.Config), source.StorageName, testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
-
-	ctx = testhelper.CtxWithLocator(ctx, config.NewLocator(config.Config))
 
 	require.NoError(t, pool.FetchFromOrigin(ctx, source), "seed pool")
 
@@ -151,14 +145,12 @@ func TestFetchFromOriginRefUpdates(t *testing.T) {
 	source, sourcePath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	pool, err := NewObjectPool(source.StorageName, testhelper.NewTestObjectPoolName(t))
+	pool, err := NewObjectPool(config.NewLocator(config.Config), source.StorageName, testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
 	poolPath := pool.FullPath()
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
-
-	ctx = testhelper.CtxWithLocator(ctx, config.NewLocator(config.Config))
 
 	require.NoError(t, pool.FetchFromOrigin(ctx, source), "seed pool")
 

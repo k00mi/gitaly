@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
@@ -25,7 +24,7 @@ func testMain(m *testing.M) int {
 }
 
 func startTestServices(t testing.TB) (*grpc.Server, string) {
-	server := testhelper.NewTestGrpcServer(t, config.Config, nil, nil)
+	server := testhelper.NewTestGrpcServer(t, nil, nil)
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 
 	listener, err := net.Listen("unix", serverSocketPath)

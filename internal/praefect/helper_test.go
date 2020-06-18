@@ -305,7 +305,7 @@ func realGitaly(storages []gconfig.Storage, authToken, internalSocketPath string
 		healthpb.HealthServer
 	}{
 		gitalyserver.NewServer(storages),
-		repository.NewServer(RubyServer, internalSocketPath),
+		repository.NewServer(RubyServer, gconfig.NewLocator(gconfig.Config), internalSocketPath),
 		internalgitaly.NewServer(gconfig.Config.Storages),
 		health.NewServer(),
 	}
@@ -315,7 +315,7 @@ func runInternalGitalyServer(t testing.TB, storages []gconfig.Storage, token str
 	streamInt := []grpc.StreamServerInterceptor{auth.StreamServerInterceptor(internalauth.Config{Token: token})}
 	unaryInt := []grpc.UnaryServerInterceptor{auth.UnaryServerInterceptor(internalauth.Config{Token: token})}
 
-	server := testhelper.NewTestGrpcServer(t, gconfig.Config, streamInt, unaryInt)
+	server := testhelper.NewTestGrpcServer(t, streamInt, unaryInt)
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 
 	listener, err := net.Listen("unix", serverSocketPath)
