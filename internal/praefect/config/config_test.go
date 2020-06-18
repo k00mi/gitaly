@@ -43,6 +43,15 @@ func TestConfigValidation(t *testing.T) {
 			},
 		},
 		{
+			desc: "Valid config with TLSListenAddr",
+			config: Config{
+				TLSListenAddr: "tls://localhost:4321",
+				VirtualStorages: []*VirtualStorage{
+					{Name: "default", Nodes: vs1Nodes},
+				},
+			},
+		},
+		{
 			desc: "Valid config with SocketPath",
 			config: Config{
 				SocketPath: "/tmp/praefect.socket",
@@ -52,9 +61,11 @@ func TestConfigValidation(t *testing.T) {
 			},
 		},
 		{
-			desc: "No ListenAddr or SocketPath",
+			desc: "No ListenAddr or SocketPath or TLSListenAddr",
 			config: Config{
-				ListenAddr: "",
+				ListenAddr:    "",
+				TLSListenAddr: "",
+				SocketPath:    "",
 				VirtualStorages: []*VirtualStorage{
 					{Name: "default", Nodes: vs1Nodes},
 				},
@@ -221,6 +232,11 @@ func TestConfigParsing(t *testing.T) {
 			desc:     "check all configuration values",
 			filePath: "testdata/config.toml",
 			expected: Config{
+				TLSListenAddr: "0.0.0.0:2306",
+				TLS: config.TLS{
+					CertPath: "/home/git/cert.cert",
+					KeyPath:  "/home/git/key.pem",
+				},
 				Logging: log.Config{
 					Level:  "info",
 					Format: "json",

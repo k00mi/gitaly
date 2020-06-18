@@ -328,6 +328,7 @@ func getStarterConfigs(conf config.Config) ([]starter.Config, error) {
 	unique := map[string]struct{}{}
 	for schema, addr := range map[string]string{
 		starter.TCP:  conf.ListenAddr,
+		starter.TLS:  conf.TLSListenAddr,
 		starter.Unix: conf.SocketPath,
 	} {
 		if addr == "" {

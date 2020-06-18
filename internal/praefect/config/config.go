@@ -28,6 +28,7 @@ const sqlFailoverValue = "sql"
 // Config is a container for everything found in the TOML config file
 type Config struct {
 	ListenAddr           string            `toml:"listen_addr"`
+	TLSListenAddr        string            `toml:"tls_listen_addr"`
 	SocketPath           string            `toml:"socket_path"`
 	VirtualStorages      []*VirtualStorage `toml:"virtual_storage"`
 	Logging              log.Config        `toml:"logging"`
@@ -35,6 +36,7 @@ type Config struct {
 	PrometheusListenAddr string            `toml:"prometheus_listen_addr"`
 	Prometheus           prometheus.Config `toml:"prometheus"`
 	Auth                 auth.Config       `toml:"auth"`
+	TLS                  config.TLS        `toml:"tls"`
 	DB                   `toml:"database"`
 	Failover             Failover `toml:"failover"`
 	// Keep for legacy reasons: remove after Omnibus has switched
@@ -86,7 +88,7 @@ var (
 
 // Validate establishes if the config is valid
 func (c *Config) Validate() error {
-	if c.ListenAddr == "" && c.SocketPath == "" {
+	if c.ListenAddr == "" && c.SocketPath == "" && c.TLSListenAddr == "" {
 		return errNoListener
 	}
 

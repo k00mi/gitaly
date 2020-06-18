@@ -2,6 +2,8 @@ package praefect
 
 import (
 	"context"
+	"crypto/x509"
+	"io/ioutil"
 	"net"
 	"os"
 	"testing"
@@ -21,6 +23,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper/promtest"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
@@ -45,7 +48,14 @@ func TestServerFactory(t *testing.T) {
 	gitalyAddr, err := starter.ComposeEndpoint(gitalyListener.Addr().Network(), gitalyListener.Addr().String())
 	require.NoError(t, err)
 
+	certFile, keyFile, remove := testhelper.GenerateTestCerts(t)
+	defer remove()
+
 	conf := config.Config{
+		TLS: gconfig.TLS{
+			CertPath: certFile,
+			KeyPath:  keyFile,
+		},
 		VirtualStorages: []*config.VirtualStorage{
 			{
 				Name: "praefect",
@@ -122,14 +132,50 @@ func TestServerFactory(t *testing.T) {
 		})
 	})
 
+	t.Run("secure", func(t *testing.T) {
+		praefectServerFactory := NewServerFactory(conf, logger, coordinator.StreamDirector, nodeMgr, txMgr, queue, registry)
+		defer praefectServerFactory.Stop()
+
+		listener, err := net.Listen(starter.TCP, ":0")
+		require.NoError(t, err)
+		defer func() { require.NoError(t, listener.Close()) }()
+
+		go praefectServerFactory.Serve(listener, true)
+
+		ctx, cancel := testhelper.Context()
+		defer cancel()
+
+		certPool, err := x509.SystemCertPool()
+		require.NoError(t, err)
+
+		pem, err := ioutil.ReadFile(conf.TLS.CertPath)
+		require.NoError(t, err)
+
+		require.True(t, certPool.AppendCertsFromPEM(pem))
+
+		creds := credentials.NewClientTLSFromCert(certPool, "")
+
+		cc, err := grpc.DialContext(ctx, listener.Addr().String(), grpc.WithTransportCredentials(creds))
+		require.NoError(t, err)
+		defer func() { require.NoError(t, cc.Close()) }()
+
+		t.Run("handles registered RPCs", func(t *testing.T) {
+			checkOwnRegisteredServices(ctx, t, cc)
+		})
+
+		t.Run("proxies RPCs onto gitaly server", func(t *testing.T) {
+			checkProxyingOntoGitaly(ctx, t, cc)
+		})
+	})
+
 	t.Run("stops all listening servers", func(t *testing.T) {
 		ctx, cancel := testhelper.Context()
 		defer cancel()
 
-		// start with tcp listener
 		praefectServerFactory := NewServerFactory(conf, logger, coordinator.StreamDirector, nodeMgr, txMgr, queue, registry)
 		defer praefectServerFactory.Stop()
 
+		// start with tcp address
 		tcpListener, err := net.Listen(starter.TCP, ":0")
 		require.NoError(t, err)
 		defer tcpListener.Close()
@@ -145,7 +191,23 @@ func TestServerFactory(t *testing.T) {
 
 		tcpHealthClient := checkOwnRegisteredServices(ctx, t, tcpCC)
 
-		// start with socket listener
+		// start with tls address
+		tlsListener, err := net.Listen(starter.TCP, ":0")
+		require.NoError(t, err)
+		defer tlsListener.Close()
+
+		go praefectServerFactory.Serve(tlsListener, true)
+
+		praefectTLSAddr, err := starter.ComposeEndpoint(tcpListener.Addr().Network(), tcpListener.Addr().String())
+		require.NoError(t, err)
+
+		tlsCC, err := client.Dial(praefectTLSAddr, nil)
+		require.NoError(t, err)
+		defer func() { require.NoError(t, tlsCC.Close()) }()
+
+		tlsHealthClient := checkOwnRegisteredServices(ctx, t, tlsCC)
+
+		// start with socket address
 		socketPath := testhelper.GetTemporaryGitalySocketFileName()
 		defer func() { require.NoError(t, os.RemoveAll(socketPath)) }()
 		socketListener, err := net.Listen(starter.Unix, socketPath)
@@ -168,7 +230,28 @@ func TestServerFactory(t *testing.T) {
 		_, err = tcpHealthClient.Check(ctx, nil)
 		require.Error(t, err)
 
+		_, err = tlsHealthClient.Check(ctx, nil)
+		require.Error(t, err)
+
 		_, err = unixHealthClient.Check(ctx, nil)
 		require.Error(t, err)
+	})
+
+	t.Run("tls key path invalid", func(t *testing.T) {
+		badTLSKeyPath := conf
+		badTLSKeyPath.TLS.KeyPath = "invalid"
+		praefectServerFactory := NewServerFactory(badTLSKeyPath, logger, coordinator.StreamDirector, nodeMgr, txMgr, queue, registry)
+
+		err := praefectServerFactory.Serve(nil, true)
+		require.EqualError(t, err, "load certificate key pair: open invalid: no such file or directory")
+	})
+
+	t.Run("tls cert path invalid", func(t *testing.T) {
+		badTLSKeyPath := conf
+		badTLSKeyPath.TLS.CertPath = "invalid"
+		praefectServerFactory := NewServerFactory(badTLSKeyPath, logger, coordinator.StreamDirector, nodeMgr, txMgr, queue, registry)
+
+		err := praefectServerFactory.Serve(nil, true)
+		require.EqualError(t, err, "load certificate key pair: open invalid: no such file or directory")
 	})
 }

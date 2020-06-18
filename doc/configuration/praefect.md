@@ -3,7 +3,7 @@
 This document describes how to configure the praefect server.
 
 Praefect is configured via a [TOML](https://github.com/toml-lang/toml)
-configuration file. The TOML file contents and location depends on how you 
+configuration file. The TOML file contents and location depends on how you
 installed GitLab. See: https://docs.gitlab.com/ce/administration/gitaly/
 
 The configuration file is passed as an argument to the `praefect`
@@ -11,7 +11,7 @@ executable. This is usually done by either omnibus-gitlab or your init
 script.
 
 ```
-gitaly -config /path/to/config.toml
+praefect -config /path/to/config.toml
 ```
 
 ## Format
@@ -19,14 +19,24 @@ gitaly -config /path/to/config.toml
 ```toml
 listen_addr = "127.0.0.1:2305"
 socket_path = "/path/to/praefect.socket"
+tls_listen_addr = "127.0.0.1:2306"
+
+[tls]
+certificate_path = '/home/git/cert.cert'
+key_path = '/home/git/key.pem'
 
 [logging]
 format = "json"
 level = "info"
 
-[[gitaly_server]]
-name = "default"
-listen_addr = "tcp://localhost:9999"
+[[virtual_storage]]
+name = 'praefect'
+
+[[virtual_storage.node]]
+  storage = "gitaly-0"
+  address = "tcp://gitaly-0.internal"
+  primary = true
+  token = 'secret_token'
 ```
 
-An example [config toml](config.praefect.toml) is stored in this repository.
+An example [config toml](../../config.praefect.toml.example) is stored in this repository.

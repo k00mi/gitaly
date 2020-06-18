@@ -87,13 +87,18 @@ func TestGetStarterConfigs(t *testing.T) {
 		{
 			desc: "addresses without schema",
 			conf: config.Config{
-				ListenAddr: "127.0.0.1:2306",
-				SocketPath: "/socket/path",
+				ListenAddr:    "127.0.0.1:2306",
+				TLSListenAddr: "127.0.0.1:2307",
+				SocketPath:    "/socket/path",
 			},
 			exp: []starter.Config{
 				{
 					Name: starter.TCP,
 					Addr: "127.0.0.1:2306",
+				},
+				{
+					Name: starter.TLS,
+					Addr: "127.0.0.1:2307",
 				},
 				{
 					Name: starter.Unix,
@@ -104,13 +109,18 @@ func TestGetStarterConfigs(t *testing.T) {
 		{
 			desc: "addresses with schema",
 			conf: config.Config{
-				ListenAddr: "tcp://127.0.0.1:2306",
-				SocketPath: "unix:///socket/path",
+				ListenAddr:    "tcp://127.0.0.1:2306",
+				TLSListenAddr: "tls://127.0.0.1:2307",
+				SocketPath:    "unix:///socket/path",
 			},
 			exp: []starter.Config{
 				{
 					Name: starter.TCP,
 					Addr: "127.0.0.1:2306",
+				},
+				{
+					Name: starter.TLS,
+					Addr: "127.0.0.1:2307",
 				},
 				{
 					Name: starter.Unix,
@@ -121,13 +131,18 @@ func TestGetStarterConfigs(t *testing.T) {
 		{
 			desc: "addresses without schema",
 			conf: config.Config{
-				ListenAddr: "127.0.0.1:2306",
-				SocketPath: "/socket/path",
+				ListenAddr:    "127.0.0.1:2306",
+				TLSListenAddr: "127.0.0.1:2307",
+				SocketPath:    "/socket/path",
 			},
 			exp: []starter.Config{
 				{
 					Name: starter.TCP,
 					Addr: "127.0.0.1:2306",
+				},
+				{
+					Name: starter.TLS,
+					Addr: "127.0.0.1:2307",
 				},
 				{
 					Name: starter.Unix,
@@ -138,8 +153,9 @@ func TestGetStarterConfigs(t *testing.T) {
 		{
 			desc: "addresses with/without schema",
 			conf: config.Config{
-				ListenAddr: "127.0.0.1:2306",
-				SocketPath: "unix:///socket/path",
+				ListenAddr:    "127.0.0.1:2306",
+				TLSListenAddr: "tls://127.0.0.1:2307",
+				SocketPath:    "unix:///socket/path",
 			},
 			exp: []starter.Config{
 				{
@@ -147,10 +163,22 @@ func TestGetStarterConfigs(t *testing.T) {
 					Addr: "127.0.0.1:2306",
 				},
 				{
+					Name: starter.TLS,
+					Addr: "127.0.0.1:2307",
+				},
+				{
 					Name: starter.Unix,
 					Addr: "/socket/path",
 				},
 			},
+		},
+		{
+			desc: "secure and insecure can't be the same",
+			conf: config.Config{
+				ListenAddr:    "127.0.0.1:2306",
+				TLSListenAddr: "127.0.0.1:2306",
+			},
+			expErr: errors.New(`same address can't be used for different schemas "127.0.0.1:2306"`),
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
