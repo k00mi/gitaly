@@ -301,6 +301,43 @@ func TestHeadReferenceWithNonExistingHead(t *testing.T) {
 	}
 }
 
+func TestSetDefaultBranchRef(t *testing.T) {
+	testCases := []struct {
+		desc        string
+		ref         string
+		expectedRef string
+	}{
+		{
+			desc:        "update the branch ref",
+			ref:         "refs/heads/feature",
+			expectedRef: "refs/heads/feature",
+		},
+		{
+			desc:        "unknown ref",
+			ref:         "refs/heads/non_existent_ref",
+			expectedRef: "refs/heads/master",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+			defer cleanupFn()
+
+			err := SetDefaultBranchRef(ctx, testRepo, tc.ref)
+			require.NoError(t, err)
+
+			newRef, err := DefaultBranchName(ctx, testRepo)
+			require.NoError(t, err)
+
+			require.Equal(t, tc.expectedRef, string(newRef))
+		})
+	}
+}
+
 func TestDefaultBranchName(t *testing.T) {
 	// We are going to override these functions during this test. Restore them after we're done
 	defer func() {

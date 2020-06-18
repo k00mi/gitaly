@@ -26,6 +26,8 @@ func TestSuccessfulFetchInternalRemote(t *testing.T) {
 	remoteRepo, remoteRepoPath, remoteCleanupFn := testhelper.NewTestRepo(t)
 	defer remoteCleanupFn()
 
+	testhelper.MustRunCommand(t, nil, "git", "-C", remoteRepoPath, "symbolic-ref", "HEAD", "refs/heads/feature")
+
 	repo, repoPath, cleanupFn := testhelper.InitBareRepo(t)
 	defer cleanupFn()
 
@@ -44,9 +46,10 @@ func TestSuccessfulFetchInternalRemote(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, c.GetResult())
 
-	remoteRefs := testhelper.GetRepositoryRefs(t, remoteRepoPath)
-	refs := testhelper.GetRepositoryRefs(t, repoPath)
-	require.Equal(t, remoteRefs, refs)
+	require.Equal(t,
+		string(testhelper.MustRunCommand(t, nil, "git", "-C", remoteRepoPath, "show-ref", "--head")),
+		string(testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "show-ref", "--head")),
+	)
 }
 
 func TestFailedFetchInternalRemote(t *testing.T) {
