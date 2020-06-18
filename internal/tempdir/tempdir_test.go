@@ -7,7 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -97,6 +99,25 @@ func TestCleanSuccess(t *testing.T) {
 
 	require.NoError(t, clean(cleanRoot), "walk first pass")
 	assertEntries(t, "c", "e")
+}
+
+func TestCleanTempDir(t *testing.T) {
+	hook := test.NewGlobal()
+
+	oldStorages := config.Config.Storages
+	defer func() {
+		config.Config.Storages = oldStorages
+	}()
+
+	config.Config.Storages = append(config.Config.Storages, config.Storage{
+		Name: "default",
+		Path: "testdata/clean",
+	})
+
+	cleanTempDir()
+
+	require.Equal(t, 2, len(hook.Entries))
+	require.Equal(t, "finished tempdir cleaner walk", hook.LastEntry().Message)
 }
 
 func chmod(p string, mode os.FileMode) error {

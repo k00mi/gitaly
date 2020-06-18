@@ -11,6 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
+	"gitlab.com/gitlab-org/gitaly/internal/dontpanic"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/housekeeping"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -113,24 +114,29 @@ func newAsRepository(ctx context.Context, storageName string, prefix string) (*g
 	return newAsRepo, tempDir, err
 }
 
-// StartCleaning starts tempdir cleanup goroutines.
-func StartCleaning() {
-	for _, st := range config.Config.Storages {
-		go func(storage config.Storage) {
-			start := time.Now()
-			err := clean(TempDir(storage))
+// StartCleaning starts tempdir cleanup in a goroutine.
+func StartCleaning(d time.Duration) {
+	dontpanic.Go(func() {
+		for {
+			cleanTempDir()
+			time.Sleep(d)
+		}
+	})
+}
 
-			entry := log.WithFields(log.Fields{
-				"time_ms": int(1000 * time.Since(start).Seconds()),
-				"storage": storage.Name,
-			})
-			if err != nil {
-				entry = entry.WithError(err)
-			}
-			entry.Info("finished tempdir cleaner walk")
+func cleanTempDir() {
+	for _, storage := range config.Config.Storages {
+		start := time.Now()
+		err := clean(TempDir(storage))
 
-			time.Sleep(1 * time.Hour)
-		}(st)
+		entry := log.WithFields(log.Fields{
+			"time_ms": time.Since(start).Milliseconds(),
+			"storage": storage.Name,
+		})
+		if err != nil {
+			entry = entry.WithError(err)
+		}
+		entry.Info("finished tempdir cleaner walk")
 	}
 }
 
