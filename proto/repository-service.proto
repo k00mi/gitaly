@@ -28,6 +28,11 @@ service RepositoryService {
       op: MUTATOR
     };
   }
+  rpc WriteCommitGraph(WriteCommitGraphRequest) returns (WriteCommitGraphResponse) {
+    option (op_type) = {
+      op: MUTATOR
+    };
+  }
   rpc RepositorySize(RepositorySizeRequest) returns (RepositorySizeResponse) {
     option (op_type) = {
       op: MUTATOR
@@ -243,6 +248,12 @@ message GarbageCollectRequest {
 }
 
 message GarbageCollectResponse {}
+
+message WriteCommitGraphRequest {
+  Repository repository = 1 [(target_repository)=true];
+}
+
+message WriteCommitGraphResponse {}
 
 message CleanupRequest {
   Repository repository = 1 [(target_repository)=true];

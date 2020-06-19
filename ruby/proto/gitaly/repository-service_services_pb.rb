@@ -18,6 +18,7 @@ module Gitaly
       rpc :RepackIncremental, RepackIncrementalRequest, RepackIncrementalResponse
       rpc :RepackFull, RepackFullRequest, RepackFullResponse
       rpc :GarbageCollect, GarbageCollectRequest, GarbageCollectResponse
+      rpc :WriteCommitGraph, WriteCommitGraphRequest, WriteCommitGraphResponse
       rpc :RepositorySize, RepositorySizeRequest, RepositorySizeResponse
       rpc :ApplyGitattributes, ApplyGitattributesRequest, ApplyGitattributesResponse
       rpc :FetchRemote, FetchRemoteRequest, FetchRemoteResponse
