@@ -1,5 +1,57 @@
 # Gitaly changelog
 
+## 13.1.0
+
+### Fixed (9 changes)
+
+- Stale packed-refs.new files prevents branches from being deleted. !2206
+- Praefect graceful stop. !2210
+- Check auth before limit handler. !2221
+- Warn if SO_REUSEPORT cannot be set. !2236
+- Praefect: unhealthy nodes must not be used for read distribution. !2250
+- Pass git push options into pre receive. !2266
+- Allow more frequent keep-alive checking on server. !2272
+- Adjust Praefect server address based on peer info. !2273
+- Replication not working on Praefect. !2281
+
+### Deprecated (1 change)
+
+- Upgrade to Git 2.27. !2237
+
+### Changed (8 changes)
+
+- PreReceive in go. !2155
+- Remote branches via ls-remote is now a toggle. !2183
+- Run replication jobs against read-only primaries. !2190
+- Praefect: Enable database replication queue by default. !2193
+- Remove feature flag go_fetch_internal_remote. !2203
+- Skip creation of gitlab api if GITALY_TESTING_NO_GIT_HOOKS is set. !2245
+- Set a stable signature for .patch endpoints to create reproducible patches. !2253
+- Improved dataloss subcommand. !2278
+
+### Performance (2 changes)
+
+- OptimizeRepository will remove empty ref directories. !2204
+- Decrease memory consuption when parsing tree objects. !2241
+
+### Added (9 changes)
+
+- Allow transaction manager to handle multi-node transactions. !2182
+- Add end-of-options to supported commands. !2192
+- Praefect gauge for replication jobs scoped by storage. !2207
+- failover: Default to enabling SQL strategy. !2218
+- Only log relevant storages in Praefect dial-nodes. !2229
+- Add support for filter-repo commit map to cleaner. !2247
+- How to handle proxying FindRemoteRepository. !2260
+- Distribute reads between all shards, including primaries. !2267
+- Expose ref names in list commits by ref name response. !2269
+
+### Other (2 changes)
+
+- Bump Ruby to v2.6.6. !2231
+- danger: Suggest merge request ID in the changelog. !2254
+
+
 ## 13.0.6
 
 - No changes.
