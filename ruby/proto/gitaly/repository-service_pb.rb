@@ -75,6 +75,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :prefix, :string, 3
     optional :format, :enum, 4, "gitaly.GetArchiveRequest.Format"
     optional :path, :bytes, 5
+    repeated :exclude, :bytes, 6
   end
   add_enum "gitaly.GetArchiveRequest.Format" do
     value :ZIP, 0

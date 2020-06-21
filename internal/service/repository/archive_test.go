@@ -37,7 +37,9 @@ func TestGetArchiveSuccess(t *testing.T) {
 		prefix   string
 		commitID string
 		path     []byte
+		exclude  [][]byte
 		contents []string
+		excluded []string
 	}{
 		{
 			desc:     "without-prefix",
@@ -79,6 +81,14 @@ func TestGetArchiveSuccess(t *testing.T) {
 			path:     []byte("files/"),
 			contents: []string{"/whitespace", "/html/500.html"},
 		},
+		{
+			desc:     "with exclusion",
+			commitID: "1e292f8fedd741b75372e19097c76d327140c312",
+			prefix:   "",
+			exclude:  [][]byte{[]byte("files")},
+			contents: []string{"/.gitignore", "/LICENSE", "/README.md"},
+			excluded: []string{"/files/whitespace", "/files/html/500.html"},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -95,6 +105,7 @@ func TestGetArchiveSuccess(t *testing.T) {
 					Prefix:     tc.prefix,
 					Format:     format,
 					Path:       tc.path,
+					Exclude:    tc.exclude,
 				}
 				stream, err := client.GetArchive(ctx, req)
 				require.NoError(t, err)
@@ -113,6 +124,10 @@ func TestGetArchiveSuccess(t *testing.T) {
 
 				for _, content := range tc.contents {
 					require.Contains(t, contents, tc.prefix+content)
+				}
+
+				for _, excluded := range tc.excluded {
+					require.NotContains(t, contents, tc.prefix+excluded)
 				}
 			})
 		}
@@ -138,6 +153,7 @@ func TestGetArchiveFailure(t *testing.T) {
 		commitID string
 		format   gitalypb.GetArchiveRequest_Format
 		path     []byte
+		exclude  [][]byte
 		code     codes.Code
 	}{
 		{
@@ -191,6 +207,15 @@ func TestGetArchiveFailure(t *testing.T) {
 			code:     codes.FailedPrecondition,
 		},
 		{
+			desc:     "Non-existing exclude path in repository on commit ID",
+			repo:     testRepo,
+			prefix:   "",
+			commitID: commitID,
+			format:   gitalypb.GetArchiveRequest_ZIP,
+			exclude:  [][]byte{[]byte("files/")},
+			code:     codes.FailedPrecondition,
+		},
+		{
 			desc:     "path contains directory traversal outside repository root",
 			repo:     testRepo,
 			prefix:   "",
@@ -221,6 +246,7 @@ func TestGetArchiveFailure(t *testing.T) {
 				Prefix:     tc.prefix,
 				Format:     tc.format,
 				Path:       tc.path,
+				Exclude:    tc.exclude,
 			}
 			stream, err := client.GetArchive(ctx, req)
 			require.NoError(t, err)
