@@ -48,7 +48,12 @@ func (s *server) FindCommits(req *gitalypb.FindCommitsRequest, stream gitalypb.C
 }
 
 func findCommits(ctx context.Context, req *gitalypb.FindCommitsRequest, stream gitalypb.CommitService_FindCommitsServer) error {
-	logCmd, err := git.SafeCmd(ctx, req.GetRepository(), nil, getLogCommandSubCmd(req))
+	var globals []git.Option
+	if req.GetLiteralPathspecs() {
+		globals = []git.Option{git.Flag{"--literal-pathspecs"}}
+	}
+
+	logCmd, err := git.SafeCmd(ctx, req.GetRepository(), globals, getLogCommandSubCmd(req))
 	if err != nil {
 		return fmt.Errorf("error when creating git log command: %v", err)
 	}

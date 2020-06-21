@@ -36,8 +36,13 @@ func LastCommitForPath(ctx context.Context, batch *catfile.Batch, repo *gitalypb
 }
 
 // GitLogCommand returns a Command that executes git log with the given the arguments
-func GitLogCommand(ctx context.Context, repo *gitalypb.Repository, revisions []string, paths []string, extraArgs ...git.Option) (*command.Command, error) {
-	return git.SafeCmd(ctx, repo, nil, git.SubCmd{
+func GitLogCommand(ctx context.Context, repo *gitalypb.Repository, revisions []string, paths []string, literalPathspecs bool, extraArgs ...git.Option) (*command.Command, error) {
+	var globals []git.Option
+	if literalPathspecs {
+		globals = []git.Option{git.Flag{"--literal-pathspecs"}}
+	}
+
+	return git.SafeCmd(ctx, repo, globals, git.SubCmd{
 		Name:        "log",
 		Flags:       append([]git.Option{git.Flag{"--pretty=%H"}}, extraArgs...),
 		Args:        revisions,
