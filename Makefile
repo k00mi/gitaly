@@ -44,6 +44,7 @@ GO_BUILD_TAGS   := tracer_static tracer_static_jaeger continuous_profiler_stackd
 # Dependency versions
 GOLANGCI_LINT_VERSION ?= 1.24.0
 PROTOC_VERSION        ?= 3.6.1
+PROTOC_GEN_GO_VERSION ?= 1.3.2
 GIT_VERSION           ?= v2.27.0
 
 # Dependency downloads
@@ -362,7 +363,7 @@ ${GO_LICENSES}: ${BUILD_DIR}/go.mod | ${BUILD_DIR}/bin
 	cd ${BUILD_DIR} && go get github.com/google/go-licenses@0fa8c766a59182ce9fd94169ddb52abe568b7f4e
 
 ${PROTOC_GEN_GO}: ${BUILD_DIR}/go.mod | ${BUILD_DIR}/bin
-	cd ${BUILD_DIR} && go get github.com/golang/protobuf/protoc-gen-go@v1.3.2
+	cd ${BUILD_DIR} && go get github.com/golang/protobuf/protoc-gen-go@v${PROTOC_GEN_GO_VERSION}
 
 ${PROTOC_GEN_GITALY}: ${BUILD_DIR}/go.mod proto-lint | ${BUILD_DIR}/bin
 	go build -o $@ gitlab.com/gitlab-org/gitaly/proto/go/internal/cmd/protoc-gen-gitaly
