@@ -1,5 +1,0 @@
----
-title: Run replication jobs against read-only primaries
-merge_request: 2190
-author:
-type: changed

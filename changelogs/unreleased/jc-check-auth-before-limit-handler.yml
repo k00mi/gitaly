@@ -1,5 +1,0 @@
----
-title: Check auth before limit handler
-merge_request: 2221
-author:
-type: fixed

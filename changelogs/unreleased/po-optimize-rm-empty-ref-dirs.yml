@@ -1,5 +1,0 @@
----
-title: OptimizeRepository will remove empty ref directories
-merge_request: 2204
-author:
-type: performance

@@ -1,5 +1,0 @@
----
-title: Allow more frequent keep-alive checking on server
-merge_request: 2272
-author:
-type: fixed
