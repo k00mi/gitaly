@@ -44,6 +44,7 @@ GO_BUILD_TAGS   := tracer_static tracer_static_jaeger continuous_profiler_stackd
 # Dependency versions
 GOLANGCI_LINT_VERSION ?= 1.24.0
 PROTOC_VERSION        ?= 3.6.1
+GIT_VERSION           ?= v2.27.0
 
 # Dependency downloads
 ifeq (${OS},Darwin)
@@ -62,11 +63,11 @@ endif
 GOLANGCI_LINT_URL := https://github.com/golangci/golangci-lint/releases/download/v${GOLANGCI_LINT_VERSION}/${GOLANGCI_LINT_ARCHIVE}.tar.gz
 
 # Git target
-GIT_VERSION      ?= v2.27.0
-GIT_REPO_URL     ?= https://gitlab.com/gitlab-org/gitlab-git.git
-GIT_BINARIES_URL ?= https://gitlab.com/gitlab-org/gitlab-git/-/jobs/artifacts/${GIT_VERSION}/raw/git_full_bins.tgz?job=build
-GIT_INSTALL_DIR  := ${BUILD_DIR}/git
-GIT_SOURCE_DIR   := ${BUILD_DIR}/src/git
+GIT_REPO_URL      ?= https://gitlab.com/gitlab-org/gitlab-git.git
+GIT_BINARIES_URL  ?= https://gitlab.com/gitlab-org/gitlab-git/-/jobs/artifacts/${GIT_VERSION}/raw/git_full_bins.tgz?job=build
+GIT_BINARIES_HASH ?= 7947f05069a61351992ae5857db077223e740ca5928b1686dac43032637163e5
+GIT_INSTALL_DIR   := ${BUILD_DIR}/git
+GIT_SOURCE_DIR    := ${BUILD_DIR}/src/git
 
 ifeq (${GIT_BUILD_OPTIONS},)
 # activate developer checks
@@ -301,9 +302,7 @@ smoke-test: all rspec
 	@go test ./internal/rubyserver
 
 .PHONY: download-git
-download-git: | ${BUILD_DIR}
-	@echo "Getting Git from ${GIT_BINARIES_URL}"
-	curl -o ${BUILD_DIR}/git_full_bins.tgz --silent --show-error -L ${GIT_BINARIES_URL}
+download-git: ${BUILD_DIR}/git_full_bins.tgz
 	rm -rf ${GIT_INSTALL_DIR}
 	mkdir -p ${GIT_INSTALL_DIR}
 	tar -C ${GIT_INSTALL_DIR} -xvzf ${BUILD_DIR}/git_full_bins.tgz
@@ -343,6 +342,11 @@ ${PROTOC}: ${BUILD_DIR}/protoc.zip | ${BUILD_DIR}
 ${BUILD_DIR}/protoc.zip: | ${BUILD_DIR}
 	curl -o $@.tmp --silent --show-error -L ${PROTOC_URL}
 	printf '${PROTOC_HASH}  $@.tmp' | shasum -a256 -c -
+	mv $@.tmp $@
+
+${BUILD_DIR}/git_full_bins.tgz: | ${BUILD_DIR}
+	curl -o $@.tmp --silent --show-error -L ${GIT_BINARIES_URL}
+	printf '${GIT_BINARIES_HASH}  $@.tmp' | shasum -a256 -c -
 	mv $@.tmp $@
 
 ${GOIMPORTS}: ${BUILD_DIR}/go.mod | ${BUILD_DIR}/bin
