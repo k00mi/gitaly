@@ -32,17 +32,19 @@ type transaction struct {
 	votersByNode map[string]*Voter
 }
 
-func newTransaction(nodes []string) (*transaction, error) {
-	if len(nodes) == 0 {
+func newTransaction(voters []Voter) (*transaction, error) {
+	if len(voters) == 0 {
 		return nil, ErrMissingNodes
 	}
 
-	votersByNode := make(map[string]*Voter, len(nodes))
-	for _, node := range nodes {
-		if _, ok := votersByNode[node]; ok {
+	votersByNode := make(map[string]*Voter, len(voters))
+	for _, voter := range voters {
+		if _, ok := votersByNode[voter.Name]; ok {
 			return nil, ErrDuplicateNodes
 		}
-		votersByNode[node] = &Voter{Name: node}
+
+		voter := voter // rescope loop variable
+		votersByNode[voter.Name] = &voter
 	}
 
 	return &transaction{

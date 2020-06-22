@@ -69,7 +69,9 @@ func TestTransactionSucceeds(t *testing.T) {
 
 	client := gitalypb.NewRefTransactionClient(cc)
 
-	transactionID, cancelTransaction, err := txMgr.RegisterTransaction(ctx, []string{"node1"})
+	transactionID, cancelTransaction, err := txMgr.RegisterTransaction(ctx, []transactions.Voter{
+		{Name: "node1"},
+	})
 	require.NoError(t, err)
 	require.NotZero(t, transactionID)
 	defer cancelTransaction()
@@ -166,12 +168,17 @@ func TestTransactionWithMultipleNodes(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.desc, func(t *testing.T) {
-			transactionID, cancelTransaction, err := txMgr.RegisterTransaction(ctx, tc.nodes)
+			var voters []transactions.Voter
+			for _, node := range tc.nodes {
+				voters = append(voters, transactions.Voter{Name: node})
+			}
+
+			transactionID, cancelTransaction, err := txMgr.RegisterTransaction(ctx, voters)
 			require.NoError(t, err)
 			defer cancelTransaction()
 
 			var wg sync.WaitGroup
-			for i := 0; i < len(tc.nodes); i++ {
+			for i := 0; i < len(voters); i++ {
 				wg.Add(1)
 
 				go func(idx int) {
@@ -179,7 +186,7 @@ func TestTransactionWithMultipleNodes(t *testing.T) {
 
 					response, err := client.VoteTransaction(ctx, &gitalypb.VoteTransactionRequest{
 						TransactionId:        transactionID,
-						Node:                 tc.nodes[idx],
+						Node:                 voters[idx].Name,
 						ReferenceUpdatesHash: tc.hashes[idx][:],
 					})
 					require.NoError(t, err)
@@ -200,7 +207,10 @@ func TestTransactionWithContextCancellation(t *testing.T) {
 
 	ctx, cancel := testhelper.Context()
 
-	transactionID, cancelTransaction, err := txMgr.RegisterTransaction(ctx, []string{"voter", "absent"})
+	transactionID, cancelTransaction, err := txMgr.RegisterTransaction(ctx, []transactions.Voter{
+		{Name: "voter"},
+		{Name: "absent"},
+	})
 	require.NoError(t, err)
 	defer cancelTransaction()
 
@@ -230,21 +240,15 @@ func TestTransactionRegistrationWithInvalidNodesFails(t *testing.T) {
 
 	txMgr := transactions.NewManager()
 
-	_, _, err := txMgr.RegisterTransaction(ctx, []string{})
+	_, _, err := txMgr.RegisterTransaction(ctx, []transactions.Voter{})
 	require.Equal(t, transactions.ErrMissingNodes, err)
 
-	_, _, err = txMgr.RegisterTransaction(ctx, []string{"node1", "node2", "node1"})
+	_, _, err = txMgr.RegisterTransaction(ctx, []transactions.Voter{
+		{Name: "node1"},
+		{Name: "node2"},
+		{Name: "node1"},
+	})
 	require.Equal(t, transactions.ErrDuplicateNodes, err)
-}
-
-func TestTransactionRegistrationWithSameNodeFails(t *testing.T) {
-	ctx, cleanup := testhelper.Context()
-	defer cleanup()
-
-	txMgr := transactions.NewManager()
-
-	_, _, err := txMgr.RegisterTransaction(ctx, []string{"foo", "bar", "foo"})
-	require.Error(t, err)
 }
 
 func TestTransactionFailures(t *testing.T) {
@@ -282,7 +286,9 @@ func TestTransactionCancellation(t *testing.T) {
 
 	client := gitalypb.NewRefTransactionClient(cc)
 
-	transactionID, cancelTransaction, err := txMgr.RegisterTransaction(ctx, []string{"node1"})
+	transactionID, cancelTransaction, err := txMgr.RegisterTransaction(ctx, []transactions.Voter{
+		{Name: "node1"},
+	})
 	require.NoError(t, err)
 	require.NotZero(t, transactionID)
 

@@ -161,14 +161,14 @@ func (c *Coordinator) accessorStreamParameters(ctx context.Context, call grpcCal
 func (c *Coordinator) injectTransaction(ctx context.Context, node nodes.Node, primary bool) (context.Context, func(), error) {
 	// We currently only handle single-node-transactions for the primary,
 	// so we just blindly call this single node "primary".
-	nodeName := "primary"
+	voter := transactions.Voter{Name: "primary"}
 
-	transactionID, cancel, err := c.txMgr.RegisterTransaction(ctx, []string{nodeName})
+	transactionID, cancel, err := c.txMgr.RegisterTransaction(ctx, []transactions.Voter{voter})
 	if err != nil {
 		return nil, nil, err
 	}
 
-	ctx, err = metadata.InjectTransaction(ctx, transactionID, nodeName, primary)
+	ctx, err = metadata.InjectTransaction(ctx, transactionID, voter.Name, primary)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -214,13 +214,15 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 	var secondaryDests []proxy.Destination
 
 	if _, ok := transactionRPCs[call.fullMethodName]; ok && featureflag.IsEnabled(ctx, featureflag.ReferenceTransactions) {
-		var nodeStorages []string
+		var voters []transactions.Voter
 
 		for _, node := range append(shard.Secondaries, shard.Primary) {
-			nodeStorages = append(nodeStorages, node.GetStorage())
+			voters = append(voters, transactions.Voter{
+				Name: node.GetStorage(),
+			})
 		}
 
-		transactionID, transactionCleanup, err := c.txMgr.RegisterTransaction(ctx, nodeStorages)
+		transactionID, transactionCleanup, err := c.txMgr.RegisterTransaction(ctx, voters)
 		if err != nil {
 			return nil, fmt.Errorf("registering transactions: %w", err)
 		}

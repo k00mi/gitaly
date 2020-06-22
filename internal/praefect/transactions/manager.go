@@ -107,7 +107,7 @@ type CancelFunc func()
 
 // RegisterTransaction registers a new reference transaction for a set of nodes
 // taking part in the transaction.
-func (mgr *Manager) RegisterTransaction(ctx context.Context, nodes []string) (uint64, CancelFunc, error) {
+func (mgr *Manager) RegisterTransaction(ctx context.Context, voters []Voter) (uint64, CancelFunc, error) {
 	mgr.lock.Lock()
 	defer mgr.lock.Unlock()
 
@@ -117,7 +117,7 @@ func (mgr *Manager) RegisterTransaction(ctx context.Context, nodes []string) (ui
 	// nodes still have in-flight transactions.
 	transactionID := mgr.txIDGenerator.ID()
 
-	transaction, err := newTransaction(nodes)
+	transaction, err := newTransaction(voters)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -129,7 +129,7 @@ func (mgr *Manager) RegisterTransaction(ctx context.Context, nodes []string) (ui
 
 	mgr.log(ctx).WithFields(logrus.Fields{
 		"transaction_id": transactionID,
-		"nodes":          nodes,
+		"voters":         voters,
 	}).Debug("RegisterTransaction")
 
 	mgr.counterMetric.WithLabelValues("registered").Inc()
