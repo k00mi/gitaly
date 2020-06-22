@@ -16,12 +16,20 @@ var (
 	ErrTransactionCanceled   = errors.New("transaction was canceled")
 )
 
+// Voter is a participant in a given transaction that may cast a vote.
+type Voter struct {
+	// Name of the voter, usually Gitaly's storage name.
+	Name string
+
+	vote []byte
+}
+
 type transaction struct {
 	doneCh   chan interface{}
 	cancelCh chan interface{}
 
-	lock  sync.Mutex
-	votes map[string][]byte
+	lock         sync.Mutex
+	votersByNode map[string]*Voter
 }
 
 func newTransaction(nodes []string) (*transaction, error) {
@@ -29,18 +37,18 @@ func newTransaction(nodes []string) (*transaction, error) {
 		return nil, ErrMissingNodes
 	}
 
-	votes := make(map[string][]byte, len(nodes))
+	votersByNode := make(map[string]*Voter, len(nodes))
 	for _, node := range nodes {
-		if _, ok := votes[node]; ok {
+		if _, ok := votersByNode[node]; ok {
 			return nil, ErrDuplicateNodes
 		}
-		votes[node] = nil
+		votersByNode[node] = &Voter{Name: node}
 	}
 
 	return &transaction{
-		doneCh:   make(chan interface{}),
-		cancelCh: make(chan interface{}),
-		votes:    votes,
+		doneCh:       make(chan interface{}),
+		cancelCh:     make(chan interface{}),
+		votersByNode: votersByNode,
 	}, nil
 }
 
@@ -58,20 +66,20 @@ func (t *transaction) vote(node string, hash []byte) error {
 
 	// Cast our vote. In case the node doesn't exist or has already cast a
 	// vote, we need to abort.
-	vote, ok := t.votes[node]
+	voter, ok := t.votersByNode[node]
 	if !ok {
 		return fmt.Errorf("invalid node for transaction: %q", node)
 	}
-	if vote != nil {
-		return fmt.Errorf("node already cast a note: %q", node)
+	if voter.vote != nil {
+		return fmt.Errorf("node already cast a vote: %q", node)
 	}
-	t.votes[node] = hash
+	voter.vote = hash
 
 	// Count votes to see if we're done. If there are no more votes, then
 	// we must notify other voters (and ourselves) by closing the `done`
 	// channel.
-	for _, vote := range t.votes {
-		if vote == nil {
+	for _, voter := range t.votersByNode {
+		if voter.vote == nil {
 			return nil
 		}
 	}
@@ -96,10 +104,10 @@ func (t *transaction) collectVotes(ctx context.Context) error {
 	// Count votes to see whether we reached agreement or not. There should
 	// be no need to lock as nobody will modify the votes anymore.
 	var firstVote []byte
-	for _, vote := range t.votes {
+	for _, voter := range t.votersByNode {
 		if firstVote == nil {
-			firstVote = vote
-		} else if !bytes.Equal(firstVote, vote) {
+			firstVote = voter.vote
+		} else if !bytes.Equal(firstVote, voter.vote) {
 			return ErrTransactionVoteFailed
 		}
 	}
