@@ -183,6 +183,8 @@ type action struct {
 }
 
 type testClientConn struct {
+	resolver.ClientConn
+
 	addrUpdates   [][]resolver.Address
 	configUpdates []string
 	mu            sync.Mutex

@@ -245,7 +245,7 @@ func copyRepoUsingSnapshot(t *testing.T, source *gitalypb.Repository) (*gitalypb
 
 	rsp, err := createFromSnapshot(t, createRepoReq)
 	require.NoError(t, err)
-	require.Equal(t, rsp, &gitalypb.CreateRepositoryFromSnapshotResponse{})
+	testhelper.ProtoEqual(t, rsp, &gitalypb.CreateRepositoryFromSnapshotResponse{})
 	return repoCopy, repoCopyPath, cleanupCopy
 }
 

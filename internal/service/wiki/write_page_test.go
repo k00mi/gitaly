@@ -155,7 +155,7 @@ func TestFailedWikiWritePageDueToDuplicatePage(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedResponse := &gitalypb.WikiWritePageResponse{DuplicateError: []byte("Cannot write //Installing-Gitaly.md, found //Installing-Gitaly.md.")}
-	require.Equal(t, expectedResponse, response, "mismatched response")
+	testhelper.ProtoEqual(t, expectedResponse, response)
 }
 
 func TestFailedWikiWritePageInPathDueToDuplicatePage(t *testing.T) {
@@ -200,7 +200,7 @@ func TestFailedWikiWritePageInPathDueToDuplicatePage(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedResponse := &gitalypb.WikiWritePageResponse{DuplicateError: []byte("Cannot write foo/Installing-Gitaly.md, found foo/Installing-Gitaly.md.")}
-	require.Equal(t, expectedResponse, response, "mismatched response")
+	testhelper.ProtoEqual(t, expectedResponse, response)
 }
 
 func TestFailedWikiWritePageDueToValidations(t *testing.T) {

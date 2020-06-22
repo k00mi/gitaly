@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
@@ -37,7 +37,7 @@ func TestEnableWritesSubcommand(t *testing.T) {
 			args: []string{"-virtual-storage=passed-storage"},
 			enableWritesFunc: func(t testing.TB) EnableWritesFunc {
 				return func(_ context.Context, req *gitalypb.EnableWritesRequest) (*gitalypb.EnableWritesResponse, error) {
-					assert.Equal(t, &gitalypb.EnableWritesRequest{
+					testhelper.ProtoEqual(t, &gitalypb.EnableWritesRequest{
 						VirtualStorage: "passed-storage",
 					}, req)
 					return &gitalypb.EnableWritesResponse{}, nil

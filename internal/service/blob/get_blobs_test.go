@@ -126,7 +126,7 @@ func TestSuccessfulGetBlobsRequest(t *testing.T) {
 					expectedBlob.Data = expectedBlob.Data[:limit]
 				}
 
-				require.Equal(t, expectedBlob, receivedBlob)
+				testhelper.ProtoEqual(t, expectedBlob, receivedBlob)
 			}
 		})
 	}
