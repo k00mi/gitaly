@@ -167,11 +167,8 @@ func (mgr *Manager) voteTransaction(ctx context.Context, transactionID uint64, n
 }
 
 // VoteTransaction is called by a client who's casting a vote on a reference
-// transaction. As we currently only have primary nodes which perform reference
-// transactions, this function doesn't yet do anything of interest but will
-// always instruct the node to commit, if given valid transaction parameters.
-// In future, it will wait for all clients of a given transaction to start the
-// transaction and perform a vote.
+// transaction. It will wait for all clients of a given transaction to start
+// the transaction and perform a vote.
 func (mgr *Manager) VoteTransaction(ctx context.Context, transactionID uint64, node string, hash []byte) error {
 	start := time.Now()
 	defer func() {
