@@ -256,11 +256,11 @@ func TestSuccessfulFindCommitsRequest(t *testing.T) {
 		{
 			desc: "revision and non-existent literal pathspec",
 			request: &gitalypb.FindCommitsRequest{
-				Repository:       testRepo,
-				Revision:         []byte("0031876facac3f2b2702a0e53a26e89939a42209"),
-				Paths:            [][]byte{[]byte("LICEN*")},
-				Limit:            10,
-				LiteralPathspecs: true,
+				Repository:    testRepo,
+				Revision:      []byte("0031876facac3f2b2702a0e53a26e89939a42209"),
+				Paths:         [][]byte{[]byte("LICEN*")},
+				Limit:         10,
+				GlobalOptions: &gitalypb.GlobalOptions{LiteralPathspecs: true},
 			},
 			ids: []string{},
 		},

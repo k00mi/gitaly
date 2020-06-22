@@ -116,9 +116,9 @@ func TestSuccessfulCommitsByMessageRequest(t *testing.T) {
 		{
 			desc: "query + empty revision + non-existent literal pathspec",
 			request: &gitalypb.CommitsByMessageRequest{
-				Query:           "much more",
-				Path:            []byte("files/*"),
-				LiteralPathspec: true,
+				Query:         "much more",
+				Path:          []byte("files/*"),
+				GlobalOptions: &gitalypb.GlobalOptions{LiteralPathspecs: true},
 			},
 			expectedCommits: []*gitalypb.GitCommit{},
 		},
