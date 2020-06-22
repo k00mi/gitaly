@@ -168,10 +168,10 @@ test: test-go rspec rspec-gitlab-shell
 .PHONY: test-go
 test-go: prepare-tests ${GO_JUNIT_REPORT}
 	@mkdir -p ${TEST_REPORT_DIR}
-	@echo 0 >${TEST_EXIT} && \
-		(go test ${TEST_OPTIONS} -v -tags "${GO_BUILD_TAGS}" -ldflags='${GO_TEST_LDFLAGS}' -count=1 $(call find_go_packages) 2>&1 | tee ${TEST_OUTPUT} || echo $$? >${TEST_EXIT}) && \
-		${GO_JUNIT_REPORT} <${TEST_OUTPUT} >${TEST_REPORT} && \
-		exit `cat ${TEST_EXIT}`
+	@echo 0>${TEST_EXIT}
+	@go test ${TEST_OPTIONS} -v -tags "${GO_BUILD_TAGS}" -ldflags='${GO_TEST_LDFLAGS}' -count=1 $(call find_go_packages) 2>&1 | tee ${TEST_OUTPUT} || echo $$? >${TEST_EXIT}
+	@${GO_JUNIT_REPORT} <${TEST_OUTPUT} >${TEST_REPORT}
+	@exit `cat ${TEST_EXIT}`
 
 .PHONY: test-with-proxies
 test-with-proxies: prepare-tests
