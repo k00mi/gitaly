@@ -116,6 +116,8 @@ func newRefServiceClient(t *testing.T, serverSocketPath string) (gitalypb.RefSer
 }
 
 func assertContainsLocalBranch(t *testing.T, branches []*gitalypb.FindLocalBranchResponse, branch *gitalypb.FindLocalBranchResponse) {
+	t.Helper()
+
 	for _, b := range branches {
 		if bytes.Equal(branch.Name, b.Name) {
 			if !testhelper.FindLocalBranchResponsesEqual(branch, b) {
@@ -129,6 +131,8 @@ func assertContainsLocalBranch(t *testing.T, branches []*gitalypb.FindLocalBranc
 }
 
 func assertContainsBranch(t *testing.T, branches []*gitalypb.FindAllBranchesResponse_Branch, branch *gitalypb.FindAllBranchesResponse_Branch) {
+	t.Helper()
+
 	var branchNames [][]byte
 
 	for _, b := range branches {

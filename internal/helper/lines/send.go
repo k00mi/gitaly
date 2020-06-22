@@ -6,6 +6,24 @@ import (
 	"io"
 )
 
+// SenderOpts contains fields that Send() uses to determine what is considered
+// a line, and how to handle pagination. That is, how many lines to skip, before
+// a line gets fed into the Sender.
+type SenderOpts struct {
+	// Delimiter is the separator used to split the sender's output into
+	// lines. Defaults to "\n".
+	Delimiter []byte
+	// Limit is the upper limit of how many lines will be sent. The zero
+	// value will cause no lines to be sent.
+	Limit int
+	// IsPageToken allows control over which results are sent as part of the
+	// response. When IsPageToken evaluates to true for the first time,
+	// results will start to be sent as part of the response. This function
+	// will	be called with an empty slice previous to sending the first line
+	// in order to allow sending everything right from the beginning.
+	IsPageToken func([]byte) bool
+}
+
 // ItemsPerMessage establishes the threshold to flush the buffer when using the
 // `Send` function. It's a variable instead of a constant to make it possible to
 // override in tests.
@@ -15,9 +33,9 @@ var ItemsPerMessage = 20
 type Sender func([][]byte) error
 
 type writer struct {
-	sender Sender
-	lines  [][]byte
-	delim  []byte
+	sender  Sender
+	lines   [][]byte
+	options SenderOpts
 }
 
 // CopyAndAppend adds a newly allocated copy of `e` to the `s` slice. Useful to
@@ -62,32 +80,44 @@ func (w *writer) addLine(p []byte) error {
 func (w *writer) consume(r io.Reader) error {
 	buf := bufio.NewReader(r)
 
-	for finished := false; !finished; {
+	// As `IsPageToken` will instruct us to send the _next_ line only, we
+	// need to call it before the first iteration to allow for the case
+	// where we want to send right from the beginning.
+	pastPageToken := w.options.IsPageToken([]byte{})
+	for i := 0; i < w.options.Limit; {
 		var line []byte
 
 		for {
 			// delim can be multiple bytes, so we read till the end byte of it ...
-			chunk, err := buf.ReadBytes(w.delim[len(w.delim)-1])
+			chunk, err := buf.ReadBytes(w.delimiter()[len(w.delimiter())-1])
 			if err != nil && err != io.EOF {
 				return err
 			}
 
 			line = append(line, chunk...)
 			// ... then we check if the last bytes of line are the same as delim
-			if bytes.HasSuffix(line, w.delim) {
+			if bytes.HasSuffix(line, w.delimiter()) {
 				break
 			}
 
 			if err == io.EOF {
-				finished = true
+				i = w.options.Limit // Implicit exit clause for the loop
 				break
 			}
 		}
 
-		line = bytes.TrimRight(line, string(w.delim))
+		line = bytes.TrimSuffix(line, w.delimiter())
 		if len(line) == 0 {
 			break
 		}
+
+		// If a page token is given, we need to skip all lines until we've found it.
+		// All remaining lines will then be sent until we reach the pagination limit.
+		if !pastPageToken {
+			pastPageToken = w.options.IsPageToken(line)
+			continue
+		}
+		i++ // Only increment the counter if the result wasn't skipped
 
 		if err := w.addLine(line); err != nil {
 			return err
@@ -97,12 +127,19 @@ func (w *writer) consume(r io.Reader) error {
 	return w.flush()
 }
 
-// Send reads output from `r`, splits it at `delim`, then handles the buffered lines using `sender`.
-func Send(r io.Reader, sender Sender, delim []byte) error {
-	if len(delim) == 0 {
-		delim = []byte{'\n'}
+func (w *writer) delimiter() []byte { return w.options.Delimiter }
+
+// Send reads output from `r`, splits it at `opts.Delimiter`, then handles the
+// buffered lines using `sender`.
+func Send(r io.Reader, sender Sender, opts SenderOpts) error {
+	if len(opts.Delimiter) == 0 {
+		opts.Delimiter = []byte{'\n'}
 	}
 
-	writer := &writer{sender: sender, delim: delim}
+	if opts.IsPageToken == nil {
+		opts.IsPageToken = func(_ []byte) bool { return true }
+	}
+
+	writer := &writer{sender: sender, options: opts}
 	return writer.consume(r)
 }

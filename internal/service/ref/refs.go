@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/golang/protobuf/proto"
@@ -34,6 +35,7 @@ var (
 type findRefsOpts struct {
 	cmdArgs []git.Option
 	delim   []byte
+	lines.SenderOpts
 }
 
 func findRefs(ctx context.Context, writer lines.Sender, repo *gitalypb.Repository, patterns []string, opts *findRefsOpts) error {
@@ -54,7 +56,11 @@ func findRefs(ctx context.Context, writer lines.Sender, repo *gitalypb.Repositor
 		return err
 	}
 
-	if err := lines.Send(cmd, writer, opts.delim); err != nil {
+	if err := lines.Send(cmd, writer, lines.SenderOpts{
+		IsPageToken: opts.IsPageToken,
+		Delimiter:   opts.delim,
+		Limit:       int(opts.Limit),
+	}); err != nil {
 		return err
 	}
 
@@ -299,12 +305,11 @@ func findLocalBranches(in *gitalypb.FindLocalBranchesRequest, stream gitalypb.Re
 	}
 
 	writer := newFindLocalBranchesWriter(stream, c)
-	opts := &findRefsOpts{
-		cmdArgs: []git.Option{
-			// %00 inserts the null character into the output (see for-each-ref docs)
-			git.Flag{"--format=" + strings.Join(localBranchFormatFields, "%00")},
-			git.Flag{"--sort=" + parseSortKey(in.GetSortBy())},
-		},
+	opts := paginationParamsToOpts(in.GetPaginationParams())
+	opts.cmdArgs = []git.Option{
+		// %00 inserts the null character into the output (see for-each-ref docs)
+		git.Flag{"--format=" + strings.Join(localBranchFormatFields, "%00")},
+		git.Flag{"--sort=" + parseSortKey(in.GetSortBy())},
 	}
 
 	return findRefs(ctx, writer, in.Repository, []string{"refs/heads"}, opts)
@@ -349,9 +354,9 @@ func findAllBranches(in *gitalypb.FindAllBranchesRequest, stream gitalypb.RefSer
 		return err
 	}
 
-	opts := &findRefsOpts{
-		cmdArgs: args,
-	}
+	opts := paginationParamsToOpts(nil)
+	opts.cmdArgs = args
+
 	writer := newFindAllBranchesWriter(stream, c)
 
 	return findRefs(ctx, writer, in.Repository, patterns, opts)
@@ -455,4 +460,24 @@ func validateFindTagRequest(in *gitalypb.FindTagRequest) error {
 		return errors.New("tag name is empty")
 	}
 	return nil
+}
+
+func paginationParamsToOpts(p *gitalypb.PaginationParameter) *findRefsOpts {
+	opts := &findRefsOpts{}
+	opts.IsPageToken = func(_ []byte) bool { return true }
+	opts.Limit = math.MaxInt32
+
+	if p == nil {
+		return opts
+	}
+
+	if p.GetLimit() >= 0 {
+		opts.Limit = int(p.GetLimit())
+	}
+
+	if p.GetPageToken() != "" {
+		opts.IsPageToken = func(l []byte) bool { return bytes.Compare(l, []byte(p.GetPageToken())) >= 0 }
+	}
+
+	return opts
 }

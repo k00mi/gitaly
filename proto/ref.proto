@@ -167,6 +167,11 @@ message FindLocalBranchesRequest {
     UPDATED_DESC = 2;
   }
   SortBy sort_by = 2;
+  // The page token is the branch name, with the `refs/heads/` prefix, for
+  // example "refs/heads/master". After the first branch name is encountered
+  // which lexicographically exceeds the page token, it will be the first result
+  // send as part of the response.
+  PaginationParameter pagination_params = 3;
 }
 
 message FindLocalBranchesResponse {
