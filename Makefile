@@ -227,19 +227,11 @@ lint-warnings: staticcheck-deprecations
 	# Runs verification analysis that is okay to fail (but not ignore completely)
 
 .PHONY: notice-up-to-date
-notice-up-to-date: notice-tmp
-	# notice-up-to-date
+notice-up-to-date: ${BUILD_DIR}/NOTICE
 	@(cmp ${BUILD_DIR}/NOTICE ${SOURCE_DIR}/NOTICE) || (echo >&2 "NOTICE requires update: 'make notice'" && false)
 
 .PHONY: notice
-notice: notice-tmp
-	mv ${BUILD_DIR}/NOTICE ${SOURCE_DIR}/NOTICE
-
-.PHONY: notice-tmp
-notice-tmp: ${GO_LICENSES} clean-ruby-vendor-go
-	rm -rf ${BUILD_DIR}/licenses
-	${GO_LICENSES} save ./... --save_path=${BUILD_DIR}/licenses
-	go run ${SOURCE_DIR}/_support/noticegen/noticegen.go -source ${BUILD_DIR}/licenses -template ${SOURCE_DIR}/_support/noticegen/notice.template > ${BUILD_DIR}/NOTICE
+notice: ${SOURCE_DIR}/NOTICE
 
 .PHONY: clean
 clean:
@@ -325,6 +317,14 @@ ${SOURCE_DIR}/.ruby-bundle: ${GITALY_RUBY_DIR}/Gemfile.lock ${GITALY_RUBY_DIR}/G
 	cd ${GITALY_RUBY_DIR} && bundle config # for debugging
 	cd ${GITALY_RUBY_DIR} && bundle install ${BUNDLE_FLAGS}
 	touch $@
+
+${SOURCE_DIR}/NOTICE: ${BUILD_DIR}/NOTICE
+	@mv $< $@
+
+${BUILD_DIR}/NOTICE: ${GO_LICENSES} clean-ruby-vendor-go
+	@rm -rf ${BUILD_DIR}/licenses
+	@${GO_LICENSES} save ./... --save_path=${BUILD_DIR}/licenses
+	@go run ${SOURCE_DIR}/_support/noticegen/noticegen.go -source ${BUILD_DIR}/licenses -template ${SOURCE_DIR}/_support/noticegen/notice.template > ${BUILD_DIR}/NOTICE
 
 ${BUILD_DIR}:
 	mkdir -p ${BUILD_DIR}
