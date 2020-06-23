@@ -39,7 +39,7 @@ func (l *configLocator) GetRepoPath(repo repository.GitRepo) (string, error) {
 		return repoPath, nil
 	}
 
-	return "", status.Errorf(codes.NotFound, "GetRepoPath: not a git repository '%s'", repoPath)
+	return "", status.Errorf(codes.NotFound, "GetRepoPath: not a git repository: %q", repoPath)
 }
 
 // GetPath returns the path of the repo passed as first argument. An error is
