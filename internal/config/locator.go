@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// NewCfgLocator returns locator based on the provided configuration struct.
+// NewLocator returns locator based on the provided configuration struct.
 // As it creates a shallow copy of the provided struct changes made into provided struct
 // may affect result of methods implemented by it.
 func NewLocator(conf Cfg) storage.Locator {
