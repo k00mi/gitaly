@@ -98,7 +98,7 @@ func (l *configLocator) GetObjectDirectoryPath(repo repository.GitRepo) (string,
 
 	fullPath := path.Join(repoPath, objectDirectoryPath)
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
-		return "", status.Errorf(codes.NotFound, "GetObjectDirectoryPath: does not exist '%s'", fullPath)
+		return "", status.Errorf(codes.NotFound, "GetObjectDirectoryPath: does not exist: %q", fullPath)
 	}
 
 	return fullPath, nil
