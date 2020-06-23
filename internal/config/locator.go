@@ -71,7 +71,7 @@ func (l *configLocator) GetPath(repo repository.GitRepo) (string, error) {
 func (l *configLocator) GetStorageByName(storageName string) (string, error) {
 	storagePath, ok := l.conf.StoragePath(storageName)
 	if !ok {
-		return "", status.Errorf(codes.InvalidArgument, "Storage can not be found by name %q", storageName)
+		return "", status.Errorf(codes.InvalidArgument, "GetStorageByName: no such storage: %q", storageName)
 	}
 
 	return storagePath, nil
