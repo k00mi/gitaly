@@ -1,7 +1,6 @@
 package transactions
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha1"
 	"errors"
@@ -21,7 +20,24 @@ type Voter struct {
 	// Name of the voter, usually Gitaly's storage name.
 	Name string
 
-	vote []byte
+	vote vote
+}
+
+type vote [sha1.Size]byte
+
+func voteFromHash(hash []byte) (vote, error) {
+	var vote vote
+
+	if len(hash) != sha1.Size {
+		return vote, fmt.Errorf("invalid voting hash: %q", hash)
+	}
+
+	copy(vote[:], hash)
+	return vote, nil
+}
+
+func (v vote) isEmpty() bool {
+	return v == vote{}
 }
 
 type transaction struct {
@@ -59,8 +75,9 @@ func (t *transaction) cancel() {
 }
 
 func (t *transaction) vote(node string, hash []byte) error {
-	if len(hash) != sha1.Size {
-		return fmt.Errorf("invalid reference hash: %q", hash)
+	vote, err := voteFromHash(hash)
+	if err != nil {
+		return err
 	}
 
 	t.lock.Lock()
@@ -72,16 +89,16 @@ func (t *transaction) vote(node string, hash []byte) error {
 	if !ok {
 		return fmt.Errorf("invalid node for transaction: %q", node)
 	}
-	if voter.vote != nil {
+	if !voter.vote.isEmpty() {
 		return fmt.Errorf("node already cast a vote: %q", node)
 	}
-	voter.vote = hash
+	voter.vote = vote
 
 	// Count votes to see if we're done. If there are no more votes, then
 	// we must notify other voters (and ourselves) by closing the `done`
 	// channel.
 	for _, voter := range t.votersByNode {
-		if voter.vote == nil {
+		if voter.vote.isEmpty() {
 			return nil
 		}
 	}
@@ -105,11 +122,11 @@ func (t *transaction) collectVotes(ctx context.Context) error {
 
 	// Count votes to see whether we reached agreement or not. There should
 	// be no need to lock as nobody will modify the votes anymore.
-	var firstVote []byte
+	var firstVote vote
 	for _, voter := range t.votersByNode {
-		if firstVote == nil {
+		if firstVote.isEmpty() {
 			firstVote = voter.vote
-		} else if !bytes.Equal(firstVote, voter.vote) {
+		} else if firstVote != voter.vote {
 			return ErrTransactionVoteFailed
 		}
 	}
