@@ -13,9 +13,9 @@ import (
 // Locator allows to get info about location of the repository or storage at the local file system.
 type Locator interface {
 	// GetRepoPath returns the full path of the repository referenced by an
-	// RPC Repository message. The errors returned are gRPC errors with
-	// relevant error codes and should be passed back to gRPC without further
-	// decoration.
+	// RPC Repository message. It verifies the path is an existing git directory.
+	// The errors returned are gRPC errors with relevant error codes and should
+	// be passed back to gRPC without further decoration.
 	GetRepoPath(repo repository.GitRepo) (string, error)
 	// GetPath returns the path of the repo passed as first argument. An error is
 	// returned when either the storage can't be found or the path includes

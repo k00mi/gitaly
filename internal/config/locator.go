@@ -22,9 +22,9 @@ type configLocator struct {
 }
 
 // GetRepoPath returns the full path of the repository referenced by an
-// RPC Repository message. The errors returned are gRPC errors with
-// relevant error codes and should be passed back to gRPC without further
-// decoration.
+// RPC Repository message. It verifies the path is an existing git directory.
+// The errors returned are gRPC errors with relevant error codes and should
+// be passed back to gRPC without further decoration.
 func (l *configLocator) GetRepoPath(repo repository.GitRepo) (string, error) {
 	repoPath, err := l.GetPath(repo)
 	if err != nil {
@@ -68,6 +68,8 @@ func (l *configLocator) GetPath(repo repository.GitRepo) (string, error) {
 	return path.Join(storagePath, relativePath), nil
 }
 
+// GetStorageByName will return the path for the storage, which is fetched by
+// its key. An error is return if it cannot be found.
 func (l *configLocator) GetStorageByName(storageName string) (string, error) {
 	storagePath, ok := l.conf.StoragePath(storageName)
 	if !ok {
