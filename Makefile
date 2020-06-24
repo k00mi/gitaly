@@ -1,5 +1,12 @@
 # Makefile for Gitaly
 
+# Call `make V=1` in order to print commands verbosely.
+ifeq ($(V),1)
+    Q =
+else
+    Q = @
+endif
+
 SHELL = /usr/bin/env bash -eo pipefail
 
 # Host information
@@ -156,8 +163,8 @@ assemble-ruby:
 
 .PHONY: binaries
 binaries: assemble
-	@if [ ${ARCH} != 'x86_64' ]; then echo Incorrect architecture for build: ${ARCH}; exit 1; fi
-	@cd ${ASSEMBLY_ROOT} && shasum -a 256 bin/* | tee checksums.sha256.txt
+	${Q}if [ ${ARCH} != 'x86_64' ]; then echo Incorrect architecture for build: ${ARCH}; exit 1; fi
+	${Q}cd ${ASSEMBLY_ROOT} && shasum -a 256 bin/* | tee checksums.sha256.txt
 
 .PHONY: prepare-tests
 prepare-tests: ${GITLAB_SHELL_DIR}/config.yml ${TEST_REPO} ${TEST_REPO_GIT} ${SOURCE_DIR}/.ruby-bundle
@@ -167,19 +174,19 @@ test: test-go rspec rspec-gitlab-shell
 
 .PHONY: test-go
 test-go: prepare-tests ${GO_JUNIT_REPORT}
-	@mkdir -p ${TEST_REPORT_DIR}
-	@echo 0>${TEST_EXIT}
-	@go test ${TEST_OPTIONS} -v -tags "${GO_BUILD_TAGS}" -ldflags='${GO_TEST_LDFLAGS}' -count=1 $(call find_go_packages) 2>&1 | tee ${TEST_OUTPUT} || echo $$? >${TEST_EXIT}
-	@${GO_JUNIT_REPORT} <${TEST_OUTPUT} >${TEST_REPORT}
-	@exit `cat ${TEST_EXIT}`
+	${Q}mkdir -p ${TEST_REPORT_DIR}
+	${Q}echo 0>${TEST_EXIT}
+	${Q}go test ${TEST_OPTIONS} -v -tags "${GO_BUILD_TAGS}" -ldflags='${GO_TEST_LDFLAGS}' -count=1 $(call find_go_packages) 2>&1 | tee ${TEST_OUTPUT} || echo $$? >${TEST_EXIT}
+	${Q}${GO_JUNIT_REPORT} <${TEST_OUTPUT} >${TEST_REPORT}
+	${Q}exit `cat ${TEST_EXIT}`
 
 .PHONY: test-with-proxies
 test-with-proxies: prepare-tests
-	@go test -tags "${GO_BUILD_TAGS}" -count=1  -exec ${SOURCE_DIR}/_support/bad-proxies ${GITALY_PACKAGE}/internal/rubyserver/
+	${Q}go test -tags "${GO_BUILD_TAGS}" -count=1  -exec ${SOURCE_DIR}/_support/bad-proxies ${GITALY_PACKAGE}/internal/rubyserver/
 
 .PHONY: test-with-praefect
 test-with-praefect: build prepare-tests
-	@GITALY_TEST_PRAEFECT_BIN=${BUILD_DIR}/bin/praefect go test -tags "${GO_BUILD_TAGS}" -ldflags='${GO_TEST_LDFLAGS}' -count=1 $(call find_go_packages) # count=1 bypasses go 1.10 test caching
+	${Q}GITALY_TEST_PRAEFECT_BIN=${BUILD_DIR}/bin/praefect go test -tags "${GO_BUILD_TAGS}" -ldflags='${GO_TEST_LDFLAGS}' -count=1 $(call find_go_packages) # count=1 bypasses go 1.10 test caching
 
 .PHONY: race-go
 race-go: TEST_OPTIONS = -race
@@ -191,36 +198,36 @@ rspec: assemble-go prepare-tests
 
 .PHONY: rspec-gitlab-shell
 rspec-gitlab-shell: ${GITLAB_SHELL_DIR}/config.yml assemble-go prepare-tests
-	@cd ${GITALY_RUBY_DIR} && bundle exec bin/ruby-cd ${GITLAB_SHELL_DIR} rspec
+	${Q}cd ${GITALY_RUBY_DIR} && bundle exec bin/ruby-cd ${GITLAB_SHELL_DIR} rspec
 
 .PHONY: test-postgres
 test-postgres: prepare-tests
-	@go test -tags postgres -count=1 gitlab.com/gitlab-org/gitaly/internal/praefect/...
+	${Q}go test -tags postgres -count=1 gitlab.com/gitlab-org/gitaly/internal/praefect/...
 
 .PHONY: verify
 verify: check-mod-tidy check-formatting notice-up-to-date check-proto rubocop
 
 .PHONY: check-mod-tidy
 check-mod-tidy:
-	@${SOURCE_DIR}/_support/check-mod-tidy
+	${Q}${SOURCE_DIR}/_support/check-mod-tidy
 
 .PHONY: lint
 lint: ${GOLANGCI_LINT}
-	@${GOLANGCI_LINT} cache clean && ${GOLANGCI_LINT} run --out-format tab --config ${SOURCE_DIR}/.golangci.yml
+	${Q}${GOLANGCI_LINT} cache clean && ${GOLANGCI_LINT} run --out-format tab --config ${SOURCE_DIR}/.golangci.yml
 
 .PHONY: check-formatting
 check-formatting: ${GITALYFMT}
-	@${GITALYFMT} $(call find_go_sources) | awk '{ print } END { if(NR>0) { print "Formatting error, run make format"; exit(1) } }'
+	${Q}${GITALYFMT} $(call find_go_sources) | awk '{ print } END { if(NR>0) { print "Formatting error, run make format"; exit(1) } }'
 
 .PHONY: format
 format: ${GOIMPORTS} ${GITALYFMT}
-	@${GOIMPORTS} -w -l $(call find_go_sources)
-	@${GITALYFMT} -w $(call find_go_sources)
-	@${GOIMPORTS} -w -l $(call find_go_sources)
+	${Q}${GOIMPORTS} -w -l $(call find_go_sources)
+	${Q}${GITALYFMT} -w $(call find_go_sources)
+	${Q}${GOIMPORTS} -w -l $(call find_go_sources)
 
 .PHONY: staticcheck-deprecations
 staticcheck-deprecations: ${GOLANGCI_LINT}
-	@${GOLANGCI_LINT} run --out-format tab --config ${SOURCE_DIR}/_support/golangci.warnings.yml
+	${Q}${GOLANGCI_LINT} run --out-format tab --config ${SOURCE_DIR}/_support/golangci.warnings.yml
 
 .PHONY: lint-warnings
 lint-warnings: staticcheck-deprecations
@@ -228,7 +235,7 @@ lint-warnings: staticcheck-deprecations
 
 .PHONY: notice-up-to-date
 notice-up-to-date: ${BUILD_DIR}/NOTICE
-	@(cmp ${BUILD_DIR}/NOTICE ${SOURCE_DIR}/NOTICE) || (echo >&2 "NOTICE requires update: 'make notice'" && false)
+	${Q}(cmp ${BUILD_DIR}/NOTICE ${SOURCE_DIR}/NOTICE) || (echo >&2 "NOTICE requires update: 'make notice'" && false)
 
 .PHONY: notice
 notice: ${SOURCE_DIR}/NOTICE
@@ -250,15 +257,15 @@ rubocop: ${SOURCE_DIR}/.ruby-bundle
 
 .PHONY: cover
 cover: prepare-tests
-	@echo "NOTE: make cover does not exit 1 on failure, don't use it to check for tests success!"
+	${Q}echo "NOTE: make cover does not exit 1 on failure, don't use it to check for tests success!"
 	mkdir -p "${COVERAGE_DIR}"
 	rm -f "${COVERAGE_DIR}/all.merged" "${COVERAGE_DIR}/all.html"
-	@go test -ldflags='${GO_TEST_LDFLAGS}' -coverprofile "${COVERAGE_DIR}/all.merged" $(call find_go_packages)
-	@go tool cover -html  "${COVERAGE_DIR}/all.merged" -o "${COVERAGE_DIR}/all.html"
-	@echo ""
-	@echo "=====> Total test coverage: <====="
-	@echo ""
-	@go tool cover -func "${COVERAGE_DIR}/all.merged"
+	${Q}go test -ldflags='${GO_TEST_LDFLAGS}' -coverprofile "${COVERAGE_DIR}/all.merged" $(call find_go_packages)
+	${Q}go tool cover -html  "${COVERAGE_DIR}/all.merged" -o "${COVERAGE_DIR}/all.html"
+	${Q}echo ""
+	${Q}echo "=====> Total test coverage: <====="
+	${Q}echo ""
+	${Q}go tool cover -func "${COVERAGE_DIR}/all.merged"
 
 .PHONY: docker
 docker:
@@ -288,11 +295,11 @@ proto-lint: ${PROTOC} ${PROTOC_GEN_GO}
 
 .PHONY: no-changes
 no-changes:
-	@git status --porcelain | awk '{ print } END { if (NR > 0) { exit 1 } }'
+	${Q}git status --porcelain | awk '{ print } END { if (NR > 0) { exit 1 } }'
 
 .PHONY: smoke-test
 smoke-test: all rspec
-	@go test ./internal/rubyserver
+	${Q}go test ./internal/rubyserver
 
 .PHONY: download-git
 download-git: ${BUILD_DIR}/git_full_bins.tgz
@@ -302,7 +309,7 @@ download-git: ${BUILD_DIR}/git_full_bins.tgz
 
 .PHONY: build-git
 build-git:
-	@echo "Getting Git from ${GIT_REPO_URL}"
+	${Q}echo "Getting Git from ${GIT_REPO_URL}"
 	rm -rf ${GIT_SOURCE_DIR} ${GIT_INSTALL_DIR}
 	git clone ${GIT_REPO_URL} ${GIT_SOURCE_DIR}
 	git -C ${GIT_SOURCE_DIR} checkout ${GIT_VERSION}
@@ -319,12 +326,12 @@ ${SOURCE_DIR}/.ruby-bundle: ${GITALY_RUBY_DIR}/Gemfile.lock ${GITALY_RUBY_DIR}/G
 	touch $@
 
 ${SOURCE_DIR}/NOTICE: ${BUILD_DIR}/NOTICE
-	@mv $< $@
+	${Q}mv $< $@
 
 ${BUILD_DIR}/NOTICE: ${GO_LICENSES} clean-ruby-vendor-go
-	@rm -rf ${BUILD_DIR}/licenses
-	@${GO_LICENSES} save ./... --save_path=${BUILD_DIR}/licenses
-	@go run ${SOURCE_DIR}/_support/noticegen/noticegen.go -source ${BUILD_DIR}/licenses -template ${SOURCE_DIR}/_support/noticegen/notice.template > ${BUILD_DIR}/NOTICE
+	${Q}rm -rf ${BUILD_DIR}/licenses
+	${Q}${GO_LICENSES} save ./... --save_path=${BUILD_DIR}/licenses
+	${Q}go run ${SOURCE_DIR}/_support/noticegen/noticegen.go -source ${BUILD_DIR}/licenses -template ${SOURCE_DIR}/_support/noticegen/notice.template > ${BUILD_DIR}/NOTICE
 
 ${BUILD_DIR}:
 	mkdir -p ${BUILD_DIR}
