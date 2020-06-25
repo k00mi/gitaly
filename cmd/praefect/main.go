@@ -102,6 +102,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore/glsql"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metrics"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes/tracker"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/transactions"
 	"gitlab.com/gitlab-org/gitaly/internal/version"
@@ -236,7 +237,26 @@ func run(cfgs []starter.Config, conf config.Config) error {
 		rs = datastore.NewPostgresRepositoryStore(db, conf.StorageNames())
 	}
 
-	nodeManager, err := nodes.NewManager(logger, conf, db, rs, nodeLatencyHistogram)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var errTracker tracker.ErrorTracker
+
+	if conf.Failover.Enabled {
+		thresholdsConfigured, err := conf.Failover.ErrorThresholdsConfigured()
+		if err != nil {
+			return err
+		}
+
+		if thresholdsConfigured {
+			errTracker, err = tracker.NewErrors(ctx, conf.Failover.ErrorThresholdWindow.Duration(), conf.Failover.ReadErrorThresholdCount, conf.Failover.WriteErrorThresholdCount)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	nodeManager, err := nodes.NewManager(logger, conf, db, rs, nodeLatencyHistogram, protoregistry.GitalyProtoPreregistered, errTracker)
 	if err != nil {
 		return err
 	}
@@ -284,9 +304,6 @@ func run(cfgs []starter.Config, conf config.Config) error {
 		repl,
 		datastore.NewRepositoryStoreCollector(logger, rs, nodeManager),
 	)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	b, err := bootstrap.New()
 	if err != nil {
