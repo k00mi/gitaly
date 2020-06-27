@@ -23,9 +23,12 @@ func TestRepositoryProfile(t *testing.T) {
 	unpackedObjects, err := UnpackedObjects(testRepo)
 	require.NoError(t, err)
 	require.Zero(t, unpackedObjects)
-	packfiles, err := Packfiles(testRepo)
+	packfiles, err := GetPackfiles(testRepoPath)
 	require.NoError(t, err)
-	require.Zero(t, packfiles)
+	require.Empty(t, packfiles)
+	packfilesCount, err := PackfilesCount(testRepo)
+	require.NoError(t, err)
+	require.Zero(t, packfilesCount)
 
 	blobs := 10
 	blobIDs := testhelper.WriteBlobs(t, testRepoPath, blobs)
