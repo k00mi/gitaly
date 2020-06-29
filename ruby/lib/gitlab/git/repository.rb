@@ -703,13 +703,6 @@ module Gitlab
         Gitlab::Git::Blob.find(self, sha, path) unless Gitlab::Git.blank_ref?(sha)
       end
 
-      def fetch_repository_as_mirror(repository)
-        cmd = ['fetch', '--prune', GITALY_INTERNAL_URL, RepositoryMirroring::REFMAPS[:all_refs]]
-        _, status = run_git(cmd, env: repository.fetch_env)
-
-        status.zero?
-      end
-
       def rev_list(including: [], excluding: [], options: [], objects: false, &block)
         args = ['rev-list']
 

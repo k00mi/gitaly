@@ -135,35 +135,6 @@ describe Gitlab::Git::Repository do # rubocop:disable Metrics/BlockLength
     end
   end
 
-  describe '#fetch_repository_as_mirror' do
-    let(:new_repository) { gitlab_git_from_gitaly(new_empty_test_repo) }
-    let(:repository) { mutable_repository }
-    let(:remote_repository) { Gitlab::Git::RemoteRepository.new(repository) }
-    let(:fake_env) { {} }
-
-    subject { new_repository.fetch_repository_as_mirror(remote_repository) }
-
-    before do
-      expect(remote_repository).to receive(:fetch_env).and_return(fake_env)
-      expect(new_repository).to receive(:run_git).with(
-        ['fetch', '--prune', Gitlab::Git::Repository::GITALY_INTERNAL_URL, Gitlab::Git::RepositoryMirroring::REFMAPS[:all_refs]],
-        env: fake_env
-      ).and_return(git_fetch_return)
-    end
-
-    context 'successfully fetches a repository as a mirror remote' do
-      let(:git_fetch_return) { ['success', 0] }
-
-      it { is_expected.to be_truthy }
-    end
-
-    context 'fails to fetch a repository as a mirror remote' do
-      let(:git_fetch_return) { ['error', 128] }
-
-      it { is_expected.to be_falsy }
-    end
-  end
-
   describe '#merge_base' do
     where(:from, :to, :result) do
       '570e7b2abdd848b95f2f578043fc23bd6f6fd24d' | '40f4a7a617393735a95a0bb67b08385bc1e7c66d' | '570e7b2abdd848b95f2f578043fc23bd6f6fd24d'

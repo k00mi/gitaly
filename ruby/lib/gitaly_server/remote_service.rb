@@ -15,15 +15,6 @@ module GitalyServer
       Gitaly::AddRemoteResponse.new
     end
 
-    def fetch_internal_remote(request, call)
-      repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
-      remote_repo = Gitlab::Git::GitalyRemoteRepository.new(request.remote_repository, call)
-
-      result = repo.fetch_repository_as_mirror(remote_repo)
-
-      Gitaly::FetchInternalRemoteResponse.new(result: result)
-    end
-
     def update_remote_mirror(call)
       request_enum = call.each_remote_read
       first_request = request_enum.next
