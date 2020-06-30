@@ -1,18 +1,26 @@
 package featureflag
 
-const (
+type FeatureFlag struct {
+	Name        string `json:"name"`
+	OnByDefault bool   `json:"on_by_default"`
+}
+
+var (
+	// UploadPackFilter enables partial clones by sending uploadpack.allowFilter and uploadpack.allowAnySHA1InWant
+	// to upload-pack
+	UploadPackFilter = FeatureFlag{Name: "upload_pack_filter", OnByDefault: false}
 	// LinguistFileCountStats will invoke an additional git-linguist command to get the number of files per language
-	LinguistFileCountStats = "linguist_file_count_stats"
+	LinguistFileCountStats = FeatureFlag{Name: "linguist_file_count_stats", OnByDefault: false}
 	// GoUpdateHook will bypass the ruby update hook and use the go implementation of custom hooks
-	GoUpdateHook = "go_update_hook"
+	GoUpdateHook = FeatureFlag{Name: "go_update_hook", OnByDefault: false}
 	// RemoteBranchesLsRemote will use `ls-remote` for remote branches
-	RemoteBranchesLsRemote = "ruby_remote_branches_ls_remote"
+	RemoteBranchesLsRemote = FeatureFlag{Name: "ruby_remote_branches_ls_remote", OnByDefault: false}
 	// ReferenceTransactions will handle Git reference updates via the transaction service for strong consistency
-	ReferenceTransactions = "reference_transactions"
+	ReferenceTransactions = FeatureFlag{Name: "reference_transactions", OnByDefault: false}
 	// DistributedReads allows praefect to redirect accessor operations to up-to-date secondaries
-	DistributedReads = "distributed_reads"
-	// GoPrereceiveHook will bypass the ruby pre-receive hook and use the go implementation
-	GoPreReceiveHook = "go_prereceive_hook"
+	DistributedReads = FeatureFlag{Name: "distributed_reads", OnByDefault: false}
+	// GoPreReceiveHook will bypass the ruby pre-receive hook and use the go implementation
+	GoPreReceiveHook = FeatureFlag{Name: "go_prereceive_hook", OnByDefault: false}
 )
 
 const (

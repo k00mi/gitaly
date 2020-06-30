@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	gitaly_x509 "gitlab.com/gitlab-org/gitaly/internal/x509"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/labkit/tracing"
@@ -51,11 +53,14 @@ func commandEnv(ctx context.Context, storageName, command string, message proto.
 
 	token := storageInfo["token"]
 
+	featureFlagPairs := featureflag.AllFlags(ctx)
+
 	return []string{
 		fmt.Sprintf("GITALY_PAYLOAD=%s", payload),
 		fmt.Sprintf("GIT_SSH_COMMAND=%s %s", gitalySSHPath(), command),
 		fmt.Sprintf("GITALY_ADDRESS=%s", address),
 		fmt.Sprintf("GITALY_TOKEN=%s", token),
+		fmt.Sprintf("GITALY_FEATUREFLAGS=%s", strings.Join(featureFlagPairs, ",")),
 		// Pass through the SSL_CERT_* variables that indicate which
 		// system certs to trust
 		fmt.Sprintf("%s=%s", gitaly_x509.SSLCertDir, os.Getenv(gitaly_x509.SSLCertDir)),

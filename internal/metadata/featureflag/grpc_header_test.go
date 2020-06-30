@@ -10,11 +10,11 @@ import (
 
 func TestGRPCMetadataFeatureFlag(t *testing.T) {
 	testCases := []struct {
-		flag     string
-		headers  map[string]string
-		enabled  bool
-		disabled bool
-		desc     string
+		flag        string
+		headers     map[string]string
+		enabled     bool
+		onByDefault bool
+		desc        string
 	}{
 		{"", nil, false, false, "empty name and no headers"},
 		{"flag", nil, false, false, "no headers"},
@@ -23,6 +23,7 @@ func TestGRPCMetadataFeatureFlag(t *testing.T) {
 		{"flag_under_score", map[string]string{"gitaly-feature-flag-under-score": "true"}, true, false, "flag name with underscores"},
 		{"flag-dash-ok", map[string]string{"gitaly-feature-flag-dash-ok": "true"}, true, false, "flag name with dashes"},
 		{"flag", map[string]string{"gitaly-feature-flag": "false"}, false, true, "flag explicitly disabled"},
+		{"flag", map[string]string{}, true, true, "flag enabled by default but missing"},
 	}
 
 	for _, tc := range testCases {
@@ -30,10 +31,7 @@ func TestGRPCMetadataFeatureFlag(t *testing.T) {
 			md := metadata.New(tc.headers)
 			ctx := metadata.NewIncomingContext(context.Background(), md)
 
-			assert.Equal(t, tc.enabled, IsEnabled(ctx, tc.flag))
-			if tc.disabled {
-				assert.True(t, IsDisabled(ctx, tc.flag))
-			}
+			assert.Equal(t, tc.enabled, IsEnabled(ctx, FeatureFlag{tc.flag, tc.onByDefault}))
 		})
 	}
 }
@@ -50,5 +48,5 @@ func TestAllEnabledFlags(t *testing.T) {
 			},
 		),
 	)
-	assert.ElementsMatch(t, AllEnabledFlags(ctx), []string{"meow", "foo"})
+	assert.ElementsMatch(t, AllFlags(ctx), []string{"meow:true", "foo:true", "woof:false", "bar:TRUE"})
 }

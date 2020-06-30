@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-const mockFeatureFlag = "turn meow on"
+var mockFeatureFlag = FeatureFlag{"turn meow on", false}
 
 func TestIncomingCtxWithFeatureFlag(t *testing.T) {
 	ctx := context.Background()
@@ -22,7 +22,7 @@ func TestOutgoingCtxWithFeatureFlag(t *testing.T) {
 	ctx := context.Background()
 	require.False(t, IsEnabled(ctx, mockFeatureFlag))
 
-	ctx = OutgoingCtxWithFeatureFlag(ctx, mockFeatureFlag)
+	ctx = OutgoingCtxWithFeatureFlags(ctx, mockFeatureFlag)
 	require.False(t, IsEnabled(ctx, mockFeatureFlag))
 
 	// simulate an outgoing context leaving the process boundary and then
