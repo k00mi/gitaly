@@ -9,9 +9,11 @@ package proxy
 
 import (
 	"context"
+	"errors"
 	"io"
 
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/sentryhandler"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -88,6 +90,12 @@ type handler struct {
 	director StreamDirector
 }
 
+type streamAndMsg struct {
+	grpc.ClientStream
+	msg    []byte
+	cancel func()
+}
+
 // handler is where the real magic of proxying happens.
 // It is invoked like any gRPC server stream and uses the gRPC server framing to get and receive bytes from the wire,
 // forwarding it to a ClientStream established against the relevant ClientConn.
@@ -108,54 +116,125 @@ func (s *handler) handler(srv interface{}, serverStream grpc.ServerStream) error
 
 	defer params.RequestFinalizer()
 
-	clientCtx, clientCancel := context.WithCancel(params.Context())
+	clientCtx, clientCancel := context.WithCancel(params.Primary().Ctx)
 	defer clientCancel()
 	// TODO(mwitkow): Add a `forwarded` header to metadata, https://en.wikipedia.org/wiki/X-Forwarded-For.
-	clientStream, err := grpc.NewClientStream(clientCtx, clientStreamDescForProxying, params.Conn(), fullMethodName, params.CallOptions()...)
+
+	primaryClientStream, err := grpc.NewClientStream(clientCtx, clientStreamDescForProxying, params.Primary().Conn, fullMethodName, params.CallOptions()...)
 	if err != nil {
 		return err
 	}
-	// Explicitly *do not close* s2cErrChan and c2sErrChan, otherwise the select below will not terminate.
+
+	primaryStream := streamAndMsg{
+		ClientStream: primaryClientStream,
+		msg:          params.Primary().Msg,
+		cancel:       clientCancel,
+	}
+
+	var secondaryStreams []streamAndMsg
+	for _, conn := range params.Secondaries() {
+		clientCtx, clientCancel := context.WithCancel(conn.Ctx)
+		defer clientCancel()
+
+		secondaryClientStream, err := grpc.NewClientStream(clientCtx, clientStreamDescForProxying, conn.Conn, fullMethodName, params.CallOptions()...)
+		if err != nil {
+			return err
+		}
+		secondaryStreams = append(secondaryStreams, streamAndMsg{
+			ClientStream: secondaryClientStream,
+			msg:          conn.Msg,
+			cancel:       clientCancel,
+		})
+	}
+
+	allStreams := append(secondaryStreams, primaryStream)
+
+	// Explicitly *do not close* p2cErrChan and c2sErrChan, otherwise the select below will not terminate.
 	// Channels do not have to be closed, it is just a control flow mechanism, see
 	// https://groups.google.com/forum/#!msg/golang-nuts/pZwdYRGxCIk/qpbHxRRPJdUJ
-	s2cErrChan := s.forwardServerToClient(serverStream, clientStream, peeker.consumedStream)
-	c2sErrChan := s.forwardClientToServer(clientStream, serverStream)
-	// We don't know which side is going to stop sending first, so we need a select between the two.
-	for i := 0; i < 2; i++ {
+	c2sErrChan := forwardClientToServers(serverStream, allStreams)
+	p2cErrChan := forwardPrimaryToClient(primaryClientStream, serverStream)
+	secondaryErrChan := receiveSecondaryStreams(secondaryStreams)
+
+	// We need to wait for the streams from the primary and secondaries. However, we don't need to wait for the s2c stream to finish because
+	// in some cases the client will close the stream, signaling the end of a request/response cycle. If we wait for s2cErrChan, we are effectively
+	// forcing the client to close the stream.
+	var primaryProxied, secondariesProxied bool
+	for !(primaryProxied && secondariesProxied) {
 		select {
-		case s2cErr := <-s2cErrChan:
-			if s2cErr == io.EOF {
-				// this is the happy case where the sender has encountered io.EOF, and won't be sending anymore./
-				// the clientStream>serverStream may continue pumping though.
-				clientStream.CloseSend()
-			} else {
-				// however, we may have gotten a receive error (stream disconnected, a read error etc) in which case we need
+		case c2sErr := <-c2sErrChan:
+			if c2sErr != nil {
+				// we may have gotten a receive error (stream disconnected, a read error etc) in which case we need
 				// to cancel the clientStream to the backend, let all of its goroutines be freed up by the CancelFunc and
 				// exit with an error to the stack
-				clientCancel()
-				return status.Errorf(codes.Internal, "failed proxying s2c: %v", s2cErr)
+				cancelStreams(allStreams)
+				return status.Errorf(codes.Internal, "failed proxying c2s: %v", c2sErr)
 			}
-		case c2sErr := <-c2sErrChan:
+		case secondaryErr := <-secondaryErrChan:
+			if secondaryErr != nil {
+				return status.Errorf(codes.Internal, "failed proxying to secondary: %v", secondaryErr)
+			}
+			secondariesProxied = true
+		case p2cErr := <-p2cErrChan:
 			// This happens when the clientStream has nothing else to offer (io.EOF), returned a gRPC error. In those two
 			// cases we may have received Trailers as part of the call. In case of other errors (stream closed) the trailers
 			// will be nil.
-			trailer := clientStream.Trailer()
+			trailer := primaryClientStream.Trailer()
 			serverStream.SetTrailer(trailer)
 			// c2sErr will contain RPC error from client code. If not io.EOF return the RPC error as server stream error.
-			if c2sErr != io.EOF {
+			if p2cErr != io.EOF {
+				// If there is an error from the primary, we want to cancel all streams
+				cancelStreams(allStreams)
+
 				if trailer != nil {
 					// we must not propagate Gitaly errors into Sentry
 					sentryhandler.MarkToSkip(serverStream.Context())
 				}
-				return c2sErr
+				return p2cErr
 			}
-			return nil
+
+			primaryProxied = true
 		}
 	}
-	return status.Errorf(codes.Internal, "gRPC proxying should never reach this stage.")
+
+	return nil
 }
 
-func (s *handler) forwardClientToServer(src grpc.ClientStream, dst grpc.ServerStream) chan error {
+func cancelStreams(streams []streamAndMsg) {
+	for _, stream := range streams {
+		stream.cancel()
+	}
+}
+
+// receiveSecondaryStreams reads from the client streams of the secondaries and drops the message
+// but returns an error to the channel if it encounters a non io.EOF error
+func receiveSecondaryStreams(srcs []streamAndMsg) chan error {
+	ret := make(chan error, 1)
+
+	go func() {
+		var g errgroup.Group
+		for _, src := range srcs {
+			src := src // rescoping for goroutine
+			g.Go(func() error {
+				for {
+					if err := src.RecvMsg(&frame{}); err != nil {
+						if errors.Is(err, io.EOF) {
+							return nil
+						}
+
+						src.cancel()
+						return err
+					}
+				}
+			})
+		}
+
+		ret <- g.Wait()
+	}()
+	return ret
+}
+
+func forwardPrimaryToClient(src grpc.ClientStream, dst grpc.ServerStream) chan error {
 	ret := make(chan error, 1)
 	go func() {
 		f := &frame{}
@@ -187,41 +266,66 @@ func (s *handler) forwardClientToServer(src grpc.ClientStream, dst grpc.ServerSt
 	return ret
 }
 
-func (s *handler) forwardServerToClient(src grpc.ServerStream, dst grpc.ClientStream, consumedStream *partialStream) chan error {
+func forwardFramesToServer(dst grpc.ClientStream, frameChan <-chan *frame) error {
+	for f := range frameChan {
+		if err := dst.SendMsg(f); err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return err
+		}
+	}
+
+	// all messages redirected
+	return dst.CloseSend()
+}
+
+func forwardClientToServers(src grpc.ServerStream, dsts []streamAndMsg) chan error {
 	ret := make(chan error, 1)
 	go func() {
-		// send any consumed/peeked frames first
-		for _, frame := range consumedStream.frames {
-			if frame == nil {
-				// It is possible for peeked frames to be empty. This most likely
-				// occurs when the server stream returns an error before the desired
-				// number of frames can be peeked
+		var g errgroup.Group
+
+		frameChans := make([]chan<- *frame, 0, len(dsts))
+
+		for _, dst := range dsts {
+			dst := dst
+			frameChan := make(chan *frame, 16)
+			frameChan <- &frame{payload: dst.msg} // send re-written message
+			frameChans = append(frameChans, frameChan)
+
+			g.Go(func() error { return forwardFramesToServer(dst, frameChan) })
+		}
+
+		for {
+			if err := receiveFromClientAndForward(src, frameChans); err != nil {
+				if !errors.Is(err, io.EOF) {
+					ret <- err
+				}
+
 				break
-			}
-			if err := dst.SendMsg(frame); err != nil {
-				ret <- err
-				return
 			}
 		}
 
-		// we may have encountered an error earlier while peeking
-		if consumedStream.err != nil {
-			ret <- consumedStream.err
-			return
-		}
-
-		// resume two-way stream after peeked messages
-		f := &frame{}
-		for i := 0; ; i++ {
-			if err := src.RecvMsg(f); err != nil {
-				ret <- err // this can be io.EOF which is happy case
-				break
-			}
-			if err := dst.SendMsg(f); err != nil {
-				ret <- err
-				break
-			}
-		}
+		ret <- g.Wait()
 	}()
 	return ret
+}
+
+func receiveFromClientAndForward(src grpc.ServerStream, frameChans []chan<- *frame) error {
+	f := &frame{}
+
+	if err := src.RecvMsg(f); err != nil {
+		for _, frameChan := range frameChans {
+			// signal no more data to redirect
+			close(frameChan)
+		}
+
+		return err // this can be io.EOF which is happy case
+	}
+
+	for _, frameChan := range frameChans {
+		frameChan <- f
+	}
+
+	return nil
 }
