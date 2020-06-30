@@ -9,6 +9,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	gitLog "gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	serverPkg "gitlab.com/gitlab-org/gitaly/internal/server"
 	"gitlab.com/gitlab-org/gitaly/internal/service/repository"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -26,36 +27,54 @@ func TestFetchSourceBranchSourceRepositorySuccess(t *testing.T) {
 	client, conn := repository.NewRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
 
-	ctxOuter, cancel := testhelper.Context()
-	defer cancel()
+	for _, tc := range []struct {
+		desc         string
+		FeatureFlags []featureflag.FeatureFlag
+	}{
+		{
+			desc: "ruby",
+		},
+		{
+			desc:         "go",
+			FeatureFlags: []featureflag.FeatureFlag{featureflag.GoFetchSourceBranch},
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			ctxOuter, cancel := testhelper.Context()
+			defer cancel()
 
-	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
-	ctx := metadata.NewOutgoingContext(ctxOuter, md)
+			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
+			ctx := metadata.NewOutgoingContext(ctxOuter, md)
+			for _, feature := range tc.FeatureFlags {
+				ctx = featureflag.OutgoingCtxWithFeatureFlagValue(ctx, feature, "true")
+			}
 
-	targetRepo, _, cleanup := newTestRepo(t, "fetch-source-target.git")
-	defer cleanup()
+			targetRepo, _, cleanup := newTestRepo(t, "fetch-source-target.git")
+			defer cleanup()
 
-	sourceRepo, sourcePath, cleanup := newTestRepo(t, "fetch-source-source.git")
-	defer cleanup()
+			sourceRepo, sourcePath, cleanup := newTestRepo(t, "fetch-source-source.git")
+			defer cleanup()
 
-	sourceBranch := "fetch-source-branch-test-branch"
-	newCommitID := testhelper.CreateCommit(t, sourcePath, sourceBranch, nil)
+			sourceBranch := "fetch-source-branch-test-branch"
+			newCommitID := testhelper.CreateCommit(t, sourcePath, sourceBranch, nil)
 
-	targetRef := "refs/tmp/fetch-source-branch-test"
-	req := &gitalypb.FetchSourceBranchRequest{
-		Repository:       targetRepo,
-		SourceRepository: sourceRepo,
-		SourceBranch:     []byte(sourceBranch),
-		TargetRef:        []byte(targetRef),
+			targetRef := "refs/tmp/fetch-source-branch-test"
+			req := &gitalypb.FetchSourceBranchRequest{
+				Repository:       targetRepo,
+				SourceRepository: sourceRepo,
+				SourceBranch:     []byte(sourceBranch),
+				TargetRef:        []byte(targetRef),
+			}
+
+			resp, err := client.FetchSourceBranch(ctx, req)
+			require.NoError(t, err)
+			require.True(t, resp.Result, "response.Result should be true")
+
+			fetchedCommit, err := gitLog.GetCommit(ctx, targetRepo, targetRef)
+			require.NoError(t, err)
+			require.Equal(t, newCommitID, fetchedCommit.GetId())
+		})
 	}
-
-	resp, err := client.FetchSourceBranch(ctx, req)
-	require.NoError(t, err)
-	require.True(t, resp.Result, "response.Result should be true")
-
-	fetchedCommit, err := gitLog.GetCommit(ctx, targetRepo, targetRef)
-	require.NoError(t, err)
-	require.Equal(t, newCommitID, fetchedCommit.GetId())
 }
 
 func TestFetchSourceBranchSameRepositorySuccess(t *testing.T) {
@@ -65,36 +84,127 @@ func TestFetchSourceBranchSameRepositorySuccess(t *testing.T) {
 	client, conn := repository.NewRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
 
-	ctxOuter, cancel := testhelper.Context()
-	defer cancel()
+	for _, tc := range []struct {
+		desc         string
+		FeatureFlags []featureflag.FeatureFlag
+	}{
+		{
+			desc: "ruby",
+		},
+		{
+			desc:         "go",
+			FeatureFlags: []featureflag.FeatureFlag{featureflag.GoFetchSourceBranch},
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			ctxOuter, cancel := testhelper.Context()
+			defer cancel()
 
-	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
-	ctx := metadata.NewOutgoingContext(ctxOuter, md)
+			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
+			ctx := metadata.NewOutgoingContext(ctxOuter, md)
+			for _, feature := range tc.FeatureFlags {
+				ctx = featureflag.OutgoingCtxWithFeatureFlagValue(ctx, feature, "true")
+			}
 
-	repo, repoPath, cleanup := newTestRepo(t, "fetch-source-source.git")
-	defer cleanup()
+			repo, repoPath, cleanup := newTestRepo(t, "fetch-source-source.git")
+			defer cleanup()
 
-	sourceBranch := "fetch-source-branch-test-branch"
-	newCommitID := testhelper.CreateCommit(t, repoPath, sourceBranch, nil)
+			sourceBranch := "fetch-source-branch-test-branch"
+			newCommitID := testhelper.CreateCommit(t, repoPath, sourceBranch, nil)
 
-	targetRef := "refs/tmp/fetch-source-branch-test"
-	req := &gitalypb.FetchSourceBranchRequest{
-		Repository:       repo,
-		SourceRepository: repo,
-		SourceBranch:     []byte(sourceBranch),
-		TargetRef:        []byte(targetRef),
+			targetRef := "refs/tmp/fetch-source-branch-test"
+			req := &gitalypb.FetchSourceBranchRequest{
+				Repository:       repo,
+				SourceRepository: repo,
+				SourceBranch:     []byte(sourceBranch),
+				TargetRef:        []byte(targetRef),
+			}
+
+			resp, err := client.FetchSourceBranch(ctx, req)
+			require.NoError(t, err)
+			require.True(t, resp.Result, "response.Result should be true")
+
+			fetchedCommit, err := gitLog.GetCommit(ctx, repo, targetRef)
+			require.NoError(t, err)
+			require.Equal(t, newCommitID, fetchedCommit.GetId())
+		})
 	}
-
-	resp, err := client.FetchSourceBranch(ctx, req)
-	require.NoError(t, err)
-	require.True(t, resp.Result, "response.Result should be true")
-
-	fetchedCommit, err := gitLog.GetCommit(ctx, repo, targetRef)
-	require.NoError(t, err)
-	require.Equal(t, newCommitID, fetchedCommit.GetId())
 }
 
 func TestFetchSourceBranchBranchNotFound(t *testing.T) {
+	server, serverSocketPath := runFullServer(t)
+	defer server.Stop()
+
+	client, conn := repository.NewRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+
+	for _, tc := range []struct {
+		desc         string
+		FeatureFlags []featureflag.FeatureFlag
+	}{
+		{
+			desc: "ruby",
+		},
+		{
+			desc:         "go",
+			FeatureFlags: []featureflag.FeatureFlag{featureflag.GoFetchSourceBranch},
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			ctxOuter, cancel := testhelper.Context()
+			defer cancel()
+
+			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
+			ctx := metadata.NewOutgoingContext(ctxOuter, md)
+			for _, feature := range tc.FeatureFlags {
+				ctx = featureflag.OutgoingCtxWithFeatureFlagValue(ctx, feature, "true")
+			}
+
+			targetRepo, _, cleanup := newTestRepo(t, "fetch-source-target.git")
+			defer cleanup()
+
+			sourceRepo, _, cleanup := newTestRepo(t, "fetch-source-source.git")
+			defer cleanup()
+
+			sourceBranch := "does-not-exist"
+			targetRef := "refs/tmp/fetch-source-branch-test"
+
+			testCases := []struct {
+				req  *gitalypb.FetchSourceBranchRequest
+				desc string
+			}{
+				{
+					desc: "target different from source",
+					req: &gitalypb.FetchSourceBranchRequest{
+						Repository:       targetRepo,
+						SourceRepository: sourceRepo,
+						SourceBranch:     []byte(sourceBranch),
+						TargetRef:        []byte(targetRef),
+					},
+				},
+				{
+					desc: "target same as source",
+					req: &gitalypb.FetchSourceBranchRequest{
+						Repository:       sourceRepo,
+						SourceRepository: sourceRepo,
+						SourceBranch:     []byte(sourceBranch),
+						TargetRef:        []byte(targetRef),
+					},
+				},
+			}
+
+			for _, tc := range testCases {
+				t.Run(tc.desc, func(t *testing.T) {
+					resp, err := client.FetchSourceBranch(ctx, tc.req)
+					require.NoError(t, err)
+					require.False(t, resp.Result, "response.Result should be false")
+				})
+			}
+		})
+	}
+}
+
+func TestFetchSourceBranchWrongRef(t *testing.T) {
 	server, serverSocketPath := runFullServer(t)
 	defer server.Stop()
 
@@ -106,14 +216,17 @@ func TestFetchSourceBranchBranchNotFound(t *testing.T) {
 
 	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
 	ctx := metadata.NewOutgoingContext(ctxOuter, md)
+	ctx = featureflag.OutgoingCtxWithFeatureFlagValue(ctx, featureflag.GoFetchSourceBranch, "true")
 
 	targetRepo, _, cleanup := newTestRepo(t, "fetch-source-target.git")
 	defer cleanup()
 
-	sourceRepo, _, cleanup := newTestRepo(t, "fetch-source-source.git")
+	sourceRepo, sourceRepoPath, cleanup := newTestRepo(t, "fetch-source-source.git")
 	defer cleanup()
 
-	sourceBranch := "does-not-exist"
+	sourceBranch := "fetch-source-branch-testmas-branch"
+	testhelper.CreateCommit(t, sourceRepoPath, sourceBranch, nil)
+
 	targetRef := "refs/tmp/fetch-source-branch-test"
 
 	testCases := []struct {
@@ -121,30 +234,101 @@ func TestFetchSourceBranchBranchNotFound(t *testing.T) {
 		desc string
 	}{
 		{
-			desc: "target different from source",
+			desc: "source branch empty",
 			req: &gitalypb.FetchSourceBranchRequest{
 				Repository:       targetRepo,
 				SourceRepository: sourceRepo,
-				SourceBranch:     []byte(sourceBranch),
+				SourceBranch:     []byte(""),
 				TargetRef:        []byte(targetRef),
 			},
 		},
 		{
-			desc: "target same as source",
+			desc: "source branch blank",
 			req: &gitalypb.FetchSourceBranchRequest{
-				Repository:       sourceRepo,
+				Repository:       targetRepo,
+				SourceRepository: sourceRepo,
+				SourceBranch:     []byte("   "),
+				TargetRef:        []byte(targetRef),
+			},
+		},
+		{
+			desc: "source branch starts with -",
+			req: &gitalypb.FetchSourceBranchRequest{
+				Repository:       targetRepo,
+				SourceRepository: sourceRepo,
+				SourceBranch:     []byte("-ref"),
+				TargetRef:        []byte(targetRef),
+			},
+		},
+		{
+			desc: "source branch with :",
+			req: &gitalypb.FetchSourceBranchRequest{
+				Repository:       targetRepo,
+				SourceRepository: sourceRepo,
+				SourceBranch:     []byte("some:ref"),
+				TargetRef:        []byte(targetRef),
+			},
+		},
+		{
+			desc: "source branch with NULL",
+			req: &gitalypb.FetchSourceBranchRequest{
+				Repository:       targetRepo,
+				SourceRepository: sourceRepo,
+				SourceBranch:     []byte("some\x00ref"),
+				TargetRef:        []byte(targetRef),
+			},
+		},
+		{
+			desc: "target branch empty",
+			req: &gitalypb.FetchSourceBranchRequest{
+				Repository:       targetRepo,
 				SourceRepository: sourceRepo,
 				SourceBranch:     []byte(sourceBranch),
-				TargetRef:        []byte(targetRef),
+				TargetRef:        []byte(""),
+			},
+		},
+		{
+			desc: "target branch blank",
+			req: &gitalypb.FetchSourceBranchRequest{
+				Repository:       targetRepo,
+				SourceRepository: sourceRepo,
+				SourceBranch:     []byte(sourceBranch),
+				TargetRef:        []byte("   "),
+			},
+		},
+		{
+			desc: "target branch starts with -",
+			req: &gitalypb.FetchSourceBranchRequest{
+				Repository:       targetRepo,
+				SourceRepository: sourceRepo,
+				SourceBranch:     []byte(sourceBranch),
+				TargetRef:        []byte("-ref"),
+			},
+		},
+		{
+			desc: "target branch with :",
+			req: &gitalypb.FetchSourceBranchRequest{
+				Repository:       targetRepo,
+				SourceRepository: sourceRepo,
+				SourceBranch:     []byte(sourceBranch),
+				TargetRef:        []byte("some:ref"),
+			},
+		},
+		{
+			desc: "target branch with NULL",
+			req: &gitalypb.FetchSourceBranchRequest{
+				Repository:       targetRepo,
+				SourceRepository: sourceRepo,
+				SourceBranch:     []byte(sourceBranch),
+				TargetRef:        []byte("some\x00ref"),
 			},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			resp, err := client.FetchSourceBranch(ctx, tc.req)
-			require.NoError(t, err)
-			require.False(t, resp.Result, "response.Result should be false")
+			_, err := client.FetchSourceBranch(ctx, tc.req)
+			testhelper.RequireGrpcError(t, err, codes.InvalidArgument)
 		})
 	}
 }

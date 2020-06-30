@@ -32,6 +32,12 @@ func GetRepoPath(repo repository.GitRepo) (string, error) {
 	return "", status.Errorf(codes.NotFound, "GetRepoPath: not a git repository '%s'", repoPath)
 }
 
+// RepoPathEqual compares if two repositories are in the same location
+func RepoPathEqual(a, b repository.GitRepo) bool {
+	return a.GetStorageName() == b.GetStorageName() &&
+		a.GetRelativePath() == b.GetRelativePath()
+}
+
 // GetPath returns the path of the repo passed as first argument. An error is
 // returned when either the storage can't be found or the path includes
 // constructs trying to perform directory traversal.
