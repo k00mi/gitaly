@@ -29,11 +29,19 @@ func (s *server) GetArchive(in *gitalypb.GetArchiveRequest, stream gitalypb.Repo
 		return helper.ErrInvalidArgument(err)
 	}
 
+	exclude := make([]string, len(in.GetExclude()))
+	for i, ex := range in.GetExclude() {
+		exclude[i], err = helper.ValidateRelativePath(repoRoot, string(ex))
+		if err != nil {
+			return helper.ErrInvalidArgument(err)
+		}
+	}
+
 	if err := validateGetArchiveRequest(in, format, path); err != nil {
 		return err
 	}
 
-	if err := validateGetArchivePrecondition(ctx, in, path); err != nil {
+	if err := validateGetArchivePrecondition(ctx, in, path, exclude); err != nil {
 		return err
 	}
 
@@ -41,7 +49,7 @@ func (s *server) GetArchive(in *gitalypb.GetArchiveRequest, stream gitalypb.Repo
 		return stream.Send(&gitalypb.GetArchiveResponse{Data: p})
 	})
 
-	return handleArchive(ctx, writer, in, compressCmd, format, path)
+	return handleArchive(ctx, writer, in, compressCmd, format, path, exclude)
 }
 
 func parseArchiveFormat(format gitalypb.GetArchiveRequest_Format) (*exec.Cmd, string) {
@@ -71,34 +79,56 @@ func validateGetArchiveRequest(in *gitalypb.GetArchiveRequest, format string, pa
 	return nil
 }
 
-func validateGetArchivePrecondition(ctx context.Context, in *gitalypb.GetArchiveRequest, path string) error {
-	if path == "." {
-		return nil
-	}
-
+func validateGetArchivePrecondition(ctx context.Context, in *gitalypb.GetArchiveRequest, path string, exclude []string) error {
 	c, err := catfile.New(ctx, in.GetRepository())
 	if err != nil {
 		return err
 	}
 
-	treeEntry, err := commit.NewTreeEntryFinder(c).FindByRevisionAndPath(in.GetCommitId(), path)
-	if err != nil {
-		return err
+	f := commit.NewTreeEntryFinder(c)
+	if path != "." {
+		if ok, err := findGetArchivePath(f, in.GetCommitId(), path); err != nil {
+			return err
+		} else if !ok {
+			return helper.ErrPreconditionFailedf("path doesn't exist")
+		}
 	}
 
-	if treeEntry == nil || len(treeEntry.Oid) == 0 {
-		return helper.ErrPreconditionFailedf("path doesn't exist")
+	for i, exclude := range exclude {
+		if ok, err := findGetArchivePath(f, in.GetCommitId(), exclude); err != nil {
+			return err
+		} else if !ok {
+			return helper.ErrPreconditionFailedf("exclude[%d] doesn't exist", i)
+		}
 	}
 
 	return nil
 }
 
-func handleArchive(ctx context.Context, writer io.Writer, in *gitalypb.GetArchiveRequest, compressCmd *exec.Cmd, format string, path string) error {
+func findGetArchivePath(f *commit.TreeEntryFinder, commitId, path string) (ok bool, err error) {
+	treeEntry, err := f.FindByRevisionAndPath(commitId, path)
+	if err != nil {
+		return false, err
+	}
+
+	if treeEntry == nil || len(treeEntry.Oid) == 0 {
+		return false, nil
+	}
+	return true, nil
+}
+
+func handleArchive(ctx context.Context, writer io.Writer, in *gitalypb.GetArchiveRequest, compressCmd *exec.Cmd, format string, path string, exclude []string) error {
+	pathspecs := make([]string, len(exclude)+1)
+	pathspecs[0] = path
+	for i, exclude := range exclude {
+		pathspecs[i+1] = ":(exclude)" + exclude
+	}
+
 	archiveCommand, err := git.SafeCmd(ctx, in.GetRepository(), nil, git.SubCmd{
 		Name:        "archive",
 		Flags:       []git.Option{git.ValueFlag{"--format", format}, git.ValueFlag{"--prefix", in.GetPrefix() + "/"}},
 		Args:        []string{in.GetCommitId()},
-		PostSepArgs: []string{path},
+		PostSepArgs: pathspecs,
 	})
 	if err != nil {
 		return err

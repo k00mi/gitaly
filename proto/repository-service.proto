@@ -311,6 +311,7 @@ message GetArchiveRequest {
   string prefix = 3;
   Format format = 4;
   bytes path = 5;
+  repeated bytes exclude = 6;
 }
 
 message GetArchiveResponse {
