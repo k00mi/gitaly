@@ -158,6 +158,12 @@
 - Update ffi gem to v1.12.2. !2111
 - Update activesupport to v6.0.3 and gitlab-labkit to v0.12.0. !2178
 
+## 12.10.13
+
+### Security (1 change)
+
+- Add random suffix to worktree paths to obstruct path traversal.
+
 
 ## 12.10.12
 
