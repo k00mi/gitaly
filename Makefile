@@ -78,19 +78,19 @@ GIT_INSTALL_DIR   := ${BUILD_DIR}/git
 GIT_SOURCE_DIR    := ${BUILD_DIR}/src/git
 
 ifeq (${GIT_BUILD_OPTIONS},)
-# activate developer checks
-GIT_BUILD_OPTIONS += DEVELOPER=1
-# make it easy to debug in case of crashes
-GIT_BUILD_OPTIONS += CFLAGS='-O0 -g3'
-GIT_BUILD_OPTIONS += NO_PERL=YesPlease
-GIT_BUILD_OPTIONS += NO_EXPAT=YesPlease
-GIT_BUILD_OPTIONS += NO_TCLTK=YesPlease
-# fix compilation on musl libc
-GIT_BUILD_OPTIONS += NO_REGEX=YesPlease
-GIT_BUILD_OPTIONS += NO_GETTEXT=YesPlease
-GIT_BUILD_OPTIONS += NO_PYTHON=YesPlease
-GIT_BUILD_OPTIONS += NO_INSTALL_HARDLINKS=YesPlease
-GIT_BUILD_OPTIONS += NO_R_TO_GCC_LINKER=YesPlease
+    # activate developer checks
+    GIT_BUILD_OPTIONS += DEVELOPER=1
+    # make it easy to debug in case of crashes
+    GIT_BUILD_OPTIONS += CFLAGS='-O0 -g3'
+    GIT_BUILD_OPTIONS += NO_PERL=YesPlease
+    GIT_BUILD_OPTIONS += NO_EXPAT=YesPlease
+    GIT_BUILD_OPTIONS += NO_TCLTK=YesPlease
+    # fix compilation on musl libc
+    GIT_BUILD_OPTIONS += NO_REGEX=YesPlease
+    GIT_BUILD_OPTIONS += NO_GETTEXT=YesPlease
+    GIT_BUILD_OPTIONS += NO_PYTHON=YesPlease
+    GIT_BUILD_OPTIONS += NO_INSTALL_HARDLINKS=YesPlease
+    GIT_BUILD_OPTIONS += NO_R_TO_GCC_LINKER=YesPlease
 endif
 
 # These variables control test options and artifacts
