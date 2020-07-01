@@ -1,5 +1,12 @@
 # Gitaly changelog
 
+## 13.1.2
+
+### Security (1 change)
+
+- Add random suffix to worktree paths to obstruct path traversal.
+
+
 ## 13.1.1
 
 - No changes.
@@ -54,6 +61,13 @@
 
 - Bump Ruby to v2.6.6. !2231
 - danger: Suggest merge request ID in the changelog. !2254
+
+
+## 13.0.8
+
+### Security (1 change)
+
+- Add random suffix to worktree paths to obstruct path traversal.
 
 
 ## 13.0.7
@@ -143,6 +157,12 @@
 - Upgrade activesupport and related Ruby gems to v6.0.2.2. !2110
 - Update ffi gem to v1.12.2. !2111
 - Update activesupport to v6.0.3 and gitlab-labkit to v0.12.0. !2178
+
+## 12.10.13
+
+### Security (1 change)
+
+- Add random suffix to worktree paths to obstruct path traversal.
 
 
 ## 12.10.12
