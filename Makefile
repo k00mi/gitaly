@@ -1,5 +1,9 @@
 # Makefile for Gitaly
 
+# You can override options by creating a "config.mak" file in Gitaly's root
+# directory.
+-include config.mak
+
 # Call `make V=1` in order to print commands verbosely.
 ifeq ($(V),1)
     Q =
