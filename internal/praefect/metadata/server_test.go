@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/peer"
 )
 
@@ -22,6 +23,19 @@ func tcpPeer(t *testing.T, ip string, port int) *peer.Peer {
 	}
 }
 
+func tlsPeer(t *testing.T, ip string, port int) *peer.Peer {
+	parsedAddress := net.ParseIP(ip)
+	require.NotNil(t, parsedAddress)
+
+	return &peer.Peer{
+		Addr: &net.TCPAddr{
+			IP:   parsedAddress,
+			Port: port,
+		},
+		AuthInfo: credentials.TLSInfo{},
+	}
+}
+
 func unixPeer(t *testing.T, socket string) *peer.Peer {
 	return &peer.Peer{
 		Addr: &net.UnixAddr{
@@ -32,11 +46,12 @@ func unixPeer(t *testing.T, socket string) *peer.Peer {
 
 func TestPraefect_InjectMetadata(t *testing.T) {
 	testcases := []struct {
-		desc            string
-		listenAddress   string
-		socketPath      string
-		peer            *peer.Peer
-		expectedAddress string
+		desc             string
+		listenAddress    string
+		tlsListenAddress string
+		socketPath       string
+		peer             *peer.Peer
+		expectedAddress  string
 	}{
 		{
 			desc:            "wildcard listen address",
@@ -55,6 +70,18 @@ func TestPraefect_InjectMetadata(t *testing.T) {
 			listenAddress:   "tcp://127.0.0.1:1234",
 			peer:            tcpPeer(t, "1.2.3.4", 4321),
 			expectedAddress: "tcp://1.2.3.4:1234",
+		},
+		{
+			desc:             "explicit TLS listen address",
+			tlsListenAddress: "127.0.0.1:1234",
+			peer:             tlsPeer(t, "1.2.3.4", 4321),
+			expectedAddress:  "tls://1.2.3.4:1234",
+		},
+		{
+			desc:             "explicit TLS listen address with explicit prefix",
+			tlsListenAddress: "tls://127.0.0.1:1234",
+			peer:             tlsPeer(t, "1.2.3.4", 4321),
+			expectedAddress:  "tls://1.2.3.4:1234",
 		},
 		{
 			desc:            "named host listen address",
@@ -106,6 +133,12 @@ func TestPraefect_InjectMetadata(t *testing.T) {
 			peer:            tcpPeer(t, "1.2.3.4", 4321),
 			expectedAddress: "",
 		},
+		{
+			desc:            "socket path with TLS peer",
+			socketPath:      "/tmp/socket",
+			peer:            tlsPeer(t, "1.2.3.4", 4321),
+			expectedAddress: "",
+		},
 	}
 
 	for _, tc := range testcases {
@@ -114,8 +147,9 @@ func TestPraefect_InjectMetadata(t *testing.T) {
 			defer cancel()
 
 			cfg := config.Config{
-				ListenAddr: tc.listenAddress,
-				SocketPath: tc.socketPath,
+				ListenAddr:    tc.listenAddress,
+				TLSListenAddr: tc.tlsListenAddress,
+				SocketPath:    tc.socketPath,
 			}
 
 			ctx = peer.NewContext(ctx, tc.peer)

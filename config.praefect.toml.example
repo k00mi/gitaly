@@ -2,6 +2,13 @@
 # # TCP address to listen on
 listen_addr = "127.0.0.1:2305"
 
+# # Secured TCP address to listen on.
+# tls_listen_addr = "127.0.0.1:2306"
+# # Path to the certificate and its key used for TLS listening address.
+# [tls]
+# certificate_path = '/home/git/cert.cert'
+# key_path = '/home/git/key.pem'
+
 # # Praefect can listen on a socket when placed on the same machine as all clients
 # socket_path = "/home/git/gitlab/tmp/sockets/private/praefect.socket"
 # # Optional: grace period before a praefect process is forcibly terminated (duration)
