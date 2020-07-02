@@ -3,7 +3,9 @@ package repository
 import (
 	"context"
 	"io"
+	"os"
 	"os/exec"
+	"strings"
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
@@ -43,6 +45,18 @@ func (s *server) GetArchive(in *gitalypb.GetArchiveRequest, stream gitalypb.Repo
 
 	if err := validateGetArchivePrecondition(ctx, in, path, exclude); err != nil {
 		return err
+	}
+
+	if in.GetElidePath() {
+		// `git archive <commit ID>:<path>` expects exclusions to be relative to path
+		pathSlash := path + string(os.PathSeparator)
+		for i := range exclude {
+			if !strings.HasPrefix(exclude[i], pathSlash) {
+				return helper.ErrInvalidArgumentf("invalid exclude: %q is not a subdirectory of %q", exclude[i], path)
+			}
+
+			exclude[i] = exclude[i][len(pathSlash):]
+		}
 	}
 
 	writer := streamio.NewWriter(func(p []byte) error {
@@ -118,16 +132,28 @@ func findGetArchivePath(f *commit.TreeEntryFinder, commitID, path string) (ok bo
 }
 
 func handleArchive(ctx context.Context, writer io.Writer, in *gitalypb.GetArchiveRequest, compressCmd *exec.Cmd, format string, path string, exclude []string) error {
-	pathspecs := make([]string, len(exclude)+1)
-	pathspecs[0] = path
-	for i, exclude := range exclude {
-		pathspecs[i+1] = ":(exclude)" + exclude
+	var args []string
+	pathspecs := make([]string, 0, len(exclude)+1)
+	if !in.GetElidePath() {
+		// git archive [options] <commit ID> -- <path> [exclude*]
+		args = []string{in.GetCommitId()}
+		pathspecs = append(pathspecs, path)
+	} else if path != "." {
+		// git archive [options] <commit ID>:<path> -- [exclude*]
+		args = []string{in.GetCommitId() + ":" + path}
+	} else {
+		// git archive [options] <commit ID> -- [exclude*]
+		args = []string{in.GetCommitId()}
+	}
+
+	for _, exclude := range exclude {
+		pathspecs = append(pathspecs, ":(exclude)"+exclude)
 	}
 
 	archiveCommand, err := git.SafeCmd(ctx, in.GetRepository(), nil, git.SubCmd{
 		Name:        "archive",
 		Flags:       []git.Option{git.ValueFlag{"--format", format}, git.ValueFlag{"--prefix", in.GetPrefix() + "/"}},
-		Args:        []string{in.GetCommitId()},
+		Args:        args,
 		PostSepArgs: pathspecs,
 	})
 	if err != nil {

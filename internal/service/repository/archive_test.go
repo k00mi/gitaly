@@ -33,13 +33,14 @@ func TestGetArchiveSuccess(t *testing.T) {
 	}
 
 	testCases := []struct {
-		desc     string
-		prefix   string
-		commitID string
-		path     []byte
-		exclude  [][]byte
-		contents []string
-		excluded []string
+		desc      string
+		prefix    string
+		commitID  string
+		path      []byte
+		exclude   [][]byte
+		elidePath bool
+		contents  []string
+		excluded  []string
 	}{
 		{
 			desc:     "without-prefix",
@@ -89,6 +90,31 @@ func TestGetArchiveSuccess(t *testing.T) {
 			contents: []string{"/.gitignore", "/LICENSE", "/README.md"},
 			excluded: []string{"/files/whitespace", "/files/html/500.html"},
 		},
+		{
+			desc:      "with path elision",
+			commitID:  "1e292f8fedd741b75372e19097c76d327140c312",
+			prefix:    "my-prefix",
+			elidePath: true,
+			path:      []byte("files/"),
+			contents:  []string{"/whitespace", "/html/500.html"},
+		},
+		{
+			desc:      "with path elision and exclusion",
+			commitID:  "1e292f8fedd741b75372e19097c76d327140c312",
+			prefix:    "my-prefix",
+			elidePath: true,
+			path:      []byte("files/"),
+			exclude:   [][]byte{[]byte("files/images")},
+			contents:  []string{"/whitespace", "/html/500.html"},
+			excluded:  []string{"/images/emoji.png"},
+		},
+		{
+			desc:      "with path elision at root",
+			commitID:  "1e292f8fedd741b75372e19097c76d327140c312",
+			prefix:    "my-prefix",
+			elidePath: true,
+			contents:  []string{"/files/whitespace", "/files/html/500.html"},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -106,6 +132,7 @@ func TestGetArchiveSuccess(t *testing.T) {
 					Format:     format,
 					Path:       tc.path,
 					Exclude:    tc.exclude,
+					ElidePath:  tc.elidePath,
 				}
 				stream, err := client.GetArchive(ctx, req)
 				require.NoError(t, err)
@@ -147,14 +174,15 @@ func TestGetArchiveFailure(t *testing.T) {
 	commitID := "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863"
 
 	testCases := []struct {
-		desc     string
-		repo     *gitalypb.Repository
-		prefix   string
-		commitID string
-		format   gitalypb.GetArchiveRequest_Format
-		path     []byte
-		exclude  [][]byte
-		code     codes.Code
+		desc      string
+		repo      *gitalypb.Repository
+		prefix    string
+		commitID  string
+		format    gitalypb.GetArchiveRequest_Format
+		path      []byte
+		exclude   [][]byte
+		elidePath bool
+		code      codes.Code
 	}{
 		{
 			desc:     "Repository doesn't exist",
@@ -233,6 +261,15 @@ func TestGetArchiveFailure(t *testing.T) {
 			path:     []byte("Here is a string...."),
 			code:     codes.InvalidArgument,
 		},
+		{
+			desc:      "with path is file and path elision",
+			repo:      testRepo,
+			commitID:  "1e292f8fedd741b75372e19097c76d327140c312",
+			prefix:    "my-prefix",
+			elidePath: true,
+			path:      []byte("files/html/500.html"),
+			code:      codes.Unknown,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -247,6 +284,7 @@ func TestGetArchiveFailure(t *testing.T) {
 				Format:     tc.format,
 				Path:       tc.path,
 				Exclude:    tc.exclude,
+				ElidePath:  tc.elidePath,
 			}
 			stream, err := client.GetArchive(ctx, req)
 			require.NoError(t, err)
