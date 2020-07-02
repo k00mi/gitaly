@@ -1,0 +1,5 @@
+---
+title: SearchFilesByName: Add `filter` parameter
+merge_request: 2262
+author: Ethan Reesor (@firelizzard)
+type: changed

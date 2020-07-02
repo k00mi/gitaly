@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"path"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -278,39 +279,54 @@ func TestSearchFilesByNameSuccessful(t *testing.T) {
 	defer cleanupFn()
 
 	testCases := []struct {
+		desc     string
 		ref      []byte
 		query    string
+		filter   string
 		numFiles int
 		testFile []byte
 	}{
 		{
+			desc:     "one file",
 			ref:      []byte("many_files"),
 			query:    "files/images/logo-black.png",
 			numFiles: 1,
 			testFile: []byte("files/images/logo-black.png"),
 		},
 		{
+			desc:     "many files",
 			ref:      []byte("many_files"),
 			query:    "many_files",
 			numFiles: 1001,
 			testFile: []byte("many_files/99"),
 		},
+		{
+			desc:     "filtered",
+			ref:      []byte("many_files"),
+			query:    "files/images",
+			filter:   `\.svg$`,
+			numFiles: 1,
+			testFile: []byte("files/images/wm.svg"),
+		},
 	}
 
 	for _, tc := range testCases {
-		stream, err := client.SearchFilesByName(ctx, &gitalypb.SearchFilesByNameRequest{
-			Repository: testRepo,
-			Ref:        tc.ref,
-			Query:      tc.query,
+		t.Run(tc.desc, func(t *testing.T) {
+			stream, err := client.SearchFilesByName(ctx, &gitalypb.SearchFilesByNameRequest{
+				Repository: testRepo,
+				Ref:        tc.ref,
+				Query:      tc.query,
+				Filter:     tc.filter,
+			})
+			require.NoError(t, err)
+
+			var files [][]byte
+			files, err = consumeFilenameByName(stream)
+			require.NoError(t, err)
+
+			require.Equal(t, tc.numFiles, len(files))
+			require.Contains(t, files, tc.testFile)
 		})
-		require.NoError(t, err)
-
-		var files [][]byte
-		files, err = consumeFilenameByName(stream)
-		require.NoError(t, err)
-
-		require.Equal(t, tc.numFiles, len(files))
-		require.Contains(t, files, tc.testFile)
 	}
 }
 
@@ -318,12 +334,13 @@ func TestSearchFilesByNameFailure(t *testing.T) {
 	server := NewServer(RubyServer, config.NewLocator(config.Config), config.GitalyInternalSocketPath())
 
 	testCases := []struct {
-		desc  string
-		repo  *gitalypb.Repository
-		query string
-		ref   string
-		code  codes.Code
-		msg   string
+		desc   string
+		repo   *gitalypb.Repository
+		query  string
+		filter string
+		ref    string
+		code   codes.Code
+		msg    string
 	}{
 		{
 			desc: "empty request",
@@ -343,6 +360,22 @@ func TestSearchFilesByNameFailure(t *testing.T) {
 			code:  codes.InvalidArgument,
 			msg:   "empty Repo",
 		},
+		{
+			desc:   "invalid filter",
+			query:  "foo",
+			ref:    "master",
+			filter: "+*.",
+			code:   codes.InvalidArgument,
+			msg:    "filter did not compile: error parsing regexp:",
+		},
+		{
+			desc:   "filter longer than max",
+			query:  "foo",
+			ref:    "master",
+			filter: strings.Repeat(".", searchFilesFilterMaxLength+1),
+			code:   codes.InvalidArgument,
+			msg:    "filter exceeds maximum length",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -350,6 +383,7 @@ func TestSearchFilesByNameFailure(t *testing.T) {
 			err := server.SearchFilesByName(&gitalypb.SearchFilesByNameRequest{
 				Repository: tc.repo,
 				Query:      tc.query,
+				Filter:     tc.filter,
 				Ref:        []byte(tc.ref),
 			}, nil)
 

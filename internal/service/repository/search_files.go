@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"math"
+	"regexp"
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
@@ -17,7 +18,13 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const surroundContext = "2"
+const (
+	surroundContext = "2"
+
+	// searchFilesFilterMaxLength controls the maximum length of the regular
+	// expression to thwart excessive resource usage when filtering
+	searchFilesFilterMaxLength = 1000
+)
 
 var contentDelimiter = []byte("--\n")
 
@@ -102,6 +109,18 @@ func (s *server) SearchFilesByName(req *gitalypb.SearchFilesByNameRequest, strea
 		return helper.DecorateError(codes.InvalidArgument, err)
 	}
 
+	var filter *regexp.Regexp
+	if req.GetFilter() != "" {
+		if len(req.GetFilter()) > searchFilesFilterMaxLength {
+			return helper.ErrInvalidArgumentf("SearchFilesByName: filter exceeds maximum length")
+		}
+		var err error
+		filter, err = regexp.Compile(req.GetFilter())
+		if err != nil {
+			return helper.ErrInvalidArgumentf("SearchFilesByName: filter did not compile: %v", err)
+		}
+	}
+
 	repo := req.GetRepository()
 	if repo == nil {
 		return status.Errorf(codes.InvalidArgument, "SearchFilesByName: empty Repository")
@@ -124,7 +143,7 @@ func (s *server) SearchFilesByName(req *gitalypb.SearchFilesByNameRequest, strea
 		return stream.Send(&gitalypb.SearchFilesByNameResponse{Files: objs})
 	}
 
-	return lines.Send(cmd, lr, lines.SenderOpts{Delimiter: []byte{'\n'}, Limit: math.MaxInt32})
+	return lines.Send(cmd, lr, lines.SenderOpts{Delimiter: []byte{'\n'}, Limit: math.MaxInt32, Filter: filter})
 }
 
 type searchFilesRequest interface {
