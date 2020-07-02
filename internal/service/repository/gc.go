@@ -47,6 +47,10 @@ func (s *server) GarbageCollect(ctx context.Context, in *gitalypb.GarbageCollect
 		return nil, err
 	}
 
+	if err := writeCommitGraph(ctx, &gitalypb.WriteCommitGraphRequest{Repository: repo}); err != nil {
+		return nil, err
+	}
+
 	// Perform housekeeping post GC
 	err = housekeeping.Perform(ctx, repoPath)
 	if err != nil {
@@ -60,11 +64,6 @@ func (s *server) GarbageCollect(ctx context.Context, in *gitalypb.GarbageCollect
 
 func gc(ctx context.Context, in *gitalypb.GarbageCollectRequest) error {
 	args := repackConfig(ctx, in.CreateBitmap)
-
-	// run garbage collect and also write the commit graph
-	args = append(args,
-		git.ValueFlag{"-c", "gc.writeCommitGraph=true"},
-	)
 
 	cmd, err := git.SafeCmd(ctx, in.GetRepository(), args,
 		git.SubCmd{Name: "gc"},
