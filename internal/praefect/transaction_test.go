@@ -19,6 +19,13 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type voter struct {
+	votes         uint
+	vote          string
+	showsUp       bool
+	shouldSucceed bool
+}
+
 func runPraefectServerAndTxMgr(t testing.TB, opts ...transactions.ManagerOpt) (*grpc.ClientConn, *transactions.Manager, testhelper.Cleanup) {
 	conf := testConfig(1)
 	txMgr := transactions.NewManager(opts...)
@@ -310,13 +317,6 @@ func TestTransactionRegistrationWithInvalidThresholdFails(t *testing.T) {
 }
 
 func TestTransactionReachesQuorum(t *testing.T) {
-	type voter struct {
-		votes         uint
-		vote          string
-		showsUp       bool
-		shouldSucceed bool
-	}
-
 	tc := []struct {
 		desc      string
 		voters    []voter
@@ -469,35 +469,109 @@ func TestTransactionFailures(t *testing.T) {
 }
 
 func TestTransactionCancellation(t *testing.T) {
-	counter, opts := setupMetrics()
-	cc, txMgr, cleanup := runPraefectServerAndTxMgr(t, opts...)
-	defer cleanup()
+	testcases := []struct {
+		desc            string
+		voters          []voter
+		threshold       uint
+		expectedMetrics counterMetrics
+	}{
+		{
+			desc: "single node cancellation",
+			voters: []voter{
+				{votes: 1, showsUp: false, shouldSucceed: false},
+			},
+			threshold:       1,
+			expectedMetrics: counterMetrics{registered: 1, committed: 0},
+		},
+		{
+			desc: "two nodes failing to show up",
+			voters: []voter{
+				{votes: 1, showsUp: false, shouldSucceed: false},
+				{votes: 1, showsUp: false, shouldSucceed: false},
+			},
+			threshold:       2,
+			expectedMetrics: counterMetrics{registered: 1, committed: 0},
+		},
+		{
+			desc: "two nodes with unweighted node failing",
+			voters: []voter{
+				{votes: 1, showsUp: true, shouldSucceed: true},
+				{votes: 0, showsUp: false, shouldSucceed: false},
+			},
+			threshold:       1,
+			expectedMetrics: counterMetrics{registered: 1, started: 1, committed: 1},
+		},
+		{
+			desc: "multiple weighted votes with subset failing",
+			voters: []voter{
+				{votes: 1, showsUp: true, shouldSucceed: true},
+				{votes: 1, showsUp: true, shouldSucceed: true},
+				{votes: 1, showsUp: false, shouldSucceed: false},
+			},
+			threshold:       2,
+			expectedMetrics: counterMetrics{registered: 1, started: 2, committed: 2},
+		},
+	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
+	for _, tc := range testcases {
+		t.Run(tc.desc, func(t *testing.T) {
+			counter, opts := setupMetrics()
+			cc, txMgr, cleanup := runPraefectServerAndTxMgr(t, opts...)
+			defer cleanup()
 
-	client := gitalypb.NewRefTransactionClient(cc)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
 
-	transactionID, cancelTransaction, err := txMgr.RegisterTransaction(ctx, []transactions.Voter{
-		{Name: "node1", Votes: 1},
-	}, 1)
-	require.NoError(t, err)
-	require.NotZero(t, transactionID)
+			client := gitalypb.NewRefTransactionClient(cc)
 
-	cancelTransaction()
+			voters := make([]transactions.Voter, 0, len(tc.voters))
+			for i, voter := range tc.voters {
+				voters = append(voters, transactions.Voter{
+					Name:  fmt.Sprintf("node-%d", i),
+					Votes: voter.votes,
+				})
+			}
 
-	hash := sha1.Sum([]byte{})
-	_, err = client.VoteTransaction(ctx, &gitalypb.VoteTransactionRequest{
-		TransactionId:        transactionID,
-		Node:                 "node1",
-		ReferenceUpdatesHash: hash[:],
-	})
-	require.Error(t, err)
-	require.Equal(t, codes.NotFound, status.Code(err))
+			transactionID, cancelTransaction, err := txMgr.RegisterTransaction(ctx, voters, tc.threshold)
+			require.NoError(t, err)
 
-	verifyCounterMetrics(t, counter, counterMetrics{
-		registered: 1,
-		started:    1,
-		invalid:    1,
-	})
+			var wg sync.WaitGroup
+			for i, v := range tc.voters {
+				if !v.showsUp {
+					continue
+				}
+
+				wg.Add(1)
+				go func(i int, v voter) {
+					defer wg.Done()
+
+					name := fmt.Sprintf("node-%d", i)
+					hash := sha1.Sum([]byte(v.vote))
+
+					response, err := client.VoteTransaction(ctx, &gitalypb.VoteTransactionRequest{
+						TransactionId:        transactionID,
+						Node:                 name,
+						ReferenceUpdatesHash: hash[:],
+					})
+					require.NoError(t, err)
+
+					if v.shouldSucceed {
+						require.Equal(t, gitalypb.VoteTransactionResponse_COMMIT, response.State, "node should have received COMMIT")
+					} else {
+						require.Equal(t, gitalypb.VoteTransactionResponse_ABORT, response.State, "node should have received ABORT")
+					}
+				}(i, v)
+			}
+			wg.Wait()
+
+			results, err := cancelTransaction()
+			require.NoError(t, err)
+
+			for i, v := range tc.voters {
+				require.Equal(t, results[fmt.Sprintf("node-%d", i)], v.shouldSucceed, "result mismatches expected node state")
+			}
+
+			verifyCounterMetrics(t, counter, tc.expectedMetrics)
+		})
+	}
 }

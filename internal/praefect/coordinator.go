@@ -235,7 +235,10 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 		if err != nil {
 			return nil, fmt.Errorf("registering transactions: %w", err)
 		}
-		finalizers = append(finalizers, transactionCleanup)
+		finalizers = append(finalizers, func() error {
+			_, err := transactionCleanup()
+			return err
+		})
 
 		injectedCtx, err := metadata.InjectTransaction(ctx, transactionID, shard.Primary.GetStorage(), true)
 		if err != nil {
