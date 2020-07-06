@@ -1,5 +1,16 @@
 # Gitaly changelog
 
+## 13.1.3
+
+### Fixed (1 change)
+
+- Fix HTTP proxies not working in Gitaly hooks. !2325
+
+### Changed (1 change)
+
+- Add GL_PROJECT_PATH for custom hooks. !2313
+
+
 ## 13.1.2
 
 ### Security (1 change)
@@ -62,6 +73,10 @@
 - Bump Ruby to v2.6.6. !2231
 - danger: Suggest merge request ID in the changelog. !2254
 
+
+## 13.0.9
+
+- No changes.
 
 ## 13.0.8
 
@@ -157,6 +172,10 @@
 - Upgrade activesupport and related Ruby gems to v6.0.2.2. !2110
 - Update ffi gem to v1.12.2. !2111
 - Update activesupport to v6.0.3 and gitlab-labkit to v0.12.0. !2178
+
+## 12.10.14
+
+- No changes.
 
 ## 12.10.13
 
