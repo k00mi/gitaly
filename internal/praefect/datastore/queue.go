@@ -191,55 +191,49 @@ func (rq PostgresReplicationEventQueue) Enqueue(ctx context.Context, event Repli
 
 func (rq PostgresReplicationEventQueue) Dequeue(ctx context.Context, virtualStorage, nodeStorage string, count int) ([]ReplicationEvent, error) {
 	query := `
-		WITH to_lock AS (
+		WITH lock AS (
 			SELECT id
-			FROM replication_queue_lock AS repo_lock
-			WHERE repo_lock.acquired = FALSE AND repo_lock.id IN (
-				SELECT rq.lock_id
-				FROM replication_queue rq
-				WHERE rq.attempt > 0
-					AND rq.state IN ('ready', 'failed')
-					AND rq.job->>'virtual_storage' = $1
-					AND rq.job->>'target_node_storage' = $2
-					AND NOT EXISTS (SELECT 1 FROM replication_queue_job_lock WHERE lock_id = rq.lock_id)
-				ORDER BY created_at
-				LIMIT $3 FOR UPDATE
-			)
+			FROM replication_queue_lock
+			WHERE id LIKE ($1 || '|' || $2 || '|%') AND NOT acquired
 			FOR UPDATE SKIP LOCKED
 		)
-		, jobs AS (
+		, candidate AS (
+			SELECT id
+			FROM replication_queue
+			WHERE id IN (
+				SELECT DISTINCT FIRST_VALUE(queue.id) OVER (PARTITION BY lock_id, job->>'change'  ORDER BY queue.created_at)
+				FROM replication_queue AS queue
+				JOIN lock ON queue.lock_id = lock.id
+				WHERE queue.state IN ('ready', 'failed' )
+					AND NOT EXISTS (SELECT 1 FROM replication_queue_job_lock WHERE lock_id = queue.lock_id)
+			)
+			ORDER BY created_at
+			LIMIT $3
+			FOR UPDATE
+		)
+		, job AS (
 			UPDATE replication_queue AS queue
 			SET attempt = queue.attempt - 1
 				, state = 'in_progress'
 				, updated_at = NOW() AT TIME ZONE 'UTC'
-			FROM to_lock
-			WHERE queue.lock_id IN (SELECT id FROM to_lock)
-				AND state NOT IN ('in_progress', 'cancelled', 'completed')
-				AND queue.id IN (
-					SELECT rq.id
-					FROM replication_queue rq
-					WHERE rq.attempt > 0
-						AND rq.state IN ('ready', 'failed')
-						AND rq.job->>'virtual_storage' = $1
-						AND rq.job->>'target_node_storage' = $2
-						AND NOT EXISTS (SELECT 1 FROM replication_queue_job_lock WHERE lock_id = rq.lock_id)
-					ORDER BY created_at
-					LIMIT $3
-				)
+			FROM candidate
+			WHERE queue.id = candidate.id
 			RETURNING queue.id, queue.state, queue.created_at, queue.updated_at, queue.lock_id, queue.attempt, queue.job, queue.meta
 		)
 		, track_job_lock AS (
 			INSERT INTO replication_queue_job_lock (job_id, lock_id, triggered_at)
-			SELECT jobs.id, jobs.lock_id, NOW() AT TIME ZONE 'UTC' FROM jobs
+			SELECT job.id, job.lock_id, NOW() AT TIME ZONE 'UTC'
+			FROM job
 			RETURNING lock_id
 		)
-		, do_lock AS (
-			UPDATE replication_queue_lock
+		, acquire_lock AS (
+			UPDATE replication_queue_lock AS lock
 			SET acquired = TRUE
-			WHERE id IN (SELECT lock_id FROM track_job_lock)
+			FROM track_job_lock AS tracked
+			WHERE lock.id = tracked.lock_id
 		)
 		SELECT id, state, created_at, updated_at, lock_id, attempt, job, meta
-		FROM jobs
+		FROM job
 		ORDER BY id`
 	rows, err := rq.qc.QueryContext(ctx, query, virtualStorage, nodeStorage, count)
 	if err != nil {
@@ -254,9 +248,11 @@ func (rq PostgresReplicationEventQueue) Dequeue(ctx context.Context, virtualStor
 	return res, nil
 }
 
-// Acknowledge updates previously dequeued events with new state releasing resources acquired for it.
-// It only updates events that are in 'in_progress' state.
-// It returns list of ids that was actually acknowledged.
+// Acknowledge updates previously dequeued events with the new state and releases resources acquired for it.
+// It updates events that are in 'in_progress' state to the state that is passed in.
+// It also updates state of similar events that are in 'ready' state and created before the target
+// event was dequeue for the processing if the new state is 'completed'. Otherwise it won't be changed.
+// It returns sub-set of passed in ids that were updated.
 func (rq PostgresReplicationEventQueue) Acknowledge(ctx context.Context, state JobState, ids []uint64) ([]uint64, error) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -267,9 +263,10 @@ func (rq PostgresReplicationEventQueue) Acknowledge(ctx context.Context, state J
 	}
 
 	params := glsql.NewParamsAssembler()
+	newState := params.AddParam(state)
 	query := `
 		WITH existing AS (
-			SELECT id, lock_id
+			SELECT id, lock_id, updated_at, job
 			FROM replication_queue
 			WHERE id IN (` + params.AddParams(glsql.Uint64sToInterfaces(ids...)) + `)
 			AND state = 'in_progress'
@@ -277,16 +274,33 @@ func (rq PostgresReplicationEventQueue) Acknowledge(ctx context.Context, state J
 		)
 		, to_release AS (
 			UPDATE replication_queue AS queue
-			SET state = ` + params.AddParam(state) + `
+			SET
+				state = CASE WHEN state = 'in_progress' THEN
+						` + newState + `::REPLICATION_JOB_STATE
+					ELSE
+						(CASE WHEN ` + newState + ` = 'completed' THEN 'completed' ELSE queue.state END)::REPLICATION_JOB_STATE
+					END,
+				updated_at = CASE WHEN state = 'in_progress' THEN
+						NOW() AT TIME ZONE 'UTC'
+					ELSE
+						(CASE WHEN ` + newState + ` = 'completed' THEN NOW() AT TIME ZONE 'UTC' ELSE queue.updated_at END)
+					END
 			FROM existing
 			WHERE existing.id = queue.id
+				OR (
+					    queue.state = 'ready'
+					AND queue.created_at < existing.updated_at
+					AND queue.lock_id = existing.lock_id
+					AND queue.job->>'change' = existing.job->>'change'
+					AND queue.job->>'source_node_storage' = existing.job->>'source_node_storage'
+				)
 			RETURNING queue.id, queue.lock_id
 		)
 		, removed_job_lock AS (
 			DELETE FROM replication_queue_job_lock AS job_lock
-			USING to_release AS job_failed
-			WHERE job_lock.job_id = job_failed.id AND job_lock.lock_id = job_failed.lock_id
-			RETURNING job_failed.lock_id
+			USING to_release
+			WHERE job_lock.job_id = to_release.id AND job_lock.lock_id = to_release.lock_id
+			RETURNING to_release.lock_id
 		)
 		, release AS (
 			UPDATE replication_queue_lock
