@@ -1,7 +1,9 @@
 package datastore
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -75,6 +77,8 @@ func (s *memoryReplicationEventQueue) Dequeue(_ context.Context, virtualStorage,
 	defer s.Unlock()
 
 	var result []ReplicationEvent
+	uniqueJob := make(map[string]struct{})
+
 	for i := 0; i < len(s.queued); i++ {
 		event := s.queued[i]
 
@@ -83,6 +87,17 @@ func (s *memoryReplicationEventQueue) Dequeue(_ context.Context, virtualStorage,
 		isReadyOrFailed := event.State == JobStateReady || event.State == JobStateFailed
 
 		if isForVirtualStorage && isForTargetStorage && isReadyOrFailed {
+			jobData, err := json.Marshal(event.Job)
+			if err != nil {
+				return nil, err
+			}
+
+			if _, found := uniqueJob[string(jobData)]; found {
+				continue
+			}
+
+			uniqueJob[string(jobData)] = struct{}{}
+
 			updatedAt := time.Now().UTC()
 			event.Attempt--
 			event.State = JobStateInProgress
@@ -137,6 +152,7 @@ func (s *memoryReplicationEventQueue) Acknowledge(_ context.Context, state JobSt
 				return nil, errDeadAckedAsFailed
 			}
 
+			dequeuedAt := s.queued[i].UpdatedAt
 			updatedAt := time.Now().UTC()
 			s.queued[i].State = state
 			s.queued[i].UpdatedAt = &updatedAt
@@ -145,6 +161,28 @@ func (s *memoryReplicationEventQueue) Acknowledge(_ context.Context, state JobSt
 				s.lastEventByDest[eventDest] = s.queued[i]
 			}
 			result = append(result, id)
+
+			if state == JobStateCompleted {
+				ackJobData, err := json.Marshal(s.queued[i].Job)
+				if err != nil {
+					return nil, err
+				}
+
+				for j := i + 1; j < len(s.queued); j++ {
+					if dequeuedAt.Before(s.queued[j].CreatedAt) {
+						break
+					}
+
+					sameJobData, err := json.Marshal(s.queued[j].Job)
+					if err != nil {
+						return nil, err
+					}
+
+					if bytes.Equal(ackJobData, sameJobData) {
+						s.remove(j)
+					}
+				}
+			}
 
 			switch state {
 			case JobStateCompleted, JobStateCancelled, JobStateDead:

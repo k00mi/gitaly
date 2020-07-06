@@ -567,7 +567,7 @@ func TestProcessBacklog_Success(t *testing.T) {
 		ackIDs, err := queue.Acknowledge(ctx, state, ids)
 		if len(ids) > 0 {
 			require.Equal(t, datastore.JobStateCompleted, state, "no fails expected")
-			require.Equal(t, []uint64{1, 2, 3, 4}, ids, "all jobs must be processed at once")
+			require.Equal(t, []uint64{1, 3, 4}, ids, "all jobs must be processed at once")
 			close(processed)
 		}
 		return ackIDs, err
@@ -575,7 +575,7 @@ func TestProcessBacklog_Success(t *testing.T) {
 
 	var healthUpdated int32
 	queueInterceptor.OnStartHealthUpdate(func(ctx context.Context, trigger <-chan time.Time, events []datastore.ReplicationEvent) error {
-		require.Len(t, events, 4)
+		require.Len(t, events, 3)
 		atomic.AddInt32(&healthUpdated, 1)
 		return nil
 	})
