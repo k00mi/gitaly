@@ -173,6 +173,10 @@
 - Update ffi gem to v1.12.2. !2111
 - Update activesupport to v6.0.3 and gitlab-labkit to v0.12.0. !2178
 
+## 12.10.14
+
+- No changes.
+
 ## 12.10.13
 
 ### Security (1 change)
