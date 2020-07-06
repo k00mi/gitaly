@@ -2,6 +2,7 @@ package praefect
 
 import (
 	"context"
+	"crypto/sha1"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -217,6 +218,160 @@ func TestStreamDirectorMutator(t *testing.T) {
 		Meta: datastore.Params{metadatahandler.CorrelationIDKey: "my-correlation-id"},
 	}
 	require.Equal(t, expectedEvent, events[0], "ensure replication job created by stream director is correct")
+}
+
+func TestStreamDirectorMutator_Transaction(t *testing.T) {
+	type node struct {
+		primary       bool
+		vote          string
+		shouldSucceed bool
+		shouldGetRepl bool
+	}
+
+	testcases := []struct {
+		desc  string
+		nodes []node
+	}{
+		{
+			desc: "successful vote should not create replication jobs",
+			nodes: []node{
+				{primary: true, vote: "foobar", shouldSucceed: true, shouldGetRepl: false},
+				{primary: false, vote: "foobar", shouldSucceed: true, shouldGetRepl: false},
+				{primary: false, vote: "foobar", shouldSucceed: true, shouldGetRepl: false},
+			},
+		},
+		{
+			// Currently, transactions are created such that all nodes need to agree.
+			// This is going to change in the future, but for now let's just test that
+			// we don't get any replication jobs if any node disagrees.
+			desc: "failing vote should not create replication jobs",
+			nodes: []node{
+				{primary: true, vote: "foobar", shouldSucceed: false, shouldGetRepl: false},
+				{primary: false, vote: "foobar", shouldSucceed: false, shouldGetRepl: false},
+				{primary: false, vote: "barfoo", shouldSucceed: false, shouldGetRepl: false},
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.desc, func(t *testing.T) {
+			storageNodes := make([]*config.Node, 0, len(tc.nodes))
+			for i, node := range tc.nodes {
+				socket := testhelper.GetTemporaryGitalySocketFileName()
+				server, _ := testhelper.NewServerWithHealth(t, socket)
+				defer server.Stop()
+				node := &config.Node{Address: "unix://" + socket, Storage: fmt.Sprintf("node-%d", i), DefaultPrimary: node.primary}
+				storageNodes = append(storageNodes, node)
+			}
+
+			conf := config.Config{
+				VirtualStorages: []*config.VirtualStorage{
+					&config.VirtualStorage{
+						Name:  "praefect",
+						Nodes: storageNodes,
+					},
+				},
+			}
+
+			var replicationWaitGroup sync.WaitGroup
+			queueInterceptor := datastore.NewReplicationEventQueueInterceptor(datastore.NewMemoryReplicationEventQueue(conf))
+			queueInterceptor.OnEnqueue(func(ctx context.Context, event datastore.ReplicationEvent, queue datastore.ReplicationEventQueue) (datastore.ReplicationEvent, error) {
+				defer replicationWaitGroup.Done()
+				return queue.Enqueue(ctx, event)
+			})
+
+			repo := gitalypb.Repository{
+				StorageName:  "praefect",
+				RelativePath: "/path/to/hashed/storage",
+			}
+
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+			ctx = featureflag.IncomingCtxWithFeatureFlag(ctx, featureflag.ReferenceTransactions)
+
+			nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf, nil, queueInterceptor, promtest.NewMockHistogramVec())
+			require.NoError(t, err)
+
+			shard, err := nodeMgr.GetShard(conf.VirtualStorages[0].Name)
+			require.NoError(t, err)
+
+			for i := range tc.nodes {
+				node, err := shard.GetNode(fmt.Sprintf("node-%d", i))
+				require.NoError(t, err)
+				waitNodeToChangeHealthStatus(ctx, t, node, true)
+			}
+
+			txMgr := transactions.NewManager()
+
+			coordinator := NewCoordinator(queueInterceptor, nodeMgr, txMgr, conf, protoregistry.GitalyProtoPreregistered)
+
+			fullMethod := "/gitaly.SmartHTTPService/PostReceivePack"
+
+			frame, err := proto.Marshal(&gitalypb.PostReceivePackRequest{
+				Repository: &repo,
+			})
+			require.NoError(t, err)
+			peeker := &mockPeeker{frame}
+
+			streamParams, err := coordinator.StreamDirector(correlation.ContextWithCorrelation(ctx, "my-correlation-id"), fullMethod, peeker)
+			require.NoError(t, err)
+
+			transaction, err := praefect_metadata.TransactionFromContext(streamParams.Primary().Ctx)
+			require.NoError(t, err)
+
+			var voterWaitGroup sync.WaitGroup
+			for i, node := range tc.nodes {
+				voterWaitGroup.Add(1)
+
+				i := i
+				node := node
+
+				go func() {
+					defer voterWaitGroup.Done()
+
+					if node.shouldGetRepl {
+						replicationWaitGroup.Add(1)
+					}
+
+					vote := sha1.Sum([]byte(node.vote))
+					err := txMgr.VoteTransaction(ctx, transaction.ID, fmt.Sprintf("node-%d", i), vote[:])
+					if node.shouldSucceed {
+						require.NoError(t, err)
+					} else {
+						require.True(t, errors.Is(err, transactions.ErrTransactionVoteFailed))
+					}
+				}()
+			}
+			voterWaitGroup.Wait()
+
+			// this call creates new events in the queue and simulates usual flow of the update operation
+			var primaryShouldSucceed bool
+			for _, node := range tc.nodes {
+				if !node.primary {
+					continue
+				}
+				primaryShouldSucceed = node.shouldSucceed
+			}
+			err = streamParams.RequestFinalizer()
+			if primaryShouldSucceed {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err, errors.New("transaction: primary failed vote"))
+			}
+
+			replicationWaitGroup.Wait()
+
+			for i, node := range tc.nodes {
+				events, err := queueInterceptor.Dequeue(ctx, "praefect", fmt.Sprintf("node-%d", i), 10)
+				require.NoError(t, err)
+				if node.shouldGetRepl {
+					require.Len(t, events, 1)
+				} else {
+					require.Empty(t, events)
+				}
+			}
+		})
+	}
 }
 
 func TestStreamDirectorAccessor(t *testing.T) {
