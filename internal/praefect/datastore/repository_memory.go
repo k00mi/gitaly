@@ -2,6 +2,7 @@ package datastore
 
 import (
 	"context"
+	"fmt"
 	"sync"
 )
 
@@ -10,9 +11,35 @@ import (
 type MemoryRepositoryStore struct {
 	m sync.Mutex
 
-	storages map[string][]string
+	storages
 	virtualStorageState
 	storageState
+}
+
+type storages map[string][]string
+
+func (s storages) secondaries(virtualStorage, primary string) ([]string, error) {
+	storages, ok := s[virtualStorage]
+	if !ok {
+		return nil, fmt.Errorf("unknown virtual storage: %q", virtualStorage)
+	}
+
+	primaryFound := false
+	secondaries := make([]string, 0, len(storages)-1)
+	for _, storage := range storages {
+		if storage == primary {
+			primaryFound = true
+			continue
+		}
+
+		secondaries = append(secondaries, storage)
+	}
+
+	if !primaryFound {
+		return nil, fmt.Errorf("primary not found: %q", primary)
+	}
+
+	return secondaries, nil
 }
 
 // virtualStorageStates represents the virtual storage's view of what state the repositories should be in.
@@ -24,9 +51,9 @@ type virtualStorageState map[string]map[string]int
 type storageState map[string]map[string]map[string]int
 
 // NewMemoryRepositoryStore returns an in-memory implementation of RepositoryStore.
-func NewMemoryRepositoryStore(storages map[string][]string) *MemoryRepositoryStore {
+func NewMemoryRepositoryStore(configuredStorages map[string][]string) *MemoryRepositoryStore {
 	return &MemoryRepositoryStore{
-		storages:            storages,
+		storages:            storages(configuredStorages),
 		storageState:        make(storageState),
 		virtualStorageState: make(virtualStorageState),
 	}
@@ -39,7 +66,7 @@ func (m *MemoryRepositoryStore) GetGeneration(ctx context.Context, virtualStorag
 	return m.getStorageGeneration(virtualStorage, relativePath, storage), nil
 }
 
-func (m *MemoryRepositoryStore) IncrementGeneration(ctx context.Context, virtualStorage, relativePath, primary string, secondaries []string) (int, error) {
+func (m *MemoryRepositoryStore) IncrementGeneration(ctx context.Context, virtualStorage, relativePath, primary string, secondaries []string) error {
 	m.m.Lock()
 	defer m.m.Unlock()
 
@@ -66,7 +93,7 @@ func (m *MemoryRepositoryStore) IncrementGeneration(ctx context.Context, virtual
 		}
 	}
 
-	return nextGen, nil
+	return nil
 }
 
 func (m *MemoryRepositoryStore) SetGeneration(ctx context.Context, virtualStorage, relativePath, storage string, generation int) error {
@@ -127,21 +154,49 @@ func (m *MemoryRepositoryStore) RenameRepository(ctx context.Context, virtualSto
 	return nil
 }
 
-func (m *MemoryRepositoryStore) EnsureUpgrade(ctx context.Context, virtualStorage, relativePath, storage string, generation int) error {
+func (m *MemoryRepositoryStore) GetReplicatedGeneration(ctx context.Context, virtualStorage, relativePath, source, target string) (int, error) {
 	m.m.Lock()
 	defer m.m.Unlock()
 
-	if current := m.getStorageGeneration(virtualStorage, relativePath, storage); current != GenerationUnknown && current >= generation {
-		return downgradeAttemptedError{
+	sourceGeneration := m.getStorageGeneration(virtualStorage, relativePath, source)
+	targetGeneration := m.getStorageGeneration(virtualStorage, relativePath, target)
+
+	if targetGeneration != GenerationUnknown && targetGeneration >= sourceGeneration {
+		return 0, DowngradeAttemptedError{
 			virtualStorage:      virtualStorage,
 			relativePath:        relativePath,
-			storage:             storage,
-			currentGeneration:   current,
-			attemptedGeneration: generation,
+			storage:             target,
+			currentGeneration:   targetGeneration,
+			attemptedGeneration: sourceGeneration,
 		}
 	}
 
-	return nil
+	return sourceGeneration, nil
+}
+
+func (m *MemoryRepositoryStore) GetConsistentSecondaries(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error) {
+	m.m.Lock()
+	defer m.m.Unlock()
+
+	secondaries, err := m.storages.secondaries(virtualStorage, primary)
+	if err != nil {
+		return nil, err
+	}
+
+	expectedGen := m.getStorageGeneration(virtualStorage, relativePath, primary)
+	if expectedGen == GenerationUnknown {
+		return nil, nil
+	}
+
+	consistentSecondaries := make(map[string]struct{}, len(secondaries))
+	for _, secondary := range secondaries {
+		gen := m.getStorageGeneration(virtualStorage, relativePath, secondary)
+		if gen == expectedGen {
+			consistentSecondaries[secondary] = struct{}{}
+		}
+	}
+
+	return consistentSecondaries, nil
 }
 
 func (m *MemoryRepositoryStore) getRepositoryGeneration(virtualStorage, relativePath string) int {

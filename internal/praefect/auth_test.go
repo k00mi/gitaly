@@ -178,9 +178,11 @@ func runServer(t *testing.T, token string, required bool) (*grpc.Server, string,
 	registry, err := protoregistry.New(fd)
 	require.NoError(t, err)
 
-	coordinator := NewCoordinator(queue, nodeMgr, txMgr, conf, registry)
+	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
 
-	srv := NewGRPCServer(conf, logEntry, registry, coordinator.StreamDirector, nodeMgr, txMgr, queue)
+	coordinator := NewCoordinator(queue, rs, nodeMgr, txMgr, conf, registry)
+
+	srv := NewGRPCServer(conf, logEntry, registry, coordinator.StreamDirector, nodeMgr, txMgr, queue, rs)
 
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 

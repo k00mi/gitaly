@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
+	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/metadatahandler"
@@ -60,7 +61,6 @@ func getReplicationDetails(methodName string, m proto.Message) (datastore.Change
 			return "", nil, fmt.Errorf("protocol changed: for method %q expected  message type '%T', got '%T'", methodName, req, m)
 		}
 		return datastore.RepackIncremental, nil, nil
-
 	default:
 		return datastore.UpdateRepo, nil, nil
 	}
@@ -81,6 +81,7 @@ type Coordinator struct {
 	nodeMgr  nodes.Manager
 	txMgr    *transactions.Manager
 	queue    datastore.ReplicationEventQueue
+	rs       datastore.RepositoryStore
 	registry *protoregistry.Registry
 	conf     config.Config
 }
@@ -88,6 +89,7 @@ type Coordinator struct {
 // NewCoordinator returns a new Coordinator that utilizes the provided logger
 func NewCoordinator(
 	queue datastore.ReplicationEventQueue,
+	rs datastore.RepositoryStore,
 	nodeMgr nodes.Manager,
 	txMgr *transactions.Manager,
 	conf config.Config,
@@ -95,6 +97,7 @@ func NewCoordinator(
 ) *Coordinator {
 	return &Coordinator{
 		queue:    queue,
+		rs:       rs,
 		registry: r,
 		nodeMgr:  nodeMgr,
 		txMgr:    txMgr,
@@ -107,6 +110,11 @@ func (c *Coordinator) directRepositoryScopedMessage(ctx context.Context, call gr
 	if err != nil {
 		return nil, helper.ErrInvalidArgument(fmt.Errorf("repo scoped: %w", err))
 	}
+
+	ctxlogrus.AddFields(ctx, logrus.Fields{
+		"virtual_storage": call.targetRepo.StorageName,
+		"relative_path":   call.targetRepo.RelativePath,
+	})
 
 	if targetRepo.StorageName == "" || targetRepo.RelativePath == "" {
 		return nil, helper.ErrInvalidArgumentf("repo scoped: target repo is invalid")
@@ -217,13 +225,25 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 	var secondaryDests []proxy.Destination
 
 	if shouldUseTransaction(ctx, call.fullMethodName) {
-		// Make sure to only let healthy nodes take part in transactions, otherwise we'll be
-		// completely blocked until they come back.
-		healthySecondaries := shard.GetHealthySecondaries()
+		// Only healthy secondaries which are consistent with the primary are allowed to take
+		// part in the transaction. Unhealthy nodes would block the transaction until they come back.
+		// Inconsistent nodes will anyway need repair so including them doesn't make sense. They
+		// also might vote to abort which might unnecessarily fail the transaction.
+		consistentSecondaries, err := c.rs.GetConsistentSecondaries(ctx, virtualStorage, targetRepo.RelativePath, shard.Primary.GetStorage())
+		if err != nil {
+			return nil, err
+		}
+
+		participatingSecondaries := make([]nodes.Node, 0, len(consistentSecondaries))
+		for _, secondary := range shard.GetHealthySecondaries() {
+			if _, ok := consistentSecondaries[secondary.GetStorage()]; ok {
+				participatingSecondaries = append(participatingSecondaries, secondary)
+			}
+		}
 
 		var voters []transactions.Voter
 		var threshold uint
-		for _, node := range append(healthySecondaries, shard.Primary) {
+		for _, node := range append(participatingSecondaries, shard.Primary) {
 			voters = append(voters, transactions.Voter{
 				Name:  node.GetStorage(),
 				Votes: 1,
@@ -247,26 +267,23 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 			if !successByNode[shard.Primary.GetStorage()] {
 				return fmt.Errorf("transaction: primary failed vote")
 			}
+			delete(successByNode, shard.Primary.GetStorage())
 
-			failedNodes := make([]nodes.Node, 0, len(successByNode))
+			updatedSecondaries := make([]string, 0, len(participatingSecondaries))
+			var outdatedSecondaries []string
+
 			for node, success := range successByNode {
 				if success {
+					updatedSecondaries = append(updatedSecondaries, node)
 					continue
 				}
 
-				secondary, err := shard.GetNode(node)
-				if err != nil {
-					return err
-				}
-
-				failedNodes = append(failedNodes, secondary)
+				outdatedSecondaries = append(outdatedSecondaries, node)
 			}
 
-			if len(failedNodes) == 0 {
-				return nil
-			}
-
-			return c.createReplicaJobs(ctx, virtualStorage, call.targetRepo, shard.Primary, failedNodes, change, params)()
+			return c.newRequestFinalizer(
+				ctx, virtualStorage, call.targetRepo,
+				shard.Primary.GetStorage(), updatedSecondaries, outdatedSecondaries, change, params)()
 		})
 
 		injectedCtx, err := metadata.InjectTransaction(ctx, transactionID, shard.Primary.GetStorage(), true)
@@ -276,7 +293,7 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 
 		primaryDest.Ctx = helper.IncomingToOutgoing(injectedCtx)
 
-		for _, secondary := range healthySecondaries {
+		for _, secondary := range participatingSecondaries {
 			secondaryMsg, err := rewrittenRepositoryMessage(call.methodInfo, call.msg, secondary.GetStorage())
 			if err != nil {
 				return nil, err
@@ -294,7 +311,17 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 			})
 		}
 	} else {
-		finalizers = append(finalizers, c.createReplicaJobs(ctx, virtualStorage, call.targetRepo, shard.Primary, shard.Secondaries, change, params))
+		finalizers = append(finalizers,
+			c.newRequestFinalizer(
+				ctx,
+				virtualStorage,
+				call.targetRepo,
+				shard.Primary.GetStorage(),
+				nil,
+				nodesToStorages(shard.Secondaries),
+				change,
+				params,
+			))
 	}
 
 	reqFinalizer := func() error {
@@ -420,27 +447,68 @@ func protoMessage(mi protoregistry.MethodInfo, frame []byte) (proto.Message, err
 	return m, nil
 }
 
-func (c *Coordinator) createReplicaJobs(
+func nodesToStorages(nodes []nodes.Node) []string {
+	storages := make([]string, len(nodes))
+	for i, n := range nodes {
+		storages[i] = n.GetStorage()
+	}
+	return storages
+}
+
+func (c *Coordinator) newRequestFinalizer(
 	ctx context.Context,
 	virtualStorage string,
 	targetRepo *gitalypb.Repository,
-	primary nodes.Node,
-	secondaries []nodes.Node,
+	primary string,
+	updatedSecondaries []string,
+	outdatedSecondaries []string,
 	change datastore.ChangeType,
 	params datastore.Params,
 ) func() error {
 	return func() error {
+		switch change {
+		case datastore.UpdateRepo:
+			// If this fails, the primary might have changes on it that are not recorded in the database. The secondaries will appear
+			// consistent with the primary but might serve different stale data. Follow-up mutator calls will solve this state although
+			// the primary will be a later generation in the mean while.
+			if err := c.rs.IncrementGeneration(ctx, virtualStorage, targetRepo.GetRelativePath(), primary, updatedSecondaries); err != nil {
+				return fmt.Errorf("increment generation: %w", err)
+			}
+		case datastore.RenameRepo:
+			// Renaming a repository is not idempotent on Gitaly's side. This combined with a failure here results in a problematic state,
+			// where the client receives an error but can't retry the call as the repository has already been moved on the primary.
+			// Ideally the rename RPC should copy the repository instead of moving so the client can retry if this failed.
+			if err := c.rs.RenameRepository(ctx, virtualStorage, targetRepo.GetRelativePath(), primary, params["RelativePath"].(string)); err != nil {
+				if !errors.Is(err, datastore.RepositoryNotExistsError{}) {
+					return fmt.Errorf("rename repository: %w", err)
+				}
+
+				ctxlogrus.Extract(ctx).WithError(err).Info("renamed repository does not have a store entry")
+			}
+		case datastore.DeleteRepo:
+			// If this fails, the repository was already deleted from the primary but we end up still having a record of it in the db.
+			// Ideally we would delete the record from the db first and schedule the repository for deletion later in order to avoid
+			// this problem. Client can reattempt this as deleting a repository is idempotent.
+			if err := c.rs.DeleteRepository(ctx, virtualStorage, targetRepo.GetRelativePath(), primary); err != nil {
+				if !errors.Is(err, datastore.RepositoryNotExistsError{}) {
+					return fmt.Errorf("delete repository: %w", err)
+				}
+
+				ctxlogrus.Extract(ctx).WithError(err).Info("deleted repository does not have a store entry")
+			}
+		}
+
 		correlationID := c.ensureCorrelationID(ctx, targetRepo)
 
 		g, ctx := errgroup.WithContext(ctx)
-		for _, secondary := range secondaries {
+		for _, secondary := range outdatedSecondaries {
 			event := datastore.ReplicationEvent{
 				Job: datastore.ReplicationJob{
 					Change:            change,
 					RelativePath:      targetRepo.GetRelativePath(),
 					VirtualStorage:    virtualStorage,
-					SourceNodeStorage: primary.GetStorage(),
-					TargetNodeStorage: secondary.GetStorage(),
+					SourceNodeStorage: primary,
+					TargetNodeStorage: secondary,
 					Params:            params,
 				},
 				Meta: datastore.Params{metadatahandler.CorrelationIDKey: correlationID},

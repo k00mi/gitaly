@@ -38,6 +38,7 @@ type Replicator interface {
 
 type defaultReplicator struct {
 	log *logrus.Entry
+	rs  datastore.RepositoryStore
 }
 
 func (dr defaultReplicator) Replicate(ctx context.Context, event datastore.ReplicationEvent, sourceCC, targetCC *grpc.ClientConn) error {
@@ -49,6 +50,17 @@ func (dr defaultReplicator) Replicate(ctx context.Context, event datastore.Repli
 	sourceRepository := &gitalypb.Repository{
 		StorageName:  event.Job.SourceNodeStorage,
 		RelativePath: event.Job.RelativePath,
+	}
+
+	generation, err := dr.rs.GetReplicatedGeneration(ctx, event.Job.VirtualStorage, event.Job.RelativePath, event.Job.SourceNodeStorage, event.Job.TargetNodeStorage)
+	if err != nil {
+		// Later generation might have already been replicated by an earlier replication job. If that's the case,
+		// we'll simply acknowledge the job. This also prevents accidental downgrades from happening.
+		if errors.Is(err, datastore.DowngradeAttemptedError{}) {
+			return nil
+		}
+
+		return fmt.Errorf("get replicated generation: %w", err)
 	}
 
 	targetRepositoryClient := gitalypb.NewRepositoryServiceClient(targetCC)
@@ -101,6 +113,15 @@ func (dr defaultReplicator) Replicate(ctx context.Context, event datastore.Repli
 		}).Error("checksums do not match")
 	}
 
+	if generation != datastore.GenerationUnknown {
+		return dr.rs.SetGeneration(ctx,
+			event.Job.VirtualStorage,
+			event.Job.RelativePath,
+			event.Job.TargetNodeStorage,
+			generation,
+		)
+	}
+
 	return nil
 }
 
@@ -112,11 +133,23 @@ func (dr defaultReplicator) Destroy(ctx context.Context, event datastore.Replica
 
 	repoSvcClient := gitalypb.NewRepositoryServiceClient(targetCC)
 
-	_, err := repoSvcClient.RemoveRepository(ctx, &gitalypb.RemoveRepositoryRequest{
+	if _, err := repoSvcClient.RemoveRepository(ctx, &gitalypb.RemoveRepositoryRequest{
 		Repository: targetRepo,
-	})
+	}); err != nil {
+		return err
+	}
 
-	return err
+	// If the repository was deleted but this fails, we'll know by the repository not having a record in the virtual
+	// storage but having one for the storage. We can later retry the deletion.
+	if err := dr.rs.DeleteRepository(ctx, event.Job.VirtualStorage, event.Job.RelativePath, event.Job.TargetNodeStorage); err != nil {
+		if !errors.Is(err, datastore.RepositoryNotExistsError{}) {
+			return err
+		}
+
+		dr.log.WithError(err).Info("replicated repository delete does not have a store entry")
+	}
+
+	return nil
 }
 
 func (dr defaultReplicator) Rename(ctx context.Context, event datastore.ReplicationEvent, targetCC *grpc.ClientConn) error {
@@ -137,12 +170,26 @@ func (dr defaultReplicator) Rename(ctx context.Context, event datastore.Replicat
 		return fmt.Errorf("parameter 'RelativePath' has unexpected type: %T", relativePath)
 	}
 
-	_, err := repoSvcClient.RenameRepository(ctx, &gitalypb.RenameRepositoryRequest{
+	if _, err := repoSvcClient.RenameRepository(ctx, &gitalypb.RenameRepositoryRequest{
 		Repository:   targetRepo,
 		RelativePath: relativePath,
-	})
+	}); err != nil {
+		return err
+	}
 
-	return err
+	// If the repository was moved but this fails, we'll have a stale record on the storage but it is missing from the
+	// virtual storage. We can later schedule a deletion to fix the situation. The newly named repository's record
+	// will be present once a replication job arrives for it.
+	if err := dr.rs.RenameRepository(ctx,
+		event.Job.VirtualStorage, event.Job.RelativePath, event.Job.TargetNodeStorage, relativePath); err != nil {
+		if !errors.Is(err, datastore.RepositoryNotExistsError{}) {
+			return err
+		}
+
+		dr.log.WithError(err).Info("replicated repository rename does not have a store entry")
+	}
+
+	return nil
 }
 
 func (dr defaultReplicator) GarbageCollect(ctx context.Context, event datastore.ReplicationEvent, targetCC *grpc.ClientConn) error {
@@ -279,12 +326,12 @@ func WithDelayMetric(h prommetrics.HistogramVec) func(*ReplMgr) {
 
 // NewReplMgr initializes a replication manager with the provided dependencies
 // and options
-func NewReplMgr(log *logrus.Entry, virtualStorages []string, queue datastore.ReplicationEventQueue, nodeMgr nodes.Manager, opts ...ReplMgrOpt) ReplMgr {
+func NewReplMgr(log *logrus.Entry, virtualStorages []string, queue datastore.ReplicationEventQueue, rs datastore.RepositoryStore, nodeMgr nodes.Manager, opts ...ReplMgrOpt) ReplMgr {
 	r := ReplMgr{
 		log:             log.WithField("component", "replication_manager"),
 		queue:           queue,
 		whitelist:       map[string]struct{}{},
-		replicator:      defaultReplicator{log},
+		replicator:      defaultReplicator{log, rs},
 		virtualStorages: virtualStorages,
 		nodeManager:     nodeMgr,
 		replInFlightMetric: prometheus.NewGaugeVec(

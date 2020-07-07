@@ -153,8 +153,10 @@ func TestProcessReplicationJob(t *testing.T) {
 		Message: "a commit",
 	})
 
-	var replicator defaultReplicator
-	replicator.log = entry
+	replicator := defaultReplicator{
+		log: entry,
+		rs:  datastore.NewMemoryRepositoryStore(conf.StorageNames()),
+	}
 
 	var mockReplicationLatencyHistogramVec promtest.MockHistogramVec
 	var mockReplicationDelayHistogramVec promtest.MockHistogramVec
@@ -163,6 +165,7 @@ func TestProcessReplicationJob(t *testing.T) {
 		testhelper.DiscardTestEntry(t),
 		conf.VirtualStorageNames(),
 		queue,
+		datastore.NewMemoryRepositoryStore(conf.StorageNames()),
 		nodeMgr,
 		WithLatencyMetric(&mockReplicationLatencyHistogramVec),
 		WithDelayMetric(&mockReplicationDelayHistogramVec),
@@ -225,11 +228,13 @@ func TestPropagateReplicationJob(t *testing.T) {
 
 	txMgr := transactions.NewManager()
 
-	coordinator := NewCoordinator(queue, nodeMgr, txMgr, conf, protoregistry.GitalyProtoPreregistered)
+	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
 
-	replmgr := NewReplMgr(logEntry, conf.VirtualStorageNames(), queue, nodeMgr)
+	coordinator := NewCoordinator(queue, rs, nodeMgr, txMgr, conf, protoregistry.GitalyProtoPreregistered)
 
-	prf := NewGRPCServer(conf, logEntry, protoregistry.GitalyProtoPreregistered, coordinator.StreamDirector, nodeMgr, txMgr, queue)
+	replmgr := NewReplMgr(logEntry, conf.VirtualStorageNames(), queue, rs, nodeMgr)
+
+	prf := NewGRPCServer(conf, logEntry, protoregistry.GitalyProtoPreregistered, coordinator.StreamDirector, nodeMgr, txMgr, queue, rs)
 
 	listener, port := listenAvailPort(t)
 	ctx, cancel := testhelper.Context()
@@ -507,7 +512,13 @@ func TestProcessBacklog_FailedJobs(t *testing.T) {
 	nodeMgr, err := nodes.NewManager(logEntry, conf, nil, queueInterceptor, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 
-	replMgr := NewReplMgr(logEntry, conf.VirtualStorageNames(), queueInterceptor, nodeMgr)
+	replMgr := NewReplMgr(
+		logEntry,
+		conf.VirtualStorageNames(),
+		queueInterceptor,
+		datastore.NewMemoryRepositoryStore(conf.StorageNames()),
+		nodeMgr,
+	)
 	replMgr.ProcessBacklog(ctx, noopBackoffFunc)
 
 	select {
@@ -647,7 +658,13 @@ func TestProcessBacklog_Success(t *testing.T) {
 	nodeMgr, err := nodes.NewManager(logEntry, conf, nil, queueInterceptor, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 
-	replMgr := NewReplMgr(logEntry, conf.VirtualStorageNames(), queueInterceptor, nodeMgr)
+	replMgr := NewReplMgr(
+		logEntry,
+		conf.VirtualStorageNames(),
+		queueInterceptor,
+		datastore.NewMemoryRepositoryStore(conf.StorageNames()),
+		nodeMgr,
+	)
 	replMgr.ProcessBacklog(ctx, noopBackoffFunc)
 
 	select {
@@ -711,6 +728,7 @@ func TestProcessBacklog_ReplicatesToReadOnlyPrimary(t *testing.T) {
 		testhelper.DiscardTestEntry(t),
 		conf.VirtualStorageNames(),
 		queue,
+		datastore.NewMemoryRepositoryStore(conf.StorageNames()),
 		&nodes.MockManager{
 			GetShardFunc: func(vs string) (nodes.Shard, error) {
 				require.Equal(t, virtualStorage, vs)
@@ -881,7 +899,7 @@ func TestReplMgr_ProcessStale(t *testing.T) {
 	hook := test.NewLocal(logger)
 
 	queue := datastore.NewReplicationEventQueueInterceptor(nil)
-	mgr := NewReplMgr(logger.WithField("test", t.Name()), nil, queue, nil)
+	mgr := NewReplMgr(logger.WithField("test", t.Name()), nil, queue, datastore.NewMemoryRepositoryStore(nil), nil)
 
 	var counter int32
 	queue.OnAcknowledgeStale(func(ctx context.Context, duration time.Duration) error {

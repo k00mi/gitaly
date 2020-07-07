@@ -42,6 +42,7 @@ func NewGRPCServer(
 	nodeMgr nodes.Manager,
 	txMgr *transactions.Manager,
 	queue datastore.ReplicationEventQueue,
+	rs datastore.RepositoryStore,
 	grpcOpts ...grpc.ServerOption,
 ) *grpc.Server {
 	ctxTagOpts := []grpc_ctxtags.Option{
