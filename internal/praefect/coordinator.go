@@ -158,8 +158,9 @@ func (c *Coordinator) accessorStreamParameters(ctx context.Context, call grpcCal
 }
 
 var transactionRPCs = map[string]struct{}{
-	"/gitaly.SmartHTTPService/PostReceivePack": {},
-	"/gitaly.SSHService/SSHReceivePack":        {},
+	"/gitaly.OperationService/UserCreateBranch": {},
+	"/gitaly.SSHService/SSHReceivePack":         {},
+	"/gitaly.SmartHTTPService/PostReceivePack":  {},
 }
 
 func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall, targetRepo *gitalypb.Repository) (*proxy.StreamParameters, error) {
