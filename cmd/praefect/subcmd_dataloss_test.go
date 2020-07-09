@@ -25,7 +25,11 @@ func TestDatalossSubcommand(t *testing.T) {
 				t.Error("unexpected virtual storage")
 			}
 
-			return nodes.Shard{Primary: &nodes.MockNode{StorageName: primary}}, nil
+			return nodes.Shard{Primary: &nodes.MockNode{
+				GetStorageMethod: func() string {
+					return primary
+				},
+			}}, nil
 		},
 	}
 

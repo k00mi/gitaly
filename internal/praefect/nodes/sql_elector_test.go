@@ -28,6 +28,7 @@ func TestGetPrimaryAndSecondaries(t *testing.T) {
 
 	conf := config.Config{
 		SocketPath: socketName,
+		Failover:   config.Failover{Enabled: true},
 	}
 
 	internalSocket0 := testhelper.GetTemporaryGitalySocketFileName()

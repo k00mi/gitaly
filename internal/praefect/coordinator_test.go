@@ -87,7 +87,9 @@ func TestStreamDirectorReadOnlyEnforcement(t *testing.T) {
 				&nodes.MockManager{GetShardFunc: func(vs string) (nodes.Shard, error) {
 					require.Equal(t, virtualStorage, vs)
 					return nodes.Shard{
-						Primary: &nodes.MockNode{StorageName: storage},
+						Primary: &nodes.MockNode{GetStorageMethod: func() string {
+							return storage
+						}},
 					}, nil
 				}},
 				transactions.NewManager(),
