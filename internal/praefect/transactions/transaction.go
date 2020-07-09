@@ -16,6 +16,19 @@ var (
 	ErrTransactionCanceled   = errors.New("transaction was canceled")
 )
 
+// voteResult represents the outcome of a transaction for a single voter.
+type voteResult int
+
+const (
+	// voteUndecided means that the voter either didn't yet show up or that
+	// the vote couldn't yet be decided due to there being no majority yet.
+	voteUndecided voteResult = iota
+	// voteCommitted means that the voter committed his vote.
+	voteCommitted
+	// voteAborted means that the voter aborted his vote.
+	voteAborted
+)
+
 // Voter is a participant in a given transaction that may cast a vote.
 type Voter struct {
 	// Name of the voter, usually Gitaly's storage name.
@@ -25,7 +38,8 @@ type Voter struct {
 	// this voter.
 	Votes uint
 
-	vote vote
+	vote   vote
+	result voteResult
 }
 
 type vote [sha1.Size]byte
@@ -96,8 +110,24 @@ func newTransaction(voters []Voter, threshold uint) (*transaction, error) {
 	}, nil
 }
 
-func (t *transaction) cancel() {
+func (t *transaction) cancel() map[string]bool {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	results := make(map[string]bool, len(t.votersByNode))
+	for node, voter := range t.votersByNode {
+		// If a voter didn't yet show up or is still undecided, we need
+		// to mark it as failed so it won't get the idea of committing
+		// the transaction at a later point anymore.
+		if voter.result == voteUndecided {
+			voter.result = voteAborted
+		}
+		results[node] = voter.result == voteCommitted
+	}
+
 	close(t.cancelCh)
+
+	return results
 }
 
 func (t *transaction) vote(node string, hash []byte) error {
@@ -176,11 +206,17 @@ func (t *transaction) collectVotes(ctx context.Context, node string) error {
 		return fmt.Errorf("invalid node for transaction: %q", node)
 	}
 
+	if voter.result != voteUndecided {
+		return fmt.Errorf("voter has already settled on an outcome: %q", node)
+	}
+
 	// See if our vote crossed the threshold. As there can be only one vote
 	// exceeding it, we know we're the winner in that case.
 	if t.voteCounts[voter.vote] < t.threshold {
+		voter.result = voteAborted
 		return fmt.Errorf("%w: got %d/%d votes", ErrTransactionVoteFailed, t.voteCounts[voter.vote], t.threshold)
 	}
 
+	voter.result = voteCommitted
 	return nil
 }
