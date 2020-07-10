@@ -4,8 +4,6 @@ package glsql
 import (
 	"context"
 	"database/sql"
-	"strconv"
-	"strings"
 
 	// Blank import to enable integration of github.com/lib/pq into database/sql
 	_ "github.com/lib/pq"
@@ -109,70 +107,6 @@ func (txq *txQuery) log(err error, msg string) {
 	if txq.logger != nil {
 		txq.logger.WithError(err).Error(msg)
 	}
-}
-
-// Uint64sToInterfaces converts list of uint64 values to the list of empty interfaces.
-func Uint64sToInterfaces(vs ...uint64) []interface{} {
-	if vs == nil {
-		return nil
-	}
-
-	rs := make([]interface{}, len(vs))
-	for i, v := range vs {
-		rs[i] = v
-	}
-	return rs
-}
-
-// GeneratePlaceholders returns string with 'count' placeholders starting from 'start' index.
-// 1 will be used if provided value for 'start' is less then 1.
-// 1 will be used if provided value for 'count' is less then 1.
-func GeneratePlaceholders(start, count int) string {
-	if start < 1 {
-		start = 1
-	}
-
-	if count <= 1 {
-		return "$" + strconv.Itoa(start)
-	}
-
-	var builder = strings.Builder{}
-	for i := start; i < start+count; i++ {
-		if i != start {
-			builder.WriteString(",")
-		}
-		builder.WriteString("$")
-		builder.WriteString(strconv.Itoa(i))
-	}
-	return builder.String()
-}
-
-// NewParamsAssembler returns
-func NewParamsAssembler() *ParamsAssembler {
-	return &ParamsAssembler{}
-}
-
-// ParamsAssembler helps to assemble parameters of the query together providing placeholders that must be used in query.
-type ParamsAssembler []interface{}
-
-// AddParams receives n params and assemble them with other params and returns generated placeholder as a result.
-func (pm *ParamsAssembler) AddParams(params []interface{}) string {
-	start := len(*pm)
-	*pm = append(*pm, params...)
-	return GeneratePlaceholders(start+1, len(params))
-}
-
-// AddParam receives param and assemble it with other params and returns generated placeholder as a result.
-func (pm *ParamsAssembler) AddParam(param interface{}) string {
-	return pm.AddParams([]interface{}{param})
-}
-
-// Params returns list of previously assembled parameters.
-func (pm *ParamsAssembler) Params() []interface{} {
-	if pm != nil {
-		return *pm
-	}
-	return nil
 }
 
 // DestProvider returns list of pointers that will be used to scan values into.

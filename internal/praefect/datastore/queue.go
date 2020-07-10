@@ -19,9 +19,12 @@ type ReplicationEventQueue interface {
 	Enqueue(ctx context.Context, event ReplicationEvent) (ReplicationEvent, error)
 	// Dequeue retrieves events from the persistent queue using provided limitations and filters.
 	Dequeue(ctx context.Context, virtualStorage, nodeStorage string, count int) ([]ReplicationEvent, error)
-	// Acknowledge updates previously dequeued events with new state releasing resources acquired for it.
-	// It only updates events that are in 'in_progress' state.
-	// It returns list of ids that was actually acknowledged.
+	// Acknowledge updates previously dequeued events with the new state and releases resources acquired for it.
+	// It updates events that are in 'in_progress' state to the state that is passed in.
+	// It also updates state of similar events (scheduled fot the same repository with same change from the same source)
+	// that are in 'ready' state and created before the target event was dequeue for the processing if the new state is
+	// 'completed'. Otherwise it won't be changed.
+	// It returns sub-set of passed in ids that were updated.
 	Acknowledge(ctx context.Context, state JobState, ids []uint64) ([]uint64, error)
 	// GetOutdatedRepositories returns storages by repositories which are considered outdated. A repository is considered
 	// outdated if the latest replication job is not in 'complete' state or the latest replication job does not originate
@@ -248,11 +251,6 @@ func (rq PostgresReplicationEventQueue) Dequeue(ctx context.Context, virtualStor
 	return res, nil
 }
 
-// Acknowledge updates previously dequeued events with the new state and releases resources acquired for it.
-// It updates events that are in 'in_progress' state to the state that is passed in.
-// It also updates state of similar events that are in 'ready' state and created before the target
-// event was dequeue for the processing if the new state is 'completed'. Otherwise it won't be changed.
-// It returns sub-set of passed in ids that were updated.
 func (rq PostgresReplicationEventQueue) Acknowledge(ctx context.Context, state JobState, ids []uint64) ([]uint64, error) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -262,13 +260,16 @@ func (rq PostgresReplicationEventQueue) Acknowledge(ctx context.Context, state J
 		return nil, err
 	}
 
-	params := glsql.NewParamsAssembler()
-	newState := params.AddParam(state)
+	pqIDs := make(pq.Int64Array, len(ids))
+	for i, id := range ids {
+		pqIDs[i] = int64(id)
+	}
+
 	query := `
 		WITH existing AS (
 			SELECT id, lock_id, updated_at, job
 			FROM replication_queue
-			WHERE id IN (` + params.AddParams(glsql.Uint64sToInterfaces(ids...)) + `)
+			WHERE id = ANY($1)
 			AND state = 'in_progress'
 			FOR UPDATE
 		)
@@ -276,14 +277,14 @@ func (rq PostgresReplicationEventQueue) Acknowledge(ctx context.Context, state J
 			UPDATE replication_queue AS queue
 			SET
 				state = CASE WHEN state = 'in_progress' THEN
-						` + newState + `::REPLICATION_JOB_STATE
+						$2::REPLICATION_JOB_STATE
 					ELSE
-						(CASE WHEN ` + newState + ` = 'completed' THEN 'completed' ELSE queue.state END)::REPLICATION_JOB_STATE
+						(CASE WHEN $2 = 'completed' THEN 'completed' ELSE queue.state END)::REPLICATION_JOB_STATE
 					END,
 				updated_at = CASE WHEN state = 'in_progress' THEN
 						NOW() AT TIME ZONE 'UTC'
 					ELSE
-						(CASE WHEN ` + newState + ` = 'completed' THEN NOW() AT TIME ZONE 'UTC' ELSE queue.updated_at END)
+						(CASE WHEN $2 = 'completed' THEN NOW() AT TIME ZONE 'UTC' ELSE queue.updated_at END)
 					END
 			FROM existing
 			WHERE existing.id = queue.id
@@ -318,7 +319,7 @@ func (rq PostgresReplicationEventQueue) Acknowledge(ctx context.Context, state J
 		)
 		SELECT id
 		FROM existing`
-	rows, err := rq.qc.QueryContext(ctx, query, params.Params()...)
+	rows, err := rq.qc.QueryContext(ctx, query, pqIDs, state)
 	if err != nil {
 		return nil, fmt.Errorf("query: %w", err)
 	}
