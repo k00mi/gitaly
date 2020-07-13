@@ -87,8 +87,9 @@ module GitalyServer
     def user_delete_branch(request, call)
       repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
       user = Gitlab::Git::User.from_gitaly(request.user)
+      transaction = Praefect::Transaction.from_metadata(call.metadata)
 
-      repo.rm_branch(request.branch_name, user: user)
+      repo.rm_branch(request.branch_name, user: user, transaction: transaction)
 
       Gitaly::UserDeleteBranchResponse.new
     rescue Gitlab::Git::PreReceiveError => e

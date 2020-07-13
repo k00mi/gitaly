@@ -32,12 +32,12 @@ module Gitlab
         update_ref_in_hooks(ref, newrev, oldrev, transaction: transaction)
       end
 
-      def rm_branch(branch)
+      def rm_branch(branch, transaction: nil)
         ref = Gitlab::Git::BRANCH_REF_PREFIX + branch.name
         oldrev = branch.target
         newrev = Gitlab::Git::BLANK_SHA
 
-        update_ref_in_hooks(ref, newrev, oldrev)
+        update_ref_in_hooks(ref, newrev, oldrev, transaction: transaction)
       end
 
       def add_lightweight_tag(tag_name, tag_target)
