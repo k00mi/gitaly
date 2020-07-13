@@ -4,6 +4,7 @@ module GitalyServer
 
     def user_create_tag(request, call)
       repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
+      transaction = Praefect::Transaction.from_metadata(call.metadata)
 
       gitaly_user = get_param!(request, :user)
       user = Gitlab::Git::User.from_gitaly(gitaly_user)
@@ -12,7 +13,7 @@ module GitalyServer
 
       target_revision = get_param!(request, :target_revision)
 
-      created_tag = repo.add_tag(tag_name, user: user, target: target_revision, message: request.message.presence)
+      created_tag = repo.add_tag(tag_name, user: user, target: target_revision, message: request.message.presence, transaction: transaction)
       Gitaly::UserCreateTagResponse.new unless created_tag
 
       rugged_commit = created_tag.dereferenced_target.rugged_commit

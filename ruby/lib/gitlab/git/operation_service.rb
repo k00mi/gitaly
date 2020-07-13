@@ -40,19 +40,19 @@ module Gitlab
         update_ref_in_hooks(ref, newrev, oldrev, transaction: transaction)
       end
 
-      def add_lightweight_tag(tag_name, tag_target)
+      def add_lightweight_tag(tag_name, tag_target, transaction: nil)
         ref = Gitlab::Git::TAG_REF_PREFIX + tag_name
         oldrev = Gitlab::Git::BLANK_SHA
 
-        update_ref_in_hooks(ref, tag_target, oldrev)
+        update_ref_in_hooks(ref, tag_target, oldrev, transaction: transaction)
       end
 
-      def add_annotated_tag(tag_name, tag_target, options)
+      def add_annotated_tag(tag_name, tag_target, options, transaction: nil)
         ref = Gitlab::Git::TAG_REF_PREFIX + tag_name
         oldrev = Gitlab::Git::BLANK_SHA
         annotation = repository.rugged.tags.create_annotation(tag_name, tag_target, options)
 
-        update_ref_in_hooks(ref, annotation.oid, oldrev)
+        update_ref_in_hooks(ref, annotation.oid, oldrev, transaction: transaction)
       end
 
       def rm_tag(tag)
