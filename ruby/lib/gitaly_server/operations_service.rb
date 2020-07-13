@@ -72,9 +72,10 @@ module GitalyServer
       newrev = get_param!(request, :newrev)
       oldrev = get_param!(request, :oldrev)
       gitaly_user = get_param!(request, :user)
+      transaction = Praefect::Transaction.from_metadata(call.metadata)
 
       user = Gitlab::Git::User.from_gitaly(gitaly_user)
-      repo.update_branch(branch_name, user: user, newrev: newrev, oldrev: oldrev)
+      repo.update_branch(branch_name, user: user, newrev: newrev, oldrev: oldrev, transaction: transaction)
 
       Gitaly::UserUpdateBranchResponse.new
     rescue Gitlab::Git::Repository::InvalidRef, Gitlab::Git::CommitError => ex

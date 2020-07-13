@@ -251,8 +251,8 @@ module Gitlab
         end
       end
 
-      def update_branch(branch_name, user:, newrev:, oldrev:, push_options: nil)
-        OperationService.new(user, self).update_branch(branch_name, newrev, oldrev, push_options: push_options)
+      def update_branch(branch_name, user:, newrev:, oldrev:, push_options: nil, transaction: nil)
+        OperationService.new(user, self).update_branch(branch_name, newrev, oldrev, push_options: push_options, transaction: transaction)
       end
 
       def rm_branch(branch_name, user:)

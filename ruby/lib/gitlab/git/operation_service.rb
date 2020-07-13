@@ -96,9 +96,9 @@ module Gitlab
         end
       end
 
-      def update_branch(branch_name, newrev, oldrev, push_options: nil)
+      def update_branch(branch_name, newrev, oldrev, push_options: nil, transaction: nil)
         ref = Gitlab::Git::BRANCH_REF_PREFIX + branch_name
-        update_ref_in_hooks(ref, newrev, oldrev, push_options: push_options)
+        update_ref_in_hooks(ref, newrev, oldrev, push_options: push_options, transaction: transaction)
       end
 
       # Yields the given block (which should return a commit) and
