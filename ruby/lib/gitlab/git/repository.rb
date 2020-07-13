@@ -264,12 +264,12 @@ module Gitlab
         OperationService.new(user, self).rm_branch(branch, transaction: transaction)
       end
 
-      def rm_tag(tag_name, user:)
+      def rm_tag(tag_name, user:, transaction: nil)
         tag = find_tag(tag_name)
 
         raise InvalidRef, "tag not found: #{tag_name}" unless tag
 
-        Gitlab::Git::OperationService.new(user, self).rm_tag(tag)
+        Gitlab::Git::OperationService.new(user, self).rm_tag(tag, transaction: transaction)
       end
 
       def find_tag(name)

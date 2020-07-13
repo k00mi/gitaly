@@ -55,12 +55,12 @@ module Gitlab
         update_ref_in_hooks(ref, annotation.oid, oldrev, transaction: transaction)
       end
 
-      def rm_tag(tag)
+      def rm_tag(tag, transaction: nil)
         ref = Gitlab::Git::TAG_REF_PREFIX + tag.name
         oldrev = tag.target
         newrev = Gitlab::Git::BLANK_SHA
 
-        update_ref_in_hooks(ref, newrev, oldrev) do
+        update_ref_in_hooks(ref, newrev, oldrev, transaction: transaction) do
           repository.rugged.tags.delete(tag_name)
         end
       end

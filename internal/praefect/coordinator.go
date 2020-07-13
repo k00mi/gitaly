@@ -161,6 +161,7 @@ var transactionRPCs = map[string]featureflag.FeatureFlag{
 	"/gitaly.OperationService/UserCreateBranch": featureflag.ReferenceTransactionsOperationService,
 	"/gitaly.OperationService/UserCreateTag":    featureflag.ReferenceTransactionsOperationService,
 	"/gitaly.OperationService/UserDeleteBranch": featureflag.ReferenceTransactionsOperationService,
+	"/gitaly.OperationService/UserDeleteTag":    featureflag.ReferenceTransactionsOperationService,
 	"/gitaly.OperationService/UserUpdateBranch": featureflag.ReferenceTransactionsOperationService,
 	"/gitaly.SSHService/SSHReceivePack":         featureflag.ReferenceTransactionsSSHService,
 	"/gitaly.SmartHTTPService/PostReceivePack":  featureflag.ReferenceTransactionsSmartHTTPService,

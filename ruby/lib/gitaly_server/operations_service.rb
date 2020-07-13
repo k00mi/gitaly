@@ -31,13 +31,14 @@ module GitalyServer
 
     def user_delete_tag(request, call)
       repo = Gitlab::Git::Repository.from_gitaly(request.repository, call)
+      transaction = Praefect::Transaction.from_metadata(call.metadata)
 
       gitaly_user = get_param!(request, :user)
       user = Gitlab::Git::User.from_gitaly(gitaly_user)
 
       tag_name = get_param!(request, :tag_name)
 
-      repo.rm_tag(tag_name, user: user)
+      repo.rm_tag(tag_name, user: user, transaction: transaction)
 
       Gitaly::UserDeleteTagResponse.new
     rescue Gitlab::Git::PreReceiveError => e
