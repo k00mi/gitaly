@@ -1,0 +1,6 @@
+---
+title: Pass GIT_OBJECT_DIRECTORY and GIT_ALTERNATE_OBJECT_DIRECTORIES in environment
+  variable field
+merge_request: 2381
+author:
+type: fixed
