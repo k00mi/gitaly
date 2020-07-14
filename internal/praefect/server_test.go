@@ -3,6 +3,7 @@ package praefect
 import (
 	"bytes"
 	"context"
+	"crypto/sha1"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -27,6 +28,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/grpc-proxy/proxy"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/mock"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
@@ -648,6 +650,7 @@ func TestRepoRename(t *testing.T) {
 }
 
 type mockSmartHTTP struct {
+	txMgr         *transactions.Manager
 	m             sync.Mutex
 	methodsCalled map[string]int
 }
@@ -716,6 +719,18 @@ func (m *mockSmartHTTP) PostReceivePack(stream gitalypb.SmartHTTPService_PostRec
 		}
 	}
 
+	ctx := stream.Context()
+
+	tx, err := metadata.TransactionFromContext(ctx)
+	if err != nil {
+		return helper.ErrInternal(err)
+	}
+
+	hash := sha1.Sum([]byte{})
+	if err := m.txMgr.VoteTransaction(ctx, tx.ID, tx.Node, hash[:]); err != nil {
+		return helper.ErrInternal(err)
+	}
+
 	return nil
 }
 
@@ -737,7 +752,9 @@ func newGrpcServer(t *testing.T, srv gitalypb.SmartHTTPServiceServer) (string, *
 }
 
 func TestProxyWrites(t *testing.T) {
-	smartHTTP0, smartHTTP1, smartHTTP2 := &mockSmartHTTP{}, &mockSmartHTTP{}, &mockSmartHTTP{}
+	txMgr := transactions.NewManager()
+
+	smartHTTP0, smartHTTP1, smartHTTP2 := &mockSmartHTTP{txMgr: txMgr}, &mockSmartHTTP{txMgr: txMgr}, &mockSmartHTTP{txMgr: txMgr}
 
 	socket0, srv0 := newGrpcServer(t, smartHTTP0)
 	defer srv0.Stop()
@@ -774,7 +791,6 @@ func TestProxyWrites(t *testing.T) {
 
 	nodeMgr, err := nodes.NewManager(entry, conf, nil, queue, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
-	txMgr := transactions.NewManager()
 
 	coordinator := NewCoordinator(queue, nodeMgr, txMgr, conf, protoregistry.GitalyProtoPreregistered)
 
