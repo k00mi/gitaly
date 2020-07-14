@@ -134,7 +134,7 @@ func (mgr *Manager) RegisterTransaction(ctx context.Context, voters []Voter, thr
 		"voters":         voters,
 	}).Debug("RegisterTransaction")
 
-	mgr.counterMetric.WithLabelValues("registered").Inc()
+	mgr.counterMetric.WithLabelValues("registered").Add(float64(len(voters)))
 
 	return transactionID, func() error {
 		mgr.cancelTransaction(transactionID, transaction)
