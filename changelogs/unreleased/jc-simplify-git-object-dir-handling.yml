@@ -1,5 +1,5 @@
 ---
-title: Pass GIT_OBJECT_DIRECTORY and GIT_ALTERNATE_OBJECT_DIRECTORIES in environment
+title: Fix pre-receive hooks not working with symlinked paths
   variable field
 merge_request: 2381
 author:
