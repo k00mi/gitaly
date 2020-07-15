@@ -78,10 +78,9 @@ func (t *transaction) cancel() map[string]bool {
 	return t.subtransaction.cancel()
 }
 
-func (t *transaction) vote(node string, hash []byte) error {
-	return t.subtransaction.vote(node, hash)
-}
-
-func (t *transaction) collectVotes(ctx context.Context, node string) error {
+func (t *transaction) vote(ctx context.Context, node string, hash []byte) error {
+	if err := t.subtransaction.vote(node, hash); err != nil {
+		return err
+	}
 	return t.subtransaction.collectVotes(ctx, node)
 }
