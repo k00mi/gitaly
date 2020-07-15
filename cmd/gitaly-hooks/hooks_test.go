@@ -117,7 +117,7 @@ func TestHooksPrePostReceive(t *testing.T) {
 
 	hookNames := []string{"pre-receive", "post-receive"}
 
-	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoPreReceiveHook})
+	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoPreReceiveHook, featureflag.GoPostReceiveHook})
 	require.NoError(t, err)
 
 	for _, hookName := range hookNames {
@@ -562,7 +562,7 @@ func TestCheckBadCreds(t *testing.T) {
 }
 
 func runHookServiceServer(t *testing.T, token string) (string, func()) {
-	return runHookServiceServerWithAPI(t, token, testhelper.GitlabAPIStub)
+	return runHookServiceServerWithAPI(t, token, hook.GitlabAPIStub)
 }
 
 func runHookServiceServerWithAPI(t *testing.T, token string, gitlabAPI hook.GitlabAPI) (string, func()) {

@@ -62,7 +62,15 @@ func TestSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	testSuccessfulGitHooksForUserDeleteTagRequest(t, ctx)
+	featureSets, err := testhelper.NewFeatureSets(nil, featureflag.GoPostReceiveHook)
+	require.NoError(t, err)
+
+	for _, featureSet := range featureSets {
+		t.Run(featureSet.String(), func(t *testing.T) {
+			ctx := featureSet.WithParent(ctx)
+			testSuccessfulGitHooksForUserDeleteTagRequest(t, ctx)
+		})
+	}
 }
 
 func testSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T, ctx context.Context) {

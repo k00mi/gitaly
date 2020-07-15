@@ -350,6 +350,20 @@ func TestPostReceivePackToHooks(t *testing.T) {
 		config.Config = cfg
 	}(config.Config)
 
+	features, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoPostReceiveHook})
+	require.NoError(t, err)
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	for _, feature := range features {
+		t.Run(feature.String(), func(t *testing.T) {
+			testPostReceivePackToHooks(t, feature.WithParent(ctx))
+		})
+	}
+}
+
+func testPostReceivePackToHooks(t *testing.T, ctx context.Context) {
 	secretToken := "secret token"
 	glRepository := "some_repo"
 	glID := "key-123"
@@ -409,9 +423,6 @@ func TestPostReceivePackToHooks(t *testing.T) {
 	hookDir := filepath.Join(cwd, "../../../ruby", "git-hooks")
 	hooks.Override = hookDir
 
-	ctx, cancel := testhelper.Context()
-	defer cancel()
-
 	stream, err := client.PostReceivePack(ctx)
 	require.NoError(t, err)
 
@@ -442,7 +453,7 @@ func runSmartHTTPHookServiceServer(t *testing.T) (*grpc.Server, string) {
 	}
 
 	gitalypb.RegisterSmartHTTPServiceServer(server, NewServer())
-	gitalypb.RegisterHookServiceServer(server, hook.NewServer(testhelper.GitlabAPIStub, config.Config.Hooks))
+	gitalypb.RegisterHookServiceServer(server, hook.NewServer(hook.GitlabAPIStub, config.Config.Hooks))
 	reflection.Register(server)
 
 	go server.Serve(listener)
@@ -509,7 +520,7 @@ func TestPostReceiveWithTransactions(t *testing.T) {
 
 			gitalyServer := testhelper.NewServerWithAuth(t, nil, nil, config.Config.Auth.Token)
 			gitalypb.RegisterSmartHTTPServiceServer(gitalyServer.GrpcServer(), NewServer())
-			gitalypb.RegisterHookServiceServer(gitalyServer.GrpcServer(), hook.NewServer(testhelper.GitlabAPIStub, config.Config.Hooks))
+			gitalypb.RegisterHookServiceServer(gitalyServer.GrpcServer(), hook.NewServer(hook.GitlabAPIStub, config.Config.Hooks))
 			reflection.Register(gitalyServer.GrpcServer())
 			require.NoError(t, gitalyServer.Start())
 			defer gitalyServer.Stop()

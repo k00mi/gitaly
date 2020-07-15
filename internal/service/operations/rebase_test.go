@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -23,6 +24,9 @@ var (
 )
 
 func TestSuccessfulUserRebaseConfirmableRequest(t *testing.T) {
+	featureSets, err := testhelper.NewFeatureSets(nil, featureflag.GoPostReceiveHook)
+	require.NoError(t, err)
+
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
@@ -38,7 +42,12 @@ func TestSuccessfulUserRebaseConfirmableRequest(t *testing.T) {
 	serverSocketPath, stop := runOperationServiceServerWithRubyServer(t, &ruby)
 	defer stop()
 
-	testSuccessfulUserRebaseConfirmableRequest(t, ctx, serverSocketPath, pushOptions)
+	for _, featureSet := range featureSets {
+		t.Run(featureSet.String(), func(t *testing.T) {
+			ctx := featureSet.WithParent(ctx)
+			testSuccessfulUserRebaseConfirmableRequest(t, ctx, serverSocketPath, pushOptions)
+		})
+	}
 }
 
 func testSuccessfulUserRebaseConfirmableRequest(t *testing.T, ctxOuter context.Context, serverSocketPath string, pushOptions []string) {
