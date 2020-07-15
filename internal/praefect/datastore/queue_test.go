@@ -975,6 +975,118 @@ func TestPostgresReplicationEventQueue_StartHealthUpdate(t *testing.T) {
 	})
 }
 
+func TestPostgresReplicationEventQueue_AcknowledgeStale(t *testing.T) {
+	db := getDB(t)
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	source := PostgresReplicationEventQueue{qc: db}
+
+	eventType := ReplicationEvent{Job: ReplicationJob{
+		Change:            UpdateRepo,
+		RelativePath:      "/project/path-1",
+		TargetNodeStorage: "gitaly-1",
+		SourceNodeStorage: "gitaly-0",
+		VirtualStorage:    "praefect-1",
+	}}
+
+	eventType1 := eventType
+
+	eventType2 := eventType
+	eventType2.Job.VirtualStorage = "praefect-2"
+
+	eventType3 := eventType2
+	eventType3.Job.RelativePath = "/project/path-2"
+	eventType3.Job.TargetNodeStorage = "gitaly-2"
+
+	eventType4 := eventType3
+	eventType4.Job.TargetNodeStorage = "gitaly-3"
+
+	t.Run("no stale jobs yet", func(t *testing.T) {
+		db.TruncateAll(t)
+
+		event, err := source.Enqueue(ctx, eventType1)
+		require.NoError(t, err)
+
+		devents, err := source.Dequeue(ctx, event.Job.VirtualStorage, event.Job.TargetNodeStorage, 1)
+		require.NoError(t, err)
+
+		// events triggered just now (< 1 sec ago), so nothing considered stale
+		require.NoError(t, source.AcknowledgeStale(ctx, time.Second))
+		requireEvents(t, ctx, db, devents)
+	})
+
+	t.Run("jobs considered stale only at 'in_progress' state", func(t *testing.T) {
+		db.TruncateAll(t)
+
+		// move event to 'ready' state
+		event1, err := source.Enqueue(ctx, eventType1)
+		require.NoError(t, err)
+
+		// move event to 'failed' state
+		event2, err := source.Enqueue(ctx, eventType2)
+		require.NoError(t, err)
+		devents2, err := source.Dequeue(ctx, event2.Job.VirtualStorage, event2.Job.TargetNodeStorage, 1)
+		require.NoError(t, err)
+		require.Equal(t, event2.ID, devents2[0].ID)
+		_, err = source.Acknowledge(ctx, JobStateFailed, []uint64{devents2[0].ID})
+		require.NoError(t, err)
+
+		// move event to 'dead' state
+		event3, err := source.Enqueue(ctx, eventType3)
+		require.NoError(t, err)
+		devents3, err := source.Dequeue(ctx, event3.Job.VirtualStorage, event3.Job.TargetNodeStorage, 1)
+		require.NoError(t, err)
+		require.Equal(t, event3.ID, devents3[0].ID)
+		_, err = source.Acknowledge(ctx, JobStateDead, []uint64{devents3[0].ID})
+		require.NoError(t, err)
+
+		event4, err := source.Enqueue(ctx, eventType4)
+		require.NoError(t, err)
+		devents4, err := source.Dequeue(ctx, event4.Job.VirtualStorage, event4.Job.TargetNodeStorage, 1)
+		require.NoError(t, err)
+
+		require.NoError(t, source.AcknowledgeStale(ctx, time.Microsecond))
+
+		devents2[0].State = JobStateFailed
+		devents3[0].State = JobStateDead
+		devents4[0].Attempt = 2
+		devents4[0].State = JobStateFailed
+		requireEvents(t, ctx, db, []ReplicationEvent{event1, devents2[0], devents3[0], devents4[0]})
+	})
+
+	t.Run("stale jobs updated for all virtual storages and storages at once", func(t *testing.T) {
+		db.TruncateAll(t)
+
+		var exp []ReplicationEvent
+		for _, eventType := range []ReplicationEvent{eventType1, eventType2, eventType3} {
+			event, err := source.Enqueue(ctx, eventType)
+			require.NoError(t, err)
+			devents, err := source.Dequeue(ctx, event.Job.VirtualStorage, event.Job.TargetNodeStorage, 1)
+			require.NoError(t, err)
+			exp = append(exp, devents...)
+		}
+
+		for event, i := exp[0], 0; i < 2; i++ { // consume all processing attempts to verify that state will be changed to 'dead'
+			_, err := source.Acknowledge(ctx, JobStateFailed, []uint64{event.ID})
+			require.NoError(t, err)
+			_, err = source.Dequeue(ctx, event.Job.VirtualStorage, event.Job.TargetNodeStorage, 1)
+			require.NoError(t, err)
+		}
+
+		require.NoError(t, source.AcknowledgeStale(ctx, time.Microsecond))
+
+		exp[0].State = JobStateDead
+		exp[0].Attempt = 0
+		for i := range exp[1:] {
+			exp[1+i].State = JobStateFailed
+		}
+
+		requireEvents(t, ctx, db, exp)
+	})
+}
+
 func requireEvents(t *testing.T, ctx context.Context, db glsql.DB, expected []ReplicationEvent) {
 	t.Helper()
 

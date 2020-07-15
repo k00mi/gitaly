@@ -14,6 +14,9 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	gitaly_config "gitlab.com/gitlab-org/gitaly/internal/config"
@@ -870,4 +873,42 @@ func TestSubtractUint64(t *testing.T) {
 			require.Equal(t, testCase.exp, subtractUint64(testCase.left, testCase.right))
 		})
 	}
+}
+
+func TestReplMgr_ProcessStale(t *testing.T) {
+	logger := testhelper.DiscardTestLogger(t)
+	hook := test.NewLocal(logger)
+
+	queue := datastore.NewReplicationEventQueueInterceptor(nil)
+	mgr := NewReplMgr(logger.WithField("test", t.Name()), nil, queue, nil)
+
+	var counter int32
+	queue.OnAcknowledgeStale(func(ctx context.Context, duration time.Duration) error {
+		counter++
+		if counter > 2 {
+			return assert.AnError
+		}
+		return nil
+	})
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	ctx, cancel = context.WithTimeout(ctx, 350*time.Millisecond)
+	defer cancel()
+
+	done := mgr.ProcessStale(ctx, 100*time.Millisecond, time.Second)
+
+	select {
+	case <-time.After(time.Second):
+		require.FailNow(t, "execution had stuck")
+	case <-done:
+	}
+
+	require.Equal(t, int32(3), counter)
+	require.Len(t, hook.Entries, 1)
+	require.Equal(t, logrus.ErrorLevel, hook.LastEntry().Level)
+	require.Equal(t, "background periodical acknowledgement for stale replication jobs", hook.LastEntry().Message)
+	require.Equal(t, "replication_manager", hook.LastEntry().Data["component"])
+	require.Equal(t, assert.AnError, hook.LastEntry().Data["error"])
 }
