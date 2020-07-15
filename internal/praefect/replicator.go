@@ -331,7 +331,7 @@ func WithReplicator(r Replicator) ReplMgrOpt {
 const (
 	logWithReplJobID  = "replication_job_id"
 	logWithReplTarget = "replication_job_target"
-	logWithCorrID     = "replication_correlation_id"
+	logWithCorrID     = "correlation_id"
 )
 
 type backoff func() time.Duration
@@ -374,6 +374,31 @@ func (r ReplMgr) ProcessBacklog(ctx context.Context, b BackoffFunc) {
 	for _, virtualStorage := range r.virtualStorages {
 		go r.processBacklog(ctx, b, virtualStorage)
 	}
+}
+
+// ProcessStale starts a background process to acknowledge stale replication jobs.
+// It will process jobs until ctx is Done.
+func (r ReplMgr) ProcessStale(ctx context.Context, checkPeriod, staleAfter time.Duration) chan struct{} {
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+
+		t := time.NewTimer(checkPeriod)
+		for {
+			select {
+			case <-t.C:
+				if err := r.queue.AcknowledgeStale(ctx, staleAfter); err != nil {
+					r.log.WithError(err).Error("background periodical acknowledgement for stale replication jobs")
+				}
+				t.Reset(checkPeriod)
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	return done
 }
 
 func (r ReplMgr) processBacklog(ctx context.Context, b BackoffFunc, virtualStorage string) {

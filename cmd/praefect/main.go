@@ -316,6 +316,7 @@ func run(cfgs []starter.Config, conf config.Config) error {
 	}
 
 	repl.ProcessBacklog(ctx, praefect.ExpBackoffFunc(1*time.Second, 5*time.Second))
+	repl.ProcessStale(ctx, 30*time.Second, time.Minute)
 
 	return b.Wait(conf.GracefulStopTimeout.Duration())
 }

@@ -263,6 +263,12 @@ func (s *memoryReplicationEventQueue) StartHealthUpdate(context.Context, <-chan 
 	return nil
 }
 
+func (s *memoryReplicationEventQueue) AcknowledgeStale(context.Context, time.Duration) error {
+	// this implementation has no problem of stale replication events as it has no information about
+	// job processing after restart of the application
+	return nil
+}
+
 // remove deletes i-th element from the queue and from the in-flight tracking map.
 // It doesn't check 'i' for the out of range and must be called with lock protection.
 func (s *memoryReplicationEventQueue) remove(i int) {
@@ -286,6 +292,8 @@ type ReplicationEventQueueInterceptor interface {
 	OnAcknowledge(func(context.Context, JobState, []uint64, ReplicationEventQueue) ([]uint64, error))
 	// OnStartHealthUpdate allows to set action that would be executed each time when `StartHealthUpdate` method called.
 	OnStartHealthUpdate(func(context.Context, <-chan time.Time, []ReplicationEvent) error)
+	// OnAcknowledgeStale allows to set action that would be executed each time when `AcknowledgeStale` method called.
+	OnAcknowledgeStale(func(context.Context, time.Duration) error)
 }
 
 // NewReplicationEventQueueInterceptor returns interception over `ReplicationEventQueue` interface.
@@ -299,6 +307,7 @@ type replicationEventQueueInterceptor struct {
 	onDequeue           func(context.Context, string, string, int, ReplicationEventQueue) ([]ReplicationEvent, error)
 	onAcknowledge       func(context.Context, JobState, []uint64, ReplicationEventQueue) ([]uint64, error)
 	onStartHealthUpdate func(context.Context, <-chan time.Time, []ReplicationEvent) error
+	onAcknowledgeStale  func(context.Context, time.Duration) error
 }
 
 func (i *replicationEventQueueInterceptor) OnEnqueue(action func(context.Context, ReplicationEvent, ReplicationEventQueue) (ReplicationEvent, error)) {
@@ -315,6 +324,10 @@ func (i *replicationEventQueueInterceptor) OnAcknowledge(action func(context.Con
 
 func (i *replicationEventQueueInterceptor) OnStartHealthUpdate(action func(context.Context, <-chan time.Time, []ReplicationEvent) error) {
 	i.onStartHealthUpdate = action
+}
+
+func (i *replicationEventQueueInterceptor) OnAcknowledgeStale(action func(context.Context, time.Duration) error) {
+	i.onAcknowledgeStale = action
 }
 
 func (i *replicationEventQueueInterceptor) Enqueue(ctx context.Context, event ReplicationEvent) (ReplicationEvent, error) {
@@ -343,4 +356,11 @@ func (i *replicationEventQueueInterceptor) StartHealthUpdate(ctx context.Context
 		return i.onStartHealthUpdate(ctx, trigger, events)
 	}
 	return i.ReplicationEventQueue.StartHealthUpdate(ctx, trigger, events)
+}
+
+func (i *replicationEventQueueInterceptor) AcknowledgeStale(ctx context.Context, staleAfter time.Duration) error {
+	if i.onAcknowledgeStale != nil {
+		return i.onAcknowledgeStale(ctx, staleAfter)
+	}
+	return i.ReplicationEventQueue.AcknowledgeStale(ctx, staleAfter)
 }

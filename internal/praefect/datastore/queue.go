@@ -38,6 +38,11 @@ type ReplicationEventQueue interface {
 	// The health update will be executed on each new entry received from trigger channel passed in.
 	// It is a blocking call that is managed by the passed in context.
 	StartHealthUpdate(ctx context.Context, trigger <-chan time.Time, events []ReplicationEvent) error
+	// AcknowledgeStale moves replication events that are 'in_progress' state for too long (more than staleAfter)
+	// into the next state:
+	//   'failed' - in case it has more attempts to be executed
+	//   'dead' - in case it has no more attempts to be executed
+	AcknowledgeStale(ctx context.Context, staleAfter time.Duration) error
 }
 
 func allowToAck(state JobState) error {
@@ -441,4 +446,44 @@ func (rq PostgresReplicationEventQueue) StartHealthUpdate(ctx context.Context, t
 			}
 		}
 	}
+}
+
+// AcknowledgeStale moves replication events that are 'in_progress' state for too long (more then staleAfter)
+// into the next state:
+//   'failed' - in case it has more attempts to be executed
+//   'dead' - in case it has no more attempts to be executed
+// The job considered 'in_progress' if it has corresponding entry in the 'replication_queue_job_lock' table.
+// When moving from 'in_progress' to other state the entry from 'replication_queue_job_lock' table will be
+// removed and entry in the 'replication_queue_lock' will be updated if needed (release of the lock).
+func (rq PostgresReplicationEventQueue) AcknowledgeStale(ctx context.Context, staleAfter time.Duration) error {
+	query := `
+		WITH stale_job_lock AS (
+			DELETE FROM replication_queue_job_lock WHERE triggered_at < NOW() - INTERVAL '1 MILLISECOND' * $1
+			RETURNING job_id, lock_id
+		)
+		, update_job AS (
+			UPDATE replication_queue AS queue
+			SET state = (CASE WHEN attempt >= 1 THEN 'failed' ELSE 'dead' END)::REPLICATION_JOB_STATE
+			FROM stale_job_lock
+			WHERE stale_job_lock.job_id = queue.id
+			RETURNING queue.id, queue.lock_id
+		)
+		UPDATE replication_queue_lock
+		SET acquired = FALSE
+		WHERE id IN (
+			SELECT existing.lock_id
+			FROM (SELECT lock_id, COUNT(*) AS amount FROM stale_job_lock GROUP BY lock_id) AS removed
+			JOIN (
+				SELECT lock_id, COUNT(*) AS amount
+				FROM replication_queue_job_lock
+				WHERE lock_id IN (SELECT lock_id FROM stale_job_lock)
+				GROUP BY lock_id
+			) AS existing ON removed.lock_id = existing.lock_id AND removed.amount = existing.amount
+		)`
+	_, err := rq.qc.ExecContext(ctx, query, staleAfter.Milliseconds())
+	if err != nil {
+		return fmt.Errorf("exec acknowledge stale: %w", err)
+	}
+
+	return nil
 }
