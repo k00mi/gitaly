@@ -181,3 +181,15 @@ func (t *subtransaction) collectVotes(ctx context.Context, node string) error {
 	voter.result = voteCommitted
 	return nil
 }
+
+func (t *subtransaction) getResult(node string) (voteResult, error) {
+	t.lock.RLock()
+	defer t.lock.RUnlock()
+
+	voter, ok := t.votersByNode[node]
+	if !ok {
+		return voteAborted, fmt.Errorf("invalid node for transaction: %q", node)
+	}
+
+	return voter.result, nil
+}
