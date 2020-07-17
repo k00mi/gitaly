@@ -9,8 +9,11 @@ import (
 )
 
 var (
+	// ErrTransactionVoteFailed indicates the transaction didn't reach quorum.
 	ErrTransactionVoteFailed = errors.New("transaction did not reach quorum")
-	ErrTransactionCanceled   = errors.New("transaction was canceled")
+	// ErrTransactionCanceled indicates the transaction was canceled before
+	// reaching quorum.
+	ErrTransactionCanceled = errors.New("transaction was canceled")
 )
 
 // voteResult represents the outcome of a transaction for a single voter.

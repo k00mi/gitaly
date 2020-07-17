@@ -7,9 +7,17 @@ import (
 )
 
 var (
-	ErrDuplicateNodes       = errors.New("transactions cannot have duplicate nodes")
-	ErrMissingNodes         = errors.New("transaction requires at least one node")
-	ErrInvalidThreshold     = errors.New("transaction has invalid threshold")
+	// ErrDuplicateNodes indicates a transaction was registered with two
+	// voters having the same name.
+	ErrDuplicateNodes = errors.New("transactions cannot have duplicate nodes")
+	// ErrMissingNodes indicates a transaction was registered with no voters.
+	ErrMissingNodes = errors.New("transaction requires at least one node")
+	// ErrInvalidThreshold indicates a transaction was registered with an
+	// invalid threshold that may either allow for multiple different
+	// quorums or none at all.
+	ErrInvalidThreshold = errors.New("transaction has invalid threshold")
+	// ErrSubtransactionFailed indicates a vote was cast on a
+	// subtransaction which failed already.
 	ErrSubtransactionFailed = errors.New("subtransaction has failed")
 )
 
