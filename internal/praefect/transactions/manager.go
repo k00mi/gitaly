@@ -119,7 +119,7 @@ type CancelFunc func() (map[string]bool, error)
 // taking part in the transaction. `threshold` is the threshold at which an
 // election will succeed. It needs to be in the range `weight(voters)/2 <
 // threshold <= weight(voters) to avoid indecidable votes.
-func (mgr *Manager) RegisterTransaction(ctx context.Context, voters []Voter, threshold uint) (uint64, CancelFunc, error) {
+func (mgr *Manager) RegisterTransaction(ctx context.Context, voters []Voter, threshold uint) (*Transaction, CancelFunc, error) {
 	mgr.lock.Lock()
 	defer mgr.lock.Unlock()
 
@@ -131,11 +131,11 @@ func (mgr *Manager) RegisterTransaction(ctx context.Context, voters []Voter, thr
 
 	transaction, err := newTransaction(transactionID, voters, threshold)
 	if err != nil {
-		return 0, nil, err
+		return nil, nil, err
 	}
 
 	if _, ok := mgr.transactions[transactionID]; ok {
-		return 0, nil, errors.New("transaction exists already")
+		return nil, nil, errors.New("transaction exists already")
 	}
 	mgr.transactions[transactionID] = transaction
 
@@ -146,16 +146,16 @@ func (mgr *Manager) RegisterTransaction(ctx context.Context, voters []Voter, thr
 
 	mgr.counterMetric.WithLabelValues("registered").Add(float64(len(voters)))
 
-	return transactionID, func() (map[string]bool, error) {
-		return mgr.cancelTransaction(transactionID, transaction)
+	return transaction, func() (map[string]bool, error) {
+		return mgr.cancelTransaction(transaction)
 	}, nil
 }
 
-func (mgr *Manager) cancelTransaction(transactionID uint64, transaction *Transaction) (map[string]bool, error) {
+func (mgr *Manager) cancelTransaction(transaction *Transaction) (map[string]bool, error) {
 	mgr.lock.Lock()
 	defer mgr.lock.Unlock()
 
-	delete(mgr.transactions, transactionID)
+	delete(mgr.transactions, transaction.ID())
 
 	transaction.cancel()
 	mgr.subtransactionsMetric.Observe(float64(transaction.CountSubtransactions()))
