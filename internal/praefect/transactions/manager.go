@@ -24,7 +24,7 @@ var ErrNotFound = errors.New("transaction not found")
 type Manager struct {
 	txIDGenerator         TransactionIDGenerator
 	lock                  sync.Mutex
-	transactions          map[uint64]*transaction
+	transactions          map[uint64]*Transaction
 	counterMetric         *prometheus.CounterVec
 	delayMetric           metrics.HistogramVec
 	subtransactionsMetric metrics.Histogram
@@ -92,7 +92,7 @@ func WithTransactionIDGenerator(generator TransactionIDGenerator) ManagerOpt {
 func NewManager(opts ...ManagerOpt) *Manager {
 	mgr := &Manager{
 		txIDGenerator:         newTransactionIDGenerator(),
-		transactions:          make(map[uint64]*transaction),
+		transactions:          make(map[uint64]*Transaction),
 		counterMetric:         prometheus.NewCounterVec(prometheus.CounterOpts{}, []string{"action"}),
 		delayMetric:           prometheus.NewHistogramVec(prometheus.HistogramOpts{}, []string{"action"}),
 		subtransactionsMetric: prometheus.NewHistogram(prometheus.HistogramOpts{}),
@@ -129,7 +129,7 @@ func (mgr *Manager) RegisterTransaction(ctx context.Context, voters []Voter, thr
 	// nodes still have in-flight transactions.
 	transactionID := mgr.txIDGenerator.ID()
 
-	transaction, err := newTransaction(voters, threshold)
+	transaction, err := newTransaction(transactionID, voters, threshold)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -151,14 +151,14 @@ func (mgr *Manager) RegisterTransaction(ctx context.Context, voters []Voter, thr
 	}, nil
 }
 
-func (mgr *Manager) cancelTransaction(transactionID uint64, transaction *transaction) (map[string]bool, error) {
+func (mgr *Manager) cancelTransaction(transactionID uint64, transaction *Transaction) (map[string]bool, error) {
 	mgr.lock.Lock()
 	defer mgr.lock.Unlock()
 
 	delete(mgr.transactions, transactionID)
 
 	transaction.cancel()
-	mgr.subtransactionsMetric.Observe(float64(transaction.countSubtransactions()))
+	mgr.subtransactionsMetric.Observe(float64(transaction.CountSubtransactions()))
 
 	return transaction.State(), nil
 }

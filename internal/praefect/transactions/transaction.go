@@ -34,11 +34,12 @@ type Voter struct {
 	result voteResult
 }
 
-// transaction is a session where a set of voters votes on one or more
+// Transaction is a session where a set of voters votes on one or more
 // subtransactions. Subtransactions are a sequence of sessions, where each node
 // needs to go through the same sequence and agree on the same thing in the end
 // in order to have the complete transaction succeed.
-type transaction struct {
+type Transaction struct {
+	id        uint64
 	threshold uint
 	voters    []Voter
 
@@ -46,7 +47,7 @@ type transaction struct {
 	subtransactions []*subtransaction
 }
 
-func newTransaction(voters []Voter, threshold uint) (*transaction, error) {
+func newTransaction(id uint64, voters []Voter, threshold uint) (*Transaction, error) {
 	if len(voters) == 0 {
 		return nil, ErrMissingNodes
 	}
@@ -74,13 +75,14 @@ func newTransaction(voters []Voter, threshold uint) (*transaction, error) {
 		return nil, ErrInvalidThreshold
 	}
 
-	return &transaction{
+	return &Transaction{
+		id:        id,
 		threshold: threshold,
 		voters:    voters,
 	}, nil
 }
 
-func (t *transaction) cancel() {
+func (t *Transaction) cancel() {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
@@ -89,10 +91,15 @@ func (t *transaction) cancel() {
 	}
 }
 
+// ID returns the identifier used to uniquely identify a transaction.
+func (t *Transaction) ID() uint64 {
+	return t.id
+}
+
 // State returns the voting state mapped by voters. A voting state of `true`
 // means all subtransactions were successful, a voting state of `false` means
 // either no subtransactions were created or any of the subtransactions failed.
-func (t *transaction) State() map[string]bool {
+func (t *Transaction) State() map[string]bool {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
@@ -115,7 +122,9 @@ func (t *transaction) State() map[string]bool {
 	return results
 }
 
-func (t *transaction) countSubtransactions() int {
+// CountSubtransactions counts the number of subtransactions created as part of
+// the transaction.
+func (t *Transaction) CountSubtransactions() int {
 	return len(t.subtransactions)
 }
 
@@ -123,7 +132,7 @@ func (t *transaction) countSubtransactions() int {
 // node hasn't yet voted on or creates a new one if the node has succeeded on
 // all subtransactions. In case the node has failed on any of the
 // subtransactions, an error will be returned.
-func (t *transaction) getOrCreateSubtransaction(node string) (*subtransaction, error) {
+func (t *Transaction) getOrCreateSubtransaction(node string) (*subtransaction, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
@@ -161,7 +170,7 @@ func (t *transaction) getOrCreateSubtransaction(node string) (*subtransaction, e
 	return subtransaction, nil
 }
 
-func (t *transaction) vote(ctx context.Context, node string, hash []byte) error {
+func (t *Transaction) vote(ctx context.Context, node string, hash []byte) error {
 	subtransaction, err := t.getOrCreateSubtransaction(node)
 	if err != nil {
 		return err
