@@ -236,10 +236,11 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 			return nil, fmt.Errorf("registering transactions: %w", err)
 		}
 		finalizers = append(finalizers, func() error {
-			successByNode, err := transactionCleanup()
-			if err != nil {
+			if err := transactionCleanup(); err != nil {
 				return err
 			}
+
+			successByNode := transaction.State()
 
 			// If the primary node failed the transaction, then
 			// there's no sense in trying to replicate from primary

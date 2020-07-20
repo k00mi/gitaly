@@ -543,7 +543,8 @@ func TestTransactionWithMultipleVotes(t *testing.T) {
 
 			wg.Wait()
 
-			results, _ := cancel()
+			require.NoError(t, cancel())
+			results := transaction.State()
 			for i, voter := range tc.voters {
 				require.Equal(t, voter.shouldSucceed, results[fmt.Sprintf("node-%d", i)])
 			}
@@ -672,9 +673,9 @@ func TestTransactionCancellation(t *testing.T) {
 			}
 			wg.Wait()
 
-			results, err := cancelTransaction()
-			require.NoError(t, err)
+			require.NoError(t, cancelTransaction())
 
+			results := transaction.State()
 			for i, v := range tc.voters {
 				require.Equal(t, results[fmt.Sprintf("node-%d", i)], v.shouldSucceed, "result mismatches expected node state")
 			}
