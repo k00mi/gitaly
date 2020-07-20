@@ -80,7 +80,19 @@ func newTransaction(voters []Voter, threshold uint) (*transaction, error) {
 	}, nil
 }
 
-func (t *transaction) cancel() map[string]bool {
+func (t *transaction) cancel() {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	for _, subtransaction := range t.subtransactions {
+		subtransaction.cancel()
+	}
+}
+
+// State returns the voting state mapped by voters. A voting state of `true`
+// means all subtransactions were successful, a voting state of `false` means
+// either no subtransactions were created or any of the subtransactions failed.
+func (t *transaction) State() map[string]bool {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
@@ -91,7 +103,7 @@ func (t *transaction) cancel() map[string]bool {
 	// node as well. Otherwise, if all subtransactions for the node
 	// succeeded, the transaction did as well.
 	for _, subtransaction := range t.subtransactions {
-		for voter, result := range subtransaction.cancel() {
+		for voter, result := range subtransaction.state() {
 			// If there already is an entry indicating failure, keep it.
 			if didSucceed, ok := results[voter]; ok && !didSucceed {
 				continue

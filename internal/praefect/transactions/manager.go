@@ -157,9 +157,10 @@ func (mgr *Manager) cancelTransaction(transactionID uint64, transaction *transac
 
 	delete(mgr.transactions, transactionID)
 
+	transaction.cancel()
 	mgr.subtransactionsMetric.Observe(float64(transaction.countSubtransactions()))
 
-	return transaction.cancel(), nil
+	return transaction.State(), nil
 }
 
 func (mgr *Manager) voteTransaction(ctx context.Context, transactionID uint64, node string, hash []byte) error {
