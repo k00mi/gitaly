@@ -1,5 +1,55 @@
 # Gitaly changelog
 
+## 13.2.0
+
+### Fixed (13 changes)
+
+- Set default branch to match remote for FetchInternalRemote. !2265
+- Make --literal-pathspecs optional for LastCommitForPath. !2285
+- Only execute hooks on primary nodes. !2294
+- Avoid duplicated primary when getting synced nodes. !2312
+- Force gitaly-ruby to use UTF-8 encoding. !2316
+- Always git fetch after snapshot repository creation. !2320
+- Return nil for missing wiki page versions. !2323
+- Pass env vars correctly into custom hooks. !2331
+- Fix getting default branch of remote repo in. !2340
+- Fix casting wrong votes on secondaries using Ruby pre-receive hook. !2347
+- Improve logging on the replication manager. !2351
+- Only let healthy secondaries take part in transactions. !2365
+- Fix pre-receive hooks not working with symlinked paths variable field. !2381
+
+### Changed (7 changes, 1 of them is from the community)
+
+- Support literal path lookups in LastCommitsForTreeRequest. !2301
+- GetArchive: Support excluding paths. !2304 (Ethan Reesor (@firelizzard))
+- Turn on go prereceive and go update by default. !2329
+- Gather remote branches via ls-remote, rather than fetch, by default. !2330
+- Include change type as a label on in-flight replication jobs gauge. !2373
+- Scale transaction registration metric by registered voters. !2375
+- Allow multiple votes per transaction. !2386
+
+### Added (12 changes)
+
+- Multi node write. !2208
+- Allow pagination for FindAllLocalBranches. !2251
+- Add TLS support to Praefect. !2276
+- PostReceiveHook in Go. !2290
+- Praefect: replication jobs health ping. !2321
+- Praefect: handling of stale replication jobs. !2322
+- Implement weighted voting. !2334
+- Schedule replication jobs for failed transaction voters. !2355
+- Praefect: Collapse duplicate replication jobs. !2357
+- Start using transactions for UserCreateBranch. !2364
+- Transaction support for modification of branches and tags via operations service. !2374
+- Remove upload-pack feature flags to enable partial clone by default.
+
+### Other (3 changes)
+
+- Support literal path lookups in other commit RPCs. !2303
+- Ensure Praefect replication queue tables exist. !2309
+- Error forwarded mutator RPCs on replication job enqueue failure. !2332
+
+
 ## 13.1.3
 
 ### Fixed (1 change)

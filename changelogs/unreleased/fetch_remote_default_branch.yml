@@ -1,5 +1,0 @@
----
-title: Set default branch to match remote for FetchInternalRemote
-merge_request: 2265
-author:
-type: fixed
