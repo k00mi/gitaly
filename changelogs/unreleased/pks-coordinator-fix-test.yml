@@ -1,5 +1,0 @@
----
-title: Avoid duplicated primary when getting synced nodes
-merge_request: 2312
-author:
-type: fixed
