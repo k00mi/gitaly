@@ -16,12 +16,14 @@ import (
 type Pool struct {
 	lock           sync.RWMutex
 	connsByAddress map[string]*grpc.ClientConn
+	dialOptions    []grpc.DialOption
 }
 
 // NewPool creates a new connection pool that's ready for use.
-func NewPool() *Pool {
+func NewPool(dialOptions ...grpc.DialOption) *Pool {
 	return &Pool{
 		connsByAddress: make(map[string]*grpc.ClientConn),
+		dialOptions:    dialOptions,
 	}
 }
 
@@ -70,7 +72,8 @@ func (p *Pool) getOrCreateConnection(ctx context.Context, address, token string)
 		return cc, nil
 	}
 
-	var opts []grpc.DialOption
+	opts := make([]grpc.DialOption, 0, len(p.dialOptions)+1)
+	opts = append(opts, p.dialOptions...)
 	if token != "" {
 		opts = append(opts, grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(token)))
 	}
