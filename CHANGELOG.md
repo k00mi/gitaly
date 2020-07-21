@@ -2,6 +2,7 @@
 
 ## 13.2.0
 
+- No changes.
 ### Fixed (13 changes)
 
 - Set default branch to match remote for FetchInternalRemote. !2265
