@@ -24,11 +24,9 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type ReadOnlyStorageError string
-
-func (storage ReadOnlyStorageError) Error() string {
-	return fmt.Sprintf("storage %q is in read-only mode", string(storage))
-}
+// ErrRepositoryReadOnly is returned when the repository is in read-only mode. This happens
+// if the primary does not have the latest changes.
+var ErrRepositoryReadOnly = helper.ErrPreconditionFailedf("repository is in read-only mode")
 
 // getReplicationDetails determines the type of job and additional details based on the method name and incoming message
 func getReplicationDetails(methodName string, m proto.Message) (datastore.ChangeType, datastore.Params, error) {
@@ -198,8 +196,12 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 		return nil, fmt.Errorf("mutator call: get shard: %w", err)
 	}
 
-	if c.conf.Failover.ReadOnlyAfterFailover && shard.IsReadOnly {
-		return nil, helper.ErrPreconditionFailed(ReadOnlyStorageError(call.targetRepo.GetStorageName()))
+	if c.conf.Failover.ReadOnlyAfterFailover {
+		if latest, err := c.rs.IsLatestGeneration(ctx, virtualStorage, call.targetRepo.RelativePath, shard.Primary.GetStorage()); err != nil {
+			return nil, fmt.Errorf("check generation: %w", err)
+		} else if !latest {
+			return nil, ErrRepositoryReadOnly
+		}
 	}
 
 	primaryMessage, err := rewrittenRepositoryMessage(call.methodInfo, call.msg, shard.Primary.GetStorage())

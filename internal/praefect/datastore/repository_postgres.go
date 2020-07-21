@@ -74,6 +74,9 @@ type RepositoryStore interface {
 	// GetConsistentSecondaries checks which secondaries are on the same generation as the primary and returns them.
 	// If the primary's generation is unknown, all secondaries are considered inconsistent.
 	GetConsistentSecondaries(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error)
+	// IsLatestGeneration checks whether the repository is on the latest generation or not. If the repository does not
+	// have an expected generation, every storage is considered to be on the latest version.
+	IsLatestGeneration(ctx context.Context, virtualStorage, relativePath, storage string) (bool, error)
 }
 
 // PostgresRepositoryStore is a Postgres implementation of RepositoryStore.
@@ -352,4 +355,30 @@ WHERE storage = ANY($4::text[])
 	}
 
 	return consistentSecondaries, rows.Err()
+}
+
+func (rs *PostgresRepositoryStore) IsLatestGeneration(ctx context.Context, virtualStorage, relativePath, storage string) (bool, error) {
+	const q = `
+SELECT COALESCE(r.generation = sr.generation, false)
+FROM repositories AS r
+LEFT JOIN storage_repositories AS sr
+	ON sr.virtual_storage = r.virtual_storage
+	AND sr.relative_path = r.relative_path
+	AND sr.storage = $3
+WHERE r.virtual_storage = $1
+AND r.relative_path = $2
+`
+
+	var isLatest bool
+	if err := rs.db.QueryRowContext(ctx, q, virtualStorage, relativePath, storage).Scan(&isLatest); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// if there is no record of the expected generation, we'll have to consider the storage
+			// up to date as this will be the case on repository creation
+			return true, nil
+		}
+
+		return false, err
+	}
+
+	return isLatest, nil
 }
