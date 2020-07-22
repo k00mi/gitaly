@@ -56,18 +56,21 @@ graph TD
 ```
 
 1. `git-receive-pack` calls `pre-receive`, `update`, `post-receive` shell scripts under `ruby/git-hooks/`.
-2. Each of these scripts simply calls `ruby/git-hooks/gitlab-shell-hook` with the environment, stdin, hook name, and hook arguments.
-3. `ruby/git-hooks/gitlab-shell-hook` in turn calls the `GITALY_BIN_DIR/gitaly-hooks` binary.
-4. `gitaly-hooks` will call the corresponding RPC that handles `pre-receive`(`PreReceiveHook`), `update`(`UpdateHook`), and `post-receive`(`PostReceiveHook`). Note: `UpdateHook` will run once per reference that's being updated.
-5. `PreReceiveHook` RPC will call out to GitLab's `internal/allowed` endpoint.
-6. `PreReceiveHook` RPC will call out to GitLab's `internal/pre_receive` endpoint.
-7. `PreReceiveHook` RPC will find `pre-receive` custom hooks and execute them.
-8. `UpdateHook` RPC will find `update` custom hooks and execute them.
-9. `PostReceiveHook`  will check if `gitaly_go_postreceive_hook` feature flag is enabled.
-10. If `gitaly_go_postreceive_hook`  is not enabled, `PostReceiveHook` RPC will fall back to calling the Ruby hook.
-11. If `gitaly_go_postreceive_hook` is enabled,  `PostReceiveHook` RPC will use the go implementation.
-12. Both the Ruby `post-receive` hook as well as the Go implementation of `PostReceiveHook` will call out to GitLab's `internal/post_receive` endpoint. (the `internal/post_receive` endpoint decreases the reference counter, and generates the MR creation link that gets printed out to stdout.)
-13. Both the Ruby `post-receive` hook as well as the Go implementation of `PostReceiveHook` will call the `post-receive` custom hooks.
+1. Each of these scripts simply calls `ruby/git-hooks/gitlab-shell-hook` with the environment, stdin, hook name, and hook arguments.
+1. `ruby/git-hooks/gitlab-shell-hook` in turn calls the `GITALY_BIN_DIR/gitaly-hooks` binary.
+1. `gitaly-hooks` will call the corresponding RPC that handles `pre-receive`(`PreReceiveHook`), `update`(`UpdateHook`), and `post-receive`(`PostReceiveHook`).
+    - `/gitaly.HookService/PreReceiveHook` and `/gitaly.HookService/UpdateHoo` uses the Go implementation by default but falls back to the Ruby `ruby/gitlab-shell/pre-receive` and  `ruby/gitlab-shell/update` hooks when `:gitaly_go_prereceive_hook`, `:gitaly_go_update_hook`
+      feature flags are (respectively) explicitly disabled.
+    - `/gitaly.HookService/UpdateHook` will run once for each ref being updated.
+1. `PreReceiveHook` RPC will call out to GitLab's `internal/allowed` endpoint.
+1. `PreReceiveHook` RPC will call out to GitLab's `internal/pre_receive` endpoint. (uses the Go implementation by default but falls back to the Ruby `ruby/gitlab-shell/pre-receive` hook when `:gitaly_go_prereceive_hook` is explicitly disabled)
+1. `PreReceiveHook` RPC will find `pre-receive` custom hooks and execute them.
+1. `UpdateHook` RPC will find `update` custom hooks and execute them.
+1. `PostReceiveHook`  will check if `gitaly_go_postreceive_hook` feature flag is enabled.
+1. If `gitaly_go_postreceive_hook`  is not enabled, `PostReceiveHook` RPC will fall back to calling the Ruby hook.
+1. If `gitaly_go_postreceive_hook` is enabled,  `PostReceiveHook` RPC will use the go implementation.
+1. Both the Ruby `post-receive` hook as well as the Go implementation of `PostReceiveHook` will call out to GitLab's `internal/post_receive` endpoint. (the `internal/post_receive` endpoint decreases the reference counter, and generates the MR creation link that gets printed out to stdout.)
+1. Both the Ruby `post-receive` hook as well as the Go implementation of `PostReceiveHook` will call the `post-receive` custom hooks.
 
 Note: `gitaly_go_postreceive_hook` has been enabled on production.
 
@@ -111,8 +114,25 @@ graph TD
 ```
 
 1. An OperationsService RPC calls out to `gitaly-ruby`'s `operation_service.rb`.
-2. A number of operation service methods call out to the `with_hooks` method.
-3. `with_hooks` calls out to `hooks_service.rb`.
-4. `hooks_service.rb` calls `hooks.rb` with `pre-receive`, `update`, and `post-receive`.
-5. `pre-receive`, `update`, `post-receive` shell scripts call `gitlab-shell-hook` shell script with environment, hook name, hook arguments.
-Steps 6-17 are identical to descriptions of steps 2-13 above.
+1. A number of operation service methods call out to the `with_hooks` method.
+1. `with_hooks` calls out to `hooks_service.rb`.
+1. `hooks_service.rb` calls `hooks.rb` with `pre-receive`, `update`, and `post-receive`.
+1. `pre-receive`, `update`, `post-receive` shell scripts call `gitlab-shell-hook` shell script with environment, hook name, hook arguments.
+
+    Note: Steps 6-17 are identical to descriptions of steps 2-13 above.
+
+1. Each of these scripts simply calls `ruby/git-hooks/gitlab-shell-hook` with the environment, stdin, hook name, and hook arguments.
+1. `ruby/git-hooks/gitlab-shell-hook` in turn calls the `GITALY_BIN_DIR/gitaly-hooks` binary.
+1. `gitaly-hooks` will call the corresponding RPC that handles `pre-receive`(`PreReceiveHook`), `update`(`UpdateHook`), and `post-receive`(`PostReceiveHook`).
+    - `/gitaly.HookService/PreReceiveHook` and `/gitaly.HookService/UpdateHoo` uses the Go implementation by default but falls back to the Ruby `ruby/gitlab-shell/pre-receive` and  `ruby/gitlab-shell/update` hooks when `:gitaly_go_prereceive_hook`, `:gitaly_go_update_hook`
+      feature flags are (respectively) explicitly disabled.
+    - `/gitaly.HookService/UpdateHook` will run once for each ref being updated.
+1. `PreReceiveHook` RPC will call out to GitLab's `internal/allowed` endpoint.
+1. `PreReceiveHook` RPC will call out to GitLab's `internal/pre_receive` endpoint. (uses the Go implementation by default but falls back to the Ruby `ruby/gitlab-shell/pre-receive` hook when `:gitaly_go_prereceive_hook` is explicitly disabled)
+1. `PreReceiveHook` RPC will find `pre-receive` custom hooks and execute them.
+1. `UpdateHook` RPC will find `update` custom hooks and execute them.
+1. `PostReceiveHook`  will check if `gitaly_go_postreceive_hook` feature flag is enabled.
+1. If `gitaly_go_postreceive_hook`  is not enabled, `PostReceiveHook` RPC will fall back to calling the Ruby hook.
+1. If `gitaly_go_postreceive_hook` is enabled,  `PostReceiveHook` RPC will use the go implementation.
+1. Both the Ruby `post-receive` hook as well as the Go implementation of `PostReceiveHook` will call out to GitLab's `internal/post_receive` endpoint. (the `internal/post_receive` endpoint decreases the reference counter, and generates the MR creation link that gets printed out to stdout.)
+1. Both the Ruby `post-receive` hook as well as the Go implementation of `PostReceiveHook` will call the `post-receive` custom hooks.
