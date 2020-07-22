@@ -32,7 +32,7 @@ service RemoteService {
     rpc FindRemoteRepository(FindRemoteRepositoryRequest) returns (FindRemoteRepositoryResponse) {
       option (op_type) = {
         op: ACCESSOR
-        scope_level: SERVER
+        scope_level: STORAGE
       };
     }
     rpc FindRemoteRootRef(FindRemoteRootRefRequest) returns (FindRemoteRootRefResponse) {
@@ -96,7 +96,7 @@ message FindRemoteRepositoryRequest {
   // This field is used to redirect request to proper storage where it can be handled.
   // As of now it doesn't matter what storage will be used, but it still must be a valid.
   // For more details: https://gitlab.com/gitlab-org/gitaly/-/issues/2442
-  string storage_name = 2;
+  string storage_name = 2 [(storage)=true];
 }
 
 // This migth throw a GRPC Unavailable code, to signal the request failure

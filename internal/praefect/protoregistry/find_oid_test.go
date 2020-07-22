@@ -159,3 +159,48 @@ func TestProtoRegistryStorage(t *testing.T) {
 		})
 	}
 }
+
+func TestMethodInfo_SetStorage(t *testing.T) {
+	testCases := []struct {
+		desc      string
+		service   string
+		method    string
+		pbMsg     proto.Message
+		storage   string
+		expectErr error
+	}{
+		{
+			desc:    "valid request type",
+			service: "NamespaceService",
+			method:  "AddNamespace",
+			pbMsg: &gitalypb.AddNamespaceRequest{
+				StorageName: "old_storage",
+			},
+			storage: "new_storage",
+		},
+		{
+			desc:      "incorrect request type",
+			service:   "RepositoryService",
+			method:    "RepackIncremental",
+			pbMsg:     &gitalypb.RepackIncrementalResponse{},
+			expectErr: errors.New("proto message gitaly.RepackIncrementalResponse does not match expected RPC request message gitaly.RepackIncrementalRequest"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			info, err := protoregistry.GitalyProtoPreregistered.LookupMethod("/gitaly." + tc.service + "/" + tc.method)
+			require.NoError(t, err)
+
+			err = info.SetStorage(tc.pbMsg, tc.storage)
+			if tc.expectErr == nil {
+				require.NoError(t, err)
+				changed, err := info.Storage(tc.pbMsg)
+				require.NoError(t, err)
+				require.Equal(t, tc.storage, changed)
+			} else {
+				require.Equal(t, tc.expectErr, err)
+			}
+		})
+	}
+}

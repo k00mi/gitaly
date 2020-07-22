@@ -232,7 +232,7 @@ func TestFindRemoteRepository(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	resp, err := client.FindRemoteRepository(ctx, &gitalypb.FindRemoteRepositoryRequest{Remote: ts.URL})
+	resp, err := client.FindRemoteRepository(ctx, &gitalypb.FindRemoteRepositoryRequest{Remote: ts.URL, StorageName: "default"})
 	require.NoError(t, err)
 
 	require.True(t, resp.Exists)
@@ -259,7 +259,7 @@ func TestFailedFindRemoteRepository(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		resp, err := client.FindRemoteRepository(ctx, &gitalypb.FindRemoteRepositoryRequest{Remote: tc.remote})
+		resp, err := client.FindRemoteRepository(ctx, &gitalypb.FindRemoteRepositoryRequest{Remote: tc.remote, StorageName: "default"})
 		if tc.code == codes.OK {
 			require.NoError(t, err)
 		} else {

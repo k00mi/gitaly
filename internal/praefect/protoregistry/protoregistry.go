@@ -67,6 +67,19 @@ const (
 	ScopeServer
 )
 
+func (s Scope) String() string {
+	switch s {
+	case ScopeServer:
+		return "server"
+	case ScopeStorage:
+		return "storage"
+	case ScopeRepository:
+		return "repository"
+	default:
+		return fmt.Sprintf("N/A: %d", s)
+	}
+}
+
 var protoScope = map[gitalypb.OperationMsg_Scope]Scope{
 	gitalypb.OperationMsg_SERVER:     ScopeServer,
 	gitalypb.OperationMsg_REPOSITORY: ScopeRepository,
@@ -135,6 +148,18 @@ func (mi MethodInfo) Storage(msg proto.Message) (string, error) {
 	}
 
 	return reflectFindStorage(msg, mi.storage)
+}
+
+// SetStorage sets the storage name for a protobuf message
+func (mi MethodInfo) SetStorage(msg proto.Message, storage string) error {
+	if mi.requestName != proto.MessageName(msg) {
+		return fmt.Errorf(
+			"proto message %s does not match expected RPC request message %s",
+			proto.MessageName(msg), mi.requestName,
+		)
+	}
+
+	return reflectSetStorage(msg, mi.storage, storage)
 }
 
 // UnmarshalRequestProto will unmarshal the bytes into the method's request

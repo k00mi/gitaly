@@ -13,6 +13,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/metadatahandler"
@@ -30,6 +31,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 var testLogger = logrus.New()
@@ -771,4 +773,263 @@ func TestCoordinatorEnqueueFailure(t *testing.T) {
 	_, err = mcli.RepoMutatorUnary(context.Background(), repoReq)
 	require.Error(t, err)
 	require.Equal(t, err.Error(), "rpc error: code = Unknown desc = enqueue replication event: "+expectErrMsg)
+}
+
+func TestStreamDirectorServerScope(t *testing.T) {
+	gz := proto.FileDescriptor("mock.proto")
+	fd, err := protoregistry.ExtractFileDescriptor(gz)
+	require.NoError(t, err)
+
+	registry, err := protoregistry.New(fd)
+	require.NoError(t, err)
+
+	conf := config.Config{VirtualStorages: []*config.VirtualStorage{{Name: "praefect"}, {Name: "another"}}}
+	mgr := &nodes.MockManager{GetShardFunc: func(s string) (nodes.Shard, error) {
+		require.Equal(t, "praefect", s)
+		return nodes.Shard{Primary: &nodes.MockNode{}}, nil
+	}}
+	coordinator := NewCoordinator(nil, mgr, nil, conf, registry)
+
+	fullMethod := "/mock.SimpleService/ServerAccessor"
+	requireScopeOperation(t, coordinator.registry, fullMethod, protoregistry.ScopeServer, protoregistry.OpAccessor)
+
+	frame, err := proto.Marshal(&mock.SimpleRequest{})
+	require.NoError(t, err)
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	sp, err := coordinator.StreamDirector(ctx, fullMethod, &mockPeeker{frame})
+	require.NoError(t, err)
+	require.NotNil(t, sp.Primary())
+	require.Empty(t, sp.Secondaries())
+}
+
+func TestStreamDirectorServerScope_Error(t *testing.T) {
+	gz := proto.FileDescriptor("mock.proto")
+	fd, err := protoregistry.ExtractFileDescriptor(gz)
+	require.NoError(t, err)
+
+	registry, err := protoregistry.New(fd)
+	require.NoError(t, err)
+
+	conf := config.Config{VirtualStorages: []*config.VirtualStorage{{Name: "fake"}, {Name: "another"}}}
+
+	t.Run("unknown storage provided", func(t *testing.T) {
+		mgr := &nodes.MockManager{
+			GetShardFunc: func(s string) (nodes.Shard, error) {
+				require.Equal(t, "fake", s)
+				return nodes.Shard{}, nodes.ErrVirtualStorageNotExist
+			},
+		}
+		coordinator := NewCoordinator(nil, mgr, nil, conf, registry)
+
+		fullMethod := "/mock.SimpleService/ServerAccessor"
+		requireScopeOperation(t, coordinator.registry, fullMethod, protoregistry.ScopeServer, protoregistry.OpAccessor)
+
+		frame, err := proto.Marshal(&mock.SimpleRequest{})
+		require.NoError(t, err)
+
+		ctx, cancel := testhelper.Context()
+		defer cancel()
+
+		_, err = coordinator.StreamDirector(ctx, fullMethod, &mockPeeker{frame})
+		require.Error(t, err)
+		result, ok := status.FromError(err)
+		require.True(t, ok)
+		require.Equal(t, codes.InvalidArgument, result.Code())
+		require.Equal(t, "virtual storage does not exist", result.Message())
+	})
+
+	t.Run("primary not healthy", func(t *testing.T) {
+		mgr := &nodes.MockManager{
+			GetShardFunc: func(s string) (nodes.Shard, error) {
+				require.Equal(t, "fake", s)
+				return nodes.Shard{}, nodes.ErrPrimaryNotHealthy
+			},
+		}
+		coordinator := NewCoordinator(nil, mgr, nil, conf, registry)
+
+		fullMethod := "/mock.SimpleService/ServerAccessor"
+		requireScopeOperation(t, coordinator.registry, fullMethod, protoregistry.ScopeServer, protoregistry.OpAccessor)
+
+		frame, err := proto.Marshal(&mock.SimpleRequest{})
+		require.NoError(t, err)
+
+		ctx, cancel := testhelper.Context()
+		defer cancel()
+
+		_, err = coordinator.StreamDirector(ctx, fullMethod, &mockPeeker{frame})
+		require.Error(t, err)
+		require.Equal(t, nodes.ErrPrimaryNotHealthy, err)
+	})
+}
+
+func TestStreamDirectorStorageScope(t *testing.T) {
+	// stubs health-check requests because nodes.NewManager establishes connection on creation
+	gitalySocket0, gitalySocket1 := testhelper.GetTemporaryGitalySocketFileName(), testhelper.GetTemporaryGitalySocketFileName()
+	srv1, _ := testhelper.NewServerWithHealth(t, gitalySocket0)
+	defer srv1.Stop()
+	srv2, _ := testhelper.NewServerWithHealth(t, gitalySocket1)
+	defer srv2.Stop()
+
+	primaryAddress, secondaryAddress := "unix://"+gitalySocket0, "unix://"+gitalySocket1
+	primaryGitaly := &config.Node{Address: primaryAddress, Storage: "gitaly-1", DefaultPrimary: true}
+	secondaryGitaly := &config.Node{Address: secondaryAddress, Storage: "gitaly-2"}
+	conf := config.Config{
+		Failover: config.Failover{Enabled: true},
+		VirtualStorages: []*config.VirtualStorage{{
+			Name:  "praefect",
+			Nodes: []*config.Node{primaryGitaly, secondaryGitaly},
+		}}}
+
+	nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf, nil, nil, promtest.NewMockHistogramVec())
+	require.NoError(t, err)
+	nodeMgr.Start(0, time.Second)
+	coordinator := NewCoordinator(nil, nodeMgr, nil, conf, protoregistry.GitalyProtoPreregistered)
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	t.Run("mutator", func(t *testing.T) {
+		fullMethod := "/gitaly.NamespaceService/RemoveNamespace"
+		requireScopeOperation(t, coordinator.registry, fullMethod, protoregistry.ScopeStorage, protoregistry.OpMutator)
+
+		frame, err := proto.Marshal(&gitalypb.RemoveNamespaceRequest{
+			StorageName: conf.VirtualStorages[0].Name,
+			Name:        "stub",
+		})
+		require.NoError(t, err)
+
+		streamParams, err := coordinator.StreamDirector(ctx, fullMethod, &mockPeeker{frame})
+		require.NoError(t, err)
+
+		require.Equal(t, primaryAddress, streamParams.Primary().Conn.Target(), "stream director didn't redirect to gitaly storage")
+
+		rewritten := gitalypb.RemoveNamespaceRequest{}
+		require.NoError(t, proto.Unmarshal(streamParams.Primary().Msg, &rewritten))
+		require.Equal(t, primaryGitaly.Storage, rewritten.StorageName, "stream director didn't rewrite storage")
+	})
+
+	t.Run("accessor", func(t *testing.T) {
+		fullMethod := "/gitaly.NamespaceService/NamespaceExists"
+		requireScopeOperation(t, coordinator.registry, fullMethod, protoregistry.ScopeStorage, protoregistry.OpAccessor)
+
+		frame, err := proto.Marshal(&gitalypb.NamespaceExistsRequest{
+			StorageName: conf.VirtualStorages[0].Name,
+			Name:        "stub",
+		})
+		require.NoError(t, err)
+
+		streamParams, err := coordinator.StreamDirector(ctx, fullMethod, &mockPeeker{frame})
+		require.NoError(t, err)
+
+		require.Equal(t, primaryAddress, streamParams.Primary().Conn.Target(), "stream director didn't redirect to gitaly storage")
+
+		rewritten := gitalypb.RemoveNamespaceRequest{}
+		require.NoError(t, proto.Unmarshal(streamParams.Primary().Msg, &rewritten))
+		require.Equal(t, primaryGitaly.Storage, rewritten.StorageName, "stream director didn't rewrite storage")
+	})
+}
+
+func TestStreamDirectorStorageScopeError(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	t.Run("no storage provided", func(t *testing.T) {
+		mgr := &nodes.MockManager{
+			GetShardFunc: func(s string) (nodes.Shard, error) {
+				require.FailNow(t, "validation of input was not executed")
+				return nodes.Shard{}, assert.AnError
+			},
+		}
+		coordinator := NewCoordinator(nil, mgr, nil, config.Config{}, protoregistry.GitalyProtoPreregistered)
+
+		frame, err := proto.Marshal(&gitalypb.RemoveNamespaceRequest{StorageName: "", Name: "stub"})
+		require.NoError(t, err)
+
+		_, err = coordinator.StreamDirector(ctx, "/gitaly.NamespaceService/RemoveNamespace", &mockPeeker{frame})
+		require.Error(t, err)
+		result, ok := status.FromError(err)
+		require.True(t, ok)
+		require.Equal(t, codes.InvalidArgument, result.Code())
+		require.Equal(t, "storage scoped: target storage is invalid", result.Message())
+	})
+
+	t.Run("unknown storage provided", func(t *testing.T) {
+		mgr := &nodes.MockManager{
+			GetShardFunc: func(s string) (nodes.Shard, error) {
+				require.Equal(t, "fake", s)
+				return nodes.Shard{}, nodes.ErrVirtualStorageNotExist
+			},
+		}
+		coordinator := NewCoordinator(nil, mgr, nil, config.Config{}, protoregistry.GitalyProtoPreregistered)
+
+		frame, err := proto.Marshal(&gitalypb.RemoveNamespaceRequest{StorageName: "fake", Name: "stub"})
+		require.NoError(t, err)
+
+		_, err = coordinator.StreamDirector(ctx, "/gitaly.NamespaceService/RemoveNamespace", &mockPeeker{frame})
+		require.Error(t, err)
+		result, ok := status.FromError(err)
+		require.True(t, ok)
+		require.Equal(t, codes.InvalidArgument, result.Code())
+		require.Equal(t, "virtual storage does not exist", result.Message())
+	})
+
+	t.Run("primary is not healthy", func(t *testing.T) {
+		t.Run("accessor", func(t *testing.T) {
+			mgr := &nodes.MockManager{
+				GetShardFunc: func(s string) (nodes.Shard, error) {
+					require.Equal(t, "fake", s)
+					return nodes.Shard{}, nodes.ErrPrimaryNotHealthy
+				},
+			}
+			coordinator := NewCoordinator(nil, mgr, nil, config.Config{}, protoregistry.GitalyProtoPreregistered)
+
+			fullMethod := "/gitaly.NamespaceService/NamespaceExists"
+			requireScopeOperation(t, coordinator.registry, fullMethod, protoregistry.ScopeStorage, protoregistry.OpAccessor)
+
+			frame, err := proto.Marshal(&gitalypb.NamespaceExistsRequest{StorageName: "fake", Name: "stub"})
+			require.NoError(t, err)
+
+			_, err = coordinator.StreamDirector(ctx, fullMethod, &mockPeeker{frame})
+			require.Error(t, err)
+			result, ok := status.FromError(err)
+			require.True(t, ok)
+			require.Equal(t, codes.Internal, result.Code())
+			require.Equal(t, `accessor storage scoped: get shard "fake": primary is not healthy`, result.Message())
+		})
+
+		t.Run("mutator", func(t *testing.T) {
+			mgr := &nodes.MockManager{
+				GetShardFunc: func(s string) (nodes.Shard, error) {
+					require.Equal(t, "fake", s)
+					return nodes.Shard{}, nodes.ErrPrimaryNotHealthy
+				},
+			}
+			coordinator := NewCoordinator(nil, mgr, nil, config.Config{}, protoregistry.GitalyProtoPreregistered)
+
+			fullMethod := "/gitaly.NamespaceService/RemoveNamespace"
+			requireScopeOperation(t, coordinator.registry, fullMethod, protoregistry.ScopeStorage, protoregistry.OpMutator)
+
+			frame, err := proto.Marshal(&gitalypb.RemoveNamespaceRequest{StorageName: "fake", Name: "stub"})
+			require.NoError(t, err)
+
+			_, err = coordinator.StreamDirector(ctx, fullMethod, &mockPeeker{frame})
+			require.Error(t, err)
+			result, ok := status.FromError(err)
+			require.True(t, ok)
+			require.Equal(t, codes.Internal, result.Code())
+			require.Equal(t, `mutator storage scoped: get shard "fake": primary is not healthy`, result.Message())
+		})
+	})
+}
+
+func requireScopeOperation(t *testing.T, registry *protoregistry.Registry, fullMethod string, scope protoregistry.Scope, op protoregistry.OpType) {
+	t.Helper()
+
+	mi, err := registry.LookupMethod(fullMethod)
+	require.NoError(t, err)
+	require.Equal(t, scope, mi.Scope, "scope doesn't match requested")
+	require.Equal(t, op, mi.Operation, "operation type doesn't match requested")
 }
