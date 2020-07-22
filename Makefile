@@ -65,8 +65,6 @@ ifeq (${OS},Darwin)
 else ifeq (${OS},Linux)
     PROTOC_URL            ?= https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip
     PROTOC_HASH           ?= 6003de742ea3fcf703cfec1cd4a3380fd143081a2eb0e559065563496af27807
-else
-    $(error Unsupported OS: ${OS})
 endif
 
 # Git target
@@ -346,6 +344,7 @@ ${PROTOC}: ${BUILD_DIR}/protoc.zip | ${BUILD_DIR}
 	cd ${BUILD_DIR}/protoc && unzip ${BUILD_DIR}/protoc.zip
 
 ${BUILD_DIR}/protoc.zip: | ${BUILD_DIR}
+	${Q}if [ -z "${PROTOC_URL}" ]; then echo "Cannot generate protos on unsupported platform ${OS}" && exit 1; fi
 	curl -o $@.tmp --silent --show-error -L ${PROTOC_URL}
 	${Q}printf '${PROTOC_HASH}  $@.tmp' | shasum -a256 -c -
 	${Q}mv $@.tmp $@
