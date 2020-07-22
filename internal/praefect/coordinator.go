@@ -194,12 +194,33 @@ func (c *Coordinator) registerTransaction(ctx context.Context, primary nodes.Nod
 	var voters []transactions.Voter
 	var threshold uint
 
-	for _, node := range append(secondaries, primary) {
+	if featureflag.IsEnabled(ctx, featureflag.ReferenceTransactionsPrimaryWins) {
+		// This voting strategy ensures that transactions always go ahead as long as
+		// the primary doesn't fail because of unrelated reasons. Secondaries' votes do
+		// not matter.
+
 		voters = append(voters, transactions.Voter{
-			Name:  node.GetStorage(),
+			Name:  primary.GetStorage(),
 			Votes: 1,
 		})
-		threshold += 1
+		threshold = 1
+
+		for _, node := range secondaries {
+			voters = append(voters, transactions.Voter{
+				Name:  node.GetStorage(),
+				Votes: 0,
+			})
+		}
+	} else {
+		// This voting strategy ensures strong consistency: all nodes will agree on the
+		// same result, but any failed node will abort the transaction.
+		for _, node := range append(secondaries, primary) {
+			voters = append(voters, transactions.Voter{
+				Name:  node.GetStorage(),
+				Votes: 1,
+			})
+			threshold += 1
+		}
 	}
 
 	return c.txMgr.RegisterTransaction(ctx, voters, threshold)
