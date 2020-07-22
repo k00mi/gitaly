@@ -18,6 +18,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/transactions"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper/promtest"
+	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 )
@@ -111,11 +112,9 @@ func TestAuthSuccess(t *testing.T) {
 			require.NoError(t, err, tc.desc)
 			defer conn.Close()
 
-			cli := mock.NewSimpleServiceClient(conn)
+			cli := gitalypb.NewServerServiceClient(conn)
 
-			_, err = cli.ServerAccessor(ctx, &mock.SimpleRequest{
-				Value: 1,
-			})
+			_, err = cli.ServerInfo(ctx, &gitalypb.ServerInfoRequest{})
 
 			assert.NoError(t, err, tc.desc)
 		})

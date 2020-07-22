@@ -50,6 +50,16 @@ func reflectFindStorage(pbMsg proto.Message, targetOID []int) (string, error) {
 	return targetRepo, nil
 }
 
+func reflectSetStorage(pbMsg proto.Message, targetOID []int, storage string) error {
+	msgV, err := reflectFindOID(pbMsg, targetOID)
+	if err != nil {
+		return err
+	}
+
+	msgV.Set(reflect.ValueOf(storage))
+	return nil
+}
+
 // ErrProtoFieldEmpty indicates the protobuf field is empty
 var ErrProtoFieldEmpty = errors.New("proto field is empty")
 

@@ -21,8 +21,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/labkit/correlation"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type ReadOnlyStorageError string
@@ -368,22 +366,113 @@ func (c *Coordinator) StreamDirector(ctx context.Context, fullMethodName string,
 		return sp, nil
 	}
 
-	// TODO: remove the need to handle non repository scoped RPCs. The only remaining one is FindRemoteRepository.
-	// https://gitlab.com/gitlab-org/gitaly/issues/2442. One this issue is resolved, we can explicitly require that
-	// any RPC that gets proxied through praefect must be repository scoped.
-	shard, err := c.nodeMgr.GetShard(c.conf.VirtualStorages[0].Name)
-	if err != nil {
-		if errors.Is(err, nodes.ErrVirtualStorageNotExist) {
-			return nil, status.Errorf(codes.InvalidArgument, err.Error())
-		}
-		return nil, err
+	if mi.Scope == protoregistry.ScopeStorage {
+		return c.directStorageScopedMessage(ctx, mi, m)
 	}
 
-	return proxy.NewStreamParameters(proxy.Destination{
-		Ctx:  helper.IncomingToOutgoing(ctx),
+	// TODO: please refer to https://gitlab.com/gitlab-org/gitaly/-/issues/2974
+	if mi.Scope == protoregistry.ScopeServer {
+		shard, err := c.nodeMgr.GetShard(c.conf.VirtualStorages[0].Name)
+		if err != nil {
+			if errors.Is(err, nodes.ErrVirtualStorageNotExist) {
+				return nil, helper.ErrInvalidArgument(err)
+			}
+			return nil, err
+		}
+
+		return proxy.NewStreamParameters(proxy.Destination{
+			Ctx:  helper.IncomingToOutgoing(ctx),
+			Conn: shard.Primary.GetConnection(),
+			Msg:  payload,
+		}, nil, func() error { return nil }, nil), nil
+	}
+
+	return nil, helper.ErrInternalf("rpc with undefined scope %q", mi.Scope)
+}
+
+func (c *Coordinator) directStorageScopedMessage(ctx context.Context, mi protoregistry.MethodInfo, msg proto.Message) (*proxy.StreamParameters, error) {
+	virtualStorage, err := mi.Storage(msg)
+	if err != nil {
+		return nil, helper.ErrInvalidArgument(err)
+	}
+
+	if virtualStorage == "" {
+		return nil, helper.ErrInvalidArgumentf("storage scoped: target storage is invalid")
+	}
+
+	var ps *proxy.StreamParameters
+	switch mi.Operation {
+	case protoregistry.OpAccessor:
+		ps, err = c.accessorStorageStreamParameters(ctx, mi, msg, virtualStorage)
+	case protoregistry.OpMutator:
+		ps, err = c.mutatorStorageStreamParameters(ctx, mi, msg, virtualStorage)
+	default:
+		err = fmt.Errorf("storage scope: unknown operation type: %v", mi.Operation)
+	}
+	return ps, err
+}
+
+func (c *Coordinator) accessorStorageStreamParameters(ctx context.Context, mi protoregistry.MethodInfo, msg proto.Message, virtualStorage string) (*proxy.StreamParameters, error) {
+	shard, err := c.nodeMgr.GetShard(virtualStorage)
+	if err != nil {
+		if errors.Is(err, nodes.ErrVirtualStorageNotExist) {
+			return nil, helper.ErrInvalidArgument(err)
+		}
+		return nil, helper.ErrInternalf("accessor storage scoped: get shard %q: %w", virtualStorage, err)
+	}
+
+	primaryStorage := shard.Primary.GetStorage()
+
+	b, err := rewrittenStorageMessage(mi, msg, primaryStorage)
+	if err != nil {
+		return nil, helper.ErrInvalidArgument(fmt.Errorf("accessor storage scoped: %w", err))
+	}
+
+	// As this is a read operation it could be routed to another storage (not only primary) if it meets constraints
+	// such as: it is healthy, it belongs to the same virtual storage bundle, etc.
+	// https://gitlab.com/gitlab-org/gitaly/-/issues/2972
+	primaryDest := proxy.Destination{
+		Ctx:  ctx,
 		Conn: shard.Primary.GetConnection(),
-		Msg:  payload,
-	}, nil, func() error { return nil }, nil), nil
+		Msg:  b,
+	}
+
+	return proxy.NewStreamParameters(primaryDest, nil, func() error { return nil }, nil), nil
+}
+
+func (c *Coordinator) mutatorStorageStreamParameters(ctx context.Context, mi protoregistry.MethodInfo, msg proto.Message, virtualStorage string) (*proxy.StreamParameters, error) {
+	shard, err := c.nodeMgr.GetShard(virtualStorage)
+	if err != nil {
+		if errors.Is(err, nodes.ErrVirtualStorageNotExist) {
+			return nil, helper.ErrInvalidArgument(err)
+		}
+		return nil, helper.ErrInternalf("mutator storage scoped: get shard %q: %w", virtualStorage, err)
+	}
+
+	primaryStorage := shard.Primary.GetStorage()
+
+	b, err := rewrittenStorageMessage(mi, msg, primaryStorage)
+	if err != nil {
+		return nil, helper.ErrInvalidArgument(fmt.Errorf("mutator storage scoped: %w", err))
+	}
+
+	primaryDest := proxy.Destination{
+		Ctx:  ctx,
+		Conn: shard.Primary.GetConnection(),
+		Msg:  b,
+	}
+
+	secondaries := shard.GetHealthySecondaries()
+	secondaryDests := make([]proxy.Destination, len(secondaries))
+	for i, secondary := range secondaries {
+		b, err := rewrittenStorageMessage(mi, msg, secondary.GetStorage())
+		if err != nil {
+			return nil, helper.ErrInvalidArgument(fmt.Errorf("mutator storage scoped: %w", err))
+		}
+		secondaryDests[i] = proxy.Destination{Ctx: ctx, Conn: secondary.GetConnection(), Msg: b}
+	}
+
+	return proxy.NewStreamParameters(primaryDest, secondaryDests, func() error { return nil }, nil), nil
 }
 
 func rewrittenRepositoryMessage(mi protoregistry.MethodInfo, m proto.Message, storage string) ([]byte, error) {
@@ -410,6 +499,14 @@ func rewrittenRepositoryMessage(mi protoregistry.MethodInfo, m proto.Message, st
 	}
 
 	return b, nil
+}
+
+func rewrittenStorageMessage(mi protoregistry.MethodInfo, m proto.Message, storage string) ([]byte, error) {
+	if err := mi.SetStorage(m, storage); err != nil {
+		return nil, helper.ErrInvalidArgument(err)
+	}
+
+	return proxy.NewCodec().Marshal(m)
 }
 
 func protoMessage(mi protoregistry.MethodInfo, frame []byte) (proto.Message, error) {
