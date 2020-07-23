@@ -50,7 +50,6 @@ BUILD_TIME      := $(shell date +"%Y%m%d.%H%M%S")
 GITALY_VERSION  := $(shell git describe --match v* 2>/dev/null | sed 's/^v//' || cat ${SOURCE_DIR}/VERSION 2>/dev/null || echo unknown)
 GO_LDFLAGS      := -ldflags '-X ${GITALY_PACKAGE}/internal/version.version=${GITALY_VERSION} -X ${GITALY_PACKAGE}/internal/version.buildtime=${BUILD_TIME}'
 GO_TEST_LDFLAGS := -X gitlab.com/gitlab-org/gitaly/auth.timestampThreshold=5s
-GO_BUILD_TAGS   := tracer_static tracer_static_jaeger continuous_profiler_stackdriver
 
 # Dependency versions
 GOLANGCI_LINT_VERSION ?= 1.27.0
@@ -123,7 +122,7 @@ all: install
 
 .PHONY: build
 build: ${SOURCE_DIR}/.ruby-bundle
-	go install ${GO_LDFLAGS} -tags "${GO_BUILD_TAGS}" $(addprefix ${GITALY_PACKAGE}/cmd/, $(call find_commands))
+	go install ${GO_LDFLAGS} $(addprefix ${GITALY_PACKAGE}/cmd/, $(call find_commands))
 
 .PHONY: install
 install: build
@@ -172,17 +171,17 @@ test: test-go rspec rspec-gitlab-shell
 test-go: prepare-tests ${GO_JUNIT_REPORT}
 	${Q}mkdir -p ${TEST_REPORT_DIR}
 	${Q}echo 0>${TEST_EXIT}
-	${Q}go test ${TEST_OPTIONS} -v -tags "${GO_BUILD_TAGS}" -ldflags='${GO_TEST_LDFLAGS}' -count=1 $(call find_go_packages) 2>&1 | tee ${TEST_OUTPUT} || echo $$? >${TEST_EXIT}
+	${Q}go test ${TEST_OPTIONS} -v -ldflags='${GO_TEST_LDFLAGS}' -count=1 $(call find_go_packages) 2>&1 | tee ${TEST_OUTPUT} || echo $$? >${TEST_EXIT}
 	${Q}${GO_JUNIT_REPORT} <${TEST_OUTPUT} >${TEST_REPORT}
 	${Q}exit `cat ${TEST_EXIT}`
 
 .PHONY: test-with-proxies
 test-with-proxies: prepare-tests
-	${Q}go test -tags "${GO_BUILD_TAGS}" -count=1  -exec ${SOURCE_DIR}/_support/bad-proxies ${GITALY_PACKAGE}/internal/rubyserver/
+	${Q}go test -count=1  -exec ${SOURCE_DIR}/_support/bad-proxies ${GITALY_PACKAGE}/internal/rubyserver/
 
 .PHONY: test-with-praefect
 test-with-praefect: build prepare-tests
-	${Q}GITALY_TEST_PRAEFECT_BIN=${BUILD_DIR}/bin/praefect go test -tags "${GO_BUILD_TAGS}" -ldflags='${GO_TEST_LDFLAGS}' -count=1 $(call find_go_packages) # count=1 bypasses go 1.10 test caching
+	${Q}GITALY_TEST_PRAEFECT_BIN=${BUILD_DIR}/bin/praefect go test -ldflags='${GO_TEST_LDFLAGS}' -count=1 $(call find_go_packages) # count=1 bypasses go 1.10 test caching
 
 .PHONY: race-go
 race-go: TEST_OPTIONS = -race
@@ -270,7 +269,7 @@ docker:
 	cp -r  ${GITALY_RUBY_DIR} ${BUILD_DIR}/docker/ruby
 	${Q}rm -rf ${BUILD_DIR}/docker/ruby/vendor/bundle
 	for command in $(call find_commands); do \
-		GOOS=linux GOARCH=amd64 go build -tags "${GO_BUILD_TAGS}" ${GO_LDFLAGS} -o "${BUILD_DIR}/docker/bin/$${command}" ${GITALY_PACKAGE}/cmd/$${command}; \
+		GOOS=linux GOARCH=amd64 go build ${GO_LDFLAGS} -o "${BUILD_DIR}/docker/bin/$${command}" ${GITALY_PACKAGE}/cmd/$${command}; \
 	done
 	cp ${SOURCE_DIR}/Dockerfile ${BUILD_DIR}/docker/
 	docker build -t gitlab/gitaly:v${GITALY_VERSION} -t gitlab/gitaly:latest ${BUILD_DIR}/docker/
