@@ -253,37 +253,6 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 		if err != nil {
 			return nil, fmt.Errorf("registering transactions: %w", err)
 		}
-		finalizers = append(finalizers, func() error {
-			if err := transactionCleanup(); err != nil {
-				return err
-			}
-
-			successByNode := transaction.State()
-
-			// If the primary node failed the transaction, then
-			// there's no sense in trying to replicate from primary
-			// to secondaries.
-			if !successByNode[shard.Primary.GetStorage()] {
-				return fmt.Errorf("transaction: primary failed vote")
-			}
-			delete(successByNode, shard.Primary.GetStorage())
-
-			updatedSecondaries := make([]string, 0, len(participatingSecondaries))
-			var outdatedSecondaries []string
-
-			for node, success := range successByNode {
-				if success {
-					updatedSecondaries = append(updatedSecondaries, node)
-					continue
-				}
-
-				outdatedSecondaries = append(outdatedSecondaries, node)
-			}
-
-			return c.newRequestFinalizer(
-				ctx, virtualStorage, call.targetRepo,
-				shard.Primary.GetStorage(), updatedSecondaries, outdatedSecondaries, change, params)()
-		})
 
 		injectedCtx, err := metadata.InjectTransaction(ctx, transaction.ID(), shard.Primary.GetStorage(), true)
 		if err != nil {
@@ -309,6 +278,10 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 				Msg:  secondaryMsg,
 			})
 		}
+
+		finalizers = append(finalizers,
+			transactionCleanup, c.createTransactionFinalizer(ctx, transaction, shard, virtualStorage, call.targetRepo, change, params),
+		)
 	} else {
 		finalizers = append(finalizers,
 			c.newRequestFinalizer(
@@ -543,6 +516,44 @@ func protoMessage(mi protoregistry.MethodInfo, frame []byte) (proto.Message, err
 	}
 
 	return m, nil
+}
+
+func (c *Coordinator) createTransactionFinalizer(
+	ctx context.Context,
+	transaction *transactions.Transaction,
+	shard nodes.Shard,
+	virtualStorage string,
+	targetRepo *gitalypb.Repository,
+	change datastore.ChangeType,
+	params datastore.Params,
+) func() error {
+	return func() error {
+		successByNode := transaction.State()
+
+		// If the primary node failed the transaction, then
+		// there's no sense in trying to replicate from primary
+		// to secondaries.
+		if !successByNode[shard.Primary.GetStorage()] {
+			return fmt.Errorf("transaction: primary failed vote")
+		}
+		delete(successByNode, shard.Primary.GetStorage())
+
+		updatedSecondaries := make([]string, 0, len(successByNode))
+		var outdatedSecondaries []string
+
+		for node, success := range successByNode {
+			if success {
+				updatedSecondaries = append(updatedSecondaries, node)
+				continue
+			}
+
+			outdatedSecondaries = append(outdatedSecondaries, node)
+		}
+
+		return c.newRequestFinalizer(
+			ctx, virtualStorage, targetRepo, shard.Primary.GetStorage(),
+			updatedSecondaries, outdatedSecondaries, change, params)()
+	}
 }
 
 func nodesToStorages(nodes []nodes.Node) []string {
