@@ -77,6 +77,8 @@ type RepositoryStore interface {
 	// IsLatestGeneration checks whether the repository is on the latest generation or not. If the repository does not
 	// have an expected generation, every storage is considered to be on the latest version.
 	IsLatestGeneration(ctx context.Context, virtualStorage, relativePath, storage string) (bool, error)
+	// RepositoryExists returns whether the repository exists on a virtual storage.
+	RepositoryExists(ctx context.Context, virtualStorage, relativePath string) (bool, error)
 }
 
 // PostgresRepositoryStore is a Postgres implementation of RepositoryStore.
@@ -381,4 +383,24 @@ AND r.relative_path = $2
 	}
 
 	return isLatest, nil
+}
+
+func (rs *PostgresRepositoryStore) RepositoryExists(ctx context.Context, virtualStorage, relativePath string) (bool, error) {
+	const q = `
+SELECT true
+FROM repositories
+WHERE virtual_storage = $1
+AND relative_path = $2
+`
+
+	var exists bool
+	if err := rs.db.QueryRowContext(ctx, q, virtualStorage, relativePath).Scan(&exists); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	return exists, nil
 }

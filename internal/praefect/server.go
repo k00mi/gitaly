@@ -86,7 +86,7 @@ func NewGRPCServer(
 	warnDupeAddrs(logger, conf)
 
 	srv := grpc.NewServer(grpcOpts...)
-	registerServices(srv, nodeMgr, txMgr, conf, queue)
+	registerServices(srv, nodeMgr, txMgr, conf, queue, rs)
 	return srv
 }
 
@@ -98,10 +98,10 @@ func proxyRequiredOpts(director proxy.StreamDirector) []grpc.ServerOption {
 }
 
 // registerServices registers services praefect needs to handle RPCs on its own.
-func registerServices(srv *grpc.Server, nm nodes.Manager, tm *transactions.Manager, conf config.Config, queue datastore.ReplicationEventQueue) {
+func registerServices(srv *grpc.Server, nm nodes.Manager, tm *transactions.Manager, conf config.Config, queue datastore.ReplicationEventQueue, rs datastore.RepositoryStore) {
 	// ServerServiceServer is necessary for the ServerInfo RPC
 	gitalypb.RegisterServerServiceServer(srv, server.NewServer(conf, nm))
-	gitalypb.RegisterPraefectInfoServiceServer(srv, info.NewServer(nm, conf, queue))
+	gitalypb.RegisterPraefectInfoServiceServer(srv, info.NewServer(nm, conf, queue, rs))
 	gitalypb.RegisterRefTransactionServer(srv, transaction.NewServer(tm))
 	healthpb.RegisterHealthServer(srv, health.NewServer())
 

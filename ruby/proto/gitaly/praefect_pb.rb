@@ -5,8 +5,14 @@ require 'google/protobuf'
 
 require 'lint_pb'
 require 'shared_pb'
-require 'google/protobuf/timestamp_pb'
 Google::Protobuf::DescriptorPool.generated_pool.build do
+  add_message "gitaly.SetAuthoritativeStorageRequest" do
+    optional :virtual_storage, :string, 1
+    optional :relative_path, :string, 2
+    optional :authoritative_storage, :string, 3
+  end
+  add_message "gitaly.SetAuthoritativeStorageResponse" do
+  end
   add_message "gitaly.EnableWritesRequest" do
     optional :virtual_storage, :string, 1
   end
@@ -53,6 +59,8 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
 end
 
 module Gitaly
+  SetAuthoritativeStorageRequest = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.SetAuthoritativeStorageRequest").msgclass
+  SetAuthoritativeStorageResponse = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.SetAuthoritativeStorageResponse").msgclass
   EnableWritesRequest = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.EnableWritesRequest").msgclass
   EnableWritesResponse = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.EnableWritesResponse").msgclass
   DatalossCheckRequest = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.DatalossCheckRequest").msgclass

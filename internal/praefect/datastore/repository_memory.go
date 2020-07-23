@@ -209,6 +209,10 @@ func (m *MemoryRepositoryStore) IsLatestGeneration(ctx context.Context, virtualS
 	return expected == actual, nil
 }
 
+func (m *MemoryRepositoryStore) RepositoryExists(ctx context.Context, virtualStorage, relativePath string) (bool, error) {
+	return m.getRepositoryGeneration(virtualStorage, relativePath) != GenerationUnknown, nil
+}
+
 func (m *MemoryRepositoryStore) getRepositoryGeneration(virtualStorage, relativePath string) int {
 	gen, ok := m.virtualStorageState[virtualStorage][relativePath]
 	if !ok {
