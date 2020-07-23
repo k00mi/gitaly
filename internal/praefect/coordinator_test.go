@@ -90,6 +90,7 @@ func TestStreamDirectorReadOnlyEnforcement(t *testing.T) {
 			const storageName = "test-storage"
 			coordinator := NewCoordinator(
 				datastore.NewMemoryReplicationEventQueue(conf),
+				nil,
 				&nodes.MockManager{GetShardFunc: func(storage string) (nodes.Shard, error) {
 					return nodes.Shard{
 						IsReadOnly: tc.readOnly,
@@ -163,7 +164,14 @@ func TestStreamDirectorMutator(t *testing.T) {
 
 	txMgr := transactions.NewManager()
 
-	coordinator := NewCoordinator(queueInterceptor, nodeMgr, txMgr, conf, protoregistry.GitalyProtoPreregistered)
+	coordinator := NewCoordinator(
+		queueInterceptor,
+		datastore.NewMemoryRepositoryStore(conf.StorageNames()),
+		nodeMgr,
+		txMgr,
+		conf,
+		protoregistry.GitalyProtoPreregistered,
+	)
 
 	frame, err := proto.Marshal(&gitalypb.FetchIntoObjectPoolRequest{
 		Origin:     &targetRepo,
@@ -223,10 +231,12 @@ func TestStreamDirectorMutator(t *testing.T) {
 
 func TestStreamDirectorMutator_Transaction(t *testing.T) {
 	type node struct {
-		primary       bool
-		vote          string
-		shouldSucceed bool
-		shouldGetRepl bool
+		primary           bool
+		vote              string
+		shouldSucceed     bool
+		shouldGetRepl     bool
+		shouldParticipate bool
+		generation        int
 	}
 
 	testcases := []struct {
@@ -236,9 +246,9 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 		{
 			desc: "successful vote should not create replication jobs",
 			nodes: []node{
-				{primary: true, vote: "foobar", shouldSucceed: true, shouldGetRepl: false},
-				{primary: false, vote: "foobar", shouldSucceed: true, shouldGetRepl: false},
-				{primary: false, vote: "foobar", shouldSucceed: true, shouldGetRepl: false},
+				{primary: true, vote: "foobar", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
+				{primary: false, vote: "foobar", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
+				{primary: false, vote: "foobar", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
 			},
 		},
 		{
@@ -247,9 +257,25 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 			// we don't get any replication jobs if any node disagrees.
 			desc: "failing vote should not create replication jobs",
 			nodes: []node{
-				{primary: true, vote: "foobar", shouldSucceed: false, shouldGetRepl: false},
-				{primary: false, vote: "foobar", shouldSucceed: false, shouldGetRepl: false},
-				{primary: false, vote: "barfoo", shouldSucceed: false, shouldGetRepl: false},
+				{primary: true, vote: "foobar", shouldSucceed: false, shouldGetRepl: false, shouldParticipate: true},
+				{primary: false, vote: "foobar", shouldSucceed: false, shouldGetRepl: false, shouldParticipate: true},
+				{primary: false, vote: "barfoo", shouldSucceed: false, shouldGetRepl: false, shouldParticipate: true},
+			},
+		},
+		{
+			desc: "only consistent secondaries should participate",
+			nodes: []node{
+				{primary: true, vote: "foobar", shouldSucceed: true, shouldParticipate: true, generation: 1},
+				{primary: false, vote: "foobar", shouldSucceed: true, shouldParticipate: true, generation: 1},
+				{shouldParticipate: false, generation: 0},
+				{shouldParticipate: false, generation: datastore.GenerationUnknown},
+			},
+		},
+		{
+			desc: "secondaries should not participate when primary's generation is unknown",
+			nodes: []node{
+				{primary: true, vote: "foobar", shouldSucceed: true, shouldParticipate: true, generation: datastore.GenerationUnknown},
+				{shouldParticipate: false, generation: datastore.GenerationUnknown},
 			},
 		},
 	}
@@ -304,7 +330,17 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 
 			txMgr := transactions.NewManager()
 
-			coordinator := NewCoordinator(queueInterceptor, nodeMgr, txMgr, conf, protoregistry.GitalyProtoPreregistered)
+			// set up the generations prior to transaction
+			rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
+			for i, n := range tc.nodes {
+				if n.generation == datastore.GenerationUnknown {
+					continue
+				}
+
+				require.NoError(t, rs.SetGeneration(ctx, repo.StorageName, repo.RelativePath, storageNodes[i].Storage, n.generation))
+			}
+
+			coordinator := NewCoordinator(queueInterceptor, rs, nodeMgr, txMgr, conf, protoregistry.GitalyProtoPreregistered)
 
 			fullMethod := "/gitaly.SmartHTTPService/PostReceivePack"
 
@@ -322,6 +358,10 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 
 			var voterWaitGroup sync.WaitGroup
 			for i, node := range tc.nodes {
+				if !node.shouldParticipate {
+					continue
+				}
+
 				voterWaitGroup.Add(1)
 
 				i := i
@@ -358,6 +398,19 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 				require.NoError(t, err)
 			} else {
 				require.Error(t, err, errors.New("transaction: primary failed vote"))
+			}
+
+			// Nodes that successfully committed should have their generations incremented.
+			// Nodes that did not successfully commit or did not participate should remain on their
+			// existing generation.
+			for i, n := range tc.nodes {
+				gen, err := rs.GetGeneration(ctx, repo.StorageName, repo.RelativePath, storageNodes[i].Storage)
+				require.NoError(t, err)
+				expectedGeneration := n.generation
+				if n.shouldSucceed {
+					expectedGeneration++
+				}
+				require.Equal(t, expectedGeneration, gen)
 			}
 
 			replicationWaitGroup.Wait()
@@ -413,7 +466,14 @@ func TestStreamDirectorAccessor(t *testing.T) {
 
 	txMgr := transactions.NewManager()
 
-	coordinator := NewCoordinator(queue, nodeMgr, txMgr, conf, protoregistry.GitalyProtoPreregistered)
+	coordinator := NewCoordinator(
+		queue,
+		datastore.NewMemoryRepositoryStore(conf.StorageNames()),
+		nodeMgr,
+		txMgr,
+		conf,
+		protoregistry.GitalyProtoPreregistered,
+	)
 
 	frame, err := proto.Marshal(&gitalypb.FindAllBranchesRequest{Repository: &targetRepo})
 	require.NoError(t, err)
@@ -490,7 +550,14 @@ func TestCoordinatorStreamDirector_distributesReads(t *testing.T) {
 
 	txMgr := transactions.NewManager()
 
-	coordinator := NewCoordinator(queue, nodeMgr, txMgr, conf, protoregistry.GitalyProtoPreregistered)
+	coordinator := NewCoordinator(
+		queue,
+		datastore.NewMemoryRepositoryStore(conf.StorageNames()),
+		nodeMgr,
+		txMgr,
+		conf,
+		protoregistry.GitalyProtoPreregistered,
+	)
 
 	t.Run("forwards accessor operations", func(t *testing.T) {
 		var primaryChosen int
@@ -680,7 +747,14 @@ func TestAbsentCorrelationID(t *testing.T) {
 	require.NoError(t, err)
 	txMgr := transactions.NewManager()
 
-	coordinator := NewCoordinator(queueInterceptor, nodeMgr, txMgr, conf, protoregistry.GitalyProtoPreregistered)
+	coordinator := NewCoordinator(
+		queueInterceptor,
+		datastore.NewMemoryRepositoryStore(conf.StorageNames()),
+		nodeMgr,
+		txMgr,
+		conf,
+		protoregistry.GitalyProtoPreregistered,
+	)
 
 	frame, err := proto.Marshal(&gitalypb.FetchIntoObjectPoolRequest{
 		Origin:     &targetRepo,

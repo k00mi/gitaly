@@ -789,7 +789,27 @@ func TestProxyWrites(t *testing.T) {
 	nodeMgr, err := nodes.NewManager(entry, conf, nil, queue, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 
-	coordinator := NewCoordinator(queue, nodeMgr, txMgr, conf, protoregistry.GitalyProtoPreregistered)
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
+	for _, vs := range conf.VirtualStorages {
+		for _, n := range vs.Nodes {
+			require.NoError(t, rs.SetGeneration(ctx, vs.Name, testRepo.RelativePath, n.Storage, 0))
+		}
+	}
+
+	coordinator := NewCoordinator(
+		queue,
+		rs,
+		nodeMgr,
+		txMgr,
+		conf,
+		protoregistry.GitalyProtoPreregistered,
+	)
 
 	server := grpc.NewServer(
 		grpc.CustomCodec(proxy.NewCodec()),
@@ -805,9 +825,6 @@ func TestProxyWrites(t *testing.T) {
 
 	client, _ := newSmartHTTPClient(t, "unix://"+socket)
 
-	ctx, cancel := testhelper.Context()
-	defer cancel()
-
 	shard, err := nodeMgr.GetShard(conf.VirtualStorages[0].Name)
 	require.NoError(t, err)
 
@@ -818,9 +835,6 @@ func TestProxyWrites(t *testing.T) {
 	}
 
 	ctx = featureflag.OutgoingCtxWithFeatureFlags(ctx, featureflag.ReferenceTransactions)
-
-	testRepo, _, cleanup := testhelper.NewTestRepo(t)
-	defer cleanup()
 
 	stream, err := client.PostReceivePack(ctx)
 	require.NoError(t, err)

@@ -15,7 +15,9 @@ import (
 // without a generation number.
 const GenerationUnknown = -1
 
-type downgradeAttemptedError struct {
+// DowngradeAttemptedError is returned when attempting to get the replicated generation for a source repository
+// that does not upgrade the target repository.
+type DowngradeAttemptedError struct {
 	virtualStorage      string
 	relativePath        string
 	storage             string
@@ -23,7 +25,7 @@ type downgradeAttemptedError struct {
 	attemptedGeneration int
 }
 
-func (err downgradeAttemptedError) Error() string {
+func (err DowngradeAttemptedError) Error() string {
 	return fmt.Sprintf("attempted downgrading %q -> %q -> %q from generation %d to %d",
 		err.virtualStorage, err.relativePath, err.storage, err.currentGeneration, err.attemptedGeneration,
 	)
@@ -54,12 +56,13 @@ type RepositoryStore interface {
 	// GetGeneration gets the repository's generation on a given storage.
 	GetGeneration(ctx context.Context, virtualStorage, relativePath, storage string) (int, error)
 	// IncrementGeneration increments the primary's and the up to date secondaries' generations.
-	IncrementGeneration(ctx context.Context, virtualStorage, relativePath, primary string, secondaries []string) (int, error)
+	IncrementGeneration(ctx context.Context, virtualStorage, relativePath, primary string, secondaries []string) error
 	// SetGeneration sets the repository's generation on the given storage. If the generation is higher
 	// than the virtual storage's generation, it is set to match as well to guarantee monotonic increments.
 	SetGeneration(ctx context.Context, virtualStorage, relativePath, storage string, generation int) error
-	// EnsureUpgrade returns an error if the given generation would downgrade the storage's repository.
-	EnsureUpgrade(ctx context.Context, virtualStorage, relativePath, storage string, generation int) error
+	// GetReplicatedGeneration returns the generation propagated by applying the replication. If the generation would
+	// downgrade, a DowngradeAttemptedError is returned.
+	GetReplicatedGeneration(ctx context.Context, virtualStorage, relativePath, source, target string) (int, error)
 	// DeleteRepository deletes the repository from the virtual storage and the storage. Returns
 	// RepositoryNotExistsError when trying to delete a repository which has no record in the virtual storage
 	// or the storage.
@@ -68,18 +71,21 @@ type RepositoryStore interface {
 	// as the storage's which is calling it. Returns RepositoryNotExistsError when trying to rename a repository
 	// which has no record in the virtual storage or the storage.
 	RenameRepository(ctx context.Context, virtualStorage, relativePath, storage, newRelativePath string) error
+	// GetConsistentSecondaries checks which secondaries are on the same generation as the primary and returns them.
+	// If the primary's generation is unknown, all secondaries are considered inconsistent.
+	GetConsistentSecondaries(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error)
 }
 
 // PostgresRepositoryStore is a Postgres implementation of RepositoryStore.
 // Refer to the interface for method documentation.
 type PostgresRepositoryStore struct {
-	db       glsql.Querier
-	storages map[string][]string
+	db glsql.Querier
+	storages
 }
 
 // NewLocalRepositoryStore returns a Postgres implementation of RepositoryStore.
-func NewPostgresRepositoryStore(db glsql.Querier, storages map[string][]string) *PostgresRepositoryStore {
-	return &PostgresRepositoryStore{db: db, storages: storages}
+func NewPostgresRepositoryStore(db glsql.Querier, configuredStorages map[string][]string) *PostgresRepositoryStore {
+	return &PostgresRepositoryStore{db: db, storages: storages(configuredStorages)}
 }
 
 func (rs *PostgresRepositoryStore) GetGeneration(ctx context.Context, virtualStorage, relativePath, storage string) (int, error) {
@@ -103,7 +109,7 @@ AND storage = $3
 	return gen, nil
 }
 
-func (rs *PostgresRepositoryStore) IncrementGeneration(ctx context.Context, virtualStorage, relativePath, primary string, secondaries []string) (int, error) {
+func (rs *PostgresRepositoryStore) IncrementGeneration(ctx context.Context, virtualStorage, relativePath, primary string, secondaries []string) error {
 	// The query works as follows:
 	//   1. `next_generation` CTE increments the latest generation by 1. If no previous records exists,
 	//      the generation starts from 0.
@@ -159,15 +165,9 @@ FROM eligible_storages
 CROSS JOIN next_generation
 ON CONFLICT (virtual_storage, relative_path, storage) DO
 	UPDATE SET generation = EXCLUDED.generation
-RETURNING generation
 `
-
-	var generation int
-	if err := rs.db.QueryRowContext(ctx, q, virtualStorage, relativePath, primary, pq.StringArray(secondaries)).Scan(&generation); err != nil {
-		return 0, err
-	}
-
-	return generation, nil
+	_, err := rs.db.ExecContext(ctx, q, virtualStorage, relativePath, primary, pq.StringArray(secondaries))
+	return err
 }
 
 func (rs *PostgresRepositoryStore) SetGeneration(ctx context.Context, virtualStorage, relativePath, storage string, generation int) error {
@@ -198,23 +198,55 @@ ON CONFLICT (virtual_storage, relative_path, storage) DO UPDATE SET
 	return err
 }
 
-func (rs *PostgresRepositoryStore) EnsureUpgrade(ctx context.Context, virtualStorage, relativePath, storage string, generation int) error {
-	current, err := rs.GetGeneration(ctx, virtualStorage, relativePath, storage)
-	if err != nil {
-		return err
-	}
+func (rs *PostgresRepositoryStore) GetReplicatedGeneration(ctx context.Context, virtualStorage, relativePath, source, target string) (int, error) {
+	const q = `
+SELECT storage, generation
+FROM storage_repositories
+WHERE virtual_storage = $1
+AND relative_path = $2
+AND storage = ANY($3)
+`
 
-	if current != GenerationUnknown && current >= generation {
-		return downgradeAttemptedError{
-			virtualStorage:      virtualStorage,
-			relativePath:        relativePath,
-			storage:             storage,
-			currentGeneration:   current,
-			attemptedGeneration: generation,
+	rows, err := rs.db.QueryContext(ctx, q, virtualStorage, relativePath, pq.StringArray([]string{source, target}))
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+
+	sourceGeneration := GenerationUnknown
+	targetGeneration := GenerationUnknown
+	for rows.Next() {
+		var storage string
+		var generation int
+		if err := rows.Scan(&storage, &generation); err != nil {
+			return 0, err
+		}
+
+		switch storage {
+		case source:
+			sourceGeneration = generation
+		case target:
+			targetGeneration = generation
+		default:
+			return 0, fmt.Errorf("unexpected storage: %s", storage)
 		}
 	}
 
-	return nil
+	if err := rows.Err(); err != nil {
+		return 0, err
+	}
+
+	if targetGeneration != GenerationUnknown && targetGeneration >= sourceGeneration {
+		return 0, DowngradeAttemptedError{
+			virtualStorage:      virtualStorage,
+			relativePath:        relativePath,
+			storage:             target,
+			currentGeneration:   targetGeneration,
+			attemptedGeneration: sourceGeneration,
+		}
+	}
+
+	return sourceGeneration, nil
 }
 
 func (rs *PostgresRepositoryStore) DeleteRepository(ctx context.Context, virtualStorage, relativePath, storage string) error {
@@ -281,4 +313,43 @@ AND storage = $3
 	}
 
 	return err
+}
+
+func (rs *PostgresRepositoryStore) GetConsistentSecondaries(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error) {
+	const q = `
+WITH expected AS (
+	SELECT virtual_storage, relative_path, generation
+	FROM storage_repositories
+	WHERE virtual_storage = $1
+	AND relative_path = $2
+	AND storage = $3
+)
+
+SELECT storage
+FROM storage_repositories
+NATURAL JOIN expected
+WHERE storage = ANY($4::text[])
+`
+	secondaries, err := rs.storages.secondaries(virtualStorage, primary)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := rs.db.QueryContext(ctx, q, virtualStorage, relativePath, primary, pq.StringArray(secondaries))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	consistentSecondaries := make(map[string]struct{}, len(secondaries))
+	for rows.Next() {
+		var storage string
+		if err := rows.Scan(&storage); err != nil {
+			return nil, err
+		}
+
+		consistentSecondaries[storage] = struct{}{}
+	}
+
+	return consistentSecondaries, rows.Err()
 }

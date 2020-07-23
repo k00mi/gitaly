@@ -36,9 +36,7 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 		t.Run("creates a new record for primary", func(t *testing.T) {
 			rs, requireState := newStore(t, nil)
 
-			generation, err := rs.IncrementGeneration(ctx, vs, repo, "primary", []string{"secondary-1"})
-			require.NoError(t, err)
-			require.Equal(t, 0, generation)
+			require.NoError(t, rs.IncrementGeneration(ctx, vs, repo, "primary", []string{"secondary-1"}))
 			requireState(t, ctx,
 				virtualStorageState{
 					"virtual-storage-1": {
@@ -59,9 +57,7 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 			rs, requireState := newStore(t, nil)
 
 			require.NoError(t, rs.SetGeneration(ctx, vs, repo, "primary", 0))
-			generation, err := rs.IncrementGeneration(ctx, vs, repo, "primary", []string{"secondary-1"})
-			require.NoError(t, err)
-			require.Equal(t, 1, generation)
+			require.NoError(t, rs.IncrementGeneration(ctx, vs, repo, "primary", []string{"secondary-1"}))
 			requireState(t, ctx,
 				virtualStorageState{
 					"virtual-storage-1": {
@@ -101,10 +97,8 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 				},
 			)
 
-			generation, err := rs.IncrementGeneration(ctx, vs, repo, "primary", []string{
-				"up-to-date-secondary", "outdated-secondary", "non-existing-secondary"})
-			require.NoError(t, err)
-			require.Equal(t, 2, generation)
+			require.NoError(t, rs.IncrementGeneration(ctx, vs, repo, "primary", []string{
+				"up-to-date-secondary", "outdated-secondary", "non-existing-secondary"}))
 			requireState(t, ctx,
 				virtualStorageState{
 					"virtual-storage-1": {
@@ -172,15 +166,38 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 
 			require.NoError(t, rs.SetGeneration(ctx, vs, repo, stor, 1))
 			require.NoError(t, rs.SetGeneration(ctx, vs, repo, stor, 0))
+			requireState(t, ctx,
+				virtualStorageState{
+					"virtual-storage-1": {
+						"repository-1": 1,
+					},
+				},
+				storageState{
+					"virtual-storage-1": {
+						"repository-1": {
+							"storage-1": 0,
+						},
+					},
+				},
+			)
 
-			generation, err := rs.IncrementGeneration(ctx, vs, repo, stor, nil)
-			require.NoError(t, err)
-			require.Equal(t, 2, generation)
+			require.NoError(t, rs.IncrementGeneration(ctx, vs, repo, stor, nil))
+			requireState(t, ctx,
+				virtualStorageState{
+					"virtual-storage-1": {
+						"repository-1": 2,
+					},
+				},
+				storageState{
+					"virtual-storage-1": {
+						"repository-1": {
+							"storage-1": 2,
+						},
+					},
+				},
+			)
 
-			generation, err = rs.IncrementGeneration(ctx, vs, repo, "storage-2", nil)
-			require.NoError(t, err)
-			require.Equal(t, 3, generation)
-
+			require.NoError(t, rs.IncrementGeneration(ctx, vs, repo, "storage-2", nil))
 			requireState(t, ctx,
 				virtualStorageState{
 					"virtual-storage-1": {
@@ -213,87 +230,49 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 		require.Equal(t, 0, generation)
 	})
 
-	t.Run("EnsureUpgrade", func(t *testing.T) {
+	t.Run("GetReplicatedGeneration", func(t *testing.T) {
 		t.Run("no previous record allowed", func(t *testing.T) {
 			rs, _ := newStore(t, nil)
-			require.NoError(t, rs.EnsureUpgrade(ctx, vs, repo, stor, GenerationUnknown))
-			require.NoError(t, rs.EnsureUpgrade(ctx, vs, repo, stor, 0))
+
+			gen, err := rs.GetReplicatedGeneration(ctx, vs, repo, "source", "target")
+			require.NoError(t, err)
+			require.Equal(t, GenerationUnknown, gen)
+
+			require.NoError(t, rs.SetGeneration(ctx, vs, repo, "source", 0))
+			gen, err = rs.GetReplicatedGeneration(ctx, vs, repo, "source", "target")
+			require.NoError(t, err)
+			require.Equal(t, 0, gen)
 		})
 
 		t.Run("upgrade allowed", func(t *testing.T) {
-			rs, requireState := newStore(t, nil)
+			rs, _ := newStore(t, nil)
 
-			require.NoError(t, rs.SetGeneration(ctx, vs, repo, stor, 0))
-			require.NoError(t, rs.EnsureUpgrade(ctx, vs, repo, stor, 1))
-			require.Error(t,
-				downgradeAttemptedError{vs, repo, stor, 1, GenerationUnknown},
-				rs.EnsureUpgrade(ctx, vs, repo, stor, GenerationUnknown))
-			requireState(t, ctx,
-				virtualStorageState{
-					"virtual-storage-1": {
-						"repository-1": 0,
-					},
-				},
-				storageState{
-					"virtual-storage-1": {
-						"repository-1": {
-							"storage-1": 0,
-						},
-					},
-				},
-			)
+			require.NoError(t, rs.SetGeneration(ctx, vs, repo, "source", 1))
+			gen, err := rs.GetReplicatedGeneration(ctx, vs, repo, "source", "target")
+			require.NoError(t, err)
+			require.Equal(t, 1, gen)
+
+			require.NoError(t, rs.SetGeneration(ctx, vs, repo, "target", 0))
+			gen, err = rs.GetReplicatedGeneration(ctx, vs, repo, "source", "target")
+			require.NoError(t, err)
+			require.Equal(t, 1, gen)
 		})
 
 		t.Run("downgrade prevented", func(t *testing.T) {
-			rs, requireState := newStore(t, nil)
+			rs, _ := newStore(t, nil)
 
-			require.NoError(t, rs.SetGeneration(ctx, vs, repo, stor, 1))
-			require.Equal(t,
-				downgradeAttemptedError{vs, repo, stor, 1, 0},
-				rs.EnsureUpgrade(ctx, vs, repo, stor, 0))
-			require.Error(t,
-				downgradeAttemptedError{vs, repo, stor, 1, GenerationUnknown},
-				rs.EnsureUpgrade(ctx, vs, repo, stor, GenerationUnknown))
-			requireState(t, ctx,
-				virtualStorageState{
-					"virtual-storage-1": {
-						"repository-1": 1,
-					},
-				},
-				storageState{
-					"virtual-storage-1": {
-						"repository-1": {
-							"storage-1": 1,
-						},
-					},
-				},
-			)
-		})
+			require.NoError(t, rs.SetGeneration(ctx, vs, repo, "target", 1))
 
-		t.Run("same version prevented", func(t *testing.T) {
-			rs, requireState := newStore(t, nil)
+			_, err := rs.GetReplicatedGeneration(ctx, vs, repo, "source", "target")
+			require.Equal(t, DowngradeAttemptedError{vs, repo, "target", 1, GenerationUnknown}, err)
 
-			require.NoError(t, rs.SetGeneration(ctx, vs, repo, stor, 1))
-			require.Equal(t,
-				downgradeAttemptedError{vs, repo, stor, 1, 1},
-				rs.EnsureUpgrade(ctx, vs, repo, stor, 1))
-			require.Error(t,
-				downgradeAttemptedError{vs, repo, stor, 1, GenerationUnknown},
-				rs.EnsureUpgrade(ctx, vs, repo, stor, GenerationUnknown))
-			requireState(t, ctx,
-				virtualStorageState{
-					"virtual-storage-1": {
-						"repository-1": 1,
-					},
-				},
-				storageState{
-					"virtual-storage-1": {
-						"repository-1": {
-							"storage-1": 1,
-						},
-					},
-				},
-			)
+			require.NoError(t, rs.SetGeneration(ctx, vs, repo, "source", 1))
+			_, err = rs.GetReplicatedGeneration(ctx, vs, repo, "source", "target")
+			require.Equal(t, DowngradeAttemptedError{vs, repo, "target", 1, 1}, err)
+
+			require.NoError(t, rs.SetGeneration(ctx, vs, repo, "source", 0))
+			_, err = rs.GetReplicatedGeneration(ctx, vs, repo, "source", "target")
+			require.Equal(t, DowngradeAttemptedError{vs, repo, "target", 1, 0}, err)
 		})
 	})
 
@@ -441,6 +420,50 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 					},
 				},
 			)
+		})
+	})
+
+	t.Run("GetConsistentSecondaries", func(t *testing.T) {
+		rs, requireState := newStore(t, map[string][]string{
+			vs: []string{"primary", "consistent-secondary", "inconsistent-secondary", "no-record"},
+		})
+
+		t.Run("unknown generations", func(t *testing.T) {
+			secondaries, err := rs.GetConsistentSecondaries(ctx, vs, repo, "primary")
+			require.NoError(t, err)
+			require.Empty(t, secondaries)
+		})
+
+		require.NoError(t, rs.SetGeneration(ctx, vs, repo, "primary", 1))
+		require.NoError(t, rs.SetGeneration(ctx, vs, repo, "consistent-secondary", 1))
+		require.NoError(t, rs.SetGeneration(ctx, vs, repo, "inconsistent-secondary", 0))
+		requireState(t, ctx,
+			virtualStorageState{
+				"virtual-storage-1": {
+					"repository-1": 1,
+				},
+			},
+			storageState{
+				"virtual-storage-1": {
+					"repository-1": {
+						"primary":                1,
+						"consistent-secondary":   1,
+						"inconsistent-secondary": 0,
+					},
+				},
+			},
+		)
+
+		t.Run("consistent secondary", func(t *testing.T) {
+			secondaries, err := rs.GetConsistentSecondaries(ctx, vs, repo, "primary")
+			require.NoError(t, err)
+			require.Equal(t, map[string]struct{}{"consistent-secondary": struct{}{}}, secondaries)
+		})
+
+		t.Run("primary on unknown generation", func(t *testing.T) {
+			secondaries, err := rs.GetConsistentSecondaries(ctx, vs, repo, "no-record")
+			require.NoError(t, err)
+			require.Empty(t, secondaries)
 		})
 	})
 }
