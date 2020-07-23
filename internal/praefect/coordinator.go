@@ -190,6 +190,21 @@ func shouldUseTransaction(ctx context.Context, method string) bool {
 	return true
 }
 
+func (c *Coordinator) registerTransaction(ctx context.Context, primary nodes.Node, secondaries []nodes.Node) (*transactions.Transaction, transactions.CancelFunc, error) {
+	var voters []transactions.Voter
+	var threshold uint
+
+	for _, node := range append(secondaries, primary) {
+		voters = append(voters, transactions.Voter{
+			Name:  node.GetStorage(),
+			Votes: 1,
+		})
+		threshold += 1
+	}
+
+	return c.txMgr.RegisterTransaction(ctx, voters, threshold)
+}
+
 func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall, targetRepo *gitalypb.Repository) (*proxy.StreamParameters, error) {
 	virtualStorage := targetRepo.StorageName
 
@@ -239,26 +254,15 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 			}
 		}
 
-		var voters []transactions.Voter
-		var threshold uint
-		for _, node := range append(participatingSecondaries, shard.Primary) {
-			voters = append(voters, transactions.Voter{
-				Name:  node.GetStorage(),
-				Votes: 1,
-			})
-			threshold += 1
-		}
-
-		transaction, transactionCleanup, err := c.txMgr.RegisterTransaction(ctx, voters, threshold)
+		transaction, transactionCleanup, err := c.registerTransaction(ctx, shard.Primary, participatingSecondaries)
 		if err != nil {
-			return nil, fmt.Errorf("registering transactions: %w", err)
+			return nil, err
 		}
 
 		injectedCtx, err := metadata.InjectTransaction(ctx, transaction.ID(), shard.Primary.GetStorage(), true)
 		if err != nil {
 			return nil, err
 		}
-
 		primaryDest.Ctx = helper.IncomingToOutgoing(injectedCtx)
 
 		for _, secondary := range participatingSecondaries {
