@@ -1,4 +1,4 @@
-package connection
+package client
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
-	"gitlab.com/gitlab-org/gitaly/client"
 	"google.golang.org/grpc"
 )
 
@@ -78,7 +77,7 @@ func (p *Pool) getOrCreateConnection(ctx context.Context, address, token string)
 		opts = append(opts, grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(token)))
 	}
 
-	cc, err := client.DialContext(ctx, address, opts)
+	cc, err := DialContext(ctx, address, opts)
 	if err != nil {
 		return nil, fmt.Errorf("could not dial source: %v", err)
 	}
