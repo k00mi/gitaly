@@ -51,6 +51,13 @@
 - Error forwarded mutator RPCs on replication job enqueue failure. !2332
 
 
+## 13.1.5
+
+### Fixed (1 change)
+
+- Fix pre-receive hooks not working with symlinked paths variable field. !2381
+
+
 ## 13.1.3
 
 ### Fixed (1 change)
