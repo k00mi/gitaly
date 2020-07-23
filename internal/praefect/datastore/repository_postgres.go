@@ -79,6 +79,10 @@ type RepositoryStore interface {
 	IsLatestGeneration(ctx context.Context, virtualStorage, relativePath, storage string) (bool, error)
 	// RepositoryExists returns whether the repository exists on a virtual storage.
 	RepositoryExists(ctx context.Context, virtualStorage, relativePath string) (bool, error)
+	// GetOutdatedRepositories finds repositories which are not on the latest generation in the virtual storage. It returns a map
+	// with key structure `relative_path-> storage -> generation`, indicating how many changes a storage is missing for a given
+	// repository.
+	GetOutdatedRepositories(ctx context.Context, virtualStorage string) (map[string]map[string]int, error)
 }
 
 // PostgresRepositoryStore is a Postgres implementation of RepositoryStore.
@@ -403,4 +407,47 @@ AND relative_path = $2
 	}
 
 	return exists, nil
+}
+
+func (rs *PostgresRepositoryStore) GetOutdatedRepositories(ctx context.Context, virtualStorage string) (map[string]map[string]int, error) {
+	// As some storages might be missing records from the table, we do a cross join between the repositories and the
+	// configured storages. If a storage is missing an entry, it is considered fully outdated.
+	const q = `
+SELECT relative_path, storage, expected.generation - COALESCE(actual.generation, -1) AS behind_by
+FROM (
+	SELECT virtual_storage, relative_path, storage, generation
+	FROM repositories
+	CROSS JOIN (SELECT unnest($2::text[]) AS storage) AS storages
+	WHERE virtual_storage = $1
+) AS expected
+LEFT JOIN storage_repositories AS actual USING (virtual_storage, relative_path, storage)
+WHERE COALESCE(actual.generation, -1) < expected.generation
+`
+	storages, ok := rs.storages[virtualStorage]
+	if !ok {
+		return nil, fmt.Errorf("unknown virtual storage: %q", virtualStorage)
+	}
+
+	rows, err := rs.db.QueryContext(ctx, q, virtualStorage, pq.StringArray(storages))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	outdated := make(map[string]map[string]int)
+	for rows.Next() {
+		var storage, relativePath string
+		var difference int
+		if err := rows.Scan(&relativePath, &storage, &difference); err != nil {
+			return nil, err
+		}
+
+		if outdated[relativePath] == nil {
+			outdated[relativePath] = make(map[string]int)
+		}
+
+		outdated[relativePath][storage] = difference
+	}
+
+	return outdated, rows.Err()
 }

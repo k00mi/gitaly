@@ -213,6 +213,36 @@ func (m *MemoryRepositoryStore) RepositoryExists(ctx context.Context, virtualSto
 	return m.getRepositoryGeneration(virtualStorage, relativePath) != GenerationUnknown, nil
 }
 
+func (m *MemoryRepositoryStore) GetOutdatedRepositories(ctx context.Context, virtualStorage string) (map[string]map[string]int, error) {
+	m.m.Lock()
+	defer m.m.Unlock()
+
+	storages, ok := m.storages[virtualStorage]
+	if !ok {
+		return nil, fmt.Errorf("unknown virtual storage: %q", virtualStorage)
+	}
+
+	outdatedRepos := make(map[string]map[string]int)
+	repositories, ok := m.virtualStorageState[virtualStorage]
+	if !ok {
+		return outdatedRepos, nil
+	}
+
+	for relativePath, latestGeneration := range repositories {
+		for _, storage := range storages {
+			if gen := m.getStorageGeneration(virtualStorage, relativePath, storage); gen < latestGeneration {
+				if outdatedRepos[relativePath] == nil {
+					outdatedRepos[relativePath] = make(map[string]int)
+				}
+
+				outdatedRepos[relativePath][storage] = latestGeneration - gen
+			}
+		}
+	}
+
+	return outdatedRepos, nil
+}
+
 func (m *MemoryRepositoryStore) getRepositoryGeneration(virtualStorage, relativePath string) int {
 	gen, ok := m.virtualStorageState[virtualStorage][relativePath]
 	if !ok {

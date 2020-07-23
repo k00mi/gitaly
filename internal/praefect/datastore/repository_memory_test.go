@@ -507,4 +507,73 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 		require.NoError(t, err)
 		require.False(t, exists)
 	})
+
+	t.Run("GetOutdatedRepositories", func(t *testing.T) {
+		t.Run("unknown virtual storage", func(t *testing.T) {
+			rs, _ := newStore(t, map[string][]string{})
+
+			_, err := rs.GetOutdatedRepositories(ctx, "does not exist")
+			require.EqualError(t, err, `unknown virtual storage: "does not exist"`)
+		})
+
+		type state map[string]map[string]map[string]struct {
+			generation int
+		}
+
+		type expected map[string]map[string]int
+
+		for _, tc := range []struct {
+			desc     string
+			state    state
+			expected map[string]map[string]int
+		}{
+			{
+				desc:     "no records in virtual storage",
+				state:    state{"virtual-storage-2": {stor: {"repo-1": {generation: 0}}}},
+				expected: expected{},
+			},
+			{
+				desc:     "storages missing records",
+				state:    state{vs: {stor: {"repo-1": {generation: 0}}}},
+				expected: expected{"repo-1": {"storage-2": 1, "storage-3": 1}},
+			},
+			{
+				desc: "outdated storages",
+				state: state{vs: {
+					stor:        {"repo-1": {generation: 2}},
+					"storage-2": {"repo-1": {generation: 1}},
+					"storage-3": {"repo-1": {generation: 0}},
+				}},
+				expected: expected{"repo-1": {"storage-2": 1, "storage-3": 2}},
+			},
+			{
+				desc: "all up to date",
+				state: state{vs: {
+					stor:        {"repo-1": {generation: 3}},
+					"storage-2": {"repo-1": {generation: 3}},
+					"storage-3": {"repo-1": {generation: 3}},
+				}},
+				expected: expected{},
+			},
+		} {
+			t.Run(tc.desc, func(t *testing.T) {
+				rs, _ := newStore(t, map[string][]string{vs: {stor, "storage-2", "storage-3"}})
+
+				ctx, cancel := testhelper.Context()
+				defer cancel()
+
+				for vs, storages := range tc.state {
+					for storage, repos := range storages {
+						for repo, state := range repos {
+							require.NoError(t, rs.SetGeneration(ctx, vs, repo, storage, state.generation))
+						}
+					}
+				}
+
+				outdated, err := rs.GetOutdatedRepositories(ctx, vs)
+				require.NoError(t, err)
+				require.Equal(t, tc.expected, outdated)
+			})
+		}
+	})
 }
