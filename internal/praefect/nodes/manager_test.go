@@ -141,39 +141,34 @@ func TestManagerFailoverDisabledElectionStrategySQL(t *testing.T) {
 	require.Equal(t, primaryStorage, shard.Primary.GetStorage())
 }
 
-func TestBlockingDial(t *testing.T) {
-	storageName := "default"
-	praefectSocket := testhelper.GetTemporaryGitalySocketFileName()
-	socketName := "unix://" + praefectSocket
-
-	gitalySocket := testhelper.GetTemporaryGitalySocketFileName()
-
-	lis, err := net.Listen("unix", gitalySocket)
+func TestDialWithUnhealthyNode(t *testing.T) {
+	primaryLn, err := net.Listen("unix", testhelper.GetTemporaryGitalySocketFileName())
 	require.NoError(t, err)
 
+	primaryAddress := "unix://" + primaryLn.Addr().String()
+	const secondaryAddress = "unix://does-not-exist"
+	const storageName = "default"
+
 	conf := config.Config{
-		SocketPath: socketName,
 		VirtualStorages: []*config.VirtualStorage{
 			{
 				Name: storageName,
 				Nodes: []*config.Node{
 					{
-						Storage: "internal-storage",
-						Address: "unix://" + gitalySocket,
+						Storage: "starts",
+						Address: primaryAddress,
+					},
+					{
+						Storage: "never-starts",
+						Address: secondaryAddress,
 					},
 				},
 			},
 		},
-		Failover: config.Failover{Enabled: true},
 	}
 
-	// simulate gitaly node starting up later
-	go func() {
-		time.Sleep(healthcheckTimeout + 10*time.Millisecond)
-
-		_, healthSrv0 := testhelper.NewHealthServerWithListener(t, lis)
-		healthSrv0.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
-	}()
+	srv, _ := testhelper.NewHealthServerWithListener(t, primaryLn)
+	defer srv.Stop()
 
 	mgr, err := NewManager(testhelper.DiscardTestEntry(t), conf, nil, nil, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
@@ -182,8 +177,10 @@ func TestBlockingDial(t *testing.T) {
 
 	shard, err := mgr.GetShard(storageName)
 	require.NoError(t, err)
-	require.Equal(t, "internal-storage", shard.Primary.GetStorage())
-	require.Empty(t, shard.Secondaries)
+	assertShard(t, shardAssertion{
+		Primary:     &nodeAssertion{Storage: "starts", Address: primaryAddress},
+		Secondaries: []nodeAssertion{{Storage: "never-starts", Address: secondaryAddress}},
+	}, shard)
 }
 
 func TestNodeManager(t *testing.T) {
