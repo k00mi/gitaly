@@ -107,6 +107,7 @@ type buildOptions struct {
 	withAnnotations *protoregistry.Registry
 	withLogger      *logrus.Entry
 	withNodeMgr     nodes.Manager
+	withRepoStore   datastore.RepositoryStore
 }
 
 func withMockBackends(t testing.TB, backends map[string]mock.SimpleServiceServer) func([]*config.VirtualStorage) []testhelper.Cleanup {
@@ -187,11 +188,15 @@ func defaultTxMgr() *transactions.Manager {
 	return transactions.NewManager()
 }
 
-func defaultNodeMgr(t testing.TB, conf config.Config, queue datastore.ReplicationEventQueue) nodes.Manager {
-	nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf, nil, queue, promtest.NewMockHistogramVec())
+func defaultNodeMgr(t testing.TB, conf config.Config, rs datastore.RepositoryStore) nodes.Manager {
+	nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf, nil, rs, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 	nodeMgr.Start(1*time.Millisecond, 5*time.Millisecond)
 	return nodeMgr
+}
+
+func defaultRepoStore(conf config.Config) datastore.RepositoryStore {
+	return datastore.NewMemoryRepositoryStore(conf.StorageNames())
 }
 
 func runPraefectServer(t testing.TB, conf config.Config, opt buildOptions) (*grpc.ClientConn, *grpc.Server, testhelper.Cleanup) {
@@ -199,6 +204,9 @@ func runPraefectServer(t testing.TB, conf config.Config, opt buildOptions) (*grp
 
 	if opt.withQueue == nil {
 		opt.withQueue = defaultQueue(conf)
+	}
+	if opt.withRepoStore == nil {
+		opt.withRepoStore = defaultRepoStore(conf)
 	}
 	if opt.withTxMgr == nil {
 		opt.withTxMgr = defaultTxMgr()
@@ -213,7 +221,7 @@ func runPraefectServer(t testing.TB, conf config.Config, opt buildOptions) (*grp
 		opt.withLogger = log.Default()
 	}
 	if opt.withNodeMgr == nil {
-		opt.withNodeMgr = defaultNodeMgr(t, conf, opt.withQueue)
+		opt.withNodeMgr = defaultNodeMgr(t, conf, opt.withRepoStore)
 	}
 
 	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())

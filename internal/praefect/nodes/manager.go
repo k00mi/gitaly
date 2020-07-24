@@ -99,7 +99,7 @@ type Mgr struct {
 	// strategies is a map of strategies keyed on virtual storage name
 	strategies map[string]leaderElectionStrategy
 	db         *sql.DB
-	queue      datastore.ReplicationEventQueue
+	rs         datastore.RepositoryStore
 }
 
 // leaderElectionStrategy defines the interface by which primary and
@@ -117,7 +117,7 @@ var ErrPrimaryNotHealthy = errors.New("primary is not healthy")
 const dialTimeout = 10 * time.Second
 
 // NewManager creates a new NodeMgr based on virtual storage configs
-func NewManager(log *logrus.Entry, c config.Config, db *sql.DB, queue datastore.ReplicationEventQueue, latencyHistogram prommetrics.HistogramVec, dialOpts ...grpc.DialOption) (*Mgr, error) {
+func NewManager(log *logrus.Entry, c config.Config, db *sql.DB, rs datastore.RepositoryStore, latencyHistogram prommetrics.HistogramVec, dialOpts ...grpc.DialOption) (*Mgr, error) {
 	strategies := make(map[string]leaderElectionStrategy, len(c.VirtualStorages))
 
 	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
@@ -164,7 +164,7 @@ func NewManager(log *logrus.Entry, c config.Config, db *sql.DB, queue datastore.
 		db:              db,
 		failoverEnabled: c.Failover.Enabled,
 		strategies:      strategies,
-		queue:           queue,
+		rs:              rs,
 	}, nil
 }
 
@@ -216,18 +216,21 @@ func (n *Mgr) GetSyncedNode(ctx context.Context, virtualStorageName, repoPath st
 	}
 
 	logger := ctxlogrus.Extract(ctx).WithFields(logrus.Fields{"virtual_storage_name": virtualStorageName, "repo_path": repoPath})
-	upToDateStorages, err := n.queue.GetUpToDateStorages(ctx, virtualStorageName, repoPath)
+	upToDateStorages, err := n.rs.GetConsistentSecondaries(ctx, virtualStorageName, repoPath, shard.Primary.GetStorage())
 	if err != nil {
 		// this is recoverable error - proceed with primary node
 		logger.WithError(err).Warn("get up to date secondaries")
 	}
 
-	// Make sure that nodes are unique in case the up-to-date storages also
-	// contain the primary.
-	storages := make(map[Node]struct{}, len(upToDateStorages)+1) // +1 is for the primary node
-	storages[shard.Primary] = struct{}{}
+	if len(upToDateStorages) == 0 {
+		upToDateStorages = make(map[string]struct{}, 1)
+	}
 
-	for _, upToDateStorage := range upToDateStorages {
+	// Primary should be considered as all other storages for serving read operations
+	upToDateStorages[shard.Primary.GetStorage()] = struct{}{}
+	healthyStorages := make([]Node, 0, len(upToDateStorages))
+
+	for upToDateStorage := range upToDateStorages {
 		node, err := shard.GetNode(upToDateStorage)
 		if err != nil {
 			// this is recoverable error - proceed with with other nodes
@@ -238,18 +241,14 @@ func (n *Mgr) GetSyncedNode(ctx context.Context, virtualStorageName, repoPath st
 			continue
 		}
 
-		storages[node] = struct{}{}
+		healthyStorages = append(healthyStorages, node)
 	}
 
-	i := rand.Intn(len(storages))
-	for storage := range storages {
-		if i == 0 {
-			return storage, nil
-		}
-		i--
+	if len(healthyStorages) == 0 {
+		return nil, ErrPrimaryNotHealthy
 	}
 
-	return nil, errors.New("could not select random storage")
+	return healthyStorages[rand.Intn(len(healthyStorages))], nil
 }
 
 func newConnectionStatus(node config.Node, cc *grpc.ClientConn, l logrus.FieldLogger, latencyHist prommetrics.HistogramVec) *nodeStatus {

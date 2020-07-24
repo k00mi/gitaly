@@ -786,7 +786,7 @@ func TestProxyWrites(t *testing.T) {
 	queue := datastore.NewMemoryReplicationEventQueue(conf)
 	entry := testhelper.DiscardTestEntry(t)
 
-	nodeMgr, err := nodes.NewManager(entry, conf, nil, queue, promtest.NewMockHistogramVec())
+	nodeMgr, err := nodes.NewManager(entry, conf, nil, nil, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 
 	ctx, cancel := testhelper.Context()

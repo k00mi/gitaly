@@ -3,6 +3,7 @@ package nodes
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -299,217 +300,121 @@ func TestNodeManager(t *testing.T) {
 }
 
 func TestMgr_GetSyncedNode(t *testing.T) {
-	var sockets [4]string
-	var srvs [4]*grpc.Server
-	var healthSrvs [4]*health.Server
-	for i := 0; i < 4; i++ {
-		sockets[i] = testhelper.GetTemporaryGitalySocketFileName()
-		srvs[i], healthSrvs[i] = testhelper.NewServerWithHealth(t, sockets[i])
+	const count = 3
+	const virtualStorage = "virtual-storage-0"
+	const repoPath = "path/1"
+
+	var srvs [count]*grpc.Server
+	var healthSrvs [count]*health.Server
+	var nodes [count]*config.Node
+	for i := 0; i < count; i++ {
+		socket := testhelper.GetTemporaryGitalySocketFileName()
+		srvs[i], healthSrvs[i] = testhelper.NewServerWithHealth(t, socket)
 		defer srvs[i].Stop()
-	}
-
-	vs0Primary := "unix://" + sockets[0]
-	vs1Primary := "unix://" + sockets[2]
-	vs1Secondary := "unix://" + sockets[3]
-
-	virtualStorages := []*config.VirtualStorage{
-		{
-			Name: "virtual-storage-0",
-			Nodes: []*config.Node{
-				{
-					Storage: "gitaly-0",
-					Address: vs0Primary,
-				},
-				{
-					Storage: "gitaly-1",
-					Address: "unix://" + sockets[1],
-				},
-			},
-		},
-		{
-			// second virtual storage needed to check there is no intersections between two even with same storage names
-			Name: "virtual-storage-1",
-			Nodes: []*config.Node{
-				{
-					// same storage name as in other virtual storage is used intentionally
-					Storage: "gitaly-1",
-					Address: "unix://" + sockets[2],
-				},
-				{
-					Storage: "gitaly-2",
-					Address: vs1Secondary,
-				},
-			},
-		},
+		nodes[i] = &config.Node{Storage: fmt.Sprintf("gitaly-%d", i), Address: "unix://" + socket}
 	}
 
 	conf := config.Config{
-		VirtualStorages: virtualStorages,
+		VirtualStorages: []*config.VirtualStorage{{Name: virtualStorage, Nodes: nodes[:]}},
 		Failover:        config.Failover{Enabled: true},
 	}
-
-	mockHistogram := promtest.NewMockHistogramVec()
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	ctx = featureflag.IncomingCtxWithFeatureFlag(ctx, featureflag.DistributedReads)
 
-	ackEvent := func(queue datastore.ReplicationEventQueue, job datastore.ReplicationJob, state datastore.JobState) datastore.ReplicationEvent {
-		event := datastore.ReplicationEvent{Job: job}
+	verify := func(scenario func(t *testing.T, nm Manager, rs datastore.RepositoryStore)) func(*testing.T) {
+		rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
 
-		eevent, err := queue.Enqueue(ctx, event)
-		require.NoError(t, err)
-
-		devents, err := queue.Dequeue(ctx, eevent.Job.VirtualStorage, eevent.Job.TargetNodeStorage, 2)
-		require.NoError(t, err)
-		require.Len(t, devents, 1)
-
-		acks, err := queue.Acknowledge(ctx, state, []uint64{devents[0].ID})
-		require.NoError(t, err)
-		require.Equal(t, []uint64{devents[0].ID}, acks)
-		return devents[0]
-	}
-
-	verify := func(scenario func(t *testing.T, nm Manager, queue datastore.ReplicationEventQueue)) func(*testing.T) {
-		queue := datastore.NewMemoryReplicationEventQueue(conf)
-
-		nm, err := NewManager(testhelper.DiscardTestEntry(t), conf, nil, queue, mockHistogram)
+		nm, err := NewManager(testhelper.DiscardTestEntry(t), conf, nil, rs, promtest.NewMockHistogramVec())
 		require.NoError(t, err)
 
 		nm.Start(time.Duration(0), time.Hour)
 
-		return func(t *testing.T) { scenario(t, nm, queue) }
+		return func(t *testing.T) { scenario(t, nm, rs) }
 	}
 
-	t.Run("unknown virtual storage", verify(func(t *testing.T, nm Manager, queue datastore.ReplicationEventQueue) {
-		_, err := nm.GetSyncedNode(ctx, "virtual-storage-unknown", "")
+	t.Run("unknown virtual storage", verify(func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
+		_, err := nm.GetSyncedNode(ctx, "virtual-storage-unknown", "stub")
 		require.True(t, errors.Is(err, ErrVirtualStorageNotExist))
 	}))
 
-	t.Run("no replication events", verify(func(t *testing.T, nm Manager, queue datastore.ReplicationEventQueue) {
-		node, err := nm.GetSyncedNode(ctx, "virtual-storage-0", "no/matter")
+	t.Run("state is undefined", verify(func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
+		node, err := nm.GetSyncedNode(ctx, virtualStorage, "no/matter")
 		require.NoError(t, err)
-		require.Contains(t, []string{vs0Primary, "unix://" + sockets[1]}, node.GetAddress())
+		require.Equal(t, conf.VirtualStorages[0].Nodes[0].Address, node.GetAddress(), "")
 	}))
 
-	t.Run("last replication event is in 'ready'", verify(func(t *testing.T, nm Manager, queue datastore.ReplicationEventQueue) {
-		_, err := queue.Enqueue(ctx, datastore.ReplicationEvent{
-			Job: datastore.ReplicationJob{
-				RelativePath:      "path/1",
-				TargetNodeStorage: "gitaly-1",
-				SourceNodeStorage: "gitaly-0",
-				VirtualStorage:    "virtual-storage-0",
-			},
-		})
+	t.Run("multiple storages up to date", verify(func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
+		require.NoError(t, rs.IncrementGeneration(ctx, virtualStorage, repoPath, "gitaly-0", nil))
+		generation, err := rs.GetGeneration(ctx, virtualStorage, repoPath, "gitaly-0")
 		require.NoError(t, err)
+		require.NoError(t, rs.SetGeneration(ctx, virtualStorage, repoPath, "gitaly-1", generation))
+		require.NoError(t, rs.SetGeneration(ctx, virtualStorage, repoPath, "gitaly-2", generation))
 
-		node, err := nm.GetSyncedNode(ctx, "virtual-storage-0", "path/1")
-		require.NoError(t, err)
-		require.Equal(t, vs0Primary, node.GetAddress())
+		chosen := map[Node]struct{}{}
+		for i := 0; i < 1000 && len(chosen) < 2; i++ {
+			node, err := nm.GetSyncedNode(ctx, virtualStorage, repoPath)
+			require.NoError(t, err)
+			chosen[node] = struct{}{}
+		}
+		if len(chosen) < 2 {
+			require.FailNow(t, "no distribution in too many attempts")
+		}
 	}))
 
-	t.Run("last replication event is in 'in_progress'", verify(func(t *testing.T, nm Manager, queue datastore.ReplicationEventQueue) {
-		vs0Event, err := queue.Enqueue(ctx, datastore.ReplicationEvent{
-			Job: datastore.ReplicationJob{
-				RelativePath:      "path/1",
-				TargetNodeStorage: "gitaly-1",
-				SourceNodeStorage: "gitaly-0",
-				VirtualStorage:    "virtual-storage-0",
-			},
-		})
+	t.Run("single secondary storage up to date but unhealthy", verify(func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
+		require.NoError(t, rs.IncrementGeneration(ctx, virtualStorage, repoPath, "gitaly-0", nil))
+		generation, err := rs.GetGeneration(ctx, virtualStorage, repoPath, "gitaly-0")
+		require.NoError(t, err)
+		require.NoError(t, rs.SetGeneration(ctx, virtualStorage, repoPath, "gitaly-1", generation))
+
+		healthSrvs[1].SetServingStatus("", grpc_health_v1.HealthCheckResponse_UNKNOWN)
+
+		shard, err := nm.GetShard(virtualStorage)
 		require.NoError(t, err)
 
-		vs0Events, err := queue.Dequeue(ctx, vs0Event.Job.VirtualStorage, vs0Event.Job.TargetNodeStorage, 100500)
+		gitaly1, err := shard.GetNode("gitaly-1")
 		require.NoError(t, err)
-		require.Len(t, vs0Events, 1)
 
-		node, err := nm.GetSyncedNode(ctx, "virtual-storage-0", "path/1")
+		ok, err := gitaly1.CheckHealth(ctx)
 		require.NoError(t, err)
-		require.Equal(t, vs0Primary, node.GetAddress())
+		require.False(t, ok)
+
+		node, err := nm.GetSyncedNode(ctx, virtualStorage, repoPath)
+		require.NoError(t, err)
+		require.Equal(t, conf.VirtualStorages[0].Nodes[0].Address, node.GetAddress(), "secondary shouldn't be chosen as it is unhealthy")
 	}))
 
-	t.Run("last replication event is in 'failed'", verify(func(t *testing.T, nm Manager, queue datastore.ReplicationEventQueue) {
-		vs0Event := ackEvent(queue, datastore.ReplicationJob{
-			RelativePath:      "path/1",
-			TargetNodeStorage: "gitaly-1",
-			SourceNodeStorage: "gitaly-0",
-			VirtualStorage:    "virtual-storage-0",
-		}, datastore.JobStateFailed)
-
-		node, err := nm.GetSyncedNode(ctx, vs0Event.Job.VirtualStorage, vs0Event.Job.RelativePath)
+	t.Run("no healthy storages", verify(func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
+		require.NoError(t, rs.IncrementGeneration(ctx, virtualStorage, repoPath, "gitaly-0", nil))
+		generation, err := rs.GetGeneration(ctx, virtualStorage, repoPath, "gitaly-0")
 		require.NoError(t, err)
-		require.Equal(t, vs0Primary, node.GetAddress())
-	}))
+		require.NoError(t, rs.SetGeneration(ctx, virtualStorage, repoPath, "gitaly-1", generation))
 
-	t.Run("multiple replication events for same virtual, last is in 'ready'", verify(func(t *testing.T, nm Manager, queue datastore.ReplicationEventQueue) {
-		vsEvent0 := ackEvent(queue, datastore.ReplicationJob{
-			RelativePath:      "path/1",
-			TargetNodeStorage: "gitaly-1",
-			SourceNodeStorage: "gitaly-0",
-			VirtualStorage:    "virtual-storage-0",
-		}, datastore.JobStateCompleted)
+		healthSrvs[0].SetServingStatus("", grpc_health_v1.HealthCheckResponse_UNKNOWN)
+		healthSrvs[1].SetServingStatus("", grpc_health_v1.HealthCheckResponse_UNKNOWN)
 
-		vsEvent1, err := queue.Enqueue(ctx, datastore.ReplicationEvent{
-			Job: datastore.ReplicationJob{
-				RelativePath:      vsEvent0.Job.RelativePath,
-				TargetNodeStorage: vsEvent0.Job.TargetNodeStorage,
-				SourceNodeStorage: vsEvent0.Job.SourceNodeStorage,
-				VirtualStorage:    vsEvent0.Job.VirtualStorage,
-			},
-		})
+		shard, err := nm.GetShard(virtualStorage)
 		require.NoError(t, err)
 
-		node, err := nm.GetSyncedNode(ctx, vsEvent1.Job.VirtualStorage, vsEvent1.Job.RelativePath)
+		gitaly0, err := shard.GetNode("gitaly-0")
 		require.NoError(t, err)
-		require.Equal(t, vs0Primary, node.GetAddress())
-	}))
 
-	t.Run("same repo path for different virtual storages", verify(func(t *testing.T, nm Manager, queue datastore.ReplicationEventQueue) {
-		vs0Event := ackEvent(queue, datastore.ReplicationJob{
-			RelativePath:      "path/1",
-			TargetNodeStorage: "gitaly-1",
-			SourceNodeStorage: "gitaly-0",
-			VirtualStorage:    "virtual-storage-0",
-		}, datastore.JobStateDead)
-
-		ackEvent(queue, datastore.ReplicationJob{
-			RelativePath:      "path/1",
-			TargetNodeStorage: "gitaly-2",
-			SourceNodeStorage: "gitaly-1",
-			VirtualStorage:    "virtual-storage-1",
-		}, datastore.JobStateCompleted)
-
-		node, err := nm.GetSyncedNode(ctx, vs0Event.Job.VirtualStorage, vs0Event.Job.RelativePath)
+		gitaly0OK, err := gitaly0.CheckHealth(ctx)
 		require.NoError(t, err)
-		require.Equal(t, vs0Primary, node.GetAddress())
-	}))
+		require.False(t, gitaly0OK)
 
-	t.Run("secondary is up to date in multi-virtual setup with processed replication jobs", verify(func(t *testing.T, nm Manager, queue datastore.ReplicationEventQueue) {
-		ackEvent(queue, datastore.ReplicationJob{
-			RelativePath:      "path/1",
-			TargetNodeStorage: "gitaly-1",
-			SourceNodeStorage: "gitaly-0",
-			VirtualStorage:    "virtual-storage-0",
-		}, datastore.JobStateCompleted)
-
-		ackEvent(queue, datastore.ReplicationJob{
-			RelativePath:      "path/1",
-			TargetNodeStorage: "gitaly-2",
-			SourceNodeStorage: "gitaly-1",
-			VirtualStorage:    "virtual-storage-1",
-		}, datastore.JobStateCompleted)
-
-		vs1Event := ackEvent(queue, datastore.ReplicationJob{
-			RelativePath:      "path/2",
-			TargetNodeStorage: "gitaly-2",
-			SourceNodeStorage: "gitaly-1",
-			VirtualStorage:    "virtual-storage-1",
-		}, datastore.JobStateCompleted)
-
-		node, err := nm.GetSyncedNode(ctx, vs1Event.Job.VirtualStorage, vs1Event.Job.RelativePath)
+		gitaly1, err := shard.GetNode("gitaly-1")
 		require.NoError(t, err)
-		require.Contains(t, []string{vs1Primary, vs1Secondary}, node.GetAddress(), "should be one of the secondaries or the primary")
+
+		gitaly1OK, err := gitaly1.CheckHealth(ctx)
+		require.NoError(t, err)
+		require.False(t, gitaly1OK)
+
+		_, err = nm.GetSyncedNode(ctx, virtualStorage, repoPath)
+		require.True(t, errors.Is(err, ErrPrimaryNotHealthy))
 	}))
 }
 
