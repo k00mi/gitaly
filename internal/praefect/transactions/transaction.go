@@ -105,6 +105,15 @@ func (t *Transaction) State() map[string]bool {
 
 	results := make(map[string]bool, len(t.voters))
 
+	if len(t.subtransactions) == 0 {
+		// If there's no subtransactions, we simply return `false` for
+		// every voter.
+		for _, voter := range t.voters {
+			results[voter.Name] = false
+		}
+		return results
+	}
+
 	// We need to collect outcomes of all subtransactions. If any of the
 	// subtransactions failed, then the overall transaction failed for that
 	// node as well. Otherwise, if all subtransactions for the node
