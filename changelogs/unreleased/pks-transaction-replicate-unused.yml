@@ -1,0 +1,5 @@
+---
+title: Queue replication jobs in case a transaction is unused
+merge_request: 2404
+author:
+type: added

@@ -297,6 +297,16 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 				{primary: false, vote: "foo", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
 			},
 		},
+		{
+			// If the transaction didn't receive any votes at all, we need to assume
+			// that the RPC wasn't aware of transactions and thus need to schedule
+			// replication jobs.
+			desc: "unstarted transaction should create replication jobs",
+			nodes: []node{
+				{primary: true, shouldSucceed: true, shouldGetRepl: false},
+				{primary: false, shouldSucceed: false, shouldGetRepl: true},
+			},
+		},
 	}
 
 	for _, tc := range testcases {
@@ -381,21 +391,20 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 
 			var voterWaitGroup sync.WaitGroup
 			for i, node := range tc.nodes {
+				if node.shouldGetRepl {
+					replicationWaitGroup.Add(1)
+				}
+
 				if !node.shouldParticipate {
 					continue
 				}
 
-				voterWaitGroup.Add(1)
-
 				i := i
 				node := node
 
+				voterWaitGroup.Add(1)
 				go func() {
 					defer voterWaitGroup.Done()
-
-					if node.shouldGetRepl {
-						replicationWaitGroup.Add(1)
-					}
 
 					vote := sha1.Sum([]byte(node.vote))
 					err := txMgr.VoteTransaction(ctx, transaction.ID, fmt.Sprintf("node-%d", i), vote[:])
