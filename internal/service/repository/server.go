@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"gitlab.com/gitlab-org/gitaly/internal/connection"
+	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
@@ -13,7 +13,7 @@ import (
 type server struct {
 	ruby *rubyserver.Server
 	gitalypb.UnimplementedRepositoryServiceServer
-	conns                *connection.Pool
+	conns                *client.Pool
 	internalGitalySocket string
 	locator              storage.Locator
 }
@@ -23,7 +23,7 @@ func NewServer(rs *rubyserver.Server, locator storage.Locator, internalGitalySoc
 	return &server{
 		ruby:                 rs,
 		locator:              locator,
-		conns:                connection.NewPool(),
+		conns:                client.NewPool(),
 		internalGitalySocket: internalGitalySocket,
 	}
 }

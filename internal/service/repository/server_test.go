@@ -4,14 +4,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/internal/connection"
+	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/metadata"
 )
 
 func TestGetConnectionByStorage(t *testing.T) {
-	connPool := connection.NewPool()
+	connPool := client.NewPool()
 	defer connPool.Close()
 
 	s := server{conns: connPool}
