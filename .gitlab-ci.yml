@@ -151,6 +151,9 @@ cover:
   stage: test
   script:
     - make cover
+  artifacts:
+    reports:
+      cobertura: _build/cover/cobertura.xml
 
 .build_image: &build_image
   stage: publish
