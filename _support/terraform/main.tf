@@ -1,3 +1,4 @@
+variable "project" { default = "gitlab-internal-153318" }
 variable "demo_region" { default = "us-east4" }
 variable "demo_zone" { default = "us-east4-c" }
 variable "praefect_demo_cluster_name" { }
@@ -23,7 +24,7 @@ variable "praefect_sql_password" { }
 provider "google" {
   version = "~> 3.12"
 
-  project = "gitlab-internal-153318"
+  project = var.project
   region  = var.demo_region
   zone    = var.demo_zone
 }
@@ -45,21 +46,16 @@ resource "google_sql_database_instance" "praefect_sql" {
     ip_configuration{
       ipv4_enabled = true
 
-      dynamic "authorized_networks" {
-        for_each = google_compute_instance.praefect
-        iterator = praefect
-
-        content {
-          name = "praefect-${praefect.key}"
-          value = praefect.value.network_interface[0].access_config[0].nat_ip
-        }
+      authorized_networks {
+        name  = "allow-all-inbound"
+        value = "0.0.0.0/0"
       }
     }
   }
 }
 
 output "praefect_postgresql_ip" {
-  value = google_sql_database_instance.praefect_sql.public_ip_address
+  value = module.pgbouncer.private_ip_address
 }
 
 resource "google_sql_user" "users" {
@@ -71,6 +67,24 @@ resource "google_sql_user" "users" {
 resource "google_sql_database" "praefect-database" {
   name     = "praefect_production"
   instance = google_sql_database_instance.praefect_sql.name
+}
+
+module "pgbouncer" {
+  source  = "christippett/cloud-sql-pgbouncer/google"
+  version = "~>1.1"
+
+  project    = var.project
+  name       = "${var.praefect_demo_cluster_name}-pgbouncer"
+  zone       = var.demo_zone
+  subnetwork = "default"
+
+  port          = 5432
+  database_host = google_sql_database_instance.praefect_sql.public_ip_address
+
+  users = [
+    { name = google_sql_user.users.name, password = google_sql_user.users.password, admin = true },
+  ]
+  auth_query = "SELECT usename, passwd FROM pg_shadow WHERE usename=$1"
 }
 
 resource "google_compute_instance" "gitlab" {
