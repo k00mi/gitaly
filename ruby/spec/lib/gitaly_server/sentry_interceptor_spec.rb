@@ -45,7 +45,8 @@ describe GitalyServer::SentryInterceptor do
       let(:expected_tags) do
         call_metadata.merge(
           'system' => 'gitaly-ruby',
-          'gitaly-ruby.method' => 'GitalyServer::OperationsService#user_create_branch'
+          'gitaly-ruby.method' => 'GitalyServer::OperationsService#user_create_branch',
+          Labkit::Correlation::CorrelationId::LOG_KEY => anything
         )
       end
 

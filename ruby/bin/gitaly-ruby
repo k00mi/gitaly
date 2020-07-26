@@ -115,6 +115,7 @@ end
 
 def build_server_interceptor_chain
   chain = []
+  chain << Labkit::Correlation::GRPC::ServerInterceptor.new
   chain << GitalyServer::SentryInterceptor.new
   chain << Labkit::Tracing::GRPC::ServerInterceptor.new if Labkit::Tracing.enabled?
   chain << GitalyServer::ExceptionSanitizerInterceptor.new
