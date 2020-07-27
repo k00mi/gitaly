@@ -205,6 +205,25 @@ func (n *Mgr) GetShard(virtualStorageName string) (Shard, error) {
 	return strategy.GetShard()
 }
 
+// GetPrimaries gets primaries of each virtual storage. If the shard has no assigned primary,
+// the virtual storage's entry will be an empty string.
+func (n *Mgr) GetPrimaries(ctx context.Context) (map[string]string, error) {
+	primaries := make(map[string]string, len(n.strategies))
+	for virtualStorage, strategy := range n.strategies {
+		shard, err := strategy.GetShard()
+		if errors.Is(err, ErrPrimaryNotHealthy) {
+			primaries[virtualStorage] = ""
+			continue
+		} else if err != nil {
+			return nil, err
+		}
+
+		primaries[virtualStorage] = shard.Primary.GetStorage()
+	}
+
+	return primaries, nil
+}
+
 func (n *Mgr) GetSyncedNode(ctx context.Context, virtualStorageName, repoPath string) (Node, error) {
 	shard, err := n.GetShard(virtualStorageName)
 	if err != nil {

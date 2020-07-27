@@ -576,4 +576,98 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 			})
 		}
 	})
+
+	t.Run("CountReadOnlyRepositories", func(t *testing.T) {
+		rs, requireState := newStore(t, nil)
+
+		t.Run("no read-only repositories", func(t *testing.T) {
+			counts, err := rs.CountReadOnlyRepositories(ctx, map[string]string{
+				"virtual-storage-1": "primary-1",
+				"virtual-storage-2": "primary-2",
+			})
+			require.NoError(t, err)
+			require.Equal(t, map[string]int{
+				"virtual-storage-1": 0,
+				"virtual-storage-2": 0,
+			}, counts)
+		})
+
+		t.Run("read-only repositories", func(t *testing.T) {
+			require.NoError(t, rs.SetGeneration(ctx, "some-read-only", "read-only-outdated", "secondary", 1))
+			require.NoError(t, rs.SetGeneration(ctx, "some-read-only", "read-only-outdated", "primary", 0))
+			require.NoError(t, rs.SetGeneration(ctx, "some-read-only", "read-only-no-record", "secondary", 0))
+			require.NoError(t, rs.SetGeneration(ctx, "some-read-only", "writable", "secondary", 0))
+			require.NoError(t, rs.SetGeneration(ctx, "some-read-only", "writable", "primary", 0))
+			require.NoError(t, rs.SetGeneration(ctx, "all-writable", "writable", "secondary", 0))
+			require.NoError(t, rs.SetGeneration(ctx, "all-writable", "writable", "primary", 0))
+
+			requireState(t, ctx,
+				virtualStorageState{
+					"some-read-only": {
+						"read-only-outdated":  1,
+						"read-only-no-record": 0,
+						"writable":            0,
+					},
+					"all-writable": {
+						"writable": 0,
+					},
+				},
+				storageState{
+					"some-read-only": {
+						"read-only-outdated": {
+							"secondary": 1,
+							"primary":   0,
+						},
+						"read-only-no-record": {
+							"secondary": 0,
+						},
+						"writable": {
+							"secondary": 0,
+							"primary":   0,
+						},
+					},
+					"all-writable": {
+						"writable": {
+							"secondary": 0,
+							"primary":   0,
+						},
+					},
+				},
+			)
+
+			t.Run("primaries", func(t *testing.T) {
+				counts, err := rs.CountReadOnlyRepositories(ctx, map[string]string{
+					"some-read-only": "primary",
+					"all-writable":   "primary",
+					"no-records":     "primary",
+				})
+				require.NoError(t, err)
+				require.Equal(t, map[string]int{
+					"some-read-only": 2,
+					"all-writable":   0,
+					"no-records":     0,
+				}, counts)
+			})
+
+			t.Run("no primaries", func(t *testing.T) {
+				counts, err := rs.CountReadOnlyRepositories(ctx, map[string]string{
+					"some-read-only": "",
+					"all-writable":   "",
+					"no-records":     "",
+				})
+				require.NoError(t, err)
+				require.Equal(t, map[string]int{
+					"some-read-only": 3,
+					"all-writable":   1,
+					"no-records":     0,
+				}, counts)
+			})
+
+			t.Run("no virtual storages", func(t *testing.T) {
+				counts, err := rs.CountReadOnlyRepositories(ctx, nil)
+				require.NoError(t, err)
+				require.Equal(t, map[string]int{}, counts)
+			})
+		})
+	})
 }

@@ -294,7 +294,10 @@ func run(cfgs []starter.Config, conf config.Config) error {
 		)
 	)
 
-	prometheus.MustRegister(repl)
+	prometheus.MustRegister(
+		repl,
+		datastore.NewRepositoryStoreCollector(logger, rs, nodeManager),
+	)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
