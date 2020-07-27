@@ -555,6 +555,23 @@ func (c *Coordinator) createTransactionFinalizer(
 	return func() error {
 		successByNode := transaction.State()
 
+		// If no subtransaction happened, then the called RPC may not be aware of
+		// transactions at all. We thus need to assume it changed repository state
+		// and need to create replication jobs.
+		if transaction.CountSubtransactions() == 0 {
+			secondaries := make([]string, 0, len(successByNode))
+			for secondary := range successByNode {
+				if secondary == shard.Primary.GetStorage() {
+					continue
+				}
+				secondaries = append(secondaries, secondary)
+			}
+
+			return c.newRequestFinalizer(
+				ctx, virtualStorage, targetRepo, shard.Primary.GetStorage(),
+				nil, secondaries, change, params)()
+		}
+
 		// If the primary node failed the transaction, then
 		// there's no sense in trying to replicate from primary
 		// to secondaries.
