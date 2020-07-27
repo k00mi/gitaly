@@ -72,29 +72,43 @@ func TestStreamDirectorReadOnlyEnforcement(t *testing.T) {
 		},
 	} {
 		t.Run(fmt.Sprintf("read-only: %v, enabled: %v", tc.readOnly, tc.readOnlyEnabled), func(t *testing.T) {
+			const (
+				virtualStorage = "test-virtual-storage"
+				relativePath   = "test-repository"
+				storage        = "test-storage"
+			)
 			conf := config.Config{
 				Failover: config.Failover{ReadOnlyAfterFailover: tc.readOnlyEnabled},
 				VirtualStorages: []*config.VirtualStorage{
 					&config.VirtualStorage{
-						Name: "praefect",
+						Name: virtualStorage,
 						Nodes: []*config.Node{
 							&config.Node{
 								Address: "tcp://gitaly-primary.example.com",
-								Storage: "praefect-internal-1",
+								Storage: storage,
 							},
 						},
 					},
 				},
 			}
 
-			const storageName = "test-storage"
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			rs := datastore.NewMemoryRepositoryStore(nil)
+			require.NoError(t, rs.SetGeneration(ctx, virtualStorage, relativePath, storage, 1))
+			if tc.readOnly {
+				require.NoError(t, rs.SetGeneration(ctx, virtualStorage, relativePath, storage, 0))
+			}
+
 			coordinator := NewCoordinator(
 				datastore.NewMemoryReplicationEventQueue(conf),
-				nil,
-				&nodes.MockManager{GetShardFunc: func(storage string) (nodes.Shard, error) {
+				rs,
+				&nodes.MockManager{GetShardFunc: func(vs string) (nodes.Shard, error) {
+					require.Equal(t, virtualStorage, vs)
 					return nodes.Shard{
 						IsReadOnly: tc.readOnly,
-						Primary:    &nodes.MockNode{StorageName: storageName},
+						Primary:    &nodes.MockNode{StorageName: storage},
 					}, nil
 				}},
 				transactions.NewManager(),
@@ -102,18 +116,15 @@ func TestStreamDirectorReadOnlyEnforcement(t *testing.T) {
 				protoregistry.GitalyProtoPreregistered,
 			)
 
-			ctx, cancel := testhelper.Context()
-			defer cancel()
-
 			frame, err := proto.Marshal(&gitalypb.CleanupRequest{Repository: &gitalypb.Repository{
-				StorageName:  storageName,
-				RelativePath: "only-for-validation",
+				StorageName:  virtualStorage,
+				RelativePath: relativePath,
 			}})
 			require.NoError(t, err)
 
 			_, err = coordinator.StreamDirector(ctx, "/gitaly.RepositoryService/Cleanup", &mockPeeker{frame: frame})
 			if tc.shouldError {
-				require.True(t, errors.Is(err, ReadOnlyStorageError(storageName)))
+				require.Equal(t, ErrRepositoryReadOnly, err)
 				testhelper.RequireGrpcError(t, err, codes.FailedPrecondition)
 			} else {
 				require.NoError(t, err)

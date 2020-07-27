@@ -199,6 +199,16 @@ func (m *MemoryRepositoryStore) GetConsistentSecondaries(ctx context.Context, vi
 	return consistentSecondaries, nil
 }
 
+func (m *MemoryRepositoryStore) IsLatestGeneration(ctx context.Context, virtualStorage, relativePath, storage string) (bool, error) {
+	expected := m.getRepositoryGeneration(virtualStorage, relativePath)
+	if expected == GenerationUnknown {
+		return true, nil
+	}
+
+	actual := m.getStorageGeneration(virtualStorage, relativePath, storage)
+	return expected == actual, nil
+}
+
 func (m *MemoryRepositoryStore) getRepositoryGeneration(virtualStorage, relativePath string) int {
 	gen, ok := m.virtualStorageState[virtualStorage][relativePath]
 	if !ok {
