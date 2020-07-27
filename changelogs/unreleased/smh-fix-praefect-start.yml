@@ -1,0 +1,5 @@
+---
+title: Fix Praefect not starting with unhealthy Gitalys
+merge_request: 2422
+author:
+type: fixed

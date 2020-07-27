@@ -141,7 +141,6 @@ func NewManager(log *logrus.Entry, c config.Config, db *sql.DB, queue datastore.
 			conn, err := client.DialContext(ctx, node.Address,
 				append(
 					[]grpc.DialOption{
-						grpc.WithBlock(),
 						grpc.WithDefaultCallOptions(grpc.ForceCodec(proxy.NewCodec())),
 						grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(node.Token)),
 						grpc.WithStreamInterceptor(grpc_middleware.ChainStreamClient(
