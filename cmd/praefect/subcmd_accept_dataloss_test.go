@@ -117,7 +117,7 @@ func TestAcceptDatalossSubcommand(t *testing.T) {
 		{
 			desc:                "positional arguments",
 			args:                []string{"-virtual-storage=test-virtual-storage-1", "-repository=test-repository-1", "-authoritative-storage=test-physical-storage-2", "positional-arg"},
-			matchError:          matchEqual(UnexpectedPositionalArgsError{Command: "accept-dataloss"}),
+			matchError:          matchEqual(unexpectedPositionalArgsError{Command: "accept-dataloss"}),
 			expectedGenerations: startingGenerations,
 		},
 		{

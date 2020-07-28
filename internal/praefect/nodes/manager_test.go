@@ -25,10 +25,8 @@ type nodeAssertion struct {
 }
 
 type shardAssertion struct {
-	PreviousWritablePrimary *nodeAssertion
-	IsReadOnly              bool
-	Primary                 *nodeAssertion
-	Secondaries             []nodeAssertion
+	Primary     *nodeAssertion
+	Secondaries []nodeAssertion
 }
 
 func toNodeAssertion(n Node) *nodeAssertion {
@@ -51,10 +49,8 @@ func assertShard(t *testing.T, exp shardAssertion, act Shard) {
 	}
 
 	require.Equal(t, exp, shardAssertion{
-		PreviousWritablePrimary: toNodeAssertion(act.PreviousWritablePrimary),
-		IsReadOnly:              act.IsReadOnly,
-		Primary:                 toNodeAssertion(act.Primary),
-		Secondaries:             actSecondaries,
+		Primary:     toNodeAssertion(act.Primary),
+		Secondaries: actSecondaries,
 	})
 }
 
@@ -210,7 +206,7 @@ func TestNodeManager(t *testing.T) {
 
 	confWithFailover := config.Config{
 		VirtualStorages: virtualStorages,
-		Failover:        config.Failover{Enabled: true, ReadOnlyAfterFailover: true},
+		Failover:        config.Failover{Enabled: true},
 	}
 	confWithoutFailover := config.Config{
 		VirtualStorages: virtualStorages,
@@ -277,11 +273,8 @@ func TestNodeManager(t *testing.T) {
 
 	// shard with failover should have promoted a secondary to primary and demoted the primary to a secondary
 	assertShard(t, shardAssertion{
-		// previous write enabled primary should have been recorded
-		PreviousWritablePrimary: &nodeAssertion{node1.Storage, node1.Address},
-		IsReadOnly:              true,
-		Primary:                 &nodeAssertion{node2.Storage, node2.Address},
-		Secondaries:             []nodeAssertion{{node1.Storage, node1.Address}},
+		Primary:     &nodeAssertion{node2.Storage, node2.Address},
+		Secondaries: []nodeAssertion{{node1.Storage, node1.Address}},
 	}, shard)
 
 	// failing back to the original primary
@@ -293,23 +286,8 @@ func TestNodeManager(t *testing.T) {
 	require.NoError(t, err)
 
 	assertShard(t, shardAssertion{
-		// previous rw primary is now the primary again, field remains the same
-		// as node2 was not write enabled
-		PreviousWritablePrimary: &nodeAssertion{node1.Storage, node1.Address},
-		IsReadOnly:              true,
-		Primary:                 &nodeAssertion{node1.Storage, node1.Address},
-		Secondaries:             []nodeAssertion{{node2.Storage, node2.Address}},
-	}, shard)
-
-	require.NoError(t, nm.EnableWrites(context.Background(), "virtual-storage-0"))
-	shard, err = nm.GetShard("virtual-storage-0")
-	require.NoError(t, err)
-
-	assertShard(t, shardAssertion{
-		PreviousWritablePrimary: &nodeAssertion{node1.Storage, node1.Address},
-		IsReadOnly:              false,
-		Primary:                 &nodeAssertion{node1.Storage, node1.Address},
-		Secondaries:             []nodeAssertion{{node2.Storage, node2.Address}},
+		Primary:     &nodeAssertion{node1.Storage, node1.Address},
+		Secondaries: []nodeAssertion{{node2.Storage, node2.Address}},
 	}, shard)
 
 	healthSrv0.SetServingStatus("", grpc_health_v1.HealthCheckResponse_UNKNOWN)
@@ -318,8 +296,6 @@ func TestNodeManager(t *testing.T) {
 
 	_, err = nm.GetShard("virtual-storage-0")
 	require.Error(t, err, "should return error since no nodes are healthy")
-	require.Equal(t, ErrPrimaryNotHealthy, nm.EnableWrites(context.Background(), "virtual-storage-0"),
-		"should not be able to enable writes with unhealthy master")
 }
 
 func TestMgr_GetSyncedNode(t *testing.T) {

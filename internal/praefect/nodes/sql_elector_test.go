@@ -68,12 +68,7 @@ func TestBasicFailover(t *testing.T) {
 	praefectSocket := testhelper.GetTemporaryGitalySocketFileName()
 	socketName := "unix://" + praefectSocket
 
-	conf := config.Config{
-		SocketPath: socketName,
-		Failover: config.Failover{
-			ReadOnlyAfterFailover: true,
-		},
-	}
+	conf := config.Config{SocketPath: socketName}
 
 	internalSocket0, internalSocket1 := testhelper.GetTemporaryGitalySocketFileName(), testhelper.GetTemporaryGitalySocketFileName()
 	srv0, healthSrv0 := testhelper.NewServerWithHealth(t, internalSocket0)
@@ -117,7 +112,6 @@ func TestBasicFailover(t *testing.T) {
 	shard, err := elector.GetShard()
 	require.NoError(t, err)
 	assertShard(t, shardAssertion{
-		IsReadOnly:  false,
 		Primary:     &nodeAssertion{cs0.GetStorage(), cs0.GetAddress()},
 		Secondaries: []nodeAssertion{{cs1.GetStorage(), cs1.GetAddress()}},
 	}, shard)
@@ -132,7 +126,6 @@ func TestBasicFailover(t *testing.T) {
 	shard, err = elector.GetShard()
 	require.NoError(t, err)
 	assertShard(t, shardAssertion{
-		IsReadOnly:  false,
 		Primary:     &nodeAssertion{cs0.GetStorage(), cs0.GetAddress()},
 		Secondaries: []nodeAssertion{{cs1.GetStorage(), cs1.GetAddress()}},
 	}, shard)
@@ -149,11 +142,8 @@ func TestBasicFailover(t *testing.T) {
 	shard, err = elector.GetShard()
 	require.NoError(t, err)
 	assertShard(t, shardAssertion{
-		// previous primary was write-enabled, so we should record it
-		PreviousWritablePrimary: &nodeAssertion{cs0.GetStorage(), cs0.GetAddress()},
-		IsReadOnly:              true,
-		Primary:                 &nodeAssertion{cs1.GetStorage(), cs1.GetAddress()},
-		Secondaries:             []nodeAssertion{{cs0.GetStorage(), cs0.GetAddress()}},
+		Primary:     &nodeAssertion{cs1.GetStorage(), cs1.GetAddress()},
+		Secondaries: []nodeAssertion{{cs0.GetStorage(), cs0.GetAddress()}},
 	}, shard)
 
 	// Failover back to the original node
@@ -166,24 +156,8 @@ func TestBasicFailover(t *testing.T) {
 	shard, err = elector.GetShard()
 	require.NoError(t, err)
 	assertShard(t, shardAssertion{
-		// failing back to the original node means the primary is the same as the
-		// previous write-enabled primary. Node 2 was read-only, so field is not
-		// modified
-		PreviousWritablePrimary: &nodeAssertion{cs0.GetStorage(), cs0.GetAddress()},
-		IsReadOnly:              true,
-		Primary:                 &nodeAssertion{cs0.GetStorage(), cs0.GetAddress()},
-		Secondaries:             []nodeAssertion{{cs1.GetStorage(), cs1.GetAddress()}},
-	}, shard)
-
-	// We should be able to enable writes on the new primary
-	require.NoError(t, elector.enableWrites(ctx))
-	shard, err = elector.GetShard()
-	require.NoError(t, err)
-	assertShard(t, shardAssertion{
-		PreviousWritablePrimary: &nodeAssertion{cs0.GetStorage(), cs0.GetAddress()},
-		IsReadOnly:              false,
-		Primary:                 &nodeAssertion{cs0.GetStorage(), cs0.GetAddress()},
-		Secondaries:             []nodeAssertion{{cs1.GetStorage(), cs1.GetAddress()}},
+		Primary:     &nodeAssertion{cs0.GetStorage(), cs0.GetAddress()},
+		Secondaries: []nodeAssertion{{cs1.GetStorage(), cs1.GetAddress()}},
 	}, shard)
 
 	// Bring second node down
@@ -195,8 +169,6 @@ func TestBasicFailover(t *testing.T) {
 	// No new candidates
 	_, err = elector.GetShard()
 	require.Error(t, ErrPrimaryNotHealthy, err)
-	require.Error(t, ErrPrimaryNotHealthy, elector.enableWrites(ctx),
-		"shouldn't be able to enable writes with unhealthy master")
 }
 
 func TestElectDemotedPrimary(t *testing.T) {
@@ -214,13 +186,13 @@ func TestElectDemotedPrimary(t *testing.T) {
 	candidates := []*sqlCandidate{{Node: &nodeStatus{node: node}}}
 	require.NoError(t, elector.electNewPrimary(candidates))
 
-	primary, _, _, err := elector.lookupPrimary()
+	primary, err := elector.lookupPrimary()
 	require.NoError(t, err)
 	require.Equal(t, node.Storage, primary.GetStorage())
 
 	require.NoError(t, elector.demotePrimary())
 
-	primary, _, _, err = elector.lookupPrimary()
+	primary, err = elector.lookupPrimary()
 	require.NoError(t, err)
 	require.Nil(t, primary)
 
@@ -228,7 +200,7 @@ func TestElectDemotedPrimary(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, elector.electNewPrimary(candidates))
 
-	primary, _, _, err = elector.lookupPrimary()
+	primary, err = elector.lookupPrimary()
 	require.NoError(t, err)
 	require.Equal(t, node.Storage, primary.GetStorage())
 }
@@ -373,14 +345,12 @@ func TestElectNewPrimary(t *testing.T) {
 		t.Run(testCase.desc, func(t *testing.T) {
 			db.TruncateAll(t)
 
-			conf := config.Config{Failover: config.Failover{ReadOnlyAfterFailover: true}}
-			elector := newSQLElector(shardName, conf, db.DB, testhelper.DiscardTestLogger(t), ns)
+			elector := newSQLElector(shardName, config.Config{}, db.DB, testhelper.DiscardTestLogger(t), ns)
 
 			require.NoError(t, elector.electNewPrimary(candidates))
-			primary, readOnly, _, err := elector.lookupPrimary()
+			primary, err := elector.lookupPrimary()
 			require.NoError(t, err)
 			require.Equal(t, "gitaly-1", primary.GetStorage(), "since replication queue is empty the first candidate should be chosen")
-			require.False(t, readOnly)
 
 			predateElection(t, db, shardName, failoverTimeout)
 			_, err = db.Exec(testCase.initialReplQueueInsert)
@@ -392,10 +362,9 @@ func TestElectNewPrimary(t *testing.T) {
 			elector.log = logger
 			require.NoError(t, elector.electNewPrimary(candidates))
 
-			primary, readOnly, _, err = elector.lookupPrimary()
+			primary, err = elector.lookupPrimary()
 			require.NoError(t, err)
 			require.Equal(t, testCase.expectedPrimary, primary.GetStorage())
-			require.True(t, readOnly)
 
 			incompleteCounts := hook.LastEntry().Data["incomplete_counts"].([]targetNodeIncompleteCounts)
 			require.Equal(t, testCase.incompleteCounts, incompleteCounts)

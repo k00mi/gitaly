@@ -14,29 +14,25 @@ import (
 // shard. It does NOT support multiple Praefect nodes or have any
 // persistence. This is used mostly for testing and development.
 type localElector struct {
-	m                       sync.RWMutex
-	failoverEnabled         bool
-	shardName               string
-	nodes                   []Node
-	primaryNode             Node
-	readOnlyAfterFailover   bool
-	previousWritablePrimary Node
-	isReadOnly              bool
-	log                     logrus.FieldLogger
+	m               sync.RWMutex
+	failoverEnabled bool
+	shardName       string
+	nodes           []Node
+	primaryNode     Node
+	log             logrus.FieldLogger
 }
 
-func newLocalElector(name string, failoverEnabled, readOnlyAfterFailover bool, log logrus.FieldLogger, ns []*nodeStatus) *localElector {
+func newLocalElector(name string, failoverEnabled bool, log logrus.FieldLogger, ns []*nodeStatus) *localElector {
 	nodes := make([]Node, len(ns))
 	for i, n := range ns {
 		nodes[i] = n
 	}
 	return &localElector{
-		shardName:             name,
-		failoverEnabled:       failoverEnabled,
-		log:                   log.WithField("virtual_storage", name),
-		nodes:                 nodes[:],
-		primaryNode:           nodes[0],
-		readOnlyAfterFailover: readOnlyAfterFailover,
+		shardName:       name,
+		failoverEnabled: failoverEnabled,
+		log:             log.WithField("virtual_storage", name),
+		nodes:           nodes[:],
+		primaryNode:     nodes[0],
 	}
 }
 
@@ -112,20 +108,7 @@ func (s *localElector) checkNodes(ctx context.Context) error {
 		return ErrPrimaryNotHealthy
 	}
 
-	var previousWritablePrimary Node
-	if s.primaryNode != nil {
-		previousWritablePrimary = s.primaryNode
-	}
-
-	if s.isReadOnly {
-		previousWritablePrimary = s.previousWritablePrimary
-	}
-
 	s.primaryNode = newPrimary
-	s.previousWritablePrimary = previousWritablePrimary
-	s.isReadOnly = s.readOnlyAfterFailover
-
-	metrics.ReadOnlyGauge.WithLabelValues(s.shardName).Set(metrics.BoolAsFloat(s.isReadOnly))
 
 	return nil
 }
@@ -136,8 +119,6 @@ func (s *localElector) checkNodes(ctx context.Context) error {
 func (s *localElector) GetShard() (Shard, error) {
 	s.m.RLock()
 	primary := s.primaryNode
-	isReadOnly := s.isReadOnly
-	previousWritablePrimary := s.previousWritablePrimary
 	s.m.RUnlock()
 
 	if primary == nil {
@@ -156,22 +137,9 @@ func (s *localElector) GetShard() (Shard, error) {
 	}
 
 	return Shard{
-		PreviousWritablePrimary: previousWritablePrimary,
-		IsReadOnly:              isReadOnly,
-		Primary:                 primary,
-		Secondaries:             secondaries,
+		Primary:     primary,
+		Secondaries: secondaries,
 	}, nil
-}
-
-func (s *localElector) enableWrites(context.Context) error {
-	s.m.Lock()
-	defer s.m.Unlock()
-	if !s.primaryNode.IsHealthy() {
-		return ErrPrimaryNotHealthy
-	}
-
-	s.isReadOnly = false
-	return nil
 }
 
 func (s *localElector) updateMetrics() {

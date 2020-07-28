@@ -31,7 +31,6 @@ var (
 		"sql-migrate-down":   &sqlMigrateDownSubcommand{},
 		"sql-migrate-status": &sqlMigrateStatusSubcommand{},
 		"dataloss":           newDatalossSubcommand(),
-		"enable-writes":      &enableWritesSubcommand{},
 		"accept-dataloss":    &acceptDatalossSubcommand{},
 	}
 )

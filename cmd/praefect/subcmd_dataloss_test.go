@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -11,22 +10,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/service/info"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
-
-type mockPraefectInfoService struct {
-	gitalypb.UnimplementedPraefectInfoServiceServer
-	DatalossCheckFunc func(context.Context, *gitalypb.DatalossCheckRequest) (*gitalypb.DatalossCheckResponse, error)
-	EnableWritesFunc  func(context.Context, *gitalypb.EnableWritesRequest) (*gitalypb.EnableWritesResponse, error)
-}
-
-func (m mockPraefectInfoService) DatalossCheck(ctx context.Context, r *gitalypb.DatalossCheckRequest) (*gitalypb.DatalossCheckResponse, error) {
-	return m.DatalossCheckFunc(ctx, r)
-}
-
-func (m mockPraefectInfoService) EnableWrites(ctx context.Context, r *gitalypb.EnableWritesRequest) (*gitalypb.EnableWritesResponse, error) {
-	return m.EnableWritesFunc(ctx, r)
-}
 
 func TestDatalossSubcommand(t *testing.T) {
 	mgr := &nodes.MockManager{
@@ -72,7 +56,7 @@ func TestDatalossSubcommand(t *testing.T) {
 		{
 			desc:  "positional arguments",
 			args:  []string{"-virtual-storage=virtual-storage-1", "positional-arg"},
-			error: UnexpectedPositionalArgsError{Command: "dataloss"},
+			error: unexpectedPositionalArgsError{Command: "dataloss"},
 		},
 		{
 			desc: "data loss",

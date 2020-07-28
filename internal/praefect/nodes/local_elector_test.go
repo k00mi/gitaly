@@ -30,7 +30,7 @@ func setupElector(t *testing.T) (*localElector, []*nodeStatus, *grpc.ClientConn,
 	secondary := newConnectionStatus(config.Node{Storage: storageName}, cc, testhelper.DiscardTestEntry(t), mockHistogramVec1)
 	ns := []*nodeStatus{cs, secondary}
 	logger := testhelper.NewTestLogger(t).WithField("test", t.Name())
-	strategy := newLocalElector(storageName, true, true, logger, ns)
+	strategy := newLocalElector(storageName, true, logger, ns)
 
 	strategy.bootstrap(time.Second)
 
@@ -43,7 +43,6 @@ func TestGetShard(t *testing.T) {
 
 	shard, err := strategy.GetShard()
 	require.NoError(t, err)
-	require.False(t, shard.IsReadOnly, "new shard should not be read-only")
 	require.Equal(t, ns[0], shard.Primary)
 	require.Len(t, shard.Secondaries, 1)
 	require.Equal(t, ns[1], shard.Secondaries[0])
