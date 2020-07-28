@@ -86,11 +86,12 @@ func runOperationServiceServerWithRubyServer(t *testing.T, ruby *rubyserver.Serv
 	internalListener, err := net.Listen("unix", internalSocket)
 	require.NoError(t, err)
 
+	locator := config.NewLocator(config.Config)
 	gitalypb.RegisterOperationServiceServer(srv.GrpcServer(), &server{ruby: ruby})
 	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hook.NewServer(hook.GitlabAPIStub, config.Config.Hooks))
-	gitalypb.RegisterRepositoryServiceServer(srv.GrpcServer(), repository.NewServer(ruby, config.NewLocator(config.Config), internalSocket))
+	gitalypb.RegisterRepositoryServiceServer(srv.GrpcServer(), repository.NewServer(ruby, locator, internalSocket))
 	gitalypb.RegisterRefServiceServer(srv.GrpcServer(), ref.NewServer())
-	gitalypb.RegisterCommitServiceServer(srv.GrpcServer(), commit.NewServer())
+	gitalypb.RegisterCommitServiceServer(srv.GrpcServer(), commit.NewServer(locator))
 	gitalypb.RegisterSSHServiceServer(srv.GrpcServer(), ssh.NewServer())
 	reflection.Register(srv.GrpcServer())
 

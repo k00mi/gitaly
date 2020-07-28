@@ -22,7 +22,7 @@ import (
 
 var errAmbigRef = errors.New("ambiguous reference")
 
-func (*server) CommitLanguages(ctx context.Context, req *gitalypb.CommitLanguagesRequest) (*gitalypb.CommitLanguagesResponse, error) {
+func (s *server) CommitLanguages(ctx context.Context, req *gitalypb.CommitLanguagesRequest) (*gitalypb.CommitLanguagesResponse, error) {
 	repo := req.Repository
 
 	if err := git.ValidateRevisionAllowEmpty(req.Revision); err != nil {
@@ -43,7 +43,7 @@ func (*server) CommitLanguages(ctx context.Context, req *gitalypb.CommitLanguage
 		return nil, err
 	}
 
-	repoPath, err := helper.GetRepoPath(repo)
+	repoPath, err := s.locator.GetRepoPath(repo)
 	if err != nil {
 		return nil, err
 	}

@@ -56,7 +56,7 @@ var (
 func RegisterAll(grpcServer *grpc.Server, cfg config.Cfg, rubyServer *rubyserver.Server, gitlabAPI hook.GitlabAPI, locator storage.Locator) {
 	gitalypb.RegisterBlobServiceServer(grpcServer, blob.NewServer(rubyServer))
 	gitalypb.RegisterCleanupServiceServer(grpcServer, cleanup.NewServer())
-	gitalypb.RegisterCommitServiceServer(grpcServer, commit.NewServer())
+	gitalypb.RegisterCommitServiceServer(grpcServer, commit.NewServer(locator))
 	gitalypb.RegisterDiffServiceServer(grpcServer, diff.NewServer())
 	gitalypb.RegisterNamespaceServiceServer(grpcServer, namespace.NewServer())
 	gitalypb.RegisterOperationServiceServer(grpcServer, operations.NewServer(rubyServer))

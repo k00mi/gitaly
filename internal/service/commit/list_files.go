@@ -25,7 +25,7 @@ func (s *server) ListFiles(in *gitalypb.ListFilesRequest, stream gitalypb.Commit
 	}
 
 	repo := in.Repository
-	if _, err := helper.GetRepoPath(repo); err != nil {
+	if _, err := s.locator.GetRepoPath(repo); err != nil {
 		return err
 	}
 
