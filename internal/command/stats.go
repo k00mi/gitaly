@@ -25,6 +25,19 @@ func (stats *Stats) RecordSum(key string, value int) {
 	stats.registry[key] = value
 }
 
+func (stats *Stats) RecordMax(key string, value int) {
+	stats.Lock()
+	defer stats.Unlock()
+
+	if prevValue, ok := stats.registry[key]; ok {
+		if prevValue > value {
+			return
+		}
+	}
+
+	stats.registry[key] = value
+}
+
 func (stats *Stats) Fields() logrus.Fields {
 	stats.Lock()
 	defer stats.Unlock()

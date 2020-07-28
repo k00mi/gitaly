@@ -424,6 +424,7 @@ func (c *Command) logProcessComplete(ctx context.Context, exitCode int) {
 		stats.RecordSum("command.real_time_ms", int(realTime.Seconds()*1000))
 
 		if ok {
+			stats.RecordMax("command.maxrss", int(rusage.Maxrss))
 			stats.RecordSum("command.inblock", int(rusage.Inblock))
 			stats.RecordSum("command.oublock", int(rusage.Oublock))
 			stats.RecordSum("command.minflt", int(rusage.Minflt))

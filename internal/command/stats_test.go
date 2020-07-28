@@ -59,3 +59,19 @@ func TestStatsFromContext_RecordSumByRef(t *testing.T) {
 	require.NotNil(t, stats2)
 	require.Equal(t, stats2.Fields(), logrus.Fields{"foo": 2})
 }
+
+func TestStatsFromContext_RecordMax(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	ctx = InitContextStats(ctx)
+
+	stats := StatsFromContext(ctx)
+
+	stats.RecordMax("foo", 1024)
+	stats.RecordMax("foo", 256)
+	stats.RecordMax("foo", 512)
+
+	require.NotNil(t, stats)
+	require.Equal(t, stats.Fields(), logrus.Fields{"foo": 1024})
+}
