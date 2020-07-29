@@ -13,24 +13,19 @@ module Gitlab
       }.freeze
 
       def remote_branches(remote_name, env:)
-        if feature_enabled?(:remote_branches_ls_remote, on_by_default: true)
-          experimental_remote_branches(remote_name, env: env)
-        else
-          branches = []
+        list_remote_refs(remote_name, env: env).map do |line|
+          target, refname = line.strip.split("\t")
 
-          rugged.references.each("refs/remotes/#{remote_name}/*").map do |ref|
-            name = ref.name.sub(%r{\Arefs/remotes/#{remote_name}/}, '')
-
-            begin
-              target_commit = Gitlab::Git::Commit.find(self, ref.target.oid)
-              branches << Gitlab::Git::Branch.new(self, name, ref.target, target_commit)
-            rescue Rugged::ReferenceError
-              # Omit invalid branch
-            end
+          if target.nil? || refname.nil?
+            Rails.logger.info("Empty or invalid list of heads for remote: #{remote_name}")
+            break []
           end
 
-          branches
-        end
+          next unless refname.start_with?('refs/heads/')
+
+          target_commit = Gitlab::Git::Commit.find(self, target)
+          Gitlab::Git::Branch.new(self, refname, target, target_commit)
+        end.compact
       end
 
       def push_remote_branches(remote_name, branch_names, forced: true, env: {})
@@ -50,23 +45,6 @@ module Gitlab
 
         rugged.config["remote.#{remote_name}.mirror"] = true
         rugged.config["remote.#{remote_name}.prune"] = true
-      end
-
-      # Experimental: Get a list of remote branches via `ls-remote`
-      def experimental_remote_branches(remote, env: {})
-        list_remote_refs(remote, env: env).map do |line|
-          target, refname = line.strip.split("\t")
-
-          if target.nil? || refname.nil?
-            Rails.logger.info("Empty or invalid list of heads for remote: #{remote}")
-            break []
-          end
-
-          next unless refname.start_with?('refs/heads/')
-
-          target_commit = Gitlab::Git::Commit.find(self, target)
-          Gitlab::Git::Branch.new(self, refname, target, target_commit)
-        end.compact
       end
 
       def remote_tags(remote, env: {})
