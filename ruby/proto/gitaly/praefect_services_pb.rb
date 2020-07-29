@@ -26,6 +26,10 @@ module Gitaly
       # EnableWrites enables writes for a storage that was switched to a read-only mode
       # following a failover.
       rpc :EnableWrites, EnableWritesRequest, EnableWritesResponse
+      # SetAuthoritativeStorage sets the authoritative storage for a repository on a given virtual storage.
+      # This causes the current version of the repository on the authoritative storage to be considered the
+      # latest and overwrite any other version on the virtual storage.
+      rpc :SetAuthoritativeStorage, SetAuthoritativeStorageRequest, SetAuthoritativeStorageResponse
     end
 
     Stub = Service.rpc_stub_class

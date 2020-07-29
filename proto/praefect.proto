@@ -6,7 +6,6 @@ option go_package = "gitlab.com/gitlab-org/gitaly/proto/go/gitalypb";
 
 import "lint.proto";
 import "shared.proto";
-import "google/protobuf/timestamp.proto";
 
 service PraefectInfoService {
   rpc RepositoryReplicas(RepositoryReplicasRequest) returns (RepositoryReplicasResponse) {
@@ -43,7 +42,25 @@ service PraefectInfoService {
       scope_level: STORAGE
     };
   }
+
+  // SetAuthoritativeStorage sets the authoritative storage for a repository on a given virtual storage.
+  // This causes the current version of the repository on the authoritative storage to be considered the
+  // latest and overwrite any other version on the virtual storage.
+  rpc SetAuthoritativeStorage(SetAuthoritativeStorageRequest) returns (SetAuthoritativeStorageResponse) {
+    option (op_type) = {
+      op: MUTATOR
+      scope_level: STORAGE
+    };
+  }
 }
+
+message SetAuthoritativeStorageRequest {
+  string virtual_storage = 1 [(storage)=true];
+  string relative_path = 2;
+  string authoritative_storage = 3;
+}
+
+message SetAuthoritativeStorageResponse {}
 
 message EnableWritesRequest {
   // virtual_storage is the name of the virtual storage to enable writes for.

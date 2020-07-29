@@ -489,4 +489,22 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 		require.NoError(t, err)
 		require.True(t, latest)
 	})
+
+	t.Run("RepositoryExists", func(t *testing.T) {
+		rs, _ := newStore(t, nil)
+
+		exists, err := rs.RepositoryExists(ctx, vs, repo)
+		require.NoError(t, err)
+		require.False(t, exists)
+
+		require.NoError(t, rs.SetGeneration(ctx, vs, repo, stor, 0))
+		exists, err = rs.RepositoryExists(ctx, vs, repo)
+		require.NoError(t, err)
+		require.True(t, exists)
+
+		require.NoError(t, rs.DeleteRepository(ctx, vs, repo, stor))
+		exists, err = rs.RepositoryExists(ctx, vs, repo)
+		require.NoError(t, err)
+		require.False(t, exists)
+	})
 }
