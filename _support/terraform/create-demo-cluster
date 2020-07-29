@@ -14,6 +14,8 @@ def main
     run!(%w[gcloud auth application-default login])
   end
 
+  run!(%w[terraform get])
+
   unless terraform_initialized?
     run!(%w[terraform init])
   end
