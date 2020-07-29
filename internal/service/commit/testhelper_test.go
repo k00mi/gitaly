@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
@@ -32,7 +33,7 @@ func startTestServices(t testing.TB) (*grpc.Server, string) {
 		t.Fatal("failed to start server")
 	}
 
-	gitalypb.RegisterCommitServiceServer(server, NewServer())
+	gitalypb.RegisterCommitServiceServer(server, NewServer(config.NewLocator(config.Config)))
 	reflection.Register(server)
 
 	go server.Serve(listener)

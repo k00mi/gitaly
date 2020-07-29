@@ -16,7 +16,7 @@ import (
 // CountDivergingCommits counts the diverging commits between from and to. Important to note that when --max-count is applied, the counts are not guaranteed to be
 // accurate because --max-count is applied before it does the rev walk.
 func (s *server) CountDivergingCommits(ctx context.Context, req *gitalypb.CountDivergingCommitsRequest) (*gitalypb.CountDivergingCommitsResponse, error) {
-	if err := validateCountDivergingCommitsRequest(req); err != nil {
+	if err := s.validateCountDivergingCommitsRequest(req); err != nil {
 		return nil, helper.ErrInvalidArgument(err)
 	}
 
@@ -30,7 +30,7 @@ func (s *server) CountDivergingCommits(ctx context.Context, req *gitalypb.CountD
 	return &gitalypb.CountDivergingCommitsResponse{LeftCount: left, RightCount: right}, nil
 }
 
-func validateCountDivergingCommitsRequest(req *gitalypb.CountDivergingCommitsRequest) error {
+func (s *server) validateCountDivergingCommitsRequest(req *gitalypb.CountDivergingCommitsRequest) error {
 	if req.GetFrom() == nil || req.GetTo() == nil {
 		return errors.New("from and to are both required")
 	}
@@ -39,7 +39,7 @@ func validateCountDivergingCommitsRequest(req *gitalypb.CountDivergingCommitsReq
 		return errors.New("repository is empty")
 	}
 
-	if _, err := helper.GetRepoPath(req.GetRepository()); err != nil {
+	if _, err := s.locator.GetRepoPath(req.GetRepository()); err != nil {
 		return fmt.Errorf("repository not valid: %v", err)
 	}
 
