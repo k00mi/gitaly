@@ -33,6 +33,10 @@ resource "random_id" "db_name_suffix" {
   byte_length = 4
 }
 
+resource "google_compute_address" "pgbouncer" {
+  name = "${var.praefect_demo_cluster_name}-praefect-pgbouncer"
+}
+
 resource "google_sql_database_instance" "praefect_sql" {
   # It appears CloudSQL does not like Terraform re-using database names.
   # Adding a random ID prevents name reuse.
@@ -48,7 +52,7 @@ resource "google_sql_database_instance" "praefect_sql" {
 
       authorized_networks {
         name  = "allow-all-inbound"
-        value = "0.0.0.0/0"
+        value = google_compute_address.pgbouncer.address
       }
     }
   }
@@ -77,6 +81,7 @@ module "pgbouncer" {
   name       = "${var.praefect_demo_cluster_name}-pgbouncer"
   zone       = var.demo_zone
   subnetwork = "default"
+  public_ip_address = google_compute_address.pgbouncer.address
 
   port          = 5432
   database_host = google_sql_database_instance.praefect_sql.public_ip_address
