@@ -143,7 +143,9 @@ func TestFailedReceivePackRequestDueToHooksFailure(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(hookDir)
 
-	defer func() { hooks.Override = "" }()
+	defer func(override string) {
+		hooks.Override = override
+	}(hooks.Override)
 	hooks.Override = hookDir
 
 	require.NoError(t, os.MkdirAll(hooks.Path(), 0755))
@@ -417,10 +419,6 @@ func testPostReceivePackToHooks(t *testing.T, ctx context.Context) {
 	config.Config.Gitlab.URL = ts.URL
 	config.Config.Gitlab.SecretFile = filepath.Join(tempGitlabShellDir, ".gitlab_shell_secret")
 
-	defer func(override string) {
-		hooks.Override = override
-	}(hooks.Override)
-
 	cwd, err := os.Getwd()
 	require.NoError(t, err)
 	hookDir := filepath.Join(cwd, "../../../ruby", "git-hooks")
@@ -595,6 +593,11 @@ func TestPostReceiveWithReferenceTransactionHook(t *testing.T) {
 	}(config.Config.Gitlab.SecretFile)
 	config.Config.Gitlab.SecretFile = filepath.Join(gitlabShellDir, ".gitlab_shell_secret")
 	testhelper.WriteShellSecretFile(t, gitlabShellDir, "secret123")
+
+	defer func(override string) {
+		hooks.Override = override
+	}(hooks.Override)
+	hooks.Override = ""
 
 	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{
 		featureflag.ReferenceTransactionHook,
