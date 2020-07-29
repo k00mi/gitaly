@@ -227,7 +227,7 @@ license_scanning:
 praefect_sql_connect:
   <<: *go_test_definition
   services:
-    - postgres:9.6
+    - postgres:11.8
   variables:
     POSTGRES_DB: praefect_test
     POSTGRES_USER: praefect
