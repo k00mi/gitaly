@@ -14,6 +14,12 @@ import (
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
+type unexpectedPositionalArgsError struct{ Command string }
+
+func (err unexpectedPositionalArgsError) Error() string {
+	return fmt.Sprintf("%s doesn't accept positional arguments", err.Command)
+}
+
 type datalossSubcommand struct {
 	output         io.Writer
 	virtualStorage string
@@ -37,7 +43,7 @@ func (cmd *datalossSubcommand) println(indent int, msg string, args ...interface
 
 func (cmd *datalossSubcommand) Exec(flags *flag.FlagSet, cfg config.Config) error {
 	if flags.NArg() > 0 {
-		return UnexpectedPositionalArgsError{Command: flags.Name()}
+		return unexpectedPositionalArgsError{Command: flags.Name()}
 	}
 
 	virtualStorages := []string{cmd.virtualStorage}

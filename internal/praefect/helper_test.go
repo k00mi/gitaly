@@ -93,10 +93,9 @@ func noopBackoffFunc() (backoff, backoffReset) {
 type nullNodeMgr struct{}
 
 func (nullNodeMgr) GetShard(virtualStorageName string) (nodes.Shard, error) {
-	return nodes.Shard{}, nil
+	return nodes.Shard{Primary: &nodes.MockNode{}}, nil
 }
 
-func (nullNodeMgr) EnableWrites(ctx context.Context, virtualStorageName string) error { return nil }
 func (nullNodeMgr) GetSyncedNode(ctx context.Context, virtualStorageName, repoPath string) (nodes.Node, error) {
 	return nil, nil
 }

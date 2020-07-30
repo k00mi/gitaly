@@ -2,7 +2,6 @@ package info
 
 import (
 	"context"
-	"errors"
 
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
@@ -28,18 +27,6 @@ func NewServer(nodeMgr nodes.Manager, conf config.Config, queue datastore.Replic
 		queue:   queue,
 		rs:      rs,
 	}
-}
-
-func (s *Server) EnableWrites(ctx context.Context, req *gitalypb.EnableWritesRequest) (*gitalypb.EnableWritesResponse, error) {
-	if err := s.nodeMgr.EnableWrites(ctx, req.GetVirtualStorage()); err != nil {
-		if errors.Is(err, nodes.ErrVirtualStorageNotExist) {
-			return nil, helper.ErrInvalidArgument(err)
-		}
-
-		return nil, helper.ErrInternal(err)
-	}
-
-	return &gitalypb.EnableWritesResponse{}, nil
 }
 
 func (s *Server) SetAuthoritativeStorage(ctx context.Context, req *gitalypb.SetAuthoritativeStorageRequest) (*gitalypb.SetAuthoritativeStorageResponse, error) {

@@ -23,9 +23,6 @@ module Gitaly
       # DatalossCheck checks for nodes which are not up to date with the previous writable primary.
       # This indicates possible data loss after a failover event.
       rpc :DatalossCheck, DatalossCheckRequest, DatalossCheckResponse
-      # EnableWrites enables writes for a storage that was switched to a read-only mode
-      # following a failover.
-      rpc :EnableWrites, EnableWritesRequest, EnableWritesResponse
       # SetAuthoritativeStorage sets the authoritative storage for a repository on a given virtual storage.
       # This causes the current version of the repository on the authoritative storage to be considered the
       # latest and overwrite any other version on the virtual storage.

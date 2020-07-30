@@ -37,7 +37,7 @@ func (cmd *acceptDatalossSubcommand) FlagSet() *flag.FlagSet {
 
 func (cmd *acceptDatalossSubcommand) Exec(flags *flag.FlagSet, cfg config.Config) error {
 	if flags.NArg() > 0 {
-		return UnexpectedPositionalArgsError{Command: flags.Name()}
+		return unexpectedPositionalArgsError{Command: flags.Name()}
 	} else if cmd.virtualStorage == "" {
 		return requiredParameterError(paramVirtualStorage)
 	} else if cmd.relativePath == "" {

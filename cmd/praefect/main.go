@@ -70,14 +70,6 @@
 // "-virtual-storage" specifies which virtual storage to check for data loss. If not specified,
 // the check is performed for every configured virtual storage.
 //
-// Enable Writes
-//
-// The subcommand "enable-writes" re-enables writes to a storage after it has experienced a
-// failover event. Once writes are re-enabled, the new primary's state might diverge from the
-// previous primary, making data recovery attempts more difficult due to possible conflicts.
-//
-//     praefect -config PATH_TO_CONFIG enable-writes -virtual-storage <vstorage>
-//
 // Accept Dataloss
 //
 // The subcommand "accept-dataloss" allows for accepting data loss in a repository to enable it for

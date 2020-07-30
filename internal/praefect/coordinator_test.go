@@ -46,39 +46,19 @@ func TestSecondaryRotation(t *testing.T) {
 
 func TestStreamDirectorReadOnlyEnforcement(t *testing.T) {
 	for _, tc := range []struct {
-		readOnly        bool
-		readOnlyEnabled bool
-		shouldError     bool
+		desc     string
+		readOnly bool
 	}{
-		{
-			readOnly:        false,
-			readOnlyEnabled: true,
-			shouldError:     false,
-		},
-		{
-			readOnly:        true,
-			readOnlyEnabled: true,
-			shouldError:     true,
-		},
-		{
-			readOnly:        false,
-			readOnlyEnabled: false,
-			shouldError:     false,
-		},
-		{
-			readOnly:        true,
-			readOnlyEnabled: false,
-			shouldError:     false,
-		},
+		{desc: "writable", readOnly: false},
+		{desc: "read-only", readOnly: true},
 	} {
-		t.Run(fmt.Sprintf("read-only: %v, enabled: %v", tc.readOnly, tc.readOnlyEnabled), func(t *testing.T) {
+		t.Run(tc.desc, func(t *testing.T) {
 			const (
 				virtualStorage = "test-virtual-storage"
 				relativePath   = "test-repository"
 				storage        = "test-storage"
 			)
 			conf := config.Config{
-				Failover: config.Failover{ReadOnlyAfterFailover: tc.readOnlyEnabled},
 				VirtualStorages: []*config.VirtualStorage{
 					&config.VirtualStorage{
 						Name: virtualStorage,
@@ -107,8 +87,7 @@ func TestStreamDirectorReadOnlyEnforcement(t *testing.T) {
 				&nodes.MockManager{GetShardFunc: func(vs string) (nodes.Shard, error) {
 					require.Equal(t, virtualStorage, vs)
 					return nodes.Shard{
-						IsReadOnly: tc.readOnly,
-						Primary:    &nodes.MockNode{StorageName: storage},
+						Primary: &nodes.MockNode{StorageName: storage},
 					}, nil
 				}},
 				transactions.NewManager(),
@@ -123,7 +102,7 @@ func TestStreamDirectorReadOnlyEnforcement(t *testing.T) {
 			require.NoError(t, err)
 
 			_, err = coordinator.StreamDirector(ctx, "/gitaly.RepositoryService/Cleanup", &mockPeeker{frame: frame})
-			if tc.shouldError {
+			if tc.readOnly {
 				require.Equal(t, ErrRepositoryReadOnly, err)
 				testhelper.RequireGrpcError(t, err, codes.FailedPrecondition)
 			} else {

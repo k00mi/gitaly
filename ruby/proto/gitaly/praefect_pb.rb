@@ -13,11 +13,6 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
   end
   add_message "gitaly.SetAuthoritativeStorageResponse" do
   end
-  add_message "gitaly.EnableWritesRequest" do
-    optional :virtual_storage, :string, 1
-  end
-  add_message "gitaly.EnableWritesResponse" do
-  end
   add_message "gitaly.DatalossCheckRequest" do
     optional :virtual_storage, :string, 1
   end
@@ -62,8 +57,6 @@ end
 module Gitaly
   SetAuthoritativeStorageRequest = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.SetAuthoritativeStorageRequest").msgclass
   SetAuthoritativeStorageResponse = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.SetAuthoritativeStorageResponse").msgclass
-  EnableWritesRequest = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.EnableWritesRequest").msgclass
-  EnableWritesResponse = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.EnableWritesResponse").msgclass
   DatalossCheckRequest = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.DatalossCheckRequest").msgclass
   DatalossCheckResponse = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.DatalossCheckResponse").msgclass
   DatalossCheckResponse::Repository = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.DatalossCheckResponse.Repository").msgclass

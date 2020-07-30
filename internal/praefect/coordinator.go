@@ -232,12 +232,10 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 		return nil, fmt.Errorf("mutator call: get shard: %w", err)
 	}
 
-	if c.conf.Failover.ReadOnlyAfterFailover {
-		if latest, err := c.rs.IsLatestGeneration(ctx, virtualStorage, call.targetRepo.RelativePath, shard.Primary.GetStorage()); err != nil {
-			return nil, fmt.Errorf("check generation: %w", err)
-		} else if !latest {
-			return nil, ErrRepositoryReadOnly
-		}
+	if latest, err := c.rs.IsLatestGeneration(ctx, virtualStorage, call.targetRepo.RelativePath, shard.Primary.GetStorage()); err != nil {
+		return nil, fmt.Errorf("check generation: %w", err)
+	} else if !latest {
+		return nil, ErrRepositoryReadOnly
 	}
 
 	primaryMessage, err := rewrittenRepositoryMessage(call.methodInfo, call.msg, shard.Primary.GetStorage())

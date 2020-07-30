@@ -111,13 +111,6 @@ var PrimaryGauge = prometheus.NewGaugeVec(
 	}, []string{"virtual_storage", "gitaly_storage"},
 )
 
-var ReadOnlyGauge = prometheus.NewGaugeVec(
-	prometheus.GaugeOpts{
-		Name: "gitaly_praefect_read_only_mode",
-		Help: "Shows whether a virtual storage is in read-only mode.",
-	}, []string{"virtual_storage"},
-)
-
 var NodeLastHealthcheckGauge = prometheus.NewGaugeVec(
 	prometheus.GaugeOpts{
 		Namespace: "gitaly",
@@ -149,7 +142,6 @@ func init() {
 	prometheus.MustRegister(
 		MethodTypeCounter,
 		PrimaryGauge,
-		ReadOnlyGauge,
 		ChecksumMismatchCounter,
 		NodeLastHealthcheckGauge,
 		ReadDistribution,

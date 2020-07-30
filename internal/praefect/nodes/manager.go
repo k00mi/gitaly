@@ -29,12 +29,8 @@ import (
 
 // Shard is a primary with a set of secondaries
 type Shard struct {
-	// PreviousWritablePrimary is the virtual storage's previous
-	// write-enabled primary.
-	PreviousWritablePrimary Node
-	IsReadOnly              bool
-	Primary                 Node
-	Secondaries             []Node
+	Primary     Node
+	Secondaries []Node
 }
 
 func (s Shard) GetNode(storage string) (Node, error) {
@@ -67,11 +63,6 @@ func (s Shard) GetHealthySecondaries() []Node {
 // Manager is responsible for returning shards for virtual storages
 type Manager interface {
 	GetShard(virtualStorageName string) (Shard, error)
-	// EnableWrites enables writes for a given virtual storage. Returns an
-	// ErrPrimaryNotHealthy if the shard does not have a healthy primary.
-	// ErrVirtualStorageNotExist if a virtual storage with the given name
-	// does not exist.
-	EnableWrites(ctx context.Context, virtualStorageName string) error
 	// GetSyncedNode returns a random storage node based on the state of the replication.
 	// It returns primary in case there are no up to date secondaries or error occurs.
 	GetSyncedNode(ctx context.Context, virtualStorageName, repoPath string) (Node, error)
@@ -117,7 +108,6 @@ type leaderElectionStrategy interface {
 	start(bootstrapInterval, monitorInterval time.Duration)
 	checkNodes(context.Context) error
 	GetShard() (Shard, error)
-	enableWrites(context.Context) error
 }
 
 // ErrPrimaryNotHealthy indicates the primary of a shard is not in a healthy state and hence
@@ -165,7 +155,7 @@ func NewManager(log *logrus.Entry, c config.Config, db *sql.DB, queue datastore.
 		if c.Failover.Enabled && c.Failover.ElectionStrategy == "sql" {
 			strategies[virtualStorage.Name] = newSQLElector(virtualStorage.Name, c, db, log, ns)
 		} else {
-			strategies[virtualStorage.Name] = newLocalElector(virtualStorage.Name, c.Failover.Enabled, c.Failover.ReadOnlyAfterFailover, log, ns)
+			strategies[virtualStorage.Name] = newLocalElector(virtualStorage.Name, c.Failover.Enabled, log, ns)
 		}
 	}
 
@@ -213,15 +203,6 @@ func (n *Mgr) GetShard(virtualStorageName string) (Shard, error) {
 	}
 
 	return strategy.GetShard()
-}
-
-func (n *Mgr) EnableWrites(ctx context.Context, virtualStorageName string) error {
-	strategy, ok := n.strategies[virtualStorageName]
-	if !ok {
-		return ErrVirtualStorageNotExist
-	}
-
-	return strategy.enableWrites(ctx)
 }
 
 func (n *Mgr) GetSyncedNode(ctx context.Context, virtualStorageName, repoPath string) (Node, error) {

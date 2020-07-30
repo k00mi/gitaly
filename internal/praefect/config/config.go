@@ -17,7 +17,6 @@ import (
 type Failover struct {
 	Enabled                  bool            `toml:"enabled"`
 	ElectionStrategy         string          `toml:"election_strategy"`
-	ReadOnlyAfterFailover    bool            `toml:"read_only_after_failover"`
 	ErrorThresholdWindow     config.Duration `toml:"error_threshold_window"`
 	WriteErrorThresholdCount uint32          `toml:"write_error_threshold_count"`
 	ReadErrorThresholdCount  uint32          `toml:"read_error_threshold_count"`
@@ -55,7 +54,7 @@ type VirtualStorage struct {
 func FromFile(filePath string) (Config, error) {
 	conf := &Config{
 		// Sets the default Failover, to be overwritten when deserializing the TOML
-		Failover: Failover{Enabled: true, ElectionStrategy: sqlFailoverValue, ReadOnlyAfterFailover: true},
+		Failover: Failover{Enabled: true, ElectionStrategy: sqlFailoverValue},
 	}
 	if _, err := toml.DecodeFile(filePath, conf); err != nil {
 		return Config{}, err

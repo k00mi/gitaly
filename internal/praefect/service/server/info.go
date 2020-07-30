@@ -69,7 +69,7 @@ func (s *Server) ServerInfo(ctx context.Context, in *gitalypb.ServerInfoRequest)
 					// From the perspective of the praefect client, the primary internal gitaly node's storage status is equivalent
 					// to the virtual storage's storage status.
 					storageStatuses[i].StorageName = virtualStorage.Name
-					storageStatuses[i].Writeable = !shard.IsReadOnly && storageStatus.Writeable
+					storageStatuses[i].Writeable = storageStatus.Writeable
 					storageStatuses[i].ReplicationFactor = replicas
 					break
 				}

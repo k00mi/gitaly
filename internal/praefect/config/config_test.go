@@ -252,7 +252,6 @@ func TestConfigParsing(t *testing.T) {
 				Failover: Failover{
 					Enabled:                  true,
 					ElectionStrategy:         sqlFailoverValue,
-					ReadOnlyAfterFailover:    true,
 					ErrorThresholdWindow:     config.Duration(20 * time.Second),
 					WriteErrorThresholdCount: 1500,
 					ReadErrorThresholdCount:  100,
@@ -265,9 +264,8 @@ func TestConfigParsing(t *testing.T) {
 			expected: Config{
 				GracefulStopTimeout: config.Duration(time.Minute),
 				Failover: Failover{
-					Enabled:               false,
-					ElectionStrategy:      "local",
-					ReadOnlyAfterFailover: false,
+					Enabled:          false,
+					ElectionStrategy: "local",
 				},
 			},
 		},
@@ -277,9 +275,8 @@ func TestConfigParsing(t *testing.T) {
 			expected: Config{
 				GracefulStopTimeout: config.Duration(time.Minute),
 				Failover: Failover{
-					Enabled:               true,
-					ElectionStrategy:      sqlFailoverValue,
-					ReadOnlyAfterFailover: true,
+					Enabled:          true,
+					ElectionStrategy: sqlFailoverValue,
 				},
 			},
 		},

@@ -729,7 +729,6 @@ func TestProcessBacklog_ReplicatesToReadOnlyPrimary(t *testing.T) {
 			GetShardFunc: func(vs string) (nodes.Shard, error) {
 				require.Equal(t, virtualStorage, vs)
 				return nodes.Shard{
-					IsReadOnly: true,
 					Primary: &nodes.MockNode{
 						StorageName: primaryStorage,
 						Conn:        primaryConn,

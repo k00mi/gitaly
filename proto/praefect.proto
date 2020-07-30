@@ -34,15 +34,6 @@ service PraefectInfoService {
     };
   }
 
-  // EnableWrites enables writes for a storage that was switched to a read-only mode
-  // following a failover.
-  rpc EnableWrites(EnableWritesRequest) returns (EnableWritesResponse) {
-    option (op_type) = {
-      op: MUTATOR
-      scope_level: STORAGE
-    };
-  }
-
   // SetAuthoritativeStorage sets the authoritative storage for a repository on a given virtual storage.
   // This causes the current version of the repository on the authoritative storage to be considered the
   // latest and overwrite any other version on the virtual storage.
@@ -61,13 +52,6 @@ message SetAuthoritativeStorageRequest {
 }
 
 message SetAuthoritativeStorageResponse {}
-
-message EnableWritesRequest {
-  // virtual_storage is the name of the virtual storage to enable writes for.
-  string virtual_storage = 1 [(storage)=true];
-}
-
-message EnableWritesResponse {}
 
 message DatalossCheckRequest {
   string virtual_storage = 1 [(storage)=true];
