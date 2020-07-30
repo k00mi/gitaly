@@ -58,7 +58,7 @@ resource "google_sql_database_instance" "praefect_sql" {
   }
 }
 
-output "praefect_postgresql_ip" {
+output "praefect_pgbouncer_ip" {
   value = module.pgbouncer.private_ip_address
 }
 
