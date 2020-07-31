@@ -1,5 +1,0 @@
----
-title: Disable iconv support for libgit2
-merge_request: 2434
-author:
-type: fixed

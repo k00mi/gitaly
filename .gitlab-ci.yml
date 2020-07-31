@@ -29,25 +29,13 @@ danger-review:
 
 .ruby_template: &ruby_definition
   cache:
-    key:
-      files:
-        - Makefile
-        - ruby/Gemfile.lock
+    key: gems-ruby-2.6
     paths:
-      - _build/libgit2
       - ruby/vendor/bundle
 
 .build_template: &build_definition
   <<: *ruby_definition
   stage: build
-  cache:
-    key:
-      files:
-        - Makefile
-        - ruby/Gemfile.lock
-    paths:
-      - _build/libgit2
-      - ruby/vendor/bundle
   script:
     - go version
     - make
@@ -74,12 +62,8 @@ danger-review:
   stage: test
   # Override the ruby_definition cache definition for pull
   cache:
-    key:
-      files:
-        - Makefile
-        - ruby/Gemfile.lock
+    key: gems-ruby-2.6
     paths:
-      - _build/libgit2
       - ruby/vendor/bundle
     policy: pull
   artifacts:
