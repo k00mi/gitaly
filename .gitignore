@@ -1,7 +1,6 @@
 /_build
 /config.mak
 /gitaly
-/gitaly-git2go
 /gitaly-hooks
 cmd/gitaly-ssh/gitaly-ssh
 /gitaly-ssh
