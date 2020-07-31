@@ -608,6 +608,21 @@ func ConfigureGitalySSH() {
 	MustRunCommand(nil, nil, "go", goBuildArgs...)
 }
 
+// ConfigureGitalyGit2Go configures the gitaly-git2go command for tests
+func ConfigureGitalyGit2Go() {
+	if config.Config.BinDir == "" {
+		log.Fatal("config.Config.BinDir must be set")
+	}
+
+	goBuildArgs := []string{
+		"build",
+		"-tags", "static,system_libgit2",
+		"-o", path.Join(config.Config.BinDir, "gitaly-git2go"),
+		"gitlab.com/gitlab-org/gitaly/cmd/gitaly-git2go",
+	}
+	MustRunCommand(nil, nil, "go", goBuildArgs...)
+}
+
 // GetRepositoryRefs gives a list of each repository ref as a string
 func GetRepositoryRefs(t testing.TB, repoPath string) string {
 	refs := MustRunCommand(t, nil, "git", "-C", repoPath, "for-each-ref")
