@@ -30,9 +30,6 @@ type ReplicationEventQueue interface {
 	// outdated if the latest replication job is not in 'complete' state or the latest replication job does not originate
 	// from the reference storage.
 	GetOutdatedRepositories(ctx context.Context, virtualStorage string, referenceStorage string) (map[string][]string, error)
-	// GetUpToDateStorages returns list of target storages where latest replication job is in 'completed' state.
-	// It returns no results if there is no up to date storages or there were no replication events yet.
-	GetUpToDateStorages(ctx context.Context, virtualStorage, repoPath string) ([]string, error)
 	// StartHealthUpdate starts periodical update of the event's health identifier.
 	// The events with fresh health identifier won't be considered as stale.
 	// The health update will be executed on each new entry received from trigger channel passed in.

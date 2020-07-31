@@ -236,7 +236,7 @@ func run(cfgs []starter.Config, conf config.Config) error {
 		rs = datastore.NewPostgresRepositoryStore(db, conf.StorageNames())
 	}
 
-	nodeManager, err := nodes.NewManager(logger, conf, db, queue, nodeLatencyHistogram)
+	nodeManager, err := nodes.NewManager(logger, conf, db, rs, nodeLatencyHistogram)
 	if err != nil {
 		return err
 	}

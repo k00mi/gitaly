@@ -149,7 +149,7 @@ func TestStreamDirectorMutator(t *testing.T) {
 
 	entry := testhelper.DiscardTestEntry(t)
 
-	nodeMgr, err := nodes.NewManager(entry, conf, nil, queueInterceptor, promtest.NewMockHistogramVec())
+	nodeMgr, err := nodes.NewManager(entry, conf, nil, nil, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 
 	txMgr := transactions.NewManager()
@@ -339,7 +339,7 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 				ctx = featureflag.IncomingCtxWithFeatureFlag(ctx, feature)
 			}
 
-			nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf, nil, queueInterceptor, promtest.NewMockHistogramVec())
+			nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf, nil, nil, promtest.NewMockHistogramVec())
 			require.NoError(t, err)
 
 			shard, err := nodeMgr.GetShard(conf.VirtualStorages[0].Name)
@@ -482,7 +482,7 @@ func TestStreamDirectorAccessor(t *testing.T) {
 
 	entry := testhelper.DiscardTestEntry(t)
 
-	nodeMgr, err := nodes.NewManager(entry, conf, nil, queue, promtest.NewMockHistogramVec())
+	nodeMgr, err := nodes.NewManager(entry, conf, nil, nil, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 	nodeMgr.Start(0, time.Minute)
 
@@ -566,7 +566,13 @@ func TestCoordinatorStreamDirector_distributesReads(t *testing.T) {
 
 	entry := testhelper.DiscardTestEntry(t)
 
-	nodeMgr, err := nodes.NewManager(entry, conf, nil, queue, promtest.NewMockHistogramVec())
+	repoStore := datastore.NewMemoryRepositoryStore(conf.StorageNames())
+	require.NoError(t, repoStore.IncrementGeneration(ctx, conf.VirtualStorages[0].Name, targetRepo.RelativePath, primaryNodeConf.Storage, nil))
+	generation, err := repoStore.GetGeneration(ctx, conf.VirtualStorages[0].Name, targetRepo.RelativePath, primaryNodeConf.Storage)
+	require.NoError(t, err)
+	require.NoError(t, repoStore.SetGeneration(ctx, conf.VirtualStorages[0].Name, targetRepo.RelativePath, secondaryNodeConf.Storage, generation))
+
+	nodeMgr, err := nodes.NewManager(entry, conf, nil, repoStore, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 	nodeMgr.Start(0, time.Minute)
 
@@ -574,7 +580,7 @@ func TestCoordinatorStreamDirector_distributesReads(t *testing.T) {
 
 	coordinator := NewCoordinator(
 		queue,
-		datastore.NewMemoryRepositoryStore(conf.StorageNames()),
+		repoStore,
 		nodeMgr,
 		txMgr,
 		conf,
@@ -765,7 +771,7 @@ func TestAbsentCorrelationID(t *testing.T) {
 
 	entry := testhelper.DiscardTestEntry(t)
 
-	nodeMgr, err := nodes.NewManager(entry, conf, nil, queueInterceptor, promtest.NewMockHistogramVec())
+	nodeMgr, err := nodes.NewManager(entry, conf, nil, nil, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
 	txMgr := transactions.NewManager()
 
