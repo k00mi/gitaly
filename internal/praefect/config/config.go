@@ -20,6 +20,12 @@ type Failover struct {
 	ErrorThresholdWindow     config.Duration `toml:"error_threshold_window"`
 	WriteErrorThresholdCount uint32          `toml:"write_error_threshold_count"`
 	ReadErrorThresholdCount  uint32          `toml:"read_error_threshold_count"`
+	// BootstrapInterval allows set a time duration that would be used on startup to make initial health check.
+	// The default value is 1s.
+	BootstrapInterval config.Duration `toml:"bootstrap_interval"`
+	// MonitorInterval allows set a time duration that would be used after bootstrap is completed to execute health checks.
+	// The default value is 3s.
+	MonitorInterval config.Duration `toml:"monitor_interval"`
 }
 
 const sqlFailoverValue = "sql"
@@ -60,13 +66,13 @@ func FromFile(filePath string) (Config, error) {
 		return Config{}, err
 	}
 
-	conf.setDefaults()
-
 	// TODO: Remove this after failover_enabled has moved under a separate failover section. This is for
 	// backwards compatibility only
 	if conf.FailoverEnabled {
 		conf.Failover.Enabled = true
 	}
+
+	conf.setDefaults()
 
 	return *conf, nil
 }
@@ -144,6 +150,16 @@ func (c *Config) NeedsSQL() bool {
 func (c *Config) setDefaults() {
 	if c.GracefulStopTimeout.Duration() == 0 {
 		c.GracefulStopTimeout = config.Duration(time.Minute)
+	}
+
+	if c.Failover.Enabled {
+		if c.Failover.BootstrapInterval.Duration() == 0 {
+			c.Failover.BootstrapInterval = config.Duration(time.Second)
+		}
+
+		if c.Failover.MonitorInterval.Duration() == 0 {
+			c.Failover.MonitorInterval = config.Duration(3 * time.Second)
+		}
 	}
 }
 
