@@ -209,7 +209,7 @@ check-mod-tidy:
 
 .PHONY: lint
 lint: ${GOLANGCI_LINT}
-	${Q}${GOLANGCI_LINT} cache clean && ${GOLANGCI_LINT} run --out-format tab --config ${SOURCE_DIR}/.golangci.yml
+	${Q}${GOLANGCI_LINT} cache clean && ${GOLANGCI_LINT} run --build-tags "${GO_BUILD_TAGS}" --out-format tab --config ${SOURCE_DIR}/.golangci.yml
 
 .PHONY: check-formatting
 check-formatting: ${GITALYFMT}
@@ -223,7 +223,7 @@ format: ${GOIMPORTS} ${GITALYFMT}
 
 .PHONY: staticcheck-deprecations
 staticcheck-deprecations: ${GOLANGCI_LINT}
-	${Q}${GOLANGCI_LINT} run --out-format tab --config ${SOURCE_DIR}/_support/golangci.warnings.yml
+	${Q}${GOLANGCI_LINT} run --build-tags "${GO_BUILD_TAGS}" --out-format tab --config ${SOURCE_DIR}/_support/golangci.warnings.yml
 
 .PHONY: lint-warnings
 lint-warnings: staticcheck-deprecations
