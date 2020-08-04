@@ -83,6 +83,10 @@ type RepositoryStore interface {
 	// with key structure `relative_path-> storage -> generation`, indicating how many changes a storage is missing for a given
 	// repository.
 	GetOutdatedRepositories(ctx context.Context, virtualStorage string) (map[string]map[string]int, error)
+	// CountReadOnlyRepositories returns the number of read-only repositories within each virtual storage. Takes in a map
+	// of configured virtual storages with their primary nodes. The primary of a virtual storage may be an empty string
+	// if there is no assigned primary. In such cases, every repository on the virtual storage is counted as read-only.
+	CountReadOnlyRepositories(ctx context.Context, virtualStoragePrimaries map[string]string) (map[string]int, error)
 }
 
 // PostgresRepositoryStore is a Postgres implementation of RepositoryStore.
@@ -450,4 +454,55 @@ WHERE COALESCE(actual.generation, -1) < expected.generation
 	}
 
 	return outdated, rows.Err()
+}
+
+func (rs *PostgresRepositoryStore) CountReadOnlyRepositories(ctx context.Context, virtualStoragePrimaries map[string]string) (map[string]int, error) {
+	const q = `
+		WITH primaries AS (
+			SELECT
+				unnest($1::text[]) AS virtual_storage,
+				unnest($2::text[]) AS storage
+		), expected_repositories AS (
+			SELECT virtual_storage, relative_path, storage, generation
+			FROM repositories
+			NATURAL JOIN primaries
+		)
+
+		SELECT virtual_storage, COUNT(*)
+		FROM expected_repositories
+		LEFT JOIN storage_repositories USING (virtual_storage, relative_path, storage)
+		WHERE COALESCE(storage_repositories.generation, -1) < expected_repositories.generation
+		GROUP BY virtual_storage
+	`
+
+	virtualStorages := make([]string, 0, len(virtualStoragePrimaries))
+	primaries := make([]string, 0, len(virtualStoragePrimaries))
+	for virtualStorage, primary := range virtualStoragePrimaries {
+		virtualStorages = append(virtualStorages, virtualStorage)
+		primaries = append(primaries, primary)
+	}
+
+	rows, err := rs.db.QueryContext(ctx, q, pq.StringArray(virtualStorages), pq.StringArray(primaries))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	vsReadOnly := make(map[string]int, len(virtualStorages))
+	for virtualStorage := range virtualStoragePrimaries {
+		vsReadOnly[virtualStorage] = 0
+	}
+
+	for rows.Next() {
+		var vs string
+		var count int
+
+		if err := rows.Scan(&vs, &count); err != nil {
+			return nil, err
+		}
+
+		vsReadOnly[vs] = count
+	}
+
+	return vsReadOnly, rows.Err()
 }
