@@ -240,7 +240,7 @@ func run(cfgs []starter.Config, conf config.Config) error {
 	if err != nil {
 		return err
 	}
-	nodeManager.Start(1*time.Second, 3*time.Second)
+	nodeManager.Start(conf.Failover.BootstrapInterval.Duration(), conf.Failover.MonitorInterval.Duration())
 
 	transactionCounterMetric, err := metrics.RegisterTransactionCounter()
 	if err != nil {
