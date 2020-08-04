@@ -88,9 +88,9 @@ func RegisterTransactionDelay(conf promconfig.Config) (metrics.HistogramVec, err
 func RegisterSubtransactionsHistogram() (metrics.Histogram, error) {
 	subtransactionsHistogram := prometheus.NewHistogram(
 		prometheus.HistogramOpts{
-			Namespace: "gitaly",
-			Subsystem: "praefect",
-			Name:      "subtransactions_per_transaction_total",
+			Name:    "gitaly_praefect_subtransactions_per_transaction_total",
+			Help:    "The number of subtransactions created for a single registered transaction",
+			Buckets: []float64{0.0, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0},
 		},
 	)
 	return subtransactionsHistogram, prometheus.Register(subtransactionsHistogram)
