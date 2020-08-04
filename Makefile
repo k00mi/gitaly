@@ -198,7 +198,7 @@ rspec-gitlab-shell: ${GITLAB_SHELL_DIR}/config.yml assemble-go prepare-tests
 
 .PHONY: test-postgres
 test-postgres: prepare-tests
-	${Q}go test -tags postgres -count=1 gitlab.com/gitlab-org/gitaly/internal/praefect/...
+	${Q}go test -tags "${GO_BUILD_TAGS}",postgres -count=1 gitlab.com/gitlab-org/gitaly/internal/praefect/...
 
 .PHONY: verify
 verify: check-mod-tidy check-formatting notice-up-to-date check-proto rubocop
@@ -255,7 +255,7 @@ cover: prepare-tests
 	${Q}echo "NOTE: make cover does not exit 1 on failure, don't use it to check for tests success!"
 	${Q}mkdir -p "${COVERAGE_DIR}"
 	${Q}rm -f "${COVERAGE_DIR}/all.merged" "${COVERAGE_DIR}/all.html"
-	${Q}go test -ldflags='${GO_TEST_LDFLAGS}' -coverprofile "${COVERAGE_DIR}/all.merged" $(call find_go_packages)
+	${Q}go test -tags "${GO_BUILD_TAGS}" -ldflags='${GO_TEST_LDFLAGS}' -coverprofile "${COVERAGE_DIR}/all.merged" $(call find_go_packages)
 	${Q}go tool cover -html  "${COVERAGE_DIR}/all.merged" -o "${COVERAGE_DIR}/all.html"
 	${Q}echo ""
 	${Q}echo "=====> Total test coverage: <====="
@@ -294,7 +294,7 @@ no-changes:
 
 .PHONY: smoke-test
 smoke-test: all rspec
-	${Q}go test ./internal/rubyserver
+	${Q}go test -tags "${GO_BUILD_TAGS}" ./internal/rubyserver
 
 .PHONY: download-git
 download-git: ${BUILD_DIR}/git_full_bins.tgz
