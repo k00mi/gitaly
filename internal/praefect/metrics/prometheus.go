@@ -3,6 +3,7 @@ package metrics
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	promconfig "gitlab.com/gitlab-org/gitaly/internal/config/prometheus"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/prometheus/metrics"
 )
 
@@ -93,6 +94,27 @@ func RegisterSubtransactionsHistogram() (metrics.Histogram, error) {
 		},
 	)
 	return subtransactionsHistogram, prometheus.Register(subtransactionsHistogram)
+}
+
+// RegisterTransactionVoters creates and registers a Prometheus counter to gauge
+// the number of voters per transaction.
+func RegisterTransactionVoters(conf config.Config) (metrics.HistogramVec, error) {
+	maxVoters := 0
+	for _, storage := range conf.VirtualStorages {
+		if len(storage.Nodes) > maxVoters {
+			maxVoters = len(storage.Nodes)
+		}
+	}
+
+	transactionVoters := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "gitaly_praefect_voters_per_transaction_total",
+			Help:    "The number of voters a given transaction was created with",
+			Buckets: prometheus.LinearBuckets(0, 1, maxVoters),
+		},
+		[]string{"virtual_storage"},
+	)
+	return transactionVoters, prometheus.Register(transactionVoters)
 }
 
 var MethodTypeCounter = prometheus.NewCounterVec(
