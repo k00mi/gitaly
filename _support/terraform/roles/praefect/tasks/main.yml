@@ -1,0 +1,9 @@
+- name: /etc/gitlab/gitlab.rb
+  template:
+    src: praefect-gitlab.rb.j2
+    dest: /etc/gitlab/gitlab.rb
+  notify:
+    - gitlab-ctl reconfigure
+    - gitlab-ctl restart
+    - verify database configuration
+    - verify node configuration

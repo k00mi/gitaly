@@ -4,17 +4,17 @@
 require 'erb'
 require 'etc'
 require 'io/console'
+require 'json'
 
 require_relative 'helper.rb'
 
 TFVARS = 'terraform.tfvars'
+HOSTS = 'hosts.ini'
 
 def main
   unless gcloud_appliction_default_logged_in?
     run!(%w[gcloud auth application-default login])
   end
-
-  run!(%w[terraform get])
 
   unless terraform_initialized?
     run!(%w[terraform init])
@@ -25,6 +25,12 @@ def main
   end
 
   run!(%w[terraform apply])
+
+  @tfstate = JSON.parse(File.read("terraform.tfstate"))
+
+  unless File.exist?(HOSTS)
+    render!(HOSTS, 'hosts.ini.erb')
+  end
 end
 
 def praefect_demo_cluster_name
@@ -33,7 +39,7 @@ def praefect_demo_cluster_name
 end
 
 def praefect_sql_password
-  get_input(
+  @praefect_sql_password ||= get_input(
     'Enter a password for the praefect PostgreSQL user',
     'PRAEFECT_SQL_PASSWORD',
     echo: false

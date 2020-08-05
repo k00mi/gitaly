@@ -1,0 +1,7 @@
+- name: verify database configuration
+  command:
+    cmd: /opt/gitlab/embedded/bin/praefect -config /var/opt/gitlab/praefect/config.toml sql-ping
+
+- name: verify node configuration
+  command:
+    cmd: /opt/gitlab/embedded/bin/praefect -config /var/opt/gitlab/praefect/config.toml dial-nodes

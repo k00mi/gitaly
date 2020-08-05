@@ -1,0 +1,7 @@
+- name: /etc/gitlab/gitlab.rb
+  template:
+    src: gitaly-gitlab.rb.j2
+    dest: /etc/gitlab/gitlab.rb
+  notify:
+    - gitlab-ctl reconfigure
+    - gitlab-ctl restart

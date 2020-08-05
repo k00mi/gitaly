@@ -1,0 +1,22 @@
+[gitalies]<% @tfstate["outputs"]["gitaly_ssh_ip"]["value"].each do |gitaly, address| %>
+<%= address %> internal=<%= @tfstate["outputs"]["gitaly_internal_ip"]["value"][gitaly] %><% end %>
+
+[praefects]<% @tfstate["outputs"]["praefect_ssh_ip"]["value"].each do |praefect, address| %>
+<%= address %> internal=<%= @tfstate["outputs"]["praefect_internal_ip"]["value"][praefect] %><% end %>
+
+[databases]
+<%= @tfstate["outputs"]["praefect_pgbouncer_ip"]["value"] %>
+
+[gitlabs]
+<%= @tfstate["outputs"]["gitlab_external_ip"]["value"] %> internal=<%= @tfstate["outputs"]["gitlab_internal_ip"]["value"] %>
+
+[loadbalancers]
+<%= @tfstate["outputs"]["praefect_loadbalancer_ip"]["value"] %>
+
+[all:vars]
+ansible_become=yes
+praefect_database_password=<%= praefect_sql_password %>
+praefect_external_token=PRAEFECT_EXTERNAL_TOKEN
+praefect_internal_token=PRAEFECT_INTERNAL_TOKEN
+gitlab_shell_secret_token=GITLAB_SHELL_SECRET_TOKEN
+grafana_password=GRAFANA_PASSWORD

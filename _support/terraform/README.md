@@ -31,10 +31,21 @@ running in the background on your new VM's.
 One of the provisioned resources is the database, which can take up to 10
 minutes to be created.
 
-### 4. Use SSH to manually configure the hosts
+### 4. Configure demo cluster
 
-Updating the config for all the demo cluster hosts is not yet
-automated. Please follow the documentation at
+```
+./configure-demo-cluster
+```
+
+Configuration of the cluster has been automated via Ansible. The cluster
+creation script has automatically created a `hosts.ini` file for use by
+Ansible containing all necessary information to configure the cluster.
+
+If you do not have Ansible installed, please refer to [Ansible's
+documentation](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html)
+to install it on your system.
+
+If you wish to manually configure the cluster, please consult
 https://docs.gitlab.com/ee/administration/gitaly/praefect.html.
 
 To see the list of IP's for your machines, run:
