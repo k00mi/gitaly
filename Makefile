@@ -54,17 +54,17 @@ GO_BUILD_TAGS   := tracer_static tracer_static_jaeger continuous_profiler_stackd
 
 # Dependency versions
 GOLANGCI_LINT_VERSION ?= 1.27.0
-PROTOC_VERSION        ?= 3.6.1
+PROTOC_VERSION        ?= 3.12.4
 PROTOC_GEN_GO_VERSION ?= 1.3.2
 GIT_VERSION           ?= v2.27.0
 
 # Dependency downloads
 ifeq (${OS},Darwin)
     PROTOC_URL            ?= https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-osx-x86_64.zip
-    PROTOC_HASH           ?= 0decc6ce5beed07f8c20361ddeb5ac7666f09cf34572cca530e16814093f9c0c
+    PROTOC_HASH           ?= 210227683a5db4a9348cd7545101d006c5829b9e823f3f067ac8539cb387519e
 else ifeq (${OS},Linux)
     PROTOC_URL            ?= https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip
-    PROTOC_HASH           ?= 6003de742ea3fcf703cfec1cd4a3380fd143081a2eb0e559065563496af27807
+    PROTOC_HASH           ?= d0d4c7a3c08d3ea9a20f94eaface12f5d46d7b023fe2057e834a4181c9e93ff3
 endif
 
 # Git target
