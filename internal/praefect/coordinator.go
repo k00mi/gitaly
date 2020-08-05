@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
@@ -19,6 +20,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/transactions"
+	prommetrics "gitlab.com/gitlab-org/gitaly/internal/prometheus/metrics"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/labkit/correlation"
 	"golang.org/x/sync/errgroup"
@@ -74,12 +76,13 @@ type grpcCall struct {
 // downstream server. The coordinator is thread safe; concurrent calls to
 // register nodes are safe.
 type Coordinator struct {
-	nodeMgr  nodes.Manager
-	txMgr    *transactions.Manager
-	queue    datastore.ReplicationEventQueue
-	rs       datastore.RepositoryStore
-	registry *protoregistry.Registry
-	conf     config.Config
+	nodeMgr      nodes.Manager
+	txMgr        *transactions.Manager
+	queue        datastore.ReplicationEventQueue
+	rs           datastore.RepositoryStore
+	registry     *protoregistry.Registry
+	conf         config.Config
+	votersMetric prommetrics.HistogramVec
 }
 
 // NewCoordinator returns a new Coordinator that utilizes the provided logger
@@ -90,14 +93,35 @@ func NewCoordinator(
 	txMgr *transactions.Manager,
 	conf config.Config,
 	r *protoregistry.Registry,
+	opts ...CoordinatorOpt,
 ) *Coordinator {
-	return &Coordinator{
+	coordinator := &Coordinator{
 		queue:    queue,
 		rs:       rs,
 		registry: r,
 		nodeMgr:  nodeMgr,
 		txMgr:    txMgr,
 		conf:     conf,
+		votersMetric: prometheus.NewHistogramVec(
+			prometheus.HistogramOpts{},
+			[]string{"virtual_storage"},
+		),
+	}
+
+	for _, opt := range opts {
+		opt(coordinator)
+	}
+
+	return coordinator
+}
+
+// CoordinatorOpt is a self referential option for Coordinator
+type CoordinatorOpt func(*Coordinator)
+
+// WithVotersMetric is an option to set the voters Prometheus metric
+func WithVotersMetric(votersMetric prommetrics.HistogramVec) CoordinatorOpt {
+	return func(coordinator *Coordinator) {
+		coordinator.votersMetric = votersMetric
 	}
 }
 
@@ -274,6 +298,8 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 				participatingSecondaries = append(participatingSecondaries, secondary)
 			}
 		}
+
+		c.votersMetric.WithLabelValues(virtualStorage).Observe(float64(1 + len(participatingSecondaries)))
 
 		transaction, transactionCleanup, err := c.registerTransaction(ctx, shard.Primary, participatingSecondaries)
 		if err != nil {

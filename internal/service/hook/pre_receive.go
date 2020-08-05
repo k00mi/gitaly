@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
@@ -66,6 +67,8 @@ func (s *server) getPraefectConn(ctx context.Context, server *metadata.PraefectS
 }
 
 func (s *server) voteOnTransaction(ctx context.Context, hash []byte, env []string) error {
+	defer prometheus.NewTimer(s.votingDelayMetric).ObserveDuration()
+
 	tx, err := metadata.TransactionFromEnv(env)
 	if err != nil {
 		if errors.Is(err, metadata.ErrTransactionNotFound) {

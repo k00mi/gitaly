@@ -3,6 +3,7 @@ package metrics
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	promconfig "gitlab.com/gitlab-org/gitaly/internal/config/prometheus"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/prometheus/metrics"
 )
 
@@ -61,6 +62,7 @@ func RegisterTransactionCounter() (*prometheus.CounterVec, error) {
 			Namespace: "gitaly",
 			Subsystem: "praefect",
 			Name:      "transactions_total",
+			Help:      "Total number of transaction actions",
 		},
 		[]string{"action"},
 	)
@@ -75,6 +77,7 @@ func RegisterTransactionDelay(conf promconfig.Config) (metrics.HistogramVec, err
 			Namespace: "gitaly",
 			Subsystem: "praefect",
 			Name:      "transactions_delay_seconds",
+			Help:      "Delay between casting a vote and reaching quorum",
 			Buckets:   conf.GRPCLatencyBuckets,
 		},
 		[]string{"action"},
@@ -87,12 +90,33 @@ func RegisterTransactionDelay(conf promconfig.Config) (metrics.HistogramVec, err
 func RegisterSubtransactionsHistogram() (metrics.Histogram, error) {
 	subtransactionsHistogram := prometheus.NewHistogram(
 		prometheus.HistogramOpts{
-			Namespace: "gitaly",
-			Subsystem: "praefect",
-			Name:      "subtransactions_per_transaction_total",
+			Name:    "gitaly_praefect_subtransactions_per_transaction_total",
+			Help:    "The number of subtransactions created for a single registered transaction",
+			Buckets: []float64{0.0, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0},
 		},
 	)
 	return subtransactionsHistogram, prometheus.Register(subtransactionsHistogram)
+}
+
+// RegisterTransactionVoters creates and registers a Prometheus counter to gauge
+// the number of voters per transaction.
+func RegisterTransactionVoters(conf config.Config) (metrics.HistogramVec, error) {
+	maxVoters := 0
+	for _, storage := range conf.VirtualStorages {
+		if len(storage.Nodes) > maxVoters {
+			maxVoters = len(storage.Nodes)
+		}
+	}
+
+	transactionVoters := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "gitaly_praefect_voters_per_transaction_total",
+			Help:    "The number of voters a given transaction was created with",
+			Buckets: prometheus.LinearBuckets(0, 1, maxVoters),
+		},
+		[]string{"virtual_storage"},
+	)
+	return transactionVoters, prometheus.Register(transactionVoters)
 }
 
 var MethodTypeCounter = prometheus.NewCounterVec(

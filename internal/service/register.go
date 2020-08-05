@@ -49,6 +49,14 @@ var (
 		},
 		[]string{"git_negotiation_feature"},
 	)
+
+	votingDelayMetric = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "gitaly_hook_transaction_voting_delay_seconds",
+			Help:    "Delay between calling out to transaction service and receiving a response",
+			Buckets: config.Config.Prometheus.GRPCLatencyBuckets,
+		},
+	)
 )
 
 // RegisterAll will register all the known grpc services with
@@ -73,7 +81,11 @@ func RegisterAll(grpcServer *grpc.Server, cfg config.Cfg, rubyServer *rubyserver
 	gitalypb.RegisterRemoteServiceServer(grpcServer, remote.NewServer(rubyServer))
 	gitalypb.RegisterServerServiceServer(grpcServer, server.NewServer(cfg.Storages))
 	gitalypb.RegisterObjectPoolServiceServer(grpcServer, objectpool.NewServer(locator))
-	gitalypb.RegisterHookServiceServer(grpcServer, hook.NewServer(gitlabAPI, cfg.Hooks))
+	gitalypb.RegisterHookServiceServer(grpcServer, hook.NewServer(
+		gitlabAPI,
+		cfg.Hooks,
+		hook.WithVotingDelayMetric(votingDelayMetric),
+	))
 	gitalypb.RegisterInternalGitalyServer(grpcServer, internalgitaly.NewServer(cfg.Storages))
 
 	healthpb.RegisterHealthServer(grpcServer, health.NewServer())

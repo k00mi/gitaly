@@ -263,6 +263,11 @@ func run(cfgs []starter.Config, conf config.Config) error {
 		transactions.WithSubtransactionsMetric(subtransactionsHistogram),
 	)
 
+	transactionVoters, err := metrics.RegisterTransactionVoters(conf)
+	if err != nil {
+		return err
+	}
+
 	var (
 		// top level server dependencies
 		coordinator = praefect.NewCoordinator(
@@ -272,6 +277,7 @@ func run(cfgs []starter.Config, conf config.Config) error {
 			transactionManager,
 			conf,
 			protoregistry.GitalyProtoPreregistered,
+			praefect.WithVotersMetric(transactionVoters),
 		)
 		repl = praefect.NewReplMgr(
 			logger,
