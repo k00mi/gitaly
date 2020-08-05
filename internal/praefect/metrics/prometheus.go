@@ -62,6 +62,7 @@ func RegisterTransactionCounter() (*prometheus.CounterVec, error) {
 			Namespace: "gitaly",
 			Subsystem: "praefect",
 			Name:      "transactions_total",
+			Help:      "Total number of transaction actions",
 		},
 		[]string{"action"},
 	)
@@ -76,6 +77,7 @@ func RegisterTransactionDelay(conf promconfig.Config) (metrics.HistogramVec, err
 			Namespace: "gitaly",
 			Subsystem: "praefect",
 			Name:      "transactions_delay_seconds",
+			Help:      "Delay between casting a vote and reaching quorum",
 			Buckets:   conf.GRPCLatencyBuckets,
 		},
 		[]string{"action"},
