@@ -1,0 +1,5 @@
+---
+title: Fix sparse checkout file list for rebase onto remote branch
+merge_request: 2447
+author:
+type: fixed

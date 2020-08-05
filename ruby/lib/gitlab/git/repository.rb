@@ -372,35 +372,30 @@ module Gitlab
         worktree = Gitlab::Git::Worktree.new(path, REBASE_WORKTREE_PREFIX, rebase_id)
         env = git_env.merge(user.git_env)
 
-        if remote_repository.is_a?(RemoteRepository)
-          env.merge!(remote_repository.fetch_env)
-          remote_repo_path = GITALY_INTERNAL_URL
-        else
-          remote_repo_path = remote_repository.path
-        end
+        with_repo_branch_commit(remote_repository, remote_branch) do |commit|
+          diff_range = "#{commit.sha}...#{branch}"
+          diff_files = begin
+                         run_git!(
+                           %W[diff --name-only #{diff_range}]
+                         ).chomp
+                       rescue GitError
+                         []
+                       end
 
-        diff_range = "#{remote_branch}...#{branch}"
-        diff_files = begin
-                       run_git!(
-                         %W[diff --name-only #{diff_range}]
-                       ).chomp
-                     rescue GitError
-                       []
-                     end
+          with_worktree(worktree, branch, sparse_checkout_files: diff_files, env: env) do
+            run_git!(
+              %W[rebase #{commit.sha}],
+              chdir: worktree.path, env: env, include_stderr: true
+            )
 
-        with_worktree(worktree, branch, sparse_checkout_files: diff_files, env: env) do
-          run_git!(
-            %W[pull --rebase #{remote_repo_path} #{remote_branch}],
-            chdir: worktree.path, env: env, include_stderr: true
-          )
+            rebase_sha = run_git!(%w[rev-parse HEAD], chdir: worktree.path, env: env).strip
 
-          rebase_sha = run_git!(%w[rev-parse HEAD], chdir: worktree.path, env: env).strip
+            yield rebase_sha if block_given?
 
-          yield rebase_sha if block_given?
+            update_branch(branch, user: user, newrev: rebase_sha, oldrev: branch_sha, push_options: push_options)
 
-          update_branch(branch, user: user, newrev: rebase_sha, oldrev: branch_sha, push_options: push_options)
-
-          rebase_sha
+            rebase_sha
+          end
         end
       end
 
