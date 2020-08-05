@@ -1,0 +1,15 @@
+- name: /etc/gitlab/gitlab.rb
+  template:
+    src: gitlab-gitlab.rb.j2
+    dest: /etc/gitlab/gitlab.rb
+  notify:
+    - gitlab-ctl reconfigure
+    - gitlab-ctl restart
+    - wait gitlab
+    - verify gitaly configuration
+    - verify gitlab-shell
+
+- name: Set Grafana password
+  command:
+    cmd: gitlab-ctl set-grafana-password
+    stdin: "{{ grafana_password }}\n{{ grafana_password }}\n"

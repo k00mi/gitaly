@@ -1,0 +1,37 @@
+external_url 'http://{{ groups['gitlabs'][0] }}'
+
+gitaly['enable'] = false
+
+git_data_dirs({
+  "default" => {
+    "gitaly_address" => "tcp://{{ groups['loadbalancers'][0] }}:2305",
+    "gitaly_token" => '{{ praefect_external_token }}'
+  }
+})
+
+gitlab_shell['secret_token'] = '{{ gitlab_shell_secret_token }}'
+
+prometheus['scrape_configs'] = [
+  {
+    'job_name' => 'praefect',
+    'static_configs' => [
+      'targets' => [
+{% for host in groups['praefects'] %}
+        '{{ hostvars[host]['internal'] }}:9652', # praefect-{{ loop.index }}
+{% endfor %}
+      ]
+    ]
+  },
+  {
+    'job_name' => 'praefect-gitaly',
+    'static_configs' => [
+      'targets' => [
+{% for host in groups['gitalies'] %}
+        '{{ hostvars[host]['internal'] }}:9236', # gitaly-{{ loop.index }}
+{% endfor %}
+      ]
+    ]
+  }
+]
+
+grafana['disable_login_form'] = false

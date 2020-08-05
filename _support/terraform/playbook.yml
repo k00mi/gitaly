@@ -1,0 +1,20 @@
+- name: Gitaly setup
+  hosts: gitalies
+  roles:
+    - common
+    - gitaly
+  gather_facts: no
+
+- name: Praefect setup
+  hosts: praefects
+  roles:
+    - common
+    - praefect
+  gather_facts: no
+
+- name: GitLab Application server setup
+  hosts: gitlabs
+  roles:
+    - common
+    - gitlab
+  gather_facts: no
