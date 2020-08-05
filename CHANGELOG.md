@@ -66,6 +66,13 @@
 - Error forwarded mutator RPCs on replication job enqueue failure. !2332
 
 
+## 13.1.6
+
+### Security (1 change)
+
+- Fix injection of arbitrary `http.*` options.
+
+
 ## 13.1.5
 
 ### Fixed (1 change)
