@@ -14,21 +14,21 @@ module Gitaly
       self.unmarshal_class_method = :decode
       self.service_name = 'gitaly.OperationService'
 
-      rpc :UserCreateBranch, UserCreateBranchRequest, UserCreateBranchResponse
-      rpc :UserUpdateBranch, UserUpdateBranchRequest, UserUpdateBranchResponse
-      rpc :UserDeleteBranch, UserDeleteBranchRequest, UserDeleteBranchResponse
-      rpc :UserCreateTag, UserCreateTagRequest, UserCreateTagResponse
-      rpc :UserDeleteTag, UserDeleteTagRequest, UserDeleteTagResponse
-      rpc :UserMergeToRef, UserMergeToRefRequest, UserMergeToRefResponse
-      rpc :UserMergeBranch, stream(UserMergeBranchRequest), stream(UserMergeBranchResponse)
-      rpc :UserFFBranch, UserFFBranchRequest, UserFFBranchResponse
-      rpc :UserCherryPick, UserCherryPickRequest, UserCherryPickResponse
-      rpc :UserCommitFiles, stream(UserCommitFilesRequest), UserCommitFilesResponse
-      rpc :UserRebaseConfirmable, stream(UserRebaseConfirmableRequest), stream(UserRebaseConfirmableResponse)
-      rpc :UserRevert, UserRevertRequest, UserRevertResponse
-      rpc :UserSquash, UserSquashRequest, UserSquashResponse
-      rpc :UserApplyPatch, stream(UserApplyPatchRequest), UserApplyPatchResponse
-      rpc :UserUpdateSubmodule, UserUpdateSubmoduleRequest, UserUpdateSubmoduleResponse
+      rpc :UserCreateBranch, Gitaly::UserCreateBranchRequest, Gitaly::UserCreateBranchResponse
+      rpc :UserUpdateBranch, Gitaly::UserUpdateBranchRequest, Gitaly::UserUpdateBranchResponse
+      rpc :UserDeleteBranch, Gitaly::UserDeleteBranchRequest, Gitaly::UserDeleteBranchResponse
+      rpc :UserCreateTag, Gitaly::UserCreateTagRequest, Gitaly::UserCreateTagResponse
+      rpc :UserDeleteTag, Gitaly::UserDeleteTagRequest, Gitaly::UserDeleteTagResponse
+      rpc :UserMergeToRef, Gitaly::UserMergeToRefRequest, Gitaly::UserMergeToRefResponse
+      rpc :UserMergeBranch, stream(Gitaly::UserMergeBranchRequest), stream(Gitaly::UserMergeBranchResponse)
+      rpc :UserFFBranch, Gitaly::UserFFBranchRequest, Gitaly::UserFFBranchResponse
+      rpc :UserCherryPick, Gitaly::UserCherryPickRequest, Gitaly::UserCherryPickResponse
+      rpc :UserCommitFiles, stream(Gitaly::UserCommitFilesRequest), Gitaly::UserCommitFilesResponse
+      rpc :UserRebaseConfirmable, stream(Gitaly::UserRebaseConfirmableRequest), stream(Gitaly::UserRebaseConfirmableResponse)
+      rpc :UserRevert, Gitaly::UserRevertRequest, Gitaly::UserRevertResponse
+      rpc :UserSquash, Gitaly::UserSquashRequest, Gitaly::UserSquashResponse
+      rpc :UserApplyPatch, stream(Gitaly::UserApplyPatchRequest), Gitaly::UserApplyPatchResponse
+      rpc :UserUpdateSubmodule, Gitaly::UserUpdateSubmoduleRequest, Gitaly::UserUpdateSubmoduleResponse
     end
 
     Stub = Service.rpc_stub_class

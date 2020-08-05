@@ -15,11 +15,11 @@ module Gitaly
       self.service_name = 'gitaly.SSHService'
 
       # To forward 'git upload-pack' to Gitaly for SSH sessions
-      rpc :SSHUploadPack, stream(SSHUploadPackRequest), stream(SSHUploadPackResponse)
+      rpc :SSHUploadPack, stream(Gitaly::SSHUploadPackRequest), stream(Gitaly::SSHUploadPackResponse)
       # To forward 'git receive-pack' to Gitaly for SSH sessions
-      rpc :SSHReceivePack, stream(SSHReceivePackRequest), stream(SSHReceivePackResponse)
+      rpc :SSHReceivePack, stream(Gitaly::SSHReceivePackRequest), stream(Gitaly::SSHReceivePackResponse)
       # To forward 'git upload-archive' to Gitaly for SSH sessions
-      rpc :SSHUploadArchive, stream(SSHUploadArchiveRequest), stream(SSHUploadArchiveResponse)
+      rpc :SSHUploadArchive, stream(Gitaly::SSHUploadArchiveRequest), stream(Gitaly::SSHUploadArchiveResponse)
     end
 
     Stub = Service.rpc_stub_class

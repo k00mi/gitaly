@@ -14,15 +14,15 @@ module Gitaly
       self.unmarshal_class_method = :decode
       self.service_name = 'gitaly.ObjectPoolService'
 
-      rpc :CreateObjectPool, CreateObjectPoolRequest, CreateObjectPoolResponse
-      rpc :DeleteObjectPool, DeleteObjectPoolRequest, DeleteObjectPoolResponse
+      rpc :CreateObjectPool, Gitaly::CreateObjectPoolRequest, Gitaly::CreateObjectPoolResponse
+      rpc :DeleteObjectPool, Gitaly::DeleteObjectPoolRequest, Gitaly::DeleteObjectPoolResponse
       # Repositories are assumed to be stored on the same disk
-      rpc :LinkRepositoryToObjectPool, LinkRepositoryToObjectPoolRequest, LinkRepositoryToObjectPoolResponse
-      rpc :UnlinkRepositoryFromObjectPool, UnlinkRepositoryFromObjectPoolRequest, UnlinkRepositoryFromObjectPoolResponse
-      rpc :ReduplicateRepository, ReduplicateRepositoryRequest, ReduplicateRepositoryResponse
-      rpc :DisconnectGitAlternates, DisconnectGitAlternatesRequest, DisconnectGitAlternatesResponse
-      rpc :FetchIntoObjectPool, FetchIntoObjectPoolRequest, FetchIntoObjectPoolResponse
-      rpc :GetObjectPool, GetObjectPoolRequest, GetObjectPoolResponse
+      rpc :LinkRepositoryToObjectPool, Gitaly::LinkRepositoryToObjectPoolRequest, Gitaly::LinkRepositoryToObjectPoolResponse
+      rpc :UnlinkRepositoryFromObjectPool, Gitaly::UnlinkRepositoryFromObjectPoolRequest, Gitaly::UnlinkRepositoryFromObjectPoolResponse
+      rpc :ReduplicateRepository, Gitaly::ReduplicateRepositoryRequest, Gitaly::ReduplicateRepositoryResponse
+      rpc :DisconnectGitAlternates, Gitaly::DisconnectGitAlternatesRequest, Gitaly::DisconnectGitAlternatesResponse
+      rpc :FetchIntoObjectPool, Gitaly::FetchIntoObjectPoolRequest, Gitaly::FetchIntoObjectPoolResponse
+      rpc :GetObjectPool, Gitaly::GetObjectPoolRequest, Gitaly::GetObjectPoolResponse
     end
 
     Stub = Service.rpc_stub_class

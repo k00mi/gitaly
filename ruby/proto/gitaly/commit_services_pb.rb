@@ -14,28 +14,28 @@ module Gitaly
       self.unmarshal_class_method = :decode
       self.service_name = 'gitaly.CommitService'
 
-      rpc :CommitIsAncestor, CommitIsAncestorRequest, CommitIsAncestorResponse
-      rpc :TreeEntry, TreeEntryRequest, stream(TreeEntryResponse)
-      rpc :CommitsBetween, CommitsBetweenRequest, stream(CommitsBetweenResponse)
-      rpc :CountCommits, CountCommitsRequest, CountCommitsResponse
-      rpc :CountDivergingCommits, CountDivergingCommitsRequest, CountDivergingCommitsResponse
-      rpc :GetTreeEntries, GetTreeEntriesRequest, stream(GetTreeEntriesResponse)
-      rpc :ListFiles, ListFilesRequest, stream(ListFilesResponse)
-      rpc :FindCommit, FindCommitRequest, FindCommitResponse
-      rpc :CommitStats, CommitStatsRequest, CommitStatsResponse
+      rpc :CommitIsAncestor, Gitaly::CommitIsAncestorRequest, Gitaly::CommitIsAncestorResponse
+      rpc :TreeEntry, Gitaly::TreeEntryRequest, stream(Gitaly::TreeEntryResponse)
+      rpc :CommitsBetween, Gitaly::CommitsBetweenRequest, stream(Gitaly::CommitsBetweenResponse)
+      rpc :CountCommits, Gitaly::CountCommitsRequest, Gitaly::CountCommitsResponse
+      rpc :CountDivergingCommits, Gitaly::CountDivergingCommitsRequest, Gitaly::CountDivergingCommitsResponse
+      rpc :GetTreeEntries, Gitaly::GetTreeEntriesRequest, stream(Gitaly::GetTreeEntriesResponse)
+      rpc :ListFiles, Gitaly::ListFilesRequest, stream(Gitaly::ListFilesResponse)
+      rpc :FindCommit, Gitaly::FindCommitRequest, Gitaly::FindCommitResponse
+      rpc :CommitStats, Gitaly::CommitStatsRequest, Gitaly::CommitStatsResponse
       # Use a stream to paginate the result set
-      rpc :FindAllCommits, FindAllCommitsRequest, stream(FindAllCommitsResponse)
-      rpc :FindCommits, FindCommitsRequest, stream(FindCommitsResponse)
-      rpc :CommitLanguages, CommitLanguagesRequest, CommitLanguagesResponse
-      rpc :RawBlame, RawBlameRequest, stream(RawBlameResponse)
-      rpc :LastCommitForPath, LastCommitForPathRequest, LastCommitForPathResponse
-      rpc :ListLastCommitsForTree, ListLastCommitsForTreeRequest, stream(ListLastCommitsForTreeResponse)
-      rpc :CommitsByMessage, CommitsByMessageRequest, stream(CommitsByMessageResponse)
-      rpc :ListCommitsByOid, ListCommitsByOidRequest, stream(ListCommitsByOidResponse)
-      rpc :ListCommitsByRefName, ListCommitsByRefNameRequest, stream(ListCommitsByRefNameResponse)
-      rpc :FilterShasWithSignatures, stream(FilterShasWithSignaturesRequest), stream(FilterShasWithSignaturesResponse)
-      rpc :GetCommitSignatures, GetCommitSignaturesRequest, stream(GetCommitSignaturesResponse)
-      rpc :GetCommitMessages, GetCommitMessagesRequest, stream(GetCommitMessagesResponse)
+      rpc :FindAllCommits, Gitaly::FindAllCommitsRequest, stream(Gitaly::FindAllCommitsResponse)
+      rpc :FindCommits, Gitaly::FindCommitsRequest, stream(Gitaly::FindCommitsResponse)
+      rpc :CommitLanguages, Gitaly::CommitLanguagesRequest, Gitaly::CommitLanguagesResponse
+      rpc :RawBlame, Gitaly::RawBlameRequest, stream(Gitaly::RawBlameResponse)
+      rpc :LastCommitForPath, Gitaly::LastCommitForPathRequest, Gitaly::LastCommitForPathResponse
+      rpc :ListLastCommitsForTree, Gitaly::ListLastCommitsForTreeRequest, stream(Gitaly::ListLastCommitsForTreeResponse)
+      rpc :CommitsByMessage, Gitaly::CommitsByMessageRequest, stream(Gitaly::CommitsByMessageResponse)
+      rpc :ListCommitsByOid, Gitaly::ListCommitsByOidRequest, stream(Gitaly::ListCommitsByOidResponse)
+      rpc :ListCommitsByRefName, Gitaly::ListCommitsByRefNameRequest, stream(Gitaly::ListCommitsByRefNameResponse)
+      rpc :FilterShasWithSignatures, stream(Gitaly::FilterShasWithSignaturesRequest), stream(Gitaly::FilterShasWithSignaturesResponse)
+      rpc :GetCommitSignatures, Gitaly::GetCommitSignaturesRequest, stream(Gitaly::GetCommitSignaturesResponse)
+      rpc :GetCommitMessages, Gitaly::GetCommitMessagesRequest, stream(Gitaly::GetCommitMessagesResponse)
     end
 
     Stub = Service.rpc_stub_class

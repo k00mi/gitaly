@@ -17,15 +17,15 @@ module Gitaly
       # The response body for GET /info/refs?service=git-upload-pack
       # Will be invoked when the user executes a `git fetch`, meaning the server
       # will upload the packs to that user. The user doesn't upload new objects.
-      rpc :InfoRefsUploadPack, InfoRefsRequest, stream(InfoRefsResponse)
+      rpc :InfoRefsUploadPack, Gitaly::InfoRefsRequest, stream(Gitaly::InfoRefsResponse)
       # The response body for GET /info/refs?service=git-receive-pack
       # Will be invoked when the user executes a `git push`, meaning the server
       # will receive new objects in the pack from the user.
-      rpc :InfoRefsReceivePack, InfoRefsRequest, stream(InfoRefsResponse)
+      rpc :InfoRefsReceivePack, Gitaly::InfoRefsRequest, stream(Gitaly::InfoRefsResponse)
       # Request and response body for POST /upload-pack
-      rpc :PostUploadPack, stream(PostUploadPackRequest), stream(PostUploadPackResponse)
+      rpc :PostUploadPack, stream(Gitaly::PostUploadPackRequest), stream(Gitaly::PostUploadPackResponse)
       # Request and response body for POST /receive-pack
-      rpc :PostReceivePack, stream(PostReceivePackRequest), stream(PostReceivePackResponse)
+      rpc :PostReceivePack, stream(Gitaly::PostReceivePackRequest), stream(Gitaly::PostReceivePackResponse)
     end
 
     Stub = Service.rpc_stub_class

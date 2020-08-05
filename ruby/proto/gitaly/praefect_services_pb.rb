@@ -14,19 +14,19 @@ module Gitaly
       self.unmarshal_class_method = :decode
       self.service_name = 'gitaly.PraefectInfoService'
 
-      rpc :RepositoryReplicas, RepositoryReplicasRequest, RepositoryReplicasResponse
+      rpc :RepositoryReplicas, Gitaly::RepositoryReplicasRequest, Gitaly::RepositoryReplicasResponse
       # ConsistencyCheck will perform a consistency check on the requested
       # virtual storage backend. A stream of repository statuses will be sent
       # back indicating which repos are consistent with the primary and which ones
       # need repair.
-      rpc :ConsistencyCheck, ConsistencyCheckRequest, stream(ConsistencyCheckResponse)
+      rpc :ConsistencyCheck, Gitaly::ConsistencyCheckRequest, stream(Gitaly::ConsistencyCheckResponse)
       # DatalossCheck checks for nodes which are not up to date with the previous writable primary.
       # This indicates possible data loss after a failover event.
-      rpc :DatalossCheck, DatalossCheckRequest, DatalossCheckResponse
+      rpc :DatalossCheck, Gitaly::DatalossCheckRequest, Gitaly::DatalossCheckResponse
       # SetAuthoritativeStorage sets the authoritative storage for a repository on a given virtual storage.
       # This causes the current version of the repository on the authoritative storage to be considered the
       # latest and overwrite any other version on the virtual storage.
-      rpc :SetAuthoritativeStorage, SetAuthoritativeStorageRequest, SetAuthoritativeStorageResponse
+      rpc :SetAuthoritativeStorage, Gitaly::SetAuthoritativeStorageRequest, Gitaly::SetAuthoritativeStorageResponse
     end
 
     Stub = Service.rpc_stub_class

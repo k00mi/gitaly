@@ -17,11 +17,11 @@ module Gitaly
       # GetBlob returns the contents of a blob object referenced by its object
       # ID. We use a stream to return a chunked arbitrarily large binary
       # response
-      rpc :GetBlob, GetBlobRequest, stream(GetBlobResponse)
-      rpc :GetBlobs, GetBlobsRequest, stream(GetBlobsResponse)
-      rpc :GetLFSPointers, GetLFSPointersRequest, stream(GetLFSPointersResponse)
-      rpc :GetNewLFSPointers, GetNewLFSPointersRequest, stream(GetNewLFSPointersResponse)
-      rpc :GetAllLFSPointers, GetAllLFSPointersRequest, stream(GetAllLFSPointersResponse)
+      rpc :GetBlob, Gitaly::GetBlobRequest, stream(Gitaly::GetBlobResponse)
+      rpc :GetBlobs, Gitaly::GetBlobsRequest, stream(Gitaly::GetBlobsResponse)
+      rpc :GetLFSPointers, Gitaly::GetLFSPointersRequest, stream(Gitaly::GetLFSPointersResponse)
+      rpc :GetNewLFSPointers, Gitaly::GetNewLFSPointersRequest, stream(Gitaly::GetNewLFSPointersResponse)
+      rpc :GetAllLFSPointers, Gitaly::GetAllLFSPointersRequest, stream(Gitaly::GetAllLFSPointersResponse)
     end
 
     Stub = Service.rpc_stub_class
