@@ -345,33 +345,32 @@ func (rq PostgresReplicationEventQueue) Acknowledge(ctx context.Context, state J
 			AND state = 'in_progress'
 			FOR UPDATE
 		)
-		, to_release AS (
-			UPDATE replication_queue AS queue
-			SET
-				state = CASE WHEN state = 'in_progress' THEN
-						$2::REPLICATION_JOB_STATE
-					ELSE
-						(CASE WHEN $2 = 'completed' THEN 'completed' ELSE queue.state END)::REPLICATION_JOB_STATE
-					END,
-				updated_at = CASE WHEN state = 'in_progress' THEN
-						NOW() AT TIME ZONE 'UTC'
-					ELSE
-						(CASE WHEN $2 = 'completed' THEN NOW() AT TIME ZONE 'UTC' ELSE queue.updated_at END)
-					END
-			FROM existing
-			WHERE existing.id = queue.id
-				OR (
-					    queue.state = 'ready'
+		, deleted AS (
+			DELETE FROM replication_queue AS queue
+			USING existing
+			WHERE ($2::REPLICATION_JOB_STATE = 'dead' AND existing.id = queue.id) OR (
+				$2::REPLICATION_JOB_STATE = 'completed'
+				AND (existing.id = queue.id OR (
+					queue.state = 'ready'
 					AND queue.created_at < existing.updated_at
 					AND queue.lock_id = existing.lock_id
 					AND queue.job->>'change' = existing.job->>'change'
-					AND queue.job->>'source_node_storage' = existing.job->>'source_node_storage'
+					AND queue.job->>'source_node_storage' = existing.job->>'source_node_storage')
 				)
+			)
+			RETURNING queue.id, queue.lock_id
+		)
+		, updated AS (
+			UPDATE replication_queue AS queue
+			SET state = $2::REPLICATION_JOB_STATE,
+				updated_at = NOW() AT TIME ZONE 'UTC'
+			FROM existing
+			WHERE existing.id = queue.id
 			RETURNING queue.id, queue.lock_id
 		)
 		, removed_job_lock AS (
 			DELETE FROM replication_queue_job_lock AS job_lock
-			USING to_release
+			USING (SELECT * FROM deleted UNION SELECT * FROM updated) AS to_release
 			WHERE job_lock.job_id = to_release.id AND job_lock.lock_id = to_release.lock_id
 			RETURNING to_release.lock_id
 		)
