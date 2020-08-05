@@ -1,5 +1,12 @@
 # Gitaly changelog
 
+## 13.2.3
+
+### Security (1 change)
+
+- Fix injection of arbitrary `http.*` options.
+
+
 ## 13.2.2
 
 - No changes.
@@ -57,6 +64,13 @@
 - Support literal path lookups in other commit RPCs. !2303
 - Ensure Praefect replication queue tables exist. !2309
 - Error forwarded mutator RPCs on replication job enqueue failure. !2332
+
+
+## 13.1.6
+
+### Security (1 change)
+
+- Fix injection of arbitrary `http.*` options.
 
 
 ## 13.1.5
@@ -139,6 +153,17 @@
 - Bump Ruby to v2.6.6. !2231
 - danger: Suggest merge request ID in the changelog. !2254
 
+
+## 13.0.12
+
+### Security (1 change)
+
+- Fix injection of arbitrary `http.*` options.
+
+
+## 13.0.11
+
+This version has been skipped due to packaging problems.
 
 ## 13.0.10
 
