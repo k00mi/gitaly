@@ -14,13 +14,13 @@ module Gitaly
       self.unmarshal_class_method = :decode
       self.service_name = 'gitaly.RemoteService'
 
-      rpc :AddRemote, AddRemoteRequest, AddRemoteResponse
-      rpc :FetchInternalRemote, FetchInternalRemoteRequest, FetchInternalRemoteResponse
-      rpc :RemoveRemote, RemoveRemoteRequest, RemoveRemoteResponse
-      rpc :UpdateRemoteMirror, stream(UpdateRemoteMirrorRequest), UpdateRemoteMirrorResponse
-      rpc :FindRemoteRepository, FindRemoteRepositoryRequest, FindRemoteRepositoryResponse
-      rpc :FindRemoteRootRef, FindRemoteRootRefRequest, FindRemoteRootRefResponse
-      rpc :ListRemotes, ListRemotesRequest, stream(ListRemotesResponse)
+      rpc :AddRemote, Gitaly::AddRemoteRequest, Gitaly::AddRemoteResponse
+      rpc :FetchInternalRemote, Gitaly::FetchInternalRemoteRequest, Gitaly::FetchInternalRemoteResponse
+      rpc :RemoveRemote, Gitaly::RemoveRemoteRequest, Gitaly::RemoveRemoteResponse
+      rpc :UpdateRemoteMirror, stream(Gitaly::UpdateRemoteMirrorRequest), Gitaly::UpdateRemoteMirrorResponse
+      rpc :FindRemoteRepository, Gitaly::FindRemoteRepositoryRequest, Gitaly::FindRemoteRepositoryResponse
+      rpc :FindRemoteRootRef, Gitaly::FindRemoteRootRefRequest, Gitaly::FindRemoteRootRefResponse
+      rpc :ListRemotes, Gitaly::ListRemotesRequest, stream(Gitaly::ListRemotesResponse)
     end
 
     Stub = Service.rpc_stub_class

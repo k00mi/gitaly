@@ -14,8 +14,8 @@ module Gitaly
       self.unmarshal_class_method = :decode
       self.service_name = 'gitaly.ConflictsService'
 
-      rpc :ListConflictFiles, ListConflictFilesRequest, stream(ListConflictFilesResponse)
-      rpc :ResolveConflicts, stream(ResolveConflictsRequest), ResolveConflictsResponse
+      rpc :ListConflictFiles, Gitaly::ListConflictFilesRequest, stream(Gitaly::ListConflictFilesResponse)
+      rpc :ResolveConflicts, stream(Gitaly::ResolveConflictsRequest), Gitaly::ResolveConflictsResponse
     end
 
     Stub = Service.rpc_stub_class

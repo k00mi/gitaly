@@ -15,12 +15,12 @@ module Gitaly
       self.service_name = 'gitaly.DiffService'
 
       # Returns stream of CommitDiffResponse with patches chunked over messages
-      rpc :CommitDiff, CommitDiffRequest, stream(CommitDiffResponse)
+      rpc :CommitDiff, Gitaly::CommitDiffRequest, stream(Gitaly::CommitDiffResponse)
       # Return a stream so we can divide the response in chunks of deltas
-      rpc :CommitDelta, CommitDeltaRequest, stream(CommitDeltaResponse)
-      rpc :RawDiff, RawDiffRequest, stream(RawDiffResponse)
-      rpc :RawPatch, RawPatchRequest, stream(RawPatchResponse)
-      rpc :DiffStats, DiffStatsRequest, stream(DiffStatsResponse)
+      rpc :CommitDelta, Gitaly::CommitDeltaRequest, stream(Gitaly::CommitDeltaResponse)
+      rpc :RawDiff, Gitaly::RawDiffRequest, stream(Gitaly::RawDiffResponse)
+      rpc :RawPatch, Gitaly::RawPatchRequest, stream(Gitaly::RawPatchResponse)
+      rpc :DiffStats, Gitaly::DiffStatsRequest, stream(Gitaly::DiffStatsResponse)
     end
 
     Stub = Service.rpc_stub_class

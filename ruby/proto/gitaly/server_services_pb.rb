@@ -14,8 +14,8 @@ module Gitaly
       self.unmarshal_class_method = :decode
       self.service_name = 'gitaly.ServerService'
 
-      rpc :ServerInfo, ServerInfoRequest, ServerInfoResponse
-      rpc :DiskStatistics, DiskStatisticsRequest, DiskStatisticsResponse
+      rpc :ServerInfo, Gitaly::ServerInfoRequest, Gitaly::ServerInfoResponse
+      rpc :DiskStatistics, Gitaly::DiskStatisticsRequest, Gitaly::DiskStatisticsResponse
     end
 
     Stub = Service.rpc_stub_class

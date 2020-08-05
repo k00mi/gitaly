@@ -14,7 +14,7 @@ module Gitaly
       self.unmarshal_class_method = :decode
       self.service_name = 'gitaly.CleanupService'
 
-      rpc :ApplyBfgObjectMapStream, stream(ApplyBfgObjectMapStreamRequest), stream(ApplyBfgObjectMapStreamResponse)
+      rpc :ApplyBfgObjectMapStream, stream(Gitaly::ApplyBfgObjectMapStreamRequest), stream(Gitaly::ApplyBfgObjectMapStreamResponse)
     end
 
     Stub = Service.rpc_stub_class

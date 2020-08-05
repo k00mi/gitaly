@@ -6,23 +6,25 @@ require 'google/protobuf'
 require 'lint_pb'
 require 'shared_pb'
 Google::Protobuf::DescriptorPool.generated_pool.build do
-  add_message "gitaly.VoteTransactionRequest" do
-    optional :repository, :message, 1, "gitaly.Repository"
-    optional :transaction_id, :uint64, 2
-    optional :node, :string, 3
-    optional :reference_updates_hash, :bytes, 4
-  end
-  add_message "gitaly.VoteTransactionResponse" do
-    optional :state, :enum, 1, "gitaly.VoteTransactionResponse.TransactionState"
-  end
-  add_enum "gitaly.VoteTransactionResponse.TransactionState" do
-    value :COMMIT, 0
-    value :ABORT, 1
+  add_file("transaction.proto", :syntax => :proto3) do
+    add_message "gitaly.VoteTransactionRequest" do
+      optional :repository, :message, 1, "gitaly.Repository"
+      optional :transaction_id, :uint64, 2
+      optional :node, :string, 3
+      optional :reference_updates_hash, :bytes, 4
+    end
+    add_message "gitaly.VoteTransactionResponse" do
+      optional :state, :enum, 1, "gitaly.VoteTransactionResponse.TransactionState"
+    end
+    add_enum "gitaly.VoteTransactionResponse.TransactionState" do
+      value :COMMIT, 0
+      value :ABORT, 1
+    end
   end
 end
 
 module Gitaly
-  VoteTransactionRequest = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.VoteTransactionRequest").msgclass
-  VoteTransactionResponse = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.VoteTransactionResponse").msgclass
-  VoteTransactionResponse::TransactionState = Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.VoteTransactionResponse.TransactionState").enummodule
+  VoteTransactionRequest = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.VoteTransactionRequest").msgclass
+  VoteTransactionResponse = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.VoteTransactionResponse").msgclass
+  VoteTransactionResponse::TransactionState = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.VoteTransactionResponse.TransactionState").enummodule
 end

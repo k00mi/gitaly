@@ -14,10 +14,10 @@ module Gitaly
       self.unmarshal_class_method = :decode
       self.service_name = 'gitaly.HookService'
 
-      rpc :PreReceiveHook, stream(PreReceiveHookRequest), stream(PreReceiveHookResponse)
-      rpc :PostReceiveHook, stream(PostReceiveHookRequest), stream(PostReceiveHookResponse)
-      rpc :UpdateHook, UpdateHookRequest, stream(UpdateHookResponse)
-      rpc :ReferenceTransactionHook, stream(ReferenceTransactionHookRequest), stream(ReferenceTransactionHookResponse)
+      rpc :PreReceiveHook, stream(Gitaly::PreReceiveHookRequest), stream(Gitaly::PreReceiveHookResponse)
+      rpc :PostReceiveHook, stream(Gitaly::PostReceiveHookRequest), stream(Gitaly::PostReceiveHookResponse)
+      rpc :UpdateHook, Gitaly::UpdateHookRequest, stream(Gitaly::UpdateHookResponse)
+      rpc :ReferenceTransactionHook, stream(Gitaly::ReferenceTransactionHookRequest), stream(Gitaly::ReferenceTransactionHookResponse)
     end
 
     Stub = Service.rpc_stub_class

@@ -14,15 +14,15 @@ module Gitaly
       self.unmarshal_class_method = :decode
       self.service_name = 'gitaly.WikiService'
 
-      rpc :WikiGetPageVersions, WikiGetPageVersionsRequest, stream(WikiGetPageVersionsResponse)
-      rpc :WikiWritePage, stream(WikiWritePageRequest), WikiWritePageResponse
-      rpc :WikiUpdatePage, stream(WikiUpdatePageRequest), WikiUpdatePageResponse
-      rpc :WikiDeletePage, WikiDeletePageRequest, WikiDeletePageResponse
+      rpc :WikiGetPageVersions, Gitaly::WikiGetPageVersionsRequest, stream(Gitaly::WikiGetPageVersionsResponse)
+      rpc :WikiWritePage, stream(Gitaly::WikiWritePageRequest), Gitaly::WikiWritePageResponse
+      rpc :WikiUpdatePage, stream(Gitaly::WikiUpdatePageRequest), Gitaly::WikiUpdatePageResponse
+      rpc :WikiDeletePage, Gitaly::WikiDeletePageRequest, Gitaly::WikiDeletePageResponse
       # WikiFindPage returns a stream because the page's raw_data field may be arbitrarily large.
-      rpc :WikiFindPage, WikiFindPageRequest, stream(WikiFindPageResponse)
-      rpc :WikiFindFile, WikiFindFileRequest, stream(WikiFindFileResponse)
-      rpc :WikiGetAllPages, WikiGetAllPagesRequest, stream(WikiGetAllPagesResponse)
-      rpc :WikiListPages, WikiListPagesRequest, stream(WikiListPagesResponse)
+      rpc :WikiFindPage, Gitaly::WikiFindPageRequest, stream(Gitaly::WikiFindPageResponse)
+      rpc :WikiFindFile, Gitaly::WikiFindFileRequest, stream(Gitaly::WikiFindFileResponse)
+      rpc :WikiGetAllPages, Gitaly::WikiGetAllPagesRequest, stream(Gitaly::WikiGetAllPagesResponse)
+      rpc :WikiListPages, Gitaly::WikiListPagesRequest, stream(Gitaly::WikiListPagesResponse)
     end
 
     Stub = Service.rpc_stub_class
