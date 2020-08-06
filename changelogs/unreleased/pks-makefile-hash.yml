@@ -1,0 +1,5 @@
+---
+title: Rebuild targets only if Makefile content changes
+merge_request: 2492
+author:
+type: added
