@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/client"
-	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -72,9 +71,11 @@ func TestNodeStatus(t *testing.T) {
 	storageName := "default"
 	cs := newConnectionStatus(config.Node{Storage: storageName}, cc, testhelper.DiscardTestEntry(t), mockHistogramVec)
 
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
 	var expectedLabels [][]string
 	for i := 0; i < healthcheckThreshold; i++ {
-		ctx := context.Background()
 		status, err := cs.CheckHealth(ctx)
 
 		require.NoError(t, err)
@@ -87,7 +88,6 @@ func TestNodeStatus(t *testing.T) {
 
 	healthSvr.SetServingStatus("", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
 
-	ctx := context.Background()
 	status, err := cs.CheckHealth(ctx)
 	require.NoError(t, err)
 	require.False(t, status)
@@ -379,8 +379,6 @@ func TestMgr_GetSyncedNode(t *testing.T) {
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
-
-	ctx = featureflag.IncomingCtxWithFeatureFlag(ctx, featureflag.DistributedReads)
 
 	verify := func(scenario func(t *testing.T, nm Manager, rs datastore.RepositoryStore)) func(*testing.T) {
 		rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())

@@ -142,7 +142,7 @@ func testHooksPrePostReceive(t *testing.T) {
 
 	for _, hookName := range hookNames {
 		for _, featureSet := range featureSets {
-			t.Run(fmt.Sprintf("hookName: %s, feature flags: %s", hookName, featureSet), func(t *testing.T) {
+			t.Run(fmt.Sprintf("hookName: %s, disabled feature flags: %s", hookName, featureSet), func(t *testing.T) {
 				customHookOutputPath, cleanup := testhelper.WriteEnvToCustomHook(t, testRepoPath, hookName)
 				defer cleanup()
 
@@ -187,7 +187,7 @@ func testHooksPrePostReceive(t *testing.T) {
 					gitPushOptions...,
 				)
 
-				if featureSet.IsEnabled(featureflag.GoPreReceiveHook) {
+				if !featureSet.IsDisabled(featureflag.GoPreReceiveHook) {
 					cmd.Env = append(cmd.Env, fmt.Sprintf("%s=true", featureflag.GoPreReceiveHookEnvVar))
 				}
 
@@ -256,7 +256,7 @@ func TestHooksUpdate(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, featureSet := range featureSets {
-		t.Run(fmt.Sprintf("enabled features: %v", featureSet), func(t *testing.T) {
+		t.Run(fmt.Sprintf("disabled %v", featureSet), func(t *testing.T) {
 			config.Config.Hooks.CustomHooksDir = customHooksDir
 
 			testHooksUpdate(t, tempGitlabShellDir, socket, token, testhelper.GlHookValues{
@@ -303,7 +303,7 @@ open('%s', 'w') { |f| f.puts(JSON.dump(ARGV)) }
 
 	var stdout, stderr bytes.Buffer
 
-	if features.IsEnabled(featureflag.GoUpdateHook) {
+	if !features.IsDisabled(featureflag.GoUpdateHook) {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=true", featureflag.GoUpdateHookEnvVar))
 	}
 	cmd.Stdout = &stdout

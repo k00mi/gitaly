@@ -27,9 +27,6 @@ func TestSuccessfulUserRebaseConfirmableRequest(t *testing.T) {
 	featureSets, err := testhelper.NewFeatureSets(nil, featureflag.GoPostReceiveHook)
 	require.NoError(t, err)
 
-	ctx, cancel := testhelper.Context()
-	defer cancel()
-
 	var ruby rubyserver.Server
 
 	pushOptions := []string{"ci.skip", "test=value"}
@@ -44,7 +41,10 @@ func TestSuccessfulUserRebaseConfirmableRequest(t *testing.T) {
 
 	for _, featureSet := range featureSets {
 		t.Run(featureSet.String(), func(t *testing.T) {
-			ctx := featureSet.WithParent(ctx)
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			ctx = featureSet.Disable(ctx)
 			testSuccessfulUserRebaseConfirmableRequest(t, ctx, serverSocketPath, pushOptions)
 		})
 	}

@@ -43,7 +43,7 @@ func TestSuccessfulFindAllBranchNames(t *testing.T) {
 
 	rpcRequest := &gitalypb.FindAllBranchNamesRequest{Repository: testRepo}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	c, err := client.FindAllBranchNames(ctx, rpcRequest)
 	require.NoError(t, err)
@@ -77,7 +77,7 @@ func TestFindAllBranchNamesVeryLargeResponse(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	updater, err := updateref.New(ctx, testRepo)
@@ -131,7 +131,7 @@ func TestEmptyFindAllBranchNamesRequest(t *testing.T) {
 	defer conn.Close()
 	rpcRequest := &gitalypb.FindAllBranchNamesRequest{}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	c, err := client.FindAllBranchNames(ctx, rpcRequest)
 	if err != nil {
@@ -157,7 +157,7 @@ func TestInvalidRepoFindAllBranchNamesRequest(t *testing.T) {
 	repo := &gitalypb.Repository{StorageName: "default", RelativePath: "made/up/path"}
 	rpcRequest := &gitalypb.FindAllBranchNamesRequest{Repository: repo}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	c, err := client.FindAllBranchNames(ctx, rpcRequest)
 	if err != nil {
@@ -186,7 +186,7 @@ func TestSuccessfulFindAllTagNames(t *testing.T) {
 
 	rpcRequest := &gitalypb.FindAllTagNamesRequest{Repository: testRepo}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	c, err := client.FindAllTagNames(ctx, rpcRequest)
 	if err != nil {
@@ -220,7 +220,7 @@ func TestEmptyFindAllTagNamesRequest(t *testing.T) {
 	defer conn.Close()
 	rpcRequest := &gitalypb.FindAllTagNamesRequest{}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	c, err := client.FindAllTagNames(ctx, rpcRequest)
 	if err != nil {
@@ -246,7 +246,7 @@ func TestInvalidRepoFindAllTagNamesRequest(t *testing.T) {
 	repo := &gitalypb.Repository{StorageName: "default", RelativePath: "made/up/path"}
 	rpcRequest := &gitalypb.FindAllTagNamesRequest{Repository: repo}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	c, err := client.FindAllTagNames(ctx, rpcRequest)
 	if err != nil {
@@ -264,7 +264,7 @@ func TestInvalidRepoFindAllTagNamesRequest(t *testing.T) {
 }
 
 func TestHeadReference(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
@@ -290,7 +290,7 @@ func TestHeadReferenceWithNonExistingHead(t *testing.T) {
 		ioutil.WriteFile(testRepoPath+"/HEAD", []byte("ref: refs/heads/master"), 0644)
 	}()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	headRef, err := headReference(ctx, testRepo)
 	if err != nil {
@@ -321,7 +321,7 @@ func TestSetDefaultBranchRef(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 
 			testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
@@ -398,7 +398,7 @@ func TestDefaultBranchName(t *testing.T) {
 		FindBranchNames = testCase.findBranchNames
 		headReference = testCase.headReference
 
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := testhelper.Context()
 		defer cancel()
 		defaultBranch, err := DefaultBranchName(ctx, testRepo)
 		if err != nil {
@@ -422,7 +422,7 @@ func TestSuccessfulFindDefaultBranchName(t *testing.T) {
 
 	rpcRequest := &gitalypb.FindDefaultBranchNameRequest{Repository: testRepo}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	r, err := client.FindDefaultBranchName(ctx, rpcRequest)
 	if err != nil {
@@ -442,7 +442,7 @@ func TestEmptyFindDefaultBranchNameRequest(t *testing.T) {
 	defer conn.Close()
 	rpcRequest := &gitalypb.FindDefaultBranchNameRequest{}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	_, err := client.FindDefaultBranchName(ctx, rpcRequest)
 
@@ -460,7 +460,7 @@ func TestInvalidRepoFindDefaultBranchNameRequest(t *testing.T) {
 	repo := &gitalypb.Repository{StorageName: "default", RelativePath: "/made/up/path"}
 	rpcRequest := &gitalypb.FindDefaultBranchNameRequest{Repository: repo}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	_, err := client.FindDefaultBranchName(ctx, rpcRequest)
 
@@ -862,7 +862,7 @@ func TestInvalidFindAllTagsRequest(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.FindAllTags(ctx, tc.request)
 			if err != nil {
@@ -891,7 +891,7 @@ func TestSuccessfulFindLocalBranches(t *testing.T) {
 
 	rpcRequest := &gitalypb.FindLocalBranchesRequest{Repository: testRepo}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	c, err := client.FindLocalBranches(ctx, rpcRequest)
 	if err != nil {
@@ -1049,7 +1049,7 @@ func TestFindLocalBranchesSort(t *testing.T) {
 		t.Run(testCase.desc, func(t *testing.T) {
 			rpcRequest := &gitalypb.FindLocalBranchesRequest{Repository: testRepo, SortBy: testCase.sortBy}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.FindLocalBranches(ctx, rpcRequest)
 			if err != nil {
@@ -1085,7 +1085,7 @@ func TestEmptyFindLocalBranchesRequest(t *testing.T) {
 	defer conn.Close()
 	rpcRequest := &gitalypb.FindLocalBranchesRequest{}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	c, err := client.FindLocalBranches(ctx, rpcRequest)
 	if err != nil {
@@ -1139,7 +1139,7 @@ func TestSuccessfulFindAllBranchesRequest(t *testing.T) {
 	request := &gitalypb.FindAllBranchesRequest{Repository: testRepo}
 	client, conn := newRefServiceClient(t, serverSocketPath)
 	defer conn.Close()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	c, err := client.FindAllBranches(ctx, request)
 	if err != nil {
@@ -1281,7 +1281,7 @@ func TestInvalidFindAllBranchesRequest(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.FindAllBranches(ctx, &tc.request)
 			if err != nil {
@@ -1451,7 +1451,7 @@ func TestListBranchNamesContainingCommit(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 
 			request := &gitalypb.ListBranchNamesContainingCommitRequest{Repository: testRepo, CommitId: tc.commitID}
@@ -1836,7 +1836,7 @@ func TestInvalidFindTagRequest(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			_, err := client.FindTag(ctx, tc.request)
 			testhelper.RequireGrpcError(t, err, codes.InvalidArgument)

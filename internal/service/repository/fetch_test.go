@@ -17,7 +17,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
-	"google.golang.org/grpc/metadata"
 )
 
 func TestFetchSourceBranchSourceRepositorySuccess(t *testing.T) {
@@ -28,24 +27,25 @@ func TestFetchSourceBranchSourceRepositorySuccess(t *testing.T) {
 	defer conn.Close()
 
 	for _, tc := range []struct {
-		desc         string
-		FeatureFlags []featureflag.FeatureFlag
+		desc             string
+		disabledFeatures []featureflag.FeatureFlag
 	}{
 		{
-			desc: "ruby",
+			desc: "go",
 		},
 		{
-			desc:         "go",
-			FeatureFlags: []featureflag.FeatureFlag{featureflag.GoFetchSourceBranch},
+			desc:             "ruby",
+			disabledFeatures: []featureflag.FeatureFlag{featureflag.GoFetchSourceBranch},
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
-			ctxOuter, cancel := testhelper.Context()
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 
 			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
-			ctx := metadata.NewOutgoingContext(ctxOuter, md)
-			for _, feature := range tc.FeatureFlags {
+			ctx = testhelper.MergeOutgoingMetadata(ctx, md)
+
+			for _, feature := range tc.disabledFeatures {
 				ctx = featureflag.OutgoingCtxWithFeatureFlagValue(ctx, feature, "true")
 			}
 
@@ -85,25 +85,26 @@ func TestFetchSourceBranchSameRepositorySuccess(t *testing.T) {
 	defer conn.Close()
 
 	for _, tc := range []struct {
-		desc         string
-		FeatureFlags []featureflag.FeatureFlag
+		desc             string
+		disabledFeatures []featureflag.FeatureFlag
 	}{
 		{
-			desc: "ruby",
+			desc: "go",
 		},
 		{
-			desc:         "go",
-			FeatureFlags: []featureflag.FeatureFlag{featureflag.GoFetchSourceBranch},
+			desc:             "ruby",
+			disabledFeatures: []featureflag.FeatureFlag{featureflag.GoFetchSourceBranch},
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
-			ctxOuter, cancel := testhelper.Context()
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 
 			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
-			ctx := metadata.NewOutgoingContext(ctxOuter, md)
-			for _, feature := range tc.FeatureFlags {
-				ctx = featureflag.OutgoingCtxWithFeatureFlagValue(ctx, feature, "true")
+			ctx = testhelper.MergeOutgoingMetadata(ctx, md)
+
+			for _, feature := range tc.disabledFeatures {
+				ctx = featureflag.OutgoingCtxWithFeatureFlagValue(ctx, feature, "false")
 			}
 
 			repo, repoPath, cleanup := newTestRepo(t, "fetch-source-source.git")
@@ -139,25 +140,26 @@ func TestFetchSourceBranchBranchNotFound(t *testing.T) {
 	defer conn.Close()
 
 	for _, tc := range []struct {
-		desc         string
-		FeatureFlags []featureflag.FeatureFlag
+		desc             string
+		disabledFeatures []featureflag.FeatureFlag
 	}{
 		{
-			desc: "ruby",
+			desc: "go",
 		},
 		{
-			desc:         "go",
-			FeatureFlags: []featureflag.FeatureFlag{featureflag.GoFetchSourceBranch},
+			desc:             "ruby",
+			disabledFeatures: []featureflag.FeatureFlag{featureflag.GoFetchSourceBranch},
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
-			ctxOuter, cancel := testhelper.Context()
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 
 			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
-			ctx := metadata.NewOutgoingContext(ctxOuter, md)
-			for _, feature := range tc.FeatureFlags {
-				ctx = featureflag.OutgoingCtxWithFeatureFlagValue(ctx, feature, "true")
+			ctx = testhelper.MergeOutgoingMetadata(ctx, md)
+
+			for _, feature := range tc.disabledFeatures {
+				ctx = featureflag.OutgoingCtxWithFeatureFlagValue(ctx, feature, "false")
 			}
 
 			targetRepo, _, cleanup := newTestRepo(t, "fetch-source-target.git")
@@ -211,12 +213,11 @@ func TestFetchSourceBranchWrongRef(t *testing.T) {
 	client, conn := repository.NewRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
 
-	ctxOuter, cancel := testhelper.Context()
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
-	ctx := metadata.NewOutgoingContext(ctxOuter, md)
-	ctx = featureflag.OutgoingCtxWithFeatureFlagValue(ctx, featureflag.GoFetchSourceBranch, "true")
+	ctx = testhelper.MergeOutgoingMetadata(ctx, md)
 
 	targetRepo, _, cleanup := newTestRepo(t, "fetch-source-target.git")
 	defer cleanup()

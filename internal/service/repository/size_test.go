@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -25,7 +24,7 @@ func TestSuccessfulRepositorySizeRequest(t *testing.T) {
 
 	request := &gitalypb.RepositorySizeRequest{Repository: repo}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	response, err := client.RepositorySize(ctx, request)
 	require.NoError(t, err)
@@ -58,7 +57,7 @@ func TestFailedRepositorySizeRequest(t *testing.T) {
 				Repository: testCase.repo,
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			_, err := client.RepositorySize(ctx, request)
 			testhelper.RequireGrpcError(t, err, codes.InvalidArgument)
@@ -80,7 +79,7 @@ func TestSuccessfulGetObjectDirectorySizeRequest(t *testing.T) {
 		Repository: testRepo,
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	response, err := client.GetObjectDirectorySize(ctx, request)

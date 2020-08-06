@@ -125,7 +125,7 @@ func TestSpawnFailure(t *testing.T) {
 }
 
 func tryConnect(socketPath string, attempts int, timeout time.Duration) (pids []int, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := testhelper.Context(testhelper.ContextWithTimeout(timeout))
 	defer cancel()
 
 	for j := 0; j < attempts; j++ {

@@ -1,7 +1,6 @@
 package ssh
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -80,7 +79,7 @@ func TestFailedUploadArchiveRequestDueToValidationError(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Desc, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			stream, err := client.SSHUploadArchive(ctx)
 			if err != nil {

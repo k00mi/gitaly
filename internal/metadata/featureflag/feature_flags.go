@@ -5,6 +5,9 @@ type FeatureFlag struct {
 	OnByDefault bool   `json:"on_by_default"`
 }
 
+// A set of feature flags used in Gitaly and Praefect.
+// In order to support coverage of combined features usage all feature flags should be marked as enabled for the test.
+// NOTE: if you add a new feature flag please add it to the `All` list defined below.
 var (
 	// GoUpdateHook will bypass the ruby update hook and use the go implementation of custom hooks
 	GoUpdateHook = FeatureFlag{Name: "go_update_hook", OnByDefault: true}
@@ -31,6 +34,21 @@ var (
 	// introduced with Git v2.28.0 for voting on transactions
 	ReferenceTransactionHook = FeatureFlag{Name: "reference_transaction_hook", OnByDefault: false}
 )
+
+// All includes all feature flags.
+var All = []FeatureFlag{
+	GoUpdateHook,
+	GoFetchSourceBranch,
+	DistributedReads,
+	GoPreReceiveHook,
+	GoPostReceiveHook,
+	ReferenceTransactions,
+	ReferenceTransactionsOperationService,
+	ReferenceTransactionsSmartHTTPService,
+	ReferenceTransactionsSSHService,
+	ReferenceTransactionsPrimaryWins,
+	ReferenceTransactionHook,
+}
 
 const (
 	GoUpdateHookEnvVar             = "GITALY_GO_UPDATE"

@@ -1,7 +1,6 @@
 package rubyserver
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"testing"
@@ -9,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc/codes"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/status"
@@ -84,7 +84,7 @@ func BenchmarkConcurrency(b *testing.B) {
 }
 
 func makeRequest(s *Server) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := testhelper.Context(testhelper.ContextWithTimeout(time.Second))
 	defer cancel()
 
 	conn, err := s.getConnection(ctx)

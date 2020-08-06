@@ -1,7 +1,6 @@
 package commit
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"os"
@@ -69,7 +68,7 @@ func TestSuccessfulGetTreeEntriesWithCurlyBraces(t *testing.T) {
 			Recursive:  testCase.recursive,
 		}
 
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := testhelper.Context()
 		defer cancel()
 		c, err := client.GetTreeEntries(ctx, request)
 		if err != nil {
@@ -381,7 +380,7 @@ func TestSuccessfulGetTreeEntries(t *testing.T) {
 				Recursive:  testCase.recursive,
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.GetTreeEntries(ctx, request)
 			if err != nil {
@@ -440,7 +439,7 @@ func TestSuccessfulGetTreeEntries_FlatPathMaxDeep_SingleFoldersStructure(t *test
 		Recursive:  false,
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	// request entries of the tree with single-folder structure on each level
@@ -485,7 +484,7 @@ func TestFailedGetTreeEntriesRequestDueToValidationError(t *testing.T) {
 
 	for _, rpcRequest := range rpcRequests {
 		t.Run(fmt.Sprintf("%v", rpcRequest), func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.GetTreeEntries(ctx, &rpcRequest)
 			if err != nil {

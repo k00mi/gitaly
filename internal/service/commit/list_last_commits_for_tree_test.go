@@ -2,7 +2,6 @@ package commit
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"os"
 	"path/filepath"
@@ -188,7 +187,7 @@ func TestSuccessfulListLastCommitsForTreeRequest(t *testing.T) {
 				Offset:     testCase.offset,
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 
 			stream, err := client.ListLastCommitsForTree(ctx, request)
@@ -404,7 +403,7 @@ func TestSuccessfulListLastCommitsForTreeRequestWithGlobCharacters(t *testing.T)
 		Offset:        0,
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	stream, err := client.ListLastCommitsForTree(ctx, request)
 	require.NoError(t, err)

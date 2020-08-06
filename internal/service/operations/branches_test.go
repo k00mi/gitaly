@@ -83,7 +83,7 @@ func TestSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T) {
 		ctx, cancel := testhelper.Context()
 		defer cancel()
 
-		ctx = featureSet.WithParent(ctx)
+		ctx = featureSet.Disable(ctx)
 
 		testSuccessfulGitHooksForUserCreateBranchRequest(t, ctx)
 	}
@@ -149,7 +149,7 @@ func TestFailedUserCreateBranchDueToHooks(t *testing.T) {
 		require.NoError(t, err)
 		defer remove()
 
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := testhelper.Context()
 		defer cancel()
 
 		response, err := client.UserCreateBranch(ctx, request)
@@ -215,7 +215,7 @@ func TestFailedUserCreateBranchRequest(t *testing.T) {
 				User:       testCase.user,
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 
 			_, err := client.UserCreateBranch(ctx, request)
@@ -229,11 +229,11 @@ func TestSuccessfulUserDeleteBranchRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, featureSet := range featureSets {
-		t.Run(featureSet.String(), func(t *testing.T) {
+		t.Run("disabled "+featureSet.String(), func(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			ctx = featureSet.WithParent(ctx)
+			ctx = featureSet.Disable(ctx)
 
 			testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 			defer cleanupFn()

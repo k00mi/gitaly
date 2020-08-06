@@ -1,7 +1,6 @@
 package praefect
 
 import (
-	"context"
 	"crypto/sha1"
 	"fmt"
 	"sync"
@@ -73,7 +72,7 @@ func TestTransactionSucceeds(t *testing.T) {
 	cc, txMgr, cleanup := runPraefectServerAndTxMgr(t, opts...)
 	defer cleanup()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := testhelper.Context(testhelper.ContextWithTimeout(time.Second))
 	defer cancel()
 
 	client := gitalypb.NewRefTransactionClient(cc)
@@ -557,7 +556,7 @@ func TestTransactionFailures(t *testing.T) {
 	cc, _, cleanup := runPraefectServerAndTxMgr(t, opts...)
 	defer cleanup()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := testhelper.Context(testhelper.ContextWithTimeout(time.Second))
 	defer cancel()
 
 	client := gitalypb.NewRefTransactionClient(cc)
@@ -628,7 +627,7 @@ func TestTransactionCancellation(t *testing.T) {
 			cc, txMgr, cleanup := runPraefectServerAndTxMgr(t, opts...)
 			defer cleanup()
 
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			ctx, cancel := testhelper.Context(testhelper.ContextWithTimeout(time.Second))
 			defer cancel()
 
 			client := gitalypb.NewRefTransactionClient(cc)

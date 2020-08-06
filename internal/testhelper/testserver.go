@@ -41,12 +41,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// PraefectEnabled returns whether or not tests should use a praefect proxy
-func PraefectEnabled() bool {
-	_, ok := os.LookupEnv("GITALY_TEST_PRAEFECT_BIN")
-	return ok
-}
-
 // TestServerOpt is an option for TestServer
 type TestServerOpt func(t *TestServer)
 
@@ -75,15 +69,19 @@ func NewTestServer(srv *grpc.Server, opts ...TestServerOpt) *TestServer {
 		opt(ts)
 	}
 
+	// the health service needs to be registered in order to support health checks on all
+	// gitaly services that are under test.
+	// The health check is executed by the praefect in case 'test-with-praefect' verification
+	// job is running.
+	healthpb.RegisterHealthServer(srv, health.NewServer())
+
 	return ts
 }
 
 // NewServerWithAuth creates a new test server with authentication
 func NewServerWithAuth(tb testing.TB, streamInterceptors []grpc.StreamServerInterceptor, unaryInterceptors []grpc.UnaryServerInterceptor, token string, opts ...TestServerOpt) *TestServer {
 	if token != "" {
-		if PraefectEnabled() {
-			opts = append(opts, WithToken(token))
-		}
+		opts = append(opts, WithToken(token))
 		streamInterceptors = append(streamInterceptors, serverauth.StreamServerInterceptor(auth.Config{Token: token}))
 		unaryInterceptors = append(unaryInterceptors, serverauth.UnaryServerInterceptor(auth.Config{Token: token}))
 	}
@@ -160,6 +158,11 @@ func (p *TestServer) Start() error {
 			Token: p.token,
 		},
 		MemoryQueueEnabled: true,
+		Failover: praefectconfig.Failover{
+			Enabled:           true,
+			BootstrapInterval: config.Duration(time.Microsecond),
+			MonitorInterval:   config.Duration(time.Second),
+		},
 	}
 
 	for _, storage := range p.storages {
@@ -212,11 +215,11 @@ func (p *TestServer) Start() error {
 	conn, err := grpc.Dial("unix://"+praefectServerSocketPath, opts...)
 
 	if err != nil {
-		return fmt.Errorf("dial: %v", err)
+		return fmt.Errorf("dial to praefect: %v", err)
 	}
 	defer conn.Close()
 
-	if err = waitForPraefectStartup(conn); err != nil {
+	if err = WaitHealthy(conn, 3, time.Second); err != nil {
 		return err
 	}
 
@@ -234,25 +237,58 @@ func (p *TestServer) listen() (string, error) {
 	}
 
 	go p.grpcServer.Serve(listener)
+
+	opts := []grpc.DialOption{grpc.WithInsecure()}
+	if p.token != "" {
+		opts = append(opts, grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(p.token)))
+	}
+
+	conn, err := grpc.Dial("unix://"+gitalyServerSocketPath, opts...)
+
+	if err != nil {
+		return "", err
+	}
+	defer conn.Close()
+
+	if err := WaitHealthy(conn, 3, time.Second); err != nil {
+		return "", err
+	}
+
 	return gitalyServerSocketPath, nil
 }
 
-func waitForPraefectStartup(conn *grpc.ClientConn) error {
-	client := healthpb.NewHealthClient(conn)
+// WaitHealthy executes health check request `retries` times and awaits each `timeout` period to respond.
+// After `retries` unsuccessful attempts it returns an error.
+// Returns immediately without an error once get a successful health check response.
+func WaitHealthy(conn *grpc.ClientConn, retries int, timeout time.Duration) error {
+	for i := 0; i < retries; i++ {
+		if IsHealthy(conn, timeout) {
+			return nil
+		}
+	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	return errors.New("server not yet ready to serve")
+}
+
+// IsHealthy creates a health client to passed in connection and send `Check` request.
+// It waits for `timeout` duration to get response back.
+// It returns `true` only if remote responds with `SERVING` status.
+func IsHealthy(conn *grpc.ClientConn, timeout time.Duration) bool {
+	healthClient := healthpb.NewHealthClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	resp, err := client.Check(ctx, &healthpb.HealthCheckRequest{}, grpc.WaitForReady(true))
+	resp, err := healthClient.Check(ctx, &healthpb.HealthCheckRequest{}, grpc.WaitForReady(true))
 	if err != nil {
-		return err
+		return false
 	}
 
 	if resp.Status != healthpb.HealthCheckResponse_SERVING {
-		return errors.New("server not yet ready to serve")
+		return false
 	}
 
-	return nil
+	return true
 }
 
 // NewServer creates a Server for testing purposes

@@ -1,7 +1,6 @@
 package commit
 
 import (
-	"context"
 	"testing"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -86,7 +85,7 @@ func TestSuccessfulLastCommitForPathRequest(t *testing.T) {
 				Path:       testCase.path,
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			response, err := client.LastCommitForPath(ctx, request)
 			if err != nil {
@@ -141,7 +140,7 @@ func TestFailedLastCommitForPathRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			_, err := client.LastCommitForPath(ctx, testCase.request)
 			testhelper.RequireGrpcError(t, err, testCase.code)
@@ -177,7 +176,7 @@ func TestSuccessfulLastCommitWithGlobCharacters(t *testing.T) {
 		LiteralPathspec: true,
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	response, err := client.LastCommitForPath(ctx, request)
 	require.NoError(t, err)

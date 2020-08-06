@@ -2,7 +2,6 @@ package diff
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"testing"
@@ -179,7 +178,7 @@ func TestSuccessfulCommitDiffRequest(t *testing.T) {
 			testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "config", "diff.noprefix", testCase.noPrefixConfig)
 			rpcRequest := &gitalypb.CommitDiffRequest{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: leftCommit, IgnoreWhitespaceChange: false}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.CommitDiff(ctx, rpcRequest)
 			if err != nil {
@@ -216,7 +215,7 @@ func TestSuccessfulCommitDiffRequestWithPaths(t *testing.T) {
 		},
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	c, err := client.CommitDiff(ctx, rpcRequest)
 	if err != nil {
@@ -287,7 +286,7 @@ func TestSuccessfulCommitDiffRequestWithTypeChangeDiff(t *testing.T) {
 		LeftCommitId:  leftCommit,
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	c, err := client.CommitDiff(ctx, rpcRequest)
 	if err != nil {
@@ -422,7 +421,7 @@ func TestSuccessfulCommitDiffRequestWithIgnoreWhitespaceChange(t *testing.T) {
 				Paths:                  entry.paths,
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.CommitDiff(ctx, rpcRequest)
 			if err != nil {
@@ -630,7 +629,7 @@ func TestSuccessfulCommitDiffRequestWithLimits(t *testing.T) {
 			request.LeftCommitId = leftCommit
 			request.RightCommitId = rightCommit
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.CommitDiff(ctx, &request)
 			if err != nil {
@@ -678,7 +677,7 @@ func TestFailedCommitDiffRequestDueToValidationError(t *testing.T) {
 
 	for _, rpcRequest := range rpcRequests {
 		t.Run(fmt.Sprintf("%v", rpcRequest), func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.CommitDiff(ctx, &rpcRequest)
 			if err != nil {
@@ -705,7 +704,7 @@ func TestFailedCommitDiffRequestWithNonExistentCommit(t *testing.T) {
 	leftCommit := nonExistentCommitID + "~" // Parent of rightCommit
 	rpcRequest := &gitalypb.CommitDiffRequest{Repository: testRepo, RightCommitId: nonExistentCommitID, LeftCommitId: leftCommit}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	c, err := client.CommitDiff(ctx, rpcRequest)
 	if err != nil {
@@ -730,7 +729,7 @@ func TestSuccessfulCommitDeltaRequest(t *testing.T) {
 	leftCommit := "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab"
 	rpcRequest := &gitalypb.CommitDeltaRequest{Repository: testRepo, RightCommitId: rightCommit, LeftCommitId: leftCommit}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	c, err := client.CommitDelta(ctx, rpcRequest)
 	if err != nil {
@@ -863,7 +862,7 @@ func TestSuccessfulCommitDeltaRequestWithPaths(t *testing.T) {
 		},
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	c, err := client.CommitDelta(ctx, rpcRequest)
 	if err != nil {
@@ -930,7 +929,7 @@ func TestFailedCommitDeltaRequestDueToValidationError(t *testing.T) {
 
 	for _, rpcRequest := range rpcRequests {
 		t.Run(fmt.Sprintf("%v", rpcRequest), func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.CommitDelta(ctx, &rpcRequest)
 			if err != nil {
@@ -957,7 +956,7 @@ func TestFailedCommitDeltaRequestWithNonExistentCommit(t *testing.T) {
 	leftCommit := nonExistentCommitID + "~" // Parent of rightCommit
 	rpcRequest := &gitalypb.CommitDeltaRequest{Repository: testRepo, RightCommitId: nonExistentCommitID, LeftCommitId: leftCommit}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	c, err := client.CommitDelta(ctx, rpcRequest)
 	if err != nil {

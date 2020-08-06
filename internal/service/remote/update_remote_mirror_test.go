@@ -1,7 +1,6 @@
 package remote
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -295,7 +294,7 @@ func TestFailedUpdateRemoteMirrorRequestDueToValidation(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 
 			stream, err := client.UpdateRemoteMirror(ctx)

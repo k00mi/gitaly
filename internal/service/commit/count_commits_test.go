@@ -1,7 +1,6 @@
 package commit
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -172,7 +171,7 @@ func TestSuccessfulCountCommitsRequest(t *testing.T) {
 				request.Path = testCase.path
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			response, err := client.CountCommits(ctx, request)
 			if err != nil {
@@ -205,7 +204,7 @@ func TestFailedCountCommitsRequestDueToValidationError(t *testing.T) {
 
 	for _, rpcRequest := range rpcRequests {
 		t.Run(fmt.Sprintf("%v", rpcRequest), func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			_, err := client.CountCommits(ctx, &rpcRequest)
 			testhelper.RequireGrpcError(t, err, codes.InvalidArgument)

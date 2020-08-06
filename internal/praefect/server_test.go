@@ -24,7 +24,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
-	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/grpc-proxy/proxy"
@@ -79,7 +78,7 @@ func TestServerRouteServerAccessor(t *testing.T) {
 			"received unexpected request value: %+v instead of %+v", actualReq, expectReq)
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := testhelper.Context(testhelper.ContextWithTimeout(time.Second))
 	defer cancel()
 
 	actualResp, err := cli.ServerAccessor(ctx, expectReq)
@@ -223,7 +222,7 @@ func TestHealthCheck(t *testing.T) {
 	cc, _, cleanup := runPraefectServerWithGitaly(t, testConfig(1))
 	defer cleanup()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := testhelper.Context(testhelper.ContextWithTimeout(time.Second))
 	defer cancel()
 
 	client := grpc_health_v1.NewHealthClient(cc)
@@ -474,11 +473,9 @@ func TestRepoRemoval(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	resp, err := rClient.RepositoryExists(ctx, &gitalypb.RepositoryExistsRequest{
-		Repository: &virtualRepo,
-	})
-	require.NoError(t, err)
-	require.Equal(t, false, resp.GetExists())
+	storage, ok := gconfig.Config.Storage(conf.VirtualStorages[0].Nodes[0].Storage)
+	require.True(t, ok)
+	testhelper.AssertPathNotExists(t, filepath.Join(storage.Path, tRepo.RelativePath))
 
 	var jobsDone int
 	for {
@@ -533,6 +530,7 @@ func TestRepoRename(t *testing.T) {
 				},
 			},
 		},
+		Failover: config.Failover{Enabled: true},
 	}
 
 	virtualStorage := conf.VirtualStorages[0]
@@ -833,8 +831,6 @@ func TestProxyWrites(t *testing.T) {
 		require.NoError(t, err)
 		waitNodeToChangeHealthStatus(ctx, t, node, true)
 	}
-
-	ctx = featureflag.OutgoingCtxWithFeatureFlags(ctx, featureflag.ReferenceTransactions)
 
 	stream, err := client.PostReceivePack(ctx)
 	require.NoError(t, err)

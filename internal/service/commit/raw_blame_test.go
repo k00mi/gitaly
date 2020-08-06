@@ -1,7 +1,6 @@
 package commit
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"testing"
@@ -51,7 +50,7 @@ func TestSuccessfulRawBlameRequest(t *testing.T) {
 				Path:       testCase.path,
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.RawBlame(ctx, request)
 			if err != nil {
@@ -129,7 +128,7 @@ func TestFailedRawBlameRequest(t *testing.T) {
 				Path:       testCase.path,
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.RawBlame(ctx, &request)
 			if err != nil {

@@ -1,7 +1,6 @@
 package housekeeping
 
 import (
-	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -186,7 +185,10 @@ func TestPerform(t *testing.T) {
 				e.create(t, rootPath)
 			}
 
-			if err = Perform(context.Background(), rootPath); (err != nil) != tt.wantErr {
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			if err = Perform(ctx, rootPath); (err != nil) != tt.wantErr {
 				t.Errorf("Perform() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
@@ -298,7 +300,10 @@ func TestDeleteRootOwnerObjects(t *testing.T) {
 		t.Skip("skipping test; Only used for manual testing")
 	}
 
-	err := Perform(context.Background(), rootPath)
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	err := Perform(ctx, rootPath)
 	assert.NoError(t, err, "Housekeeping failed")
 
 	_, err = os.Stat(filepath.Join(rootPath, "tmp_FILE"))

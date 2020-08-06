@@ -1,7 +1,6 @@
 package ref
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -28,7 +27,7 @@ func TestFindRefNameSuccess(t *testing.T) {
 		Prefix:     []byte(`refs/heads/`),
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	c, err := client.FindRefName(ctx, rpcRequest)
 	if err != nil {
@@ -58,7 +57,7 @@ func TestFindRefNameEmptyCommit(t *testing.T) {
 		Prefix:     []byte(`refs/heads/`),
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	c, err := client.FindRefName(ctx, rpcRequest)
 	if err == nil {
@@ -87,7 +86,7 @@ func TestFindRefNameInvalidRepo(t *testing.T) {
 		Prefix:     []byte(`refs/heads/`),
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	c, err := client.FindRefName(ctx, rpcRequest)
 	if err == nil {
@@ -119,7 +118,7 @@ func TestFindRefNameInvalidPrefix(t *testing.T) {
 		Prefix:     []byte(`refs/nonexistant/`),
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	c, err := client.FindRefName(ctx, rpcRequest)
 	if err != nil {
@@ -145,7 +144,7 @@ func TestFindRefNameInvalidObject(t *testing.T) {
 		CommitId:   "dead1234dead1234dead1234dead1234dead1234",
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	c, err := client.FindRefName(ctx, rpcRequest)
 	if err != nil {

@@ -1,7 +1,6 @@
 package commit
 
 import (
-	"context"
 	"io"
 	"testing"
 
@@ -173,7 +172,7 @@ func TestSuccessfulCommitsBetween(t *testing.T) {
 				Repository: testRepo, From: tc.from, To: tc.to,
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.CommitsBetween(ctx, &rpcRequest)
 			if err != nil {
@@ -266,7 +265,7 @@ func TestFailedCommitsBetweenRequest(t *testing.T) {
 				Repository: tc.repository, From: tc.from, To: tc.to,
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.CommitsBetween(ctx, &rpcRequest)
 			if err != nil {

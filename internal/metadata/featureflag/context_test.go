@@ -18,6 +18,16 @@ func TestIncomingCtxWithFeatureFlag(t *testing.T) {
 	require.True(t, IsEnabled(ctx, mockFeatureFlag))
 }
 
+func TestIncomingCtxWithDisabledFeatureFlag(t *testing.T) {
+	ctx := context.Background()
+
+	require.False(t, IsEnabled(ctx, mockFeatureFlag))
+
+	ctx = IncomingCtxWithDisabledFeatureFlag(ctx, mockFeatureFlag)
+
+	require.True(t, IsDisabled(ctx, mockFeatureFlag))
+}
+
 func TestOutgoingCtxWithFeatureFlag(t *testing.T) {
 	ctx := context.Background()
 	require.False(t, IsEnabled(ctx, mockFeatureFlag))

@@ -1,7 +1,6 @@
 package git
 
 import (
-	"context"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -9,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
 func TestGitCommandProxy(t *testing.T) {
@@ -24,7 +24,7 @@ func TestGitCommandProxy(t *testing.T) {
 
 	os.Setenv("http_proxy", ts.URL)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	dir, err := ioutil.TempDir("", "test-clone")

@@ -1,10 +1,10 @@
 package git
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
 type fakeProtocolMessage struct {
@@ -34,7 +34,10 @@ func TestAddGitProtocolEnv(t *testing.T) {
 		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
-			actual := AddGitProtocolEnv(context.Background(), tt.msg, env)
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			actual := AddGitProtocolEnv(ctx, tt.msg, env)
 			require.Equal(t, tt.env, actual)
 		})
 	}

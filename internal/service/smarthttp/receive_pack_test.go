@@ -124,7 +124,7 @@ func TestFailedReceivePackRequestWithGitOpts(t *testing.T) {
 	client, conn := newSmartHTTPClient(t, serverSocketPath)
 	defer conn.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	stream, err := client.PostReceivePack(ctx)
@@ -274,7 +274,7 @@ func TestFailedReceivePackRequestDueToValidationError(t *testing.T) {
 
 	for _, rpcRequest := range rpcRequests {
 		t.Run(fmt.Sprintf("%v", rpcRequest), func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			stream, err := client.PostReceivePack(ctx)
 			require.NoError(t, err)
@@ -358,12 +358,14 @@ func TestPostReceivePackToHooks(t *testing.T) {
 	features, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoPostReceiveHook})
 	require.NoError(t, err)
 
-	ctx, cancel := testhelper.Context()
-	defer cancel()
-
 	for _, feature := range features {
-		t.Run(feature.String(), func(t *testing.T) {
-			testPostReceivePackToHooks(t, feature.WithParent(ctx))
+		t.Run("disabled "+feature.String(), func(t *testing.T) {
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			ctx = feature.Disable(ctx)
+
+			testPostReceivePackToHooks(t, ctx)
 		})
 	}
 }
@@ -483,7 +485,7 @@ func TestPostReceiveWithTransactionsViaPraefect(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, features := range featureSets {
-		t.Run(fmt.Sprintf("features:%s", features), func(t *testing.T) {
+		t.Run("disabled "+features.String(), func(t *testing.T) {
 			repo, repoPath, cleanup := testhelper.NewTestRepo(t)
 			defer cleanup()
 
@@ -539,7 +541,7 @@ func TestPostReceiveWithTransactionsViaPraefect(t *testing.T) {
 
 			ctx, cancel := testhelper.Context()
 			defer cancel()
-			ctx = features.WithParent(ctx)
+			ctx = features.Disable(ctx)
 
 			stream, err := client.PostReceivePack(ctx)
 			require.NoError(t, err)
@@ -605,7 +607,7 @@ func TestPostReceiveWithReferenceTransactionHook(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, features := range featureSets {
-		t.Run(fmt.Sprintf("features:%s", features), func(t *testing.T) {
+		t.Run("disabled "+features.String(), func(t *testing.T) {
 			refTransactionServer.called = 0
 
 			client, conn := newSmartHTTPClient(t, "unix://"+gitalySocketPath)
@@ -627,7 +629,7 @@ func TestPostReceiveWithReferenceTransactionHook(t *testing.T) {
 			require.NoError(t, err)
 
 			ctx = helper.IncomingToOutgoing(ctx)
-			ctx = features.WithParent(ctx)
+			ctx = features.Disable(ctx)
 
 			stream, err := client.PostReceivePack(ctx)
 			require.NoError(t, err)
@@ -648,7 +650,7 @@ func TestPostReceiveWithReferenceTransactionHook(t *testing.T) {
 
 			// If the reference-transaction hook is not supported or the feature flag is
 			// not enabled, voting only happens via the pre-receive hook.
-			if !features.IsEnabled(featureflag.ReferenceTransactionHook) || !supported {
+			if features.IsDisabled(featureflag.ReferenceTransactionHook) || !supported {
 				require.Equal(t, 1, refTransactionServer.called)
 			} else {
 				require.Equal(t, 3, refTransactionServer.called)

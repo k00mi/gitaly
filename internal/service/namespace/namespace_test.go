@@ -1,7 +1,6 @@
 package namespace
 
 import (
-	"context"
 	"log"
 	"os"
 	"path/filepath"
@@ -49,7 +48,7 @@ func TestNamespaceExists(t *testing.T) {
 	defer conn.Close()
 
 	// Create one namespace for testing it exists
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	const (
@@ -175,7 +174,7 @@ func TestAddNamespace(t *testing.T) {
 
 	for _, tc := range queries {
 		t.Run(tc.desc, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 
 			_, err := client.AddNamespace(ctx, tc.request)
@@ -199,7 +198,7 @@ func TestRemoveNamespace(t *testing.T) {
 	client, conn := newNamespaceClient(t, serverSocketPath)
 	defer conn.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	const (
@@ -262,7 +261,7 @@ func TestRenameNamespace(t *testing.T) {
 	client, conn := newNamespaceClient(t, serverSocketPath)
 	defer conn.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	const (
@@ -344,7 +343,7 @@ func TestRenameNamespaceWithNonexistentParentDir(t *testing.T) {
 	client, conn := newNamespaceClient(t, serverSocketPath)
 	defer conn.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	_, err := client.AddNamespace(ctx, &gitalypb.AddNamespaceRequest{
