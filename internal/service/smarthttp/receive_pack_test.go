@@ -623,9 +623,12 @@ func TestPostReceiveWithReferenceTransactionHook(t *testing.T) {
 			// RefTransaction server for Gitaly itself. As this is the only Praefect
 			// service required in this context, we can just pretend that
 			// Gitaly is the Praefect server and inject it.
-			ctx, err = metadata.InjectPraefectServer(ctx, pconfig.Config{
+			praefectServer, err := metadata.PraefectFromConfig(pconfig.Config{
 				SocketPath: "unix://" + gitalySocketPath,
 			})
+			require.NoError(t, err)
+
+			ctx, err = praefectServer.Inject(ctx)
 			require.NoError(t, err)
 
 			ctx = helper.IncomingToOutgoing(ctx)
