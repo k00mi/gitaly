@@ -1,7 +1,6 @@
 package commit
 
 import (
-	"context"
 	"fmt"
 	"os/exec"
 	"testing"
@@ -68,7 +67,7 @@ func TestCommitIsAncestorFailure(t *testing.T) {
 
 	for _, v := range queries {
 		t.Run(fmt.Sprintf("%v", v.Request), func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			if _, err := client.CommitIsAncestor(ctx, v.Request); err == nil {
 				t.Error("Expected to throw an error")
@@ -161,7 +160,7 @@ func TestCommitIsAncestorSuccess(t *testing.T) {
 
 	for _, v := range queries {
 		t.Run(fmt.Sprintf("%v", v.Request), func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.CommitIsAncestor(ctx, v.Request)
 			if err != nil {
@@ -224,7 +223,7 @@ func TestSuccessfulIsAncestorRequestWithAltGitObjectDirs(t *testing.T) {
 				ChildId:    string(currentHead),
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			response, err := client.CommitIsAncestor(ctx, request)
 			if err != nil {

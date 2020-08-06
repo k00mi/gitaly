@@ -1,7 +1,6 @@
 package gitalyssh
 
 import (
-	"context"
 	"encoding/base64"
 	"fmt"
 	"path/filepath"
@@ -19,7 +18,7 @@ func TestUploadPackEnv(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	md := metadata.Pairs("gitaly-servers", base64.StdEncoding.EncodeToString([]byte(`{"default":{"address":"unix:///tmp/sock","token":"hunter1"}}`)))

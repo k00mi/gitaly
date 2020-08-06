@@ -1,7 +1,6 @@
 package commit
 
 import (
-	"context"
 	"io"
 	"testing"
 
@@ -145,7 +144,7 @@ func TestSuccessfulCommitsByMessageRequest(t *testing.T) {
 			request := testCase.request
 			request.Repository = testRepo
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.CommitsByMessage(ctx, request)
 			if err != nil {
@@ -214,7 +213,7 @@ func TestFailedCommitsByMessageRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.CommitsByMessage(ctx, testCase.request)
 			if err != nil {

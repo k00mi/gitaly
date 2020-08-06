@@ -1,7 +1,6 @@
 package ref
 
 import (
-	"context"
 	"io"
 	"testing"
 
@@ -113,7 +112,7 @@ func TestInvalidFindAllRemoteBranchesRequest(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.FindAllRemoteBranches(ctx, &tc.request)
 			if err != nil {

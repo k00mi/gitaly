@@ -1,7 +1,6 @@
 package commit
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,7 +17,7 @@ func TestCommitStatsSuccess(t *testing.T) {
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
@@ -89,7 +88,7 @@ func TestCommitStatsFailure(t *testing.T) {
 	client, conn := newCommitServiceClient(t, serverSocketPath)
 	defer conn.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)

@@ -2,7 +2,6 @@ package repository
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -97,7 +96,7 @@ func TestGarbageCollectSuccess(t *testing.T) {
 			// precision on `mtime`.
 			// Stamp taken from https://golang.org/pkg/time/#pkg-constants
 			testhelper.MustRunCommand(t, nil, "touch", "-t", testTimeString, packPath)
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.GarbageCollect(ctx, test.req)
 			assert.NoError(t, err)
@@ -222,7 +221,7 @@ func TestGarbageCollectFailure(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%v", test.repo), func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			_, err := client.GarbageCollect(ctx, &gitalypb.GarbageCollectRequest{Repository: test.repo})
 			testhelper.RequireGrpcError(t, err, test.code)
@@ -338,7 +337,7 @@ func TestGarbageCollectDeltaIslands(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	gittest.TestDeltaIslands(t, testRepoPath, func() error {

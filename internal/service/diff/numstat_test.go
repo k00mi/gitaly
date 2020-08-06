@@ -1,7 +1,6 @@
 package diff
 
 import (
-	"context"
 	"io"
 	"testing"
 
@@ -134,7 +133,7 @@ func TestFailedDiffStatsRequest(t *testing.T) {
 	client, conn := newDiffClient(t, serverSocketPath)
 	defer conn.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)

@@ -1,7 +1,6 @@
 package commit
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -25,7 +24,7 @@ func TestLanguages(t *testing.T) {
 		Revision:   []byte("cb19058ecc02d01f8e4290b7e79cafd16a8839b6"),
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	resp, err := client.CommitLanguages(ctx, request)
@@ -66,7 +65,7 @@ func TestFileCountIsZeroWhenFeatureIsDisabled(t *testing.T) {
 		Revision:   []byte("cb19058ecc02d01f8e4290b7e79cafd16a8839b6"),
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	resp, err := client.CommitLanguages(ctx, request)
@@ -101,7 +100,7 @@ func TestLanguagesEmptyRevision(t *testing.T) {
 		Repository: testRepo,
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	resp, err := client.CommitLanguages(ctx, request)
 	require.NoError(t, err)

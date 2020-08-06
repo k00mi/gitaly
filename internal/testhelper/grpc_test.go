@@ -1,7 +1,6 @@
 package testhelper_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -11,7 +10,11 @@ import (
 
 func TestSetCtxGrpcMethod(t *testing.T) {
 	expectFullMethodName := "/pinkypb/TakeOverTheWorld.SNARF"
-	ctx := testhelper.SetCtxGrpcMethod(context.Background(), expectFullMethodName)
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	ctx = testhelper.SetCtxGrpcMethod(ctx, expectFullMethodName)
 
 	actualFullMethodName, ok := grpc.Method(ctx)
 	require.True(t, ok, "expected context to contain server transport stream")

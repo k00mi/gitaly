@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	gitaly_auth "gitlab.com/gitlab-org/gitaly/internal/config/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/server/auth"
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health"
@@ -130,7 +131,7 @@ func TestPoolDial(t *testing.T) {
 				require.NoError(t, pool.Close())
 			}()
 
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			ctx, cancel := testhelper.Context(testhelper.ContextWithTimeout(time.Second))
 			defer cancel()
 
 			tc.test(t, ctx, pool)

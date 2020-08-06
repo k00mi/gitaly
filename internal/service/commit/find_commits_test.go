@@ -159,7 +159,7 @@ func TestFindCommitsFields(t *testing.T) {
 				Limit:      1,
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			stream, err := client.FindCommits(ctx, request)
 			require.NoError(t, err)

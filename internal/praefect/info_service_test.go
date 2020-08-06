@@ -30,6 +30,7 @@ func TestInfoService_RepositoryReplicas(t *testing.T) {
 				},
 			},
 		},
+		Failover: config.Failover{Enabled: true},
 	}
 
 	defer func(storages []gconfig.Storage) { gconfig.Config.Storages = storages }(gconfig.Config.Storages)

@@ -230,12 +230,13 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 	}
 
 	testcases := []struct {
-		desc     string
-		features []featureflag.FeatureFlag
-		nodes    []node
+		desc            string
+		disableFeatures []featureflag.FeatureFlag
+		nodes           []node
 	}{
 		{
-			desc: "successful vote should not create replication jobs",
+			desc:            "successful vote should not create replication jobs",
+			disableFeatures: []featureflag.FeatureFlag{featureflag.ReferenceTransactionsPrimaryWins},
 			nodes: []node{
 				{primary: true, vote: "foobar", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
 				{primary: false, vote: "foobar", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
@@ -246,7 +247,8 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 			// Currently, transactions are created such that all nodes need to agree.
 			// This is going to change in the future, but for now let's just test that
 			// we don't get any replication jobs if any node disagrees.
-			desc: "failing vote should not create replication jobs",
+			desc:            "failing vote should not create replication jobs",
+			disableFeatures: []featureflag.FeatureFlag{featureflag.ReferenceTransactionsPrimaryWins},
 			nodes: []node{
 				{primary: true, vote: "foobar", shouldSucceed: false, shouldGetRepl: false, shouldParticipate: true},
 				{primary: false, vote: "foobar", shouldSucceed: false, shouldGetRepl: false, shouldParticipate: true},
@@ -254,7 +256,8 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 			},
 		},
 		{
-			desc: "only consistent secondaries should participate",
+			desc:            "only consistent secondaries should participate",
+			disableFeatures: []featureflag.FeatureFlag{featureflag.ReferenceTransactionsPrimaryWins},
 			nodes: []node{
 				{primary: true, vote: "foobar", shouldSucceed: true, shouldParticipate: true, generation: 1},
 				{primary: false, vote: "foobar", shouldSucceed: true, shouldParticipate: true, generation: 1},
@@ -263,15 +266,15 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 			},
 		},
 		{
-			desc: "secondaries should not participate when primary's generation is unknown",
+			desc:            "secondaries should not participate when primary's generation is unknown",
+			disableFeatures: []featureflag.FeatureFlag{featureflag.ReferenceTransactionsPrimaryWins},
 			nodes: []node{
 				{primary: true, vote: "foobar", shouldSucceed: true, shouldParticipate: true, generation: datastore.GenerationUnknown},
 				{shouldParticipate: false, generation: datastore.GenerationUnknown},
 			},
 		},
 		{
-			desc:     "primary succeeds with primary-wins strategy",
-			features: []featureflag.FeatureFlag{featureflag.ReferenceTransactionsPrimaryWins},
+			desc: "primary succeeds with primary-wins strategy",
 			nodes: []node{
 				{primary: true, vote: "foo", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
 				{primary: false, vote: "qux", shouldSucceed: false, shouldGetRepl: true, shouldParticipate: true},
@@ -279,8 +282,7 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 			},
 		},
 		{
-			desc:     "only failing secondaries get replication jobs",
-			features: []featureflag.FeatureFlag{featureflag.ReferenceTransactionsPrimaryWins},
+			desc: "only failing secondaries get replication jobs",
 			nodes: []node{
 				{primary: true, vote: "foo", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
 				{primary: false, vote: "qux", shouldSucceed: false, shouldGetRepl: true, shouldParticipate: true},
@@ -291,7 +293,8 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 			// If the transaction didn't receive any votes at all, we need to assume
 			// that the RPC wasn't aware of transactions and thus need to schedule
 			// replication jobs.
-			desc: "unstarted transaction should create replication jobs",
+			desc:            "unstarted transaction should create replication jobs",
+			disableFeatures: []featureflag.FeatureFlag{featureflag.ReferenceTransactionsPrimaryWins},
 			nodes: []node{
 				{primary: true, shouldSucceed: true, shouldGetRepl: false},
 				{primary: false, shouldSucceed: false, shouldGetRepl: true},
@@ -334,9 +337,8 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			ctx = featureflag.IncomingCtxWithFeatureFlag(ctx, featureflag.ReferenceTransactions)
-			for _, feature := range tc.features {
-				ctx = featureflag.IncomingCtxWithFeatureFlag(ctx, feature)
+			for _, feature := range tc.disableFeatures {
+				ctx = featureflag.IncomingCtxWithDisabledFeatureFlag(ctx, feature)
 			}
 
 			nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf, nil, nil, promtest.NewMockHistogramVec())
@@ -399,9 +401,9 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 					vote := sha1.Sum([]byte(node.vote))
 					err := txMgr.VoteTransaction(ctx, transaction.ID, fmt.Sprintf("node-%d", i), vote[:])
 					if node.shouldSucceed {
-						require.NoError(t, err)
+						assert.NoError(t, err)
 					} else {
-						require.True(t, errors.Is(err, transactions.ErrTransactionVoteFailed))
+						assert.True(t, errors.Is(err, transactions.ErrTransactionVoteFailed))
 					}
 				}()
 			}
@@ -479,6 +481,8 @@ func TestStreamDirectorAccessor(t *testing.T) {
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
+
+	ctx = featureflag.IncomingCtxWithDisabledFeatureFlag(ctx, featureflag.DistributedReads)
 
 	entry := testhelper.DiscardTestEntry(t)
 
@@ -562,7 +566,6 @@ func TestCoordinatorStreamDirector_distributesReads(t *testing.T) {
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
-	ctx = featureflag.IncomingCtxWithFeatureFlag(ctx, featureflag.DistributedReads)
 
 	entry := testhelper.DiscardTestEntry(t)
 
@@ -853,6 +856,9 @@ func TestCoordinatorEnqueueFailure(t *testing.T) {
 	})
 	defer cleanup()
 
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
 	mcli := mock.NewSimpleServiceClient(cc)
 
 	errQ <- nil
@@ -862,12 +868,12 @@ func TestCoordinatorEnqueueFailure(t *testing.T) {
 			StorageName:  conf.VirtualStorages[0].Name,
 		},
 	}
-	_, err = mcli.RepoMutatorUnary(context.Background(), repoReq)
+	_, err = mcli.RepoMutatorUnary(ctx, repoReq)
 	require.NoError(t, err)
 
 	expectErrMsg := "enqueue failed"
 	errQ <- errors.New(expectErrMsg)
-	_, err = mcli.RepoMutatorUnary(context.Background(), repoReq)
+	_, err = mcli.RepoMutatorUnary(ctx, repoReq)
 	require.Error(t, err)
 	require.Equal(t, err.Error(), "rpc error: code = Unknown desc = enqueue replication event: "+expectErrMsg)
 }

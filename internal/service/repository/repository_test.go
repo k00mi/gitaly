@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"context"
 	"io/ioutil"
 	"os"
 	"path"
@@ -105,7 +104,7 @@ func TestRepositoryExists(t *testing.T) {
 
 	for _, tc := range queries {
 		t.Run(tc.desc, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			response, err := client.RepositoryExists(ctx, tc.request)
 
@@ -161,7 +160,7 @@ func TestSuccessfulHasLocalBranches(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 
 			response, err := client.HasLocalBranches(ctx, tc.request)
@@ -202,7 +201,7 @@ func TestFailedHasLocalBranches(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 
 			request := &gitalypb.HasLocalBranchesRequest{Repository: tc.repository}

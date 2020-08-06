@@ -1,7 +1,6 @@
 package commit
 
 import (
-	"context"
 	"io"
 	"testing"
 
@@ -95,7 +94,7 @@ func TestSuccessfulListCommitsByOidRequest(t *testing.T) {
 			request := testCase.request
 			request.Repository = testRepo
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.ListCommitsByOid(ctx, request)
 			if err != nil {

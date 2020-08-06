@@ -2,7 +2,6 @@ package repository
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"os/exec"
 	"path"
@@ -39,7 +38,7 @@ func TestRepackIncrementalSuccess(t *testing.T) {
 	// Stamp taken from https://golang.org/pkg/time/#pkg-constants
 	testhelper.MustRunCommand(t, nil, "touch", "-t", testTimeString, path.Join(packPath, "*"))
 	testTime := time.Date(2006, 01, 02, 15, 04, 05, 0, time.UTC)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 	c, err := client.RepackIncremental(ctx, &gitalypb.RepackIncrementalRequest{Repository: testRepo})
 	assert.NoError(t, err)
@@ -137,7 +136,7 @@ func TestRepackIncrementalFailure(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			_, err := client.RepackIncremental(ctx, &gitalypb.RepackIncrementalRequest{Repository: test.repo})
 			testhelper.RequireGrpcError(t, err, test.code)
@@ -171,7 +170,7 @@ func TestRepackFullSuccess(t *testing.T) {
 			// precision on `mtime`.
 			testhelper.MustRunCommand(t, nil, "touch", "-t", testTimeString, packPath)
 			testTime := time.Date(2006, 01, 02, 15, 04, 05, 0, time.UTC)
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.RepackFull(ctx, test.req)
 			assert.NoError(t, err)
@@ -273,7 +272,7 @@ func TestRepackFullFailure(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			_, err := client.RepackFull(ctx, &gitalypb.RepackFullRequest{Repository: test.repo})
 			testhelper.RequireGrpcError(t, err, test.code)
@@ -291,7 +290,7 @@ func TestRepackFullDeltaIslands(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	gittest.TestDeltaIslands(t, testRepoPath, func() error {

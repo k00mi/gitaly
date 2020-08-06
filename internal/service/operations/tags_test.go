@@ -22,11 +22,11 @@ func TestSuccessfulUserDeleteTagRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, featureSet := range featureSets {
-		t.Run(featureSet.String(), func(t *testing.T) {
+		t.Run("disabled "+featureSet.String(), func(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			ctx = featureSet.WithParent(ctx)
+			ctx = featureSet.Disable(ctx)
 
 			serverSocketPath, stop := runOperationServiceServer(t)
 			defer stop()
@@ -59,15 +59,15 @@ func TestSuccessfulUserDeleteTagRequest(t *testing.T) {
 }
 
 func TestSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T) {
-	ctx, cancel := testhelper.Context()
-	defer cancel()
-
 	featureSets, err := testhelper.NewFeatureSets(nil, featureflag.GoPostReceiveHook)
 	require.NoError(t, err)
 
 	for _, featureSet := range featureSets {
-		t.Run(featureSet.String(), func(t *testing.T) {
-			ctx := featureSet.WithParent(ctx)
+		t.Run("disabled "+featureSet.String(), func(t *testing.T) {
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			ctx = featureSet.Disable(ctx)
 			testSuccessfulGitHooksForUserDeleteTagRequest(t, ctx)
 		})
 	}
@@ -113,11 +113,11 @@ func TestSuccessfulUserCreateTagRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, featureSet := range featureSets {
-		t.Run(featureSet.String(), func(t *testing.T) {
+		t.Run("disabled "+featureSet.String(), func(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			ctx = featureSet.WithParent(ctx)
+			ctx = featureSet.Disable(ctx)
 
 			serverSocketPath, stop := runOperationServiceServer(t)
 			defer stop()
@@ -190,9 +190,6 @@ func TestSuccessfulUserCreateTagRequest(t *testing.T) {
 						User:           testhelper.TestUser,
 						Message:        []byte(testCase.message),
 					}
-
-					ctx, cancel := testhelper.Context()
-					defer cancel()
 
 					response, err := client.UserCreateTag(ctx, request)
 					require.NoError(t, err, "error from calling RPC")

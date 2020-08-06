@@ -1,7 +1,6 @@
 package commit
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -126,7 +125,7 @@ func TestSuccessfulCountDivergentCommitsRequest(t *testing.T) {
 				To:         []byte(testCase.rightRevision),
 				MaxCount:   int32(1000),
 			}
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			response, err := client.CountDivergingCommits(ctx, request)
 			require.NoError(t, err)
@@ -176,7 +175,7 @@ func TestSuccessfulCountDivergentCommitsRequestWithMaxCount(t *testing.T) {
 				To:         []byte(testCase.rightRevision),
 				MaxCount:   int32(testCase.maxCount),
 			}
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			response, err := client.CountDivergingCommits(ctx, request)
 			require.NoError(t, err)

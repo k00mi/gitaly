@@ -70,6 +70,16 @@ func IncomingCtxWithFeatureFlag(ctx context.Context, flag FeatureFlag) context.C
 	return metadata.NewIncomingContext(ctx, md)
 }
 
+// IncomingCtxWithDisabledFeatureFlag marks feature flag as disabled in the incoming context.
+func IncomingCtxWithDisabledFeatureFlag(ctx context.Context, flag FeatureFlag) context.Context {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		md = metadata.New(map[string]string{})
+	}
+	md.Set(HeaderKey(flag.Name), "false")
+	return metadata.NewIncomingContext(ctx, md)
+}
+
 func OutgoingCtxWithRubyFeatureFlags(ctx context.Context, flags ...FeatureFlag) context.Context {
 	md, ok := metadata.FromOutgoingContext(ctx)
 	if !ok {
@@ -79,6 +89,23 @@ func OutgoingCtxWithRubyFeatureFlags(ctx context.Context, flags ...FeatureFlag) 
 	for _, flag := range flags {
 		md.Set(rubyHeaderKey(flag.Name), "true")
 	}
+
+	return metadata.NewOutgoingContext(ctx, md)
+}
+
+// OutgoingCtxWithRubyFeatureFlagValue returns context populated with outgoing metadata
+// that contains ruby feature flags passed in.
+func OutgoingCtxWithRubyFeatureFlagValue(ctx context.Context, flag FeatureFlag, val string) context.Context {
+	if val != "true" && val != "false" {
+		return ctx
+	}
+
+	md, ok := metadata.FromOutgoingContext(ctx)
+	if !ok {
+		md = metadata.New(map[string]string{})
+	}
+
+	md.Set(rubyHeaderKey(flag.Name), val)
 
 	return metadata.NewOutgoingContext(ctx, md)
 }

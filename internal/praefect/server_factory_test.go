@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/client"
@@ -68,6 +69,7 @@ func TestServerFactory(t *testing.T) {
 				},
 			},
 		},
+		Failover: config.Failover{Enabled: true},
 	}
 
 	repo, repoPath, cleanup := testhelper.NewTestRepo(t)
@@ -77,8 +79,9 @@ func TestServerFactory(t *testing.T) {
 
 	logger := testhelper.DiscardTestEntry(t)
 	queue := datastore.NewMemoryReplicationEventQueue(conf)
-	nodeMgr, err := nodes.NewManager(logger, conf, nil, nil, &promtest.MockHistogramVec{})
+	nodeMgr, err := nodes.NewManager(logger, conf, nil, datastore.NewMemoryRepositoryStore(conf.StorageNames()), &promtest.MockHistogramVec{})
 	require.NoError(t, err)
+	nodeMgr.Start(0, time.Second)
 	txMgr := transactions.NewManager()
 	registry := protoregistry.GitalyProtoPreregistered
 	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())

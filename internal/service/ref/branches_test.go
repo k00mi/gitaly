@@ -1,7 +1,6 @@
 package ref
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -66,7 +65,7 @@ func TestSuccessfulFindBranchRequest(t *testing.T) {
 				Name:       []byte(testCase.branchName),
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 
 			response, err := client.FindBranch(ctx, request)
@@ -106,7 +105,7 @@ func TestFailedFindBranchRequest(t *testing.T) {
 				Name:       []byte(testCase.branchName),
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 
 			_, err := client.FindBranch(ctx, request)

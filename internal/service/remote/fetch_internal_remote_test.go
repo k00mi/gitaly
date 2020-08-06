@@ -1,7 +1,6 @@
 package remote_test
 
 import (
-	"context"
 	"net"
 	"os"
 	"testing"
@@ -119,7 +118,7 @@ func TestFailedFetchInternalRemoteDueToValidations(t *testing.T) {
 	client, conn := remote.NewRemoteClient(t, serverSocketPath)
 	defer conn.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	repo := &gitalypb.Repository{StorageName: "default", RelativePath: "repo.git"}

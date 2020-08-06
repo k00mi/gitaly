@@ -2,7 +2,6 @@ package commit
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"testing"
@@ -147,7 +146,7 @@ func TestSuccessfulTreeEntry(t *testing.T) {
 				Limit:      testCase.limit,
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.TreeEntry(ctx, request)
 			if err != nil {
@@ -182,7 +181,7 @@ func TestFailedTreeEntryRequestDueToValidationError(t *testing.T) {
 
 	for _, rpcRequest := range rpcRequests {
 		t.Run(fmt.Sprintf("%+v", rpcRequest), func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.TreeEntry(ctx, &rpcRequest)
 			if err != nil {

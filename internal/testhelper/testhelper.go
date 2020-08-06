@@ -21,6 +21,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -144,6 +145,26 @@ func GitalyServersMetadata(t testing.TB, serverSocketPath string) metadata.MD {
 	}
 
 	return metadata.Pairs("gitaly-servers", base64.StdEncoding.EncodeToString(gitalyServersJSON))
+}
+
+// MergeOutgoingMetadata merges provided metadata-s and returns context with resulting value.
+func MergeOutgoingMetadata(ctx context.Context, md ...metadata.MD) context.Context {
+	ctxmd, ok := metadata.FromOutgoingContext(ctx)
+	if !ok {
+		return metadata.NewOutgoingContext(ctx, metadata.Join(md...))
+	}
+
+	return metadata.NewOutgoingContext(ctx, metadata.Join(append(md, ctxmd)...))
+}
+
+// MergeIncomingMetadata merges provided metadata-s and returns context with resulting value.
+func MergeIncomingMetadata(ctx context.Context, md ...metadata.MD) context.Context {
+	ctxmd, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return metadata.NewIncomingContext(ctx, metadata.Join(md...))
+	}
+
+	return metadata.NewIncomingContext(ctx, metadata.Join(append(md, ctxmd)...))
 }
 
 // isValidRepoPath checks whether a valid git repository exists at the given path.
@@ -438,9 +459,36 @@ func mustFindNoRunningChildProcess() {
 	panic(fmt.Errorf("%s: %v", desc, err))
 }
 
+// ContextOpt returns a new context instance with the new additions to it.
+type ContextOpt func(context.Context) (context.Context, func())
+
+// ContextWithTimeout allows to set provided timeout to the context.
+func ContextWithTimeout(duration time.Duration) ContextOpt {
+	return func(ctx context.Context) (context.Context, func()) {
+		return context.WithTimeout(ctx, duration)
+	}
+}
+
 // Context returns a cancellable context.
-func Context() (context.Context, func()) {
-	return context.WithCancel(context.Background())
+func Context(opts ...ContextOpt) (context.Context, func()) {
+	ctx, cancel := context.WithCancel(context.Background())
+	for _, ff := range featureflag.All {
+		ctx = featureflag.IncomingCtxWithFeatureFlag(ctx, ff)
+		ctx = featureflag.OutgoingCtxWithFeatureFlags(ctx, ff)
+	}
+
+	cancels := make([]func(), len(opts)+1)
+	cancels[0] = cancel
+	for i, opt := range opts {
+		ctx, cancel = opt(ctx)
+		cancels[i+1] = cancel
+	}
+
+	return ctx, func() {
+		for i := len(cancels) - 1; i >= 0; i-- {
+			cancels[i]()
+		}
+	}
 }
 
 // CreateRepo creates a temporary directory for a repo, without initializing it
@@ -733,48 +781,41 @@ func WriteBlobs(t testing.TB, testRepoPath string, n int) []string {
 	return blobIDs
 }
 
-// FeatureSet is a representation of a set of features that are enabled
-// This is useful in situations where a test needs to test any combination of features toggled on and off
+// FeatureSet is a representation of a set of features that should be disabled.
+// This is useful in situations where a test needs to test any combination of features toggled on and off.
+// It is designed to disable features as all features are enabled by default, please see: testhelper.Context()
 type FeatureSet struct {
-	features     map[featureflag.FeatureFlag]bool
-	rubyFeatures map[featureflag.FeatureFlag]bool
+	features     map[featureflag.FeatureFlag]struct{}
+	rubyFeatures map[featureflag.FeatureFlag]struct{}
 }
 
-func (f FeatureSet) IsEnabled(flag featureflag.FeatureFlag) bool {
-	on, ok := f.features[flag]
-	if !ok {
-		return flag.OnByDefault
-	}
-
-	return on
+func (f FeatureSet) IsDisabled(flag featureflag.FeatureFlag) bool {
+	_, ok := f.features[flag]
+	return ok
 }
 
 func (f FeatureSet) String() string {
-	features := make([]string, 0, len(f.enabledFeatures()))
-	for _, feature := range f.enabledFeatures() {
+	features := make([]string, 0, len(f.features))
+	for feature := range f.features {
 		features = append(features, feature.Name)
 	}
+
+	if len(features) == 0 {
+		return "none"
+	}
+
+	sort.Strings(features)
 
 	return strings.Join(features, ",")
 }
 
-func (f FeatureSet) enabledFeatures() []featureflag.FeatureFlag {
-	var enabled []featureflag.FeatureFlag
-
+func (f FeatureSet) Disable(ctx context.Context) context.Context {
 	for feature := range f.features {
-		enabled = append(enabled, feature)
-	}
-
-	return enabled
-}
-
-func (f FeatureSet) WithParent(ctx context.Context) context.Context {
-	for _, enabledFeature := range f.enabledFeatures() {
-		if _, ok := f.rubyFeatures[enabledFeature]; ok {
-			ctx = featureflag.OutgoingCtxWithRubyFeatureFlags(ctx, enabledFeature)
+		if _, ok := f.rubyFeatures[feature]; ok {
+			ctx = featureflag.OutgoingCtxWithRubyFeatureFlagValue(ctx, feature, "false")
 			continue
 		}
-		ctx = featureflag.OutgoingCtxWithFeatureFlags(ctx, enabledFeature)
+		ctx = featureflag.OutgoingCtxWithFeatureFlagValue(ctx, feature, "false")
 	}
 
 	return ctx
@@ -786,20 +827,20 @@ type FeatureSets []FeatureSet
 // NewFeatureSets takes a slice of go feature flags, and an optional variadic set of ruby feature flags
 // and returns a FeatureSets slice
 func NewFeatureSets(goFeatures []featureflag.FeatureFlag, rubyFeatures ...featureflag.FeatureFlag) (FeatureSets, error) {
-	rubyFeatureMap := make(map[featureflag.FeatureFlag]bool)
+	rubyFeatureMap := make(map[featureflag.FeatureFlag]struct{})
 	for _, rubyFeature := range rubyFeatures {
-		rubyFeatureMap[rubyFeature] = true
+		rubyFeatureMap[rubyFeature] = struct{}{}
 	}
 
 	// start with an empty feature set
-	f := []FeatureSet{{features: make(map[featureflag.FeatureFlag]bool), rubyFeatures: rubyFeatureMap}}
+	f := []FeatureSet{{features: make(map[featureflag.FeatureFlag]struct{}), rubyFeatures: rubyFeatureMap}}
 
 	allFeatures := append(goFeatures, rubyFeatures...)
 
 	for i := range allFeatures {
-		featureMap := make(map[featureflag.FeatureFlag]bool)
+		featureMap := make(map[featureflag.FeatureFlag]struct{})
 		for j := 0; j <= i; j++ {
-			featureMap[allFeatures[j]] = true
+			featureMap[allFeatures[j]] = struct{}{}
 		}
 
 		f = append(f, FeatureSet{features: featureMap, rubyFeatures: rubyFeatureMap})

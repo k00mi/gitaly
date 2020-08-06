@@ -2,7 +2,6 @@ package commit
 
 import (
 	"bufio"
-	"context"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -257,7 +256,7 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 				Revision:   []byte(testCase.revision),
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			response, err := client.FindCommit(ctx, request)
 			require.NoError(t, err)
@@ -292,7 +291,7 @@ func TestFailedFindCommitRequest(t *testing.T) {
 		{repo: testRepo, revision: []byte("mas:ter"), description: "Invalid revision"},
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	for _, testCase := range testCases {

@@ -2,7 +2,6 @@ package remote
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -25,7 +24,7 @@ func TestSuccessfulAddRemote(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	testCases := []struct {
@@ -109,7 +108,7 @@ func TestFailedAddRemoteDueToValidation(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	testCases := []struct {
@@ -156,7 +155,7 @@ func TestSuccessfulRemoveRemote(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "remote", "add", "my-remote", "http://my-repo.git")
@@ -206,7 +205,7 @@ func TestFailedRemoveRemoteDueToValidation(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	request := &gitalypb.RemoveRemoteRequest{Repository: testRepo} // Remote name empty
@@ -278,7 +277,7 @@ func TestListDifferentPushUrlRemote(t *testing.T) {
 	client, conn := NewRemoteClient(t, serverSocketPath)
 	defer conn.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
@@ -325,7 +324,7 @@ func TestListRemotes(t *testing.T) {
 	client, conn := NewRemoteClient(t, serverSocketPath)
 	defer conn.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testhelper.Context()
 	defer cancel()
 
 	repoWithSingleRemote, _, cleanupFn := testhelper.NewTestRepo(t)

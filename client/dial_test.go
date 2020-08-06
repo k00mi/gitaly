@@ -21,7 +21,7 @@ import (
 
 var proxyEnvironmentKeys = []string{"http_proxy", "https_proxy", "no_proxy"}
 
-func doDialAndExecuteCall(addr string) error {
+func doDialAndExecuteCall(ctx context.Context, addr string) error {
 	conn, err := Dial(addr, nil)
 	if err != nil {
 		return fmt.Errorf("dial: %v", err)
@@ -29,7 +29,7 @@ func doDialAndExecuteCall(addr string) error {
 	defer conn.Close()
 
 	client := healthpb.NewHealthClient(conn)
-	_, err = client.Check(context.Background(), &healthpb.HealthCheckRequest{})
+	_, err = client.Check(ctx, &healthpb.HealthCheckRequest{})
 	return err
 }
 
@@ -113,7 +113,10 @@ func TestDial(t *testing.T) {
 				defer testhelper.ModifyEnvironment(t, gitaly_x509.SSLCertFile, tt.envSSLCertFile)()
 			}
 
-			err := doDialAndExecuteCall(tt.rawAddress)
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			err := doDialAndExecuteCall(ctx, tt.rawAddress)
 			if tt.expectFailure {
 				require.Error(t, err)
 				return

@@ -104,7 +104,7 @@ func TestListFilesSuccess(t *testing.T) {
 				Repository: testRepo, Revision: []byte(test.revision),
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.ListFiles(ctx, &rpcRequest)
 			if err != nil {
@@ -161,7 +161,7 @@ func TestListFilesFailure(t *testing.T) {
 				Repository: test.repo, Revision: []byte("master"),
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := testhelper.Context()
 			defer cancel()
 			c, err := client.ListFiles(ctx, &rpcRequest)
 			if err != nil {

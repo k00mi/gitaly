@@ -2,7 +2,6 @@ package inspect
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -13,6 +12,7 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
 func TestWrite(t *testing.T) {
@@ -102,7 +102,11 @@ func TestLogPackInfoStatistic(t *testing.T) {
 		Formatter: &logrus.JSONFormatter{},
 		Level:     logrus.InfoLevel,
 	}
-	ctx := ctxlogrus.ToContext(context.Background(), log.WithField("test", "logging"))
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	ctx = ctxlogrus.ToContext(ctx, log.WithField("test", "logging"))
 
 	logging := LogPackInfoStatistic(ctx)
 	logging(strings.NewReader("0038\x41ACK 1e292f8fedd741b75372e19097c76d327140c312 ready\n0035\x02Total 1044 (delta 519), reused 1035 (delta 512)\n0038\x41ACK 1e292f8fedd741b75372e19097c76d327140c312 ready\n0000\x01"))

@@ -1,7 +1,6 @@
 package praefect
 
 import (
-	"context"
 	"io"
 	"os"
 	"testing"
@@ -72,7 +71,7 @@ func TestConsistencyCheck(t *testing.T) {
 
 	praefectCli := gitalypb.NewPraefectInfoServiceClient(cc)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := testhelper.Context(testhelper.ContextWithTimeout(10 * time.Second))
 	defer cancel()
 
 	disableReconcilliation := true
