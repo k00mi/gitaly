@@ -1,3 +1,6 @@
+[replication]
+batch_size = 1
+
 [failover]
 enabled = false
 election_strategy = "local"
