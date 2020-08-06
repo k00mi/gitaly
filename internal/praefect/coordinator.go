@@ -140,7 +140,12 @@ func (c *Coordinator) directRepositoryScopedMessage(ctx context.Context, call gr
 		return nil, helper.ErrInvalidArgumentf("repo scoped: target repo is invalid")
 	}
 
-	if ctx, err = metadata.InjectPraefectServer(ctx, c.conf); err != nil {
+	praefectServer, err := metadata.PraefectFromConfig(c.conf)
+	if err != nil {
+		return nil, fmt.Errorf("repo scoped: could not create Praefect configuration: %w", err)
+	}
+
+	if ctx, err = praefectServer.Inject(ctx); err != nil {
 		return nil, fmt.Errorf("repo scoped: could not inject Praefect server: %w", err)
 	}
 

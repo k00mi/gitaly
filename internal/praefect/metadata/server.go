@@ -44,8 +44,8 @@ type PraefectServer struct {
 	Token string `json:"token"`
 }
 
-// InjectPraefectServer injects Praefect connection metadata into an incoming context
-func InjectPraefectServer(ctx context.Context, conf config.Config) (context.Context, error) {
+// PraefectFromConfig creates a Praefect server for a given configuration.
+func PraefectFromConfig(conf config.Config) (*PraefectServer, error) {
 	praefectServer := PraefectServer{Token: conf.Auth.Token}
 
 	addrBySchema := map[string]*string{
@@ -82,7 +82,12 @@ func InjectPraefectServer(ctx context.Context, conf config.Config) (context.Cont
 		*addrBySchema[endpoint.schema] = addr
 	}
 
-	serialized, err := praefectServer.serialize()
+	return &praefectServer, nil
+}
+
+// Inject injects Praefect connection metadata into an incoming context
+func (p *PraefectServer) Inject(ctx context.Context) (context.Context, error) {
+	serialized, err := p.serialize()
 	if err != nil {
 		return nil, err
 	}

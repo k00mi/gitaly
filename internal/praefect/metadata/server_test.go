@@ -153,7 +153,11 @@ func TestPraefect_InjectMetadata(t *testing.T) {
 			}
 
 			ctx = peer.NewContext(ctx, tc.peer)
-			ctx, err := InjectPraefectServer(ctx, cfg)
+
+			praefectServer, err := PraefectFromConfig(cfg)
+			require.NoError(t, err)
+
+			ctx, err = praefectServer.Inject(ctx)
 			require.NoError(t, err)
 
 			server, err := PraefectFromContext(ctx)

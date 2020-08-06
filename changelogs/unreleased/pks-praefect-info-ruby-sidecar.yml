@@ -1,0 +1,5 @@
+---
+title: Fix connecting to Praefect service from Ruby sidecar
+merge_request: 2451
+author:
+type: fixed
