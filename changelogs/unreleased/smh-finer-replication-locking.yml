@@ -1,5 +1,0 @@
----
-title: Dequeue one event per worker at a time
-merge_request: 2445
-author:
-type: performance
