@@ -151,6 +151,7 @@ func TestStreamDirectorMutator(t *testing.T) {
 
 	nodeMgr, err := nodes.NewManager(entry, conf, nil, nil, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
+	nodeMgr.Start(0, time.Hour)
 
 	txMgr := transactions.NewManager()
 
@@ -343,6 +344,7 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 
 			nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf, nil, nil, promtest.NewMockHistogramVec())
 			require.NoError(t, err)
+			nodeMgr.Start(0, time.Hour)
 
 			shard, err := nodeMgr.GetShard(conf.VirtualStorages[0].Name)
 			require.NoError(t, err)
@@ -776,6 +778,8 @@ func TestAbsentCorrelationID(t *testing.T) {
 
 	nodeMgr, err := nodes.NewManager(entry, conf, nil, nil, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
+	nodeMgr.Start(0, time.Hour)
+
 	txMgr := transactions.NewManager()
 
 	coordinator := NewCoordinator(

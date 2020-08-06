@@ -14,25 +14,23 @@ import (
 // shard. It does NOT support multiple Praefect nodes or have any
 // persistence. This is used mostly for testing and development.
 type localElector struct {
-	m               sync.RWMutex
-	failoverEnabled bool
-	shardName       string
-	nodes           []Node
-	primaryNode     Node
-	log             logrus.FieldLogger
+	m           sync.RWMutex
+	shardName   string
+	nodes       []Node
+	primaryNode Node
+	log         logrus.FieldLogger
 }
 
-func newLocalElector(name string, failoverEnabled bool, log logrus.FieldLogger, ns []*nodeStatus) *localElector {
+func newLocalElector(name string, log logrus.FieldLogger, ns []*nodeStatus) *localElector {
 	nodes := make([]Node, len(ns))
 	for i, n := range ns {
 		nodes[i] = n
 	}
 	return &localElector{
-		shardName:       name,
-		failoverEnabled: failoverEnabled,
-		log:             log.WithField("virtual_storage", name),
-		nodes:           nodes[:],
-		primaryNode:     nodes[0],
+		shardName:   name,
+		log:         log.WithField("virtual_storage", name),
+		nodes:       nodes[:],
+		primaryNode: nodes[0],
 	}
 }
 
@@ -125,7 +123,7 @@ func (s *localElector) GetShard() (Shard, error) {
 		return Shard{}, ErrPrimaryNotHealthy
 	}
 
-	if s.failoverEnabled && !primary.IsHealthy() {
+	if !primary.IsHealthy() {
 		return Shard{}, ErrPrimaryNotHealthy
 	}
 

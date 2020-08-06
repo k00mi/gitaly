@@ -40,6 +40,8 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper/promtest"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 )
@@ -222,7 +224,7 @@ func TestPropagateReplicationJob(t *testing.T) {
 
 	nodeMgr, err := nodes.NewManager(logEntry, conf, nil, nil, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
-	nodeMgr.Start(1*time.Millisecond, 5*time.Millisecond)
+	nodeMgr.Start(0, time.Hour)
 
 	txMgr := transactions.NewManager()
 
@@ -346,6 +348,7 @@ func runMockRepositoryServer(t *testing.T) (*mockRepositoryServer, string, func(
 	mockServer := newMockRepositoryServer()
 
 	gitalypb.RegisterRepositoryServiceServer(server, mockServer)
+	healthpb.RegisterHealthServer(server, health.NewServer())
 	reflection.Register(server)
 
 	go server.Serve(listener)
@@ -508,6 +511,7 @@ func TestProcessBacklog_FailedJobs(t *testing.T) {
 
 	nodeMgr, err := nodes.NewManager(logEntry, conf, nil, nil, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
+	nodeMgr.Start(0, time.Hour)
 
 	replMgr := NewReplMgr(
 		logEntry,
@@ -653,6 +657,7 @@ func TestProcessBacklog_Success(t *testing.T) {
 
 	nodeMgr, err := nodes.NewManager(logEntry, conf, nil, nil, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
+	nodeMgr.Start(0, time.Hour)
 
 	replMgr := NewReplMgr(
 		logEntry,
@@ -813,6 +818,7 @@ func newReplicationService(tb testing.TB) (*grpc.Server, string) {
 	gitalypb.RegisterRemoteServiceServer(svr, remote.NewServer(RubyServer))
 	gitalypb.RegisterSSHServiceServer(svr, ssh.NewServer())
 	gitalypb.RegisterRefServiceServer(svr, ref.NewServer())
+	healthpb.RegisterHealthServer(svr, health.NewServer())
 	reflection.Register(svr)
 
 	listener, err := net.Listen("unix", socketName)

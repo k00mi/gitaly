@@ -191,7 +191,7 @@ func defaultTxMgr() *transactions.Manager {
 func defaultNodeMgr(t testing.TB, conf config.Config, rs datastore.RepositoryStore) nodes.Manager {
 	nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf, nil, rs, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
-	nodeMgr.Start(1*time.Millisecond, 5*time.Millisecond)
+	nodeMgr.Start(0, time.Hour)
 	return nodeMgr
 }
 
@@ -371,6 +371,7 @@ func dialLocalPort(tb testing.TB, port int, backend bool) *grpc.ClientConn {
 func newMockDownstream(tb testing.TB, token string, m mock.SimpleServiceServer) (string, func()) {
 	srv := grpc.NewServer(grpc.UnaryInterceptor(auth.UnaryServerInterceptor(internalauth.Config{Token: token})))
 	mock.RegisterSimpleServiceServer(srv, m)
+	healthpb.RegisterHealthServer(srv, health.NewServer())
 
 	// client to backend service
 	lis, port := listenAvailPort(tb)
