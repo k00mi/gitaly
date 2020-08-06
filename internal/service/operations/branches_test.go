@@ -2,16 +2,33 @@ package operations
 
 import (
 	"context"
+	"fmt"
+	"net"
 	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
+	"gitlab.com/gitlab-org/gitaly/internal/service/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
 )
+
+type testTransactionServer struct {
+	called int
+}
+
+func (s *testTransactionServer) VoteTransaction(ctx context.Context, in *gitalypb.VoteTransactionRequest) (*gitalypb.VoteTransactionResponse, error) {
+	s.called++
+	return &gitalypb.VoteTransactionResponse{
+		State: gitalypb.VoteTransactionResponse_COMMIT,
+	}, nil
+}
 
 func TestSuccessfulCreateBranchRequest(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
@@ -86,6 +103,91 @@ func TestSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T) {
 		ctx = featureSet.Disable(ctx)
 
 		testSuccessfulGitHooksForUserCreateBranchRequest(t, ctx)
+	}
+}
+
+func TestUserCreateBranchWithTransaction(t *testing.T) {
+	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	internalSocket := config.GitalyInternalSocketPath()
+	internalListener, err := net.Listen("unix", internalSocket)
+	require.NoError(t, err)
+
+	tcpSocket, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	transactionServer := &testTransactionServer{}
+	srv := testhelper.NewServerWithAuth(t, nil, nil, config.Config.Auth.Token)
+	gitalypb.RegisterOperationServiceServer(srv.GrpcServer(), &server{ruby: RubyServer})
+	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hook.NewServer(hook.GitlabAPIStub, config.Config.Hooks))
+	gitalypb.RegisterRefTransactionServer(srv.GrpcServer(), transactionServer)
+
+	require.NoError(t, srv.Start())
+	defer srv.Stop()
+
+	go srv.GrpcServer().Serve(internalListener)
+	go srv.GrpcServer().Serve(tcpSocket)
+
+	testcases := []struct {
+		desc    string
+		address string
+		server  metadata.PraefectServer
+	}{
+		{
+			desc:    "explicit TCP address",
+			address: tcpSocket.Addr().String(),
+			server: metadata.PraefectServer{
+				ListenAddr: fmt.Sprintf("tcp://" + tcpSocket.Addr().String()),
+				Token:      config.Config.Auth.Token,
+			},
+		},
+		{
+			desc:    "catch-all TCP address",
+			address: tcpSocket.Addr().String(),
+			server: metadata.PraefectServer{
+				ListenAddr: fmt.Sprintf("tcp://0.0.0.0:%d", tcpSocket.Addr().(*net.TCPAddr).Port),
+				Token:      config.Config.Auth.Token,
+			},
+		},
+		{
+			desc:    "Unix socket",
+			address: "unix://" + internalSocket,
+			server: metadata.PraefectServer{
+				SocketPath: "unix://" + internalSocket,
+				Token:      config.Config.Auth.Token,
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.desc, func(t *testing.T) {
+			defer exec.Command("git", "-C", testRepoPath, "branch", "-D", "new-branch").Run()
+
+			client, conn := newOperationClient(t, tc.address)
+			defer conn.Close()
+
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+			ctx, err = tc.server.Inject(ctx)
+			require.NoError(t, err)
+			ctx, err = metadata.InjectTransaction(ctx, 1, "node", true)
+			require.NoError(t, err)
+			ctx = helper.IncomingToOutgoing(ctx)
+
+			request := &gitalypb.UserCreateBranchRequest{
+				Repository: testRepo,
+				BranchName: []byte("new-branch"),
+				StartPoint: []byte("c7fbe50c7c7419d9701eebe64b1fdacc3df5b9dd"),
+				User:       testhelper.TestUser,
+			}
+
+			transactionServer.called = 0
+			response, err := client.UserCreateBranch(ctx, request)
+			require.NoError(t, err)
+			require.Empty(t, response.PreReceiveError)
+			require.Equal(t, 1, transactionServer.called)
+		})
 	}
 }
 
