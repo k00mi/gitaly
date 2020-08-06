@@ -20,8 +20,7 @@ module Gitaly
       # back indicating which repos are consistent with the primary and which ones
       # need repair.
       rpc :ConsistencyCheck, Gitaly::ConsistencyCheckRequest, stream(Gitaly::ConsistencyCheckResponse)
-      # DatalossCheck checks for nodes which are not up to date with the previous writable primary.
-      # This indicates possible data loss after a failover event.
+      # DatalossCheck checks for outdated repository replicas.
       rpc :DatalossCheck, Gitaly::DatalossCheckRequest, Gitaly::DatalossCheckResponse
       # SetAuthoritativeStorage sets the authoritative storage for a repository on a given virtual storage.
       # This causes the current version of the repository on the authoritative storage to be considered the
