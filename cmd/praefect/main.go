@@ -287,7 +287,6 @@ func run(cfgs []starter.Config, conf config.Config) error {
 			nodeManager,
 			praefect.WithDelayMetric(delayMetric),
 			praefect.WithLatencyMetric(latencyMetric),
-			praefect.WithDequeueBatchSize(1),
 		)
 		srvFactory = praefect.NewServerFactory(
 			conf,
