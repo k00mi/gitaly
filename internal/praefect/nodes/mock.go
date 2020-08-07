@@ -26,12 +26,10 @@ type MockNode struct {
 
 func (m *MockNode) GetStorage() string { return m.GetStorageMethod() }
 
+func (m *MockNode) IsHealthy() bool { return m.Healthy }
+
 func (m *MockNode) GetConnection() *grpc.ClientConn { return m.Conn }
 
 func (m *MockNode) GetAddress() string { return "" }
 
 func (m *MockNode) GetToken() string { return "" }
-
-func (m *MockNode) IsHealthy() bool {
-	return m.Healthy
-}

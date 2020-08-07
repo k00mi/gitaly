@@ -9,6 +9,10 @@ graceful_stop_timeout = "30s"
 [replication]
 batch_size = 1
 
+[reconciliation]
+scheduling_interval = "1m"
+histogram_buckets = [1.0, 2.0, 3.0, 4.0, 5.0]
+
 [tls]
 certificate_path = '/home/git/cert.cert'
 key_path = '/home/git/key.pem'

@@ -274,7 +274,11 @@ func TestConfigParsing(t *testing.T) {
 				},
 				MemoryQueueEnabled:  true,
 				GracefulStopTimeout: config.Duration(30 * time.Second),
-				Replication:         Replication{BatchSize: 1},
+				Reconciliation: Reconciliation{
+					SchedulingInterval: config.Duration(time.Minute),
+					HistogramBuckets:   []float64{1, 2, 3, 4, 5},
+				},
+				Replication: Replication{BatchSize: 1},
 				Failover: Failover{
 					Enabled:                  true,
 					ElectionStrategy:         sqlFailoverValue,
@@ -291,7 +295,11 @@ func TestConfigParsing(t *testing.T) {
 			filePath: "testdata/config.overwritedefaults.toml",
 			expected: Config{
 				GracefulStopTimeout: config.Duration(time.Minute),
-				Replication:         Replication{BatchSize: 1},
+				Reconciliation: Reconciliation{
+					SchedulingInterval: config.Duration(time.Minute),
+					HistogramBuckets:   []float64{1, 2, 3, 4, 5},
+				},
+				Replication: Replication{BatchSize: 1},
 				Failover: Failover{
 					Enabled:           false,
 					ElectionStrategy:  "local",
@@ -305,7 +313,8 @@ func TestConfigParsing(t *testing.T) {
 			filePath: "testdata/config.empty.toml",
 			expected: Config{
 				GracefulStopTimeout: config.Duration(time.Minute),
-				Replication:         Replication{BatchSize: 10},
+				Reconciliation:      DefaultReconciliationConfig(),
+				Replication:         DefaultReplicationConfig(),
 				Failover: Failover{
 					Enabled:           true,
 					ElectionStrategy:  sqlFailoverValue,
@@ -324,8 +333,8 @@ func TestConfigParsing(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
 			cfg, err := FromFile(tc.filePath)
-			require.Equal(t, tc.expected, cfg)
 			require.True(t, errors.Is(err, tc.expectedErr), "actual error: %v", err)
+			require.Equal(t, tc.expected, cfg)
 		})
 	}
 }
