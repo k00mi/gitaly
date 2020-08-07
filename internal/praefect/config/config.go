@@ -30,8 +30,21 @@ type Failover struct {
 
 const sqlFailoverValue = "sql"
 
+// Replication contains replication specific configuration options.
+type Replication struct {
+	// BatchSize controls how many replication jobs to dequeue and lock
+	// in a single call to the database.
+	BatchSize uint `toml:"batch_size"`
+}
+
+// DefaultReplicationConfig returns the default values for replication configuration.
+func DefaultReplicationConfig() Replication {
+	return Replication{BatchSize: 10}
+}
+
 // Config is a container for everything found in the TOML config file
 type Config struct {
+	Replication          Replication       `toml:"replication"`
 	ListenAddr           string            `toml:"listen_addr"`
 	TLSListenAddr        string            `toml:"tls_listen_addr"`
 	SocketPath           string            `toml:"socket_path"`
@@ -59,6 +72,7 @@ type VirtualStorage struct {
 // FromFile loads the config for the passed file path
 func FromFile(filePath string) (Config, error) {
 	conf := &Config{
+		Replication: DefaultReplicationConfig(),
 		// Sets the default Failover, to be overwritten when deserializing the TOML
 		Failover: Failover{Enabled: true, ElectionStrategy: sqlFailoverValue},
 	}
@@ -97,6 +111,10 @@ func (c *Config) Validate() error {
 
 	if len(c.VirtualStorages) == 0 {
 		return errNoVirtualStorages
+	}
+
+	if c.Replication.BatchSize < 1 {
+		return fmt.Errorf("replication batch size was %d but must be >=1", c.Replication.BatchSize)
 	}
 
 	allAddresses := make(map[string]struct{})

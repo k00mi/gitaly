@@ -163,6 +163,7 @@ func (p *TestServer) Start() error {
 			BootstrapInterval: config.Duration(time.Microsecond),
 			MonitorInterval:   config.Duration(time.Second),
 		},
+		Replication: praefectconfig.DefaultReplicationConfig(),
 	}
 
 	for _, storage := range p.storages {

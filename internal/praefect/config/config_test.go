@@ -35,7 +35,8 @@ func TestConfigValidation(t *testing.T) {
 		{
 			desc: "Valid config with ListenAddr",
 			config: Config{
-				ListenAddr: "localhost:1234",
+				ListenAddr:  "localhost:1234",
+				Replication: DefaultReplicationConfig(),
 				VirtualStorages: []*VirtualStorage{
 					{Name: "default", Nodes: vs1Nodes},
 					{Name: "secondary", Nodes: vs2Nodes},
@@ -46,6 +47,7 @@ func TestConfigValidation(t *testing.T) {
 			desc: "Valid config with TLSListenAddr",
 			config: Config{
 				TLSListenAddr: "tls://localhost:4321",
+				Replication:   DefaultReplicationConfig(),
 				VirtualStorages: []*VirtualStorage{
 					{Name: "default", Nodes: vs1Nodes},
 				},
@@ -54,11 +56,23 @@ func TestConfigValidation(t *testing.T) {
 		{
 			desc: "Valid config with SocketPath",
 			config: Config{
-				SocketPath: "/tmp/praefect.socket",
+				SocketPath:  "/tmp/praefect.socket",
+				Replication: DefaultReplicationConfig(),
 				VirtualStorages: []*VirtualStorage{
 					{Name: "default", Nodes: vs1Nodes},
 				},
 			},
+		},
+		{
+			desc: "Invalid replication batch size",
+			config: Config{
+				SocketPath:  "/tmp/praefect.socket",
+				Replication: Replication{BatchSize: 0},
+				VirtualStorages: []*VirtualStorage{
+					{Name: "default", Nodes: vs1Nodes},
+				},
+			},
+			errMsg: "replication batch size was 0 but must be >=1",
 		},
 		{
 			desc: "No ListenAddr or SocketPath or TLSListenAddr",
@@ -69,18 +83,23 @@ func TestConfigValidation(t *testing.T) {
 				VirtualStorages: []*VirtualStorage{
 					{Name: "default", Nodes: vs1Nodes},
 				},
+				Replication: DefaultReplicationConfig(),
 			},
 			errMsg: "no listen address or socket path configured",
 		},
 		{
-			desc:   "No virtual storages",
-			config: Config{ListenAddr: "localhost:1234"},
+			desc: "No virtual storages",
+			config: Config{
+				ListenAddr:  "localhost:1234",
+				Replication: DefaultReplicationConfig(),
+			},
 			errMsg: "no virtual storages configured",
 		},
 		{
 			desc: "duplicate storage",
 			config: Config{
-				ListenAddr: "localhost:1234",
+				ListenAddr:  "localhost:1234",
+				Replication: DefaultReplicationConfig(),
 				VirtualStorages: []*VirtualStorage{
 					{
 						Name: "default",
@@ -96,7 +115,8 @@ func TestConfigValidation(t *testing.T) {
 		{
 			desc: "Node storage has no name",
 			config: Config{
-				ListenAddr: "localhost:1234",
+				ListenAddr:  "localhost:1234",
+				Replication: DefaultReplicationConfig(),
 				VirtualStorages: []*VirtualStorage{
 					{
 						Name: "default",
@@ -115,7 +135,8 @@ func TestConfigValidation(t *testing.T) {
 		{
 			desc: "Node storage has no address",
 			config: Config{
-				ListenAddr: "localhost:1234",
+				ListenAddr:  "localhost:1234",
+				Replication: DefaultReplicationConfig(),
 				VirtualStorages: []*VirtualStorage{
 					{
 						Name: "default",
@@ -134,7 +155,8 @@ func TestConfigValidation(t *testing.T) {
 		{
 			desc: "Virtual storage has no name",
 			config: Config{
-				ListenAddr: "localhost:1234",
+				ListenAddr:  "localhost:1234",
+				Replication: DefaultReplicationConfig(),
 				VirtualStorages: []*VirtualStorage{
 					{Name: "", Nodes: vs1Nodes},
 				},
@@ -144,7 +166,8 @@ func TestConfigValidation(t *testing.T) {
 		{
 			desc: "Virtual storage not unique",
 			config: Config{
-				ListenAddr: "localhost:1234",
+				ListenAddr:  "localhost:1234",
+				Replication: DefaultReplicationConfig(),
 				VirtualStorages: []*VirtualStorage{
 					{Name: "default", Nodes: vs1Nodes},
 					{Name: "default", Nodes: vs2Nodes},
@@ -155,7 +178,8 @@ func TestConfigValidation(t *testing.T) {
 		{
 			desc: "Virtual storage has no nodes",
 			config: Config{
-				ListenAddr: "localhost:1234",
+				ListenAddr:  "localhost:1234",
+				Replication: DefaultReplicationConfig(),
 				VirtualStorages: []*VirtualStorage{
 					{Name: "default", Nodes: vs1Nodes},
 					{Name: "secondary", Nodes: nil},
@@ -166,7 +190,8 @@ func TestConfigValidation(t *testing.T) {
 		{
 			desc: "Node storage has address duplicate",
 			config: Config{
-				ListenAddr: "localhost:1234",
+				ListenAddr:  "localhost:1234",
+				Replication: DefaultReplicationConfig(),
 				VirtualStorages: []*VirtualStorage{
 					{Name: "default", Nodes: vs1Nodes},
 					{Name: "secondary", Nodes: append(vs2Nodes, vs1Nodes[1])},
@@ -249,6 +274,7 @@ func TestConfigParsing(t *testing.T) {
 				},
 				MemoryQueueEnabled:  true,
 				GracefulStopTimeout: config.Duration(30 * time.Second),
+				Replication:         Replication{BatchSize: 1},
 				Failover: Failover{
 					Enabled:                  true,
 					ElectionStrategy:         sqlFailoverValue,
@@ -265,6 +291,7 @@ func TestConfigParsing(t *testing.T) {
 			filePath: "testdata/config.overwritedefaults.toml",
 			expected: Config{
 				GracefulStopTimeout: config.Duration(time.Minute),
+				Replication:         Replication{BatchSize: 1},
 				Failover: Failover{
 					Enabled:           false,
 					ElectionStrategy:  "local",
@@ -278,6 +305,7 @@ func TestConfigParsing(t *testing.T) {
 			filePath: "testdata/config.empty.toml",
 			expected: Config{
 				GracefulStopTimeout: config.Duration(time.Minute),
+				Replication:         Replication{BatchSize: 10},
 				Failover: Failover{
 					Enabled:           true,
 					ElectionStrategy:  sqlFailoverValue,
