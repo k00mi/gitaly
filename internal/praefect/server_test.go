@@ -786,6 +786,7 @@ func TestProxyWrites(t *testing.T) {
 
 	nodeMgr, err := nodes.NewManager(entry, conf, nil, nil, promtest.NewMockHistogramVec())
 	require.NoError(t, err)
+	nodeMgr.Start(0, time.Hour)
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()

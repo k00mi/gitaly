@@ -92,10 +92,6 @@ type Node interface {
 
 // Mgr is a concrete type that adheres to the Manager interface
 type Mgr struct {
-	failoverEnabled bool
-	// log must be used only for non-request specific needs like bootstrapping, etc.
-	// for request related logging `ctxlogrus.Extract(ctx)` must be used.
-	log *logrus.Entry
 	// strategies is a map of strategies keyed on virtual storage name
 	strategies map[string]leaderElectionStrategy
 	db         *sql.DB
@@ -152,33 +148,29 @@ func NewManager(log *logrus.Entry, c config.Config, db *sql.DB, rs datastore.Rep
 			ns = append(ns, cs)
 		}
 
-		if c.Failover.Enabled && c.Failover.ElectionStrategy == "sql" {
-			strategies[virtualStorage.Name] = newSQLElector(virtualStorage.Name, c, db, log, ns)
+		if c.Failover.Enabled {
+			if c.Failover.ElectionStrategy == "sql" {
+				strategies[virtualStorage.Name] = newSQLElector(virtualStorage.Name, c, db, log, ns)
+			} else {
+				strategies[virtualStorage.Name] = newLocalElector(virtualStorage.Name, log, ns)
+			}
 		} else {
-			strategies[virtualStorage.Name] = newLocalElector(virtualStorage.Name, c.Failover.Enabled, log, ns)
+			strategies[virtualStorage.Name] = newDisabledElector(virtualStorage.Name, ns)
 		}
 	}
 
 	return &Mgr{
-		log:             log,
-		db:              db,
-		failoverEnabled: c.Failover.Enabled,
-		strategies:      strategies,
-		rs:              rs,
+		db:         db,
+		strategies: strategies,
+		rs:         rs,
 	}, nil
 }
 
 // Start will bootstrap the node manager by calling healthcheck on the nodes as well as kicking off
 // the monitoring process. Start must be called before NodeMgr can be used.
 func (n *Mgr) Start(bootstrapInterval, monitorInterval time.Duration) {
-	if n.failoverEnabled {
-		n.log.Info("Starting failover checks")
-
-		for _, strategy := range n.strategies {
-			strategy.start(bootstrapInterval, monitorInterval)
-		}
-	} else {
-		n.log.Info("Failover checks are disabled")
+	for _, strategy := range n.strategies {
+		strategy.start(bootstrapInterval, monitorInterval)
 	}
 }
 

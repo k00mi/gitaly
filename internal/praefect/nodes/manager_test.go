@@ -134,8 +134,8 @@ func TestManagerFailoverDisabledElectionStrategySQL(t *testing.T) {
 	nm.checkShards()
 
 	shard, err = nm.GetShard(virtualStorageName)
-	require.NoError(t, err)
-	require.Equal(t, primaryStorage, shard.Primary.GetStorage())
+	require.Error(t, err)
+	require.Equal(t, ErrPrimaryNotHealthy, err)
 }
 
 func TestDialWithUnhealthyNode(t *testing.T) {
@@ -279,8 +279,9 @@ func TestNodeManager(t *testing.T) {
 	nmWithoutFailover, err := NewManager(testhelper.DiscardTestEntry(t), confWithoutFailover, nil, nil, mockHistogram)
 	require.NoError(t, err)
 
-	nm.Start(1*time.Millisecond, 5*time.Second)
-	nmWithoutFailover.Start(1*time.Millisecond, 5*time.Second)
+	// monitoring period set to 1 hour as we execute health checks by hands in this test
+	nm.Start(0, time.Hour)
+	nmWithoutFailover.Start(0, time.Hour)
 
 	shardWithoutFailover, err := nmWithoutFailover.GetShard("virtual-storage-0")
 	require.NoError(t, err)
@@ -301,6 +302,7 @@ func TestNodeManager(t *testing.T) {
 	checkShards := func(count int) {
 		for i := 0; i < count; i++ {
 			nm.checkShards()
+			nmWithoutFailover.checkShards()
 		}
 	}
 
@@ -312,24 +314,15 @@ func TestNodeManager(t *testing.T) {
 		require.Contains(t, labelsCalled, []string{node.Storage})
 	}
 
+	// since the failover is disabled the attempt to get a shard with unhealthy primary fails
+	_, err = nmWithoutFailover.GetShard("virtual-storage-0")
+	require.Error(t, err)
+	require.Equal(t, ErrPrimaryNotHealthy, err)
+
 	// since the primary is unhealthy, we expect checkShards to demote primary to secondary, and promote the healthy
 	// secondary to primary
-
-	shardWithoutFailover, err = nmWithoutFailover.GetShard("virtual-storage-0")
-	require.NoError(t, err)
-
 	shard, err = nm.GetShard("virtual-storage-0")
 	require.NoError(t, err)
-
-	// shard without failover and shard with failover should not be the same
-	require.NotEqual(t, shardWithoutFailover.Primary.GetStorage(), shard.Primary.GetStorage())
-	require.NotEqual(t, shardWithoutFailover.Primary.GetAddress(), shard.Primary.GetAddress())
-	require.NotEqual(t, shardWithoutFailover.Secondaries[0].GetStorage(), shard.Secondaries[0].GetStorage())
-	require.NotEqual(t, shardWithoutFailover.Secondaries[0].GetAddress(), shard.Secondaries[0].GetAddress())
-
-	// shard without failover should still match the config
-	assertShard(t, initialState, shardWithoutFailover)
-
 	// shard with failover should have promoted a secondary to primary and demoted the primary to a secondary
 	assertShard(t, shardAssertion{
 		Primary:     &nodeAssertion{node2.Storage, node2.Address},
@@ -374,35 +367,38 @@ func TestMgr_GetSyncedNode(t *testing.T) {
 
 	conf := config.Config{
 		VirtualStorages: []*config.VirtualStorage{{Name: virtualStorage, Nodes: nodes[:]}},
-		Failover:        config.Failover{Enabled: true},
 	}
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	verify := func(scenario func(t *testing.T, nm Manager, rs datastore.RepositoryStore)) func(*testing.T) {
+	verify := func(failover bool, scenario func(t *testing.T, nm Manager, rs datastore.RepositoryStore)) func(*testing.T) {
+		conf.Failover.Enabled = failover
 		rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
 
 		nm, err := NewManager(testhelper.DiscardTestEntry(t), conf, nil, rs, promtest.NewMockHistogramVec())
 		require.NoError(t, err)
 
-		nm.Start(time.Duration(0), time.Hour)
+		for i := range healthSrvs {
+			healthSrvs[i].SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
+		}
+		nm.Start(0, time.Hour)
 
 		return func(t *testing.T) { scenario(t, nm, rs) }
 	}
 
-	t.Run("unknown virtual storage", verify(func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
+	t.Run("unknown virtual storage", verify(true, func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
 		_, err := nm.GetSyncedNode(ctx, "virtual-storage-unknown", "stub")
 		require.True(t, errors.Is(err, ErrVirtualStorageNotExist))
 	}))
 
-	t.Run("state is undefined", verify(func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
+	t.Run("state is undefined", verify(true, func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
 		node, err := nm.GetSyncedNode(ctx, virtualStorage, "no/matter")
 		require.NoError(t, err)
 		require.Equal(t, conf.VirtualStorages[0].Nodes[0].Address, node.GetAddress(), "")
 	}))
 
-	t.Run("multiple storages up to date", verify(func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
+	t.Run("multiple storages up to date", verify(true, func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
 		require.NoError(t, rs.IncrementGeneration(ctx, virtualStorage, repoPath, "gitaly-0", nil))
 		generation, err := rs.GetGeneration(ctx, virtualStorage, repoPath, "gitaly-0")
 		require.NoError(t, err)
@@ -420,7 +416,7 @@ func TestMgr_GetSyncedNode(t *testing.T) {
 		}
 	}))
 
-	t.Run("single secondary storage up to date but unhealthy", verify(func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
+	t.Run("single secondary storage up to date but unhealthy", verify(true, func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
 		require.NoError(t, rs.IncrementGeneration(ctx, virtualStorage, repoPath, "gitaly-0", nil))
 		generation, err := rs.GetGeneration(ctx, virtualStorage, repoPath, "gitaly-0")
 		require.NoError(t, err)
@@ -443,7 +439,7 @@ func TestMgr_GetSyncedNode(t *testing.T) {
 		require.Equal(t, conf.VirtualStorages[0].Nodes[0].Address, node.GetAddress(), "secondary shouldn't be chosen as it is unhealthy")
 	}))
 
-	t.Run("no healthy storages", verify(func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
+	t.Run("no healthy storages", verify(true, func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
 		require.NoError(t, rs.IncrementGeneration(ctx, virtualStorage, repoPath, "gitaly-0", nil))
 		generation, err := rs.GetGeneration(ctx, virtualStorage, repoPath, "gitaly-0")
 		require.NoError(t, err)
@@ -470,6 +466,41 @@ func TestMgr_GetSyncedNode(t *testing.T) {
 		require.False(t, gitaly1OK)
 
 		_, err = nm.GetSyncedNode(ctx, virtualStorage, repoPath)
+		require.True(t, errors.Is(err, ErrPrimaryNotHealthy))
+	}))
+
+	t.Run("disabled failover doesn't disable health state", verify(false, func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
+		require.NoError(t, rs.IncrementGeneration(ctx, virtualStorage, repoPath, "gitaly-0", nil))
+		generation, err := rs.GetGeneration(ctx, virtualStorage, repoPath, "gitaly-0")
+		require.NoError(t, err)
+		require.NoError(t, rs.SetGeneration(ctx, virtualStorage, repoPath, "gitaly-1", generation))
+
+		shard, err := nm.GetShard(virtualStorage)
+		require.NoError(t, err)
+
+		gitaly0, err := shard.GetNode("gitaly-0")
+		require.NoError(t, err)
+
+		require.Equal(t, shard.Primary, gitaly0)
+
+		gitaly0OK, err := gitaly0.CheckHealth(ctx)
+		require.NoError(t, err)
+		require.True(t, gitaly0OK)
+
+		gitaly1, err := shard.GetNode("gitaly-1")
+		require.NoError(t, err)
+
+		gitaly1OK, err := gitaly1.CheckHealth(ctx)
+		require.NoError(t, err)
+		require.True(t, gitaly1OK)
+
+		healthSrvs[0].SetServingStatus("", grpc_health_v1.HealthCheckResponse_UNKNOWN)
+		gitaly0OK, err = gitaly0.CheckHealth(ctx)
+		require.NoError(t, err)
+		require.False(t, gitaly0OK, "primary should be unhealthy")
+
+		_, err = nm.GetSyncedNode(ctx, virtualStorage, repoPath)
+		require.Error(t, err)
 		require.True(t, errors.Is(err, ErrPrimaryNotHealthy))
 	}))
 }

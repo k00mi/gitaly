@@ -1,0 +1,5 @@
+---
+title: Nodes elector for configuration with disabled failover
+merge_request: 2444
+author:
+type: fixed

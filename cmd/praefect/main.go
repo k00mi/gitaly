@@ -241,6 +241,7 @@ func run(cfgs []starter.Config, conf config.Config) error {
 		return err
 	}
 	nodeManager.Start(conf.Failover.BootstrapInterval.Duration(), conf.Failover.MonitorInterval.Duration())
+	logger.Info("background started: gitaly nodes health monitoring")
 
 	transactionCounterMetric, err := metrics.RegisterTransactionCounter()
 	if err != nil {
@@ -345,7 +346,9 @@ func run(cfgs []starter.Config, conf config.Config) error {
 	}
 
 	repl.ProcessBacklog(ctx, praefect.ExpBackoffFunc(1*time.Second, 5*time.Second))
+	logger.Info("background started: processing of the replication events")
 	repl.ProcessStale(ctx, 30*time.Second, time.Minute)
+	logger.Info("background started: processing of the stale replication events")
 
 	return b.Wait(conf.GracefulStopTimeout.Duration())
 }
