@@ -21,8 +21,9 @@ func (err unexpectedPositionalArgsError) Error() string {
 }
 
 type datalossSubcommand struct {
-	output         io.Writer
-	virtualStorage string
+	output                     io.Writer
+	virtualStorage             string
+	includePartiallyReplicated bool
 }
 
 func newDatalossSubcommand() *datalossSubcommand {
@@ -32,6 +33,12 @@ func newDatalossSubcommand() *datalossSubcommand {
 func (cmd *datalossSubcommand) FlagSet() *flag.FlagSet {
 	fs := flag.NewFlagSet("dataloss", flag.ContinueOnError)
 	fs.StringVar(&cmd.virtualStorage, "virtual-storage", "", "virtual storage to check for data loss")
+	fs.BoolVar(&cmd.includePartiallyReplicated, "partially-replicated", false, strings.TrimSpace(`
+Additionally include repositories which are fully up to date on the
+primary but outdated on some secondaries. Such repositories are writable
+and do not suffer from data loss. The data on the primary is not fully
+replicated to all secondaries which leads to increased risk of data loss
+following a failover.`))
 	return fs
 }
 
@@ -74,7 +81,8 @@ func (cmd *datalossSubcommand) Exec(flags *flag.FlagSet, cfg config.Config) erro
 
 	for _, vs := range virtualStorages {
 		resp, err := client.DatalossCheck(context.Background(), &gitalypb.DatalossCheckRequest{
-			VirtualStorage: vs,
+			VirtualStorage:             vs,
+			IncludePartiallyReplicated: cmd.includePartiallyReplicated,
 		})
 		if err != nil {
 			return fmt.Errorf("error checking: %v", err)
@@ -83,14 +91,24 @@ func (cmd *datalossSubcommand) Exec(flags *flag.FlagSet, cfg config.Config) erro
 		cmd.println(0, "Virtual storage: %s", vs)
 		cmd.println(1, "Primary: %s", resp.Primary)
 		if len(resp.Repositories) == 0 {
-			cmd.println(1, "All repositories are up to date!")
+			msg := "All repositories are writable!"
+			if cmd.includePartiallyReplicated {
+				msg = "All repositories are up to date!"
+			}
+
+			cmd.println(1, msg)
 			continue
 		}
 
 		cmd.println(1, "Outdated repositories:")
-		for _, r := range resp.Repositories {
-			cmd.println(2, "%s:", r.RelativePath)
-			for _, s := range r.Storages {
+		for _, repo := range resp.Repositories {
+			mode := "writable"
+			if repo.ReadOnly {
+				mode = "read-only"
+			}
+
+			cmd.println(2, "%s (%s):", repo.RelativePath, mode)
+			for _, s := range repo.Storages {
 				plural := ""
 				if s.BehindBy > 1 {
 					plural = "s"

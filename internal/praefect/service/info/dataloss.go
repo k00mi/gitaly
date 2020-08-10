@@ -20,18 +20,28 @@ func (s *Server) DatalossCheck(ctx context.Context, req *gitalypb.DatalossCheckR
 
 	pbRepos := make([]*gitalypb.DatalossCheckResponse_Repository, 0, len(outdatedRepos))
 	for relativePath, storages := range outdatedRepos {
+		readOnly := false
 		pbStorages := make([]*gitalypb.DatalossCheckResponse_Repository_Storage, 0, len(storages))
 		for name, behindBy := range storages {
+			if name == shard.Primary.GetStorage() {
+				readOnly = true
+			}
+
 			pbStorages = append(pbStorages, &gitalypb.DatalossCheckResponse_Repository_Storage{
 				Name:     name,
 				BehindBy: int64(behindBy),
 			})
 		}
 
+		if !req.IncludePartiallyReplicated && !readOnly {
+			continue
+		}
+
 		sort.Slice(pbStorages, func(i, j int) bool { return pbStorages[i].Name < pbStorages[j].Name })
 
 		pbRepos = append(pbRepos, &gitalypb.DatalossCheckResponse_Repository{
 			RelativePath: relativePath,
+			ReadOnly:     readOnly,
 			Storages:     pbStorages,
 		})
 	}

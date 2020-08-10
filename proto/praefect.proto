@@ -25,8 +25,7 @@ service PraefectInfoService {
     };
   }
 
-  // DatalossCheck checks for nodes which are not up to date with the previous writable primary.
-  // This indicates possible data loss after a failover event.
+  // DatalossCheck checks for outdated repository replicas.
   rpc DatalossCheck(DatalossCheckRequest) returns (DatalossCheckResponse) {
     option (op_type) = {
       op: ACCESSOR
@@ -55,6 +54,11 @@ message SetAuthoritativeStorageResponse {}
 
 message DatalossCheckRequest {
   string virtual_storage = 1 [(storage)=true];
+  // include_partially_replicated decides whether to include repositories which are fully up to date
+  // on the primary but are outdated on some secondaries. Such repositories are still writable and do
+  // not suffer from data loss. The data on the primary is not fully replicated which increases the
+  // chances of data loss following a failover.
+  bool include_partially_replicated = 2;
 }
 
 message DatalossCheckResponse {
@@ -70,6 +74,8 @@ message DatalossCheckResponse {
     string relative_path = 1;
     // storages on which the repository is outdated
     repeated Storage storages = 2;
+    // read_only indicates whether the repository is in read-only mode.
+    bool read_only = 3;
   }
 
   // current primary storage
