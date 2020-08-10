@@ -1,0 +1,22 @@
+- hosts: localhost
+  vars_prompt:
+    - name: praefect_demo_cluster_name
+      prompt: "Enter a name for your demo cluster"
+      default: "{{ lookup('env', 'USER') }}-{{ lookup('pipe', 'date +%Y-%m-%d') }}"
+      private: false
+    - name: praefect_sql_password
+      prompt: "Enter a password for the Praefect PostgreSQL user"
+      default: "PRAEFECT_SQL_PASSWORD"
+    - name: gitlab_root_password
+      prompt: "Enter a password for the root GitLab user"
+      default: "GITLAB_ROOT_PASSWORD"
+    - name: ssh_username
+      prompt: "Enter the user name you want to use to connect to remote hosts via SSH"
+      default: "{{ lookup('env', 'USER') }}"
+      private: false
+    - name: ssh_pubkey
+      prompt: "Enter the path to your SSH public key"
+      default: "{{ lookup('env', 'HOME') }}/.ssh/id_rsa.pub"
+      private: false
+  roles:
+    - deploy

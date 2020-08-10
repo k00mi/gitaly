@@ -21,9 +21,8 @@ page](https://www.terraform.io/downloads.html).
 ./create-demo-cluster
 ```
 
-This will open a browser to sign into GCP if necessary. Terraform will
-print a plan and ask you to confirm it before it creates anything in
-GCP.
+This will open a browser to sign into GCP if necessary. Ansible will then ask
+you a set of questions before it performs the deplyoment.
 
 When the script is done, `apt-get install gitlab-ee` is still busy
 running in the background on your new VM's.

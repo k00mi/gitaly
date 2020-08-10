@@ -28,7 +28,7 @@ praefect['auth_token'] = '{{ praefect_external_token }}'
 praefect['database_host'] = '{{ groups['databases'][0] }}'
 praefect['database_port'] = 5432
 praefect['database_user'] = 'praefect'
-praefect['database_password'] = '{{ praefect_database_password }}'
+praefect['database_password'] = '{{ praefect_sql_password }}'
 praefect['database_dbname'] = 'praefect_production'
 praefect['database_sslmode'] = 'disable'
 
