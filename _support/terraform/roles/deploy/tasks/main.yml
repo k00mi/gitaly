@@ -18,6 +18,8 @@
     variables_file: terraform.tfvars
     force_init: true
   register: tfstate
+  notify:
+    - add hostkeys
 
 - name: hosts.ini
   template:
