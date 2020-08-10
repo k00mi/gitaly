@@ -1,12 +1,2 @@
-#!/usr/bin/env ruby
-# frozen_string_literal: true
-
-require_relative 'helper.rb'
-
-def main
-  return unless terraform_any_machines?
-
-  run!(%w[terraform output])
-end
-
-main
+#!/bin/sh
+cd terraform && terraform output
