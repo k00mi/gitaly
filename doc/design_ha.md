@@ -436,12 +436,13 @@ changes.
 ## Enabling Strong Consistency
 
 The current implementation of strong consistency via pre-receive hooks is
-guarded by feature flags. In order to make use of it, you thus need to enable
+guarded by feature flags. In order to make use of it, you thus need to disable
 the following feature flag:
 
-- `gitaly_reference_transactions`: Enables usage of reference transactions and
-  proxying to multiple Gitaly nodes at once for both SSH and HTTPS receive-pack
-  endpoints.
+- `gitaly_reference_transactions_primary_wins`: This feature flag is enabled by
+  default and will cause transactions to always succeed for the primary, no
+  matter what secondaries vote for. To enable strong consistency where nodes
+  need to agree, this feature flag needs to be disabled.
 
 In order to observe reference transactions, two metrics
 `gitaly_praefect_transactions_total` and
