@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
@@ -267,77 +266,41 @@ func TestElectNewPrimary(t *testing.T) {
 		desc                   string
 		initialReplQueueInsert string
 		expectedPrimary        string
-		incompleteCounts       []targetNodeIncompleteCounts
-	}{{
-		desc: "gitaly-1's most recent job status after the last completion is a dead job",
-		initialReplQueueInsert: `INSERT INTO replication_queue
-	(job, updated_at, state)
-	VALUES
-	('{"virtual_storage": "test-shard-1", "target_node_storage": "gitaly-1"}', '2020-01-01 00:00:05', 'ready'),
-	('{"virtual_storage": "test-shard-1", "target_node_storage": "gitaly-2"}', '2020-01-01 00:00:05', 'completed'),
-
-	('{"virtual_storage": "test-shard-0", "target_node_storage": "gitaly-1"}', '2020-01-01 00:00:04', 'dead'),
-	('{"virtual_storage": "test-shard-0", "target_node_storage": "gitaly-1"}', '2020-01-01 00:00:03', 'completed'),
-	('{"virtual_storage": "test-shard-0", "target_node_storage": "gitaly-1"}', '2020-01-01 00:00:02', 'completed'),
-	('{"virtual_storage": "test-shard-0", "target_node_storage": "gitaly-1"}', '2020-01-01 00:00:01', 'completed'),
-	('{"virtual_storage": "test-shard-0", "target_node_storage": "gitaly-1"}', '2020-01-01 00:00:00', 'completed'),
-
-	('{"virtual_storage": "test-shard-0", "target_node_storage": "gitaly-2"}', '2020-01-01 00:00:04', 'completed'),
-	('{"virtual_storage": "test-shard-0", "target_node_storage": "gitaly-2"}', '2020-01-01 00:00:03', 'dead'),
-	('{"virtual_storage": "test-shard-0", "target_node_storage": "gitaly-2"}', '2020-01-01 00:00:02', 'dead'),
-	('{"virtual_storage": "test-shard-0", "target_node_storage": "gitaly-2"}', '2020-01-01 00:00:01', 'dead'),
-	('{"virtual_storage": "test-shard-0", "target_node_storage": "gitaly-2"}', '2020-01-01 00:00:00', 'dead')`,
-		expectedPrimary: "gitaly-2",
-		incompleteCounts: []targetNodeIncompleteCounts{
-			{
-				NodeStorage: "gitaly-2",
-				Ready:       0,
-				InProgress:  0,
-				Failed:      0,
-				Dead:        0,
-			},
-			{
-				NodeStorage: "gitaly-1",
-				Ready:       0,
-				InProgress:  0,
-				Failed:      0,
-				Dead:        1,
-			},
-		},
-	},
+		defaultChoice          bool
+	}{
 		{
-			desc: "gitaly-1 has 2 dead jobs, while gitaly-2 has ready and in_progress jobs",
-			initialReplQueueInsert: `INSERT INTO replication_queue
-		(job, updated_at, state)
-		VALUES
-		('{"virtual_storage": "test-shard-1", "target_node_storage": "gitaly-1"}', '2020-01-01 00:00:05', 'in_progress'),
-		('{"virtual_storage": "test-shard-1", "target_node_storage": "gitaly-2"}', '2020-01-01 00:00:05', 'completed'),
+			desc: "gitaly-2 storage has more up to date repositories",
+			initialReplQueueInsert: `
+			INSERT INTO repositories
+				(virtual_storage, relative_path, generation)
+			VALUES
+				('test-shard-0', '/p/1', 5),
+				('test-shard-0', '/p/2', 5),
+				('test-shard-0', '/p/3', 5),
+				('test-shard-0', '/p/4', 5),
+				('test-shard-0', '/p/5', 5);
 
-		('{"virtual_storage": "test-shard-0", "target_node_storage": "gitaly-1"}', '2020-01-01 00:00:02', 'dead'),
-		('{"virtual_storage": "test-shard-0", "target_node_storage": "gitaly-1"}', '2020-01-01 00:00:01', 'dead'),
-		('{"virtual_storage": "test-shard-0", "target_node_storage": "gitaly-1"}', '2020-01-01 00:00:00', 'completed'),
+			INSERT INTO storage_repositories
+				(virtual_storage, relative_path, storage, generation)
+			VALUES
+				('test-shard-0', '/p/1', 'gitaly-1', 5),
+				('test-shard-0', '/p/2', 'gitaly-1', 5),
+				('test-shard-0', '/p/3', 'gitaly-1', 4),
+				('test-shard-0', '/p/4', 'gitaly-1', 3),
 
-		('{"virtual_storage": "test-shard-0", "target_node_storage": "gitaly-2"}', '2020-01-01 00:00:03', 'ready'),
-		('{"virtual_storage": "test-shard-0", "target_node_storage": "gitaly-2"}', '2020-01-01 00:00:02', 'in_progress'),
-		('{"virtual_storage": "test-shard-0", "target_node_storage": "gitaly-2"}', '2020-01-01 00:00:01', 'ready'),
-		('{"virtual_storage": "test-shard-0", "target_node_storage": "gitaly-2"}', '2020-01-01 00:00:00', 'completed')`,
+				('test-shard-0', '/p/1', 'gitaly-2', 5),
+				('test-shard-0', '/p/2', 'gitaly-2', 5),
+				('test-shard-0', '/p/3', 'gitaly-2', 4),
+				('test-shard-0', '/p/4', 'gitaly-2', 4),
+				('test-shard-0', '/p/5', 'gitaly-2', 5)
+			`,
 			expectedPrimary: "gitaly-2",
-			incompleteCounts: []targetNodeIncompleteCounts{
-				{
-					NodeStorage: "gitaly-2",
-					Ready:       2,
-					InProgress:  1,
-					Failed:      0,
-					Dead:        0,
-				},
-				{
-					NodeStorage: "gitaly-1",
-					Ready:       0,
-					InProgress:  0,
-					Failed:      0,
-					Dead:        2,
-				},
-			},
+			defaultChoice:   false,
+		},
+		{
+			desc:            "no information about generations results to first candidate",
+			expectedPrimary: "gitaly-1",
+			defaultChoice:   true,
 		},
 	}
 
@@ -345,30 +308,21 @@ func TestElectNewPrimary(t *testing.T) {
 		t.Run(testCase.desc, func(t *testing.T) {
 			db.TruncateAll(t)
 
-			elector := newSQLElector(shardName, config.Config{}, db.DB, testhelper.DiscardTestLogger(t), ns)
-
-			require.NoError(t, elector.electNewPrimary(candidates))
-			primary, err := elector.lookupPrimary()
-			require.NoError(t, err)
-			require.Equal(t, "gitaly-1", primary.GetStorage(), "since replication queue is empty the first candidate should be chosen")
-
-			predateElection(t, db, shardName, failoverTimeout)
-			_, err = db.Exec(testCase.initialReplQueueInsert)
+			_, err := db.Exec(testCase.initialReplQueueInsert)
 			require.NoError(t, err)
 
 			logger, hook := test.NewNullLogger()
-			logger.SetFormatter(&logrus.JSONFormatter{})
 
-			elector.log = logger
+			elector := newSQLElector(shardName, config.Config{}, db.DB, logger, ns)
+
 			require.NoError(t, elector.electNewPrimary(candidates))
+			primary, err := elector.lookupPrimary()
 
-			primary, err = elector.lookupPrimary()
 			require.NoError(t, err)
 			require.Equal(t, testCase.expectedPrimary, primary.GetStorage())
 
-			incompleteCounts := hook.LastEntry().Data["incomplete_counts"].([]targetNodeIncompleteCounts)
-			require.Equal(t, testCase.incompleteCounts, incompleteCounts)
-			require.Equal(t, testCase.expectedPrimary, hook.LastEntry().Data["new_primary"].(string))
+			defaultChoice := hook.LastEntry().Data["default_choice"].(bool)
+			require.Equal(t, testCase.defaultChoice, defaultChoice)
 		})
 	}
 }
