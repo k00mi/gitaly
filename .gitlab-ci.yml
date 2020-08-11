@@ -198,16 +198,6 @@ docker-tag:
   only:
     - tags@gitlab-org/gitaly
 
-# Create a MR in GitLab-CE when releasing a Gitaly version
-update-downstream-server-version:
-  stage: publish
-  when: manual
-  only:
-    - tags@gitlab-org/gitaly
-  script:
-    - ruby _support/update-downstream-server-version
-  allow_failure: true
-
 include:
   - template: Security/License-Scanning.gitlab-ci.yml
   - template: Security/SAST.gitlab-ci.yml
