@@ -1,0 +1,5 @@
+---
+title: Fix accessors mislabeled as mutators
+merge_request: 2466
+author:
+type: fixed

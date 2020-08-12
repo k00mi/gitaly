@@ -25,7 +25,7 @@ service SSHService {
   // To forward 'git upload-archive' to Gitaly for SSH sessions
   rpc SSHUploadArchive(stream SSHUploadArchiveRequest) returns (stream SSHUploadArchiveResponse) {
     option (op_type) = {
-      op: MUTATOR
+      op: ACCESSOR
     };
   }
 }
