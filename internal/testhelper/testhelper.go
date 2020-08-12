@@ -212,6 +212,10 @@ func RequireGrpcError(t testing.TB, err error, expectedCode codes.Code) {
 
 // MustRunCommand runs a command with an optional standard input and returns the standard output, or fails.
 func MustRunCommand(t testing.TB, stdin io.Reader, name string, args ...string) []byte {
+	if t != nil {
+		t.Helper()
+	}
+
 	cmd := exec.Command(name, args...)
 
 	if name == "git" {

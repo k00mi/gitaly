@@ -27,6 +27,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     add_message "gitaly.GarbageCollectRequest" do
       optional :repository, :message, 1, "gitaly.Repository"
       optional :create_bitmap, :bool, 2
+      optional :prune, :bool, 3
     end
     add_message "gitaly.GarbageCollectResponse" do
     end
