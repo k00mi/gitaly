@@ -266,7 +266,7 @@ func TestElectNewPrimary(t *testing.T) {
 		desc                   string
 		initialReplQueueInsert string
 		expectedPrimary        string
-		defaultChoice          bool
+		fallbackChoice         bool
 	}{
 		{
 			desc: "gitaly-2 storage has more up to date repositories",
@@ -295,12 +295,49 @@ func TestElectNewPrimary(t *testing.T) {
 				('test-shard-0', '/p/5', 'gitaly-2', 5)
 			`,
 			expectedPrimary: "gitaly-2",
-			defaultChoice:   false,
+			fallbackChoice:  false,
+		},
+		{
+			desc: "gitaly-2 storage has less repositories as some may not been replicated yet",
+			initialReplQueueInsert: `
+			INSERT INTO REPOSITORIES
+				(virtual_storage, relative_path, generation)
+			VALUES
+				('test-shard-0', '/p/1', 5),
+				('test-shard-0', '/p/2', 5);
+
+			INSERT INTO STORAGE_REPOSITORIES
+			VALUES
+				('test-shard-0', '/p/1', 'gitaly-1', 5),
+				('test-shard-0', '/p/2', 'gitaly-1', 4),
+				('test-shard-0', '/p/1', 'gitaly-2', 5)`,
+			expectedPrimary: "gitaly-1",
+			fallbackChoice:  false,
+		},
+		{
+			desc: "gitaly-1 is primary as it has less generations behind in total despite it has less repositories",
+			initialReplQueueInsert: `
+			INSERT INTO REPOSITORIES
+				(virtual_storage, relative_path, generation)
+			VALUES
+				('test-shard-0', '/p/1', 2),
+				('test-shard-0', '/p/2', 2),
+				('test-shard-0', '/p/3', 10);
+
+			INSERT INTO STORAGE_REPOSITORIES
+			VALUES
+				('test-shard-0', '/p/2', 'gitaly-1', 1),
+				('test-shard-0', '/p/3', 'gitaly-1', 9),
+				('test-shard-0', '/p/1', 'gitaly-2', 1),
+				('test-shard-0', '/p/2', 'gitaly-2', 1),
+				('test-shard-0', '/p/3', 'gitaly-2', 1)`,
+			expectedPrimary: "gitaly-1",
+			fallbackChoice:  false,
 		},
 		{
 			desc:            "no information about generations results to first candidate",
 			expectedPrimary: "gitaly-1",
-			defaultChoice:   true,
+			fallbackChoice:  true,
 		},
 	}
 
@@ -321,8 +358,8 @@ func TestElectNewPrimary(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, testCase.expectedPrimary, primary.GetStorage())
 
-			defaultChoice := hook.LastEntry().Data["default_choice"].(bool)
-			require.Equal(t, testCase.defaultChoice, defaultChoice)
+			fallbackChoice := hook.LastEntry().Data["fallback_choice"].(bool)
+			require.Equal(t, testCase.fallbackChoice, fallbackChoice)
 		})
 	}
 }

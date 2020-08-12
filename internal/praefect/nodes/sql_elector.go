@@ -348,13 +348,14 @@ func (s *sqlElector) electNewPrimary(candidates []*sqlCandidate) error {
 	}
 
 	q := `
-		SELECT sr.storage
+		SELECT storages.storage
 		FROM repositories AS r
-		JOIN storage_repositories AS sr USING(virtual_storage, relative_path)
-		WHERE sr.storage = ANY($1)
-			AND r.virtual_storage = $2
-		GROUP BY sr.storage
-		ORDER BY SUM(r.generation - sr.generation)`
+		CROSS JOIN (SELECT UNNEST($1::TEXT[]) AS storage) AS storages
+		LEFT JOIN storage_repositories AS sr USING(virtual_storage, relative_path, storage)
+		WHERE r.virtual_storage = $2
+		GROUP BY storages.storage
+		ORDER BY SUM(r.generation - COALESCE(sr.generation, -1))
+		LIMIT 1`
 
 	var newPrimaryStorage string
 	var fallbackChoice bool
