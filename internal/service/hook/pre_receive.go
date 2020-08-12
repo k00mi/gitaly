@@ -67,8 +67,6 @@ func (s *server) getPraefectConn(ctx context.Context, server *metadata.PraefectS
 }
 
 func (s *server) voteOnTransaction(ctx context.Context, hash []byte, env []string) error {
-	defer prometheus.NewTimer(s.votingDelayMetric).ObserveDuration()
-
 	tx, err := metadata.TransactionFromEnv(env)
 	if err != nil {
 		if errors.Is(err, metadata.ErrTransactionNotFound) {
@@ -95,6 +93,7 @@ func (s *server) voteOnTransaction(ctx context.Context, hash []byte, env []strin
 
 	praefectClient := gitalypb.NewRefTransactionClient(praefectConn)
 
+	defer prometheus.NewTimer(s.votingDelayMetric).ObserveDuration()
 	response, err := praefectClient.VoteTransaction(ctx, &gitalypb.VoteTransactionRequest{
 		TransactionId:        tx.ID,
 		Node:                 tx.Node,
