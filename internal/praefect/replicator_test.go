@@ -226,7 +226,7 @@ func TestPropagateReplicationJob(t *testing.T) {
 	require.NoError(t, err)
 	nodeMgr.Start(0, time.Hour)
 
-	txMgr := transactions.NewManager()
+	txMgr := transactions.NewManager(conf)
 
 	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
 

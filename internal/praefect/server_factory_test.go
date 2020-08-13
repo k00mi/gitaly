@@ -82,7 +82,7 @@ func TestServerFactory(t *testing.T) {
 	nodeMgr, err := nodes.NewManager(logger, conf, nil, datastore.NewMemoryRepositoryStore(conf.StorageNames()), &promtest.MockHistogramVec{})
 	require.NoError(t, err)
 	nodeMgr.Start(0, time.Second)
-	txMgr := transactions.NewManager()
+	txMgr := transactions.NewManager(conf)
 	registry := protoregistry.GitalyProtoPreregistered
 	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
 	coordinator := NewCoordinator(queue, rs, nodeMgr, txMgr, conf, registry)
