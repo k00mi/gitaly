@@ -681,6 +681,71 @@ func TestProcessBacklog_Success(t *testing.T) {
 	require.True(t, storage.IsGitDirectory(fullNewPath2), "repository must exist at new last RenameRepository location")
 }
 
+func TestReplMgrProcessBacklog_OnlyHealthyNodes(t *testing.T) {
+	conf := config.Config{
+		VirtualStorages: []*config.VirtualStorage{
+			{
+				Name: "default",
+				Nodes: []*config.Node{
+					{Storage: "node-1"},
+					{Storage: "node-2"},
+					{Storage: "node-3"},
+				},
+			},
+		},
+	}
+
+	ctx, cancel := testhelper.Context()
+
+	queueInterceptor := datastore.NewReplicationEventQueueInterceptor(datastore.NewMemoryReplicationEventQueue(conf))
+	queueInterceptor.OnDequeue(func(_ context.Context, virtualStorageName string, storageName string, _ int, _ datastore.ReplicationEventQueue) ([]datastore.ReplicationEvent, error) {
+		select {
+		case <-ctx.Done():
+			return nil, nil
+		default:
+			assert.Equal(t, conf.VirtualStorages[0].Name, virtualStorageName)
+			assert.Equal(t, conf.VirtualStorages[0].Nodes[2].Storage, storageName)
+			cancel()
+			return nil, nil
+		}
+	})
+
+	nodeMgr := &nodes.MockManager{
+		GetShardFunc: func(string) (shard nodes.Shard, err error) {
+			return nodes.Shard{
+				Primary: &nodes.MockNode{
+					Healthy:          true,
+					GetStorageMethod: func() string { return conf.VirtualStorages[0].Nodes[0].Storage },
+				},
+				Secondaries: []nodes.Node{
+					&nodes.MockNode{
+						GetStorageMethod: func() string {
+							assert.FailNow(t, "as this node is not healthy this method should not be called")
+							return conf.VirtualStorages[0].Nodes[1].Storage
+						},
+						Healthy: false,
+					},
+					&nodes.MockNode{
+						Healthy:          true,
+						GetStorageMethod: func() string { return conf.VirtualStorages[0].Nodes[2].Storage },
+					},
+				},
+			}, nil
+		},
+	}
+
+	replMgr := NewReplMgr(testhelper.DiscardTestEntry(t), conf.VirtualStorageNames(), queueInterceptor, nil, nodeMgr)
+	replMgr.ProcessBacklog(ctx, noopBackoffFunc)
+
+	select {
+	case <-ctx.Done():
+		// completed by scenario
+	case <-time.After(30 * time.Second):
+		// strongly depends on the processing capacity
+		t.Fatal("time limit expired for job to complete")
+	}
+}
+
 type mockReplicator struct {
 	Replicator
 	ReplicateFunc func(ctx context.Context, event datastore.ReplicationEvent, source, target *grpc.ClientConn) error
@@ -735,12 +800,14 @@ func TestProcessBacklog_ReplicatesToReadOnlyPrimary(t *testing.T) {
 				require.Equal(t, virtualStorage, vs)
 				return nodes.Shard{
 					Primary: &nodes.MockNode{
-						StorageName: primaryStorage,
-						Conn:        primaryConn,
+						Healthy:          true,
+						GetStorageMethod: func() string { return primaryStorage },
+						Conn:             primaryConn,
 					},
 					Secondaries: []nodes.Node{&nodes.MockNode{
-						StorageName: secondaryStorage,
-						Conn:        secondaryConn,
+						Healthy:          true,
+						GetStorageMethod: func() string { return secondaryStorage },
+						Conn:             secondaryConn,
 					}},
 				}, nil
 			},

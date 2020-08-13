@@ -479,6 +479,9 @@ func (r ReplMgr) processBacklog(ctx context.Context, b BackoffFunc, virtualStora
 			logger.WithError(err).Error("error when getting primary and secondaries")
 		} else {
 			for _, target := range append(shard.Secondaries, shard.Primary) {
+				if !target.IsHealthy() {
+					continue
+				}
 				totalEvents += r.handleNode(ctx, logger, shard, virtualStorage, target)
 			}
 		}
