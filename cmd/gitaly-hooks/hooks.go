@@ -141,6 +141,13 @@ func main() {
 
 		environment := glValues()
 
+		for _, key := range []string{metadata.PraefectEnvKey, metadata.TransactionEnvKey} {
+			if value, ok := os.LookupEnv(key); ok {
+				env := fmt.Sprintf("%s=%s", key, value)
+				environment = append(environment, env)
+			}
+		}
+
 		if os.Getenv(featureflag.GoPostReceiveHookEnvVar) == "true" {
 			environment = append(environment, fmt.Sprintf("%s=true", featureflag.GoPostReceiveHookEnvVar))
 		}

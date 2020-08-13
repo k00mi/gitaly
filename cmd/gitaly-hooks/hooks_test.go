@@ -17,6 +17,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/internal/service/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -385,30 +386,74 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 
 	postReceiveHookPath, err := filepath.Abs("../../ruby/git-hooks/post-receive")
 	require.NoError(t, err)
-	cmd := exec.Command(postReceiveHookPath)
-	cmd.Env = testhelper.EnvForHooks(t, tempGitlabShellDir, socket, token, testRepo,
-		testhelper.GlHookValues{
-			GLID:       glID,
-			GLUsername: glUsername,
-			GLRepo:     glRepository,
-			GLProtocol: glProtocol,
+
+	testcases := []struct {
+		desc    string
+		primary bool
+		verify  func(*testing.T, *exec.Cmd, *bytes.Buffer, *bytes.Buffer)
+	}{
+		{
+			desc:    "Primary calls out to post_receive endpoint",
+			primary: true,
+			verify: func(t *testing.T, cmd *exec.Cmd, stdout, stderr *bytes.Buffer) {
+				err = cmd.Run()
+				code, ok := command.ExitStatus(err)
+				require.True(t, ok, "expect exit status in %v", err)
+
+				require.Equal(t, 1, code, "exit status")
+				require.Empty(t, stdout.String())
+				require.Empty(t, stderr.String())
+
+				output := string(testhelper.MustReadFile(t, customHookOutputPath))
+				require.Empty(t, output, "custom hook should not have run")
+			},
 		},
-		testhelper.ProxyValues{})
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	cmd.Stdin = bytes.NewBuffer([]byte(changes))
-	cmd.Dir = testRepoPath
+		{
+			desc:    "Secondary does not call out to post_receive endpoint",
+			primary: false,
+			verify: func(t *testing.T, cmd *exec.Cmd, stdout, stderr *bytes.Buffer) {
+				err = cmd.Run()
+				require.NoError(t, err)
 
-	err = cmd.Run()
-	code, ok := command.ExitStatus(err)
+				require.Empty(t, stdout.String())
+				require.Empty(t, stderr.String())
 
-	require.True(t, ok, "expect exit status in %v", err)
-	require.Equal(t, 1, code, "exit status")
-	require.Empty(t, stdout.String())
-	require.Empty(t, stderr.String())
+				output := string(testhelper.MustReadFile(t, customHookOutputPath))
+				require.Empty(t, output, "custom hook should not have run")
+			},
+		},
+	}
 
-	output := string(testhelper.MustReadFile(t, customHookOutputPath))
-	require.Empty(t, output, "custom hook should not have run")
+	for _, tc := range testcases {
+		t.Run(tc.desc, func(t *testing.T) {
+			transactionEnv, err := metadata.Transaction{
+				ID:      1,
+				Node:    "node",
+				Primary: tc.primary,
+			}.Env()
+			require.NoError(t, err)
+
+			env := testhelper.EnvForHooks(t, tempGitlabShellDir, socket, token, testRepo,
+				testhelper.GlHookValues{
+					GLID:       glID,
+					GLUsername: glUsername,
+					GLRepo:     glRepository,
+					GLProtocol: glProtocol,
+				},
+				testhelper.ProxyValues{},
+			)
+			env = append(env, transactionEnv)
+
+			cmd := exec.Command(postReceiveHookPath)
+			cmd.Env = env
+			cmd.Stdout = &stdout
+			cmd.Stderr = &stderr
+			cmd.Stdin = bytes.NewBuffer([]byte(changes))
+			cmd.Dir = testRepoPath
+
+			tc.verify(t, cmd, &stdout, &stderr)
+		})
+	}
 }
 
 func TestHooksNotAllowed(t *testing.T) {

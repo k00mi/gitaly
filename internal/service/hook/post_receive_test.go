@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -190,6 +191,25 @@ func TestPostReceive(t *testing.T) {
 					"GL_PROTOCOL=protocol",
 					"GL_REPOSITORY=repository",
 					transactionEnv(t, false),
+				},
+				GitPushOptions: []string{"option0"},
+			},
+			status: 0,
+			stdout: "",
+			stderr: "",
+		},
+		{
+			desc:  "Go hook correctly honors the primary flag",
+			stdin: bytes.NewBuffer(nil),
+			req: gitalypb.PostReceiveHookRequest{
+				Repository: testRepo,
+				EnvironmentVariables: []string{
+					"GL_ID=key_id",
+					"GL_USERNAME=username",
+					"GL_PROTOCOL=protocol",
+					"GL_REPOSITORY=repository",
+					transactionEnv(t, false),
+					fmt.Sprintf("%s=true", featureflag.GoPostReceiveHookEnvVar),
 				},
 				GitPushOptions: []string{"option0"},
 			},
