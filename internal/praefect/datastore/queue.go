@@ -351,11 +351,18 @@ func (rq PostgresReplicationEventQueue) Acknowledge(ctx context.Context, state J
 			WHERE ($2::REPLICATION_JOB_STATE = 'dead' AND existing.id = queue.id) OR (
 				$2::REPLICATION_JOB_STATE = 'completed'
 				AND (existing.id = queue.id OR (
+					-- this is an optimization to omit events that won't make any effect as the same event
+					-- was just applied, so we acknowledge similar events:
+					-- only not yet touched events (no attempts to process it)
 					queue.state = 'ready'
+					-- and they were created before current event was consumed for processing
 					AND queue.created_at < existing.updated_at
+					-- they are for the exact same repository
 					AND queue.lock_id = existing.lock_id
+					-- and created to apply exact same replication operation (gc, update, ...)
 					AND queue.job->>'change' = existing.job->>'change'
-					AND queue.job->>'source_node_storage' = existing.job->>'source_node_storage')
+					-- from the same source storage (if applicable, as 'gc' has no source)
+					AND COALESCE(queue.job->>'source_node_storage', '') = COALESCE(existing.job->>'source_node_storage', ''))
 				)
 			)
 			RETURNING queue.id, queue.lock_id
