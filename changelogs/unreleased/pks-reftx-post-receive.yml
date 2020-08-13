@@ -1,0 +1,5 @@
+---
+title: Fix post-receive hooks with reference transactions
+merge_request: 2471
+author:
+type: fixed

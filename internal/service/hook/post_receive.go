@@ -154,6 +154,15 @@ func (s *server) PostReceiveHook(stream gitalypb.HookService_PostReceiveHookServ
 		return helper.ErrInternalf("reading stdin from request: %w", err)
 	}
 
+	primary, err := isPrimary(hookEnv)
+	if err != nil {
+		return helper.ErrInternalf("could not check role: %w", err)
+	}
+
+	if !primary {
+		return postReceiveHookResponse(stream, 0, "")
+	}
+
 	glID, glRepo := getEnvVar("GL_ID", hookEnv), getEnvVar("GL_REPOSITORY", hookEnv)
 
 	ok, messages, err := s.gitlabAPI.PostReceive(glRepo, glID, string(changes), firstRequest.GetGitPushOptions()...)
