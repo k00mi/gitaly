@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math/rand"
 	"sync"
 	"time"
@@ -146,11 +147,11 @@ func (mgr *Manager) RegisterTransaction(ctx context.Context, voters []Voter, thr
 	mgr.counterMetric.WithLabelValues("registered").Add(float64(len(voters)))
 
 	return transaction, func() error {
-		return mgr.cancelTransaction(transaction)
+		return mgr.cancelTransaction(ctx, transaction)
 	}, nil
 }
 
-func (mgr *Manager) cancelTransaction(transaction *Transaction) error {
+func (mgr *Manager) cancelTransaction(ctx context.Context, transaction *Transaction) error {
 	mgr.lock.Lock()
 	defer mgr.lock.Unlock()
 
@@ -158,6 +159,20 @@ func (mgr *Manager) cancelTransaction(transaction *Transaction) error {
 
 	transaction.cancel()
 	mgr.subtransactionsMetric.Observe(float64(transaction.CountSubtransactions()))
+
+	var committed uint64
+	state := transaction.State()
+	for _, success := range state {
+		if success {
+			committed++
+		}
+	}
+
+	mgr.log(ctx).WithFields(logrus.Fields{
+		"transaction_id":  transaction.ID(),
+		"committed":       fmt.Sprintf("%d/%d", committed, len(state)),
+		"subtransactions": transaction.CountSubtransactions(),
+	}).Info("transaction completed")
 
 	return nil
 }
