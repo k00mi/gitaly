@@ -1,6 +1,8 @@
 package service
 
 import (
+	"sync"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
@@ -30,6 +32,14 @@ import (
 )
 
 var (
+	once sync.Once
+
+	smarthttpPackfileNegotiationMetrics *prometheus.CounterVec
+	sshPackfileNegotiationMetrics       *prometheus.CounterVec
+	votingDelayMetric                   prometheus.Histogram
+)
+
+func registerMetrics(cfg config.Cfg) {
 	smarthttpPackfileNegotiationMetrics = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "gitaly",
@@ -54,14 +64,18 @@ var (
 		prometheus.HistogramOpts{
 			Name:    "gitaly_hook_transaction_voting_delay_seconds",
 			Help:    "Delay between calling out to transaction service and receiving a response",
-			Buckets: config.Config.Prometheus.GRPCLatencyBuckets,
+			Buckets: cfg.Prometheus.GRPCLatencyBuckets,
 		},
 	)
-)
+}
 
 // RegisterAll will register all the known grpc services with
 // the specified grpc service instance
 func RegisterAll(grpcServer *grpc.Server, cfg config.Cfg, rubyServer *rubyserver.Server, gitlabAPI hook.GitlabAPI, locator storage.Locator) {
+	once.Do(func() {
+		registerMetrics(cfg)
+	})
+
 	gitalypb.RegisterBlobServiceServer(grpcServer, blob.NewServer(rubyServer))
 	gitalypb.RegisterCleanupServiceServer(grpcServer, cleanup.NewServer())
 	gitalypb.RegisterCommitServiceServer(grpcServer, commit.NewServer(locator))
