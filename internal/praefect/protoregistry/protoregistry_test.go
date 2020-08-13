@@ -120,7 +120,7 @@ func TestNewProtoRegistry(t *testing.T) {
 			"RepackIncremental":            protoregistry.OpMutator,
 			"RepackFull":                   protoregistry.OpMutator,
 			"GarbageCollect":               protoregistry.OpMutator,
-			"RepositorySize":               protoregistry.OpMutator,
+			"RepositorySize":               protoregistry.OpAccessor,
 			"ApplyGitattributes":           protoregistry.OpMutator,
 			"FetchRemote":                  protoregistry.OpMutator,
 			"CreateRepository":             protoregistry.OpMutator,
@@ -163,7 +163,7 @@ func TestNewProtoRegistry(t *testing.T) {
 		"SSHService": map[string]protoregistry.OpType{
 			"SSHUploadPack":    protoregistry.OpAccessor,
 			"SSHReceivePack":   protoregistry.OpMutator,
-			"SSHUploadArchive": protoregistry.OpMutator,
+			"SSHUploadArchive": protoregistry.OpAccessor,
 		},
 		"WikiService": map[string]protoregistry.OpType{
 			"WikiGetPageVersions": protoregistry.OpAccessor,
