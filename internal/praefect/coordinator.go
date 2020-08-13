@@ -20,7 +20,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/transactions"
-	prommetrics "gitlab.com/gitlab-org/gitaly/internal/prometheus/metrics"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/labkit/correlation"
 	"golang.org/x/sync/errgroup"
@@ -82,7 +81,7 @@ type Coordinator struct {
 	rs           datastore.RepositoryStore
 	registry     *protoregistry.Registry
 	conf         config.Config
-	votersMetric prommetrics.HistogramVec
+	votersMetric *prometheus.HistogramVec
 }
 
 // NewCoordinator returns a new Coordinator that utilizes the provided logger
@@ -93,8 +92,14 @@ func NewCoordinator(
 	txMgr *transactions.Manager,
 	conf config.Config,
 	r *protoregistry.Registry,
-	opts ...CoordinatorOpt,
 ) *Coordinator {
+	maxVoters := 1
+	for _, storage := range conf.VirtualStorages {
+		if len(storage.Nodes) > maxVoters {
+			maxVoters = len(storage.Nodes)
+		}
+	}
+
 	coordinator := &Coordinator{
 		queue:    queue,
 		rs:       rs,
@@ -103,26 +108,24 @@ func NewCoordinator(
 		txMgr:    txMgr,
 		conf:     conf,
 		votersMetric: prometheus.NewHistogramVec(
-			prometheus.HistogramOpts{},
+			prometheus.HistogramOpts{
+				Name:    "gitaly_praefect_voters_per_transaction_total",
+				Help:    "The number of voters a given transaction was created with",
+				Buckets: prometheus.LinearBuckets(1, 1, maxVoters),
+			},
 			[]string{"virtual_storage"},
 		),
-	}
-
-	for _, opt := range opts {
-		opt(coordinator)
 	}
 
 	return coordinator
 }
 
-// CoordinatorOpt is a self referential option for Coordinator
-type CoordinatorOpt func(*Coordinator)
+func (c *Coordinator) Describe(descs chan<- *prometheus.Desc) {
+	prometheus.DescribeByCollect(c, descs)
+}
 
-// WithVotersMetric is an option to set the voters Prometheus metric
-func WithVotersMetric(votersMetric prommetrics.HistogramVec) CoordinatorOpt {
-	return func(coordinator *Coordinator) {
-		coordinator.votersMetric = votersMetric
-	}
+func (c *Coordinator) Collect(metrics chan<- prometheus.Metric) {
+	c.votersMetric.Collect(metrics)
 }
 
 func (c *Coordinator) directRepositoryScopedMessage(ctx context.Context, call grpcCall) (*proxy.StreamParameters, error) {
