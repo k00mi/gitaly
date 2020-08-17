@@ -15,6 +15,30 @@ The following terminology may be used within the context of the Gitaly Cluster p
 - RPC categories (#1496):
     - Accessor - a side effect free (or read-only) RPC; does not modify the git repo (!228)
     - Mutator - an RPC that modifies the data in the git repo (!228)
+- Transaction - mechanism used to ensure that a set of voters agree on the same
+  modifications.
+    - Voter - a node registered in a transaction. Only registered voters may
+      cast votes in transactions.
+    - Vote - the change a voter intends to commit if the transaction succeeds.
+      This is e.g. the hash of all references which are to be updated in their
+      old and new state.
+    - Quorum - minimum number of voters required to agree in order to commit a
+      transaction.
+    - Voting strategy - defines how many nodes are required to reach quorum.
+        - strong - all nodes need to agree.
+        - primary-wins - the transaction always succeeds as long as the primary
+          has cast a vote.
+        - majority-wins - the transaction succeeds when the primary and at least
+          half of the secondaries agree.
+    - Subtransactions - ordered list of voting processes of a transaction. For
+      each vote cast by a voter, a new subtransaction is created. For a
+      transaction to be successful, all subtransactions need to be successful.
+      This is done so that Gitaly may perform multiple modifications in a single
+      transaction.
+    - reference-transaction - Git mechanism to update references. The
+      [reference-transaction hook](https://git-scm.com/docs/githooks#_reference_transaction)
+      directly hooks into this mechanism whenever a reference is being updated
+      via Git.
 
 ## Design
 The high level design takes a reverse proxy approach to fanning out write requests to the appropriate nodes:
