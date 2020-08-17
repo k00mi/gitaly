@@ -74,6 +74,10 @@
 - Error forwarded mutator RPCs on replication job enqueue failure. !2332
 
 
+## 13.1.7
+
+- No changes.
+
 ## 13.1.6
 
 ### Security (1 change)
