@@ -68,6 +68,7 @@ RPC name. So for a change to RPC `FooBar` you would get:
 | Maintainer         |
 |--------------------|
 |@8bitlife|
+|@avar|
 |@pks-t|
 |@pokstad1 |
 |@proglottis|
