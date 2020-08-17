@@ -92,7 +92,7 @@ func TestStreamDirectorReadOnlyEnforcement(t *testing.T) {
 						}},
 					}, nil
 				}},
-				transactions.NewManager(),
+				transactions.NewManager(conf),
 				conf,
 				protoregistry.GitalyProtoPreregistered,
 			)
@@ -155,7 +155,7 @@ func TestStreamDirectorMutator(t *testing.T) {
 	require.NoError(t, err)
 	nodeMgr.Start(0, time.Hour)
 
-	txMgr := transactions.NewManager()
+	txMgr := transactions.NewManager(conf)
 
 	coordinator := NewCoordinator(
 		queueInterceptor,
@@ -357,7 +357,7 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 				waitNodeToChangeHealthStatus(ctx, t, node, true)
 			}
 
-			txMgr := transactions.NewManager()
+			txMgr := transactions.NewManager(conf)
 
 			// set up the generations prior to transaction
 			rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
@@ -494,7 +494,7 @@ func TestStreamDirectorAccessor(t *testing.T) {
 	require.NoError(t, err)
 	nodeMgr.Start(0, time.Minute)
 
-	txMgr := transactions.NewManager()
+	txMgr := transactions.NewManager(conf)
 
 	coordinator := NewCoordinator(
 		queue,
@@ -583,7 +583,7 @@ func TestCoordinatorStreamDirector_distributesReads(t *testing.T) {
 	require.NoError(t, err)
 	nodeMgr.Start(0, time.Minute)
 
-	txMgr := transactions.NewManager()
+	txMgr := transactions.NewManager(conf)
 
 	coordinator := NewCoordinator(
 		queue,
@@ -782,7 +782,7 @@ func TestAbsentCorrelationID(t *testing.T) {
 	require.NoError(t, err)
 	nodeMgr.Start(0, time.Hour)
 
-	txMgr := transactions.NewManager()
+	txMgr := transactions.NewManager(conf)
 
 	coordinator := NewCoordinator(
 		queueInterceptor,

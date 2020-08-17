@@ -748,7 +748,7 @@ func newGrpcServer(t *testing.T, srv gitalypb.SmartHTTPServiceServer) (string, *
 }
 
 func TestProxyWrites(t *testing.T) {
-	txMgr := transactions.NewManager()
+	txMgr := transactions.NewManager(config.Config{})
 
 	smartHTTP0, smartHTTP1, smartHTTP2 := &mockSmartHTTP{txMgr: txMgr}, &mockSmartHTTP{txMgr: txMgr}, &mockSmartHTTP{txMgr: txMgr}
 

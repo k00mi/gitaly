@@ -1,16 +1,17 @@
 package praefect
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"fmt"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/transactions"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -26,9 +27,9 @@ type voter struct {
 	shouldSucceed bool
 }
 
-func runPraefectServerAndTxMgr(t testing.TB, opts ...transactions.ManagerOpt) (*grpc.ClientConn, *transactions.Manager, testhelper.Cleanup) {
+func runPraefectServerAndTxMgr(t testing.TB) (*grpc.ClientConn, *transactions.Manager, testhelper.Cleanup) {
 	conf := testConfig(1)
-	txMgr := transactions.NewManager(opts...)
+	txMgr := transactions.NewManager(conf)
 	cc, _, cleanup := runPraefectServer(t, conf, buildOptions{
 		withTxMgr:   txMgr,
 		withNodeMgr: nullNodeMgr{}, // to suppress node address issues
@@ -36,40 +37,38 @@ func runPraefectServerAndTxMgr(t testing.TB, opts ...transactions.ManagerOpt) (*
 	return cc, txMgr, cleanup
 }
 
-func setupMetrics() (*prometheus.CounterVec, []transactions.ManagerOpt) {
-	counter := prometheus.NewCounterVec(prometheus.CounterOpts{}, []string{"status"})
-	return counter, []transactions.ManagerOpt{
-		transactions.WithCounterMetric(counter),
-	}
-}
-
 type counterMetrics struct {
 	registered, started, invalid, committed int
 }
 
-func verifyCounterMetrics(t *testing.T, counter *prometheus.CounterVec, expected counterMetrics) {
+func verifyCounterMetrics(t *testing.T, manager *transactions.Manager, expected counterMetrics) {
 	t.Helper()
 
-	registered, err := counter.GetMetricWithLabelValues("registered")
-	require.NoError(t, err)
-	require.Equal(t, float64(expected.registered), testutil.ToFloat64(registered))
+	metrics := []struct {
+		name  string
+		value int
+	}{
+		{"registered", expected.registered},
+		{"started", expected.started},
+		{"invalid", expected.invalid},
+		{"committed", expected.committed},
+	}
 
-	started, err := counter.GetMetricWithLabelValues("started")
-	require.NoError(t, err)
-	require.Equal(t, float64(expected.started), testutil.ToFloat64(started))
+	var expectedMetric bytes.Buffer
+	expectedMetric.WriteString("# HELP gitaly_praefect_transactions_total Total number of transaction actions\n")
+	expectedMetric.WriteString("# TYPE gitaly_praefect_transactions_total counter\n")
+	for _, metric := range metrics {
+		if metric.value == 0 {
+			continue
+		}
+		expectedMetric.WriteString(fmt.Sprintf("gitaly_praefect_transactions_total{action=\"%s\"} %d\n", metric.name, metric.value))
+	}
 
-	invalid, err := counter.GetMetricWithLabelValues("invalid")
-	require.NoError(t, err)
-	require.Equal(t, float64(expected.invalid), testutil.ToFloat64(invalid))
-
-	committed, err := counter.GetMetricWithLabelValues("committed")
-	require.NoError(t, err)
-	require.Equal(t, float64(expected.committed), testutil.ToFloat64(committed))
+	require.NoError(t, testutil.CollectAndCompare(manager, &expectedMetric, "gitaly_praefect_transactions_total"))
 }
 
 func TestTransactionSucceeds(t *testing.T) {
-	counter, opts := setupMetrics()
-	cc, txMgr, cleanup := runPraefectServerAndTxMgr(t, opts...)
+	cc, txMgr, cleanup := runPraefectServerAndTxMgr(t)
 	defer cleanup()
 
 	ctx, cancel := testhelper.Context(testhelper.ContextWithTimeout(time.Second))
@@ -95,7 +94,7 @@ func TestTransactionSucceeds(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, gitalypb.VoteTransactionResponse_COMMIT, response.State)
 
-	verifyCounterMetrics(t, counter, counterMetrics{
+	verifyCounterMetrics(t, txMgr, counterMetrics{
 		registered: 1,
 		started:    1,
 		committed:  1,
@@ -249,7 +248,7 @@ func TestTransactionRegistrationWithInvalidNodesFails(t *testing.T) {
 	ctx, cleanup := testhelper.Context()
 	defer cleanup()
 
-	txMgr := transactions.NewManager()
+	txMgr := transactions.NewManager(config.Config{})
 
 	_, _, err := txMgr.RegisterTransaction(ctx, []transactions.Voter{}, 1)
 	require.Equal(t, transactions.ErrMissingNodes, err)
@@ -298,7 +297,7 @@ func TestTransactionRegistrationWithInvalidThresholdFails(t *testing.T) {
 	ctx, cleanup := testhelper.Context()
 	defer cleanup()
 
-	txMgr := transactions.NewManager()
+	txMgr := transactions.NewManager(config.Config{})
 
 	for _, tc := range tc {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -552,8 +551,7 @@ func TestTransactionWithMultipleVotes(t *testing.T) {
 }
 
 func TestTransactionFailures(t *testing.T) {
-	counter, opts := setupMetrics()
-	cc, _, cleanup := runPraefectServerAndTxMgr(t, opts...)
+	cc, txMgr, cleanup := runPraefectServerAndTxMgr(t)
 	defer cleanup()
 
 	ctx, cancel := testhelper.Context(testhelper.ContextWithTimeout(time.Second))
@@ -570,7 +568,7 @@ func TestTransactionFailures(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, codes.NotFound, status.Code(err))
 
-	verifyCounterMetrics(t, counter, counterMetrics{
+	verifyCounterMetrics(t, txMgr, counterMetrics{
 		started: 1,
 		invalid: 1,
 	})
@@ -623,8 +621,7 @@ func TestTransactionCancellation(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.desc, func(t *testing.T) {
-			counter, opts := setupMetrics()
-			cc, txMgr, cleanup := runPraefectServerAndTxMgr(t, opts...)
+			cc, txMgr, cleanup := runPraefectServerAndTxMgr(t)
 			defer cleanup()
 
 			ctx, cancel := testhelper.Context(testhelper.ContextWithTimeout(time.Second))
@@ -679,7 +676,7 @@ func TestTransactionCancellation(t *testing.T) {
 				require.Equal(t, results[fmt.Sprintf("node-%d", i)], v.shouldSucceed, "result mismatches expected node state")
 			}
 
-			verifyCounterMetrics(t, counter, tc.expectedMetrics)
+			verifyCounterMetrics(t, txMgr, tc.expectedMetrics)
 		})
 	}
 }

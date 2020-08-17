@@ -14,7 +14,7 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
-	"gitlab.com/gitlab-org/gitaly/internal/prometheus/metrics"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 )
 
 var ErrNotFound = errors.New("transaction not found")
@@ -27,8 +27,8 @@ type Manager struct {
 	lock                  sync.Mutex
 	transactions          map[uint64]*Transaction
 	counterMetric         *prometheus.CounterVec
-	delayMetric           metrics.HistogramVec
-	subtransactionsMetric metrics.Histogram
+	delayMetric           *prometheus.HistogramVec
+	subtransactionsMetric prometheus.Histogram
 }
 
 // TransactionIDGenerator is an interface for types that can generate transaction IDs.
@@ -61,27 +61,6 @@ func (t *transactionIDGenerator) ID() uint64 {
 // ManagerOpt is a self referential option for Manager
 type ManagerOpt func(*Manager)
 
-// WithCounterMetric is an option to set the counter Prometheus metric
-func WithCounterMetric(counterMetric *prometheus.CounterVec) ManagerOpt {
-	return func(mgr *Manager) {
-		mgr.counterMetric = counterMetric
-	}
-}
-
-// WithDelayMetric is an option to set the delay Prometheus metric
-func WithDelayMetric(delayMetric metrics.HistogramVec) ManagerOpt {
-	return func(mgr *Manager) {
-		mgr.delayMetric = delayMetric
-	}
-}
-
-// WithSubtransactionsMetric is an option to set the subtransactions Prometheus metric
-func WithSubtransactionsMetric(subtransactionsMetric metrics.Histogram) ManagerOpt {
-	return func(mgr *Manager) {
-		mgr.subtransactionsMetric = subtransactionsMetric
-	}
-}
-
 // WithTransactionIDGenerator is an option to set the transaction ID generator
 func WithTransactionIDGenerator(generator TransactionIDGenerator) ManagerOpt {
 	return func(mgr *Manager) {
@@ -90,13 +69,36 @@ func WithTransactionIDGenerator(generator TransactionIDGenerator) ManagerOpt {
 }
 
 // NewManager creates a new transactions Manager.
-func NewManager(opts ...ManagerOpt) *Manager {
+func NewManager(cfg config.Config, opts ...ManagerOpt) *Manager {
 	mgr := &Manager{
-		txIDGenerator:         newTransactionIDGenerator(),
-		transactions:          make(map[uint64]*Transaction),
-		counterMetric:         prometheus.NewCounterVec(prometheus.CounterOpts{}, []string{"action"}),
-		delayMetric:           prometheus.NewHistogramVec(prometheus.HistogramOpts{}, []string{"action"}),
-		subtransactionsMetric: prometheus.NewHistogram(prometheus.HistogramOpts{}),
+		txIDGenerator: newTransactionIDGenerator(),
+		transactions:  make(map[uint64]*Transaction),
+		counterMetric: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Namespace: "gitaly",
+				Subsystem: "praefect",
+				Name:      "transactions_total",
+				Help:      "Total number of transaction actions",
+			},
+			[]string{"action"},
+		),
+		delayMetric: prometheus.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Namespace: "gitaly",
+				Subsystem: "praefect",
+				Name:      "transactions_delay_seconds",
+				Help:      "Delay between casting a vote and reaching quorum",
+				Buckets:   cfg.Prometheus.GRPCLatencyBuckets,
+			},
+			[]string{"action"},
+		),
+		subtransactionsMetric: prometheus.NewHistogram(
+			prometheus.HistogramOpts{
+				Name:    "gitaly_praefect_subtransactions_per_transaction_total",
+				Help:    "The number of subtransactions created for a single registered transaction",
+				Buckets: []float64{0.0, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0},
+			},
+		),
 	}
 
 	for _, opt := range opts {
@@ -104,6 +106,16 @@ func NewManager(opts ...ManagerOpt) *Manager {
 	}
 
 	return mgr
+}
+
+func (mgr *Manager) Describe(descs chan<- *prometheus.Desc) {
+	prometheus.DescribeByCollect(mgr, descs)
+}
+
+func (mgr *Manager) Collect(metrics chan<- prometheus.Metric) {
+	mgr.counterMetric.Collect(metrics)
+	mgr.delayMetric.Collect(metrics)
+	mgr.subtransactionsMetric.Collect(metrics)
 }
 
 func (mgr *Manager) log(ctx context.Context) logrus.FieldLogger {

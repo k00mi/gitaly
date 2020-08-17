@@ -243,34 +243,10 @@ func run(cfgs []starter.Config, conf config.Config) error {
 	nodeManager.Start(conf.Failover.BootstrapInterval.Duration(), conf.Failover.MonitorInterval.Duration())
 	logger.Info("background started: gitaly nodes health monitoring")
 
-	transactionCounterMetric, err := metrics.RegisterTransactionCounter()
-	if err != nil {
-		return err
-	}
-
-	transactionDelayMetric, err := metrics.RegisterTransactionDelay(conf.Prometheus)
-	if err != nil {
-		return err
-	}
-
-	subtransactionsHistogram, err := metrics.RegisterSubtransactionsHistogram()
-	if err != nil {
-		return err
-	}
-
-	transactionManager := transactions.NewManager(
-		transactions.WithCounterMetric(transactionCounterMetric),
-		transactions.WithDelayMetric(transactionDelayMetric),
-		transactions.WithSubtransactionsMetric(subtransactionsHistogram),
-	)
-
-	transactionVoters, err := metrics.RegisterTransactionVoters(conf)
-	if err != nil {
-		return err
-	}
-
 	var (
 		// top level server dependencies
+		transactionManager = transactions.NewManager(conf)
+
 		coordinator = praefect.NewCoordinator(
 			queue,
 			rs,
@@ -278,8 +254,8 @@ func run(cfgs []starter.Config, conf config.Config) error {
 			transactionManager,
 			conf,
 			protoregistry.GitalyProtoPreregistered,
-			praefect.WithVotersMetric(transactionVoters),
 		)
+
 		repl = praefect.NewReplMgr(
 			logger,
 			conf.VirtualStorageNames(),
@@ -303,6 +279,8 @@ func run(cfgs []starter.Config, conf config.Config) error {
 	)
 
 	prometheus.MustRegister(
+		transactionManager,
+		coordinator,
 		repl,
 		datastore.NewRepositoryStoreCollector(logger, rs, nodeManager),
 	)

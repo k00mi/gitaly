@@ -175,7 +175,7 @@ func runPraefectServerWithGitaly(t *testing.T, conf config.Config) (*grpc.Client
 func runPraefectServerWithGitalyWithDatastore(t *testing.T, conf config.Config, queue datastore.ReplicationEventQueue) (*grpc.ClientConn, *grpc.Server, testhelper.Cleanup) {
 	return runPraefectServer(t, conf, buildOptions{
 		withQueue:    queue,
-		withTxMgr:    transactions.NewManager(),
+		withTxMgr:    transactions.NewManager(conf),
 		withBackends: withRealGitalyShared(t),
 	})
 }
@@ -184,8 +184,8 @@ func defaultQueue(conf config.Config) datastore.ReplicationEventQueue {
 	return datastore.NewMemoryReplicationEventQueue(conf)
 }
 
-func defaultTxMgr() *transactions.Manager {
-	return transactions.NewManager()
+func defaultTxMgr(conf config.Config) *transactions.Manager {
+	return transactions.NewManager(conf)
 }
 
 func defaultNodeMgr(t testing.TB, conf config.Config, rs datastore.RepositoryStore) nodes.Manager {
@@ -209,7 +209,7 @@ func runPraefectServer(t testing.TB, conf config.Config, opt buildOptions) (*grp
 		opt.withRepoStore = defaultRepoStore(conf)
 	}
 	if opt.withTxMgr == nil {
-		opt.withTxMgr = defaultTxMgr()
+		opt.withTxMgr = defaultTxMgr(conf)
 	}
 	if opt.withBackends != nil {
 		cleanups = append(cleanups, opt.withBackends(conf.VirtualStorages)...)
