@@ -65,9 +65,15 @@ func (s *server) GarbageCollect(ctx context.Context, in *gitalypb.GarbageCollect
 func gc(ctx context.Context, in *gitalypb.GarbageCollectRequest) error {
 	args := repackConfig(ctx, in.CreateBitmap)
 
+	var flags []git.Option
+	if in.Prune {
+		flags = append(flags, git.Flag{Name: "--prune=24.hours.ago"})
+	}
+
 	cmd, err := git.SafeCmd(ctx, in.GetRepository(), args,
-		git.SubCmd{Name: "gc"},
+		git.SubCmd{Name: "gc", Flags: flags},
 	)
+
 	if err != nil {
 		if git.IsInvalidArgErr(err) {
 			return helper.ErrInvalidArgumentf("GarbageCollect: gitCommand: %v", err)

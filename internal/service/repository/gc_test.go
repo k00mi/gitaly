@@ -122,6 +122,51 @@ func TestGarbageCollectSuccess(t *testing.T) {
 	}
 }
 
+func TestGarbageCollectWithPrune(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	serverSocketPath, stop := runRepoServer(t)
+	defer stop()
+
+	client, conn := newRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, repoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	blobHashes := testhelper.WriteBlobs(t, repoPath, 3)
+	oldDanglingObjFile := filepath.Join(repoPath, "objects", blobHashes[0][:2], blobHashes[0][2:])
+	newDanglingObjFile := filepath.Join(repoPath, "objects", blobHashes[1][:2], blobHashes[1][2:])
+	oldReferencedObjFile := filepath.Join(repoPath, "objects", blobHashes[2][:2], blobHashes[2][2:])
+
+	// create a reference to the blob, so it should not be removed by gc
+	testhelper.CommitBlobWithName(t, repoPath, blobHashes[2], t.Name(), t.Name())
+
+	// change modification time of the blobs to make them attractive for the gc
+	aBitMoreThan24HoursAgo := time.Now().Add(-24*time.Hour - time.Second)
+	farAgo := time.Date(2015, 1, 1, 1, 1, 1, 1, time.UTC)
+	require.NoError(t, os.Chtimes(oldDanglingObjFile, aBitMoreThan24HoursAgo, aBitMoreThan24HoursAgo))
+	require.NoError(t, os.Chtimes(newDanglingObjFile, time.Now(), time.Now()))
+	require.NoError(t, os.Chtimes(oldReferencedObjFile, farAgo, farAgo))
+
+	// Prune option has no effect when disabled
+	c, err := client.GarbageCollect(ctx, &gitalypb.GarbageCollectRequest{Repository: testRepo, Prune: false})
+	require.NoError(t, err)
+	require.NotNil(t, c)
+	require.FileExists(t, oldDanglingObjFile, "blob should not be removed from object storage as it was modified less then 2 weeks ago")
+
+	// Prune option has effect when enabled
+	c, err = client.GarbageCollect(ctx, &gitalypb.GarbageCollectRequest{Repository: testRepo, Prune: true})
+	require.NoError(t, err)
+	require.NotNil(t, c)
+
+	_, err = os.Stat(oldDanglingObjFile)
+	require.True(t, os.IsNotExist(err), "blob should be removed from object storage as it is too old and there are no references to it")
+	require.FileExists(t, newDanglingObjFile, "blob should not be removed from object storage as it is fresh enough despite there are no references to it")
+	require.FileExists(t, oldReferencedObjFile, "blob should not be removed from object storage as it is referenced by something despite it is too old")
+}
+
 func TestGarbageCollectLogStatistics(t *testing.T) {
 	defer func(tl func(tb testing.TB) *logrus.Logger) {
 		testhelper.NewTestLogger = tl
