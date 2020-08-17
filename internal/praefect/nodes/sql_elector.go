@@ -336,15 +336,6 @@ func (s *sqlElector) demotePrimary() error {
 	return err
 }
 
-// targetNodeIncompleteCounts represents a row of the sql election query and is for logging purposes only
-type targetNodeIncompleteCounts struct {
-	NodeStorage string `json:"node_storage"`
-	Ready       int    `json:"ready"`
-	InProgress  int    `json:"in_progress"`
-	Failed      int    `json:"failed"`
-	Dead        int    `json:"dead"`
-}
-
 func (s *sqlElector) electNewPrimary(candidates []*sqlCandidate) error {
 	if len(candidates) == 0 {
 		return errors.New("candidates cannot be empty")
@@ -356,54 +347,33 @@ func (s *sqlElector) electNewPrimary(candidates []*sqlCandidate) error {
 		candidateStorages = append(candidateStorages, candidate.GetStorage())
 	}
 
-	q := `  SELECT target_node_storage, SUM(ready) AS ready, SUM(in_progress) AS in_progress, SUM(failed) AS failed, SUM(dead) AS dead
-	        FROM (
-	            SELECT
-	                CASE WHEN rq.state = 'ready' THEN 1 ELSE 0 END AS ready,
-	                CASE WHEN rq.state = 'in_progress' THEN 1 ELSE 0 END AS in_progress,
-	                CASE WHEN rq.state = 'failed' THEN 1 ELSE 0 END AS failed,
-	                CASE WHEN rq.state = 'dead' THEN 1 ELSE 0 END AS dead,
-	                rq.job->>'target_node_storage' AS target_node_storage
-	            FROM replication_queue AS rq
-	            JOIN (
-	            	SELECT
-	            		job->>'target_node_storage' AS target_node_storage,
-	            		MAX(updated_at) AS updated_at
-	            	FROM replication_queue
-	            	WHERE state = 'completed' AND job->>'target_node_storage' = ANY ($1) AND job->>'virtual_storage' = $2
-	            	GROUP BY job->>'target_node_storage'
-	            ) latest ON rq.job->>'target_node_storage' = latest.target_node_storage AND rq.updated_at >= latest.updated_at
-	            WHERE rq.job->>'virtual_storage' = $2
-	        ) AS t
-	        GROUP BY target_node_storage
-	        ORDER BY SUM(ready+in_progress+2*failed+2*dead)`
+	q := `
+		SELECT storages.storage
+		FROM repositories AS r
+		CROSS JOIN (SELECT UNNEST($1::TEXT[]) AS storage) AS storages
+		LEFT JOIN storage_repositories AS sr USING(virtual_storage, relative_path, storage)
+		WHERE r.virtual_storage = $2
+		GROUP BY storages.storage
+		ORDER BY SUM(r.generation - COALESCE(sr.generation, -1))
+		LIMIT 1`
 
-	rows, err := s.db.Query(q, pq.Array(candidateStorages), s.shardName)
-	if err != nil {
-		return fmt.Errorf("executing query for ordering candidate nodes: %w", err)
-	}
-	defer rows.Close()
-
-	var incompleteCounts []targetNodeIncompleteCounts
-
-	newPrimaryStorage := candidateStorages[0]
-	for rows.Next() {
-		var r targetNodeIncompleteCounts
-		if err := rows.Scan(&r.NodeStorage, &r.Ready, &r.InProgress, &r.Failed, &r.Dead); err != nil {
-			return fmt.Errorf("scanning rows for incomplete count: %w", err)
+	var newPrimaryStorage string
+	var fallbackChoice bool
+	if err := s.db.QueryRow(q, pq.StringArray(candidateStorages), s.shardName).Scan(&newPrimaryStorage); err != nil {
+		if err != sql.ErrNoRows {
+			return fmt.Errorf("retrieve potential candidate: %w", err)
 		}
 
-		incompleteCounts = append(incompleteCounts, r)
+		// the state of the repositories is undefined - use first candidate
+		newPrimaryStorage = candidateStorages[0]
+		fallbackChoice = true
 	}
 
-	if err = rows.Err(); err != nil {
-		return fmt.Errorf("getting rows for ordering candidate nodes: %w", err)
-	}
-
-	if len(incompleteCounts) > 0 {
-		newPrimaryStorage = incompleteCounts[0].NodeStorage
-		s.log.WithField("incomplete_counts", incompleteCounts).WithField("new_primary", newPrimaryStorage).Info("new primary selected")
-	}
+	s.log.WithFields(logrus.Fields{
+		"candidates":      candidateStorages,
+		"new_primary":     newPrimaryStorage,
+		"fallback_choice": fallbackChoice,
+	}).Info("new primary selected")
 
 	// read_only is set only when a row already exists in the table. This avoids new shards, which
 	// do not yet have a row in the table, from starting in read-only mode. In a failover scenario,
@@ -435,7 +405,7 @@ func (s *sqlElector) electNewPrimary(candidates []*sqlCandidate) error {
 				, demoted = false
 	   WHERE shard_primaries.elected_at < now() - INTERVAL '1 MICROSECOND' * $4
 	`
-	_, err = s.db.Exec(q, s.praefectName, s.shardName, newPrimaryStorage, failoverTimeout.Microseconds())
+	_, err := s.db.Exec(q, s.praefectName, s.shardName, newPrimaryStorage, failoverTimeout.Microseconds())
 	if err != nil {
 		s.log.Errorf("error updating new primary: %s", err)
 		return err
