@@ -1,5 +1,13 @@
 # Gitaly changelog
 
+## 13.2.6
+
+- No changes.
+
+## 13.2.5
+
+- No changes.
+
 ## 13.2.4
 
 - No changes.
@@ -69,6 +77,14 @@
 - Ensure Praefect replication queue tables exist. !2309
 - Error forwarded mutator RPCs on replication job enqueue failure. !2332
 
+
+## 13.1.8
+
+- No changes.
+
+## 13.1.7
+
+- No changes.
 
 ## 13.1.6
 
@@ -157,6 +173,14 @@
 - Bump Ruby to v2.6.6. !2231
 - danger: Suggest merge request ID in the changelog. !2254
 
+
+## 13.0.14
+
+- No changes.
+
+## 13.0.13
+
+- No changes.
 
 ## 13.0.12
 
