@@ -222,7 +222,7 @@ func (n *Mgr) GetSyncedNode(ctx context.Context, virtualStorageName, repoPath st
 		return nil, fmt.Errorf("get shard for %q: %w", virtualStorageName, err)
 	}
 
-	if !featureflag.IsEnabled(ctx, featureflag.DistributedReads) {
+	if featureflag.IsDisabled(ctx, featureflag.DistributedReads) {
 		return shard.Primary, nil
 	}
 
