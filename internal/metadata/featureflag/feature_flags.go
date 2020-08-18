@@ -33,6 +33,8 @@ var (
 	// ReferenceTransactionHook will enable the reference-transaction hook
 	// introduced with Git v2.28.0 for voting on transactions
 	ReferenceTransactionHook = FeatureFlag{Name: "reference_transaction_hook", OnByDefault: false}
+	// LogCommandStats will log additional rusage stats for commands
+	LogCommandStats = FeatureFlag{Name: "log_command_stats", OnByDefault: false}
 )
 
 // All includes all feature flags.

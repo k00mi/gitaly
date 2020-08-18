@@ -17,6 +17,7 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 )
 
 const (
@@ -405,12 +406,30 @@ func (c *Command) logProcessComplete(ctx context.Context, exitCode int) {
 		"command.real_time_ms":   realTime.Seconds() * 1000,
 	})
 
-	if rusage, ok := cmd.ProcessState.SysUsage().(*syscall.Rusage); ok {
+	rusage, ok := cmd.ProcessState.SysUsage().(*syscall.Rusage)
+	if ok {
 		entry = entry.WithFields(logrus.Fields{
 			"command.maxrss":  rusage.Maxrss,
 			"command.inblock": rusage.Inblock,
 			"command.oublock": rusage.Oublock,
 		})
+	}
+
+	if featureflag.IsEnabled(ctx, featureflag.LogCommandStats) {
+		stats := StatsFromContext(ctx)
+
+		stats.RecordSum("command.count", 1)
+		stats.RecordSum("command.system_time_ms", int(systemTime.Seconds()*1000))
+		stats.RecordSum("command.user_time_ms", int(userTime.Seconds()*1000))
+		stats.RecordSum("command.real_time_ms", int(realTime.Seconds()*1000))
+
+		if ok {
+			stats.RecordMax("command.maxrss", int(rusage.Maxrss))
+			stats.RecordSum("command.inblock", int(rusage.Inblock))
+			stats.RecordSum("command.oublock", int(rusage.Oublock))
+			stats.RecordSum("command.minflt", int(rusage.Minflt))
+			stats.RecordSum("command.majflt", int(rusage.Majflt))
+		}
 	}
 
 	entry.Debug("spawn complete")
