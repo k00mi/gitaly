@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
@@ -39,7 +40,7 @@ func TestSuccessfulUserDeleteTagRequest(t *testing.T) {
 
 			tagNameInput := "to-be-deleted-soon-tag"
 
-			defer exec.Command("git", "-C", testRepoPath, "tag", "-d", tagNameInput).Run()
+			defer exec.Command(command.GitPath(), "-C", testRepoPath, "tag", "-d", tagNameInput).Run()
 
 			testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", tagNameInput)
 
@@ -84,7 +85,7 @@ func testSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T, ctx context.Con
 	defer cleanupFn()
 
 	tagNameInput := "to-be-déleted-soon-tag"
-	defer exec.Command("git", "-C", testRepoPath, "tag", "-d", tagNameInput).Run()
+	defer exec.Command(command.GitPath(), "-C", testRepoPath, "tag", "-d", tagNameInput).Run()
 
 	request := &gitalypb.UserDeleteTagRequest{
 		Repository: testRepo,
@@ -195,7 +196,7 @@ func TestSuccessfulUserCreateTagRequest(t *testing.T) {
 					require.NoError(t, err, "error from calling RPC")
 					require.Empty(t, response.PreReceiveError, "PreReceiveError must be empty, signalling the push was accepted")
 
-					defer exec.Command("git", "-C", testRepoPath, "tag", "-d", inputTagName).Run()
+					defer exec.Command(command.GitPath(), "-C", testRepoPath, "tag", "-d", inputTagName).Run()
 
 					id := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", inputTagName)
 					testCase.expectedTag.Id = text.ChompBytes(id)
@@ -241,7 +242,7 @@ func testSuccessfulGitHooksForUserCreateTagRequest(t *testing.T, ctx context.Con
 
 	for _, hookName := range GitlabHooks {
 		t.Run(hookName, func(t *testing.T) {
-			defer exec.Command("git", "-C", testRepoPath, "tag", "-d", tagName).Run()
+			defer exec.Command(command.GitPath(), "-C", testRepoPath, "tag", "-d", tagName).Run()
 
 			hookOutputTempPath, cleanup := testhelper.WriteEnvToCustomHook(t, testRepoPath, hookName)
 			defer cleanup()
@@ -329,7 +330,7 @@ func testFailedUserDeleteTagDueToHooks(t *testing.T, ctx context.Context) {
 
 	tagNameInput := "to-be-deleted-soon-tag"
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", tagNameInput)
-	defer exec.Command("git", "-C", testRepoPath, "tag", "-d", tagNameInput).Run()
+	defer exec.Command(command.GitPath(), "-C", testRepoPath, "tag", "-d", tagNameInput).Run()
 
 	request := &gitalypb.UserDeleteTagRequest{
 		Repository: testRepo,

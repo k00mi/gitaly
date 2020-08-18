@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/archive"
+	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -127,7 +128,7 @@ func TestGetSnapshotWithDedupe(t *testing.T) {
 			const committerName = "Scrooge McDuck"
 			const committerEmail = "scrooge@mcduck.com"
 
-			cmd := exec.Command("git", "-C", repoPath,
+			cmd := exec.Command(command.GitPath(), "-C", repoPath,
 				"-c", fmt.Sprintf("user.name=%s", committerName),
 				"-c", fmt.Sprintf("user.email=%s", committerEmail),
 				"commit", "--allow-empty", "-m", "An empty commit")
@@ -147,7 +148,7 @@ func TestGetSnapshotWithDedupe(t *testing.T) {
 			require.NoError(t, ioutil.WriteFile(alternatesPath, []byte(path.Join(repoPath, ".git", fmt.Sprintf("%s\n", alternateObjDir))), 0644))
 
 			// write another commit and ensure we can find it
-			cmd = exec.Command("git", "-C", repoPath,
+			cmd = exec.Command(command.GitPath(), "-C", repoPath,
 				"-c", fmt.Sprintf("user.name=%s", committerName),
 				"-c", fmt.Sprintf("user.email=%s", committerEmail),
 				"commit", "--allow-empty", "-m", "Another empty commit")
@@ -203,7 +204,7 @@ func TestGetSnapshotWithDedupeSoftFailures(t *testing.T) {
 	committerName := "Scrooge McDuck"
 	committerEmail := "scrooge@mcduck.com"
 
-	cmd := exec.Command("git", "-C", repoPath,
+	cmd := exec.Command(command.GitPath(), "-C", repoPath,
 		"-c", fmt.Sprintf("user.name=%s", committerName),
 		"-c", fmt.Sprintf("user.email=%s", committerEmail),
 		"commit", "--allow-empty", "-m", "An empty commit")

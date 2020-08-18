@@ -216,15 +216,17 @@ func MustRunCommand(t testing.TB, stdin io.Reader, name string, args ...string) 
 		t.Helper()
 	}
 
-	cmd := exec.Command(name, args...)
-
+	var cmd *exec.Cmd
 	if name == "git" {
+		cmd = exec.Command(command.GitPath(), args...)
 		cmd.Env = os.Environ()
 		cmd.Env = append(command.GitEnv, cmd.Env...)
 		cmd.Env = append(cmd.Env,
 			"GIT_AUTHOR_DATE=1572776879 +0100",
 			"GIT_COMMITTER_DATE=1572776879 +0100",
 		)
+	} else {
+		cmd = exec.Command(name, args...)
 	}
 
 	if stdin != nil {
@@ -678,7 +680,7 @@ func GitObjectMustNotExist(t testing.TB, repoPath, sha string) {
 }
 
 func gitObjectExists(t testing.TB, repoPath, sha string, exists bool) {
-	cmd := exec.Command("git", "-C", repoPath, "cat-file", "-e", sha)
+	cmd := exec.Command(command.GitPath(), "-C", repoPath, "cat-file", "-e", sha)
 	cmd.Env = []string{
 		"GIT_ALLOW_PROTOCOL=", // To prevent partial clone reaching remote repo over SSH
 	}
