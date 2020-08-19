@@ -286,12 +286,6 @@ func TestUploadPackCloneWithPartialCloneFilter(t *testing.T) {
 }
 
 func TestUploadPackCloneSuccessWithGitProtocol(t *testing.T) {
-	restore := testhelper.EnableGitProtocolV2Support()
-	defer restore()
-
-	serverSocketPath, stop := runSSHServer(t)
-	defer stop()
-
 	localRepoPath := path.Join(testRepoRoot, "gitlab-test-upload-pack-local")
 
 	tests := []struct {
@@ -310,6 +304,12 @@ func TestUploadPackCloneSuccessWithGitProtocol(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
+			restore := testhelper.EnableGitProtocolV2Support(t)
+			defer restore()
+
+			serverSocketPath, stop := runSSHServer(t)
+			defer stop()
+
 			cmd := cloneCommand{
 				repository:  testRepo,
 				command:     tc.cmd,
@@ -323,7 +323,7 @@ func TestUploadPackCloneSuccessWithGitProtocol(t *testing.T) {
 			envData, err := testhelper.GetGitEnvData()
 
 			require.NoError(t, err)
-			require.Equal(t, fmt.Sprintf("GIT_PROTOCOL=%s\n", git.ProtocolV2), envData)
+			require.Contains(t, envData, fmt.Sprintf("GIT_PROTOCOL=%s\n", git.ProtocolV2))
 		})
 	}
 }

@@ -111,7 +111,7 @@ func TestReceivePackPushSuccess(t *testing.T) {
 }
 
 func TestReceivePackPushSuccessWithGitProtocol(t *testing.T) {
-	restore := testhelper.EnableGitProtocolV2Support()
+	restore := testhelper.EnableGitProtocolV2Support(t)
 	defer restore()
 
 	serverSocketPath, stop := runSSHServer(t)
@@ -127,7 +127,7 @@ func TestReceivePackPushSuccessWithGitProtocol(t *testing.T) {
 	envData, err := testhelper.GetGitEnvData()
 
 	require.NoError(t, err)
-	require.Equal(t, fmt.Sprintf("GIT_PROTOCOL=%s\n", git.ProtocolV2), envData)
+	require.Contains(t, envData, fmt.Sprintf("GIT_PROTOCOL=%s\n", git.ProtocolV2))
 }
 
 func TestReceivePackPushFailure(t *testing.T) {
@@ -212,7 +212,7 @@ func TestSSHReceivePackToHooks(t *testing.T) {
 	glRepository := "some_repo"
 	glID := "key-123"
 
-	restore := testhelper.EnableGitProtocolV2Support()
+	restore := testhelper.EnableGitProtocolV2Support(t)
 	defer restore()
 
 	serverSocketPath, stop := runSSHServer(t)
@@ -262,7 +262,7 @@ func TestSSHReceivePackToHooks(t *testing.T) {
 	envData, err := testhelper.GetGitEnvData()
 
 	require.NoError(t, err)
-	require.Equal(t, fmt.Sprintf("GIT_PROTOCOL=%s\n", git.ProtocolV2), envData)
+	require.Contains(t, envData, fmt.Sprintf("GIT_PROTOCOL=%s\n", git.ProtocolV2))
 }
 
 // SSHCloneDetails encapsulates values relevant for a test clone
@@ -322,9 +322,9 @@ func sshPush(t *testing.T, cloneDetails SSHCloneDetails, serverSocketPath string
 	cmd.Env = []string{
 		fmt.Sprintf("GITALY_PAYLOAD=%s", payload),
 		fmt.Sprintf("GITALY_ADDRESS=%s", serverSocketPath),
-		fmt.Sprintf("PATH=%s", ".:"+os.Getenv("PATH")),
 		fmt.Sprintf(`GIT_SSH_COMMAND=%s receive-pack`, gitalySSHPath),
 	}
+
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", "", fmt.Errorf("error pushing: %v: %q", err, out)

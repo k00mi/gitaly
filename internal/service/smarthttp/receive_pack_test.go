@@ -83,7 +83,7 @@ func TestSuccessfulReceivePackRequest(t *testing.T) {
 }
 
 func TestSuccessfulReceivePackRequestWithGitProtocol(t *testing.T) {
-	restore := testhelper.EnableGitProtocolV2Support()
+	restore := testhelper.EnableGitProtocolV2Support(t)
 	defer restore()
 
 	serverSocketPath, stop := runSmartHTTPServer(t)
