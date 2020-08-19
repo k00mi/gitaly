@@ -330,31 +330,6 @@ func (rq PostgresReplicationEventQueue) Acknowledge(ctx context.Context, state J
 	return acknowledged.Values(), nil
 }
 
-func (rq PostgresReplicationEventQueue) GetUpToDateStorages(ctx context.Context, virtualStorage, repoPath string) ([]string, error) {
-	query := `
-		SELECT storage
-		FROM (
-			SELECT DISTINCT ON (job ->> 'target_node_storage')
-				job ->> 'target_node_storage' AS storage,
-				state
-			FROM replication_queue
-			WHERE job ->> 'virtual_storage' = $1 AND job ->> 'relative_path' = $2
-			ORDER BY job ->> 'target_node_storage', updated_at DESC NULLS FIRST
-		) t
-		WHERE state = 'completed'`
-	rows, err := rq.qc.QueryContext(ctx, query, virtualStorage, repoPath)
-	if err != nil {
-		return nil, fmt.Errorf("query: %w", err)
-	}
-
-	var storages glsql.StringProvider
-	if err := glsql.ScanAll(rows, &storages); err != nil {
-		return nil, fmt.Errorf("scan: %w", err)
-	}
-
-	return storages.Values(), nil
-}
-
 // StartHealthUpdate starts periodical update of the event's health identifier.
 // The events with fresh health identifier won't be considered as stale.
 // The health update will be executed on each new entry received from trigger channel passed in.

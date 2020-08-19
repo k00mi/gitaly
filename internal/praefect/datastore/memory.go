@@ -195,30 +195,6 @@ func (s *memoryReplicationEventQueue) Acknowledge(_ context.Context, state JobSt
 	return result, nil
 }
 
-func (s *memoryReplicationEventQueue) GetUpToDateStorages(_ context.Context, virtualStorage, repoPath string) ([]string, error) {
-	s.RLock()
-	dirtyStorages := make(map[string]struct{})
-	for dst, event := range s.lastEventByDest {
-		if dst.virtual == virtualStorage && dst.relativePath == repoPath && event.State != JobStateCompleted {
-			dirtyStorages[event.Job.TargetNodeStorage] = struct{}{}
-		}
-	}
-	s.RUnlock()
-
-	storageNames, found := s.storageNamesByVirtualStorage[virtualStorage]
-	if !found {
-		return nil, nil
-	}
-
-	var result []string
-	for _, storage := range storageNames {
-		if _, found := dirtyStorages[storage]; !found {
-			result = append(result, storage)
-		}
-	}
-	return result, nil
-}
-
 // StartHealthUpdate does nothing as it has no sense in terms of in-memory implementation as
 // all information about events will be lost after restart.
 func (s *memoryReplicationEventQueue) StartHealthUpdate(context.Context, <-chan time.Time, []ReplicationEvent) error {
