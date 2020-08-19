@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
 	"sync"
 	"time"
 
@@ -194,43 +193,6 @@ func (s *memoryReplicationEventQueue) Acknowledge(_ context.Context, state JobSt
 	}
 
 	return result, nil
-}
-
-func (s *memoryReplicationEventQueue) GetOutdatedRepositories(ctx context.Context, virtualStorage string, referenceStorage string) (map[string][]string, error) {
-	s.RLock()
-	defer s.RUnlock()
-	outdatedRepositories := make(map[string][]string)
-	for _, event := range s.lastEventByDest {
-		// ensure the event is in the virtual storage we are checking and it is not targeting
-		// the reference node
-		if event.Job.VirtualStorage != virtualStorage ||
-			event.Job.TargetNodeStorage == referenceStorage ||
-			// ensure the event satisfies the rules specified in the ReplicationEventQueue
-			// interface documentation
-			event.Job.SourceNodeStorage == referenceStorage && event.State == JobStateCompleted {
-			continue
-		}
-
-		nodeAlreadyListed := false
-		for _, node := range outdatedRepositories[event.Job.RelativePath] {
-			if node == event.Job.TargetNodeStorage {
-				nodeAlreadyListed = true
-				break
-			}
-		}
-
-		if nodeAlreadyListed {
-			continue
-		}
-
-		outdatedRepositories[event.Job.RelativePath] = append(outdatedRepositories[event.Job.RelativePath], event.Job.TargetNodeStorage)
-	}
-
-	for _, slc := range outdatedRepositories {
-		sort.Strings(slc)
-	}
-
-	return outdatedRepositories, nil
 }
 
 func (s *memoryReplicationEventQueue) GetUpToDateStorages(_ context.Context, virtualStorage, repoPath string) ([]string, error) {
