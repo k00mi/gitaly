@@ -18,6 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
+	"gitlab.com/gitlab-org/labkit/tracing"
 )
 
 const (
@@ -55,6 +56,8 @@ var exportedEnvVars = []string{
 	"no_proxy",
 	"NO_PROXY",
 }
+
+var envInjector = tracing.NewEnvInjector()
 
 const (
 	// MaxStderrBytes is at most how many bytes will be written to stderr
@@ -200,6 +203,7 @@ func New(ctx context.Context, cmd *exec.Cmd, stdin io.Reader, stdout, stderr io.
 
 	// Export env vars
 	cmd.Env = append(env, AllowedEnvironment()...)
+	cmd.Env = envInjector(ctx, cmd.Env)
 
 	// Start the command in its own process group (nice for signalling)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
