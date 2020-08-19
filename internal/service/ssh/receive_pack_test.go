@@ -248,7 +248,8 @@ func TestSSHReceivePackToHooks(t *testing.T) {
 	config.Config.Gitlab.URL = ts.URL
 	config.Config.Gitlab.SecretFile = filepath.Join(tempGitlabShellDir, ".gitlab_shell_secret")
 
-	testhelper.WriteCustomHook(cloneDetails.RemoteRepoPath, "pre-receive", []byte(testhelper.CheckNewObjectExists))
+	cleanup = testhelper.WriteCheckNewObjectExistsHook(t, cloneDetails.RemoteRepoPath)
+	defer cleanup()
 
 	lHead, rHead, err := sshPush(t, cloneDetails, serverSocketPath, pushParams{
 		storageName:  testRepo.GetStorageName(),

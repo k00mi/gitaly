@@ -764,17 +764,26 @@ func WriteExecutable(path string, content []byte) (func(), error) {
 	}, ioutil.WriteFile(path, content, 0755)
 }
 
-// CheckNewObjectExists is a script meant to be used as a pre-receive custom hook.
-// It only succeeds if it can find the object in the quarantine directory.
-// if GIT_OBJECT_DIRECTORY and GIT_ALTERNATE_OBJECT_DIRECTORIES were not passed through correctly to the hooks,
-// it will fail
-const CheckNewObjectExists = `#!/usr/bin/env ruby
+// WriteCheckNewObjectExistsHook writes a pre-receive hook which only succeeds
+// if it can find the object in the quarantine directory. if
+// GIT_OBJECT_DIRECTORY and GIT_ALTERNATE_OBJECT_DIRECTORIES were not passed
+// through correctly to the hooks, it will fail
+func WriteCheckNewObjectExistsHook(t *testing.T, repoPath string) func() {
+	hook := fmt.Sprintf(`#!/usr/bin/env ruby
 STDIN.each_line do |line|
   new_object = line.split(' ')[1]
   exit 1 unless new_object
-  exit 1 unless	system(*%W[git cat-file -e #{new_object}])
+  exit 1 unless	system(*%%W[%s cat-file -e #{new_object}])
 end
-`
+`, command.GitPath())
+
+	ioutil.WriteFile("/tmp/file", []byte(hook), 0644)
+
+	cleanup, err := WriteCustomHook(repoPath, "pre-receive", []byte(hook))
+	require.NoError(t, err)
+
+	return cleanup
+}
 
 func WriteBlobs(t testing.TB, testRepoPath string, n int) []string {
 	var blobIDs []string

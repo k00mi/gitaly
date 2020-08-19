@@ -3,9 +3,10 @@ package operations
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -109,6 +110,65 @@ func testSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T, ctx context.Con
 	}
 }
 
+func writeAssertObjectTypePreReceiveHook(t *testing.T) (string, func()) {
+	t.Helper()
+
+	hook := fmt.Sprintf(`#!/usr/bin/env ruby
+
+commands = STDIN.each_line.map(&:chomp)
+unless commands.size == 1
+  abort "expected 1 ref update command, got #{commands.size}"
+end
+
+new_value = commands[0].split(' ', 3)[1]
+abort 'missing new_value' unless new_value
+
+out = IO.popen(%%W[%s cat-file -t #{new_value}], &:read)
+abort 'cat-file failed' unless $?.success?
+
+unless out.chomp == ARGV[0]
+  abort "error: expected #{ARGV[0]} object, got #{out}"
+end`, command.GitPath())
+
+	dir, err := ioutil.TempDir("", "gitaly-temp-dir-*")
+	require.NoError(t, err)
+	hookPath := path.Join(dir, "pre-receive")
+
+	require.NoError(t, ioutil.WriteFile(hookPath, []byte(hook), 0755))
+
+	return hookPath, func() {
+		os.RemoveAll(dir)
+	}
+}
+
+func writeAssertObjectTypeUpdateHook(t *testing.T) (string, func()) {
+	t.Helper()
+
+	hook := fmt.Sprintf(`#!/usr/bin/env ruby
+
+expected_object_type = ARGV.shift
+new_value = ARGV[2]
+
+abort "missing new_value" unless new_value
+
+out = IO.popen(%%W[%s cat-file -t #{new_value}], &:read)
+abort 'cat-file failed' unless $?.success?
+
+unless out.chomp == expected_object_type
+  abort "error: expected #{expected_object_type} object, got #{out}"
+end`, command.GitPath())
+
+	dir, err := ioutil.TempDir("", "gitaly-temp-dir-*")
+	require.NoError(t, err)
+	hookPath := path.Join(dir, "pre-receive")
+
+	require.NoError(t, ioutil.WriteFile(hookPath, []byte(hook), 0755))
+
+	return hookPath, func() {
+		os.RemoveAll(dir)
+	}
+}
+
 func TestSuccessfulUserCreateTagRequest(t *testing.T) {
 	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.ReferenceTransactions})
 	require.NoError(t, err)
@@ -135,10 +195,11 @@ func TestSuccessfulUserCreateTagRequest(t *testing.T) {
 
 			inputTagName := "to-be-créated-soon"
 
-			cwd, err := os.Getwd()
-			require.NoError(t, err)
-			preReceiveHook := filepath.Join(cwd, "testdata/pre-receive-expect-object-type")
-			updateHook := filepath.Join(cwd, "testdata/update-expect-object-type")
+			preReceiveHook, cleanup := writeAssertObjectTypePreReceiveHook(t)
+			defer cleanup()
+
+			updateHook, cleanup := writeAssertObjectTypeUpdateHook(t)
+			defer cleanup()
 
 			testCases := []struct {
 				desc               string
