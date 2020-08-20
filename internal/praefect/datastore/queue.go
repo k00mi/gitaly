@@ -26,10 +26,6 @@ type ReplicationEventQueue interface {
 	// 'completed'. Otherwise it won't be changed.
 	// It returns sub-set of passed in ids that were updated.
 	Acknowledge(ctx context.Context, state JobState, ids []uint64) ([]uint64, error)
-	// GetOutdatedRepositories returns storages by repositories which are considered outdated. A repository is considered
-	// outdated if the latest replication job is not in 'complete' state or the latest replication job does not originate
-	// from the reference storage.
-	GetOutdatedRepositories(ctx context.Context, virtualStorage string, referenceStorage string) (map[string][]string, error)
 	// StartHealthUpdate starts periodical update of the event's health identifier.
 	// The events with fresh health identifier won't be considered as stale.
 	// The health update will be executed on each new entry received from trigger channel passed in.
@@ -332,71 +328,6 @@ func (rq PostgresReplicationEventQueue) Acknowledge(ctx context.Context, state J
 	}
 
 	return acknowledged.Values(), nil
-}
-
-func (rq PostgresReplicationEventQueue) GetOutdatedRepositories(ctx context.Context, virtualStorage, reference string) (map[string][]string, error) {
-	const q = `
-WITH latest_jobs AS (
-	SELECT DISTINCT ON (repository, target)
-		job->>'relative_path' AS repository,
-		job->>'target_node_storage' AS target,
-		job->>'source_node_storage' AS source,
-		state
-	FROM replication_queue
-	WHERE job->>'virtual_storage' = $1 AND
-		job->>'target_node_storage' != $2
-	ORDER BY repository, target, updated_at DESC NULLS FIRST
-)
-
-SELECT repository, target
-FROM latest_jobs
-WHERE state != 'completed' OR source != $2
-ORDER BY repository, target
-`
-
-	rows, err := rq.qc.QueryContext(ctx, q, virtualStorage, reference)
-	if err != nil {
-		return nil, err
-	}
-
-	defer rows.Close()
-
-	nodesByRepo := map[string][]string{}
-	for rows.Next() {
-		var repo, node string
-		if err := rows.Scan(&repo, &node); err != nil {
-			return nil, err
-		}
-
-		nodesByRepo[repo] = append(nodesByRepo[repo], node)
-	}
-
-	return nodesByRepo, rows.Err()
-}
-
-func (rq PostgresReplicationEventQueue) GetUpToDateStorages(ctx context.Context, virtualStorage, repoPath string) ([]string, error) {
-	query := `
-		SELECT storage
-		FROM (
-			SELECT DISTINCT ON (job ->> 'target_node_storage')
-				job ->> 'target_node_storage' AS storage,
-				state
-			FROM replication_queue
-			WHERE job ->> 'virtual_storage' = $1 AND job ->> 'relative_path' = $2
-			ORDER BY job ->> 'target_node_storage', updated_at DESC NULLS FIRST
-		) t
-		WHERE state = 'completed'`
-	rows, err := rq.qc.QueryContext(ctx, query, virtualStorage, repoPath)
-	if err != nil {
-		return nil, fmt.Errorf("query: %w", err)
-	}
-
-	var storages glsql.StringProvider
-	if err := glsql.ScanAll(rows, &storages); err != nil {
-		return nil, fmt.Errorf("scan: %w", err)
-	}
-
-	return storages.Values(), nil
 }
 
 // StartHealthUpdate starts periodical update of the event's health identifier.
