@@ -1,0 +1,5 @@
+---
+title: Fix Git hooks when GitLab relative URL path and UNIX socket in use
+merge_request: 2485
+author:
+type: fixed
