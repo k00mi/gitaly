@@ -18,11 +18,11 @@ service SmartHTTPService {
   }
 
   // The response body for GET /info/refs?service=git-receive-pack
-  // Will be invoked when the user executes a `git push`, meaning the server
-  // will receive new objects in the pack from the user.
+  // Will be invoked when the user executes a `git push`, but only advertises
+  // references to the user.
   rpc InfoRefsReceivePack(InfoRefsRequest) returns (stream InfoRefsResponse) {
     option (op_type) = {
-      op: MUTATOR
+      op: ACCESSOR
     };
   }
 
