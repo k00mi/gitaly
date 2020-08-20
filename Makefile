@@ -205,7 +205,9 @@ verify: check-mod-tidy check-formatting notice-up-to-date check-proto rubocop
 
 .PHONY: check-mod-tidy
 check-mod-tidy:
-	${Q}${SOURCE_DIR}/_support/check-mod-tidy
+	${Q}${GIT} diff --quiet --exit-code go.mod go.sum || (echo "error: uncommitted changes in go.mod or go.sum" && exit 1)
+	${Q}go mod tidy
+	${Q}${GIT} diff --quiet --exit-code go.mod go.sum || (echo "error: uncommitted changes in go.mod or go.sum" && exit 1)
 
 .PHONY: lint
 lint: ${GOLANGCI_LINT}
