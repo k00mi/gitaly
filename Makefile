@@ -395,8 +395,7 @@ ${GOIMPORTS}: ${BUILD_DIR}/Makefile.sha256 ${BUILD_DIR}/go.mod
 ifeq (${GIT_USE_PREBUILT_BINARIES},)
 ${GIT_INSTALL_DIR}/bin/git: ${BUILD_DIR}/Makefile.sha256 | ${BUILD_DIR}
 	${Q}rm -rf ${GIT_SOURCE_DIR} ${GIT_INSTALL_DIR}
-	${GIT} clone ${GIT_REPO_URL} ${GIT_SOURCE_DIR}
-	${GIT} -C ${GIT_SOURCE_DIR} checkout ${GIT_VERSION}
+	${GIT} clone --depth 1 --branch ${GIT_VERSION} --quiet ${GIT_REPO_URL} ${GIT_SOURCE_DIR}
 	${Q}rm -rf ${GIT_INSTALL_DIR}
 	${Q}mkdir -p ${GIT_INSTALL_DIR}
 	${MAKE} -C ${GIT_SOURCE_DIR} -j$(shell nproc) prefix=${GIT_PREFIX} ${GIT_BUILD_OPTIONS} install
