@@ -9,12 +9,13 @@ import (
 	"regexp"
 	"time"
 
+	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git/pktline"
 )
 
 func simulateHTTPClone(gitDir string) {
 	msg("Generating server response for HTTP clone. Data goes to /dev/null.")
-	infoRefs := exec.Command("git", "upload-pack", "--stateless-rpc", "--advertise-refs", gitDir)
+	infoRefs := exec.Command(command.GitPath(), "upload-pack", "--stateless-rpc", "--advertise-refs", gitDir)
 	infoRefs.Stderr = os.Stderr
 	out, err := infoRefs.StdoutPipe()
 	noError(err)
@@ -57,7 +58,7 @@ func simulateHTTPClone(gitDir string) {
 	}
 	fmt.Fprint(request, "00000009done\n")
 
-	uploadPack := exec.Command("git", "upload-pack", "--stateless-rpc", gitDir)
+	uploadPack := exec.Command(command.GitPath(), "upload-pack", "--stateless-rpc", gitDir)
 	uploadPack.Stdin = request
 	uploadPack.Stderr = os.Stderr
 	out, err = uploadPack.StdoutPipe()

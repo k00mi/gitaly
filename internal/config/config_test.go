@@ -438,6 +438,10 @@ func TestValidateHooks(t *testing.T) {
 }
 
 func TestLoadGit(t *testing.T) {
+	defer func(oldGitSettings Git) {
+		Config.Git = oldGitSettings
+	}(Config.Git)
+
 	tmpFile := configFileReader(`[git]
 bin_path = "/my/git/path"
 catfile_cache_size = 50
@@ -455,10 +459,13 @@ func TestSetGitPath(t *testing.T) {
 		Config.Git = oldGitSettings
 	}(Config.Git)
 
-	resolvedGitPath, err := exec.LookPath("git")
-
-	if err != nil {
-		t.Fatal(err)
+	var resolvedGitPath string
+	if path, ok := os.LookupEnv("GITALY_TESTING_GIT_BINARY"); ok {
+		resolvedGitPath = path
+	} else {
+		path, err := exec.LookPath("git")
+		require.NoError(t, err)
+		resolvedGitPath = path
 	}
 
 	testCases := []struct {
@@ -479,11 +486,11 @@ func TestSetGitPath(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		Config.Git.BinPath = tc.gitBinPath
-
-		SetGitPath()
-
-		assert.Equal(t, tc.expected, Config.Git.BinPath, tc.desc)
+		t.Run(tc.desc, func(t *testing.T) {
+			Config.Git.BinPath = tc.gitBinPath
+			SetGitPath()
+			assert.Equal(t, tc.expected, Config.Git.BinPath, tc.desc)
+		})
 	}
 }
 

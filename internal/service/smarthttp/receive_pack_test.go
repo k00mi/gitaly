@@ -83,7 +83,7 @@ func TestSuccessfulReceivePackRequest(t *testing.T) {
 }
 
 func TestSuccessfulReceivePackRequestWithGitProtocol(t *testing.T) {
-	restore := testhelper.EnableGitProtocolV2Support()
+	restore := testhelper.EnableGitProtocolV2Support(t)
 	defer restore()
 
 	serverSocketPath, stop := runSmartHTTPServer(t)
@@ -416,7 +416,8 @@ func testPostReceivePackToHooks(t *testing.T, ctx context.Context) {
 	testhelper.WriteTemporaryGitlabShellConfigFile(t, tempGitlabShellDir, testhelper.GitlabShellConfig{GitlabURL: ts.URL})
 	testhelper.WriteShellSecretFile(t, tempGitlabShellDir, secretToken)
 
-	testhelper.WriteCustomHook(testRepoPath, "pre-receive", []byte(testhelper.CheckNewObjectExists))
+	cleanup = testhelper.WriteCheckNewObjectExistsHook(t, testRepoPath)
+	defer cleanup()
 
 	config.Config.Gitlab.URL = ts.URL
 	config.Config.Gitlab.SecretFile = filepath.Join(tempGitlabShellDir, ".gitlab_shell_secret")
