@@ -1,0 +1,5 @@
+---
+title: Move fake git path to test target
+merge_request: 2490
+author:
+type: fixed

@@ -114,7 +114,7 @@ find_go_packages = $(dir $(call find_go_sources, 's|[^/]*\.go||'))
 unexport GOROOT
 export GOBIN                      = ${BUILD_DIR}/bin
 export GOPROXY                   ?= https://proxy.golang.org
-export PATH                      := ${SOURCE_DIR}/internal/testhelper/testdata/home/bin:${BUILD_DIR}/bin:${PATH}
+export PATH                      := ${BUILD_DIR}/bin:${PATH}
 export GITALY_TESTING_GIT_BINARY ?= ${GIT}
 
 .NOTPARALLEL:
@@ -168,6 +168,7 @@ binaries: assemble
 prepare-tests: ${GITLAB_SHELL_DIR}/config.yml ${TEST_REPO} ${TEST_REPO_GIT} ${SOURCE_DIR}/.ruby-bundle
 
 .PHONY: test
+test: export PATH := ${SOURCE_DIR}/internal/testhelper/testdata/home/bin:${PATH}
 test: test-go rspec rspec-gitlab-shell
 
 .PHONY: test-go
