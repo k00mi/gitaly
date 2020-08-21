@@ -351,7 +351,7 @@ ${PROTOC}: ${BUILD_DIR}/protoc.zip | ${BUILD_DIR}
 # depending on the timestamp of the Makefile, which will change e.g. between
 # jobs of a CI pipeline, we start depending on its hash. Like this, we only
 # rebuild if the Makefile actually has changed contents.
-${BUILD_DIR}/Makefile.sha256: FORCE | ${BUILD_DIR}
+${BUILD_DIR}/Makefile.sha256: Makefile | ${BUILD_DIR}
 	${Q}shasum -a256 -c $@ >/dev/null 2>&1 || >$@ shasum -a256 Makefile
 
 ${BUILD_DIR}/protoc.zip: ${BUILD_DIR}/Makefile.sha256
@@ -404,6 +404,3 @@ ${TEST_REPO_GIT}:
 
 ${GITLAB_SHELL_DIR}/config.yml: ${GITLAB_SHELL_DIR}/config.yml.example
 	cp $< $@
-
-.PHONY: FORCE
-FORCE:
