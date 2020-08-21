@@ -401,7 +401,7 @@ func testPostReceivePackToHooks(t *testing.T, ctx context.Context) {
 
 	changes := fmt.Sprintf("%s %s refs/heads/master\n", oldHead, push.newHead)
 
-	ts := testhelper.NewGitlabTestServer(testhelper.GitlabTestServerOptions{
+	serverURL, cleanup := testhelper.NewGitlabTestServer(t, testhelper.GitlabTestServerOptions{
 		User:                        "",
 		Password:                    "",
 		SecretToken:                 secretToken,
@@ -411,15 +411,15 @@ func testPostReceivePackToHooks(t *testing.T, ctx context.Context) {
 		PostReceiveCounterDecreased: true,
 		Protocol:                    "http",
 	})
-	defer ts.Close()
+	defer cleanup()
 
-	testhelper.WriteTemporaryGitlabShellConfigFile(t, tempGitlabShellDir, testhelper.GitlabShellConfig{GitlabURL: ts.URL})
+	testhelper.WriteTemporaryGitlabShellConfigFile(t, tempGitlabShellDir, testhelper.GitlabShellConfig{GitlabURL: serverURL})
 	testhelper.WriteShellSecretFile(t, tempGitlabShellDir, secretToken)
 
 	cleanup = testhelper.WriteCheckNewObjectExistsHook(t, testRepoPath)
 	defer cleanup()
 
-	config.Config.Gitlab.URL = ts.URL
+	config.Config.Gitlab.URL = serverURL
 	config.Config.Gitlab.SecretFile = filepath.Join(tempGitlabShellDir, ".gitlab_shell_secret")
 
 	cwd, err := os.Getwd()
@@ -499,8 +499,8 @@ func TestPostReceiveWithTransactionsViaPraefect(t *testing.T) {
 				RepoPath:     repoPath,
 			}
 
-			gitlabServer := testhelper.NewGitlabTestServer(opts)
-			defer gitlabServer.Close()
+			serverURL, cleanup := testhelper.NewGitlabTestServer(t, opts)
+			defer cleanup()
 
 			gitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
 			defer cleanup()
@@ -508,14 +508,14 @@ func TestPostReceiveWithTransactionsViaPraefect(t *testing.T) {
 			testhelper.WriteTemporaryGitlabShellConfigFile(t,
 				gitlabShellDir,
 				testhelper.GitlabShellConfig{
-					GitlabURL: gitlabServer.URL,
+					GitlabURL: serverURL,
 					HTTPSettings: testhelper.HTTPSettings{
 						User:     gitlabUser,
 						Password: gitlabPassword,
 					},
 				})
 
-			config.Config.Gitlab.URL = gitlabServer.URL
+			config.Config.Gitlab.URL = serverURL
 			config.Config.Gitlab.HTTPSettings.User = gitlabUser
 			config.Config.Gitlab.HTTPSettings.Password = gitlabPassword
 			config.Config.Gitlab.SecretFile = filepath.Join(gitlabShellDir, ".gitlab_shell_secret")

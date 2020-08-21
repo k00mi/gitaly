@@ -65,7 +65,7 @@ type GitlabShell struct {
 // Gitlab contains settings required to connect to the Gitlab api
 type Gitlab struct {
 	URL             string       `toml:"url" json:"url"`
-	RelativeURLRoot string       `toml:"relative_url_root" json:"relative_url_root"`
+	RelativeURLRoot string       `toml:"relative_url_root" json:"relative_url_root"` // For UNIX sockets only
 	HTTPSettings    HTTPSettings `toml:"http-settings" json:"http_settings"`
 	SecretFile      string       `toml:"secret_file" json:"secret_file"`
 }

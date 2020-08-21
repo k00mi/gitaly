@@ -252,7 +252,7 @@ func TestPreReceiveHook_GitlabAPIAccess(t *testing.T) {
 	testRepo.GitObjectDirectory = gitObjectDirRel
 	testRepo.GitAlternateObjectDirectories = gitAlternateObjectRelDirs
 
-	server := testhelper.NewGitlabTestServer(testhelper.GitlabTestServerOptions{
+	serverURL, cleanup := testhelper.NewGitlabTestServer(t, testhelper.GitlabTestServerOptions{
 		User:                        user,
 		Password:                    password,
 		SecretToken:                 secretToken,
@@ -267,10 +267,10 @@ func TestPreReceiveHook_GitlabAPIAccess(t *testing.T) {
 		RepoPath:                    testRepoPath,
 	})
 
-	defer server.Close()
+	defer cleanup()
 
 	gitlabConfig := config.Gitlab{
-		URL: server.URL,
+		URL: serverURL,
 		HTTPSettings: config.HTTPSettings{
 			User:     user,
 			Password: password,
