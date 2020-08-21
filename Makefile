@@ -162,7 +162,7 @@ assemble-ruby:
 .PHONY: binaries
 binaries: assemble
 	${Q}if [ ${ARCH} != 'x86_64' ]; then echo Incorrect architecture for build: ${ARCH}; exit 1; fi
-	${Q}cd ${ASSEMBLY_ROOT} && shasum -a 256 bin/* | tee checksums.sha256.txt
+	${Q}cd ${ASSEMBLY_ROOT} && sha256sum bin/* | tee checksums.sha256.txt
 
 .PHONY: prepare-tests
 prepare-tests: ${GITLAB_SHELL_DIR}/config.yml ${TEST_REPO} ${TEST_REPO_GIT} ${SOURCE_DIR}/.ruby-bundle
@@ -352,17 +352,17 @@ ${PROTOC}: ${BUILD_DIR}/protoc.zip | ${BUILD_DIR}
 # jobs of a CI pipeline, we start depending on its hash. Like this, we only
 # rebuild if the Makefile actually has changed contents.
 ${BUILD_DIR}/Makefile.sha256: Makefile | ${BUILD_DIR}
-	${Q}shasum -a256 -c $@ >/dev/null 2>&1 || >$@ shasum -a256 Makefile
+	${Q}sha256sum -c $@ >/dev/null 2>&1 || >$@ sha256sum Makefile
 
 ${BUILD_DIR}/protoc.zip: ${BUILD_DIR}/Makefile.sha256
 	${Q}if [ -z "${PROTOC_URL}" ]; then echo "Cannot generate protos on unsupported platform ${OS}" && exit 1; fi
 	curl -o $@.tmp --silent --show-error -L ${PROTOC_URL}
-	${Q}printf '${PROTOC_HASH}  $@.tmp' | shasum -a256 -c -
+	${Q}printf '${PROTOC_HASH}  $@.tmp' | sha256sum -c -
 	${Q}mv $@.tmp $@
 
 ${BUILD_DIR}/git_full_bins.tgz: ${BUILD_DIR}/Makefile.sha256
 	curl -o $@.tmp --silent --show-error -L ${GIT_BINARIES_URL}
-	${Q}printf '${GIT_BINARIES_HASH}  $@.tmp' | shasum -a256 -c -
+	${Q}printf '${GIT_BINARIES_HASH}  $@.tmp' | sha256sum -c -
 	${Q}mv $@.tmp $@
 
 ${GOIMPORTS}: ${BUILD_DIR}/Makefile.sha256 ${BUILD_DIR}/go.mod
