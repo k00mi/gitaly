@@ -1,0 +1,5 @@
+---
+title: Relabel smarthttp.InfoRefsReceivePack as accessor
+merge_request: 2487
+author:
+type: fixed

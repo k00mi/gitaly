@@ -156,7 +156,7 @@ func TestNewProtoRegistry(t *testing.T) {
 		},
 		"SmartHTTPService": map[string]protoregistry.OpType{
 			"InfoRefsUploadPack":  protoregistry.OpAccessor,
-			"InfoRefsReceivePack": protoregistry.OpMutator,
+			"InfoRefsReceivePack": protoregistry.OpAccessor,
 			"PostUploadPack":      protoregistry.OpAccessor,
 			"PostReceivePack":     protoregistry.OpMutator,
 		},

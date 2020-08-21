@@ -19,8 +19,8 @@ module Gitaly
       # will upload the packs to that user. The user doesn't upload new objects.
       rpc :InfoRefsUploadPack, Gitaly::InfoRefsRequest, stream(Gitaly::InfoRefsResponse)
       # The response body for GET /info/refs?service=git-receive-pack
-      # Will be invoked when the user executes a `git push`, meaning the server
-      # will receive new objects in the pack from the user.
+      # Will be invoked when the user executes a `git push`, but only advertises
+      # references to the user.
       rpc :InfoRefsReceivePack, Gitaly::InfoRefsRequest, stream(Gitaly::InfoRefsResponse)
       # Request and response body for POST /upload-pack
       rpc :PostUploadPack, stream(Gitaly::PostUploadPackRequest), stream(Gitaly::PostUploadPackResponse)
