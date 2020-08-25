@@ -74,8 +74,13 @@ func LoadColors(cfg config.Cfg) error {
 }
 
 func startGitLinguist(ctx context.Context, repoPath string, commitID string, linguistCommand string) (*command.Command, error) {
+	bundle, err := exec.LookPath("bundle")
+	if err != nil {
+		return nil, err
+	}
+
 	args := []string{
-		"bundle",
+		bundle,
 		"exec",
 		"bin/ruby-cd",
 		repoPath,
