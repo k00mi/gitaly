@@ -328,21 +328,8 @@ no-changes:
 smoke-test: all rspec
 	${Q}go test -tags "${GO_BUILD_TAGS}" ./internal/rubyserver
 
-.PHONY: download-git
-download-git: ${BUILD_DIR}/git_full_bins.tgz
-	${Q}rm -rf ${GIT_INSTALL_DIR}
-	${Q}mkdir -p ${GIT_INSTALL_DIR}
-	tar -C ${GIT_INSTALL_DIR} -xvzf ${BUILD_DIR}/git_full_bins.tgz
-
-.PHONY: build-git
-build-git:
-	${Q}echo "Getting Git from ${GIT_REPO_URL}"
-	${Q}rm -rf ${GIT_SOURCE_DIR} ${GIT_INSTALL_DIR}
-	${GIT} clone ${GIT_REPO_URL} ${GIT_SOURCE_DIR}
-	${GIT} -C ${GIT_SOURCE_DIR} checkout ${GIT_VERSION}
-	${Q}rm -rf ${GIT_INSTALL_DIR}
-	${Q}mkdir -p ${GIT_INSTALL_DIR}
-	${MAKE} -C ${GIT_SOURCE_DIR} -j$(shell nproc) prefix=${GIT_PREFIX} ${GIT_BUILD_OPTIONS} install
+.PHONY:
+git: ${GIT_INSTALL_DIR}/bin/git
 
 .PHONY: libgit2
 libgit2: ${LIBGIT2_INSTALL_DIR}/lib/libgit2.a
@@ -404,6 +391,21 @@ ${LIBGIT2_INSTALL_DIR}/lib/libgit2.a: ${BUILD_DIR}/Makefile.sha256
 
 ${GOIMPORTS}: ${BUILD_DIR}/Makefile.sha256 ${BUILD_DIR}/go.mod
 	${Q}cd ${BUILD_DIR} && go get golang.org/x/tools/cmd/goimports@2538eef75904eff384a2551359968e40c207d9d2
+
+ifeq (${GIT_USE_PREBUILT_BINARIES},)
+${GIT_INSTALL_DIR}/bin/git: ${BUILD_DIR}/Makefile.sha256 | ${BUILD_DIR}
+	${Q}rm -rf ${GIT_SOURCE_DIR} ${GIT_INSTALL_DIR}
+	${GIT} clone ${GIT_REPO_URL} ${GIT_SOURCE_DIR}
+	${GIT} -C ${GIT_SOURCE_DIR} checkout ${GIT_VERSION}
+	${Q}rm -rf ${GIT_INSTALL_DIR}
+	${Q}mkdir -p ${GIT_INSTALL_DIR}
+	${MAKE} -C ${GIT_SOURCE_DIR} -j$(shell nproc) prefix=${GIT_PREFIX} ${GIT_BUILD_OPTIONS} install
+else
+${GIT_INSTALL_DIR}/bin/git: ${BUILD_DIR}/git_full_bins.tgz
+	${Q}rm -rf ${GIT_INSTALL_DIR}
+	${Q}mkdir -p ${GIT_INSTALL_DIR}
+	tar -C ${GIT_INSTALL_DIR} -xvzf ${BUILD_DIR}/git_full_bins.tgz
+endif
 
 ${GO_JUNIT_REPORT}: ${BUILD_DIR}/Makefile.sha256 ${BUILD_DIR}/go.mod
 	${Q}cd ${BUILD_DIR} && go get github.com/jstemmer/go-junit-report@984a47ca6b0a7d704c4b589852051b4d7865aa17
