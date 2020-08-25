@@ -92,14 +92,15 @@ ifeq (${GIT_BUILD_OPTIONS},)
 endif
 
 # These variables control test options and artifacts
-TEST_OPTIONS    ?=
-TEST_REPORT_DIR ?= ${BUILD_DIR}/reports
-TEST_OUTPUT     ?= ${TEST_REPORT_DIR}/go-tests-output-${CI_JOB_NAME}.txt
-TEST_REPORT     ?= ${TEST_REPORT_DIR}/go-tests-report-${CI_JOB_NAME}.xml
-TEST_EXIT       ?= ${TEST_REPORT_DIR}/go-tests-exit-${CI_JOB_NAME}.txt
-TEST_REPO_DIR   := ${SOURCE_DIR}/internal/testhelper/testdata/data
-TEST_REPO       := ${TEST_REPO_DIR}/gitlab-test.git
-TEST_REPO_GIT   := ${TEST_REPO_DIR}/gitlab-git-test.git
+TEST_OPTIONS     ?=
+TEST_REPORT_DIR  ?= ${BUILD_DIR}/reports
+TEST_OUTPUT_NAME ?= go-${GO_VERSION}-git-${GIT_VERSION}
+TEST_OUTPUT      ?= ${TEST_REPORT_DIR}/go-tests-output-${TEST_OUTPUT_NAME}.txt
+TEST_REPORT      ?= ${TEST_REPORT_DIR}/go-tests-report-${TEST_OUTPUT_NAME}.xml
+TEST_EXIT        ?= ${TEST_REPORT_DIR}/go-tests-exit-${TEST_OUTPUT_NAME}.txt
+TEST_REPO_DIR    := ${SOURCE_DIR}/internal/testhelper/testdata/data
+TEST_REPO        := ${TEST_REPO_DIR}/gitlab-test.git
+TEST_REPO_GIT    := ${TEST_REPO_DIR}/gitlab-git-test.git
 
 # Find all commands.
 find_commands         = $(notdir $(shell find ${SOURCE_DIR}/cmd -mindepth 1 -maxdepth 1 -type d -print))

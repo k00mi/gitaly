@@ -100,7 +100,7 @@ binaries:
     paths:
     - _build/assembly/checksums.sha256.txt
     - _build/assembly/bin/
-    name: "$CI_JOB_NAME"
+    name: "${CI_JOB_NAME}:go-${GO_VERSION}-git-${GIT_VERSION}"
     expire_in: 6 months
   parallel:
     matrix:
@@ -118,9 +118,9 @@ test:
     - make ${TARGET}
   artifacts:
     paths:
-      - _build/reports/go-tests-report-${CI_JOB_NAME}.xml
+      - _build/reports/go-tests-report-go-${GO_VERSION}-git-${GIT_VERSION}.xml
     reports:
-      junit: _build/reports/go-tests-report-${CI_JOB_NAME}.xml
+      junit: _build/reports/go-tests-report-go-${GO_VERSION}-git-${GIT_VERSION}.xml
   parallel:
     matrix:
       - GO_VERSION: [ "1.13", "1.14" ]
