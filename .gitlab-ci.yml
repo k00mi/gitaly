@@ -34,6 +34,8 @@ danger-review:
         - Makefile
         - ruby/Gemfile.lock
     paths:
+      - _build/libgit2
+      - _build/Makefile.sha256
       - ruby/vendor/bundle
 
 .build_template: &build_definition
@@ -70,6 +72,8 @@ danger-review:
         - Makefile
         - ruby/Gemfile.lock
     paths:
+      - _build/libgit2
+      - _build/Makefile.sha256
       - ruby/vendor/bundle
     policy: pull
   artifacts:
