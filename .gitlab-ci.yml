@@ -29,7 +29,10 @@ danger-review:
 
 .ruby_template: &ruby_definition
   cache:
-    key: gems-ruby-2.6
+    key:
+      files:
+        - Makefile
+        - ruby/Gemfile.lock
     paths:
       - ruby/vendor/bundle
 
@@ -62,7 +65,10 @@ danger-review:
   stage: test
   # Override the ruby_definition cache definition for pull
   cache:
-    key: gems-ruby-2.6
+    key:
+      files:
+        - Makefile
+        - ruby/Gemfile.lock
     paths:
       - ruby/vendor/bundle
     policy: pull
