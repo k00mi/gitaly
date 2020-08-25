@@ -162,7 +162,7 @@ assemble-ruby:
 .PHONY: binaries
 binaries: assemble
 	${Q}if [ ${ARCH} != 'x86_64' ]; then echo Incorrect architecture for build: ${ARCH}; exit 1; fi
-	${Q}cd ${ASSEMBLY_ROOT} && shasum -a 256 bin/* | tee checksums.sha256.txt
+	${Q}cd ${ASSEMBLY_ROOT} && sha256sum bin/* | tee checksums.sha256.txt
 
 .PHONY: prepare-tests
 prepare-tests: ${GITLAB_SHELL_DIR}/config.yml ${TEST_REPO} ${TEST_REPO_GIT} ${SOURCE_DIR}/.ruby-bundle
@@ -347,36 +347,43 @@ ${PROTOC}: ${BUILD_DIR}/protoc.zip | ${BUILD_DIR}
 	${Q}mkdir -p ${BUILD_DIR}/protoc
 	cd ${BUILD_DIR}/protoc && unzip ${BUILD_DIR}/protoc.zip
 
-${BUILD_DIR}/protoc.zip: Makefile | ${BUILD_DIR}
+# This is a build hack to avoid excessive rebuilding of targets. Instead of
+# depending on the timestamp of the Makefile, which will change e.g. between
+# jobs of a CI pipeline, we start depending on its hash. Like this, we only
+# rebuild if the Makefile actually has changed contents.
+${BUILD_DIR}/Makefile.sha256: Makefile | ${BUILD_DIR}
+	${Q}sha256sum -c $@ >/dev/null 2>&1 || >$@ sha256sum Makefile
+
+${BUILD_DIR}/protoc.zip: ${BUILD_DIR}/Makefile.sha256
 	${Q}if [ -z "${PROTOC_URL}" ]; then echo "Cannot generate protos on unsupported platform ${OS}" && exit 1; fi
 	curl -o $@.tmp --silent --show-error -L ${PROTOC_URL}
-	${Q}printf '${PROTOC_HASH}  $@.tmp' | shasum -a256 -c -
+	${Q}printf '${PROTOC_HASH}  $@.tmp' | sha256sum -c -
 	${Q}mv $@.tmp $@
 
-${BUILD_DIR}/git_full_bins.tgz: Makefile | ${BUILD_DIR}
+${BUILD_DIR}/git_full_bins.tgz: ${BUILD_DIR}/Makefile.sha256
 	curl -o $@.tmp --silent --show-error -L ${GIT_BINARIES_URL}
-	${Q}printf '${GIT_BINARIES_HASH}  $@.tmp' | shasum -a256 -c -
+	${Q}printf '${GIT_BINARIES_HASH}  $@.tmp' | sha256sum -c -
 	${Q}mv $@.tmp $@
 
-${GOIMPORTS}: Makefile ${BUILD_DIR}/go.mod | ${BUILD_DIR}/bin
+${GOIMPORTS}: ${BUILD_DIR}/Makefile.sha256 ${BUILD_DIR}/go.mod
 	${Q}cd ${BUILD_DIR} && go get golang.org/x/tools/cmd/goimports@2538eef75904eff384a2551359968e40c207d9d2
 
-${GO_JUNIT_REPORT}: Makefile ${BUILD_DIR}/go.mod | ${BUILD_DIR}/bin
+${GO_JUNIT_REPORT}: ${BUILD_DIR}/Makefile.sha256 ${BUILD_DIR}/go.mod
 	${Q}cd ${BUILD_DIR} && go get github.com/jstemmer/go-junit-report@984a47ca6b0a7d704c4b589852051b4d7865aa17
 
 ${GITALYFMT}: | ${BUILD_DIR}/bin
 	${Q}go build -o $@ ${SOURCE_DIR}/internal/cmd/gitalyfmt
 
-${GO_LICENSES}: Makefile ${BUILD_DIR}/go.mod | ${BUILD_DIR}/bin
+${GO_LICENSES}: ${BUILD_DIR}/Makefile.sha256 ${BUILD_DIR}/go.mod
 	${Q}cd ${BUILD_DIR} && go get github.com/google/go-licenses@0fa8c766a59182ce9fd94169ddb52abe568b7f4e
 
-${PROTOC_GEN_GO}: Makefile ${BUILD_DIR}/go.mod | ${BUILD_DIR}/bin
+${PROTOC_GEN_GO}: ${BUILD_DIR}/Makefile.sha256 ${BUILD_DIR}/go.mod
 	${Q}cd ${BUILD_DIR} && go get github.com/golang/protobuf/protoc-gen-go@v${PROTOC_GEN_GO_VERSION}
 
-${PROTOC_GEN_GITALY}: ${BUILD_DIR}/go.mod proto-lint | ${BUILD_DIR}/bin
+${PROTOC_GEN_GITALY}: ${BUILD_DIR}/go.mod proto-lint
 	${Q}go build -o $@ gitlab.com/gitlab-org/gitaly/proto/go/internal/cmd/protoc-gen-gitaly
 
-${GOLANGCI_LINT}: Makefile ${BUILD_DIR}/go.mod | ${BUILD_DIR}/bin
+${GOLANGCI_LINT}: ${BUILD_DIR}/Makefile.sha256 ${BUILD_DIR}/go.mod
 	${Q}cd ${BUILD_DIR} && go get github.com/golangci/golangci-lint/cmd/golangci-lint@v${GOLANGCI_LINT_VERSION}
 
 ${TEST_REPO}:
