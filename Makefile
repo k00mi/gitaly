@@ -396,7 +396,7 @@ ${BUILD_DIR}/git_full_bins.tgz: ${BUILD_DIR}/Makefile.sha256
 
 ${LIBGIT2_INSTALL_DIR}/lib/libgit2.a: ${BUILD_DIR}/Makefile.sha256
 	${Q}rm -rf ${LIBGIT2_SOURCE_DIR}
-	git clone --depth 1 --branch ${LIBGIT2_VERSION} --quiet ${LIBGIT2_REPO_URL} ${LIBGIT2_SOURCE_DIR}
+	${GIT} clone --depth 1 --branch ${LIBGIT2_VERSION} --quiet ${LIBGIT2_REPO_URL} ${LIBGIT2_SOURCE_DIR}
 	${Q}mkdir -p ${LIBGIT2_BUILD_DIR}
 	${Q}cd ${LIBGIT2_BUILD_DIR} && cmake ${LIBGIT2_SOURCE_DIR} ${LIBGIT2_BUILD_OPTIONS}
 	${Q}CMAKE_BUILD_PARALLEL_LEVEL=$(shell nproc) cmake --build ${LIBGIT2_BUILD_DIR} --target install
