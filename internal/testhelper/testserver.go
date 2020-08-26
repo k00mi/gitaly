@@ -739,17 +739,53 @@ type GitlabTestServerOptions struct {
 	GitObjectDir                string
 	GitAlternateObjectDirs      []string
 	RepoPath                    string
+	UnixSocket                  bool
+	RelativeURLRoot             string
 }
 
 // NewGitlabTestServer returns a mock gitlab server that responds to the hook api endpoints
-func NewGitlabTestServer(options GitlabTestServerOptions) *httptest.Server {
+func NewGitlabTestServer(t FatalLogger, options GitlabTestServerOptions) (url string, cleanup func()) {
 	mux := http.NewServeMux()
-	mux.Handle("/api/v4/internal/allowed", http.HandlerFunc(handleAllowed(options)))
-	mux.Handle("/api/v4/internal/pre_receive", http.HandlerFunc(handlePreReceive(options)))
-	mux.Handle("/api/v4/internal/post_receive", http.HandlerFunc(handlePostReceive(options)))
-	mux.Handle("/api/v4/internal/check", http.HandlerFunc(handleCheck(options)))
+	prefix := strings.TrimRight(options.RelativeURLRoot, "/") + "/api/v4/internal"
+	mux.Handle(prefix+"/allowed", http.HandlerFunc(handleAllowed(options)))
+	mux.Handle(prefix+"/pre_receive", http.HandlerFunc(handlePreReceive(options)))
+	mux.Handle(prefix+"/post_receive", http.HandlerFunc(handlePostReceive(options)))
+	mux.Handle(prefix+"/check", http.HandlerFunc(handleCheck(options)))
 
-	return httptest.NewServer(mux)
+	if options.UnixSocket {
+		return startSocketHTTPServer(t, mux)
+	} else {
+		server := httptest.NewServer(mux)
+		return server.URL, server.Close
+	}
+}
+
+func startSocketHTTPServer(t FatalLogger, mux *http.ServeMux) (string, func()) {
+	tmpFile, err := ioutil.TempFile(os.TempDir(), "http-test-server")
+	if err != nil {
+		t.Fatalf("Cannot create temporary file", err)
+	}
+	filename := tmpFile.Name()
+	tmpFile.Close()
+	os.Remove(filename)
+
+	socketListener, err := net.Listen("unix", filename)
+	if err != nil {
+		t.Fatalf("Cannot listen to socket", err)
+	}
+
+	server := http.Server{
+		Handler: mux,
+	}
+
+	go server.Serve(socketListener)
+
+	url := "http+unix://" + filename
+	cleanup := func() {
+		server.Close()
+	}
+
+	return url, cleanup
 }
 
 // CreateTemporaryGitlabShellDir creates a temporary gitlab shell directory. It returns the path to the directory
@@ -902,12 +938,10 @@ func NewHealthServerWithListener(t testing.TB, listener net.Listener) (*grpc.Ser
 }
 
 func SetupAndStartGitlabServer(t FatalLogger, c *GitlabTestServerOptions) (string, func()) {
-	ts := NewGitlabTestServer(*c)
+	url, cleanup := NewGitlabTestServer(t, *c)
 
-	WriteTemporaryGitlabShellConfigFile(t, config.Config.GitlabShell.Dir, GitlabShellConfig{GitlabURL: ts.URL})
+	WriteTemporaryGitlabShellConfigFile(t, config.Config.GitlabShell.Dir, GitlabShellConfig{GitlabURL: url})
 	WriteShellSecretFile(t, config.Config.GitlabShell.Dir, c.SecretToken)
 
-	return ts.URL, func() {
-		ts.Close()
-	}
+	return url, cleanup
 }

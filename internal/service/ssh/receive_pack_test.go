@@ -230,7 +230,7 @@ func TestSSHReceivePackToHooks(t *testing.T) {
 	cloneDetails, cleanup := setupSSHClone(t)
 	defer cleanup()
 
-	ts := testhelper.NewGitlabTestServer(testhelper.GitlabTestServerOptions{
+	serverURL, cleanup := testhelper.NewGitlabTestServer(t, testhelper.GitlabTestServerOptions{
 		User:                        "",
 		Password:                    "",
 		SecretToken:                 secretToken,
@@ -240,12 +240,12 @@ func TestSSHReceivePackToHooks(t *testing.T) {
 		PostReceiveCounterDecreased: true,
 		Protocol:                    "ssh",
 	})
-	defer ts.Close()
+	defer cleanup()
 
-	testhelper.WriteTemporaryGitlabShellConfigFile(t, tempGitlabShellDir, testhelper.GitlabShellConfig{GitlabURL: ts.URL})
+	testhelper.WriteTemporaryGitlabShellConfigFile(t, tempGitlabShellDir, testhelper.GitlabShellConfig{GitlabURL: serverURL})
 	testhelper.WriteShellSecretFile(t, tempGitlabShellDir, secretToken)
 
-	config.Config.Gitlab.URL = ts.URL
+	config.Config.Gitlab.URL = serverURL
 	config.Config.Gitlab.SecretFile = filepath.Join(tempGitlabShellDir, ".gitlab_shell_secret")
 
 	cleanup = testhelper.WriteCheckNewObjectExistsHook(t, cloneDetails.RemoteRepoPath)

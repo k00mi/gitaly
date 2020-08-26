@@ -48,7 +48,7 @@ func TestAllowedVerifyParams(t *testing.T) {
 
 	secretFilePath := filepath.Join(tempDir, ".gitlab_shell_secret")
 
-	server := testhelper.NewGitlabTestServer(testhelper.GitlabTestServerOptions{
+	serverURL, cleanup := testhelper.NewGitlabTestServer(t, testhelper.GitlabTestServerOptions{
 		User:                        user,
 		Password:                    password,
 		SecretToken:                 secretToken,
@@ -62,11 +62,10 @@ func TestAllowedVerifyParams(t *testing.T) {
 		GitAlternateObjectDirs:      gitAlternateObjectDirsFull,
 		RepoPath:                    testRepoPath,
 	})
-
-	defer server.Close()
+	defer cleanup()
 
 	c, err := hook.NewGitlabAPI(config.Gitlab{
-		URL:        server.URL,
+		URL:        serverURL,
 		SecretFile: secretFilePath,
 		HTTPSettings: config.HTTPSettings{
 			User:     user,
@@ -111,7 +110,7 @@ func TestAllowedVerifyParams(t *testing.T) {
 	}
 }
 
-func TestEscapedURL(t *testing.T) {
+func TestEscapedAndRelativeURLs(t *testing.T) {
 	user, password := "user", "password"
 	secretToken := "topsecret"
 	glID, glRepository := "key-123", "repo-1"
@@ -137,40 +136,63 @@ func TestEscapedURL(t *testing.T) {
 
 	secretFilePath := filepath.Join(tempDir, ".gitlab_shell_secret")
 
-	server := testhelper.NewGitlabTestServer(testhelper.GitlabTestServerOptions{
-		User:                        user,
-		Password:                    password,
-		SecretToken:                 secretToken,
-		GLID:                        glID,
-		GLRepository:                glRepository,
-		Changes:                     changes,
-		PostReceiveCounterDecreased: true,
-		Protocol:                    protocol,
-		GitPushOptions:              nil,
-		GitObjectDir:                gitObjectDirFull,
-		GitAlternateObjectDirs:      gitAlternateObjectDirsFull,
-		RepoPath:                    testRepoPath,
-	})
-
 	testCases := []struct {
-		desc string
-		url  string
+		desc            string
+		escaped         bool
+		relativeURLRoot string
+		unixSocket      bool
 	}{
 		{
 			desc: "unescaped URL",
-			url:  server.URL,
 		},
 		{
-			desc: "escaped URL",
-			url:  url.PathEscape(server.URL),
+			desc:    "escaped URL",
+			escaped: true,
+		},
+		{
+			desc:       "UNIX socket with no relative root",
+			unixSocket: true,
+		},
+		{
+			desc:            "UNIX socket with / root",
+			unixSocket:      true,
+			relativeURLRoot: "/",
+		},
+		{
+			desc:            "UNIX socket with /gitlab root",
+			unixSocket:      true,
+			relativeURLRoot: "/gitlab",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
+			serverURL, cleanup := testhelper.NewGitlabTestServer(t, testhelper.GitlabTestServerOptions{
+				User:                        user,
+				Password:                    password,
+				SecretToken:                 secretToken,
+				GLID:                        glID,
+				GLRepository:                glRepository,
+				Changes:                     changes,
+				PostReceiveCounterDecreased: true,
+				Protocol:                    protocol,
+				GitPushOptions:              nil,
+				GitObjectDir:                gitObjectDirFull,
+				GitAlternateObjectDirs:      gitAlternateObjectDirsFull,
+				RepoPath:                    testRepoPath,
+				RelativeURLRoot:             tc.relativeURLRoot,
+				UnixSocket:                  tc.unixSocket,
+			})
+			defer cleanup()
+
+			if tc.escaped {
+				serverURL = url.PathEscape(serverURL)
+			}
+
 			c, err := hook.NewGitlabAPI(config.Gitlab{
-				URL:        tc.url,
-				SecretFile: secretFilePath,
+				URL:             serverURL,
+				RelativeURLRoot: tc.relativeURLRoot,
+				SecretFile:      secretFilePath,
 				HTTPSettings: config.HTTPSettings{
 					User:     user,
 					Password: password,
