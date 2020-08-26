@@ -247,15 +247,29 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 			},
 		},
 		{
-			// Currently, transactions are created such that all nodes need to agree.
-			// This is going to change in the future, but for now let's just test that
-			// we don't get any replication jobs if any node disagrees.
 			desc:            "failing vote should not create replication jobs",
 			disableFeatures: []featureflag.FeatureFlag{featureflag.ReferenceTransactionsPrimaryWins},
 			nodes: []node{
-				{primary: true, vote: "foobar", shouldSucceed: false, shouldGetRepl: false, shouldParticipate: true},
-				{primary: false, vote: "foobar", shouldSucceed: false, shouldGetRepl: false, shouldParticipate: true},
-				{primary: false, vote: "barfoo", shouldSucceed: false, shouldGetRepl: false, shouldParticipate: true},
+				{primary: true, vote: "foo", shouldSucceed: false, shouldGetRepl: false, shouldParticipate: true},
+				{primary: false, vote: "qux", shouldSucceed: false, shouldGetRepl: false, shouldParticipate: true},
+				{primary: false, vote: "bar", shouldSucceed: false, shouldGetRepl: false, shouldParticipate: true},
+			},
+		},
+		{
+			desc:            "primary should reach quorum with disagreeing secondary",
+			disableFeatures: []featureflag.FeatureFlag{featureflag.ReferenceTransactionsPrimaryWins},
+			nodes: []node{
+				{primary: true, vote: "foobar", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
+				{primary: false, vote: "barfoo", shouldSucceed: false, shouldGetRepl: true, shouldParticipate: true},
+			},
+		},
+		{
+			desc:            "quorum should create replication jobs for disagreeing node",
+			disableFeatures: []featureflag.FeatureFlag{featureflag.ReferenceTransactionsPrimaryWins},
+			nodes: []node{
+				{primary: true, vote: "foobar", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
+				{primary: false, vote: "foobar", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
+				{primary: false, vote: "barfoo", shouldSucceed: false, shouldGetRepl: true, shouldParticipate: true},
 			},
 		},
 		{

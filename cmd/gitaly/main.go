@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/config/sentry"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
+	glog "gitlab.com/gitlab-org/gitaly/internal/log"
 	"gitlab.com/gitlab-org/gitaly/internal/server"
 	"gitlab.com/gitlab-org/gitaly/internal/service/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
@@ -162,6 +164,13 @@ func run(b *bootstrap.Bootstrap) error {
 	if err := servers.StartRuby(); err != nil {
 		return fmt.Errorf("initialize gitaly-ruby: %v", err)
 	}
+
+	ctx := context.Background()
+	shutdownWorkers, err := servers.StartWorkers(ctx, glog.Default(), config.Config)
+	if err != nil {
+		return fmt.Errorf("initialize auxiliary workers: %v", err)
+	}
+	defer shutdownWorkers()
 
 	return b.Wait(config.Config.GracefulRestartTimeout.Duration())
 }

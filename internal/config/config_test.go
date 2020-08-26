@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -765,4 +766,69 @@ func TestInternalSocketDir(t *testing.T) {
 	socketDir := InternalSocketDir()
 
 	require.NoError(t, trySocketCreation(socketDir))
+}
+
+func TestLoadDailyMaintenance(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		rawCfg      string
+		expect      DailyJob
+		loadErr     error
+		validateErr error
+	}{
+		{
+			name: "success",
+			rawCfg: `[[storage]]
+name = "default"
+path = "/"
+
+			[daily_maintenance]
+start_hour = 11
+start_minute = 23
+duration = "45m"
+storages = ["default"]
+`,
+			expect: DailyJob{
+				Hour:     11,
+				Minute:   23,
+				Duration: Duration(45 * time.Minute),
+				Storages: []string{"default"},
+			},
+		},
+		{
+			rawCfg: `[daily_maintenance]
+			start_hour = 24`,
+			expect: DailyJob{
+				Hour: 24,
+			},
+			validateErr: errors.New("daily maintenance specified hour '24' outside range (0-23)"),
+		}, {
+			rawCfg: `[daily_maintenance]
+			start_hour = 60`,
+			expect: DailyJob{
+				Hour: 60,
+			},
+			validateErr: errors.New("daily maintenance specified hour '60' outside range (0-23)"),
+		},
+		{
+			rawCfg: `[daily_maintenance]
+			duration = "meow"`,
+			expect:  DailyJob{},
+			loadErr: errors.New("load toml: time: invalid duration meow"),
+		}, {
+			rawCfg: `[daily_maintenance]
+			storages = ["default"]`,
+			expect: DailyJob{
+				Storages: []string{"default"},
+			},
+			validateErr: errors.New(`daily maintenance specified storage "default" does not exist in configuration`),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpFile := configFileReader(tt.rawCfg)
+			require.Equal(t, tt.loadErr, Load(tmpFile))
+			require.Equal(t, tt.expect, Config.DailyMaintenance)
+			require.Equal(t, tt.validateErr, validateMaintenance())
+		})
+	}
 }

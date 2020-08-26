@@ -242,14 +242,32 @@ func (c *Coordinator) registerTransaction(ctx context.Context, primary nodes.Nod
 			})
 		}
 	} else {
-		// This voting strategy ensures strong consistency: all nodes will agree on the
-		// same result, but any failed node will abort the transaction.
-		for _, node := range append(secondaries, primary) {
+		// This voting-strategy is a majority-wins one: the primary always needs to agree
+		// with at least half of the secondaries.
+
+		secondaryLen := uint(len(secondaries))
+
+		// In order to ensure that no quorum can be reached without the primary, its number
+		// of votes needs to exceed the number of secondaries.
+		voters = append(voters, transactions.Voter{
+			Name:  primary.GetStorage(),
+			Votes: secondaryLen + 1,
+		})
+		threshold = secondaryLen + 1
+
+		for _, secondary := range secondaries {
 			voters = append(voters, transactions.Voter{
-				Name:  node.GetStorage(),
+				Name:  secondary.GetStorage(),
 				Votes: 1,
 			})
-			threshold += 1
+		}
+
+		// If we only got a single secondary (or none), we don't increase the threshold so
+		// that it's allowed to disagree with the primary without blocking the transaction.
+		// Otherwise, we add `Math.ceil(len(secondaries) / 2.0)`, which means that at least
+		// half of the secondaries need to agree with the primary.
+		if len(secondaries) > 1 {
+			threshold += (secondaryLen + 1) / 2
 		}
 	}
 

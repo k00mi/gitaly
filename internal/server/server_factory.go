@@ -1,12 +1,20 @@
 package server
 
 import (
+	"context"
+	"fmt"
 	"net"
 	"sync"
+	"time"
 
+	"github.com/sirupsen/logrus"
+	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
+	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
+	"gitlab.com/gitlab-org/gitaly/internal/maintenance"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/service/hook"
+	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
 )
 
@@ -27,6 +35,57 @@ func NewGitalyServerFactory(api hook.GitlabAPI) *GitalyServerFactory {
 // StartRuby starts the ruby process
 func (s *GitalyServerFactory) StartRuby() error {
 	return s.ruby.Start()
+}
+
+// StartWorkers will start any auxiliary background workers that are allowed
+// to fail without stopping the rest of the server.
+func (s *GitalyServerFactory) StartWorkers(ctx context.Context, l logrus.FieldLogger, cfg config.Cfg) (func(), error) {
+	var opts []grpc.DialOption
+	if cfg.Auth.Token != "" {
+		opts = append(opts, grpc.WithPerRPCCredentials(
+			gitalyauth.RPCCredentialsV2(cfg.Auth.Token),
+		))
+	}
+
+	cc, err := client.Dial("unix://"+config.GitalyInternalSocketPath(), opts)
+	if err != nil {
+		return nil, err
+	}
+
+	errQ := make(chan error)
+
+	ctx, cancel := context.WithCancel(ctx)
+	go func() {
+		errQ <- maintenance.NewDailyWorker().StartDaily(
+			ctx,
+			l,
+			cfg.DailyMaintenance,
+			maintenance.OptimizeReposRandomly(
+				cfg.Storages,
+				gitalypb.NewRepositoryServiceClient(cc),
+			),
+		)
+	}()
+
+	shutdown := func() {
+		cancel()
+
+		// give the worker 5 seconds to shutdown gracefully
+		timeout := 5 * time.Second
+
+		var err error
+		select {
+		case err = <-errQ:
+			break
+		case <-time.After(timeout):
+			err = fmt.Errorf("timed out after %s", timeout)
+		}
+		if err != nil && err != context.Canceled {
+			l.WithError(err).Error("maintenance worker shutdown")
+		}
+	}
+
+	return shutdown, nil
 }
 
 // Stop stops all servers started by calling Serve and the gitaly-ruby server.
