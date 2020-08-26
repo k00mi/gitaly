@@ -29,6 +29,14 @@ var (
 	hooks []func(Cfg) error
 )
 
+// DailyJob enables a daily task to be scheduled for specific storages
+type DailyJob struct {
+	Hour     uint     `toml:"start_hour"`
+	Minute   uint     `toml:"start_minute"`
+	Duration Duration `toml:"duration"`
+	Storages []string `toml:"storages"`
+}
+
 // Cfg is a container for all config derived from config.toml.
 type Cfg struct {
 	SocketPath             string            `toml:"socket_path" split_words:"true"`
@@ -49,6 +57,7 @@ type Cfg struct {
 	Concurrency            []Concurrency     `toml:"concurrency"`
 	GracefulRestartTimeout Duration          `toml:"graceful_restart_timeout"`
 	InternalSocketDir      string            `toml:"internal_socket_dir"`
+	DailyMaintenance       DailyJob          `toml:"daily_maintenance"`
 }
 
 // TLS configuration
@@ -156,6 +165,7 @@ func Validate() error {
 		validateBinDir(),
 		validateInternalSocketDir(),
 		validateHooks(),
+		validateMaintenance(),
 	} {
 		if err != nil {
 			return err
@@ -462,4 +472,30 @@ func trySocketCreation(dir string) error {
 	}
 
 	return l.Close()
+}
+
+func validateMaintenance() error {
+	dm := Config.DailyMaintenance
+
+	sNames := map[string]struct{}{}
+	for _, s := range Config.Storages {
+		sNames[s.Name] = struct{}{}
+	}
+	for _, sName := range dm.Storages {
+		if _, ok := sNames[sName]; !ok {
+			return fmt.Errorf("daily maintenance specified storage %q does not exist in configuration", sName)
+		}
+	}
+
+	if dm.Hour > 23 {
+		return fmt.Errorf("daily maintenance specified hour '%d' outside range (0-23)", dm.Hour)
+	}
+	if dm.Minute > 59 {
+		return fmt.Errorf("daily maintenance specified minute '%d' outside range (0-59)", dm.Minute)
+	}
+	if dm.Duration.Duration() > 24*time.Hour {
+		return fmt.Errorf("daily maintenance specified duration %s must be less than 24 hours", dm.Duration.Duration())
+	}
+
+	return nil
 }
