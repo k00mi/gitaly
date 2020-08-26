@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/rubyserver"
@@ -466,6 +467,71 @@ func TestRebaseRequestWithDeletedFile(t *testing.T) {
 
 	require.NotEqual(t, newBranchSha, branchSha)
 	require.Equal(t, newBranchSha, firstResponse.GetRebaseSha())
+
+	require.True(t, secondResponse.GetRebaseApplied(), "the second rebase is applied")
+}
+
+func TestRebaseOntoRemoteBranch(t *testing.T) {
+	serverSocketPath, stop := runOperationServiceServer(t)
+	defer stop()
+
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	localRepo, localRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	remoteRepo, remoteRepoPath, cleanup := testhelper.NewTestRepoWithWorktree(t)
+	defer cleanup()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
+	ctx = metadata.NewOutgoingContext(ctx, md)
+
+	localBranch := "master"
+	localBranchHash := getBranchSha(t, localRepoPath, localBranch)
+
+	remoteBranch := "remote-branch"
+	testhelper.MustRunCommand(t, nil, "git", "-C", remoteRepoPath, "config", "user.name", string(testhelper.TestUser.Name))
+	testhelper.MustRunCommand(t, nil, "git", "-C", remoteRepoPath, "config", "user.email", string(testhelper.TestUser.Email))
+	testhelper.MustRunCommand(t, nil, "git", "-C", remoteRepoPath, "checkout", "-b", remoteBranch, "master")
+	testhelper.MustRunCommand(t, nil, "git", "-C", remoteRepoPath, "rm", "README")
+	testhelper.MustRunCommand(t, nil, "git", "-C", remoteRepoPath, "commit", "-a", "-m", "remove README")
+	remoteBranchHash := getBranchSha(t, remoteRepoPath, remoteBranch)
+
+	rebaseStream, err := client.UserRebaseConfirmable(ctx)
+	require.NoError(t, err)
+
+	_, err = gitlog.GetCommit(ctx, localRepo, remoteBranchHash)
+	require.True(t, catfile.IsNotFound(err), "remote commit does not yet exist in local repository")
+
+	headerRequest := buildHeaderRequest(localRepo, testhelper.TestUser, "1", localBranch, localBranchHash, remoteRepo, remoteBranch)
+	require.NoError(t, rebaseStream.Send(headerRequest), "send header")
+
+	firstResponse, err := rebaseStream.Recv()
+	require.NoError(t, err, "receive first response")
+
+	_, err = gitlog.GetCommit(ctx, localRepo, remoteBranchHash)
+	require.NoError(t, err, "remote commit does now exist in local repository")
+
+	applyRequest := buildApplyRequest(true)
+	require.NoError(t, rebaseStream.Send(applyRequest), "apply rebase")
+
+	secondResponse, err := rebaseStream.Recv()
+	require.NoError(t, err, "receive second response")
+
+	err = testhelper.ReceiveEOFWithTimeout(func() error {
+		_, err = rebaseStream.Recv()
+		return err
+	})
+	require.NoError(t, err, "consume EOF")
+
+	rebasedBranchHash := getBranchSha(t, localRepoPath, localBranch)
+
+	require.NotEqual(t, rebasedBranchHash, localBranchHash)
+	require.Equal(t, rebasedBranchHash, firstResponse.GetRebaseSha())
 
 	require.True(t, secondResponse.GetRebaseApplied(), "the second rebase is applied")
 }

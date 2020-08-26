@@ -51,6 +51,24 @@ func TestLoadEmptyConfig(t *testing.T) {
 	assert.Equal(t, defaultConf, Config)
 }
 
+func TestLoadURLs(t *testing.T) {
+	tmpFile := configFileReader(`
+[gitlab]
+url = "unix:///tmp/test.socket"
+relative_url_root = "/gitlab"`)
+
+	err := Load(tmpFile)
+	assert.NoError(t, err)
+
+	defaultConf := Cfg{Gitlab: Gitlab{
+		URL:             "unix:///tmp/test.socket",
+		RelativeURLRoot: "/gitlab",
+	}}
+	defaultConf.setDefaults()
+
+	assert.Equal(t, defaultConf, Config)
+}
+
 func TestLoadStorage(t *testing.T) {
 	tmpFile := configFileReader(`[[storage]]
 name = "default"

@@ -75,6 +75,7 @@ func NewGitlabAPI(gitlabCfg config.Gitlab) (GitlabAPI, error) {
 
 	httpClient := client.NewHTTPClient(
 		url,
+		gitlabCfg.RelativeURLRoot,
 		gitlabCfg.HTTPSettings.CAFile,
 		gitlabCfg.HTTPSettings.CAPath,
 		gitlabCfg.HTTPSettings.SelfSigned,

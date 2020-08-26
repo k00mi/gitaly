@@ -312,12 +312,12 @@ To create a merge request for okay, visit:
 					RepoPath:                    testRepoPath,
 				}
 
-				ts := testhelper.NewGitlabTestServer(c)
-				defer ts.Close()
+				serverURL, cleanup := testhelper.NewGitlabTestServer(t, c)
+				defer cleanup()
 
 				gitlabConfig := config.Gitlab{
 					SecretFile: filepath.Join(tempDir, ".gitlab_shell_secret"),
-					URL:        ts.URL,
+					URL:        serverURL,
 					HTTPSettings: config.HTTPSettings{
 						User:     user,
 						Password: password,
