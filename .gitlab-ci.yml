@@ -27,7 +27,7 @@ danger-review:
     - git version
     - danger
 
-.ruby_template: &ruby_definition
+.cache: &cache_definition
   cache:
     key:
       files:
@@ -38,34 +38,10 @@ danger-review:
       - _build/Makefile.sha256
       - ruby/vendor/bundle
 
-.build_template: &build_definition
-  <<: *ruby_definition
-  stage: build
-  script:
-    - go version
-    - make
-    - _support/test-boot .
-
-.assemble_template: &assemble_definition
-  <<: *ruby_definition
-  stage: build
-  only:
-    - tags
-  script:
-    # Just in case we start running CI builds on other architectures in future
-    - go version
-    - make binaries
-  artifacts:
-    paths:
-    - _build/assembly/checksums.sha256.txt
-    - _build/assembly/bin/
-    name: "$CI_JOB_NAME"
-    expire_in: 6 months
-
-.go_test_template: &go_test_definition
-  <<: *ruby_definition
+.test_template: &test_definition
+  <<: *cache_definition
   stage: test
-  # Override the ruby_definition cache definition for pull
+  # Override the cache definition for pull
   cache:
     key:
       files:
@@ -82,26 +58,14 @@ danger-review:
     when: on_failure
     expire_in: 1 week
 
-.test_template: &test_definition
-  <<: *go_test_definition
-  script:
-    - go version
-    - git version
-    - make test
-  artifacts:
-    paths:
-      - _build/reports/go-tests-report-${CI_JOB_NAME}.xml
-    reports:
-      junit: _build/reports/go-tests-report-${CI_JOB_NAME}.xml
-
 verify:
-  <<: *ruby_definition
+  <<: *cache_definition
   stage: test
   script:
     - make verify
 
 proto:
-  <<: *ruby_definition
+  <<: *cache_definition
   stage: test
   script:
     - make proto no-changes
@@ -111,54 +75,67 @@ proto:
     - proto/go/gitalypb/*
     when: on_failure
 
-build:go1.14:
-  <<: *build_definition
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.14-git-2.27
-
-build:go1.13:
-  <<: *build_definition
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.13-git-2.26
-
-binaries_go1.14:
-  <<: *assemble_definition
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.14-git-2.27
-
-binaries_go1.13:
-  <<: *assemble_definition
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.13-git-2.26
-
-test:go1.14-git-2.28-ruby-2.6:
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.14-git-2.28
-  <<: *test_definition
-
-test:go1.14-git-2.27-ruby-2.6:
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.14-git-2.27
-  <<: *test_definition
-
-test:go1.14-git-2.26-ruby-2.6:
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.14-git-2.26
-  <<: *test_definition
-
-test:go1.13-git-2.27-ruby-2.6:
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.13-git-2.27
-  <<: *test_definition
-
-test:go1.13-git-2.26-ruby-2.6:
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.13-git-2.26
-  <<: *test_definition
-
-test:proxy:
-  <<: *test_definition
+build:
+  <<: *cache_definition
+  stage: build
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-${GO_VERSION}-git-${GIT_VERSION}
   script:
-    - make test-with-proxies
+    - go version
+    - make
+    - _support/test-boot .
+  parallel:
+    matrix:
+      - GO_VERSION: "1.14"
+        GIT_VERSION: "2.27"
+      - GO_VERSION: "1.13"
+        GIT_VERSION: "2.26"
 
-test:praefect:
-  <<: *test_definition
+binaries:
+  <<: *cache_definition
+  stage: build
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-${GO_VERSION}-git-${GIT_VERSION}
+  only:
+    - tags
   script:
-    - make test-with-praefect
+    # Just in case we start running CI builds on other architectures in future
+    - go version
+    - make binaries
+  artifacts:
+    paths:
+    - _build/assembly/checksums.sha256.txt
+    - _build/assembly/bin/
+    name: "${CI_JOB_NAME}:go-${GO_VERSION}-git-${GIT_VERSION}"
+    expire_in: 6 months
+  parallel:
+    matrix:
+      - GO_VERSION: "1.14"
+        GIT_VERSION: "2.27"
+      - GO_VERSION: "1.13"
+        GIT_VERSION: "2.26"
+
+test:
+  <<: *test_definition
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-${GO_VERSION}-git-${GIT_VERSION}
+  script:
+    - go version
+    - git version
+    - make ${TARGET}
+  artifacts:
+    paths:
+      - _build/reports/go-tests-report-go-${GO_VERSION}-git-${GIT_VERSION}.xml
+    reports:
+      junit: _build/reports/go-tests-report-go-${GO_VERSION}-git-${GIT_VERSION}.xml
+  parallel:
+    matrix:
+      - GO_VERSION: [ "1.13", "1.14" ]
+        GIT_VERSION: [ "2.26", "2.27", "2.28" ]
+        TARGET: test
+      - GO_VERSION: "1.14"
+        GIT_VERSION: "2.27"
+        TARGET: [ test-with-proxies, test-with-praefect ]
 
 race:
-  <<: *go_test_definition
+  <<: *test_definition
   script:
     - go version
     - git version
@@ -170,7 +147,7 @@ race:
       junit: _build/reports/go-tests-report-${CI_JOB_NAME}.xml
 
 cover:
-  <<: *ruby_definition
+  <<: *cache_definition
   stage: test
   script:
     - make cover
@@ -225,7 +202,7 @@ license_scanning:
     LICENSE_FINDER_CLI_OPTS: '--aggregate-paths=. ruby'
 
 praefect_sql_connect:
-  <<: *go_test_definition
+  <<: *test_definition
   services:
     - postgres:11.8
   variables:
@@ -241,7 +218,7 @@ praefect_sql_connect:
     - ./praefect -config config.praefect.toml sql-migrate
 
 praefect_sql_test:
-  <<: *go_test_definition
+  <<: *test_definition
   image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.14-git-2.27-pgbouncer-1.14
   services:
     - postgres:11.8
