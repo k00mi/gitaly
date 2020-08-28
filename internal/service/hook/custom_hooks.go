@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
@@ -100,8 +99,6 @@ func matchFiles(dir string) ([]string, error) {
 		}
 		hookFiles = append(hookFiles, filepath.Join(dir, fi.Name()))
 	}
-
-	sort.Strings(hookFiles)
 
 	return hookFiles, nil
 }
