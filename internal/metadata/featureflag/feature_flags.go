@@ -18,7 +18,7 @@ var (
 	// GoPreReceiveHook will bypass the ruby pre-receive hook and use the go implementation
 	GoPreReceiveHook = FeatureFlag{Name: "go_prereceive_hook", OnByDefault: true}
 	// GoPostReceiveHook will bypass the ruby post-receive hook and use the go implementation
-	GoPostReceiveHook = FeatureFlag{Name: "go_postreceive_hook", OnByDefault: false}
+	GoPostReceiveHook = FeatureFlag{Name: "go_postreceive_hook", OnByDefault: true}
 	// ReferenceTransactions will handle Git reference updates via the transaction service for strong consistency
 	ReferenceTransactions = FeatureFlag{Name: "reference_transactions", OnByDefault: true}
 	// ReferenceTransactionsOperationService will enable reference transactions for the OperationService
