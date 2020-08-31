@@ -19,7 +19,7 @@ const (
 
 	// LfsPointerMinSize is the minimum size for an lfs pointer text blob
 	LfsPointerMinSize = 120
-	// LfsPointerMaxSize is the minimum size for an lfs pointer text blob
+	// LfsPointerMaxSize is the maximum size for an lfs pointer text blob
 	LfsPointerMaxSize = 200
 )
 
