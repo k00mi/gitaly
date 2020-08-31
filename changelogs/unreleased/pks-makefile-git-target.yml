@@ -1,0 +1,5 @@
+---
+title: Provide generic "git" Makefile target
+merge_request: 2488
+author:
+type: added
