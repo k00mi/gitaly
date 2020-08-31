@@ -22,6 +22,7 @@ require (
 	gitlab.com/gitlab-org/labkit v0.0.0-20200507062444-0149780c759d
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	golang.org/x/sys v0.0.0-20200113162924-86b910548bc1
+	golang.org/x/text v0.3.3 // indirect
 	google.golang.org/grpc v1.24.0
 	gopkg.in/yaml.v2 v2.2.8
 )
