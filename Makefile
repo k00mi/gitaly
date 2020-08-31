@@ -43,6 +43,7 @@ PROTOC            := ${BUILD_DIR}/protoc/bin/protoc
 PROTOC_GEN_GO     := ${BUILD_DIR}/bin/protoc-gen-go
 PROTOC_GEN_GITALY := ${BUILD_DIR}/bin/protoc-gen-gitaly
 GO_JUNIT_REPORT   := ${BUILD_DIR}/bin/go-junit-report
+GOCOVER_COBERTURA := ${BUILD_DIR}/bin/gocover-cobertura
 
 # Build information
 BUNDLE_FLAGS    ?= $(shell test -f ${SOURCE_DIR}/../.gdk-install-root && echo --no-deployment || echo --deployment)
@@ -54,11 +55,12 @@ GO_TEST_LDFLAGS := -X gitlab.com/gitlab-org/gitaly/auth.timestampThreshold=5s
 GO_BUILD_TAGS   := tracer_static,tracer_static_jaeger,continuous_profiler_stackdriver,static,system_libgit2
 
 # Dependency versions
-GOLANGCI_LINT_VERSION ?= 1.27.0
-PROTOC_VERSION        ?= 3.12.4
-PROTOC_GEN_GO_VERSION ?= 1.3.2
-GIT_VERSION           ?= v2.27.0
-LIBGIT2_VERSION       ?= v1.0.1
+GOLANGCI_LINT_VERSION     ?= 1.27.0
+PROTOC_VERSION            ?= 3.12.4
+PROTOC_GEN_GO_VERSION     ?= 1.3.2
+GIT_VERSION               ?= v2.27.0
+LIBGIT2_VERSION       	  ?= v1.0.1
+GOCOVER_COBERTURA_VERSION ?= aaee18c8195c3f2d90e5ef80ca918d265463842a
 
 # Dependency downloads
 ifeq (${OS},Darwin)
@@ -283,12 +285,14 @@ rubocop: ${SOURCE_DIR}/.ruby-bundle
 	${Q}cd ${GITALY_RUBY_DIR} && bundle exec rubocop --parallel
 
 .PHONY: cover
-cover: prepare-tests libgit2
+cover: prepare-tests libgit2 ${GOCOVER_COBERTURA}
 	${Q}echo "NOTE: make cover does not exit 1 on failure, don't use it to check for tests success!"
 	${Q}mkdir -p "${COVERAGE_DIR}"
 	${Q}rm -f "${COVERAGE_DIR}/all.merged" "${COVERAGE_DIR}/all.html"
 	${Q}go test -tags "${GO_BUILD_TAGS}" -ldflags='${GO_TEST_LDFLAGS}' -coverprofile "${COVERAGE_DIR}/all.merged" $(call find_go_packages)
 	${Q}go tool cover -html  "${COVERAGE_DIR}/all.merged" -o "${COVERAGE_DIR}/all.html"
+	# sed is used below to convert file paths to repository root relative paths. See https://gitlab.com/gitlab-org/gitlab/-/issues/217664
+	${Q}${GOCOVER_COBERTURA} <"${COVERAGE_DIR}/all.merged" | sed 's;filename=\"$(shell go list -m)/;filename=\";g' >"${COVERAGE_DIR}/cobertura.xml"
 	${Q}echo ""
 	${Q}echo "=====> Total test coverage: <====="
 	${Q}echo ""
@@ -405,6 +409,9 @@ ${GIT_INSTALL_DIR}/bin/git: ${BUILD_DIR}/git_full_bins.tgz
 	${Q}mkdir -p ${GIT_INSTALL_DIR}
 	tar -C ${GIT_INSTALL_DIR} -xvzf ${BUILD_DIR}/git_full_bins.tgz
 endif
+
+${GOCOVER_COBERTURA}: ${BUILD_DIR}/Makefile.sha256 | ${BUILD_DIR}
+	${Q}cd ${BUILD_DIR} && go get github.com/t-yuki/gocover-cobertura@${GOCOVER_COBERTURA_VERSION}
 
 ${GO_JUNIT_REPORT}: ${BUILD_DIR}/Makefile.sha256 ${BUILD_DIR}/go.mod
 	${Q}cd ${BUILD_DIR} && go get github.com/jstemmer/go-junit-report@984a47ca6b0a7d704c4b589852051b4d7865aa17
