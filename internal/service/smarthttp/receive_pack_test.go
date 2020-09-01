@@ -613,10 +613,6 @@ func TestPostReceiveWithReferenceTransactionHook(t *testing.T) {
 
 	for _, features := range featureSets {
 		t.Run("disabled "+features.String(), func(t *testing.T) {
-			if !features.IsDisabled(featureflag.ReferenceTransactionHook) {
-				t.Skip("reference-transaction hook is broken in git-core")
-			}
-
 			refTransactionServer.called = 0
 
 			client, conn := newSmartHTTPClient(t, "unix://"+gitalySocketPath)
