@@ -990,7 +990,7 @@ func TestErrorThreshold(t *testing.T) {
 			require.NoError(t, err)
 			cli := mock.NewSimpleServiceClient(conn)
 
-			nodeMgr.Start(0, 5*time.Millisecond)
+			nodeMgr.Start(0, time.Nanosecond)
 			repo, _, cleanup := testhelper.NewTestRepo(t)
 			defer cleanup()
 
@@ -1012,7 +1012,7 @@ func TestErrorThreshold(t *testing.T) {
 				require.Equal(t, expectedErr, err)
 			}
 
-			time.Sleep(5 * time.Millisecond)
+			time.Sleep(10 * time.Millisecond)
 
 			_, err = nodeMgr.GetShard("default")
 			require.Equal(t, nodes.ErrPrimaryNotHealthy, err)
