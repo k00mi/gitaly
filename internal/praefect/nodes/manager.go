@@ -20,6 +20,9 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/grpc-proxy/proxy"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metrics"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/middleware"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes/tracker"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	prommetrics "gitlab.com/gitlab-org/gitaly/internal/prometheus/metrics"
 	correlation "gitlab.com/gitlab-org/labkit/correlation/grpc"
 	grpctracing "gitlab.com/gitlab-org/labkit/tracing/grpc"
@@ -113,7 +116,15 @@ var ErrPrimaryNotHealthy = errors.New("primary is not healthy")
 const dialTimeout = 10 * time.Second
 
 // NewManager creates a new NodeMgr based on virtual storage configs
-func NewManager(log *logrus.Entry, c config.Config, db *sql.DB, rs datastore.RepositoryStore, latencyHistogram prommetrics.HistogramVec, dialOpts ...grpc.DialOption) (*Mgr, error) {
+func NewManager(
+	log *logrus.Entry,
+	c config.Config,
+	db *sql.DB,
+	rs datastore.RepositoryStore,
+	latencyHistogram prommetrics.HistogramVec,
+	registry *protoregistry.Registry,
+	errorTracker tracker.ErrorTracker,
+	dialOpts ...grpc.DialOption) (*Mgr, error) {
 	strategies := make(map[string]leaderElectionStrategy, len(c.VirtualStorages))
 
 	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
@@ -124,16 +135,22 @@ func NewManager(log *logrus.Entry, c config.Config, db *sql.DB, rs datastore.Rep
 
 		ns := make([]*nodeStatus, 0, len(virtualStorage.Nodes))
 		for _, node := range virtualStorage.Nodes {
+			streamInterceptors := []grpc.StreamClientInterceptor{
+				grpc_prometheus.StreamClientInterceptor,
+				grpctracing.StreamClientTracingInterceptor(),
+				correlation.StreamClientCorrelationInterceptor(),
+			}
+
+			if c.Failover.Enabled && errorTracker != nil {
+				streamInterceptors = append(streamInterceptors, middleware.StreamErrorHandler(registry, errorTracker, node.Storage))
+			}
+
 			conn, err := client.DialContext(ctx, node.Address,
 				append(
 					[]grpc.DialOption{
 						grpc.WithDefaultCallOptions(grpc.ForceCodec(proxy.NewCodec())),
 						grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(node.Token)),
-						grpc.WithStreamInterceptor(grpc_middleware.ChainStreamClient(
-							grpc_prometheus.StreamClientInterceptor,
-							grpctracing.StreamClientTracingInterceptor(),
-							correlation.StreamClientCorrelationInterceptor(),
-						)),
+						grpc.WithStreamInterceptor(grpc_middleware.ChainStreamClient(streamInterceptors...)),
 						grpc.WithUnaryInterceptor(grpc_middleware.ChainUnaryClient(
 							grpc_prometheus.UnaryClientInterceptor,
 							grpctracing.UnaryClientTracingInterceptor(),
@@ -144,7 +161,7 @@ func NewManager(log *logrus.Entry, c config.Config, db *sql.DB, rs datastore.Rep
 			if err != nil {
 				return nil, err
 			}
-			cs := newConnectionStatus(*node, conn, log, latencyHistogram)
+			cs := newConnectionStatus(*node, conn, log, latencyHistogram, errorTracker)
 			ns = append(ns, cs)
 		}
 
@@ -262,12 +279,13 @@ func (n *Mgr) GetSyncedNode(ctx context.Context, virtualStorageName, repoPath st
 	return healthyStorages[rand.Intn(len(healthyStorages))], nil
 }
 
-func newConnectionStatus(node config.Node, cc *grpc.ClientConn, l logrus.FieldLogger, latencyHist prommetrics.HistogramVec) *nodeStatus {
+func newConnectionStatus(node config.Node, cc *grpc.ClientConn, l logrus.FieldLogger, latencyHist prommetrics.HistogramVec, errorTracker tracker.ErrorTracker) *nodeStatus {
 	return &nodeStatus{
 		node:        node,
 		clientConn:  cc,
 		log:         l,
 		latencyHist: latencyHist,
+		errTracker:  errorTracker,
 	}
 }
 
@@ -278,6 +296,7 @@ type nodeStatus struct {
 	latencyHist prommetrics.HistogramVec
 	mtx         sync.RWMutex
 	statuses    []bool
+	errTracker  tracker.ErrorTracker
 }
 
 // GetStorage gets the storage name of a node
@@ -331,6 +350,18 @@ func (n *nodeStatus) updateStatus(status bool) {
 }
 
 func (n *nodeStatus) CheckHealth(ctx context.Context) (bool, error) {
+	if n.errTracker != nil {
+		if n.errTracker.ReadThresholdReached(n.GetStorage()) {
+			n.updateStatus(false)
+			return false, fmt.Errorf("read error threshold reached for storage %q", n.GetStorage())
+		}
+
+		if n.errTracker.WriteThresholdReached(n.GetStorage()) {
+			n.updateStatus(false)
+			return false, fmt.Errorf("write error threshold reached for storage %q", n.GetStorage())
+		}
+	}
+
 	health := healthpb.NewHealthClient(n.clientConn)
 	ctx, cancel := context.WithTimeout(ctx, healthcheckTimeout)
 	defer cancel()

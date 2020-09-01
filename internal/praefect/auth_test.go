@@ -167,16 +167,15 @@ func runServer(t *testing.T, token string, required bool) (*grpc.Server, string,
 
 	logEntry := testhelper.DiscardTestEntry(t)
 	queue := datastore.NewMemoryReplicationEventQueue(conf)
+	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
 
-	nodeMgr, err := nodes.NewManager(logEntry, conf, nil, nil, promtest.NewMockHistogramVec())
+	nodeMgr, err := nodes.NewManager(logEntry, conf, nil, rs, promtest.NewMockHistogramVec(), protoregistry.GitalyProtoPreregistered, nil)
 	require.NoError(t, err)
 
 	txMgr := transactions.NewManager(conf)
 
 	registry, err := protoregistry.New(fd)
 	require.NoError(t, err)
-
-	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
 
 	coordinator := NewCoordinator(queue, rs, nodeMgr, txMgr, conf, registry)
 

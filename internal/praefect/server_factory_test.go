@@ -79,7 +79,8 @@ func TestServerFactory(t *testing.T) {
 
 	logger := testhelper.DiscardTestEntry(t)
 	queue := datastore.NewMemoryReplicationEventQueue(conf)
-	nodeMgr, err := nodes.NewManager(logger, conf, nil, datastore.NewMemoryRepositoryStore(conf.StorageNames()), &promtest.MockHistogramVec{})
+
+	nodeMgr, err := nodes.NewManager(logger, conf, nil, datastore.NewMemoryRepositoryStore(conf.StorageNames()), &promtest.MockHistogramVec{}, protoregistry.GitalyProtoPreregistered, nil)
 	require.NoError(t, err)
 	nodeMgr.Start(0, time.Second)
 	txMgr := transactions.NewManager(conf)

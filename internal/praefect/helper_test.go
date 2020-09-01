@@ -189,7 +189,7 @@ func defaultTxMgr(conf config.Config) *transactions.Manager {
 }
 
 func defaultNodeMgr(t testing.TB, conf config.Config, rs datastore.RepositoryStore) nodes.Manager {
-	nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf, nil, rs, promtest.NewMockHistogramVec())
+	nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf, nil, rs, promtest.NewMockHistogramVec(), protoregistry.GitalyProtoPreregistered, nil)
 	require.NoError(t, err)
 	nodeMgr.Start(0, time.Hour)
 	return nodeMgr

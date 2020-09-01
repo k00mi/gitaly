@@ -28,6 +28,28 @@ type Failover struct {
 	MonitorInterval config.Duration `toml:"monitor_interval"`
 }
 
+// ErrorThresholdsConfigured checks whether returns whether the errors thresholds are configured. If they
+// are configured but in an invalid way, an error is returned.
+func (f Failover) ErrorThresholdsConfigured() (bool, error) {
+	if f.ErrorThresholdWindow == 0 && f.WriteErrorThresholdCount == 0 && f.ReadErrorThresholdCount == 0 {
+		return false, nil
+	}
+
+	if f.ErrorThresholdWindow == 0 {
+		return false, errors.New("threshold window not set")
+	}
+
+	if f.WriteErrorThresholdCount == 0 {
+		return false, errors.New("write error threshold not set")
+	}
+
+	if f.ReadErrorThresholdCount == 0 {
+		return false, errors.New("read error threshold not set")
+	}
+
+	return true, nil
+}
+
 const sqlFailoverValue = "sql"
 
 // Replication contains replication specific configuration options.
