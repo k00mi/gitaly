@@ -168,10 +168,49 @@ func NewPostgresReplicationEventQueue(qc glsql.Querier) PostgresReplicationEvent
 
 // PostgresReplicationEventQueue is a Postgres implementation of persistent queue.
 type PostgresReplicationEventQueue struct {
+	// The main requirements for the queue implementation are:
+	//  - it should not use long transactions
+	//  - it should perform without problems if PgBouncer is used in between with `pool_mode = transaction`
+	//  - it should perform concurrently with other queue implementations (support of horizontal scaling)
+	//  - it should handle events sequentially starting with the oldest
+	//  - it should handle events concurrently for multiple repositories
+	//  - it should support retries
+	//
+	// Current implementation uses the following tables to mimic the queue:
+	//  - replication_queue_lock
+	//  - replication_queue
+	//  - replication_queue_job_lock
+	//
+	// `replication_queue_lock` holds repository level locks to synchronize multiple Praefects instances
+	// working on the same queue (shared database). Only one worker is allowed to operate on a given repository at a time.
+	// The `id` column is a concatenated string of the virtual storage name, gitaly node,
+	// and repository relative path: virtual1|node1|/path/to/project.git with `|` as a delimiter (represented as <lock>
+	// elsewhere in this doc).
+	// The `acquired` column reflects whether the lock for this repository (qualified by `id` column) is taken.
+	//
+	// `replication_queue` stores the actual replication event. The job is stored as a JSONB value in the `job` column of
+	// the table. It includes `meta` column designed to store meta information such as `correlation_id` etc. Each event has
+	// corresponding value in the `lock_id` column from `replication_queue_lock` table. Each replication event will be
+	// created with the following defaults:
+	//  - attempt: 3
+	//  - state: `ready`
+	//  - created_at: UTC timestamp
+	//  - updated_at: NULL
+	//
+	// `replication_queue_job_lock` holds event specific locks to prevent multiple queue workers from operating on the same
+	// event and track the events that are protected by the <lock>.
+	//
+	// The mechanics of how the queue works is described in the `Enqueue`, `Dequeue`, `Acknowledge` methods.
 	qc glsql.Querier
 }
 
 func (rq PostgresReplicationEventQueue) Enqueue(ctx context.Context, event ReplicationEvent) (ReplicationEvent, error) {
+	// When `Enqueue` method is called:
+	//  1. Insertion of the new record into `replication_queue_lock` table, so we are ensured all events have
+	//     a corresponding <lock>. If a record already exists it won't be inserted again.
+	//  2. Insertion of the new record into the `replication_queue` table with the defaults listed above,
+	//     the job, the meta and corresponding <lock> used in `replication_queue_lock` table for the `lock_id` column.
+
 	query := `
 		WITH insert_lock AS (
 			INSERT INTO replication_queue_lock(id)
@@ -198,6 +237,23 @@ func (rq PostgresReplicationEventQueue) Enqueue(ctx context.Context, event Repli
 }
 
 func (rq PostgresReplicationEventQueue) Dequeue(ctx context.Context, virtualStorage, nodeStorage string, count int) ([]ReplicationEvent, error) {
+	// When `Dequeue` method is called:
+	//  1. Events with attempts left that are either in `ready` or `failed` state are candidates for dequeuing.
+	//     Events already being processed by another worker are filtered out by checking if the event is already locked
+	//     in the `replication_queue_job_lock` table.
+	//  2. Events for repositories that are already locked by another Praefect instance are filtered out.
+	//     Repository locks are stored in the `replication_queue_lock` table.
+	//  3. The events that still remain after filtering are dequeued. On dequeuing:
+	//      - The event's attempts are decremented by 1.
+	//      - The event's state is set to `in_progress`
+	//      - The event's `updated_at` is set to current time in UTC.
+	//  4. For each event retrieved from the step above a new record would be created in
+	//     `replication_queue_job_lock` table. Rows in this table allows us to track events that were fetched for processing
+	//     and relation of them with the locks in the `replication_queue_lock` table. The reason we need it is because
+	//     multiple events can be fetched for the same repository (more details on it in `Acknowledge` below).
+	//  5. Update the corresponding <lock> in `replication_queue_lock` table and column `acquired` is assigned with
+	//     `TRUE` value to signal that this <lock> is busy and can't be used to fetch events (step 2.).
+
 	query := `
 		WITH lock AS (
 			SELECT id
@@ -257,6 +313,24 @@ func (rq PostgresReplicationEventQueue) Dequeue(ctx context.Context, virtualStor
 }
 
 func (rq PostgresReplicationEventQueue) Acknowledge(ctx context.Context, state JobState, ids []uint64) ([]uint64, error) {
+	// When `Acknowledge` method is called:
+	//  1. The list of event `id`s and corresponding <lock>s retrieved from `replication_queue` table as passed in by the
+	//     user `ids` could not exist in the table or the `state` of the event could differ from `in_progress` (it is
+	//     possible to acknowledge only events previously fetched by the `Dequeue` method)
+	//  2. Based on the list fetched on previous step the update is executed on the `replication_queue` table and it changes
+	//     the `state` column to the passed in value if the event was actually executed or it updates similar events
+	//     (events for the same repository with same change type and a source) that were created before processed events
+	//     were queued for processing. It returns a list of event `id`s and corresponding <lock>s of the affected events
+	//     during the update.
+	//  3. The removal of records in `replication_queue_job_lock` table happens that were created by step 4. of `Dequeue`
+	//     method call.
+	//  4. Acquisition state of <lock>s in `replication_queue_lock` table updated by comparing amount of existing bindings
+	//     in `replication_queue_lock` table for the <lock> to amount of removed bindings done on the 3. for the <lock>
+	//     and if amount is the same the <lock> is free and column `acquired` assigned `FALSE` value, so this <lock> can
+	//     be used in the `Dequeue` method to retrieve other events. If amounts don't match no update happens and <lock>
+	//     remains acquired until all events are acknowledged (binding records removed from the `replication_queue_job_lock`
+	//     table).
+
 	if len(ids) == 0 {
 		return nil, nil
 	}
