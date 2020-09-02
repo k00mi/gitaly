@@ -402,7 +402,7 @@ ${GIT_INSTALL_DIR}/bin/git: ${BUILD_DIR}/Makefile.sha256 | ${BUILD_DIR}
 	${GIT} clone --depth 1 --branch ${GIT_VERSION} --quiet ${GIT_REPO_URL} ${GIT_SOURCE_DIR}
 	${Q}rm -rf ${GIT_INSTALL_DIR}
 	${Q}mkdir -p ${GIT_INSTALL_DIR}
-	${MAKE} -C ${GIT_SOURCE_DIR} -j$(shell nproc) prefix=${GIT_PREFIX} ${GIT_BUILD_OPTIONS} install
+	env -u MAKEFLAGS -u GIT_VERSION ${MAKE} -C ${GIT_SOURCE_DIR} -j$(shell nproc) prefix=${GIT_PREFIX} ${GIT_BUILD_OPTIONS} install
 else
 ${GIT_INSTALL_DIR}/bin/git: ${BUILD_DIR}/git_full_bins.tgz
 	${Q}rm -rf ${GIT_INSTALL_DIR}
