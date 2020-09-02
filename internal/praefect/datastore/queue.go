@@ -310,11 +310,12 @@ func (rq PostgresReplicationEventQueue) Acknowledge(ctx context.Context, state J
 	//  1. The list of event `id`s and corresponding <lock>s retrieved from `replication_queue` table as passed in by the
 	//     user `ids` could not exist in the table or the `state` of the event could differ from `in_progress` (it is
 	//     possible to acknowledge only events previously fetched by the `Dequeue` method)
-	//  2. Based on the list fetched on previous step the update is executed on the `replication_queue` table and it changes
-	//     the `state` column to the passed in value if the event was actually executed or it updates similar events
-	//     (events for the same repository with same change type and a source) that were created before processed events
-	//     were queued for processing. It returns a list of event `id`s and corresponding <lock>s of the affected events
-	//     during the update.
+	//  2. Based on the list fetched on previous step the delete is executed on the `replication_queue` table. In case the
+	//     new state for the entry is 'dead' it will be just deleted, but if the new state is 'completed' the event will
+	//     be delete as well, but all events similar to it (events for the same repository with same change type and a source)
+	//     that were created before processed events were queued for processing will also be deleted.
+	//     In case the new state is something different ('failed') the event will be updated only with a new state.
+	//     It returns a list of event `id`s and corresponding <lock>s of the affected events during this delete/update process.
 	//  3. The removal of records in `replication_queue_job_lock` table happens that were created by step 4. of `Dequeue`
 	//     method call.
 	//  4. Acquisition state of <lock>s in `replication_queue_lock` table updated by comparing amount of existing bindings
