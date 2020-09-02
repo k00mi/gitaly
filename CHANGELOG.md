@@ -1,5 +1,12 @@
 # Gitaly changelog
 
+## 13.3.3 (2020-09-02)
+
+### Security (1 change)
+
+- Don't expand filesystem paths of wiki pages.
+
+
 ## 13.3.2 (2020-08-28)
 
 ### Fixed (1 change)
@@ -71,6 +78,13 @@
 
 - Update mime-types for Ruby 2.7. !2456
 - Pass CORRELATION_ID env variable to spawned git subprocesses. !2478
+
+
+## 13.2.7 (2020-09-02)
+
+### Security (1 change)
+
+- Don't expand filesystem paths of wiki pages.
 
 
 ## 13.2.6
@@ -149,6 +163,13 @@
 - Support literal path lookups in other commit RPCs. !2303
 - Ensure Praefect replication queue tables exist. !2309
 - Error forwarded mutator RPCs on replication job enqueue failure. !2332
+
+
+## 13.1.9 (2020-09-02)
+
+### Security (1 change)
+
+- Don't expand filesystem paths of wiki pages.
 
 
 ## 13.1.8
