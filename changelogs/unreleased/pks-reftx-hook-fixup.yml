@@ -1,0 +1,5 @@
+---
+title: Fixup reference-transaction hook name based on arguments
+merge_request: 2506
+author:
+type: fixed

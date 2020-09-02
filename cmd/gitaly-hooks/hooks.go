@@ -28,6 +28,32 @@ import (
 	"google.golang.org/grpc"
 )
 
+// fixupReftxHook fixes up the subcommand in case case the wrong hook was executed instead of the
+// reference-transaction hook. This bug was introduced together with the reference-transaction hook
+// in Git v2.28.0. As pre-receive and post-receive don't have any arguments and update has the fully
+// qualified reference as first argument, none should ever be invoked with the verbs that the
+// reference-transaction hook receives.
+func fixupReftxHook(args []string) []string {
+	if len(args) != 3 {
+		return args
+	}
+
+	name := args[1]
+	if name != "pre-receive" && name != "post-receive" && name != "update" {
+		return args
+	}
+
+	arg := args[2]
+	if arg != "prepared" && arg != "committed" && arg != "aborted" {
+		return args
+	}
+
+	return append(
+		[]string{args[0], "reference-transaction"},
+		args[2:]...,
+	)
+}
+
 func main() {
 	var logger = gitalylog.NewHookLogger()
 
@@ -35,10 +61,12 @@ func main() {
 		logger.Fatalf("requires hook name. args: %v", os.Args)
 	}
 
-	subCmd := os.Args[1]
+	fixedArgs := fixupReftxHook(os.Args)
+
+	subCmd := fixedArgs[1]
 
 	if subCmd == "check" {
-		configPath := os.Args[2]
+		configPath := fixedArgs[2]
 
 		status, err := check(configPath)
 		if err != nil {
@@ -67,7 +95,7 @@ func main() {
 
 	switch subCmd {
 	case "update":
-		args := os.Args[2:]
+		args := fixedArgs[2:]
 		if len(args) != 3 {
 			logger.Fatalf("hook %q is missing required arguments", subCmd)
 		}
