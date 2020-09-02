@@ -165,6 +165,13 @@
 - Error forwarded mutator RPCs on replication job enqueue failure. !2332
 
 
+## 13.1.9 (2020-09-02)
+
+### Security (1 change)
+
+- Don't expand filesystem paths of wiki pages.
+
+
 ## 13.1.8
 
 - No changes.
