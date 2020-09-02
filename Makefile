@@ -333,7 +333,7 @@ no-changes:
 smoke-test: all rspec
 	${Q}go test -tags "${GO_BUILD_TAGS}" ./internal/gitaly/rubyserver
 
-.PHONY:
+.PHONY: git
 git: ${GIT_INSTALL_DIR}/bin/git
 
 .PHONY: libgit2
