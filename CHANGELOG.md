@@ -84,6 +84,10 @@
 - Pass CORRELATION_ID env variable to spawned git subprocesses. !2478
 
 
+## 13.2.8
+
+- No changes.
+
 ## 13.2.7 (2020-09-02)
 
 ### Security (1 change)
