@@ -3,6 +3,8 @@ calls to a set of Gitaly services.*/
 package praefect
 
 import (
+	"time"
+
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
@@ -30,6 +32,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/keepalive"
 )
 
 // NewGRPCServer returns gRPC server with registered proxy-handler and actual services praefect serves on its own.
@@ -81,6 +84,10 @@ func NewGRPCServer(
 			// converted to errors and logged
 			panichandler.UnaryPanicHandler,
 		)),
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			MinTime:             20 * time.Second,
+			PermitWithoutStream: true,
+		}),
 	}...)
 
 	warnDupeAddrs(logger, conf)
