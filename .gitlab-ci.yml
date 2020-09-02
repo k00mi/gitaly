@@ -135,7 +135,7 @@ test:
         TARGET: test
       - GO_VERSION: "1.14"
         GIT_VERSION: "v2.27.0"
-        TARGET: [ test-with-proxies, test-with-praefect ]
+        TARGET: [ test-with-proxies, test-with-praefect, race-go ]
 
 test:master:
   <<: *test_definition
@@ -150,18 +150,6 @@ test:master:
         TARGET: [ test, test-with-proxies, test-with-praefect ]
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-
-race:
-  <<: *test_definition
-  script:
-    - go version
-    - _build/git/bin/git version
-    - make race-go
-  artifacts:
-    paths:
-      - _build/reports/go-tests-report-${CI_JOB_NAME}.xml
-    reports:
-      junit: _build/reports/go-tests-report-${CI_JOB_NAME}.xml
 
 cover:
   <<: *cache_definition
