@@ -1,5 +1,9 @@
 # Gitaly changelog
 
+## 13.3.4
+
+- No changes.
+
 ## 13.3.3 (2020-09-02)
 
 ### Security (1 change)
@@ -79,6 +83,10 @@
 - Update mime-types for Ruby 2.7. !2456
 - Pass CORRELATION_ID env variable to spawned git subprocesses. !2478
 
+
+## 13.2.8
+
+- No changes.
 
 ## 13.2.7 (2020-09-02)
 
@@ -164,6 +172,10 @@
 - Ensure Praefect replication queue tables exist. !2309
 - Error forwarded mutator RPCs on replication job enqueue failure. !2332
 
+
+## 13.1.10
+
+- No changes.
 
 ## 13.1.9 (2020-09-02)
 
