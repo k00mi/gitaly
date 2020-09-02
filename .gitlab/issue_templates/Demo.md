@@ -11,12 +11,11 @@
 
 When adding new feature demonstrations to the script, follow these guidelines.
 
-For each feature you are verifying, add an H3 section with a link to the issue.
-For example:
+For each feature you are verifying, add an H3 section with a link to the issue
+to the `## Features` section.
 
-```
-### #1234
-```
+Always add new features near the bottom of this section. This way older issues
+will float to the top and allow them to be prioritized during the demo.
 
 Make sure you break down steps into the following sections:
 
@@ -61,23 +60,32 @@ it from this issue template.
 -->
 
 This issue is used to conduct a demo for exhibiting and verifying new behavior
-for Gitaly and Praefect. Before the demo, run all prep steps. During the demo,
-run through all remaining exercise and verification steps. Check each step as
-completed. 
+for Gitaly and Praefect. Before the demo, run all `Prep:` steps. During the
+demo, run through all remaining `Demo:` and `Verify` steps. Check each
+step as completed or verified. Do not check a `Verify:` step if it does not
+succeed. 
 
 ## General Setup
 
+1. [ ] Prep: Check the
+   [latest version of this issue template](https://gitlab.com/gitlab-org/gitaly/-/blob/master/.gitlab/issue_templates/Demo.md)
+   for any new steps and update this issue accordingly.
 1. [ ] Prep: [Follow instructions to setup and configure a GitLab instance with
    a Praefect
    cluster](https://gitlab.com/gitlab-org/gitaly/-/blob/master/_support/terraform/README.md).
-1. [ ] Prep: Log into GitLab web interface
-1. [ ] Prep: Upload license
+1. [ ] Prep: Log into the GitLab web interface and upload license
 
-<!-- Features go here-->
+## Features
+<!-- Keep older features near the top of this section, add new features at
+the bottom -->
 
-## Tear Down
+## After Demo
 
-1. [ ] Demo: [Follow teardown instructions to remove demo
+1. [ ] Open a new demo issue and assign to the next demo runner.
+1. [ ] Create any follow up issues discovered during the demo and assign label
+   ~demo.
+1. [ ] [Follow teardown instructions to remove demo
    resources](https://gitlab.com/gitlab-org/gitaly/-/blob/master/_support/terraform/README.md#destroying-a-demo-cluster)
+1. [ ] Close this issue
 
 /label ~demo ~"group::gitaly" ~"devops::create"
