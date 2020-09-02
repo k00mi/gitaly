@@ -1,6 +1,10 @@
 [replication]
 batch_size = 1
 
+[reconciliation]
+scheduling_interval = "1m"
+histogram_buckets = [1.0, 2.0, 3.0, 4.0, 5.0]
+
 [failover]
 enabled = false
 election_strategy = "local"

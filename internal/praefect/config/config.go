@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	promclient "github.com/prometheus/client_golang/prometheus"
 	"gitlab.com/gitlab-org/gitaly/internal/config"
 	"gitlab.com/gitlab-org/gitaly/internal/config/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/config/log"
@@ -52,6 +53,20 @@ func (f Failover) ErrorThresholdsConfigured() (bool, error) {
 
 const sqlFailoverValue = "sql"
 
+// Reconciliation contains reconciliation specific configuration options.
+type Reconciliation struct {
+	// SchedulingInterval the interval between each automatic reconciliation run. If set to 0,
+	// automatic reconciliation is disabled.
+	SchedulingInterval config.Duration `toml:"scheduling_interval"`
+	// HistogramBuckets configures the reconciliation scheduling duration histogram's buckets.
+	HistogramBuckets []float64 `toml:"histogram_buckets"`
+}
+
+// DefaultReconciliationConfig returns the default values for reconciliation configuration.
+func DefaultReconciliationConfig() Reconciliation {
+	return Reconciliation{HistogramBuckets: promclient.DefBuckets}
+}
+
 // Replication contains replication specific configuration options.
 type Replication struct {
 	// BatchSize controls how many replication jobs to dequeue and lock
@@ -66,6 +81,7 @@ func DefaultReplicationConfig() Replication {
 
 // Config is a container for everything found in the TOML config file
 type Config struct {
+	Reconciliation       Reconciliation    `toml:"reconciliation"`
 	Replication          Replication       `toml:"replication"`
 	ListenAddr           string            `toml:"listen_addr"`
 	TLSListenAddr        string            `toml:"tls_listen_addr"`
@@ -94,7 +110,8 @@ type VirtualStorage struct {
 // FromFile loads the config for the passed file path
 func FromFile(filePath string) (Config, error) {
 	conf := &Config{
-		Replication: DefaultReplicationConfig(),
+		Reconciliation: DefaultReconciliationConfig(),
+		Replication:    DefaultReplicationConfig(),
 		// Sets the default Failover, to be overwritten when deserializing the TOML
 		Failover: Failover{Enabled: true, ElectionStrategy: sqlFailoverValue},
 	}

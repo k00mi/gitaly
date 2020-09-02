@@ -104,6 +104,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes/tracker"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/reconciler"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/transactions"
 	"gitlab.com/gitlab-org/gitaly/internal/version"
 	"gitlab.com/gitlab-org/labkit/monitoring"
@@ -344,6 +345,16 @@ func run(cfgs []starter.Config, conf config.Config) error {
 	logger.Info("background started: processing of the replication events")
 	repl.ProcessStale(ctx, 30*time.Second, time.Minute)
 	logger.Info("background started: processing of the stale replication events")
+
+	if interval := conf.Reconciliation.SchedulingInterval.Duration(); interval > 0 {
+		if conf.MemoryQueueEnabled {
+			logger.Warn("Disabled automatic reconciliation as it is only implemented using SQL queue and in-memory queue is configured.")
+		} else {
+			r := reconciler.NewReconciler(logger, db, nodeManager, conf.StorageNames(), conf.Reconciliation.HistogramBuckets)
+			prometheus.MustRegister(r)
+			go r.Run(ctx, reconciler.NewTimer(interval))
+		}
+	}
 
 	return b.Wait(conf.GracefulStopTimeout.Duration())
 }
