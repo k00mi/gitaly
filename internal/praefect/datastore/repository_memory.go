@@ -19,9 +19,9 @@ type MemoryRepositoryStore struct {
 type storages map[string][]string
 
 func (s storages) secondaries(virtualStorage, primary string) ([]string, error) {
-	storages, ok := s[virtualStorage]
-	if !ok {
-		return nil, fmt.Errorf("unknown virtual storage: %q", virtualStorage)
+	storages, err := s.storages(virtualStorage)
+	if err != nil {
+		return nil, err
 	}
 
 	primaryFound := false
@@ -40,6 +40,15 @@ func (s storages) secondaries(virtualStorage, primary string) ([]string, error) 
 	}
 
 	return secondaries, nil
+}
+
+func (s storages) storages(virtualStorage string) ([]string, error) {
+	storages, ok := s[virtualStorage]
+	if !ok {
+		return nil, fmt.Errorf("unknown virtual storage: %q", virtualStorage)
+	}
+
+	return storages, nil
 }
 
 // virtualStorageStates represents the virtual storage's view of what state the repositories should be in.
