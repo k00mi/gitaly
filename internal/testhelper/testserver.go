@@ -513,7 +513,7 @@ func handleAllowed(options GitlabTestServerOptions) func(w http.ResponseWriter, 
 			return
 		}
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`{"message":"401 Unauthorized"}`))
+		w.Write([]byte(`{"message":"401 Unauthorized\n"}`))
 	}
 }
 

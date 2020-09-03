@@ -351,9 +351,6 @@ To create a merge request for okay, visit:
 					"GL_USERNAME=username",
 					"GL_PROTOCOL=protocol",
 					"GL_REPOSITORY=repository"}
-				if useGoPreReceive {
-					envVars = append(envVars, "GITALY_GO_PRERECEIVE=true")
-				}
 
 				require.NoError(t, stream.Send(&gitalypb.PostReceiveHookRequest{
 					Repository:           testRepo,

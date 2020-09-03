@@ -13,8 +13,6 @@ var (
 	GoFetchSourceBranch = FeatureFlag{Name: "go_fetch_source_branch", OnByDefault: false}
 	// DistributedReads allows praefect to redirect accessor operations to up-to-date secondaries
 	DistributedReads = FeatureFlag{Name: "distributed_reads", OnByDefault: true}
-	// GoPreReceiveHook will bypass the ruby pre-receive hook and use the go implementation
-	GoPreReceiveHook = FeatureFlag{Name: "go_prereceive_hook", OnByDefault: true}
 	// GoPostReceiveHook will bypass the ruby post-receive hook and use the go implementation
 	GoPostReceiveHook = FeatureFlag{Name: "go_postreceive_hook", OnByDefault: true}
 	// ReferenceTransactions will handle Git reference updates via the transaction service for strong consistency
@@ -39,7 +37,6 @@ var (
 var All = []FeatureFlag{
 	GoFetchSourceBranch,
 	DistributedReads,
-	GoPreReceiveHook,
 	GoPostReceiveHook,
 	ReferenceTransactions,
 	ReferenceTransactionsOperationService,
@@ -50,7 +47,6 @@ var All = []FeatureFlag{
 }
 
 const (
-	GoPreReceiveHookEnvVar         = "GITALY_GO_PRERECEIVE"
 	GoPostReceiveHookEnvVar        = "GITALY_GO_POSTRECEIVE"
 	ReferenceTransactionHookEnvVar = "GITALY_REFERENCE_TRANSACTION_HOOK"
 )

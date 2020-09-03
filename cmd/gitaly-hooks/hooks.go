@@ -125,18 +125,12 @@ func main() {
 			logger.Fatalf("error when getting preReceiveHookStream client for %q: %v", subCmd, err)
 		}
 
-		environment := glValues()
-		environment = append(environment, gitObjectDirs()...)
-
+		environment := append(glValues(), gitObjectDirs()...)
 		for _, key := range []string{metadata.PraefectEnvKey, metadata.TransactionEnvKey} {
 			if value, ok := os.LookupEnv(key); ok {
 				env := fmt.Sprintf("%s=%s", key, value)
 				environment = append(environment, env)
 			}
-		}
-
-		if os.Getenv(featureflag.GoPreReceiveHookEnvVar) == "true" {
-			environment = append(environment, fmt.Sprintf("%s=true", featureflag.GoPreReceiveHookEnvVar))
 		}
 
 		if err := preReceiveHookStream.Send(&gitalypb.PreReceiveHookRequest{
