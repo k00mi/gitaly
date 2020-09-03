@@ -9,8 +9,6 @@ type FeatureFlag struct {
 // In order to support coverage of combined features usage all feature flags should be marked as enabled for the test.
 // NOTE: if you add a new feature flag please add it to the `All` list defined below.
 var (
-	// GoUpdateHook will bypass the ruby update hook and use the go implementation of custom hooks
-	GoUpdateHook = FeatureFlag{Name: "go_update_hook", OnByDefault: true}
 	// GoFetchSourceBranch enables a go implementation of FetchSourceBranch
 	GoFetchSourceBranch = FeatureFlag{Name: "go_fetch_source_branch", OnByDefault: false}
 	// DistributedReads allows praefect to redirect accessor operations to up-to-date secondaries
@@ -39,7 +37,6 @@ var (
 
 // All includes all feature flags.
 var All = []FeatureFlag{
-	GoUpdateHook,
 	GoFetchSourceBranch,
 	DistributedReads,
 	GoPreReceiveHook,
@@ -53,7 +50,6 @@ var All = []FeatureFlag{
 }
 
 const (
-	GoUpdateHookEnvVar             = "GITALY_GO_UPDATE"
 	GoPreReceiveHookEnvVar         = "GITALY_GO_PRERECEIVE"
 	GoPostReceiveHookEnvVar        = "GITALY_GO_POSTRECEIVE"
 	ReferenceTransactionHookEnvVar = "GITALY_REFERENCE_TRANSACTION_HOOK"

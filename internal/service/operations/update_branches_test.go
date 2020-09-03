@@ -102,22 +102,9 @@ func testSuccessfulGitHooksForUserUpdateBranchRequest(t *testing.T, ctx context.
 }
 
 func TestFailedUserUpdateBranchDueToHooks(t *testing.T) {
-	featureSet, err := testhelper.NewFeatureSets(nil, featureflag.GoUpdateHook)
-	require.NoError(t, err)
+	ctx, cancel := testhelper.Context()
+	defer cancel()
 
-	for _, features := range featureSet {
-		t.Run("disabled "+features.String(), func(t *testing.T) {
-			ctx, cancel := testhelper.Context()
-			defer cancel()
-
-			ctx = features.Disable(ctx)
-
-			testFailedUserUpdateBranchDueToHooks(t, ctx)
-		})
-	}
-}
-
-func testFailedUserUpdateBranchDueToHooks(t *testing.T, ctx context.Context) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 

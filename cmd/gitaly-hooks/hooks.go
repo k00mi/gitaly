@@ -101,14 +101,9 @@ func main() {
 		}
 		ref, oldValue, newValue := args[0], args[1], args[2]
 
-		environment := glValues()
-		if os.Getenv(featureflag.GoUpdateHookEnvVar) == "true" {
-			environment = append(environment, fmt.Sprintf("%s=true", featureflag.GoUpdateHookEnvVar))
-		}
-
 		req := &gitalypb.UpdateHookRequest{
 			Repository:           repository,
-			EnvironmentVariables: environment,
+			EnvironmentVariables: glValues(),
 			Ref:                  []byte(ref),
 			OldValue:             oldValue,
 			NewValue:             newValue,
