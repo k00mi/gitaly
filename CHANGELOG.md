@@ -177,6 +177,13 @@
 - Error forwarded mutator RPCs on replication job enqueue failure. !2332
 
 
+## 13.1.11
+
+### Fixed (1 change)
+
+- Fix hanging info refs cache when error occurs. !2497
+
+
 ## 13.1.10
 
 - No changes.
