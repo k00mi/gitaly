@@ -59,6 +59,7 @@ GOLANGCI_LINT_VERSION     ?= 1.27.0
 PROTOC_VERSION            ?= 3.12.4
 PROTOC_GEN_GO_VERSION     ?= 1.3.2
 GIT_VERSION               ?= v2.27.0
+GIT2GO_VERSION            ?= v30
 LIBGIT2_VERSION       	  ?= v1.0.1
 GOCOVER_COBERTURA_VERSION ?= aaee18c8195c3f2d90e5ef80ca918d265463842a
 
@@ -392,6 +393,7 @@ ${LIBGIT2_INSTALL_DIR}/lib/libgit2.a: ${BUILD_DIR}/Makefile.sha256
 	${Q}mkdir -p ${LIBGIT2_BUILD_DIR}
 	${Q}cd ${LIBGIT2_BUILD_DIR} && cmake ${LIBGIT2_SOURCE_DIR} ${LIBGIT2_BUILD_OPTIONS}
 	${Q}CMAKE_BUILD_PARALLEL_LEVEL=$(shell nproc) cmake --build ${LIBGIT2_BUILD_DIR} --target install
+	go install -a github.com/libgit2/git2go/${GIT2GO_VERSION}
 
 ${GOIMPORTS}: ${BUILD_DIR}/Makefile.sha256 ${BUILD_DIR}/go.mod
 	${Q}cd ${BUILD_DIR} && go get golang.org/x/tools/cmd/goimports@2538eef75904eff384a2551359968e40c207d9d2
