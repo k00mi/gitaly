@@ -135,19 +135,21 @@ test:
         TARGET: test
       - GO_VERSION: "1.14"
         GIT_VERSION: "v2.27.0"
-        TARGET: [ test-with-proxies, test-with-praefect ]
+        TARGET: [ test-with-proxies, test-with-praefect, race-go ]
 
-race:
+test:master:
   <<: *test_definition
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-${GO_VERSION}-git-2.28
   script:
     - go version
-    - _build/git/bin/git version
-    - make race-go
-  artifacts:
-    paths:
-      - _build/reports/go-tests-report-${CI_JOB_NAME}.xml
-    reports:
-      junit: _build/reports/go-tests-report-${CI_JOB_NAME}.xml
+    - make all ${TARGET}
+  parallel:
+    matrix:
+      - GO_VERSION: "1.14"
+        GIT_VERSION: "master"
+        TARGET: [ test, test-with-proxies, test-with-praefect ]
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
 
 cover:
   <<: *cache_definition
