@@ -163,11 +163,11 @@ func (m *MemoryRepositoryStore) GetReplicatedGeneration(ctx context.Context, vir
 
 	if targetGeneration != GenerationUnknown && targetGeneration >= sourceGeneration {
 		return 0, DowngradeAttemptedError{
-			virtualStorage:      virtualStorage,
-			relativePath:        relativePath,
-			storage:             target,
-			currentGeneration:   targetGeneration,
-			attemptedGeneration: sourceGeneration,
+			VirtualStorage:      virtualStorage,
+			RelativePath:        relativePath,
+			Storage:             target,
+			CurrentGeneration:   targetGeneration,
+			AttemptedGeneration: sourceGeneration,
 		}
 	}
 

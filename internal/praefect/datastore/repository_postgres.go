@@ -18,16 +18,16 @@ const GenerationUnknown = -1
 // DowngradeAttemptedError is returned when attempting to get the replicated generation for a source repository
 // that does not upgrade the target repository.
 type DowngradeAttemptedError struct {
-	virtualStorage      string
-	relativePath        string
-	storage             string
-	currentGeneration   int
-	attemptedGeneration int
+	VirtualStorage      string
+	RelativePath        string
+	Storage             string
+	CurrentGeneration   int
+	AttemptedGeneration int
 }
 
 func (err DowngradeAttemptedError) Error() string {
 	return fmt.Sprintf("attempted downgrading %q -> %q -> %q from generation %d to %d",
-		err.virtualStorage, err.relativePath, err.storage, err.currentGeneration, err.attemptedGeneration,
+		err.VirtualStorage, err.RelativePath, err.Storage, err.CurrentGeneration, err.AttemptedGeneration,
 	)
 }
 
@@ -38,7 +38,7 @@ type RepositoryNotExistsError struct {
 	storage        string
 }
 
-// Is checks whetehr the other errors is of the same type.
+// Is checks whether the other errors is of the same type.
 func (err RepositoryNotExistsError) Is(other error) bool {
 	_, ok := other.(RepositoryNotExistsError)
 	return ok
@@ -251,11 +251,11 @@ AND storage = ANY($3)
 
 	if targetGeneration != GenerationUnknown && targetGeneration >= sourceGeneration {
 		return 0, DowngradeAttemptedError{
-			virtualStorage:      virtualStorage,
-			relativePath:        relativePath,
-			storage:             target,
-			currentGeneration:   targetGeneration,
-			attemptedGeneration: sourceGeneration,
+			VirtualStorage:      virtualStorage,
+			RelativePath:        relativePath,
+			Storage:             target,
+			CurrentGeneration:   targetGeneration,
+			AttemptedGeneration: sourceGeneration,
 		}
 	}
 
