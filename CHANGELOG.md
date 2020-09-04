@@ -88,6 +88,13 @@
 - Pass CORRELATION_ID env variable to spawned git subprocesses. !2478
 
 
+## 13.2.9
+
+### Fixed (1 change)
+
+- Fix hanging info refs cache when error occurs. !2497
+
+
 ## 13.2.8
 
 - No changes.
