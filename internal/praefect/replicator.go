@@ -57,7 +57,14 @@ func (dr defaultReplicator) Replicate(ctx context.Context, event datastore.Repli
 	if err != nil {
 		// Later generation might have already been replicated by an earlier replication job. If that's the case,
 		// we'll simply acknowledge the job. This also prevents accidental downgrades from happening.
-		if errors.Is(err, datastore.DowngradeAttemptedError{}) {
+		var downgradeErr datastore.DowngradeAttemptedError
+		if errors.As(err, &downgradeErr) {
+			message := "repository downgrade prevented"
+			if downgradeErr.CurrentGeneration == downgradeErr.AttemptedGeneration {
+				message = "target repository already on the same generation, skipping replication job"
+			}
+
+			dr.log.WithError(downgradeErr).Info(message)
 			return nil
 		}
 

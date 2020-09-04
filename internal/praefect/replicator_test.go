@@ -193,6 +193,58 @@ gitaly_praefect_replication_jobs{change_type="update",gitaly_storage="backup",vi
 `)))
 }
 
+func TestReplicatorDowngradeAttempt(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	rs := datastore.NewMemoryRepositoryStore(nil)
+	require.NoError(t, rs.SetGeneration(ctx, "virtual-storage-1", "relative-path-1", "gitaly-1", 0))
+	require.NoError(t, rs.SetGeneration(ctx, "virtual-storage-1", "relative-path-1", "gitaly-2", 0))
+
+	logger := testhelper.DiscardTestLogger(t)
+	hook := test.NewLocal(logger)
+	r := &defaultReplicator{log: logrus.NewEntry(logger), rs: rs}
+
+	require.NoError(t, r.Replicate(ctx, datastore.ReplicationEvent{
+		Job: datastore.ReplicationJob{
+			VirtualStorage:    "virtual-storage-1",
+			RelativePath:      "relative-path-1",
+			SourceNodeStorage: "gitaly-1",
+			TargetNodeStorage: "gitaly-2",
+		},
+	}, nil, nil))
+
+	require.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
+	require.Equal(t, datastore.DowngradeAttemptedError{
+		VirtualStorage:      "virtual-storage-1",
+		RelativePath:        "relative-path-1",
+		Storage:             "gitaly-2",
+		CurrentGeneration:   0,
+		AttemptedGeneration: 0,
+	}, hook.LastEntry().Data["error"])
+	require.Equal(t, "target repository already on the same generation, skipping replication job", hook.LastEntry().Message)
+
+	require.NoError(t, rs.SetGeneration(ctx, "virtual-storage-1", "relative-path-1", "gitaly-2", 1))
+	require.NoError(t, r.Replicate(ctx, datastore.ReplicationEvent{
+		Job: datastore.ReplicationJob{
+			VirtualStorage:    "virtual-storage-1",
+			RelativePath:      "relative-path-1",
+			SourceNodeStorage: "gitaly-1",
+			TargetNodeStorage: "gitaly-2",
+		},
+	}, nil, nil))
+
+	require.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
+	require.Equal(t, datastore.DowngradeAttemptedError{
+		VirtualStorage:      "virtual-storage-1",
+		RelativePath:        "relative-path-1",
+		Storage:             "gitaly-2",
+		CurrentGeneration:   1,
+		AttemptedGeneration: 0,
+	}, hook.LastEntry().Data["error"])
+	require.Equal(t, "repository downgrade prevented", hook.LastEntry().Message)
+}
+
 func TestPropagateReplicationJob(t *testing.T) {
 	primaryServer, primarySocketPath, cleanup := runMockRepositoryServer(t)
 	defer cleanup()
