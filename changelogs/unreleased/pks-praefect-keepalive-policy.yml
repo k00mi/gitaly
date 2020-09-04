@@ -1,0 +1,5 @@
+---
+title: Fix stale connections to Praefect due to keepalive policy
+merge_request: 2511
+author:
+type: fixed
