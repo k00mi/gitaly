@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"path"
 
-	"gitlab.com/gitlab-org/gitaly/internal/config"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 )
 
 // Override allows tests to control where the hooks directory is.

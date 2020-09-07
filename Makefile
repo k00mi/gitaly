@@ -211,7 +211,7 @@ test-go: prepare-tests ${GO_JUNIT_REPORT} libgit2
 
 .PHONY: test-with-proxies
 test-with-proxies: prepare-tests
-	${Q}go test -tags "${GO_BUILD_TAGS}" -count=1  -exec ${SOURCE_DIR}/_support/bad-proxies ${GITALY_PACKAGE}/internal/rubyserver/
+	${Q}go test -tags "${GO_BUILD_TAGS}" -count=1  -exec ${SOURCE_DIR}/_support/bad-proxies ${GITALY_PACKAGE}/internal/gitaly/rubyserver/
 
 .PHONY: test-with-praefect
 test-with-praefect: build prepare-tests
@@ -331,7 +331,7 @@ no-changes:
 
 .PHONY: smoke-test
 smoke-test: all rspec
-	${Q}go test -tags "${GO_BUILD_TAGS}" ./internal/rubyserver
+	${Q}go test -tags "${GO_BUILD_TAGS}" ./internal/gitaly/rubyserver
 
 .PHONY:
 git: ${GIT_INSTALL_DIR}/bin/git

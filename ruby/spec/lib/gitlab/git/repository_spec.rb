@@ -806,7 +806,7 @@ describe Gitlab::Git::Repository do # rubocop:disable Metrics/BlockLength
 
   describe "#commit_patches" do
     let(:repository) { gitlab_git_from_gitaly(new_mutable_test_repo) }
-    let(:testdata_dir) { File.join(File.dirname(__FILE__), '../../../../../internal/service/operations/testdata') }
+    let(:testdata_dir) { File.join(File.dirname(__FILE__), '../../../../../internal/gitaly/service/operations/testdata') }
     let(:patches) { File.foreach(File.join(testdata_dir, patch_file_name)) }
 
     def apply_patches(branch_name)

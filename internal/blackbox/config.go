@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-	logconfig "gitlab.com/gitlab-org/gitaly/internal/config/log"
+	logconfig "gitlab.com/gitlab-org/gitaly/internal/gitaly/config/log"
 )
 
 type Config struct {
