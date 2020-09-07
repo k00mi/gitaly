@@ -1,0 +1,5 @@
+---
+title: 'transactions: Enable majority-wins voting strategy by default'
+merge_request: 2529
+author:
+type: changed

@@ -27,7 +27,7 @@ var (
 	ReferenceTransactionsSSHService = FeatureFlag{Name: "reference_transactions_ssh_service", OnByDefault: true}
 	// ReferenceTranasctiionsPrimaryWins will change transaction registration such that
 	// secondaries will take part in transactions, but not influence their outcome.
-	ReferenceTransactionsPrimaryWins = FeatureFlag{Name: "reference_transactions_primary_wins", OnByDefault: true}
+	ReferenceTransactionsPrimaryWins = FeatureFlag{Name: "reference_transactions_primary_wins", OnByDefault: false}
 	// ReferenceTransactionHook will enable the reference-transaction hook
 	// introduced with Git v2.28.0 for voting on transactions
 	ReferenceTransactionHook = FeatureFlag{Name: "reference_transaction_hook", OnByDefault: false}
