@@ -2,7 +2,7 @@ package metrics
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
-	promconfig "gitlab.com/gitlab-org/gitaly/internal/config/prometheus"
+	promconfig "gitlab.com/gitlab-org/gitaly/internal/gitaly/config/prometheus"
 	"gitlab.com/gitlab-org/gitaly/internal/prometheus/metrics"
 )
 

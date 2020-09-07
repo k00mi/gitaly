@@ -5,7 +5,7 @@ describe Gitlab::Git::CommitPatches do
 
   describe "#commit" do
     let(:repository) { gitlab_git_from_gitaly(new_mutable_test_repo) }
-    let(:testdata_dir) { File.join(File.dirname(__FILE__), '../../../../../internal/service/operations/testdata') }
+    let(:testdata_dir) { File.join(File.dirname(__FILE__), '../../../../../internal/gitaly/service/operations/testdata') }
     let(:patches) { File.foreach(File.join(testdata_dir, patch_file_name)) }
     let(:user) { Gitlab::Git::User.new('jane', 'Jane Doe', 'jane@doe.org', '123') }
 

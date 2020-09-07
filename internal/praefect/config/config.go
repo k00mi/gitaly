@@ -8,11 +8,11 @@ import (
 
 	"github.com/BurntSushi/toml"
 	promclient "github.com/prometheus/client_golang/prometheus"
-	"gitlab.com/gitlab-org/gitaly/internal/config"
-	"gitlab.com/gitlab-org/gitaly/internal/config/auth"
-	"gitlab.com/gitlab-org/gitaly/internal/config/log"
-	"gitlab.com/gitlab-org/gitaly/internal/config/prometheus"
-	"gitlab.com/gitlab-org/gitaly/internal/config/sentry"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config/auth"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config/log"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config/prometheus"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config/sentry"
 )
 
 type Failover struct {
