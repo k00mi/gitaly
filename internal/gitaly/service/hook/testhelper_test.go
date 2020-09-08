@@ -39,7 +39,7 @@ func runHooksServer(t *testing.T, hooksCfg config.Hooks) (string, func()) {
 func runHooksServerWithAPI(t *testing.T, gitlabAPI gitalyhook.GitlabAPI, hooksCfg config.Hooks) (string, func()) {
 	srv := testhelper.NewServer(t, nil, nil)
 
-	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), NewServer(gitalyhook.NewManager(), gitlabAPI, hooksCfg))
+	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), NewServer(gitalyhook.NewManager(gitlabAPI, hooksCfg), gitlabAPI, hooksCfg))
 	reflection.Register(srv.GrpcServer())
 
 	require.NoError(t, srv.Start())
