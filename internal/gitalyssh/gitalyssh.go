@@ -3,9 +3,11 @@ package gitalyssh
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
@@ -14,12 +16,16 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	gitaly_x509 "gitlab.com/gitlab-org/gitaly/internal/x509"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
+	"gitlab.com/gitlab-org/labkit/correlation"
 	"gitlab.com/gitlab-org/labkit/tracing"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-var envInjector = tracing.NewEnvInjector()
+var (
+	envInjector       = tracing.NewEnvInjector()
+	correlationIDRand = rand.New(rand.NewSource(time.Now().UnixNano()))
+)
 
 func UploadPackEnv(ctx context.Context, req *gitalypb.SSHUploadPackRequest) ([]string, error) {
 	env, err := commandEnv(ctx, req.Repository.StorageName, "upload-pack", req)
@@ -61,6 +67,7 @@ func commandEnv(ctx context.Context, storageName, command string, message proto.
 		fmt.Sprintf("GITALY_ADDRESS=%s", address),
 		fmt.Sprintf("GITALY_TOKEN=%s", token),
 		fmt.Sprintf("GITALY_FEATUREFLAGS=%s", strings.Join(featureFlagPairs, ",")),
+		fmt.Sprintf("CORRELATION_ID=%s", getCorrelationID(ctx)),
 		// Pass through the SSL_CERT_* variables that indicate which
 		// system certs to trust
 		fmt.Sprintf("%s=%s", gitaly_x509.SSLCertDir, os.Getenv(gitaly_x509.SSLCertDir)),
@@ -70,4 +77,20 @@ func commandEnv(ctx context.Context, storageName, command string, message proto.
 
 func gitalySSHPath() string {
 	return filepath.Join(config.Config.BinDir, "gitaly-ssh")
+}
+
+func getCorrelationID(ctx context.Context) string {
+	correlationID := correlation.ExtractFromContext(ctx)
+	if correlationID != "" {
+		return correlationID
+	}
+
+	correlationID, _ = correlation.RandomID()
+	if correlationID == "" {
+		source := []byte("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+		correlationIDRand.Shuffle(len(source), func(i, j int) { source[i], source[j] = source[j], source[i] })
+		return correlationID[:32]
+	}
+
+	return correlationID
 }

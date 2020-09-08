@@ -35,6 +35,7 @@ import (
 	praefectconfig "gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	serverauth "gitlab.com/gitlab-org/gitaly/internal/server/auth"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
+	grpccorrelation "gitlab.com/gitlab-org/labkit/correlation/grpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
@@ -298,11 +299,18 @@ func NewServer(tb testing.TB, streamInterceptors []grpc.StreamServerInterceptor,
 	logrusEntry := log.NewEntry(logger).WithField("test", tb.Name())
 
 	ctxTagger := grpc_ctxtags.WithFieldExtractorForInitialReq(fieldextractors.FieldExtractor)
-	ctxStreamTagger := grpc_ctxtags.StreamServerInterceptor(ctxTagger)
-	ctxUnaryTagger := grpc_ctxtags.UnaryServerInterceptor(ctxTagger)
 
-	streamInterceptors = append([]grpc.StreamServerInterceptor{ctxStreamTagger, grpc_logrus.StreamServerInterceptor(logrusEntry)}, streamInterceptors...)
-	unaryInterceptors = append([]grpc.UnaryServerInterceptor{ctxUnaryTagger, grpc_logrus.UnaryServerInterceptor(logrusEntry)}, unaryInterceptors...)
+	streamInterceptors = append([]grpc.StreamServerInterceptor{
+		grpc_ctxtags.StreamServerInterceptor(ctxTagger),
+		grpccorrelation.StreamServerCorrelationInterceptor(),
+		grpc_logrus.StreamServerInterceptor(logrusEntry),
+	}, streamInterceptors...)
+
+	unaryInterceptors = append([]grpc.UnaryServerInterceptor{
+		grpc_ctxtags.UnaryServerInterceptor(ctxTagger),
+		grpccorrelation.UnaryServerCorrelationInterceptor(),
+		grpc_logrus.UnaryServerInterceptor(logrusEntry),
+	}, unaryInterceptors...)
 
 	return NewTestServer(
 		grpc.NewServer(

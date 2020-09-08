@@ -8,6 +8,8 @@ import (
 	"time"
 
 	gitaly_x509 "gitlab.com/gitlab-org/gitaly/internal/x509"
+	grpccorrelation "gitlab.com/gitlab-org/labkit/correlation/grpc"
+	grpctracing "gitlab.com/gitlab-org/labkit/tracing/grpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
@@ -74,12 +76,22 @@ func DialContext(ctx context.Context, rawAddress string, connOpts []grpc.DialOpt
 		)
 	}
 
-	// grpc.KeepaliveParams must be specified at least as large as what is allowed by the
-	// server-side grpc.KeepaliveEnforcementPolicy
-	connOpts = append(connOpts, grpc.WithKeepaliveParams(keepalive.ClientParameters{
-		Time:                20 * time.Second,
-		PermitWithoutStream: true,
-	}))
+	connOpts = append(connOpts,
+		// grpc.KeepaliveParams must be specified at least as large as what is allowed by the
+		// server-side grpc.KeepaliveEnforcementPolicy
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time:                20 * time.Second,
+			PermitWithoutStream: true,
+		}),
+		grpc.WithChainUnaryInterceptor(
+			grpctracing.UnaryClientTracingInterceptor(),
+			grpccorrelation.UnaryClientCorrelationInterceptor(),
+		),
+		grpc.WithChainStreamInterceptor(
+			grpctracing.StreamClientTracingInterceptor(),
+			grpccorrelation.StreamClientCorrelationInterceptor(),
+		),
+	)
 
 	conn, err := grpc.DialContext(ctx, canonicalAddress, connOpts...)
 	if err != nil {
