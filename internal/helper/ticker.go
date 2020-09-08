@@ -54,3 +54,21 @@ func NewManualTicker() *ManualTicker {
 		ResetFunc: func() {},
 	}
 }
+
+// NewCountTicker returns a ManualTicker with a ResetFunc that
+// calls the provided callback on Reset call after it has been
+// called N times.
+func NewCountTicker(n int, callback func()) *ManualTicker {
+	ticker := NewManualTicker()
+	ticker.ResetFunc = func() {
+		n--
+		if n < 0 {
+			callback()
+			return
+		}
+
+		ticker.Tick()
+	}
+
+	return ticker
+}

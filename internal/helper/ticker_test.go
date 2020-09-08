@@ -67,3 +67,33 @@ func TestManualTicker(t *testing.T) {
 		t.Fatalf("did not receive expected tick")
 	}
 }
+
+func TestCountTicker(t *testing.T) {
+	callbackCalled := make(chan struct{}, 1)
+	callback := func() { callbackCalled <- struct{}{} }
+	numCalls := 2
+
+	ticker := NewCountTicker(numCalls, callback)
+
+	for i := 0; i < numCalls; i++ {
+		ticker.Reset()
+		select {
+		case <-ticker.C():
+		case <-callbackCalled:
+			t.Fatalf("Callback should not be called before the number of is reached")
+		default:
+			t.Fatalf("did not receive expected tick")
+		}
+	}
+
+	for i := 0; i < numCalls; i++ {
+		ticker.Reset()
+		select {
+		case <-ticker.C():
+			t.Fatalf("Should not tick after the maximum number of reset calls is reached")
+		case <-callbackCalled:
+		default:
+			t.Fatalf("callback was not called as expected")
+		}
+	}
+}
