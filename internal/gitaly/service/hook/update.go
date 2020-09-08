@@ -4,7 +4,6 @@ import (
 	"errors"
 	"os/exec"
 
-	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
@@ -23,23 +22,16 @@ func (s *server) UpdateHook(in *gitalypb.UpdateHookRequest, stream gitalypb.Hook
 		return helper.ErrInvalidArgument(err)
 	}
 
-	repoPath, err := helper.GetRepoPath(in.GetRepository())
-	if err != nil {
-		return err
-	}
-	executor, err := s.manager.NewCustomHooksExecutor(repoPath, config.Config.Hooks.CustomHooksDir, "update")
-	if err != nil {
-		return helper.ErrInternal(err)
-	}
-
 	stdout := streamio.NewWriter(func(p []byte) error { return stream.Send(&gitalypb.UpdateHookResponse{Stdout: p}) })
 	stderr := streamio.NewWriter(func(p []byte) error { return stream.Send(&gitalypb.UpdateHookResponse{Stderr: p}) })
 
-	if err = executor(
+	if err := s.manager.UpdateHook(
 		stream.Context(),
-		[]string{string(in.GetRef()), in.GetOldValue(), in.GetNewValue()},
+		in.GetRepository(),
+		string(in.GetRef()),
+		in.GetOldValue(),
+		in.GetNewValue(),
 		in.GetEnvironmentVariables(),
-		nil,
 		stdout,
 		stderr,
 	); err != nil {
