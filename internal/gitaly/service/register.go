@@ -97,10 +97,13 @@ func RegisterAll(grpcServer *grpc.Server, cfg config.Cfg, rubyServer *rubyserver
 	gitalypb.RegisterServerServiceServer(grpcServer, server.NewServer(cfg.Storages))
 	gitalypb.RegisterObjectPoolServiceServer(grpcServer, objectpool.NewServer(locator))
 	gitalypb.RegisterHookServiceServer(grpcServer, hook.NewServer(
-		gitalyhook.NewManager(gitlabAPI, cfg.Hooks),
+		gitalyhook.NewManager(
+			gitlabAPI,
+			cfg.Hooks,
+			gitalyhook.WithVotingDelayMetric(votingDelayMetric),
+		),
 		gitlabAPI,
 		cfg.Hooks,
-		hook.WithVotingDelayMetric(votingDelayMetric),
 	))
 	gitalypb.RegisterInternalGitalyServer(grpcServer, internalgitaly.NewServer(cfg.Storages))
 

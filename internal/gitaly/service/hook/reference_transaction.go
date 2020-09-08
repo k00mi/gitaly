@@ -39,7 +39,7 @@ func (s *server) ReferenceTransactionHook(stream gitalypb.HookService_ReferenceT
 	}
 	hash := sha1.Sum(changes)
 
-	if err := s.voteOnTransaction(stream.Context(), hash[:], request.GetEnvironmentVariables()); err != nil {
+	if err := s.manager.VoteOnTransaction(stream.Context(), hash[:], request.GetEnvironmentVariables()); err != nil {
 		return helper.ErrInternalf("error voting on transaction: %v", err)
 	}
 
