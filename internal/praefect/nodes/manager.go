@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/sirupsen/logrus"
@@ -24,8 +23,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes/tracker"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	prommetrics "gitlab.com/gitlab-org/gitaly/internal/prometheus/metrics"
-	correlation "gitlab.com/gitlab-org/labkit/correlation/grpc"
-	grpctracing "gitlab.com/gitlab-org/labkit/tracing/grpc"
 	"google.golang.org/grpc"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
@@ -137,8 +134,6 @@ func NewManager(
 		for _, node := range virtualStorage.Nodes {
 			streamInterceptors := []grpc.StreamClientInterceptor{
 				grpc_prometheus.StreamClientInterceptor,
-				grpctracing.StreamClientTracingInterceptor(),
-				correlation.StreamClientCorrelationInterceptor(),
 			}
 
 			if c.Failover.Enabled && errorTracker != nil {
@@ -150,12 +145,8 @@ func NewManager(
 					[]grpc.DialOption{
 						grpc.WithDefaultCallOptions(grpc.ForceCodec(proxy.NewCodec())),
 						grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(node.Token)),
-						grpc.WithStreamInterceptor(grpc_middleware.ChainStreamClient(streamInterceptors...)),
-						grpc.WithUnaryInterceptor(grpc_middleware.ChainUnaryClient(
-							grpc_prometheus.UnaryClientInterceptor,
-							grpctracing.UnaryClientTracingInterceptor(),
-							correlation.UnaryClientCorrelationInterceptor(),
-						)),
+						grpc.WithChainStreamInterceptor(streamInterceptors...),
+						grpc.WithChainUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
 					}, dialOpts...),
 			)
 			if err != nil {

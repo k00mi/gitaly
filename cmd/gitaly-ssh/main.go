@@ -7,13 +7,10 @@ import (
 	"os"
 	"strings"
 
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
-	grpccorrelation "gitlab.com/gitlab-org/labkit/correlation/grpc"
 	"gitlab.com/gitlab-org/labkit/tracing"
-	grpctracing "gitlab.com/gitlab-org/labkit/tracing/grpc"
 	"google.golang.org/grpc"
 )
 
@@ -127,19 +124,6 @@ func dialOpts() []grpc.DialOption {
 	if token := os.Getenv("GITALY_TOKEN"); token != "" {
 		connOpts = append(connOpts, grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(token)))
 	}
-
-	// Add grpc client interceptors
-	connOpts = append(connOpts, grpc.WithStreamInterceptor(
-		grpc_middleware.ChainStreamClient(
-			grpctracing.StreamClientTracingInterceptor(),         // Tracing
-			grpccorrelation.StreamClientCorrelationInterceptor(), // Correlation
-		)),
-
-		grpc.WithUnaryInterceptor(
-			grpc_middleware.ChainUnaryClient(
-				grpctracing.UnaryClientTracingInterceptor(),         // Tracing
-				grpccorrelation.UnaryClientCorrelationInterceptor(), // Correlation
-			)))
 
 	return connOpts
 }
