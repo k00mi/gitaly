@@ -2,6 +2,7 @@ package metadatahandler
 
 import (
 	"context"
+	"strings"
 
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -21,7 +22,7 @@ var (
 			Name:      "client_requests_total",
 			Help:      "Counter of client requests received by client, call_site, auth version, response code and deadline_type",
 		},
-		[]string{"client_name", "call_site", "auth_version", "grpc_code", "deadline_type"},
+		[]string{"client_name", "grpc_service", "call_site", "auth_version", "grpc_code", "deadline_type"},
 	)
 )
 
@@ -125,9 +126,26 @@ func addMetadataTags(ctx context.Context) metadataTags {
 	return metaTags
 }
 
-func reportWithPrometheusLabels(metaTags metadataTags, err error) {
+func extractServiceName(fullMethodName string) string {
+	fullMethodName = strings.TrimPrefix(fullMethodName, "/") // remove leading slash
+	if i := strings.Index(fullMethodName, "/"); i >= 0 {
+		return fullMethodName[:i]
+	}
+	return unknownValue
+}
+
+func reportWithPrometheusLabels(metaTags metadataTags, fullMethod string, err error) {
 	grpcCode := helper.GrpcCode(err)
-	requests.WithLabelValues(metaTags.clientName, metaTags.callSite, metaTags.authVersion, grpcCode.String(), metaTags.deadlineType).Inc()
+	serviceName := extractServiceName(fullMethod)
+
+	requests.WithLabelValues(
+		metaTags.clientName,   // client_name
+		serviceName,           // grpc_service
+		metaTags.callSite,     // call_site
+		metaTags.authVersion,  // auth_version
+		grpcCode.String(),     // grpc_code
+		metaTags.deadlineType, // deadline_type
+	).Inc()
 	grpc_prometheus.WithConstLabels(prometheus.Labels{"deadline_type": metaTags.deadlineType})
 }
 
@@ -137,7 +155,7 @@ func UnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServ
 
 	res, err := handler(ctx, req)
 
-	reportWithPrometheusLabels(metaTags, err)
+	reportWithPrometheusLabels(metaTags, info.FullMethod, err)
 
 	return res, err
 }
@@ -149,7 +167,7 @@ func StreamInterceptor(srv interface{}, stream grpc.ServerStream, info *grpc.Str
 
 	err := handler(srv, stream)
 
-	reportWithPrometheusLabels(metaTags, err)
+	reportWithPrometheusLabels(metaTags, info.FullMethod, err)
 
 	return err
 }
