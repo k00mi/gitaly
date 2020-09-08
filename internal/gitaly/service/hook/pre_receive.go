@@ -110,28 +110,19 @@ func (s *server) voteOnTransaction(ctx context.Context, hash []byte, env []strin
 	return nil
 }
 
-func (s *server) executeCustomHooks(firstReq prePostRequest, stream gitalypb.HookService_PreReceiveHookServer, changes []byte, repository *gitalypb.Repository, reqEnvVars []string) error {
-	stdout := streamio.NewWriter(func(p []byte) error { return stream.Send(&gitalypb.PreReceiveHookResponse{Stdout: p}) })
-	stderr := streamio.NewWriter(func(p []byte) error { return stream.Send(&gitalypb.PreReceiveHookResponse{Stderr: p}) })
-
+func (s *server) executeCustomHooks(ctx context.Context, stdout, stderr io.Writer, changes []byte, repository *gitalypb.Repository, env []string) error {
 	// custom hooks execution
 	repoPath, err := helper.GetRepoPath(repository)
 	if err != nil {
 		return err
 	}
-	executor, err := newCustomHooksExecutor(repoPath, s.hooksConfig.CustomHooksDir, "pre-receive")
+	executor, err := s.manager.NewCustomHooksExecutor(repoPath, s.hooksConfig.CustomHooksDir, "pre-receive")
 	if err != nil {
 		return fmt.Errorf("creating custom hooks executor: %w", err)
 	}
 
-	env, err := preReceiveEnv(firstReq)
-	if err != nil {
-		return fmt.Errorf("getting env vars from request: %v", err)
-	}
-	env = append(env, reqEnvVars...)
-
 	if err = executor(
-		stream.Context(),
+		ctx,
 		nil,
 		env,
 		bytes.NewReader(changes),
@@ -242,7 +233,16 @@ func (s *server) PreReceiveHook(stream gitalypb.HookService_PreReceiveHookServer
 			return preReceiveHookResponse(stream, int32(1), message)
 		}
 
-		if err := s.executeCustomHooks(firstRequest, stream, changes, repository, reqEnvVars); err != nil {
+		stdout := streamio.NewWriter(func(p []byte) error { return stream.Send(&gitalypb.PreReceiveHookResponse{Stdout: p}) })
+		stderr := streamio.NewWriter(func(p []byte) error { return stream.Send(&gitalypb.PreReceiveHookResponse{Stderr: p}) })
+
+		env, err := preReceiveEnv(firstRequest)
+		if err != nil {
+			return fmt.Errorf("getting env vars from request: %v", err)
+		}
+		env = append(env, reqEnvVars...)
+
+		if err := s.executeCustomHooks(stream.Context(), stdout, stderr, changes, repository, env); err != nil {
 			var exitError *exec.ExitError
 			if errors.As(err, &exitError) {
 				return preReceiveHookResponse(stream, int32(exitError.ExitCode()), "")

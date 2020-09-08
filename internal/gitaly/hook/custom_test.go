@@ -147,7 +147,8 @@ func TestCustomHookPartialFailure(t *testing.T) {
 			cleanup = writeCustomHook(t, tc.hook, globalHookPath, globalHookScript)
 			defer cleanup()
 
-			caller, err := newCustomHooksExecutor(testRepoPath, globalCustomHooksDir, tc.hook)
+			mgr := Manager{}
+			caller, err := mgr.NewCustomHooksExecutor(testRepoPath, globalCustomHooksDir, tc.hook)
 			require.NoError(t, err)
 
 			var stdout, stderr bytes.Buffer
@@ -195,7 +196,8 @@ func TestCustomHooksMultipleHooks(t *testing.T) {
 		expectedExecutedScripts = append(expectedExecutedScripts, filepath.Join(globalHooksPath, fileName))
 	}
 
-	hooksExecutor, err := newCustomHooksExecutor(testRepoPath, globalCustomHooksDir, "update")
+	mgr := Manager{}
+	hooksExecutor, err := mgr.NewCustomHooksExecutor(testRepoPath, globalCustomHooksDir, "update")
 	require.NoError(t, err)
 
 	var stdout, stderr bytes.Buffer
@@ -224,7 +226,8 @@ func TestMultilineStdin(t *testing.T) {
 
 	writeCustomHook(t, "pre-receive-script", projectHooksPath, printStdinScript)
 
-	hooksExecutor, err := newCustomHooksExecutor(testRepoPath, globalCustomHooksDir, "pre-receive")
+	mgr := Manager{}
+	hooksExecutor, err := mgr.NewCustomHooksExecutor(testRepoPath, globalCustomHooksDir, "pre-receive")
 	require.NoError(t, err)
 
 	changes := `old1 new1 ref1
@@ -256,7 +259,8 @@ func TestMultipleScriptsStdin(t *testing.T) {
 		writeCustomHook(t, fileName, projectHooksPath, printStdinScript)
 	}
 
-	hooksExecutor, err := newCustomHooksExecutor(testRepoPath, globalCustomHooksDir, "pre-receive")
+	mgr := Manager{}
+	hooksExecutor, err := mgr.NewCustomHooksExecutor(testRepoPath, globalCustomHooksDir, "pre-receive")
 	require.NoError(t, err)
 
 	changes := "oldref11 newref00 ref123445"
@@ -281,7 +285,8 @@ func callAndVerifyHooks(t *testing.T, repoPath, hookName, globalHooksDir, hookDi
 	cleanup := writeCustomHook(t, hookName, hookDir, printAllScript)
 	defer cleanup()
 
-	callHooks, err := newCustomHooksExecutor(repoPath, globalHooksDir, hookName)
+	mgr := Manager{}
+	callHooks, err := mgr.NewCustomHooksExecutor(repoPath, globalHooksDir, hookName)
 	require.NoError(t, err)
 
 	require.NoError(t, callHooks(ctx, args, env, bytes.NewBufferString(stdin), &stdout, &stderr))

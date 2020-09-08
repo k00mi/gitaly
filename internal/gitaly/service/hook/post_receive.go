@@ -183,7 +183,7 @@ func (s *server) PostReceiveHook(stream gitalypb.HookService_PostReceiveHookServ
 	if err != nil {
 		return err
 	}
-	executor, err := newCustomHooksExecutor(repoPath, s.hooksConfig.CustomHooksDir, "post-receive")
+	executor, err := s.manager.NewCustomHooksExecutor(repoPath, s.hooksConfig.CustomHooksDir, "post-receive")
 	if err != nil {
 		return helper.ErrInternalf("creating custom hooks executor: %v", err)
 	}
