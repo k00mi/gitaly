@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// Headers prefixed with this string get whitelisted automatically
+// Headers prefixed with this string get allowlisted automatically
 const rubyFeaturePrefix = "gitaly-feature-ruby-"
 
 const (
@@ -76,21 +76,21 @@ func setHeaders(ctx context.Context, repo *gitalypb.Repository, mustExist bool) 
 	}
 
 	// list of http/2 headers that will be forwarded as-is to gitaly-ruby
-	proxyHeaderWhitelist := []string{
+	proxyHeaderAllowlist := []string{
 		"gitaly-servers",
 		praefect_metadata.TransactionMetadataKey,
 		praefect_metadata.PraefectMetadataKey,
 	}
 
 	if inMD, ok := metadata.FromIncomingContext(ctx); ok {
-		// Automatically whitelist any Ruby-specific feature flag
+		// Automatically allowlist any Ruby-specific feature flag
 		for header := range inMD {
 			if strings.HasPrefix(header, rubyFeaturePrefix) {
-				proxyHeaderWhitelist = append(proxyHeaderWhitelist, header)
+				proxyHeaderAllowlist = append(proxyHeaderAllowlist, header)
 			}
 		}
 
-		for _, header := range proxyHeaderWhitelist {
+		for _, header := range proxyHeaderAllowlist {
 			for _, v := range inMD[header] {
 				md = metadata.Join(md, metadata.Pairs(header, v))
 			}

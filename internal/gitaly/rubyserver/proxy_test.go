@@ -23,10 +23,10 @@ func TestSetHeadersBlocksUnknownMetadata(t *testing.T) {
 	require.True(t, ok, "outgoing context should have metadata")
 
 	_, ok = outMd[otherKey]
-	require.False(t, ok, "outgoing MD should not contain non-whitelisted key")
+	require.False(t, ok, "outgoing MD should not contain non-allowlisted key")
 }
 
-func TestSetHeadersPreservesWhitelistedMetadata(t *testing.T) {
+func TestSetHeadersPreservesAllowlistedMetadata(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
@@ -40,7 +40,7 @@ func TestSetHeadersPreservesWhitelistedMetadata(t *testing.T) {
 	outMd, ok := metadata.FromOutgoingContext(outCtx)
 	require.True(t, ok, "outgoing context should have metadata")
 
-	require.Equal(t, []string{value}, outMd[key], "outgoing MD should contain whitelisted key")
+	require.Equal(t, []string{value}, outMd[key], "outgoing MD should contain allowlisted key")
 }
 
 func TestRubyFeatureHeaders(t *testing.T) {
@@ -57,5 +57,5 @@ func TestRubyFeatureHeaders(t *testing.T) {
 	outMd, ok := metadata.FromOutgoingContext(outCtx)
 	require.True(t, ok, "outgoing context should have metadata")
 
-	require.Equal(t, []string{value}, outMd[key], "outgoing MD should contain whitelisted feature key")
+	require.Equal(t, []string{value}, outMd[key], "outgoing MD should contain allowlisted feature key")
 }
