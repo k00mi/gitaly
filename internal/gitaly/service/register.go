@@ -102,8 +102,6 @@ func RegisterAll(grpcServer *grpc.Server, cfg config.Cfg, rubyServer *rubyserver
 			cfg.Hooks,
 			gitalyhook.WithVotingDelayMetric(votingDelayMetric),
 		),
-		gitlabAPI,
-		cfg.Hooks,
 	))
 	gitalypb.RegisterInternalGitalyServer(grpcServer, internalgitaly.NewServer(cfg.Storages))
 
