@@ -84,6 +84,7 @@ ifeq (${GIT_BUILD_OPTIONS},)
     GIT_BUILD_OPTIONS += DEVELOPER=1
     # make it easy to debug in case of crashes
     GIT_BUILD_OPTIONS += CFLAGS='-O0 -g3'
+    GIT_BUILD_OPTIONS += USE_LIBPCRE2=YesPlease
     GIT_BUILD_OPTIONS += NO_PERL=YesPlease
     GIT_BUILD_OPTIONS += NO_EXPAT=YesPlease
     GIT_BUILD_OPTIONS += NO_TCLTK=YesPlease
