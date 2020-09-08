@@ -1,0 +1,5 @@
+---
+title: Improved SQL to get up to date storages for repository.
+merge_request: 2514
+author:
+type: performance

@@ -148,11 +148,11 @@ WITH next_generation AS (
 		UPDATE SET generation = repositories.generation + 1
 	RETURNING virtual_storage, relative_path, generation
 ), base_generation AS (
-	SELECT virtual_storage, relative_path, generation 
+	SELECT virtual_storage, relative_path, generation
 	FROM storage_repositories
 	WHERE virtual_storage = $1
 	AND relative_path = $2
-	AND storage = $3 
+	AND storage = $3
 	FOR UPDATE
 ), eligible_secondaries AS (
 	SELECT storage
@@ -330,31 +330,31 @@ AND storage = $3
 
 func (rs *PostgresRepositoryStore) GetConsistentSecondaries(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error) {
 	const q = `
-WITH expected AS (
-	SELECT virtual_storage, relative_path, generation
-	FROM storage_repositories
-	WHERE virtual_storage = $1
-	AND relative_path = $2
-	AND storage = $3
-)
+		WITH storage_gen AS (
+		    SELECT storage, generation
+		    FROM storage_repositories
+		    WHERE virtual_storage = $1
+		      AND relative_path = $2
+		      AND storage = ANY($4::text[])
+		)
 
-SELECT storage
-FROM storage_repositories
-NATURAL JOIN expected
-WHERE storage = ANY($4::text[])
-`
-	secondaries, err := rs.storages.secondaries(virtualStorage, primary)
+		SELECT DISTINCT sec.storage
+		FROM (SELECT generation FROM storage_gen WHERE storage = $3) AS prim
+		JOIN storage_gen AS sec ON sec.storage != $3 AND prim.generation = sec.generation`
+
+	storages, err := rs.storages.storages(virtualStorage)
 	if err != nil {
 		return nil, err
 	}
+	storages = append(storages, primary)
 
-	rows, err := rs.db.QueryContext(ctx, q, virtualStorage, relativePath, primary, pq.StringArray(secondaries))
+	rows, err := rs.db.QueryContext(ctx, q, virtualStorage, relativePath, primary, pq.StringArray(storages))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	consistentSecondaries := make(map[string]struct{}, len(secondaries))
+	consistentSecondaries := make(map[string]struct{}, len(storages)-1)
 	for rows.Next() {
 		var storage string
 		if err := rows.Scan(&storage); err != nil {
