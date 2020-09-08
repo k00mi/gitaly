@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	gitalyhook "gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
@@ -38,7 +39,7 @@ func runHooksServer(t *testing.T, hooksCfg config.Hooks) (string, func()) {
 func runHooksServerWithAPI(t *testing.T, gitlabAPI GitlabAPI, hooksCfg config.Hooks) (string, func()) {
 	srv := testhelper.NewServer(t, nil, nil)
 
-	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), NewServer(gitlabAPI, hooksCfg))
+	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), NewServer(gitalyhook.NewManager(), gitlabAPI, hooksCfg))
 	reflection.Register(srv.GrpcServer())
 
 	require.NoError(t, srv.Start())

@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	gitalyhook "gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
@@ -711,7 +712,7 @@ func runHookServiceServer(t *testing.T, token string) (string, func()) {
 func runHookServiceServerWithAPI(t *testing.T, token string, gitlabAPI hook.GitlabAPI) (string, func()) {
 	server := testhelper.NewServerWithAuth(t, nil, nil, token)
 
-	gitalypb.RegisterHookServiceServer(server.GrpcServer(), hook.NewServer(gitlabAPI, config.Config.Hooks))
+	gitalypb.RegisterHookServiceServer(server.GrpcServer(), hook.NewServer(gitalyhook.NewManager(), gitlabAPI, config.Config.Hooks))
 	reflection.Register(server.GrpcServer())
 	require.NoError(t, server.Start())
 
