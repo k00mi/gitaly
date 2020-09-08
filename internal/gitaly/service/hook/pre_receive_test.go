@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	gitalyhook "gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
@@ -278,7 +279,7 @@ func TestPreReceiveHook_GitlabAPIAccess(t *testing.T) {
 		SecretFile: secretFilePath,
 	}
 
-	gitlabAPI, err := NewGitlabAPI(gitlabConfig)
+	gitlabAPI, err := gitalyhook.NewGitlabAPI(gitlabConfig)
 	require.NoError(t, err)
 
 	serverSocketPath, stop := runHooksServerWithAPI(t, gitlabAPI, config.Hooks{})
@@ -382,7 +383,7 @@ func TestPreReceive_APIErrors(t *testing.T) {
 				SecretFile: secretFilePath,
 			}
 
-			gitlabAPI, err := NewGitlabAPI(gitlabConfig)
+			gitlabAPI, err := gitalyhook.NewGitlabAPI(gitlabConfig)
 			require.NoError(t, err)
 
 			serverSocketPath, stop := runHooksServerWithAPI(t, gitlabAPI, config.Hooks{})
@@ -443,7 +444,7 @@ exit %d
 		SecretFile: secretFilePath,
 	}
 
-	gitlabAPI, err := NewGitlabAPI(gitlabConfig)
+	gitlabAPI, err := gitalyhook.NewGitlabAPI(gitlabConfig)
 	require.NoError(t, err)
 
 	serverSocketPath, stop := runHooksServerWithAPI(t, gitlabAPI, config.Hooks{})
@@ -642,7 +643,7 @@ func TestPreReceiveHook_Primary(t *testing.T) {
 			testhelper.WriteShellSecretFile(t, tmpDir, "token")
 			testhelper.WriteCustomHook(testRepoPath, "pre-receive", []byte(fmt.Sprintf("#!/bin/bash\nexit %d", tc.hookExitCode)))
 
-			gitlabAPI, err := NewGitlabAPI(config.Gitlab{
+			gitlabAPI, err := gitalyhook.NewGitlabAPI(config.Gitlab{
 				URL:        srv.URL,
 				SecretFile: secretFilePath,
 			})

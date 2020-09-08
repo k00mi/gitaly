@@ -18,6 +18,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	gitalyhook "gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
@@ -461,7 +462,7 @@ func runSmartHTTPHookServiceServer(t *testing.T) (*grpc.Server, string) {
 	}
 
 	gitalypb.RegisterSmartHTTPServiceServer(server, NewServer())
-	gitalypb.RegisterHookServiceServer(server, hook.NewServer(hook.GitlabAPIStub, config.Config.Hooks))
+	gitalypb.RegisterHookServiceServer(server, hook.NewServer(gitalyhook.NewManager(gitalyhook.GitlabAPIStub, config.Config.Hooks)))
 	reflection.Register(server)
 
 	go server.Serve(listener)
@@ -528,7 +529,7 @@ func TestPostReceiveWithTransactionsViaPraefect(t *testing.T) {
 
 			gitalyServer := testhelper.NewServerWithAuth(t, nil, nil, config.Config.Auth.Token)
 			gitalypb.RegisterSmartHTTPServiceServer(gitalyServer.GrpcServer(), NewServer())
-			gitalypb.RegisterHookServiceServer(gitalyServer.GrpcServer(), hook.NewServer(hook.GitlabAPIStub, config.Config.Hooks))
+			gitalypb.RegisterHookServiceServer(gitalyServer.GrpcServer(), hook.NewServer(gitalyhook.NewManager(gitalyhook.GitlabAPIStub, config.Config.Hooks)))
 			reflection.Register(gitalyServer.GrpcServer())
 			require.NoError(t, gitalyServer.Start())
 			defer gitalyServer.Stop()
@@ -577,7 +578,7 @@ func TestPostReceiveWithReferenceTransactionHook(t *testing.T) {
 
 	gitalyServer := testhelper.NewTestGrpcServer(t, nil, nil)
 	gitalypb.RegisterSmartHTTPServiceServer(gitalyServer, NewServer())
-	gitalypb.RegisterHookServiceServer(gitalyServer, hook.NewServer(hook.GitlabAPIStub, config.Config.Hooks))
+	gitalypb.RegisterHookServiceServer(gitalyServer, hook.NewServer(gitalyhook.NewManager(gitalyhook.GitlabAPIStub, config.Config.Hooks)))
 	gitalypb.RegisterRefTransactionServer(gitalyServer, refTransactionServer)
 	reflection.Register(gitalyServer)
 

@@ -1,0 +1,24 @@
+package hook
+
+import (
+	"context"
+	"crypto/sha1"
+	"io"
+	"io/ioutil"
+
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
+)
+
+func (m *Manager) ReferenceTransactionHook(ctx context.Context, env []string, stdin io.Reader) error {
+	changes, err := ioutil.ReadAll(stdin)
+	if err != nil {
+		return helper.ErrInternalf("reading stdin from request: %w", err)
+	}
+	hash := sha1.Sum(changes)
+
+	if err := m.VoteOnTransaction(ctx, hash[:], env); err != nil {
+		return helper.ErrInternalf("error voting on transaction: %v", err)
+	}
+
+	return nil
+}

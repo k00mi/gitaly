@@ -6,6 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	gitalyhook "gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/blob"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/cleanup"
@@ -71,7 +72,7 @@ func registerMetrics(cfg config.Cfg) {
 
 // RegisterAll will register all the known grpc services with
 // the specified grpc service instance
-func RegisterAll(grpcServer *grpc.Server, cfg config.Cfg, rubyServer *rubyserver.Server, gitlabAPI hook.GitlabAPI, locator storage.Locator) {
+func RegisterAll(grpcServer *grpc.Server, cfg config.Cfg, rubyServer *rubyserver.Server, gitlabAPI gitalyhook.GitlabAPI, locator storage.Locator) {
 	once.Do(func() {
 		registerMetrics(cfg)
 	})
@@ -96,9 +97,11 @@ func RegisterAll(grpcServer *grpc.Server, cfg config.Cfg, rubyServer *rubyserver
 	gitalypb.RegisterServerServiceServer(grpcServer, server.NewServer(cfg.Storages))
 	gitalypb.RegisterObjectPoolServiceServer(grpcServer, objectpool.NewServer(locator))
 	gitalypb.RegisterHookServiceServer(grpcServer, hook.NewServer(
-		gitlabAPI,
-		cfg.Hooks,
-		hook.WithVotingDelayMetric(votingDelayMetric),
+		gitalyhook.NewManager(
+			gitlabAPI,
+			cfg.Hooks,
+			gitalyhook.WithVotingDelayMetric(votingDelayMetric),
+		),
 	))
 	gitalypb.RegisterInternalGitalyServer(grpcServer, internalgitaly.NewServer(cfg.Storages))
 

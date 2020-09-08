@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	gitalyhook "gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
@@ -240,7 +241,7 @@ func testHooksPrePostReceive(t *testing.T) {
 				config.Config.Gitlab.HTTPSettings.User = gitlabUser
 				config.Config.Gitlab.HTTPSettings.Password = gitlabPassword
 
-				gitlabAPI, err := hook.NewGitlabAPI(config.Config.Gitlab)
+				gitlabAPI, err := gitalyhook.NewGitlabAPI(config.Config.Gitlab)
 				require.NoError(t, err)
 
 				socket, stop := runHookServiceServerWithAPI(t, token, gitlabAPI)
@@ -451,7 +452,7 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 
 	token := "abc123"
 
-	gitlabAPI, err := hook.NewGitlabAPI(config.Config.Gitlab)
+	gitlabAPI, err := gitalyhook.NewGitlabAPI(config.Config.Gitlab)
 	require.NoError(t, err)
 
 	socket, stop := runHookServiceServerWithAPI(t, token, gitlabAPI)
@@ -577,7 +578,7 @@ func TestHooksNotAllowed(t *testing.T) {
 
 	token := "abc123"
 
-	gitlabAPI, err := hook.NewGitlabAPI(config.Config.Gitlab)
+	gitlabAPI, err := gitalyhook.NewGitlabAPI(config.Config.Gitlab)
 	require.NoError(t, err)
 
 	socket, stop := runHookServiceServerWithAPI(t, token, gitlabAPI)
@@ -705,13 +706,13 @@ func TestCheckBadCreds(t *testing.T) {
 }
 
 func runHookServiceServer(t *testing.T, token string) (string, func()) {
-	return runHookServiceServerWithAPI(t, token, hook.GitlabAPIStub)
+	return runHookServiceServerWithAPI(t, token, gitalyhook.GitlabAPIStub)
 }
 
-func runHookServiceServerWithAPI(t *testing.T, token string, gitlabAPI hook.GitlabAPI) (string, func()) {
+func runHookServiceServerWithAPI(t *testing.T, token string, gitlabAPI gitalyhook.GitlabAPI) (string, func()) {
 	server := testhelper.NewServerWithAuth(t, nil, nil, token)
 
-	gitalypb.RegisterHookServiceServer(server.GrpcServer(), hook.NewServer(gitlabAPI, config.Config.Hooks))
+	gitalypb.RegisterHookServiceServer(server.GrpcServer(), hook.NewServer(gitalyhook.NewManager(gitlabAPI, config.Config.Hooks)))
 	reflection.Register(server.GrpcServer())
 	require.NoError(t, server.Start())
 

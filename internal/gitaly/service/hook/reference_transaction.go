@@ -1,9 +1,7 @@
 package hook
 
 import (
-	"crypto/sha1"
 	"errors"
-	"io/ioutil"
 
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -33,13 +31,11 @@ func (s *server) ReferenceTransactionHook(stream gitalypb.HookService_ReferenceT
 		return req.GetStdin(), err
 	})
 
-	changes, err := ioutil.ReadAll(stdin)
-	if err != nil {
-		return helper.ErrInternalf("reading stdin from request: %w", err)
-	}
-	hash := sha1.Sum(changes)
-
-	if err := s.voteOnTransaction(stream.Context(), hash[:], request.GetEnvironmentVariables()); err != nil {
+	if err := s.manager.ReferenceTransactionHook(
+		stream.Context(),
+		request.GetEnvironmentVariables(),
+		stdin,
+	); err != nil {
 		return helper.ErrInternalf("error voting on transaction: %v", err)
 	}
 

@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	gitalyhook "gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/commit"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/hook"
@@ -88,7 +89,7 @@ func runOperationServiceServerWithRubyServer(t *testing.T, ruby *rubyserver.Serv
 
 	locator := config.NewLocator(config.Config)
 	gitalypb.RegisterOperationServiceServer(srv.GrpcServer(), &server{ruby: ruby})
-	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hook.NewServer(hook.GitlabAPIStub, config.Config.Hooks))
+	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hook.NewServer(gitalyhook.NewManager(gitalyhook.GitlabAPIStub, config.Config.Hooks)))
 	gitalypb.RegisterRepositoryServiceServer(srv.GrpcServer(), repository.NewServer(ruby, locator, internalSocket))
 	gitalypb.RegisterRefServiceServer(srv.GrpcServer(), ref.NewServer())
 	gitalypb.RegisterCommitServiceServer(srv.GrpcServer(), commit.NewServer(locator))
