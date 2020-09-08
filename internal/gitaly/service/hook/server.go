@@ -12,12 +12,12 @@ type server struct {
 	manager           *gitalyhook.Manager
 	conns             *client.Pool
 	hooksConfig       config.Hooks
-	gitlabAPI         GitlabAPI
+	gitlabAPI         gitalyhook.GitlabAPI
 	votingDelayMetric prometheus.Histogram
 }
 
 // NewServer creates a new instance of a gRPC namespace server
-func NewServer(manager *gitalyhook.Manager, gitlab GitlabAPI, hooksConfig config.Hooks, serverOpts ...ServerOpt) gitalypb.HookServiceServer {
+func NewServer(manager *gitalyhook.Manager, gitlab gitalyhook.GitlabAPI, hooksConfig config.Hooks, serverOpts ...ServerOpt) gitalypb.HookServiceServer {
 	s := &server{
 		manager:           manager,
 		gitlabAPI:         gitlab,

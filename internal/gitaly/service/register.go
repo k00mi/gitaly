@@ -72,7 +72,7 @@ func registerMetrics(cfg config.Cfg) {
 
 // RegisterAll will register all the known grpc services with
 // the specified grpc service instance
-func RegisterAll(grpcServer *grpc.Server, cfg config.Cfg, rubyServer *rubyserver.Server, gitlabAPI hook.GitlabAPI, locator storage.Locator) {
+func RegisterAll(grpcServer *grpc.Server, cfg config.Cfg, rubyServer *rubyserver.Server, gitlabAPI gitalyhook.GitlabAPI, locator storage.Locator) {
 	once.Do(func() {
 		registerMetrics(cfg)
 	})

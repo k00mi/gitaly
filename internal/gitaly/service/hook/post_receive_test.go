@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	gitalyhook "gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
@@ -330,7 +331,7 @@ To create a merge request for okay, visit:
 
 				config.Config.Gitlab = gitlabConfig
 
-				api, err := NewGitlabAPI(gitlabConfig)
+				api, err := gitalyhook.NewGitlabAPI(gitlabConfig)
 				require.NoError(t, err)
 
 				serverSocketPath, stop := runHooksServerWithAPI(t, api, config.Config.Hooks)
@@ -425,7 +426,7 @@ func TestPrintAlert(t *testing.T) {
 	for _, tc := range testCases {
 		var result bytes.Buffer
 
-		require.NoError(t, printAlert(PostReceiveMessage{Message: tc.message}, &result))
+		require.NoError(t, printAlert(gitalyhook.PostReceiveMessage{Message: tc.message}, &result))
 		assert.Equal(t, tc.expected, result.String())
 	}
 }

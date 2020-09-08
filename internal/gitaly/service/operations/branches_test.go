@@ -122,7 +122,7 @@ func TestUserCreateBranchWithTransaction(t *testing.T) {
 	transactionServer := &testTransactionServer{}
 	srv := testhelper.NewServerWithAuth(t, nil, nil, config.Config.Auth.Token)
 	gitalypb.RegisterOperationServiceServer(srv.GrpcServer(), &server{ruby: RubyServer})
-	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hook.NewServer(gitalyhook.NewManager(), hook.GitlabAPIStub, config.Config.Hooks))
+	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hook.NewServer(gitalyhook.NewManager(), gitalyhook.GitlabAPIStub, config.Config.Hooks))
 	gitalypb.RegisterRefTransactionServer(srv.GrpcServer(), transactionServer)
 
 	require.NoError(t, srv.Start())

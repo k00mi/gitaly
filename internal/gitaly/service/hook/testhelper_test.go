@@ -33,10 +33,10 @@ func newHooksClient(t *testing.T, serverSocketPath string) (gitalypb.HookService
 }
 
 func runHooksServer(t *testing.T, hooksCfg config.Hooks) (string, func()) {
-	return runHooksServerWithAPI(t, GitlabAPIStub, hooksCfg)
+	return runHooksServerWithAPI(t, gitalyhook.GitlabAPIStub, hooksCfg)
 }
 
-func runHooksServerWithAPI(t *testing.T, gitlabAPI GitlabAPI, hooksCfg config.Hooks) (string, func()) {
+func runHooksServerWithAPI(t *testing.T, gitlabAPI gitalyhook.GitlabAPI, hooksCfg config.Hooks) (string, func()) {
 	srv := testhelper.NewServer(t, nil, nil)
 
 	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), NewServer(gitalyhook.NewManager(), gitlabAPI, hooksCfg))

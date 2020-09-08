@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
+	gitalyhook "gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -47,7 +48,7 @@ const (
 	maxMessageTextWidth = maxMessageWidth - 2*terminalMessagePadding
 )
 
-func printMessages(messages []PostReceiveMessage, w io.Writer) error {
+func printMessages(messages []gitalyhook.PostReceiveMessage, w io.Writer) error {
 	for _, message := range messages {
 		if _, err := w.Write([]byte("\n")); err != nil {
 			return err
@@ -80,7 +81,7 @@ func centerLine(b []byte) []byte {
 	return append(bytes.Repeat([]byte(" "), linePadding), b...)
 }
 
-func printAlert(m PostReceiveMessage, w io.Writer) error {
+func printAlert(m gitalyhook.PostReceiveMessage, w io.Writer) error {
 	if _, err := w.Write(bytes.Repeat([]byte("="), maxMessageWidth)); err != nil {
 		return err
 	}
