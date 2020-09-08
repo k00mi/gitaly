@@ -10,6 +10,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/metadatahandler"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore/glsql"
@@ -383,9 +384,9 @@ func TestReconciler(t *testing.T) {
 
 			runCtx, cancelRun := context.WithCancel(ctx)
 			var stopped, resetted bool
-			ticker := newManualTicker()
-			ticker.stop = func() { stopped = true }
-			ticker.reset = func() {
+			ticker := helper.NewManualTicker()
+			ticker.StopFunc = func() { stopped = true }
+			ticker.ResetFunc = func() {
 				if resetted {
 					cancelRun()
 					return
