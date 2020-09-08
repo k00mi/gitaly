@@ -1,10 +1,15 @@
 external_url 'http://{{ groups['gitlabs'][0] }}'
 
-gitaly['enable'] = false
+gitaly['enable'] = true
+gitaly['listen_addr'] = '0.0.0.0:8705'
 
 git_data_dirs({
   "default" => {
     "gitaly_address" => "tcp://{{ groups['loadbalancers'][0] }}:2305",
+    "gitaly_token" => '{{ praefect_external_token }}'
+  },
+  "internal" => {
+    "gitaly_address" => "tcp://{{ hostvars[groups['gitlabs'][0]]['internal'] }}:8705",
     "gitaly_token" => '{{ praefect_external_token }}'
   }
 })
