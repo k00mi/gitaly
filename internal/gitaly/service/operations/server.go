@@ -11,13 +11,13 @@ import (
 type server struct {
 	cfg         config.Cfg
 	ruby        *rubyserver.Server
-	hookManager *hook.Manager
+	hookManager hook.Manager
 	locator     storage.Locator
 	gitalypb.UnimplementedOperationServiceServer
 }
 
 // NewServer creates a new instance of a grpc OperationServiceServer
-func NewServer(cfg config.Cfg, rs *rubyserver.Server, hookManager *hook.Manager, locator storage.Locator) gitalypb.OperationServiceServer {
+func NewServer(cfg config.Cfg, rs *rubyserver.Server, hookManager hook.Manager, locator storage.Locator) gitalypb.OperationServiceServer {
 	return &server{
 		ruby:        rs,
 		cfg:         cfg,

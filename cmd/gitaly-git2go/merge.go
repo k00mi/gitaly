@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"strings"
 	"time"
 
 	git "github.com/libgit2/git2go/v30"
@@ -74,6 +75,17 @@ func lookupCommit(repo *git.Repository, ref string) (*git.Commit, error) {
 	return commit, nil
 }
 
+func sanitizeSignatureInfo(info string) string {
+	return strings.Map(func(r rune) rune {
+		switch r {
+		case '<', '>', '\n':
+			return -1
+		default:
+			return r
+		}
+	}, info)
+}
+
 func (cmd *mergeSubcommand) Run() error {
 	if err := cmd.verifyOptions(); err != nil {
 		return fmt.Errorf("invalid options: %w", err)
@@ -118,8 +130,8 @@ func (cmd *mergeSubcommand) Run() error {
 	}
 
 	committer := git.Signature{
-		Name:  cmd.authorName,
-		Email: cmd.authorMail,
+		Name:  sanitizeSignatureInfo(cmd.authorName),
+		Email: sanitizeSignatureInfo(cmd.authorMail),
 		When:  date,
 	}
 
