@@ -18,7 +18,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	gitalyhook "gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
-	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -82,148 +81,6 @@ func receivePreReceive(t *testing.T, stream gitalypb.HookService_PreReceiveHookC
 	stdout, stderr, status, err := sendPreReceiveHookRequest(t, stream, stdin)
 	require.NoError(t, err)
 	return stdout, stderr, status
-}
-
-func TestPreReceive(t *testing.T) {
-	rubyDir := config.Config.Ruby.Dir
-	defer func(rubyDir string) {
-		config.Config.Ruby.Dir = rubyDir
-	}(rubyDir)
-
-	cwd, err := os.Getwd()
-	require.NoError(t, err)
-	config.Config.Ruby.Dir = filepath.Join(cwd, "testdata")
-
-	serverSocketPath, stop := runHooksServer(t, config.Config.Hooks)
-	defer stop()
-
-	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
-	defer cleanupFn()
-
-	client, conn := newHooksClient(t, serverSocketPath)
-	defer conn.Close()
-
-	ctx, cancel := testhelper.Context()
-	defer cancel()
-
-	testCases := []struct {
-		desc           string
-		stdin          io.Reader
-		req            gitalypb.PreReceiveHookRequest
-		status         int32
-		stdout, stderr string
-	}{
-		{
-			desc:  "everything OK",
-			stdin: bytes.NewBufferString("a\nb\nc\nd\ne\nf\ng"),
-			req: gitalypb.PreReceiveHookRequest{
-				Repository: testRepo,
-				EnvironmentVariables: []string{
-					"GL_ID=key-123",
-					"GL_PROTOCOL=protocol",
-					"GL_USERNAME=username",
-					"GL_REPOSITORY=repository",
-				},
-			},
-			status: 0,
-			stdout: "OK",
-			stderr: "",
-		},
-		{
-			desc:  "missing stdin",
-			stdin: bytes.NewBuffer(nil),
-			req: gitalypb.PreReceiveHookRequest{
-				Repository: testRepo,
-				EnvironmentVariables: []string{
-					"GL_ID=key-123",
-					"GL_PROTOCOL=protocol",
-					"GL_USERNAME=username",
-					"GL_REPOSITORY=repository",
-				},
-			},
-			status: 1,
-			stdout: "",
-			stderr: "FAIL",
-		},
-		{
-			desc:  "missing gl_protocol",
-			stdin: bytes.NewBufferString("a\nb\nc\nd\ne\nf\ng"),
-			req: gitalypb.PreReceiveHookRequest{
-				Repository: testRepo,
-				EnvironmentVariables: []string{
-					"GL_ID=key-123",
-					"GL_USERNAME=username",
-					"GL_PROTOCOL=",
-					"GL_REPOSITORY=repository",
-				},
-			},
-			status: 1,
-			stdout: "",
-			stderr: "FAIL",
-		},
-		{
-			desc:  "missing gl_id",
-			stdin: bytes.NewBufferString("a\nb\nc\nd\ne\nf\ng"),
-			req: gitalypb.PreReceiveHookRequest{
-				Repository: testRepo,
-				EnvironmentVariables: []string{
-					"GL_ID=",
-					"GL_PROTOCOL=protocol",
-					"GL_USERNAME=username",
-					"GL_REPOSITORY=repository",
-				},
-			},
-			status: 1,
-			stdout: "",
-			stderr: "FAIL",
-		},
-		{
-			desc:  "missing gl_username",
-			stdin: bytes.NewBufferString("a\nb\nc\nd\ne\nf\ng"),
-			req: gitalypb.PreReceiveHookRequest{
-				Repository: testRepo,
-				EnvironmentVariables: []string{
-					"GL_ID=key-123",
-					"GL_PROTOCOL=protocol",
-					"GL_USERNAME=",
-					"GL_REPOSITORY=repository",
-				},
-			},
-			status: 1,
-			stdout: "",
-			stderr: "FAIL",
-		},
-		{
-			desc:  "missing gl_repository",
-			stdin: bytes.NewBufferString("a\nb\nc\nd\ne\nf\ng"),
-			req: gitalypb.PreReceiveHookRequest{
-				Repository: testRepo,
-				EnvironmentVariables: []string{
-					"GL_ID=key-123",
-					"GL_PROTOCOL=protocol",
-					"GL_USERNAME=username",
-					"GL_REPOSITORY=",
-				},
-			},
-			status: 1,
-			stdout: "",
-			stderr: "FAIL",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.desc, func(t *testing.T) {
-			stream, err := client.PreReceiveHook(ctx)
-			require.NoError(t, err)
-			require.NoError(t, stream.Send(&tc.req))
-
-			stdout, stderr, status := receivePreReceive(t, stream, tc.stdin)
-
-			assert.Equal(t, tc.status, status)
-			assert.Equal(t, tc.stderr, text.ChompBytes(stderr), "hook stderr")
-			assert.Equal(t, tc.stdout, text.ChompBytes(stdout), "hook stdout")
-		})
-	}
 }
 
 func TestPreReceiveHook_GitlabAPIAccess(t *testing.T) {
@@ -299,7 +156,6 @@ func TestPreReceiveHook_GitlabAPIAccess(t *testing.T) {
 			"GL_PROTOCOL=" + protocol,
 			"GL_USERNAME=username",
 			"GL_REPOSITORY=" + glRepository,
-			fmt.Sprintf("%s=true", featureflag.GoPreReceiveHookEnvVar),
 		},
 	}
 
@@ -404,7 +260,6 @@ func TestPreReceive_APIErrors(t *testing.T) {
 					"GL_PROTOCOL=web",
 					"GL_USERNAME=username",
 					"GL_REPOSITORY=repository",
-					fmt.Sprintf("%s=true", featureflag.GoPreReceiveHookEnvVar),
 				},
 			}))
 			require.NoError(t, stream.CloseSend())
@@ -465,7 +320,6 @@ exit %d
 			"GL_PROTOCOL=web",
 			"GL_USERNAME=username",
 			"GL_REPOSITORY=repository",
-			fmt.Sprintf("%s=true", featureflag.GoPreReceiveHookEnvVar),
 		},
 	}))
 
@@ -501,7 +355,6 @@ func TestPreReceiveHook_Primary(t *testing.T) {
 	testCases := []struct {
 		desc               string
 		primary            bool
-		useRubyHook        bool
 		allowedHandler     http.HandlerFunc
 		preReceiveHandler  http.HandlerFunc
 		stdin              []byte
@@ -580,7 +433,6 @@ func TestPreReceiveHook_Primary(t *testing.T) {
 		{
 			desc:               "primary Ruby hook triggers transaction",
 			primary:            true,
-			useRubyHook:        true,
 			stdin:              []byte("foobar"),
 			allowedHandler:     allowedHandler(true),
 			preReceiveHandler:  preReceiveHandler(true),
@@ -591,7 +443,6 @@ func TestPreReceiveHook_Primary(t *testing.T) {
 		{
 			desc:               "secondary Ruby hook triggers transaction",
 			primary:            false,
-			useRubyHook:        true,
 			stdin:              []byte("foobar"),
 			allowedHandler:     allowedHandler(true),
 			preReceiveHandler:  preReceiveHandler(true),
@@ -679,9 +530,6 @@ func TestPreReceiveHook_Primary(t *testing.T) {
 				"GL_REPOSITORY=repository",
 				transactionEnv,
 				transactionServerEnv,
-			}
-			if !tc.useRubyHook {
-				environment = append(environment, fmt.Sprintf("%s=true", featureflag.GoPreReceiveHookEnvVar))
 			}
 
 			stream, err := client.PreReceiveHook(ctx)

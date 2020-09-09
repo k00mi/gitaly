@@ -1,11 +1,8 @@
 package hook
 
 import (
-	"crypto/sha1"
 	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -14,7 +11,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
-	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
@@ -79,10 +75,6 @@ func (s *server) PreReceiveHook(stream gitalypb.HookService_PreReceiveHookServer
 	reqEnvVars := firstRequest.GetEnvironmentVariables()
 	repository := firstRequest.GetRepository()
 
-	if !useGoPreReceiveHook(reqEnvVars) {
-		return s.preReceiveHookRuby(firstRequest, stream)
-	}
-
 	stdin := streamio.NewReader(func() ([]byte, error) {
 		req, err := stream.Recv()
 		return req.GetStdin(), err
@@ -122,90 +114,12 @@ func validatePreReceiveHookRequest(in *gitalypb.PreReceiveHookRequest) error {
 	return nil
 }
 
-func useGoPreReceiveHook(env []string) bool {
-	return getEnvVar(featureflag.GoPreReceiveHookEnvVar, env) == "true"
-}
-
 func preReceiveHookResponse(stream gitalypb.HookService_PreReceiveHookServer, code int32, stderr string) error {
 	if err := stream.Send(&gitalypb.PreReceiveHookResponse{
 		ExitStatus: &gitalypb.ExitStatus{Value: code},
 		Stderr:     []byte(stderr),
 	}); err != nil {
 		return helper.ErrInternalf("sending response: %v", err)
-	}
-
-	return nil
-}
-
-func (s *server) preReceiveHookRuby(firstRequest *gitalypb.PreReceiveHookRequest, stream gitalypb.HookService_PreReceiveHookServer) error {
-	referenceUpdatesHasher := sha1.New()
-
-	stdin := streamio.NewReader(func() ([]byte, error) {
-		req, err := stream.Recv()
-		if err != nil {
-			return nil, err
-		}
-
-		stdin := req.GetStdin()
-		if _, err := referenceUpdatesHasher.Write(stdin); err != nil {
-			return stdin, err
-		}
-
-		return stdin, nil
-	})
-
-	env, err := preReceiveEnv(firstRequest)
-	if err != nil {
-		return helper.ErrInternal(err)
-	}
-
-	primary, err := isPrimary(env)
-	if err != nil {
-		return helper.ErrInternalf("could not check role: %w", err)
-	}
-
-	var status int32
-
-	// Only the primary should execute hooks.
-	if primary {
-		stdout := streamio.NewWriter(func(p []byte) error { return stream.Send(&gitalypb.PreReceiveHookResponse{Stdout: p}) })
-		stderr := streamio.NewWriter(func(p []byte) error { return stream.Send(&gitalypb.PreReceiveHookResponse{Stderr: p}) })
-
-		repoPath, err := helper.GetRepoPath(firstRequest.GetRepository())
-		if err != nil {
-			return helper.ErrInternal(err)
-		}
-
-		c := exec.Command(gitlabShellHook("pre-receive"))
-		c.Dir = repoPath
-
-		status, err = streamCommandResponse(
-			stream.Context(),
-			stdin,
-			stdout, stderr,
-			c,
-			env,
-		)
-		if err != nil {
-			return helper.ErrInternal(err)
-		}
-	} else {
-		// We need to read all of stdin on secondaries so that we
-		// arrive at the same hash as the primary.
-		_, err := io.Copy(ioutil.Discard, stdin)
-		if err != nil {
-			return helper.ErrInternal(err)
-		}
-	}
-
-	if err := s.manager.VoteOnTransaction(stream.Context(), referenceUpdatesHasher.Sum(nil), env); err != nil {
-		return helper.ErrInternalf("error voting on transaction: %w", err)
-	}
-
-	if err := stream.SendMsg(&gitalypb.PreReceiveHookResponse{
-		ExitStatus: &gitalypb.ExitStatus{Value: status},
-	}); err != nil {
-		return helper.ErrInternal(err)
 	}
 
 	return nil

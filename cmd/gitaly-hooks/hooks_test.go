@@ -227,7 +227,7 @@ func testHooksPrePostReceive(t *testing.T) {
 
 	hookNames := []string{"pre-receive", "post-receive"}
 
-	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoPreReceiveHook, featureflag.GoPostReceiveHook})
+	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoPostReceiveHook})
 	require.NoError(t, err)
 
 	for _, hookName := range hookNames {
@@ -276,10 +276,6 @@ func testHooksPrePostReceive(t *testing.T) {
 					},
 					gitPushOptions...,
 				)
-
-				if !featureSet.IsDisabled(featureflag.GoPreReceiveHook) {
-					cmd.Env = append(cmd.Env, fmt.Sprintf("%s=true", featureflag.GoPreReceiveHookEnvVar))
-				}
 
 				cmd.Dir = testRepoPath
 
