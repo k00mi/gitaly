@@ -84,6 +84,7 @@ ifeq (${GIT_BUILD_OPTIONS},)
     GIT_BUILD_OPTIONS += DEVELOPER=1
     # make it easy to debug in case of crashes
     GIT_BUILD_OPTIONS += CFLAGS='-O0 -g3'
+    GIT_BUILD_OPTIONS += USE_LIBPCRE2=YesPlease
     GIT_BUILD_OPTIONS += NO_PERL=YesPlease
     GIT_BUILD_OPTIONS += NO_EXPAT=YesPlease
     GIT_BUILD_OPTIONS += NO_TCLTK=YesPlease
@@ -333,7 +334,7 @@ no-changes:
 smoke-test: all rspec
 	${Q}go test -tags "${GO_BUILD_TAGS}" ./internal/gitaly/rubyserver
 
-.PHONY:
+.PHONY: git
 git: ${GIT_INSTALL_DIR}/bin/git
 
 .PHONY: libgit2
@@ -399,7 +400,7 @@ ${GOIMPORTS}: ${BUILD_DIR}/Makefile.sha256 ${BUILD_DIR}/go.mod
 	${Q}cd ${BUILD_DIR} && go get golang.org/x/tools/cmd/goimports@2538eef75904eff384a2551359968e40c207d9d2
 
 ifeq (${GIT_USE_PREBUILT_BINARIES},)
-${GIT_INSTALL_DIR}/bin/git: ${BUILD_DIR}/Makefile.sha256 | ${BUILD_DIR}
+${GIT_INSTALL_DIR}/bin/git: ${BUILD_DIR}/Makefile.sha256
 	${Q}rm -rf ${GIT_SOURCE_DIR} ${GIT_INSTALL_DIR}
 	${GIT} clone --depth 1 --branch ${GIT_VERSION} --quiet ${GIT_REPO_URL} ${GIT_SOURCE_DIR}
 	${Q}rm -rf ${GIT_INSTALL_DIR}
@@ -412,7 +413,7 @@ ${GIT_INSTALL_DIR}/bin/git: ${BUILD_DIR}/git_full_bins.tgz
 	tar -C ${GIT_INSTALL_DIR} -xvzf ${BUILD_DIR}/git_full_bins.tgz
 endif
 
-${GOCOVER_COBERTURA}: ${BUILD_DIR}/Makefile.sha256 | ${BUILD_DIR}
+${GOCOVER_COBERTURA}: ${BUILD_DIR}/Makefile.sha256
 	${Q}cd ${BUILD_DIR} && go get github.com/t-yuki/gocover-cobertura@${GOCOVER_COBERTURA_VERSION}
 
 ${GO_JUNIT_REPORT}: ${BUILD_DIR}/Makefile.sha256 ${BUILD_DIR}/go.mod

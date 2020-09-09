@@ -5,13 +5,11 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os/exec"
 	"path"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -89,7 +87,7 @@ func TestSearchFilesByContentSuccessful(t *testing.T) {
 	client, conn := newRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
 
-	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
 	testCases := []struct {
@@ -97,7 +95,6 @@ func TestSearchFilesByContentSuccessful(t *testing.T) {
 		query  string
 		ref    string
 		output [][]byte
-		skip   func(t *testing.T)
 	}{
 		{
 			desc:   "single file in many_files",
@@ -128,22 +125,11 @@ func TestSearchFilesByContentSuccessful(t *testing.T) {
 			query:  "(*LIMIT_MATCH=1)foobar",
 			ref:    "many_files",
 			output: contentOutputLines,
-			skip: func(t *testing.T) {
-				cmd := exec.Command(command.GitPath(), "-C", testRepoPath, "grep", "--perl-regexp", "(*LIMIT_MATCH=1)foobar", "many_files")
-				err := cmd.Run()
-				if exitError, ok := err.(*exec.ExitError); ok && exitError.ExitCode() == 128 {
-					t.Skip("Git does not seem to be compiled with support for PCRE2")
-				}
-			},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			if tc.skip != nil {
-				tc.skip(t)
-			}
-
 			request := &gitalypb.SearchFilesByContentRequest{
 				Repository: testRepo,
 				Query:      tc.query,
