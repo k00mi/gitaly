@@ -355,26 +355,9 @@ func drainPostReceivePackResponse(stream gitalypb.SmartHTTPService_PostReceivePa
 }
 
 func TestPostReceivePackToHooks(t *testing.T) {
-	defer func(cfg config.Cfg) {
-		config.Config = cfg
-	}(config.Config)
+	ctx, cancel := testhelper.Context()
+	defer cancel()
 
-	features, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoPostReceiveHook})
-	require.NoError(t, err)
-
-	for _, feature := range features {
-		t.Run("disabled "+feature.String(), func(t *testing.T) {
-			ctx, cancel := testhelper.Context()
-			defer cancel()
-
-			ctx = feature.Disable(ctx)
-
-			testPostReceivePackToHooks(t, ctx)
-		})
-	}
-}
-
-func testPostReceivePackToHooks(t *testing.T, ctx context.Context) {
 	secretToken := "secret token"
 	glRepository := "some_repo"
 	glID := "key-123"
@@ -390,6 +373,9 @@ func testPostReceivePackToHooks(t *testing.T, ctx context.Context) {
 	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
 	defer cleanup()
 
+	defer func(cfg config.Cfg) {
+		config.Config = cfg
+	}(config.Config)
 	config.Config.GitlabShell.Dir = tempGitlabShellDir
 
 	defer func(override string) {

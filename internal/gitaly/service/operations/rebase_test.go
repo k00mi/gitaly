@@ -3,7 +3,6 @@ package operations
 //lint:file-ignore SA1019 due to planned removal in issue https://gitlab.com/gitlab-org/gitaly/issues/1628
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -13,7 +12,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
-	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
@@ -25,9 +23,6 @@ var (
 )
 
 func TestSuccessfulUserRebaseConfirmableRequest(t *testing.T) {
-	featureSets, err := testhelper.NewFeatureSets(nil, featureflag.GoPostReceiveHook)
-	require.NoError(t, err)
-
 	var ruby rubyserver.Server
 
 	pushOptions := []string{"ci.skip", "test=value"}
@@ -40,18 +35,9 @@ func TestSuccessfulUserRebaseConfirmableRequest(t *testing.T) {
 	serverSocketPath, stop := runOperationServiceServerWithRubyServer(t, &ruby)
 	defer stop()
 
-	for _, featureSet := range featureSets {
-		t.Run(featureSet.String(), func(t *testing.T) {
-			ctx, cancel := testhelper.Context()
-			defer cancel()
+	ctxOuter, cancel := testhelper.Context()
+	defer cancel()
 
-			ctx = featureSet.Disable(ctx)
-			testSuccessfulUserRebaseConfirmableRequest(t, ctx, serverSocketPath, pushOptions)
-		})
-	}
-}
-
-func testSuccessfulUserRebaseConfirmableRequest(t *testing.T, ctxOuter context.Context, serverSocketPath string, pushOptions []string) {
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
 

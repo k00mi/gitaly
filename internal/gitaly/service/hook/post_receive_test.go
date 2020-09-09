@@ -2,9 +2,7 @@ package hook
 
 import (
 	"bytes"
-	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -13,7 +11,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	gitalyhook "gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
-	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -54,207 +51,110 @@ func transactionEnv(t *testing.T, primary bool) string {
 	return env
 }
 
-func TestPostReceive(t *testing.T) {
-	rubyDir := config.Config.Ruby.Dir
-	defer func(rubyDir string) {
-		config.Config.Ruby.Dir = rubyDir
-	}(rubyDir)
+func TestHooksMissingStdin(t *testing.T) {
+	user, password, secretToken := "user", "password", "secret token"
+	tempDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
+	defer cleanup()
+	testhelper.WriteShellSecretFile(t, tempDir, secretToken)
 
-	cwd, err := os.Getwd()
-	require.NoError(t, err)
-	config.Config.Ruby.Dir = filepath.Join(cwd, "testdata")
-
-	serverSocketPath, stop := runHooksServer(t, config.Config)
-	defer stop()
-
-	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	client, conn := newHooksClient(t, serverSocketPath)
-	defer conn.Close()
+	c := testhelper.GitlabTestServerOptions{
+		User:                        user,
+		Password:                    password,
+		SecretToken:                 secretToken,
+		GLID:                        "key_id",
+		GLRepository:                "repository",
+		Changes:                     "changes",
+		PostReceiveCounterDecreased: true,
+		Protocol:                    "protocol",
+		RepoPath:                    testRepoPath,
+	}
+
+	serverURL, cleanup := testhelper.NewGitlabTestServer(t, c)
+	defer cleanup()
+
+	gitlabConfig := config.Gitlab{
+		SecretFile: filepath.Join(tempDir, ".gitlab_shell_secret"),
+		URL:        serverURL,
+		HTTPSettings: config.HTTPSettings{
+			User:     user,
+			Password: password,
+		},
+	}
+
+	defer func(cfg config.Cfg) {
+		config.Config = cfg
+	}(config.Config)
+
+	config.Config.Gitlab = gitlabConfig
+
+	api, err := gitalyhook.NewGitlabAPI(gitlabConfig)
+	require.NoError(t, err)
 
 	testCases := []struct {
-		desc   string
-		stdin  io.Reader
-		req    gitalypb.PostReceiveHookRequest
-		status int32
-		stdout string
-		stderr string
+		desc string
+		env  string
+		fail bool
 	}{
 		{
-			desc:  "everything OK",
-			stdin: bytes.NewBufferString("a\nb\nc\nd\ne\nf\ng"),
-			req: gitalypb.PostReceiveHookRequest{
-				Repository:           testRepo,
-				EnvironmentVariables: []string{"GL_ID=key_id", "GL_USERNAME=username", "GL_PROTOCOL=protocol", "GL_REPOSITORY=repository"},
-				GitPushOptions:       []string{"option0", "option1"}},
-			status: 0,
-			stdout: "OK",
-			stderr: "",
+			desc: "empty stdin fails if primary",
+			env:  transactionEnv(t, true),
+			fail: true,
 		},
 		{
-			desc:  "missing stdin",
-			stdin: bytes.NewBuffer(nil),
-			req: gitalypb.PostReceiveHookRequest{
-				Repository:           testRepo,
-				EnvironmentVariables: []string{"GL_ID=key_id", "GL_USERNAME=username", "GL_PROTOCOL=protocol", "GL_REPOSITORY=repository"},
-				GitPushOptions:       []string{"option0"},
-			},
-			status: 1,
-			stdout: "",
-			stderr: "FAIL",
-		},
-		{
-			desc:  "missing gl_id",
-			stdin: bytes.NewBufferString("a\nb\nc\nd\ne\nf\ng"),
-			req: gitalypb.PostReceiveHookRequest{
-				Repository:           testRepo,
-				EnvironmentVariables: []string{"GL_ID=", "GL_USERNAME=username", "GL_PROTOCOL=protocol", "GL_REPOSITORY=repository"},
-				GitPushOptions:       []string{"option0"},
-			},
-			status: 1,
-			stdout: "",
-			stderr: "FAIL",
-		},
-		{
-			desc:  "missing gl_username",
-			stdin: bytes.NewBufferString("a\nb\nc\nd\ne\nf\ng"),
-			req: gitalypb.PostReceiveHookRequest{
-				Repository:           testRepo,
-				EnvironmentVariables: []string{"GL_ID=key-123", "GL_USERNAME=", "GL_PROTOCOL=protocol", "GL_REPOSITORY=repository"},
-				GitPushOptions:       []string{"option0"},
-			},
-			status: 1,
-			stdout: "",
-			stderr: "FAIL",
-		},
-		{
-			desc:  "missing gl_protocol",
-			stdin: bytes.NewBufferString("a\nb\nc\nd\ne\nf\ng"),
-			req: gitalypb.PostReceiveHookRequest{
-				Repository:           testRepo,
-				EnvironmentVariables: []string{"GL_ID=key-123", "GL_USERNAME=username", "GL_PROTOCOL=", "GL_REPOSITORY=repository"},
-				GitPushOptions:       []string{"option0"},
-			},
-			status: 1,
-			stdout: "",
-			stderr: "FAIL",
-		},
-		{
-			desc:  "missing gl_repository value",
-			stdin: bytes.NewBufferString("a\nb\nc\nd\ne\nf\ng"),
-			req: gitalypb.PostReceiveHookRequest{
-				Repository:           testRepo,
-				EnvironmentVariables: []string{"GL_ID=key-123", "GL_USERNAME=username", "GL_PROTOCOL=protocol", "GL_REPOSITORY="},
-				GitPushOptions:       []string{"option0"},
-			},
-			status: 1,
-			stdout: "",
-			stderr: "FAIL",
-		},
-		{
-			desc:  "missing git push option",
-			stdin: bytes.NewBufferString("a\nb\nc\nd\ne\nf\ng"),
-			req: gitalypb.PostReceiveHookRequest{
-				Repository:           testRepo,
-				EnvironmentVariables: []string{"GL_ID=key-123", "GL_USERNAME=username", "GL_PROTOCOL=protocol", "GL_REPOSITORY=repository"},
-			},
-			status: 1,
-			stdout: "",
-			stderr: "FAIL",
-		},
-		{
-			desc:  "primary fails with missing stdin because hook gets executed",
-			stdin: bytes.NewBuffer(nil),
-			req: gitalypb.PostReceiveHookRequest{
-				Repository: testRepo,
-				EnvironmentVariables: []string{
-					"GL_ID=key_id",
-					"GL_USERNAME=username",
-					"GL_PROTOCOL=protocol",
-					"GL_REPOSITORY=repository",
-					transactionEnv(t, true),
-				},
-				GitPushOptions: []string{"option0"},
-			},
-			status: 1,
-			stdout: "",
-			stderr: "FAIL",
-		},
-		{
-			desc:  "secondary succeeds with missing stdin because hook does not get executed",
-			stdin: bytes.NewBuffer(nil),
-			req: gitalypb.PostReceiveHookRequest{
-				Repository: testRepo,
-				EnvironmentVariables: []string{
-					"GL_ID=key_id",
-					"GL_USERNAME=username",
-					"GL_PROTOCOL=protocol",
-					"GL_REPOSITORY=repository",
-					transactionEnv(t, false),
-				},
-				GitPushOptions: []string{"option0"},
-			},
-			status: 0,
-			stdout: "",
-			stderr: "",
-		},
-		{
-			desc:  "Go hook correctly honors the primary flag",
-			stdin: bytes.NewBuffer(nil),
-			req: gitalypb.PostReceiveHookRequest{
-				Repository: testRepo,
-				EnvironmentVariables: []string{
-					"GL_ID=key_id",
-					"GL_USERNAME=username",
-					"GL_PROTOCOL=protocol",
-					"GL_REPOSITORY=repository",
-					transactionEnv(t, false),
-					fmt.Sprintf("%s=true", featureflag.GoPostReceiveHookEnvVar),
-				},
-				GitPushOptions: []string{"option0"},
-			},
-			status: 0,
-			stdout: "",
-			stderr: "",
+			desc: "empty stdin success on secondary",
+			env:  transactionEnv(t, false),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
+			serverSocketPath, stop := runHooksServerWithAPI(t, api, config.Config)
+			defer stop()
+
+			client, conn := newHooksClient(t, serverSocketPath)
+			defer conn.Close()
+
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
 			stream, err := client.PostReceiveHook(ctx)
 			require.NoError(t, err)
-			require.NoError(t, stream.Send(&tc.req))
+			require.NoError(t, stream.Send(&gitalypb.PostReceiveHookRequest{
+				Repository: testRepo,
+				EnvironmentVariables: []string{
+					"GL_ID=key_id",
+					"GL_USERNAME=username",
+					"GL_PROTOCOL=protocol",
+					"GL_REPOSITORY=repository", tc.env},
+			}))
 
 			go func() {
 				writer := streamio.NewWriter(func(p []byte) error {
 					return stream.Send(&gitalypb.PostReceiveHookRequest{Stdin: p})
 				})
-				_, err := io.Copy(writer, tc.stdin)
+				_, err := io.Copy(writer, bytes.NewBuffer(nil))
 				require.NoError(t, err)
 				require.NoError(t, stream.CloseSend(), "close send")
 			}()
 
 			var status int32
-			var stdout, stderr bytes.Buffer
 			for {
 				resp, err := stream.Recv()
 				if err == io.EOF {
 					break
 				}
 
-				_, err = stdout.Write(resp.GetStdout())
-				require.NoError(t, err)
-				stderr.Write(resp.GetStderr())
 				status = resp.GetExitStatus().GetValue()
 			}
 
-			assert.Equal(t, tc.status, status)
-			assert.Equal(t, tc.stderr, text.ChompBytes(stderr.Bytes()), "hook stderr")
-			assert.Equal(t, tc.stdout, text.ChompBytes(stdout.Bytes()), "hook stdout")
+			if tc.fail {
+				require.NotEqual(t, int32(0), status, "exit code should be non-zero")
+			} else {
+				require.Equal(t, int32(0), status, "exit code unequal")
+			}
 		})
 	}
 }
@@ -297,94 +197,91 @@ To create a merge request for okay, visit:
 	testhelper.WriteShellSecretFile(t, tempDir, secretToken)
 
 	for _, tc := range testCases {
-		for _, useGoPostReceive := range []bool{true, false} {
-			t.Run(fmt.Sprintf("%s:use_go_post_receive:%v", tc.desc, useGoPostReceive), func(t *testing.T) {
-				c := testhelper.GitlabTestServerOptions{
-					User:                        user,
-					Password:                    password,
-					SecretToken:                 secretToken,
-					GLID:                        "key_id",
-					GLRepository:                "repository",
-					Changes:                     "changes",
-					PostReceiveCounterDecreased: true,
-					PostReceiveMessages:         tc.basicMessages,
-					PostReceiveAlerts:           tc.alertMessages,
-					Protocol:                    "protocol",
-					RepoPath:                    testRepoPath,
-				}
+		t.Run(tc.desc, func(t *testing.T) {
+			c := testhelper.GitlabTestServerOptions{
+				User:                        user,
+				Password:                    password,
+				SecretToken:                 secretToken,
+				GLID:                        "key_id",
+				GLRepository:                "repository",
+				Changes:                     "changes",
+				PostReceiveCounterDecreased: true,
+				PostReceiveMessages:         tc.basicMessages,
+				PostReceiveAlerts:           tc.alertMessages,
+				Protocol:                    "protocol",
+				RepoPath:                    testRepoPath,
+			}
 
-				serverURL, cleanup := testhelper.NewGitlabTestServer(t, c)
-				defer cleanup()
+			serverURL, cleanup := testhelper.NewGitlabTestServer(t, c)
+			defer cleanup()
 
-				gitlabConfig := config.Gitlab{
-					SecretFile: filepath.Join(tempDir, ".gitlab_shell_secret"),
-					URL:        serverURL,
-					HTTPSettings: config.HTTPSettings{
-						User:     user,
-						Password: password,
-					},
-				}
+			gitlabConfig := config.Gitlab{
+				SecretFile: filepath.Join(tempDir, ".gitlab_shell_secret"),
+				URL:        serverURL,
+				HTTPSettings: config.HTTPSettings{
+					User:     user,
+					Password: password,
+				},
+			}
 
-				defer func(cfg config.Cfg) {
-					config.Config = cfg
-				}(config.Config)
+			defer func(cfg config.Cfg) {
+				config.Config = cfg
+			}(config.Config)
 
-				config.Config.Gitlab = gitlabConfig
+			config.Config.Gitlab = gitlabConfig
 
-				api, err := gitalyhook.NewGitlabAPI(gitlabConfig)
+			api, err := gitalyhook.NewGitlabAPI(gitlabConfig)
+			require.NoError(t, err)
+
+			serverSocketPath, stop := runHooksServerWithAPI(t, api, config.Config)
+			defer stop()
+
+			client, conn := newHooksClient(t, serverSocketPath)
+			defer conn.Close()
+
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			stream, err := client.PostReceiveHook(ctx)
+			require.NoError(t, err)
+
+			envVars := []string{
+				"GL_ID=key_id",
+				"GL_USERNAME=username",
+				"GL_PROTOCOL=protocol",
+				"GL_REPOSITORY=repository",
+			}
+
+			require.NoError(t, stream.Send(&gitalypb.PostReceiveHookRequest{
+				Repository:           testRepo,
+				EnvironmentVariables: envVars}))
+
+			go func() {
+				writer := streamio.NewWriter(func(p []byte) error {
+					return stream.Send(&gitalypb.PostReceiveHookRequest{Stdin: p})
+				})
+				_, err := writer.Write([]byte("changes"))
 				require.NoError(t, err)
+				require.NoError(t, stream.CloseSend(), "close send")
+			}()
 
-				serverSocketPath, stop := runHooksServerWithAPI(t, api, config.Config)
-				defer stop()
+			var status int32
+			var stdout, stderr bytes.Buffer
+			for {
+				resp, err := stream.Recv()
+				if err == io.EOF {
+					break
+				}
 
-				client, conn := newHooksClient(t, serverSocketPath)
-				defer conn.Close()
-
-				ctx, cancel := testhelper.Context()
-				defer cancel()
-
-				stream, err := client.PostReceiveHook(ctx)
+				_, err = stdout.Write(resp.GetStdout())
 				require.NoError(t, err)
+				stderr.Write(resp.GetStderr())
+				status = resp.GetExitStatus().GetValue()
+			}
 
-				envVars := []string{
-					"GL_ID=key_id",
-					"GL_USERNAME=username",
-					"GL_PROTOCOL=protocol",
-					"GL_REPOSITORY=repository",
-					fmt.Sprintf("%s=%v", featureflag.GoPostReceiveHookEnvVar, useGoPostReceive),
-				}
-
-				require.NoError(t, stream.Send(&gitalypb.PostReceiveHookRequest{
-					Repository:           testRepo,
-					EnvironmentVariables: envVars}))
-
-				go func() {
-					writer := streamio.NewWriter(func(p []byte) error {
-						return stream.Send(&gitalypb.PostReceiveHookRequest{Stdin: p})
-					})
-					_, err := writer.Write([]byte("changes"))
-					require.NoError(t, err)
-					require.NoError(t, stream.CloseSend(), "close send")
-				}()
-
-				var status int32
-				var stdout, stderr bytes.Buffer
-				for {
-					resp, err := stream.Recv()
-					if err == io.EOF {
-						break
-					}
-
-					_, err = stdout.Write(resp.GetStdout())
-					require.NoError(t, err)
-					stderr.Write(resp.GetStderr())
-					status = resp.GetExitStatus().GetValue()
-				}
-
-				assert.Equal(t, int32(0), status)
-				assert.Equal(t, "", text.ChompBytes(stderr.Bytes()), "hook stderr")
-				assert.Equal(t, tc.expectedStdout, text.ChompBytes(stdout.Bytes()), "hook stdout")
-			})
-		}
+			assert.Equal(t, int32(0), status)
+			assert.Equal(t, "", text.ChompBytes(stderr.Bytes()), "hook stderr")
+			assert.Equal(t, tc.expectedStdout, text.ChompBytes(stdout.Bytes()), "hook stdout")
+		})
 	}
 }

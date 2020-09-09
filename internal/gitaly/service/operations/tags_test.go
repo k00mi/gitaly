@@ -61,21 +61,6 @@ func TestSuccessfulUserDeleteTagRequest(t *testing.T) {
 }
 
 func TestSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T) {
-	featureSets, err := testhelper.NewFeatureSets(nil, featureflag.GoPostReceiveHook)
-	require.NoError(t, err)
-
-	for _, featureSet := range featureSets {
-		t.Run("disabled "+featureSet.String(), func(t *testing.T) {
-			ctx, cancel := testhelper.Context()
-			defer cancel()
-
-			ctx = featureSet.Disable(ctx)
-			testSuccessfulGitHooksForUserDeleteTagRequest(t, ctx)
-		})
-	}
-}
-
-func testSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -87,6 +72,9 @@ func testSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T, ctx context.Con
 
 	tagNameInput := "to-be-déleted-soon-tag"
 	defer exec.Command(command.GitPath(), "-C", testRepoPath, "tag", "-d", tagNameInput).Run()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
 
 	request := &gitalypb.UserDeleteTagRequest{
 		Repository: testRepo,

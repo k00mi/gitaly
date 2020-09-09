@@ -18,7 +18,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	gitalyhook "gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/hook"
-	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -228,82 +227,80 @@ func testHooksPrePostReceive(t *testing.T) {
 	hookNames := []string{"pre-receive", "post-receive"}
 
 	for _, hookName := range hookNames {
-		for _, useGoPostReceive := range []bool{true, false} {
-			t.Run(fmt.Sprintf("hookName: %s, using Go PostReceive: %v", hookName, useGoPostReceive), func(t *testing.T) {
-				customHookOutputPath, cleanup := testhelper.WriteEnvToCustomHook(t, testRepoPath, hookName)
-				defer cleanup()
+		t.Run(fmt.Sprintf("hookName: %s", hookName), func(t *testing.T) {
+			customHookOutputPath, cleanup := testhelper.WriteEnvToCustomHook(t, testRepoPath, hookName)
+			defer cleanup()
 
-				config.Config.Gitlab.URL = serverURL
-				config.Config.Gitlab.SecretFile = filepath.Join(tempGitlabShellDir, ".gitlab_shell_secret")
-				config.Config.Gitlab.HTTPSettings.User = gitlabUser
-				config.Config.Gitlab.HTTPSettings.Password = gitlabPassword
+			config.Config.Gitlab.URL = serverURL
+			config.Config.Gitlab.SecretFile = filepath.Join(tempGitlabShellDir, ".gitlab_shell_secret")
+			config.Config.Gitlab.HTTPSettings.User = gitlabUser
+			config.Config.Gitlab.HTTPSettings.Password = gitlabPassword
 
-				gitlabAPI, err := gitalyhook.NewGitlabAPI(config.Config.Gitlab)
-				require.NoError(t, err)
+			gitlabAPI, err := gitalyhook.NewGitlabAPI(config.Config.Gitlab)
+			require.NoError(t, err)
 
-				socket, stop := runHookServiceServerWithAPI(t, token, gitlabAPI)
-				defer stop()
+			socket, stop := runHookServiceServerWithAPI(t, token, gitlabAPI)
+			defer stop()
 
-				var stderr, stdout bytes.Buffer
-				stdin := bytes.NewBuffer([]byte(changes))
-				hookPath, err := filepath.Abs(fmt.Sprintf("../../ruby/git-hooks/%s", hookName))
-				require.NoError(t, err)
-				cmd := exec.Command(hookPath)
-				cmd.Stderr = &stderr
-				cmd.Stdout = &stdout
-				cmd.Stdin = stdin
-				cmd.Env = append(testhelper.EnvForHooks(
-					t,
-					tempGitlabShellDir,
-					socket,
-					token,
-					testRepo,
-					testhelper.GlHookValues{
-						GLID:                   glID,
-						GLUsername:             glUsername,
-						GLRepo:                 glRepository,
-						GLProtocol:             glProtocol,
-						GitObjectDir:           c.GitObjectDir,
-						GitAlternateObjectDirs: c.GitAlternateObjectDirs,
-					},
-					testhelper.ProxyValues{
-						HTTPProxy:  httpProxy,
-						HTTPSProxy: httpsProxy,
-						NoProxy:    noProxy,
-					},
-					gitPushOptions...,
-				), fmt.Sprintf("%s=%v", featureflag.GoPostReceiveHookEnvVar, useGoPostReceive))
+			var stderr, stdout bytes.Buffer
+			stdin := bytes.NewBuffer([]byte(changes))
+			hookPath, err := filepath.Abs(fmt.Sprintf("../../ruby/git-hooks/%s", hookName))
+			require.NoError(t, err)
+			cmd := exec.Command(hookPath)
+			cmd.Stderr = &stderr
+			cmd.Stdout = &stdout
+			cmd.Stdin = stdin
+			cmd.Env = testhelper.EnvForHooks(
+				t,
+				tempGitlabShellDir,
+				socket,
+				token,
+				testRepo,
+				testhelper.GlHookValues{
+					GLID:                   glID,
+					GLUsername:             glUsername,
+					GLRepo:                 glRepository,
+					GLProtocol:             glProtocol,
+					GitObjectDir:           c.GitObjectDir,
+					GitAlternateObjectDirs: c.GitAlternateObjectDirs,
+				},
+				testhelper.ProxyValues{
+					HTTPProxy:  httpProxy,
+					HTTPSProxy: httpsProxy,
+					NoProxy:    noProxy,
+				},
+				gitPushOptions...,
+			)
 
-				cmd.Dir = testRepoPath
+			cmd.Dir = testRepoPath
 
-				require.NoError(t, cmd.Run())
-				require.Empty(t, stderr.String())
-				require.Empty(t, stdout.String())
+			require.NoError(t, cmd.Run())
+			require.Empty(t, stderr.String())
+			require.Empty(t, stdout.String())
 
-				output := string(testhelper.MustReadFile(t, customHookOutputPath))
-				requireContainsOnce(t, output, "GL_USERNAME="+glUsername)
-				requireContainsOnce(t, output, "GL_ID="+glID)
-				requireContainsOnce(t, output, "GL_REPOSITORY="+glRepository)
-				requireContainsOnce(t, output, "HTTP_PROXY="+httpProxy)
-				requireContainsOnce(t, output, "http_proxy="+httpProxy)
-				requireContainsOnce(t, output, "HTTPS_PROXY="+httpsProxy)
-				requireContainsOnce(t, output, "https_proxy="+httpsProxy)
-				requireContainsOnce(t, output, "no_proxy="+noProxy)
-				requireContainsOnce(t, output, "NO_PROXY="+noProxy)
+			output := string(testhelper.MustReadFile(t, customHookOutputPath))
+			requireContainsOnce(t, output, "GL_USERNAME="+glUsername)
+			requireContainsOnce(t, output, "GL_ID="+glID)
+			requireContainsOnce(t, output, "GL_REPOSITORY="+glRepository)
+			requireContainsOnce(t, output, "HTTP_PROXY="+httpProxy)
+			requireContainsOnce(t, output, "http_proxy="+httpProxy)
+			requireContainsOnce(t, output, "HTTPS_PROXY="+httpsProxy)
+			requireContainsOnce(t, output, "https_proxy="+httpsProxy)
+			requireContainsOnce(t, output, "no_proxy="+noProxy)
+			requireContainsOnce(t, output, "NO_PROXY="+noProxy)
 
-				if hookName == "pre-receive" {
-					gitObjectDirMatches := gitObjectDirRegex.FindStringSubmatch(output)
-					require.Len(t, gitObjectDirMatches, 2)
-					require.Equal(t, gitObjectDir, gitObjectDirMatches[1])
+			if hookName == "pre-receive" {
+				gitObjectDirMatches := gitObjectDirRegex.FindStringSubmatch(output)
+				require.Len(t, gitObjectDirMatches, 2)
+				require.Equal(t, gitObjectDir, gitObjectDirMatches[1])
 
-					gitAlternateObjectDirMatches := gitAlternateObjectDirRegex.FindStringSubmatch(output)
-					require.Len(t, gitAlternateObjectDirMatches, 2)
-					require.Equal(t, strings.Join(gitAlternateObjectDirs, ":"), gitAlternateObjectDirMatches[1])
-				} else {
-					require.Contains(t, output, "GL_PROTOCOL="+glProtocol)
-				}
-			})
-		}
+				gitAlternateObjectDirMatches := gitAlternateObjectDirRegex.FindStringSubmatch(output)
+				require.Len(t, gitAlternateObjectDirMatches, 2)
+				require.Equal(t, strings.Join(gitAlternateObjectDirs, ":"), gitAlternateObjectDirMatches[1])
+			} else {
+				require.Contains(t, output, "GL_PROTOCOL="+glProtocol)
+			}
+		})
 	}
 }
 
