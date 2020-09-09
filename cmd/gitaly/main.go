@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/bootstrap"
 	"gitlab.com/gitlab-org/gitaly/internal/bootstrap/starter"
@@ -102,6 +103,7 @@ func run(b *bootstrap.Bootstrap) error {
 	}
 
 	hookManager := hook.NewManager(gitlabAPI, config.Config)
+	prometheus.MustRegister(hookManager)
 
 	servers := server.NewGitalyServerFactory(hookManager)
 	defer servers.Stop()
