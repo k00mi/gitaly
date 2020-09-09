@@ -58,6 +58,7 @@ func testMain(m *testing.M) int {
 	config.Config.GitlabShell.Dir = filepath.Join(cwd, "testdata", "gitlab-shell")
 
 	testhelper.ConfigureGitalySSH()
+	testhelper.ConfigureGitalyGit2Go()
 	testhelper.ConfigureGitalyHooksBinary()
 
 	defer func(token string) {
