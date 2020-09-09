@@ -37,7 +37,6 @@ var (
 
 	smarthttpPackfileNegotiationMetrics *prometheus.CounterVec
 	sshPackfileNegotiationMetrics       *prometheus.CounterVec
-	votingDelayMetric                   prometheus.Histogram
 )
 
 func registerMetrics(cfg config.Cfg) {
@@ -60,19 +59,11 @@ func registerMetrics(cfg config.Cfg) {
 		},
 		[]string{"git_negotiation_feature"},
 	)
-
-	votingDelayMetric = promauto.NewHistogram(
-		prometheus.HistogramOpts{
-			Name:    "gitaly_hook_transaction_voting_delay_seconds",
-			Help:    "Delay between calling out to transaction service and receiving a response",
-			Buckets: cfg.Prometheus.GRPCLatencyBuckets,
-		},
-	)
 }
 
 // RegisterAll will register all the known grpc services with
 // the specified grpc service instance
-func RegisterAll(grpcServer *grpc.Server, cfg config.Cfg, rubyServer *rubyserver.Server, gitlabAPI gitalyhook.GitlabAPI, locator storage.Locator) {
+func RegisterAll(grpcServer *grpc.Server, cfg config.Cfg, rubyServer *rubyserver.Server, hookManager *gitalyhook.Manager, locator storage.Locator) {
 	once.Do(func() {
 		registerMetrics(cfg)
 	})
@@ -96,13 +87,7 @@ func RegisterAll(grpcServer *grpc.Server, cfg config.Cfg, rubyServer *rubyserver
 	gitalypb.RegisterRemoteServiceServer(grpcServer, remote.NewServer(rubyServer))
 	gitalypb.RegisterServerServiceServer(grpcServer, server.NewServer(cfg.Storages))
 	gitalypb.RegisterObjectPoolServiceServer(grpcServer, objectpool.NewServer(locator))
-	gitalypb.RegisterHookServiceServer(grpcServer, hook.NewServer(
-		gitalyhook.NewManager(
-			gitlabAPI,
-			cfg,
-			gitalyhook.WithVotingDelayMetric(votingDelayMetric),
-		),
-	))
+	gitalypb.RegisterHookServiceServer(grpcServer, hook.NewServer(hookManager))
 	gitalypb.RegisterInternalGitalyServer(grpcServer, internalgitaly.NewServer(cfg.Storages))
 
 	healthpb.RegisterHealthServer(grpcServer, health.NewServer())

@@ -22,14 +22,14 @@ import (
 type GitalyServerFactory struct {
 	mtx              sync.Mutex
 	ruby             *rubyserver.Server
-	gitlabAPI        hook.GitlabAPI
+	hookManager      *hook.Manager
 	secure, insecure []*grpc.Server
 }
 
 // NewGitalyServerFactory allows to create and start secure/insecure 'grpc.Server'-s with gitaly-ruby
 // server shared in between.
-func NewGitalyServerFactory(api hook.GitlabAPI) *GitalyServerFactory {
-	return &GitalyServerFactory{ruby: &rubyserver.Server{}, gitlabAPI: api}
+func NewGitalyServerFactory(hookManager *hook.Manager) *GitalyServerFactory {
+	return &GitalyServerFactory{ruby: &rubyserver.Server{}, hookManager: hookManager}
 }
 
 // StartRuby starts the ruby process
@@ -126,11 +126,11 @@ func (s *GitalyServerFactory) create(secure bool) *grpc.Server {
 	defer s.mtx.Unlock()
 
 	if secure {
-		s.secure = append(s.secure, NewSecure(s.ruby, s.gitlabAPI, config.Config))
+		s.secure = append(s.secure, NewSecure(s.ruby, s.hookManager, config.Config))
 		return s.secure[len(s.secure)-1]
 	}
 
-	s.insecure = append(s.insecure, NewInsecure(s.ruby, s.gitlabAPI, config.Config))
+	s.insecure = append(s.insecure, NewInsecure(s.ruby, s.hookManager, config.Config))
 
 	return s.insecure[len(s.insecure)-1]
 }

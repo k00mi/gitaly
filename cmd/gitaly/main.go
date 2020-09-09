@@ -101,7 +101,9 @@ func run(b *bootstrap.Bootstrap) error {
 		}
 	}
 
-	servers := server.NewGitalyServerFactory(gitlabAPI)
+	hookManager := hook.NewManager(gitlabAPI, config.Config)
+
+	servers := server.NewGitalyServerFactory(hookManager)
 	defer servers.Stop()
 
 	b.StopAction = servers.GracefulStop

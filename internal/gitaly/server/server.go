@@ -73,7 +73,7 @@ func init() {
 
 // createNewServer returns a GRPC server with all Gitaly services and interceptors set up.
 // allows for specifying secure = true to enable tls credentials
-func createNewServer(rubyServer *rubyserver.Server, gitlabAPI hook.GitlabAPI, cfg config.Cfg, secure bool) *grpc.Server {
+func createNewServer(rubyServer *rubyserver.Server, hookManager *hook.Manager, cfg config.Cfg, secure bool) *grpc.Server {
 	ctxTagOpts := []grpc_ctxtags.Option{
 		grpc_ctxtags.WithFieldExtractorForInitialReq(fieldextractors.FieldExtractor),
 	}
@@ -135,7 +135,7 @@ func createNewServer(rubyServer *rubyserver.Server, gitlabAPI hook.GitlabAPI, cf
 
 	server := grpc.NewServer(opts...)
 
-	service.RegisterAll(server, cfg, rubyServer, gitlabAPI, storageLocator)
+	service.RegisterAll(server, cfg, rubyServer, hookManager, storageLocator)
 	reflection.Register(server)
 
 	grpc_prometheus.Register(server)
@@ -144,13 +144,13 @@ func createNewServer(rubyServer *rubyserver.Server, gitlabAPI hook.GitlabAPI, cf
 }
 
 // NewInsecure returns a GRPC server with all Gitaly services and interceptors set up.
-func NewInsecure(rubyServer *rubyserver.Server, gitlabAPI hook.GitlabAPI, cfg config.Cfg) *grpc.Server {
-	return createNewServer(rubyServer, gitlabAPI, cfg, false)
+func NewInsecure(rubyServer *rubyserver.Server, hookManager *hook.Manager, cfg config.Cfg) *grpc.Server {
+	return createNewServer(rubyServer, hookManager, cfg, false)
 }
 
 // NewSecure returns a GRPC server enabling TLS credentials
-func NewSecure(rubyServer *rubyserver.Server, gitlabAPI hook.GitlabAPI, cfg config.Cfg) *grpc.Server {
-	return createNewServer(rubyServer, gitlabAPI, cfg, true)
+func NewSecure(rubyServer *rubyserver.Server, hookManager *hook.Manager, cfg config.Cfg) *grpc.Server {
+	return createNewServer(rubyServer, hookManager, cfg, true)
 }
 
 // CleanupInternalSocketDir will clean up the directory for internal sockets if it is a generated temp dir

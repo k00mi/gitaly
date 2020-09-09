@@ -904,7 +904,7 @@ func TestBackoff(t *testing.T) {
 }
 
 func runFullGitalyServer(t *testing.T) (*grpc.Server, string) {
-	server := serverPkg.NewInsecure(RubyServer, hook.GitlabAPIStub, gitaly_config.Config)
+	server := serverPkg.NewInsecure(RubyServer, hook.NewManager(hook.GitlabAPIStub, gitaly_config.Config), gitaly_config.Config)
 
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 
