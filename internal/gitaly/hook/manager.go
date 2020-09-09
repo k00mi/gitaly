@@ -15,10 +15,10 @@ type Manager struct {
 }
 
 // NewManager returns a new hook manager
-func NewManager(gitlabAPI GitlabAPI, hooksConfig config.Hooks, opts ...ManagerOpt) *Manager {
+func NewManager(gitlabAPI GitlabAPI, cfg config.Cfg, opts ...ManagerOpt) *Manager {
 	m := &Manager{
 		gitlabAPI:         gitlabAPI,
-		hooksConfig:       hooksConfig,
+		hooksConfig:       cfg.Hooks,
 		conns:             client.NewPool(),
 		votingDelayMetric: prometheus.NewHistogram(prometheus.HistogramOpts{}),
 	}

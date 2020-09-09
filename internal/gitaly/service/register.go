@@ -99,7 +99,7 @@ func RegisterAll(grpcServer *grpc.Server, cfg config.Cfg, rubyServer *rubyserver
 	gitalypb.RegisterHookServiceServer(grpcServer, hook.NewServer(
 		gitalyhook.NewManager(
 			gitlabAPI,
-			cfg.Hooks,
+			cfg,
 			gitalyhook.WithVotingDelayMetric(votingDelayMetric),
 		),
 	))

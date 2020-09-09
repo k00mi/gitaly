@@ -16,7 +16,7 @@ import (
 )
 
 func TestReferenceTransactionHookInvalidArgument(t *testing.T) {
-	serverSocketPath, stop := runHooksServer(t, config.Config.Hooks)
+	serverSocketPath, stop := runHooksServer(t, config.Config)
 	defer stop()
 
 	client, conn := newHooksClient(t, serverSocketPath)
@@ -86,7 +86,7 @@ func TestReferenceTransactionHook(t *testing.T) {
 			testRepo, _, cleanup := testhelper.NewTestRepo(t)
 			defer cleanup()
 
-			serverSocketPath, stop := runHooksServer(t, config.Hooks{})
+			serverSocketPath, stop := runHooksServer(t, config.Cfg{})
 			defer stop()
 
 			transactionServer := metadata.PraefectServer{

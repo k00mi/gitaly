@@ -16,7 +16,7 @@ import (
 )
 
 func TestUpdateInvalidArgument(t *testing.T) {
-	serverSocketPath, stop := runHooksServer(t, config.Config.Hooks)
+	serverSocketPath, stop := runHooksServer(t, config.Config)
 	defer stop()
 
 	client, conn := newHooksClient(t, serverSocketPath)
@@ -33,7 +33,7 @@ func TestUpdateInvalidArgument(t *testing.T) {
 }
 
 func TestUpdate_CustomHooks(t *testing.T) {
-	serverSocketPath, stop := runHooksServer(t, config.Config.Hooks)
+	serverSocketPath, stop := runHooksServer(t, config.Config)
 	defer stop()
 
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)

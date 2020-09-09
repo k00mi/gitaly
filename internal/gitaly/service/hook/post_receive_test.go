@@ -22,7 +22,7 @@ import (
 )
 
 func TestPostReceiveInvalidArgument(t *testing.T) {
-	serverSocketPath, stop := runHooksServer(t, config.Config.Hooks)
+	serverSocketPath, stop := runHooksServer(t, config.Config)
 	defer stop()
 
 	client, conn := newHooksClient(t, serverSocketPath)
@@ -64,7 +64,7 @@ func TestPostReceive(t *testing.T) {
 	require.NoError(t, err)
 	config.Config.Ruby.Dir = filepath.Join(cwd, "testdata")
 
-	serverSocketPath, stop := runHooksServer(t, config.Config.Hooks)
+	serverSocketPath, stop := runHooksServer(t, config.Config)
 	defer stop()
 
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
@@ -334,7 +334,7 @@ To create a merge request for okay, visit:
 				api, err := gitalyhook.NewGitlabAPI(gitlabConfig)
 				require.NoError(t, err)
 
-				serverSocketPath, stop := runHooksServerWithAPI(t, api, config.Config.Hooks)
+				serverSocketPath, stop := runHooksServerWithAPI(t, api, config.Config)
 				defer stop()
 
 				client, conn := newHooksClient(t, serverSocketPath)
