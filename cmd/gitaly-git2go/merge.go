@@ -79,7 +79,7 @@ func (cmd *mergeSubcommand) Run() error {
 		return fmt.Errorf("invalid options: %w", err)
 	}
 
-	var date time.Time
+	var date time.Time = time.Now()
 	if cmd.authorDate != "" {
 		var err error
 		date, err = time.Parse("Mon Jan 2 15:04:05 2006 -0700", cmd.authorDate)
