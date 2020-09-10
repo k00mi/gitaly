@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -669,19 +670,9 @@ func handlePostReceive(options GitlabTestServerOptions) func(w http.ResponseWrit
 			}
 		}
 
-		if len(options.GitPushOptions) > 0 {
-			pushOptions := params["push_options"].([]string)
-			if len(pushOptions) != len(options.GitPushOptions) {
-				http.Error(w, "git push options is invalid", http.StatusUnauthorized)
-				return
-			}
-
-			for i, pushOption := range pushOptions {
-				if pushOption != options.GitPushOptions[i] {
-					http.Error(w, "git push options is invalid", http.StatusUnauthorized)
-					return
-				}
-			}
+		if !reflect.DeepEqual(options.GitPushOptions, params["push_options"]) {
+			http.Error(w, "git push options is invalid", http.StatusUnauthorized)
+			return
 		}
 
 		response := postReceiveResponse{

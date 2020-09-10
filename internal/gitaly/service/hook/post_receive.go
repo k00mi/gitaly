@@ -58,7 +58,7 @@ func (s *server) PostReceiveHook(stream gitalypb.HookService_PostReceiveHookServ
 	if err := s.manager.PostReceiveHook(
 		stream.Context(),
 		firstRequest.Repository,
-		hooks.GitPushOptions(firstRequest.GetGitPushOptions()),
+		firstRequest.GetGitPushOptions(),
 		hookEnv,
 		stdin,
 		stdout,
