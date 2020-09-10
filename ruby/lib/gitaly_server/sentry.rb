@@ -14,7 +14,6 @@ module GitalyServer
       include GitalyServer::Utils
 
       def process(data)
-        sanitize_message(data)
         sanitize_fingerprint(data)
         sanitize_exceptions(data)
         sanitize_logentry(data)
@@ -46,10 +45,6 @@ module GitalyServer
         return unless values.is_a?(Array)
 
         values.each { |exception_data| exception_data[:value] = sanitize_url(exception_data[:value]) }
-      end
-
-      def sanitize_message(data)
-        data[:message] = sanitize_url(data[:message])
       end
     end
   end
