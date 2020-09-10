@@ -12,6 +12,8 @@ import (
 	"strings"
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
 // customHooksExecutor executes all custom hooks for a given repository and hook name
@@ -22,7 +24,12 @@ type customHooksExecutor func(ctx context.Context, args, env []string, stdin io.
 // 1. <repository>.git/custom_hooks/<hook_name> - per project hook
 // 2. <repository>.git/custom_hooks/<hook_name>.d/* - per project hooks
 // 3. <repository>.git/hooks/<hook_name>.d/* - global hooks
-func (m *GitLabHookManager) newCustomHooksExecutor(repoPath, hookName string) (customHooksExecutor, error) {
+func (m *GitLabHookManager) newCustomHooksExecutor(repo *gitalypb.Repository, hookName string) (customHooksExecutor, error) {
+	repoPath, err := helper.GetRepoPath(repo)
+	if err != nil {
+		return nil, err
+	}
+
 	var hookFiles []string
 	projectCustomHookFile := filepath.Join(repoPath, "custom_hooks", hookName)
 	s, err := os.Stat(projectCustomHookFile)

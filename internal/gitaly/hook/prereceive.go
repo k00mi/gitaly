@@ -40,31 +40,6 @@ func getRelativeObjectDirs(repoPath, gitObjectDir, gitAlternateObjectDirs string
 	return gitObjDirRel, gitAltObjDirsRel, nil
 }
 
-func (m *GitLabHookManager) executeCustomHooks(ctx context.Context, stdout, stderr io.Writer, changes []byte, repo *gitalypb.Repository, env []string) error {
-	// custom hooks execution
-	repoPath, err := helper.GetRepoPath(repo)
-	if err != nil {
-		return err
-	}
-	executor, err := m.newCustomHooksExecutor(repoPath, "pre-receive")
-	if err != nil {
-		return fmt.Errorf("creating custom hooks executor: %w", err)
-	}
-
-	if err = executor(
-		ctx,
-		nil,
-		env,
-		bytes.NewReader(changes),
-		stdout,
-		stderr,
-	); err != nil {
-		return fmt.Errorf("executing custom hooks: %w", err)
-	}
-
-	return nil
-}
-
 func (m *GitLabHookManager) PreReceiveHook(ctx context.Context, repo *gitalypb.Repository, env []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	if gitObjDir, gitAltObjDirs := getEnvVar("GIT_OBJECT_DIRECTORY", env), getEnvVar("GIT_ALTERNATE_OBJECT_DIRECTORIES", env); gitObjDir != "" && gitAltObjDirs != "" {
 		repoPath, err := helper.GetRepoPath(repo)
@@ -104,8 +79,20 @@ func (m *GitLabHookManager) PreReceiveHook(ctx context.Context, repo *gitalypb.R
 			return errors.New(message)
 		}
 
-		if err := m.executeCustomHooks(ctx, stdout, stderr, changes, repo, env); err != nil {
-			return err
+		executor, err := m.newCustomHooksExecutor(repo, "pre-receive")
+		if err != nil {
+			return fmt.Errorf("creating custom hooks executor: %w", err)
+		}
+
+		if err = executor(
+			ctx,
+			nil,
+			env,
+			bytes.NewReader(changes),
+			stdout,
+			stderr,
+		); err != nil {
+			return fmt.Errorf("executing custom hooks: %w", err)
 		}
 
 		// reference counter

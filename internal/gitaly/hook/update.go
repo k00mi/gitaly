@@ -9,12 +9,7 @@ import (
 )
 
 func (m *GitLabHookManager) UpdateHook(ctx context.Context, repo *gitalypb.Repository, ref, oldValue, newValue string, env []string, stdout, stderr io.Writer) error {
-	repoPath, err := helper.GetRepoPath(repo)
-	if err != nil {
-		return err
-	}
-
-	executor, err := m.newCustomHooksExecutor(repoPath, "update")
+	executor, err := m.newCustomHooksExecutor(repo, "update")
 	if err != nil {
 		return helper.ErrInternal(err)
 	}
