@@ -147,7 +147,7 @@ func TestCustomHookPartialFailure(t *testing.T) {
 			cleanup = writeCustomHook(t, tc.hook, globalHookPath, globalHookScript)
 			defer cleanup()
 
-			mgr := Manager{}
+			mgr := GitLabHookManager{}
 			caller, err := mgr.NewCustomHooksExecutor(testRepoPath, globalCustomHooksDir, tc.hook)
 			require.NoError(t, err)
 
@@ -196,7 +196,7 @@ func TestCustomHooksMultipleHooks(t *testing.T) {
 		expectedExecutedScripts = append(expectedExecutedScripts, filepath.Join(globalHooksPath, fileName))
 	}
 
-	mgr := Manager{}
+	mgr := GitLabHookManager{}
 	hooksExecutor, err := mgr.NewCustomHooksExecutor(testRepoPath, globalCustomHooksDir, "update")
 	require.NoError(t, err)
 
@@ -226,7 +226,7 @@ func TestMultilineStdin(t *testing.T) {
 
 	writeCustomHook(t, "pre-receive-script", projectHooksPath, printStdinScript)
 
-	mgr := Manager{}
+	mgr := GitLabHookManager{}
 	hooksExecutor, err := mgr.NewCustomHooksExecutor(testRepoPath, globalCustomHooksDir, "pre-receive")
 	require.NoError(t, err)
 
@@ -259,7 +259,7 @@ func TestMultipleScriptsStdin(t *testing.T) {
 		writeCustomHook(t, fileName, projectHooksPath, printStdinScript)
 	}
 
-	mgr := Manager{}
+	mgr := GitLabHookManager{}
 	hooksExecutor, err := mgr.NewCustomHooksExecutor(testRepoPath, globalCustomHooksDir, "pre-receive")
 	require.NoError(t, err)
 
@@ -285,7 +285,7 @@ func callAndVerifyHooks(t *testing.T, repoPath, hookName, globalHooksDir, hookDi
 	cleanup := writeCustomHook(t, hookName, hookDir, printAllScript)
 	defer cleanup()
 
-	mgr := Manager{}
+	mgr := GitLabHookManager{}
 	callHooks, err := mgr.NewCustomHooksExecutor(repoPath, globalHooksDir, hookName)
 	require.NoError(t, err)
 

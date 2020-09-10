@@ -22,13 +22,13 @@ import (
 type GitalyServerFactory struct {
 	mtx              sync.Mutex
 	ruby             *rubyserver.Server
-	hookManager      *hook.Manager
+	hookManager      hook.Manager
 	secure, insecure []*grpc.Server
 }
 
 // NewGitalyServerFactory allows to create and start secure/insecure 'grpc.Server'-s with gitaly-ruby
 // server shared in between.
-func NewGitalyServerFactory(hookManager *hook.Manager) *GitalyServerFactory {
+func NewGitalyServerFactory(hookManager hook.Manager) *GitalyServerFactory {
 	return &GitalyServerFactory{ruby: &rubyserver.Server{}, hookManager: hookManager}
 }
 
