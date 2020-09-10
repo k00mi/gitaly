@@ -1,9 +1,8 @@
 package ref
 
 import (
-	"bufio"
 	"context"
-	"io"
+	"errors"
 	"strings"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git"
@@ -18,7 +17,6 @@ func (s *server) FindBranch(ctx context.Context, req *gitalypb.FindBranchRequest
 	if len(refName) == 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "Branch name cannot be empty")
 	}
-	repo := req.GetRepository()
 
 	if strings.HasPrefix(refName, "refs/heads/") {
 		refName = strings.TrimPrefix(refName, "refs/heads/")
@@ -26,30 +24,18 @@ func (s *server) FindBranch(ctx context.Context, req *gitalypb.FindBranchRequest
 		refName = strings.TrimPrefix(refName, "heads/")
 	}
 
-	cmd, err := git.SafeCmd(ctx, repo, nil, git.SubCmd{
-		Name:  "for-each-ref",
-		Flags: []git.Option{git.Flag{Name: "--format=%(objectname)"}},
-		Args:  []string{"refs/heads/" + refName},
-	})
-	if err != nil {
-		return nil, err
-	}
+	repo := req.GetRepository()
 
-	reader := bufio.NewReader(cmd)
-	revision, _, err := reader.ReadLine()
+	branch, err := git.NewRepository(repo).GetBranch(ctx, refName)
 	if err != nil {
-		if err == io.EOF {
+		if errors.Is(err, git.ErrReferenceNotFound) {
 			return &gitalypb.FindBranchResponse{}, nil
 		}
 		return nil, err
 	}
 
-	commit, err := log.GetCommit(ctx, repo, string(revision))
+	commit, err := log.GetCommit(ctx, repo, branch.Target)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := cmd.Wait(); err != nil {
 		return nil, err
 	}
 

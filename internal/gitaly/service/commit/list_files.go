@@ -39,7 +39,12 @@ func (s *server) ListFiles(in *gitalypb.ListFilesRequest, stream gitalypb.Commit
 		revision = string(defaultBranch)
 	}
 
-	if !git.IsValidRef(stream.Context(), repo, revision) {
+	containsRef, err := git.NewRepository(in.Repository).ContainsRef(stream.Context(), revision)
+	if err != nil {
+		return helper.ErrInternal(err)
+	}
+
+	if !containsRef {
 		return stream.Send(&gitalypb.ListFilesResponse{})
 	}
 
