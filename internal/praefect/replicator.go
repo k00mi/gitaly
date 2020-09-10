@@ -16,7 +16,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
 	prommetrics "gitlab.com/gitlab-org/gitaly/internal/prometheus/metrics"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
-	grpccorrelation "gitlab.com/gitlab-org/labkit/correlation/grpc"
+	"gitlab.com/gitlab-org/labkit/correlation"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
@@ -38,8 +38,8 @@ type Replicator interface {
 }
 
 type defaultReplicator struct {
-	log *logrus.Entry
 	rs  datastore.RepositoryStore
+	log logrus.FieldLogger
 }
 
 func (dr defaultReplicator) Replicate(ctx context.Context, event datastore.ReplicationEvent, sourceCC, targetCC *grpc.ClientConn) error {
@@ -53,6 +53,12 @@ func (dr defaultReplicator) Replicate(ctx context.Context, event datastore.Repli
 		RelativePath: event.Job.RelativePath,
 	}
 
+	logger := dr.log.WithFields(logrus.Fields{
+		logWithVirtualStorage: event.Job.VirtualStorage,
+		logWithReplTarget:     event.Job.TargetNodeStorage,
+		logWithCorrID:         correlation.ExtractFromContext(ctx),
+	})
+
 	generation, err := dr.rs.GetReplicatedGeneration(ctx, event.Job.VirtualStorage, event.Job.RelativePath, event.Job.SourceNodeStorage, event.Job.TargetNodeStorage)
 	if err != nil {
 		// Later generation might have already been replicated by an earlier replication job. If that's the case,
@@ -64,7 +70,7 @@ func (dr defaultReplicator) Replicate(ctx context.Context, event datastore.Repli
 				message = "target repository already on the same generation, skipping replication job"
 			}
 
-			dr.log.WithError(downgradeErr).Info(message)
+			logger.WithError(downgradeErr).Info(message)
 			return nil
 		}
 
@@ -77,7 +83,7 @@ func (dr defaultReplicator) Replicate(ctx context.Context, event datastore.Repli
 		Source:     sourceRepository,
 		Repository: targetRepository,
 	}); err != nil {
-		return fmt.Errorf("failed to create repository: %v", err)
+		return fmt.Errorf("failed to create repository: %w", err)
 	}
 
 	// check if the repository has an object pool
@@ -104,7 +110,7 @@ func (dr defaultReplicator) Replicate(ctx context.Context, event datastore.Repli
 		}
 	}
 
-	checksumsMatch, err := dr.confirmChecksums(ctx, gitalypb.NewRepositoryServiceClient(sourceCC), targetRepositoryClient, sourceRepository, targetRepository)
+	checksumsMatch, err := dr.confirmChecksums(ctx, logger, gitalypb.NewRepositoryServiceClient(sourceCC), targetRepositoryClient, sourceRepository, targetRepository)
 	if err != nil {
 		return err
 	}
@@ -115,10 +121,8 @@ func (dr defaultReplicator) Replicate(ctx context.Context, event datastore.Repli
 			targetRepository.GetStorageName(),
 			sourceRepository.GetStorageName(),
 		).Inc()
-		dr.log.WithFields(logrus.Fields{
-			"primary": sourceRepository,
-			"replica": targetRepository,
-		}).Error("checksums do not match")
+
+		logger.Error("checksums do not match")
 	}
 
 	if generation != datastore.GenerationUnknown {
@@ -154,7 +158,9 @@ func (dr defaultReplicator) Destroy(ctx context.Context, event datastore.Replica
 			return err
 		}
 
-		dr.log.WithError(err).Info("replicated repository delete does not have a store entry")
+		dr.log.WithField(logWithCorrID, correlation.ExtractFromContext(ctx)).
+			WithError(err).
+			Info("replicated repository delete does not have a store entry")
 	}
 
 	return nil
@@ -194,7 +200,9 @@ func (dr defaultReplicator) Rename(ctx context.Context, event datastore.Replicat
 			return err
 		}
 
-		dr.log.WithError(err).Info("replicated repository rename does not have a store entry")
+		dr.log.WithField(logWithCorrID, correlation.ExtractFromContext(ctx)).
+			WithError(err).
+			Info("replicated repository rename does not have a store entry")
 	}
 
 	return nil
@@ -278,7 +286,7 @@ func getChecksumFunc(ctx context.Context, client gitalypb.RepositoryServiceClien
 	}
 }
 
-func (dr defaultReplicator) confirmChecksums(ctx context.Context, primaryClient, replicaClient gitalypb.RepositoryServiceClient, primary, replica *gitalypb.Repository) (bool, error) {
+func (dr defaultReplicator) confirmChecksums(ctx context.Context, logger logrus.FieldLogger, primaryClient, replicaClient gitalypb.RepositoryServiceClient, primary, replica *gitalypb.Repository) (bool, error) {
 	g, gCtx := errgroup.WithContext(ctx)
 
 	var primaryChecksum, replicaChecksum string
@@ -290,12 +298,10 @@ func (dr defaultReplicator) confirmChecksums(ctx context.Context, primaryClient,
 		return false, err
 	}
 
-	dr.log.WithFields(logrus.Fields{
-		"primary":          primary,
-		"replica":          replica,
+	logger.WithFields(logrus.Fields{
 		"primary_checksum": primaryChecksum,
 		"replica_checksum": replicaChecksum,
-	}).Info("replication finished")
+	}).Info("checksum comparison completed")
 
 	return primaryChecksum == replicaChecksum, nil
 }
@@ -347,7 +353,7 @@ func NewReplMgr(log *logrus.Entry, virtualStorages []string, queue datastore.Rep
 		log:             log.WithField("component", "replication_manager"),
 		queue:           queue,
 		allowlist:       map[string]struct{}{},
-		replicator:      defaultReplicator{log, rs},
+		replicator:      defaultReplicator{rs: rs, log: log.WithField("component", "replicator")},
 		virtualStorages: virtualStorages,
 		nodeManager:     nodeMgr,
 		replInFlightMetric: prometheus.NewGaugeVec(
@@ -393,9 +399,9 @@ func WithReplicator(r Replicator) ReplMgrOpt {
 }
 
 const (
-	logWithReplJobID  = "replication_job_id"
-	logWithReplTarget = "replication_job_target"
-	logWithCorrID     = "correlation_id"
+	logWithReplTarget     = "replication_job_target"
+	logWithCorrID         = "correlation_id"
+	logWithVirtualStorage = "virtual_storage"
 )
 
 type backoff func() time.Duration
@@ -466,7 +472,7 @@ func (r ReplMgr) ProcessStale(ctx context.Context, checkPeriod, staleAfter time.
 }
 
 func (r ReplMgr) processBacklog(ctx context.Context, b BackoffFunc, virtualStorage string) {
-	logger := r.log.WithField("virtual_storage", virtualStorage)
+	logger := r.log.WithField(logWithVirtualStorage, virtualStorage)
 	backoff, reset := b()
 
 	logger.Info("processing started")
@@ -489,7 +495,7 @@ func (r ReplMgr) processBacklog(ctx context.Context, b BackoffFunc, virtualStora
 				if !target.IsHealthy() {
 					continue
 				}
-				totalEvents += r.handleNode(ctx, logger, shard, virtualStorage, target)
+				totalEvents += r.handleNode(ctx, shard, virtualStorage, target)
 			}
 		}
 
@@ -507,10 +513,12 @@ func (r ReplMgr) processBacklog(ctx context.Context, b BackoffFunc, virtualStora
 	}
 }
 
-func (r ReplMgr) handleNode(ctx context.Context, logger logrus.FieldLogger, shard nodes.Shard, virtualStorage string, target nodes.Node) int {
+func (r ReplMgr) handleNode(ctx context.Context, shard nodes.Shard, virtualStorage string, target nodes.Node) int {
+	logger := r.log.WithFields(logrus.Fields{logWithVirtualStorage: virtualStorage, logWithReplTarget: target.GetStorage()})
+
 	events, err := r.queue.Dequeue(ctx, virtualStorage, target.GetStorage(), int(r.dequeueBatchSize))
 	if err != nil {
-		logger.WithField(logWithReplTarget, target.GetStorage()).WithError(err).Error("failed to dequeue replication events")
+		logger.WithError(err).Error("failed to dequeue replication events")
 		return 0
 	}
 
@@ -530,13 +538,17 @@ func (r ReplMgr) handleNode(ctx context.Context, logger logrus.FieldLogger, shar
 	for state, eventIDs := range eventIDsByState {
 		ackIDs, err := r.queue.Acknowledge(ctx, state, eventIDs)
 		if err != nil {
-			logger.WithField("state", state).WithField("event_ids", eventIDs).WithError(err).Error("failed to acknowledge replication events")
+			logger.WithFields(logrus.Fields{"state": state, "event_ids": eventIDs}).
+				WithError(err).
+				Error("failed to acknowledge replication events")
 			continue
 		}
 
 		notAckIDs := subtractUint64(ackIDs, eventIDs)
 		if len(notAckIDs) > 0 {
-			logger.WithField("state", state).WithField("event_ids", notAckIDs).WithError(err).Error("replication events were not acknowledged")
+			logger.WithFields(logrus.Fields{"state": state, "event_ids": notAckIDs}).
+				WithError(err).
+				Error("replication events were not acknowledged")
 		}
 	}
 
@@ -563,26 +575,27 @@ func (r ReplMgr) startHealthUpdate(ctx context.Context, logger logrus.FieldLogge
 }
 
 func (r ReplMgr) handleNodeEvent(ctx context.Context, logger logrus.FieldLogger, shard nodes.Shard, target nodes.Node, event datastore.ReplicationEvent) datastore.JobState {
-	ctxLogger := logger.WithFields(logrus.Fields{
-		logWithReplJobID: event.ID,
-		logWithCorrID:    getCorrelationID(event.Meta),
-	})
-	ctxLogger.Info("processing replication job")
+	cid := getCorrelationID(event.Meta)
+	ctx = correlation.ContextWithCorrelation(ctx, cid)
+
+	// we want it to be queryable by common `json.correlation_id` filter
+	logger = logger.WithField(logWithCorrID, cid)
+	// we log all details about the event only once before start of the processing
+	logger.WithField("event", event).Info("replication job processing started")
 
 	if err := r.processReplicationEvent(ctx, event, shard, target.GetConnection()); err != nil {
-		ctxLogger.WithError(err).Error("replication job failed")
-
+		newState := datastore.JobStateFailed
 		if event.Attempt <= 0 {
-			logger.WithField("event", event).Info("handled event would be deleted")
-			return datastore.JobStateDead
+			newState = datastore.JobStateDead
 		}
 
-		return datastore.JobStateFailed
+		logger.WithError(err).WithField("new_state", newState).Error("replication job processing finished")
+		return newState
 	}
 
-	logger.WithField("event", event).Info("handled event would be deleted")
-
-	return datastore.JobStateCompleted
+	newState := datastore.JobStateCompleted
+	logger.WithField("new_state", newState).Info("replication job processing finished")
+	return newState
 }
 
 func (r ReplMgr) processReplicationEvent(ctx context.Context, event datastore.ReplicationEvent, shard nodes.Shard, targetCC *grpc.ClientConn) error {
@@ -591,23 +604,19 @@ func (r ReplMgr) processReplicationEvent(ctx context.Context, event datastore.Re
 		return fmt.Errorf("get source node: %w", err)
 	}
 
-	cid := getCorrelationID(event.Meta)
-
-	var replCtx context.Context
 	var cancel func()
 
 	if r.replJobTimeout > 0 {
-		replCtx, cancel = context.WithTimeout(ctx, r.replJobTimeout)
+		ctx, cancel = context.WithTimeout(ctx, r.replJobTimeout)
 	} else {
-		replCtx, cancel = context.WithCancel(ctx)
+		ctx, cancel = context.WithCancel(ctx)
 	}
 	defer cancel()
 
-	injectedCtx, err := helper.InjectGitalyServers(replCtx, event.Job.SourceNodeStorage, source.GetAddress(), source.GetToken())
+	ctx, err = helper.InjectGitalyServers(ctx, event.Job.SourceNodeStorage, source.GetAddress(), source.GetToken())
 	if err != nil {
 		return fmt.Errorf("inject Gitaly servers into context: %w", err)
 	}
-	injectedCtx = grpccorrelation.InjectToOutgoingContext(injectedCtx, cid)
 
 	replStart := time.Now()
 
@@ -619,17 +628,17 @@ func (r ReplMgr) processReplicationEvent(ctx context.Context, event datastore.Re
 
 	switch event.Job.Change {
 	case datastore.UpdateRepo:
-		err = r.replicator.Replicate(injectedCtx, event, source.GetConnection(), targetCC)
+		err = r.replicator.Replicate(ctx, event, source.GetConnection(), targetCC)
 	case datastore.DeleteRepo:
-		err = r.replicator.Destroy(injectedCtx, event, targetCC)
+		err = r.replicator.Destroy(ctx, event, targetCC)
 	case datastore.RenameRepo:
-		err = r.replicator.Rename(injectedCtx, event, targetCC)
+		err = r.replicator.Rename(ctx, event, targetCC)
 	case datastore.GarbageCollect:
-		err = r.replicator.GarbageCollect(injectedCtx, event, targetCC)
+		err = r.replicator.GarbageCollect(ctx, event, targetCC)
 	case datastore.RepackFull:
-		err = r.replicator.RepackFull(injectedCtx, event, targetCC)
+		err = r.replicator.RepackFull(ctx, event, targetCC)
 	case datastore.RepackIncremental:
-		err = r.replicator.RepackIncremental(injectedCtx, event, targetCC)
+		err = r.replicator.RepackIncremental(ctx, event, targetCC)
 	default:
 		err = fmt.Errorf("unknown replication change type encountered: %q", event.Job.Change)
 	}

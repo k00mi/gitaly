@@ -39,6 +39,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper/promtest"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
+	"gitlab.com/gitlab-org/labkit/correlation"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
@@ -46,7 +47,7 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-func TestProcessReplicationJob(t *testing.T) {
+func TestReplMgr_ProcessBacklog(t *testing.T) {
 	backupStorageName := "backup"
 
 	backupDir, err := ioutil.TempDir(testhelper.GitlabTestStoragePath(), backupStorageName)
@@ -91,8 +92,6 @@ func TestProcessReplicationJob(t *testing.T) {
 			},
 		},
 	}
-
-	queue := datastore.NewMemoryReplicationEventQueue(conf)
 
 	// create object pool on the source
 	objectPoolPath := testhelper.NewTestObjectPoolName(t)
@@ -154,27 +153,63 @@ func TestProcessReplicationJob(t *testing.T) {
 		Message: "a commit",
 	})
 
-	replicator := defaultReplicator{
-		log: entry,
-		rs:  datastore.NewMemoryRepositoryStore(conf.StorageNames()),
-	}
-
 	var mockReplicationLatencyHistogramVec promtest.MockHistogramVec
 	var mockReplicationDelayHistogramVec promtest.MockHistogramVec
 
+	logger := testhelper.DiscardTestLogger(t)
+	hook := test.NewLocal(logger)
+
+	queue := datastore.NewReplicationEventQueueInterceptor(datastore.NewMemoryReplicationEventQueue(conf))
+	queue.OnAcknowledge(func(ctx context.Context, state datastore.JobState, ids []uint64, queue datastore.ReplicationEventQueue) ([]uint64, error) {
+		cancel() // when it is called we know that replication is finished
+		return queue.Acknowledge(ctx, state, ids)
+	})
+
+	loggerEntry := logger.WithField("test", t.Name())
+	_, err = queue.Enqueue(ctx, events[0])
+	require.NoError(t, err)
+
+	store := datastore.NewMemoryRepositoryStore(conf.StorageNames())
+
 	replMgr := NewReplMgr(
-		testhelper.DiscardTestEntry(t),
+		loggerEntry,
 		conf.VirtualStorageNames(),
 		queue,
-		datastore.NewMemoryRepositoryStore(conf.StorageNames()),
+		store,
 		nodeMgr,
 		WithLatencyMetric(&mockReplicationLatencyHistogramVec),
 		WithDelayMetric(&mockReplicationDelayHistogramVec),
 	)
 
-	replMgr.replicator = replicator
+	replMgr.ProcessBacklog(ctx, ExpBackoffFunc(time.Hour, 0))
 
-	require.NoError(t, replMgr.processReplicationEvent(ctx, events[0], shard, shard.Secondaries[0].GetConnection()))
+	<-ctx.Done()
+
+	logEntries := hook.AllEntries()
+	require.True(t, len(logEntries) > 3, "expected at least 4 log entries to be present")
+	require.Equal(t,
+		[]interface{}{"processing started", "default"},
+		[]interface{}{logEntries[0].Message, logEntries[0].Data["virtual_storage"]},
+	)
+
+	require.Equal(t,
+		[]interface{}{"replication job processing started", "default", "correlation-id"},
+		[]interface{}{logEntries[1].Message, logEntries[1].Data["virtual_storage"], logEntries[1].Data[logWithCorrID]},
+	)
+
+	dequeuedEvent := logEntries[1].Data["event"].(datastore.ReplicationEvent)
+	require.Equal(t, datastore.JobStateInProgress, dequeuedEvent.State)
+	require.Equal(t, []string{"backup", "default"}, []string{dequeuedEvent.Job.TargetNodeStorage, dequeuedEvent.Job.SourceNodeStorage})
+
+	require.Equal(t,
+		[]interface{}{"checksum comparison completed", "default", "correlation-id"},
+		[]interface{}{logEntries[2].Message, logEntries[2].Data["virtual_storage"], logEntries[2].Data[logWithCorrID]},
+	)
+
+	require.Equal(t,
+		[]interface{}{"replication job processing finished", "default", datastore.JobStateCompleted, "correlation-id"},
+		[]interface{}{logEntries[3].Message, logEntries[3].Data["virtual_storage"], logEntries[3].Data["new_state"], logEntries[3].Data[logWithCorrID]},
+	)
 
 	relativeRepoPath, err := filepath.Rel(testhelper.GitlabTestStoragePath(), testRepoPath)
 	require.NoError(t, err)
@@ -197,13 +232,15 @@ func TestReplicatorDowngradeAttempt(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	ctx = correlation.ContextWithCorrelation(ctx, "correlation-id")
+
 	rs := datastore.NewMemoryRepositoryStore(nil)
 	require.NoError(t, rs.SetGeneration(ctx, "virtual-storage-1", "relative-path-1", "gitaly-1", 0))
 	require.NoError(t, rs.SetGeneration(ctx, "virtual-storage-1", "relative-path-1", "gitaly-2", 0))
 
 	logger := testhelper.DiscardTestLogger(t)
 	hook := test.NewLocal(logger)
-	r := &defaultReplicator{log: logrus.NewEntry(logger), rs: rs}
+	r := &defaultReplicator{rs: rs, log: logger}
 
 	require.NoError(t, r.Replicate(ctx, datastore.ReplicationEvent{
 		Job: datastore.ReplicationJob{
@@ -222,6 +259,7 @@ func TestReplicatorDowngradeAttempt(t *testing.T) {
 		CurrentGeneration:   0,
 		AttemptedGeneration: 0,
 	}, hook.LastEntry().Data["error"])
+	require.Equal(t, "correlation-id", hook.LastEntry().Data[logWithCorrID])
 	require.Equal(t, "target repository already on the same generation, skipping replication job", hook.LastEntry().Message)
 
 	require.NoError(t, rs.SetGeneration(ctx, "virtual-storage-1", "relative-path-1", "gitaly-2", 1))
@@ -242,6 +280,7 @@ func TestReplicatorDowngradeAttempt(t *testing.T) {
 		CurrentGeneration:   1,
 		AttemptedGeneration: 0,
 	}, hook.LastEntry().Data["error"])
+	require.Equal(t, "correlation-id", hook.LastEntry().Data[logWithCorrID])
 	require.Equal(t, "repository downgrade prevented", hook.LastEntry().Message)
 }
 
@@ -441,10 +480,8 @@ func TestConfirmReplication(t *testing.T) {
 	require.NoError(t, err)
 
 	var replicator defaultReplicator
-	entry := testhelper.DiscardTestEntry(t)
-	replicator.log = entry
 
-	equal, err := replicator.confirmChecksums(ctx, gitalypb.NewRepositoryServiceClient(conn), gitalypb.NewRepositoryServiceClient(conn), testRepoA, testRepoB)
+	equal, err := replicator.confirmChecksums(ctx, testhelper.DiscardTestLogger(t), gitalypb.NewRepositoryServiceClient(conn), gitalypb.NewRepositoryServiceClient(conn), testRepoA, testRepoB)
 	require.NoError(t, err)
 	require.True(t, equal)
 
@@ -452,7 +489,7 @@ func TestConfirmReplication(t *testing.T) {
 		Message: "a commit",
 	})
 
-	equal, err = replicator.confirmChecksums(ctx, gitalypb.NewRepositoryServiceClient(conn), gitalypb.NewRepositoryServiceClient(conn), testRepoA, testRepoB)
+	equal, err = replicator.confirmChecksums(ctx, testhelper.DiscardTestLogger(t), gitalypb.NewRepositoryServiceClient(conn), gitalypb.NewRepositoryServiceClient(conn), testRepoA, testRepoB)
 	require.NoError(t, err)
 	require.False(t, equal)
 }
