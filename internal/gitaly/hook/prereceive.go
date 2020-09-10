@@ -46,7 +46,7 @@ func (m *GitLabHookManager) executeCustomHooks(ctx context.Context, stdout, stde
 	if err != nil {
 		return err
 	}
-	executor, err := m.NewCustomHooksExecutor(repoPath, m.hooksConfig.CustomHooksDir, "pre-receive")
+	executor, err := m.newCustomHooksExecutor(repoPath, m.hooksConfig.CustomHooksDir, "pre-receive")
 	if err != nil {
 		return fmt.Errorf("creating custom hooks executor: %w", err)
 	}

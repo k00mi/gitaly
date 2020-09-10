@@ -148,7 +148,7 @@ func TestCustomHookPartialFailure(t *testing.T) {
 			defer cleanup()
 
 			mgr := GitLabHookManager{}
-			caller, err := mgr.NewCustomHooksExecutor(testRepoPath, globalCustomHooksDir, tc.hook)
+			caller, err := mgr.newCustomHooksExecutor(testRepoPath, globalCustomHooksDir, tc.hook)
 			require.NoError(t, err)
 
 			var stdout, stderr bytes.Buffer
@@ -197,7 +197,7 @@ func TestCustomHooksMultipleHooks(t *testing.T) {
 	}
 
 	mgr := GitLabHookManager{}
-	hooksExecutor, err := mgr.NewCustomHooksExecutor(testRepoPath, globalCustomHooksDir, "update")
+	hooksExecutor, err := mgr.newCustomHooksExecutor(testRepoPath, globalCustomHooksDir, "update")
 	require.NoError(t, err)
 
 	var stdout, stderr bytes.Buffer
@@ -227,7 +227,7 @@ func TestMultilineStdin(t *testing.T) {
 	writeCustomHook(t, "pre-receive-script", projectHooksPath, printStdinScript)
 
 	mgr := GitLabHookManager{}
-	hooksExecutor, err := mgr.NewCustomHooksExecutor(testRepoPath, globalCustomHooksDir, "pre-receive")
+	hooksExecutor, err := mgr.newCustomHooksExecutor(testRepoPath, globalCustomHooksDir, "pre-receive")
 	require.NoError(t, err)
 
 	changes := `old1 new1 ref1
@@ -260,7 +260,7 @@ func TestMultipleScriptsStdin(t *testing.T) {
 	}
 
 	mgr := GitLabHookManager{}
-	hooksExecutor, err := mgr.NewCustomHooksExecutor(testRepoPath, globalCustomHooksDir, "pre-receive")
+	hooksExecutor, err := mgr.newCustomHooksExecutor(testRepoPath, globalCustomHooksDir, "pre-receive")
 	require.NoError(t, err)
 
 	changes := "oldref11 newref00 ref123445"
@@ -286,7 +286,7 @@ func callAndVerifyHooks(t *testing.T, repoPath, hookName, globalHooksDir, hookDi
 	defer cleanup()
 
 	mgr := GitLabHookManager{}
-	callHooks, err := mgr.NewCustomHooksExecutor(repoPath, globalHooksDir, hookName)
+	callHooks, err := mgr.newCustomHooksExecutor(repoPath, globalHooksDir, hookName)
 	require.NoError(t, err)
 
 	require.NoError(t, callHooks(ctx, args, env, bytes.NewBufferString(stdin), &stdout, &stderr))

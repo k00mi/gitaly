@@ -27,10 +27,6 @@ type Manager interface {
 	// ReferenceTransactionHook executes the reference-transaction Git hook. stdin must contain
 	// all references to be updated and match the format specified in githooks(5).
 	ReferenceTransactionHook(ctx context.Context, env []string, stdin io.Reader) error
-
-	// NewCustomHooksExecutor creates a new executor for custom hooks. This function will get
-	// removed as soon as the Ruby hook implementation gets deleted.
-	NewCustomHooksExecutor(repoPath, customHooksDir, hookName string) (CustomHooksExecutor, error)
 }
 
 // GitLabHookManager is a hook manager containing Git hook business logic. It

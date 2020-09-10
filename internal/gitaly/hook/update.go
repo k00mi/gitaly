@@ -15,7 +15,7 @@ func (m *GitLabHookManager) UpdateHook(ctx context.Context, repo *gitalypb.Repos
 		return err
 	}
 
-	executor, err := m.NewCustomHooksExecutor(repoPath, config.Config.Hooks.CustomHooksDir, "update")
+	executor, err := m.newCustomHooksExecutor(repoPath, config.Config.Hooks.CustomHooksDir, "update")
 	if err != nil {
 		return helper.ErrInternal(err)
 	}

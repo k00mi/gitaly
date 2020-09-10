@@ -151,7 +151,7 @@ func (m *GitLabHookManager) PostReceiveHook(ctx context.Context, repo *gitalypb.
 	if err != nil {
 		return err
 	}
-	executor, err := m.NewCustomHooksExecutor(repoPath, m.hooksConfig.CustomHooksDir, "post-receive")
+	executor, err := m.newCustomHooksExecutor(repoPath, m.hooksConfig.CustomHooksDir, "post-receive")
 	if err != nil {
 		return helper.ErrInternalf("creating custom hooks executor: %v", err)
 	}
