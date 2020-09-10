@@ -145,3 +145,32 @@ func TestGRPCTags(t *testing.T) {
 	_, err := interceptor(ctx, require, nil, verifyHandler)
 	require.NoError(err)
 }
+
+func Test_extractServiceName(t *testing.T) {
+	tests := []struct {
+		name           string
+		fullMethodName string
+		want           string
+	}{
+		{
+			name:           "blank",
+			fullMethodName: "",
+			want:           unknownValue,
+		}, {
+			name:           "normal",
+			fullMethodName: "/gitaly.OperationService/method",
+			want:           "gitaly.OperationService",
+		}, {
+			name:           "malformed",
+			fullMethodName: "//method",
+			want:           "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := extractServiceName(tt.fullMethodName); got != tt.want {
+				t.Errorf("extractServiceName() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
