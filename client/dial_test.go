@@ -294,6 +294,8 @@ func TestDial_Tracing(t *testing.T) {
 				span, _ := opentracing.StartSpanFromContext(stream.Context(), "health")
 				defer span.Finish()
 				span.LogKV("was", "called")
+				_, err := stream.Recv()
+				assert.NoError(t, err)
 				return stream.Send(&proxytestdata.PingResponse{})
 			},
 		}
