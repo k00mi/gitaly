@@ -15,26 +15,25 @@ type Manager struct {
 }
 
 // NewManager returns a new hook manager
-func NewManager(gitlabAPI GitlabAPI, hooksConfig config.Hooks, opts ...ManagerOpt) *Manager {
-	m := &Manager{
-		gitlabAPI:         gitlabAPI,
-		hooksConfig:       hooksConfig,
-		conns:             client.NewPool(),
-		votingDelayMetric: prometheus.NewHistogram(prometheus.HistogramOpts{}),
+func NewManager(gitlabAPI GitlabAPI, cfg config.Cfg) *Manager {
+	return &Manager{
+		gitlabAPI:   gitlabAPI,
+		hooksConfig: cfg.Hooks,
+		conns:       client.NewPool(),
+		votingDelayMetric: prometheus.NewHistogram(
+			prometheus.HistogramOpts{
+				Name:    "gitaly_hook_transaction_voting_delay_seconds",
+				Help:    "Delay between calling out to transaction service and receiving a response",
+				Buckets: cfg.Prometheus.GRPCLatencyBuckets,
+			},
+		),
 	}
-
-	for _, opt := range opts {
-		opt(m)
-	}
-
-	return m
 }
 
-// ManagerOpt is a self referential option for manager
-type ManagerOpt func(m *Manager)
+func (m *Manager) Describe(descs chan<- *prometheus.Desc) {
+	prometheus.DescribeByCollect(m, descs)
+}
 
-func WithVotingDelayMetric(metric prometheus.Histogram) ManagerOpt {
-	return func(m *Manager) {
-		m.votingDelayMetric = metric
-	}
+func (m *Manager) Collect(metrics chan<- prometheus.Metric) {
+	m.votingDelayMetric.Collect(metrics)
 }
