@@ -118,7 +118,7 @@ func TestConnectivity(t *testing.T) {
 	}
 }
 
-func runServer(t *testing.T, newServer func(rubyServer *rubyserver.Server, hookManager *hook.Manager, cfg config.Cfg) *grpc.Server, cfg config.Cfg, connectionType string, addr string) (*grpc.Server, int) {
+func runServer(t *testing.T, newServer func(rubyServer *rubyserver.Server, hookManager hook.Manager, cfg config.Cfg) *grpc.Server, cfg config.Cfg, connectionType string, addr string) (*grpc.Server, int) {
 	srv := newServer(nil, hook.NewManager(hook.GitlabAPIStub, cfg), cfg)
 
 	listener, err := net.Listen(connectionType, addr)

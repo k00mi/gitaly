@@ -26,7 +26,7 @@ func isPrimary(env []string) (bool, error) {
 	return tx.Primary, nil
 }
 
-func (m *Manager) getPraefectConn(ctx context.Context, server *metadata.PraefectServer) (*grpc.ClientConn, error) {
+func (m *GitLabHookManager) getPraefectConn(ctx context.Context, server *metadata.PraefectServer) (*grpc.ClientConn, error) {
 	address, err := server.Address()
 	if err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func (m *Manager) getPraefectConn(ctx context.Context, server *metadata.Praefect
 	return m.conns.Dial(ctx, address, server.Token)
 }
 
-func (m *Manager) VoteOnTransaction(ctx context.Context, hash []byte, env []string) error {
+func (m *GitLabHookManager) VoteOnTransaction(ctx context.Context, hash []byte, env []string) error {
 	tx, err := metadata.TransactionFromEnv(env)
 	if err != nil {
 		if errors.Is(err, metadata.ErrTransactionNotFound) {

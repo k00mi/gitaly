@@ -114,7 +114,7 @@ func printAlert(m PostReceiveMessage, w io.Writer) error {
 	return nil
 }
 
-func (m *Manager) PostReceiveHook(ctx context.Context, repo *gitalypb.Repository, pushOptions, env []string, stdin io.Reader, stdout, stderr io.Writer) error {
+func (m *GitLabHookManager) PostReceiveHook(ctx context.Context, repo *gitalypb.Repository, pushOptions, env []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	changes, err := ioutil.ReadAll(stdin)
 	if err != nil {
 		return helper.ErrInternalf("reading stdin from request: %w", err)

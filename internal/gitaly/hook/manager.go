@@ -1,13 +1,41 @@
 package hook
 
 import (
+	"context"
+	"io"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
-// Manager is a hook manager containing Git hook business logic.
-type Manager struct {
+// Manager is an interface providing the ability to execute Git hooks.
+type Manager interface {
+	// PreReceiveHook executes the pre-receive Git hook and any installed custom hooks. stdin
+	// must contain all references to be updated and match the format specified in githooks(5).
+	PreReceiveHook(ctx context.Context, repo *gitalypb.Repository, env []string, stdin io.Reader, stdout, stderr io.Writer) error
+
+	// PostReceiveHook executes the post-receive Git hook and any installed custom hooks. stdin
+	// must contain all references to be updated and match the format specified in githooks(5).
+	PostReceiveHook(ctx context.Context, repo *gitalypb.Repository, pushOptions, env []string, stdin io.Reader, stdout, stderr io.Writer) error
+
+	// UpdateHook executes the update Git hook and any installed custom hooks for the reference
+	// `ref` getting updated from `oldValue` to `newValue`.
+	UpdateHook(ctx context.Context, repo *gitalypb.Repository, ref, oldValue, newValue string, env []string, stdout, stderr io.Writer) error
+
+	// ReferenceTransactionHook executes the reference-transaction Git hook. stdin must contain
+	// all references to be updated and match the format specified in githooks(5).
+	ReferenceTransactionHook(ctx context.Context, env []string, stdin io.Reader) error
+
+	// NewCustomHooksExecutor creates a new executor for custom hooks. This function will get
+	// removed as soon as the Ruby hook implementation gets deleted.
+	NewCustomHooksExecutor(repoPath, customHooksDir, hookName string) (CustomHooksExecutor, error)
+}
+
+// GitLabHookManager is a hook manager containing Git hook business logic. It
+// uses the GitLab API to authenticate and track ongoing hook calls.
+type GitLabHookManager struct {
 	gitlabAPI         GitlabAPI
 	hooksConfig       config.Hooks
 	conns             *client.Pool
@@ -15,8 +43,8 @@ type Manager struct {
 }
 
 // NewManager returns a new hook manager
-func NewManager(gitlabAPI GitlabAPI, cfg config.Cfg) *Manager {
-	return &Manager{
+func NewManager(gitlabAPI GitlabAPI, cfg config.Cfg) *GitLabHookManager {
+	return &GitLabHookManager{
 		gitlabAPI:   gitlabAPI,
 		hooksConfig: cfg.Hooks,
 		conns:       client.NewPool(),
@@ -30,10 +58,10 @@ func NewManager(gitlabAPI GitlabAPI, cfg config.Cfg) *Manager {
 	}
 }
 
-func (m *Manager) Describe(descs chan<- *prometheus.Desc) {
+func (m *GitLabHookManager) Describe(descs chan<- *prometheus.Desc) {
 	prometheus.DescribeByCollect(m, descs)
 }
 
-func (m *Manager) Collect(metrics chan<- prometheus.Metric) {
+func (m *GitLabHookManager) Collect(metrics chan<- prometheus.Metric) {
 	m.votingDelayMetric.Collect(metrics)
 }

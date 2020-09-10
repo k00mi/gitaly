@@ -73,7 +73,7 @@ func init() {
 
 // createNewServer returns a GRPC server with all Gitaly services and interceptors set up.
 // allows for specifying secure = true to enable tls credentials
-func createNewServer(rubyServer *rubyserver.Server, hookManager *hook.Manager, cfg config.Cfg, secure bool) *grpc.Server {
+func createNewServer(rubyServer *rubyserver.Server, hookManager hook.Manager, cfg config.Cfg, secure bool) *grpc.Server {
 	ctxTagOpts := []grpc_ctxtags.Option{
 		grpc_ctxtags.WithFieldExtractorForInitialReq(fieldextractors.FieldExtractor),
 	}
@@ -144,12 +144,12 @@ func createNewServer(rubyServer *rubyserver.Server, hookManager *hook.Manager, c
 }
 
 // NewInsecure returns a GRPC server with all Gitaly services and interceptors set up.
-func NewInsecure(rubyServer *rubyserver.Server, hookManager *hook.Manager, cfg config.Cfg) *grpc.Server {
+func NewInsecure(rubyServer *rubyserver.Server, hookManager hook.Manager, cfg config.Cfg) *grpc.Server {
 	return createNewServer(rubyServer, hookManager, cfg, false)
 }
 
 // NewSecure returns a GRPC server enabling TLS credentials
-func NewSecure(rubyServer *rubyserver.Server, hookManager *hook.Manager, cfg config.Cfg) *grpc.Server {
+func NewSecure(rubyServer *rubyserver.Server, hookManager hook.Manager, cfg config.Cfg) *grpc.Server {
 	return createNewServer(rubyServer, hookManager, cfg, true)
 }
 
