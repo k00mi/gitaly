@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 
-	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -15,7 +14,7 @@ func (m *GitLabHookManager) UpdateHook(ctx context.Context, repo *gitalypb.Repos
 		return err
 	}
 
-	executor, err := m.newCustomHooksExecutor(repoPath, config.Config.Hooks.CustomHooksDir, "update")
+	executor, err := m.newCustomHooksExecutor(repoPath, "update")
 	if err != nil {
 		return helper.ErrInternal(err)
 	}

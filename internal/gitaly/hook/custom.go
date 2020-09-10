@@ -22,7 +22,7 @@ type customHooksExecutor func(ctx context.Context, args, env []string, stdin io.
 // 1. <repository>.git/custom_hooks/<hook_name> - per project hook
 // 2. <repository>.git/custom_hooks/<hook_name>.d/* - per project hooks
 // 3. <repository>.git/hooks/<hook_name>.d/* - global hooks
-func (m *GitLabHookManager) newCustomHooksExecutor(repoPath, customHooksDir, hookName string) (customHooksExecutor, error) {
+func (m *GitLabHookManager) newCustomHooksExecutor(repoPath, hookName string) (customHooksExecutor, error) {
 	var hookFiles []string
 	projectCustomHookFile := filepath.Join(repoPath, "custom_hooks", hookName)
 	s, err := os.Stat(projectCustomHookFile)
@@ -37,7 +37,7 @@ func (m *GitLabHookManager) newCustomHooksExecutor(repoPath, customHooksDir, hoo
 	}
 	hookFiles = append(hookFiles, files...)
 
-	globalCustomHooksDir := filepath.Join(customHooksDir, fmt.Sprintf("%s.d", hookName))
+	globalCustomHooksDir := filepath.Join(m.hooksConfig.CustomHooksDir, fmt.Sprintf("%s.d", hookName))
 
 	files, err = matchFiles(globalCustomHooksDir)
 	if err != nil {

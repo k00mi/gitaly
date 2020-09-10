@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
@@ -147,8 +148,13 @@ func TestCustomHookPartialFailure(t *testing.T) {
 			cleanup = writeCustomHook(t, tc.hook, globalHookPath, globalHookScript)
 			defer cleanup()
 
-			mgr := GitLabHookManager{}
-			caller, err := mgr.newCustomHooksExecutor(testRepoPath, globalCustomHooksDir, tc.hook)
+			mgr := GitLabHookManager{
+				hooksConfig: config.Hooks{
+					CustomHooksDir: globalCustomHooksDir,
+				},
+			}
+
+			caller, err := mgr.newCustomHooksExecutor(testRepoPath, tc.hook)
 			require.NoError(t, err)
 
 			var stdout, stderr bytes.Buffer
@@ -196,8 +202,12 @@ func TestCustomHooksMultipleHooks(t *testing.T) {
 		expectedExecutedScripts = append(expectedExecutedScripts, filepath.Join(globalHooksPath, fileName))
 	}
 
-	mgr := GitLabHookManager{}
-	hooksExecutor, err := mgr.newCustomHooksExecutor(testRepoPath, globalCustomHooksDir, "update")
+	mgr := GitLabHookManager{
+		hooksConfig: config.Hooks{
+			CustomHooksDir: globalCustomHooksDir,
+		},
+	}
+	hooksExecutor, err := mgr.newCustomHooksExecutor(testRepoPath, "update")
 	require.NoError(t, err)
 
 	var stdout, stderr bytes.Buffer
@@ -225,9 +235,13 @@ func TestMultilineStdin(t *testing.T) {
 	projectHooksPath := filepath.Join(testRepoPath, "custom_hooks", "pre-receive.d")
 
 	writeCustomHook(t, "pre-receive-script", projectHooksPath, printStdinScript)
+	mgr := GitLabHookManager{
+		hooksConfig: config.Hooks{
+			CustomHooksDir: globalCustomHooksDir,
+		},
+	}
 
-	mgr := GitLabHookManager{}
-	hooksExecutor, err := mgr.newCustomHooksExecutor(testRepoPath, globalCustomHooksDir, "pre-receive")
+	hooksExecutor, err := mgr.newCustomHooksExecutor(testRepoPath, "pre-receive")
 	require.NoError(t, err)
 
 	changes := `old1 new1 ref1
@@ -259,8 +273,13 @@ func TestMultipleScriptsStdin(t *testing.T) {
 		writeCustomHook(t, fileName, projectHooksPath, printStdinScript)
 	}
 
-	mgr := GitLabHookManager{}
-	hooksExecutor, err := mgr.newCustomHooksExecutor(testRepoPath, globalCustomHooksDir, "pre-receive")
+	mgr := GitLabHookManager{
+		hooksConfig: config.Hooks{
+			CustomHooksDir: globalCustomHooksDir,
+		},
+	}
+
+	hooksExecutor, err := mgr.newCustomHooksExecutor(testRepoPath, "pre-receive")
 	require.NoError(t, err)
 
 	changes := "oldref11 newref00 ref123445"
@@ -285,8 +304,13 @@ func callAndVerifyHooks(t *testing.T, repoPath, hookName, globalHooksDir, hookDi
 	cleanup := writeCustomHook(t, hookName, hookDir, printAllScript)
 	defer cleanup()
 
-	mgr := GitLabHookManager{}
-	callHooks, err := mgr.newCustomHooksExecutor(repoPath, globalHooksDir, hookName)
+	mgr := GitLabHookManager{
+		hooksConfig: config.Hooks{
+			CustomHooksDir: globalHooksDir,
+		},
+	}
+
+	callHooks, err := mgr.newCustomHooksExecutor(repoPath, hookName)
 	require.NoError(t, err)
 
 	require.NoError(t, callHooks(ctx, args, env, bytes.NewBufferString(stdin), &stdout, &stderr))
