@@ -1,0 +1,5 @@
+---
+title: Remove server scoped handling from coordinator
+merge_request: 2546
+author:
+type: removed
