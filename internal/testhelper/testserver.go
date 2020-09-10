@@ -14,7 +14,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -340,13 +339,21 @@ func preReceiveFormToMap(u url.Values) map[string]string {
 	}
 }
 
-func postReceiveFormToMap(u url.Values) map[string]interface{} {
-	return map[string]interface{}{
-		"gl_repository": u.Get("gl_repository"),
-		"secret_token":  u.Get("secret_token"),
-		"changes":       u.Get("changes"),
-		"identifier":    u.Get("identifier"),
-		"push_options":  u["push_options[]"],
+type postReceiveForm struct {
+	GLRepository   string   `json:"gl_repository"`
+	SecretToken    string   `json:"secret_token"`
+	Changes        string   `json:"changes"`
+	Identifier     string   `json:"identifier"`
+	GitPushOptions []string `json:"push_options"`
+}
+
+func parsePostReceiveForm(u url.Values) postReceiveForm {
+	return postReceiveForm{
+		GLRepository:   u.Get("gl_repository"),
+		SecretToken:    u.Get("secret_token"),
+		Changes:        u.Get("changes"),
+		Identifier:     u.Get("identifier"),
+		GitPushOptions: u["push_options[]"],
 	}
 }
 
@@ -609,11 +616,11 @@ func handlePostReceive(options GitlabTestServerOptions) func(w http.ResponseWrit
 			return
 		}
 
-		var params map[string]interface{}
+		var params postReceiveForm
 
 		switch r.Header.Get("Content-Type") {
 		case "application/x-www-form-urlencoded":
-			params = postReceiveFormToMap(r.Form)
+			params = parsePostReceiveForm(r.Form)
 		case "application/json":
 			if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
 				http.Error(w, "could not parse json body", http.StatusBadRequest)
@@ -621,19 +628,19 @@ func handlePostReceive(options GitlabTestServerOptions) func(w http.ResponseWrit
 			}
 		}
 
-		if params["gl_repository"] == "" {
+		if params.GLRepository == "" {
 			http.Error(w, "gl_repository is empty", http.StatusUnauthorized)
 			return
 		}
 
 		if options.GLRepository != "" {
-			if params["gl_repository"] != options.GLRepository {
+			if params.GLRepository != options.GLRepository {
 				http.Error(w, "gl_repository is invalid", http.StatusUnauthorized)
 				return
 			}
 		}
 
-		if params["secret_token"] != options.SecretToken {
+		if params.SecretToken != options.SecretToken {
 			decodedSecret, err := base64.StdEncoding.DecodeString(r.Header.Get("Gitlab-Shared-Secret"))
 			if err != nil {
 				http.Error(w, "secret_token is invalid", http.StatusUnauthorized)
@@ -646,33 +653,40 @@ func handlePostReceive(options GitlabTestServerOptions) func(w http.ResponseWrit
 			}
 		}
 
-		if params["identifier"] == "" {
+		if params.Identifier == "" {
 			http.Error(w, "identifier is empty", http.StatusUnauthorized)
 			return
 		}
 
 		if options.GLRepository != "" {
-			if params["identifier"] != options.GLID {
+			if params.Identifier != options.GLID {
 				http.Error(w, "identifier is invalid", http.StatusUnauthorized)
 				return
 			}
 		}
 
-		if params["changes"] == "" {
+		if params.Changes == "" {
 			http.Error(w, "changes is empty", http.StatusUnauthorized)
 			return
 		}
 
 		if options.Changes != "" {
-			if params["changes"] != options.Changes {
+			if params.Changes != options.Changes {
 				http.Error(w, "changes is invalid", http.StatusUnauthorized)
 				return
 			}
 		}
 
-		if !reflect.DeepEqual(options.GitPushOptions, params["push_options"]) {
-			http.Error(w, "git push options is invalid", http.StatusUnauthorized)
+		if len(options.GitPushOptions) != len(params.GitPushOptions) {
+			http.Error(w, "invalid push options", http.StatusUnauthorized)
 			return
+		}
+
+		for i, opt := range options.GitPushOptions {
+			if opt != params.GitPushOptions[i] {
+				http.Error(w, "invalid push options", http.StatusUnauthorized)
+				return
+			}
 		}
 
 		response := postReceiveResponse{
