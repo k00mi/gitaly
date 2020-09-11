@@ -291,7 +291,7 @@ cover: prepare-tests libgit2 ${GOCOVER_COBERTURA}
 	${Q}echo "NOTE: make cover does not exit 1 on failure, don't use it to check for tests success!"
 	${Q}mkdir -p "${COVERAGE_DIR}"
 	${Q}rm -f "${COVERAGE_DIR}/all.merged" "${COVERAGE_DIR}/all.html"
-	${Q}go test -tags "${GO_BUILD_TAGS}" -ldflags='${GO_TEST_LDFLAGS}' -coverprofile "${COVERAGE_DIR}/all.merged" $(call find_go_packages)
+	${Q}go test -tags ${GO_BUILD_TAGS},postgres -ldflags='${GO_TEST_LDFLAGS}' -coverprofile "${COVERAGE_DIR}/all.merged" $(call find_go_packages)
 	${Q}go tool cover -html  "${COVERAGE_DIR}/all.merged" -o "${COVERAGE_DIR}/all.html"
 	# sed is used below to convert file paths to repository root relative paths. See https://gitlab.com/gitlab-org/gitlab/-/issues/217664
 	${Q}${GOCOVER_COBERTURA} <"${COVERAGE_DIR}/all.merged" | sed 's;filename=\"$(shell go list -m)/;filename=\";g' >"${COVERAGE_DIR}/cobertura.xml"
