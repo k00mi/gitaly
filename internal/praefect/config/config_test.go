@@ -296,7 +296,7 @@ func TestConfigParsing(t *testing.T) {
 			expected: Config{
 				GracefulStopTimeout: config.Duration(time.Minute),
 				Reconciliation: Reconciliation{
-					SchedulingInterval: config.Duration(time.Minute),
+					SchedulingInterval: 0,
 					HistogramBuckets:   []float64{1, 2, 3, 4, 5},
 				},
 				Replication: Replication{BatchSize: 1},

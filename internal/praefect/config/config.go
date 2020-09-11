@@ -64,7 +64,10 @@ type Reconciliation struct {
 
 // DefaultReconciliationConfig returns the default values for reconciliation configuration.
 func DefaultReconciliationConfig() Reconciliation {
-	return Reconciliation{HistogramBuckets: promclient.DefBuckets}
+	return Reconciliation{
+		SchedulingInterval: 5 * config.Duration(time.Minute),
+		HistogramBuckets:   promclient.DefBuckets,
+	}
 }
 
 // Replication contains replication specific configuration options.
