@@ -63,6 +63,23 @@ danger-review:
     when: on_failure
     expire_in: 1 week
 
+.postgres_template: &postgres_definition
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.14-git-2.28-pgbouncer-1.14
+  services:
+    - postgres:11.8
+  variables:
+    PGHOST: 0.0.0.0
+    PGPORT: 5432
+    PGUSER: postgres
+    POSTGRES_HOST_AUTH_METHOD: trust
+  before_script:
+    - go version
+    - git version
+    - pgbouncer --version
+    - adduser --no-create-home --disabled-password --disabled-login --quiet --force-badname --gecos '' pgbouncer-runner
+    - su pgbouncer-runner -c 'pgbouncer internal/praefect/datastore/glsql/testdata/pgbouncer.ini' &
+    - for i in {1..10}; do psql -U $PGUSER -c 'select now()' && break; done || { echo 'pgbouncer awaiting failed' ; exit 1; }
+
 verify:
   <<: *cache_definition
   stage: test
@@ -153,6 +170,7 @@ test:master:
 
 cover:
   <<: *cache_definition
+  <<: *postgres_definition
   stage: test
   script:
     - make cover
@@ -233,21 +251,8 @@ praefect_sql_connect:
 
 praefect_sql_test:
   <<: *test_definition
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.6-golang-1.14-git-2.28-pgbouncer-1.14
-  services:
-    - postgres:11.8
-  variables:
-    PGHOST: 0.0.0.0
-    PGPORT: 5432
-    PGUSER: postgres
-    POSTGRES_HOST_AUTH_METHOD: trust
+  <<: *postgres_definition
   script:
-    - go version
-    - git version
-    - pgbouncer --version
-    - adduser --no-create-home --disabled-password --disabled-login --quiet --force-badname --gecos '' pgbouncer-runner
-    - su pgbouncer-runner -c 'pgbouncer internal/praefect/datastore/glsql/testdata/pgbouncer.ini' &
-    - for i in {1..10}; do psql -U $PGUSER -c 'select now()' && break; done || { echo 'pgbouncer awaiting failed' ; exit 1; }
     - make test-postgres
 
 lint:
