@@ -297,8 +297,8 @@ To create a merge request for okay, visit:
 	testhelper.WriteShellSecretFile(t, tempDir, secretToken)
 
 	for _, tc := range testCases {
-		for _, useGoPreReceive := range []bool{true, false} {
-			t.Run(fmt.Sprintf("%s:use_go_pre_receive:%v", tc.desc, useGoPreReceive), func(t *testing.T) {
+		for _, useGoPostReceive := range []bool{true, false} {
+			t.Run(fmt.Sprintf("%s:use_go_post_receive:%v", tc.desc, useGoPostReceive), func(t *testing.T) {
 				c := testhelper.GitlabTestServerOptions{
 					User:                        user,
 					Password:                    password,
@@ -350,7 +350,9 @@ To create a merge request for okay, visit:
 					"GL_ID=key_id",
 					"GL_USERNAME=username",
 					"GL_PROTOCOL=protocol",
-					"GL_REPOSITORY=repository"}
+					"GL_REPOSITORY=repository",
+					fmt.Sprintf("%s=%v", featureflag.GoPostReceiveHookEnvVar, useGoPostReceive),
+				}
 
 				require.NoError(t, stream.Send(&gitalypb.PostReceiveHookRequest{
 					Repository:           testRepo,

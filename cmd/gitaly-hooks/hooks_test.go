@@ -227,12 +227,9 @@ func testHooksPrePostReceive(t *testing.T) {
 
 	hookNames := []string{"pre-receive", "post-receive"}
 
-	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoPostReceiveHook})
-	require.NoError(t, err)
-
 	for _, hookName := range hookNames {
-		for _, featureSet := range featureSets {
-			t.Run(fmt.Sprintf("hookName: %s, disabled feature flags: %s", hookName, featureSet), func(t *testing.T) {
+		for _, useGoPostReceive := range []bool{true, false} {
+			t.Run(fmt.Sprintf("hookName: %s, using Go PostReceive: %v", hookName, useGoPostReceive), func(t *testing.T) {
 				customHookOutputPath, cleanup := testhelper.WriteEnvToCustomHook(t, testRepoPath, hookName)
 				defer cleanup()
 
@@ -255,7 +252,7 @@ func testHooksPrePostReceive(t *testing.T) {
 				cmd.Stderr = &stderr
 				cmd.Stdout = &stdout
 				cmd.Stdin = stdin
-				cmd.Env = testhelper.EnvForHooks(
+				cmd.Env = append(testhelper.EnvForHooks(
 					t,
 					tempGitlabShellDir,
 					socket,
@@ -275,7 +272,7 @@ func testHooksPrePostReceive(t *testing.T) {
 						NoProxy:    noProxy,
 					},
 					gitPushOptions...,
-				)
+				), fmt.Sprintf("%s=%v", featureflag.GoPostReceiveHookEnvVar, useGoPostReceive))
 
 				cmd.Dir = testRepoPath
 
