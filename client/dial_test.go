@@ -201,6 +201,8 @@ func TestDial_Correlation(t *testing.T) {
 			PingStreamMethod: func(stream proxytestdata.TestService_PingStreamServer) error {
 				cid := correlation.ExtractFromContext(stream.Context())
 				assert.Equal(t, "correlation-id-1", cid)
+				_, err := stream.Recv()
+				assert.NoError(t, err)
 				return stream.Send(&proxytestdata.PingResponse{})
 			},
 		}
