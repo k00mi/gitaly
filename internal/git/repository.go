@@ -62,8 +62,8 @@ func (repo *localRepository) ContainsRef(ctx context.Context, ref string) (bool,
 	}
 
 	cmd, err := repo.command(ctx, nil, SubCmd{
-		Name:  "log",
-		Flags: []Option{Flag{Name: "--max-count=1"}},
+		Name:  "rev-parse",
+		Flags: []Option{Flag{Name: "--verify"}},
 		Args:  []string{ref},
 	})
 	if err != nil {
