@@ -67,13 +67,17 @@ func (repo *localRepository) ContainsRef(ctx context.Context, ref string) (bool,
 		Args:  []string{ref},
 	})
 	if err != nil {
+		return false, err
+	}
+
+	if err := cmd.Wait(); err != nil {
 		if _, ok := err.(*exec.ExitError); ok {
 			return false, nil
 		}
 		return false, err
 	}
 
-	return cmd.Wait() == nil, nil
+	return true, nil
 }
 
 func (repo *localRepository) GetReference(ctx context.Context, ref string) (Reference, error) {
