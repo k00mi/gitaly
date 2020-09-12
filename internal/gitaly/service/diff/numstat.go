@@ -5,7 +5,6 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/diff"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -16,7 +15,7 @@ var (
 )
 
 func (s *server) DiffStats(in *gitalypb.DiffStatsRequest, stream gitalypb.DiffService_DiffStatsServer) error {
-	if err := validateDiffStatsRequestParams(in); err != nil {
+	if err := s.validateDiffStatsRequestParams(in); err != nil {
 		return err
 	}
 
@@ -83,9 +82,9 @@ func sendStats(batch []*gitalypb.DiffStats, stream gitalypb.DiffService_DiffStat
 	return nil
 }
 
-func validateDiffStatsRequestParams(in *gitalypb.DiffStatsRequest) error {
+func (s *server) validateDiffStatsRequestParams(in *gitalypb.DiffStatsRequest) error {
 	repo := in.GetRepository()
-	if _, err := helper.GetRepoPath(repo); err != nil {
+	if _, err := s.locator.GetRepoPath(repo); err != nil {
 		return err
 	}
 

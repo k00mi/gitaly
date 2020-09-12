@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
@@ -31,7 +32,7 @@ func runDiffServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	gitalypb.RegisterDiffServiceServer(server, NewServer())
+	gitalypb.RegisterDiffServiceServer(server, NewServer(config.NewLocator(config.Config)))
 	reflection.Register(server)
 
 	go server.Serve(listener)
