@@ -32,7 +32,7 @@ func (s *server) FetchInternalRemote(ctx context.Context, req *gitalypb.FetchInt
 		return nil, err
 	}
 
-	repoPath, err := helper.GetRepoPath(req.Repository)
+	repoPath, err := s.locator.GetRepoPath(req.Repository)
 	if err != nil {
 		return nil, err
 	}

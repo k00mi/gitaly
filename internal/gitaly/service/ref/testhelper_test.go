@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -95,7 +96,7 @@ func testMain(m *testing.M) int {
 func runRefServiceServer(t *testing.T) (func(), string) {
 	srv := testhelper.NewServer(t, nil, nil)
 
-	gitalypb.RegisterRefServiceServer(srv.GrpcServer(), &server{})
+	gitalypb.RegisterRefServiceServer(srv.GrpcServer(), NewServer(config.NewLocator(config.Config)))
 	reflection.Register(srv.GrpcServer())
 
 	require.NoError(t, srv.Start())
