@@ -10,7 +10,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/git/objectpool"
 	gconfig "gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -172,7 +171,8 @@ func TestLinkNoPool(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	pool, err := objectpool.NewObjectPool(gconfig.NewLocator(gconfig.Config), testRepo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
+	locator := gconfig.NewLocator(gconfig.Config)
+	pool, err := objectpool.NewObjectPool(locator, testRepo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
 	// intentionally do not call pool.Create
 	defer pool.Remove(ctx)
@@ -185,7 +185,7 @@ func TestLinkNoPool(t *testing.T) {
 	_, err = client.LinkRepositoryToObjectPool(ctx, request)
 	require.NoError(t, err)
 
-	poolRepoPath, err := helper.GetRepoPath(pool)
+	poolRepoPath, err := locator.GetRepoPath(pool)
 	require.NoError(t, err)
 
 	assert.True(t, storage.IsGitDirectory(poolRepoPath))
