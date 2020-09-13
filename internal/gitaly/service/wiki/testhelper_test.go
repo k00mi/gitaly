@@ -14,7 +14,7 @@ import (
 	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
@@ -58,10 +58,10 @@ func testMain(m *testing.M) int {
 	return m.Run()
 }
 
-func runWikiServiceServer(t *testing.T) (func(), string) {
+func runWikiServiceServer(t *testing.T, locator storage.Locator) (func(), string) {
 	srv := testhelper.NewServer(t, nil, nil)
 
-	gitalypb.RegisterWikiServiceServer(srv.GrpcServer(), &server{ruby: rubyServer})
+	gitalypb.RegisterWikiServiceServer(srv.GrpcServer(), NewServer(rubyServer, locator))
 	reflection.Register(srv.GrpcServer())
 
 	require.NoError(t, srv.Start())
@@ -185,11 +185,11 @@ func sendBytes(data []byte, chunkSize int, sender func([]byte) error) (int, erro
 	return i, nil
 }
 
-func createTestWikiPage(t *testing.T, client gitalypb.WikiServiceClient, wikiRepo *gitalypb.Repository, opts createWikiPageOpts) *gitalypb.GitCommit {
+func createTestWikiPage(t *testing.T, locator storage.Locator, client gitalypb.WikiServiceClient, wikiRepo *gitalypb.Repository, opts createWikiPageOpts) *gitalypb.GitCommit {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	wikiRepoPath, err := helper.GetRepoPath(wikiRepo)
+	wikiRepoPath, err := locator.GetRepoPath(wikiRepo)
 	require.NoError(t, err)
 	writeWikiPage(t, client, wikiRepo, opts)
 	head1ID := testhelper.MustRunCommand(t, nil, "git", "-C", wikiRepoPath, "show", "--format=format:%H", "--no-patch", "HEAD")

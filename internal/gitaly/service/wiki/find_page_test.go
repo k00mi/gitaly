@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
@@ -14,7 +15,8 @@ func TestSuccessfulWikiFindPageRequest(t *testing.T) {
 	wikiRepo, _, cleanupFunc := setupWikiRepo(t)
 	defer cleanupFunc()
 
-	stop, serverSocketPath := runWikiServiceServer(t)
+	locator := config.NewLocator(config.Config)
+	stop, serverSocketPath := runWikiServiceServer(t, locator)
 	defer stop()
 
 	client, conn := newWikiClient(t, serverSocketPath)
@@ -29,14 +31,14 @@ func TestSuccessfulWikiFindPageRequest(t *testing.T) {
 	page7Name := "~Tilde in filename"
 	page8Name := "~!/Tilde with invalid user"
 
-	page1Commit := createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page1Name})
-	createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page2Name})
-	createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page3Name})
-	createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page4Name, content: []byte("f\xFCr")})
-	createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page5Name, forceContentEmpty: true})
-	createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page6Name})
-	createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page7Name})
-	page8Commit := createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page8Name})
+	page1Commit := createTestWikiPage(t, locator, client, wikiRepo, createWikiPageOpts{title: page1Name})
+	createTestWikiPage(t, locator, client, wikiRepo, createWikiPageOpts{title: page2Name})
+	createTestWikiPage(t, locator, client, wikiRepo, createWikiPageOpts{title: page3Name})
+	createTestWikiPage(t, locator, client, wikiRepo, createWikiPageOpts{title: page4Name, content: []byte("f\xFCr")})
+	createTestWikiPage(t, locator, client, wikiRepo, createWikiPageOpts{title: page5Name, forceContentEmpty: true})
+	createTestWikiPage(t, locator, client, wikiRepo, createWikiPageOpts{title: page6Name})
+	createTestWikiPage(t, locator, client, wikiRepo, createWikiPageOpts{title: page7Name})
+	page8Commit := createTestWikiPage(t, locator, client, wikiRepo, createWikiPageOpts{title: page8Name})
 	latestCommit := page8Commit
 
 	testCases := []struct {
@@ -257,7 +259,8 @@ func TestSuccessfulWikiFindPageSameTitleDifferentPathRequest(t *testing.T) {
 	wikiRepo, _, cleanupFunc := setupWikiRepo(t)
 	defer cleanupFunc()
 
-	stop, serverSocketPath := runWikiServiceServer(t)
+	locator := config.NewLocator(config.Config)
+	stop, serverSocketPath := runWikiServiceServer(t, locator)
 	defer stop()
 
 	client, conn := newWikiClient(t, serverSocketPath)
@@ -270,8 +273,8 @@ func TestSuccessfulWikiFindPageSameTitleDifferentPathRequest(t *testing.T) {
 	page2Path := "foo/" + page2Name
 	page2Content := []byte("content " + page2Name)
 
-	createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page1Name, content: page1Content})
-	page2Commit := createTestWikiPage(t, client, wikiRepo, createWikiPageOpts{title: page2Path, content: page2Content})
+	createTestWikiPage(t, locator, client, wikiRepo, createWikiPageOpts{title: page1Name, content: page1Content})
+	page2Commit := createTestWikiPage(t, locator, client, wikiRepo, createWikiPageOpts{title: page2Path, content: page2Content})
 
 	testCases := []struct {
 		desc         string
@@ -373,7 +376,8 @@ func TestFailedWikiFindPageDueToValidation(t *testing.T) {
 	wikiRepo, _, cleanupFunc := setupWikiRepo(t)
 	defer cleanupFunc()
 
-	stop, serverSocketPath := runWikiServiceServer(t)
+	locator := config.NewLocator(config.Config)
+	stop, serverSocketPath := runWikiServiceServer(t, locator)
 	defer stop()
 
 	client, conn := newWikiClient(t, serverSocketPath)
@@ -439,7 +443,8 @@ func readFullWikiPageFromWikiFindPageClient(t *testing.T, c gitalypb.WikiService
 }
 
 func TestInvalidWikiFindPageRequestRevision(t *testing.T) {
-	stop, serverSocketPath := runWikiServiceServer(t)
+	locator := config.NewLocator(config.Config)
+	stop, serverSocketPath := runWikiServiceServer(t, locator)
 	defer stop()
 
 	client, conn := newWikiClient(t, serverSocketPath)
