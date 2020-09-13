@@ -2,7 +2,7 @@ package main
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
@@ -20,7 +20,7 @@ func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
 	testhelper.ConfigureGitalySSH()
-	gitalySSHPath = path.Join(config.Config.BinDir, "gitaly-ssh")
+	gitalySSHPath = filepath.Join(config.Config.BinDir, "gitaly-ssh")
 
 	return m.Run()
 }

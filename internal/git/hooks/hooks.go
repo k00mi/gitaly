@@ -2,7 +2,7 @@ package hooks
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 )
@@ -23,7 +23,7 @@ func Path() string {
 		return "/var/empty"
 	}
 
-	return path.Join(config.Config.Ruby.Dir, "git-hooks")
+	return filepath.Join(config.Config.Ruby.Dir, "git-hooks")
 }
 
 // GitPushOptions turns a slice of git push option values into a GIT_PUSH_OPTION_COUNT and individual

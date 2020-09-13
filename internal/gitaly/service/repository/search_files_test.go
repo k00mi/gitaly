@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -187,7 +187,7 @@ func TestSearchFilesByContentLargeFile(t *testing.T) {
 
 	for _, largeFile := range largeFiles {
 		t.Run(largeFile.filename, func(t *testing.T) {
-			require.NoError(t, ioutil.WriteFile(path.Join(testRepoPath, largeFile.filename), bytes.Repeat([]byte(largeFile.line), largeFile.repeated), 0644))
+			require.NoError(t, ioutil.WriteFile(filepath.Join(testRepoPath, largeFile.filename), bytes.Repeat([]byte(largeFile.line), largeFile.repeated), 0644))
 			testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "add", ".")
 			testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath,
 				"-c", fmt.Sprintf("user.name=%s", committerName),

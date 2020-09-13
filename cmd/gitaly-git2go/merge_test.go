@@ -5,7 +5,7 @@ package main
 import (
 	"bytes"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -40,7 +40,7 @@ func merge(t *testing.T, opts mergeSubcommand) (string, string, error) {
 		args = append(args, arg, value)
 	}
 
-	binary := path.Join(config.Config.BinDir, "gitaly-git2go")
+	binary := filepath.Join(config.Config.BinDir, "gitaly-git2go")
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()

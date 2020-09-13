@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -75,7 +75,7 @@ func (cmd cloneCommand) test(t *testing.T, localRepoPath string) (string, string
 	require.NoError(t, err)
 
 	storagePath := testhelper.GitlabTestStoragePath()
-	testRepoPath := path.Join(storagePath, testRepo.GetRelativePath())
+	testRepoPath := filepath.Join(storagePath, testRepo.GetRelativePath())
 
 	remoteHead := text.ChompBytes(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", "master"))
 	localHead := text.ChompBytes(testhelper.MustRunCommand(t, nil, "git", "-C", localRepoPath, "rev-parse", "master"))
@@ -198,7 +198,7 @@ func TestUploadPackCloneSuccess(t *testing.T) {
 	)
 	defer stop()
 
-	localRepoPath := path.Join(testRepoRoot, "gitlab-test-upload-pack-local")
+	localRepoPath := filepath.Join(testRepoRoot, "gitlab-test-upload-pack-local")
 
 	tests := []struct {
 		cmd    *exec.Cmd
@@ -269,7 +269,7 @@ func TestUploadPackCloneWithPartialCloneFilter(t *testing.T) {
 			// Run the clone with filtering enabled in both runs. The only
 			// difference is that in the first run, we have the
 			// UploadPackFilter flag disabled.
-			localPath := path.Join(testRepoRoot, fmt.Sprintf("gitlab-test-upload-pack-local-%s", tc.desc))
+			localPath := filepath.Join(testRepoRoot, fmt.Sprintf("gitlab-test-upload-pack-local-%s", tc.desc))
 			cmd := cloneCommand{
 				repository: testRepo,
 				command:    exec.Command(command.GitPath(), append(tc.cloneArgs, localPath)...),
@@ -286,7 +286,7 @@ func TestUploadPackCloneWithPartialCloneFilter(t *testing.T) {
 }
 
 func TestUploadPackCloneSuccessWithGitProtocol(t *testing.T) {
-	localRepoPath := path.Join(testRepoRoot, "gitlab-test-upload-pack-local")
+	localRepoPath := filepath.Join(testRepoRoot, "gitlab-test-upload-pack-local")
 
 	tests := []struct {
 		cmd  *exec.Cmd
@@ -332,7 +332,7 @@ func TestUploadPackCloneHideTags(t *testing.T) {
 	serverSocketPath, stop := runSSHServer(t)
 	defer stop()
 
-	localRepoPath := path.Join(testRepoRoot, "gitlab-test-upload-pack-local-hide-tags")
+	localRepoPath := filepath.Join(testRepoRoot, "gitlab-test-upload-pack-local-hide-tags")
 
 	cmd := cloneCommand{
 		repository: testRepo,
@@ -354,7 +354,7 @@ func TestUploadPackCloneFailure(t *testing.T) {
 	serverSocketPath, stop := runSSHServer(t)
 	defer stop()
 
-	localRepoPath := path.Join(testRepoRoot, "gitlab-test-upload-pack-local-failure")
+	localRepoPath := filepath.Join(testRepoRoot, "gitlab-test-upload-pack-local-failure")
 
 	cmd := cloneCommand{
 		repository: &gitalypb.Repository{

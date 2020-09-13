@@ -6,7 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
@@ -18,8 +18,8 @@ import (
 const attributesFileMode os.FileMode = 0644
 
 func applyGitattributes(c *catfile.Batch, repoPath string, revision []byte) error {
-	infoPath := path.Join(repoPath, "info")
-	attributesPath := path.Join(infoPath, "attributes")
+	infoPath := filepath.Join(repoPath, "info")
+	attributesPath := filepath.Join(infoPath, "attributes")
 
 	_, err := c.Info(string(revision))
 	if err != nil {

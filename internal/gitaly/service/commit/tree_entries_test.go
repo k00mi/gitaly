@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -27,14 +27,14 @@ func TestSuccessfulGetTreeEntriesWithCurlyBraces(t *testing.T) {
 
 	normalFolderName := "issue-46261/folder"
 	curlyFolderName := "issue-46261/{{curly}}"
-	normalFolder := path.Join(testRepoPath, normalFolderName)
-	curlyFolder := path.Join(testRepoPath, curlyFolderName)
+	normalFolder := filepath.Join(testRepoPath, normalFolderName)
+	curlyFolder := filepath.Join(testRepoPath, curlyFolderName)
 
 	os.MkdirAll(normalFolder, 0755)
 	os.MkdirAll(curlyFolder, 0755)
 
-	testhelper.MustRunCommand(t, nil, "touch", path.Join(normalFolder, "/test1.txt"))
-	testhelper.MustRunCommand(t, nil, "touch", path.Join(curlyFolder, "/test2.txt"))
+	testhelper.MustRunCommand(t, nil, "touch", filepath.Join(normalFolder, "/test1.txt"))
+	testhelper.MustRunCommand(t, nil, "touch", filepath.Join(curlyFolder, "/test2.txt"))
 
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "add", "--all")
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "commit", "-m", "Test commit")
@@ -421,10 +421,10 @@ func TestSuccessfulGetTreeEntries_FlatPathMaxDeep_SingleFoldersStructure(t *test
 	folderName := "1/2/3/4/5/6/7/8/9/10/11/12"
 	require.GreaterOrEqual(t, strings.Count(strings.Trim(folderName, "/"), "/"), defaultFlatTreeRecursion, "sanity check: construct folder deeper than default recursion value")
 
-	nestedFolder := path.Join(testRepoPath, folderName)
+	nestedFolder := filepath.Join(testRepoPath, folderName)
 	require.NoError(t, os.MkdirAll(nestedFolder, 0755))
 	// put single file into the deepest directory
-	testhelper.MustRunCommand(t, nil, "touch", path.Join(nestedFolder, ".gitkeep"))
+	testhelper.MustRunCommand(t, nil, "touch", filepath.Join(nestedFolder, ".gitkeep"))
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "add", "--all")
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "commit", "-m", "Deep folder struct")
 

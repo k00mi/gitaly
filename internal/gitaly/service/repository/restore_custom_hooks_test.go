@@ -3,7 +3,7 @@ package repository
 import (
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -55,7 +55,7 @@ func TestSuccessfullRestoreCustomHooksRequest(t *testing.T) {
 	_, err = stream.CloseAndRecv()
 	require.NoError(t, err)
 
-	require.FileExists(t, path.Join(repoPath, "custom_hooks/pre-push.sample"))
+	require.FileExists(t, filepath.Join(repoPath, "custom_hooks", "pre-push.sample"))
 }
 
 func TestFailedRestoreCustomHooksDueToValidations(t *testing.T) {

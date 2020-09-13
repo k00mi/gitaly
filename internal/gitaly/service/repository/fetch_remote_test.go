@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -26,7 +26,7 @@ func copyRepoWithNewRemote(t *testing.T, repo *gitalypb.Repository, remote strin
 
 	cloneRepo := &gitalypb.Repository{StorageName: repo.GetStorageName(), RelativePath: "fetch-remote-clone.git"}
 
-	clonePath := path.Join(testhelper.GitlabTestStoragePath(), "fetch-remote-clone.git")
+	clonePath := filepath.Join(testhelper.GitlabTestStoragePath(), "fetch-remote-clone.git")
 	t.Logf("clonePath: %q", clonePath)
 	os.RemoveAll(clonePath)
 

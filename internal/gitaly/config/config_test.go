@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -235,7 +234,7 @@ func TestValidateStorages(t *testing.T) {
 	repositories2, err := filepath.Abs("testdata/repositories2")
 	require.NoError(t, err)
 
-	invalidDir := path.Join(repositories, t.Name())
+	invalidDir := filepath.Join(repositories, t.Name())
 
 	testCases := []struct {
 		desc     string
@@ -520,8 +519,8 @@ func TestValidateShellPath(t *testing.T) {
 
 	tmpDir, err := ioutil.TempDir("", "gitaly-tests-")
 	require.NoError(t, err)
-	require.NoError(t, os.MkdirAll(path.Join(tmpDir, "bin"), 0755))
-	tmpFile := path.Join(tmpDir, "my-file")
+	require.NoError(t, os.MkdirAll(filepath.Join(tmpDir, "bin"), 0755))
+	tmpFile := filepath.Join(tmpDir, "my-file")
 	defer os.RemoveAll(tmpDir)
 	fp, err := os.Create(tmpFile)
 	require.NoError(t, err)
@@ -575,7 +574,7 @@ func TestConfigureRuby(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	tmpFile := path.Join(tmpDir, "file")
+	tmpFile := filepath.Join(tmpDir, "file")
 	require.NoError(t, ioutil.WriteFile(tmpFile, nil, 0644))
 
 	testCases := []struct {

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -119,5 +118,5 @@ func (s *server) RemoveNamespace(ctx context.Context, in *gitalypb.RemoveNamespa
 }
 
 func namespacePath(storage, ns string) string {
-	return path.Join(storage, ns)
+	return filepath.Join(storage, ns)
 }

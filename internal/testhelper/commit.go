@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -64,12 +64,12 @@ func CreateCommit(t testing.TB, repoPath, branchName string, opts *CreateCommitO
 // objects will live in an alternate objects directory. It returns the current
 // head after the command is run and the alternate objects directory path
 func CreateCommitInAlternateObjectDirectory(t testing.TB, repoPath, altObjectsDir string, cmd *exec.Cmd) (currentHead []byte) {
-	gitPath := path.Join(repoPath, ".git")
+	gitPath := filepath.Join(repoPath, ".git")
 
-	altObjectsPath := path.Join(gitPath, altObjectsDir)
+	altObjectsPath := filepath.Join(gitPath, altObjectsDir)
 	gitObjectEnv := []string{
 		fmt.Sprintf("GIT_OBJECT_DIRECTORY=%s", altObjectsPath),
-		fmt.Sprintf("GIT_ALTERNATE_OBJECT_DIRECTORIES=%s", path.Join(gitPath, "objects")),
+		fmt.Sprintf("GIT_ALTERNATE_OBJECT_DIRECTORIES=%s", filepath.Join(gitPath, "objects")),
 	}
 	require.NoError(t, os.MkdirAll(altObjectsPath, 0755))
 

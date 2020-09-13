@@ -3,7 +3,6 @@ package storage
 import (
 	"errors"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -53,7 +52,7 @@ func IsGitDirectory(dir string) bool {
 	}
 
 	for _, element := range []string{"objects", "refs", "HEAD"} {
-		if _, err := os.Stat(path.Join(dir, element)); err != nil {
+		if _, err := os.Stat(filepath.Join(dir, element)); err != nil {
 			return false
 		}
 	}
@@ -66,7 +65,7 @@ func IsGitDirectory(dir string) bool {
 	// git gc runs for a long time while keeping open the packed-refs file.
 	// Running stat() on the file causes the kernel to revalidate the cached
 	// directory entry. We don't actually care if this file exists.
-	os.Stat(path.Join(dir, "packed-refs"))
+	os.Stat(filepath.Join(dir, "packed-refs"))
 
 	return true
 }

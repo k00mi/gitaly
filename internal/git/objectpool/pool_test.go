@@ -3,7 +3,6 @@ package objectpool
 import (
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -112,7 +111,7 @@ func TestCreate(t *testing.T) {
 	require.True(t, pool.IsValid())
 
 	// No hooks
-	_, err = os.Stat(path.Join(pool.FullPath(), "hooks"))
+	_, err = os.Stat(filepath.Join(pool.FullPath(), "hooks"))
 	assert.True(t, os.IsNotExist(err))
 
 	// origin is set

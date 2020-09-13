@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -132,7 +132,7 @@ end`, command.GitPath())
 
 	dir, err := ioutil.TempDir("", "gitaly-temp-dir-*")
 	require.NoError(t, err)
-	hookPath := path.Join(dir, "pre-receive")
+	hookPath := filepath.Join(dir, "pre-receive")
 
 	require.NoError(t, ioutil.WriteFile(hookPath, []byte(hook), 0755))
 
@@ -160,7 +160,7 @@ end`, command.GitPath())
 
 	dir, err := ioutil.TempDir("", "gitaly-temp-dir-*")
 	require.NoError(t, err)
-	hookPath := path.Join(dir, "pre-receive")
+	hookPath := filepath.Join(dir, "pre-receive")
 
 	require.NoError(t, ioutil.WriteFile(hookPath, []byte(hook), 0755))
 

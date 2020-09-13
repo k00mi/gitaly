@@ -2,7 +2,7 @@ package commit
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 	"strconv"
 
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -32,7 +32,7 @@ func newTreeEntry(commitOid, rootOid, rootPath string, filename, oidBytes, modeB
 		CommitOid: commitOid,
 		RootOid:   rootOid,
 		Oid:       oid,
-		Path:      []byte(path.Join(rootPath, string(filename))),
+		Path:      []byte(filepath.Join(rootPath, string(filename))),
 		Type:      objectType,
 		Mode:      int32(mode),
 	}, nil

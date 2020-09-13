@@ -3,7 +3,7 @@ package blob
 import (
 	"fmt"
 	"io"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -117,7 +117,7 @@ func TestSuccessfulGetBlobsRequest(t *testing.T) {
 				expectedBlob := expectedBlobs[i]
 				expectedBlob.Revision = revision
 				if !expectedBlob.IsSubmodule && expectedBlob.Type == gitalypb.ObjectType_BLOB {
-					expectedBlob.Data = testhelper.MustReadFile(t, path.Join(testRepoPath, "blobs-sandbox", string(expectedBlob.Path)))
+					expectedBlob.Data = testhelper.MustReadFile(t, filepath.Join(testRepoPath, "blobs-sandbox", string(expectedBlob.Path)))
 				}
 				if limit == 0 {
 					expectedBlob.Data = nil

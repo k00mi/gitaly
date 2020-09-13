@@ -18,7 +18,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -126,7 +125,7 @@ func GitlabTestStoragePath() string {
 	if !ok {
 		log.Fatal("Could not get caller info")
 	}
-	return path.Join(path.Dir(currentFile), "testdata/data")
+	return filepath.Join(filepath.Dir(currentFile), "testdata", "data")
 }
 
 // GitalyServersMetadata returns a metadata pair for gitaly-servers to be used in
@@ -531,7 +530,7 @@ func initRepo(t testing.TB, bare bool) (*gitalypb.Repository, string, func()) {
 
 	repo := CreateRepo(t, storagePath, relativePath)
 	if !bare {
-		repo.RelativePath = path.Join(repo.RelativePath, ".git")
+		repo.RelativePath = filepath.Join(repo.RelativePath, ".git")
 	}
 
 	return repo, repoPath, func() { require.NoError(t, os.RemoveAll(repoPath)) }
@@ -574,7 +573,7 @@ func cloneTestRepo(t testing.TB, storageRoot, relativePath string, bare bool) (r
 		args = append(args, "--bare")
 	} else {
 		// For non-bare repos the relative path is the .git folder inside the path
-		repo.RelativePath = path.Join(relativePath, ".git")
+		repo.RelativePath = filepath.Join(relativePath, ".git")
 	}
 
 	MustRunCommand(t, nil, "git", append(args, testRepositoryPath(t), repoPath)...)
@@ -602,7 +601,7 @@ func ConfigureGitalySSH() {
 	goBuildArgs := []string{
 		"build",
 		"-o",
-		path.Join(config.Config.BinDir, "gitaly-ssh"),
+		filepath.Join(config.Config.BinDir, "gitaly-ssh"),
 		"gitlab.com/gitlab-org/gitaly/cmd/gitaly-ssh",
 	}
 	MustRunCommand(nil, nil, "go", goBuildArgs...)
@@ -617,7 +616,7 @@ func ConfigureGitalyGit2Go() {
 	goBuildArgs := []string{
 		"build",
 		"-tags", "static,system_libgit2",
-		"-o", path.Join(config.Config.BinDir, "gitaly-git2go"),
+		"-o", filepath.Join(config.Config.BinDir, "gitaly-git2go"),
 		"gitlab.com/gitlab-org/gitaly/cmd/gitaly-git2go",
 	}
 	MustRunCommand(nil, nil, "go", goBuildArgs...)
@@ -678,7 +677,7 @@ func TempDir(t testing.TB) (string, func()) {
 		log.Fatal("Could not get caller info")
 	}
 
-	rootTmpDir := path.Join(path.Dir(currentFile), "testdata/tmp")
+	rootTmpDir := filepath.Join(filepath.Dir(currentFile), "testdata", "tmp")
 	tmpDir, err := ioutil.TempDir(rootTmpDir, "")
 	require.NoError(t, err)
 	return tmpDir, func() { require.NoError(t, os.RemoveAll(tmpDir)) }

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 )
 
 // SystemCertPool circumvents the fact that Go on macOS does not support
@@ -34,7 +34,7 @@ func SystemCertPool() (*x509.CertPool, error) {
 				continue
 			}
 
-			pem, err := ioutil.ReadFile(path.Join(d, entry.Name()))
+			pem, err := ioutil.ReadFile(filepath.Join(d, entry.Name()))
 			if err != nil {
 				return nil, err
 			}

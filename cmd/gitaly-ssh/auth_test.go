@@ -5,7 +5,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -31,7 +31,7 @@ func TestConnectivity(t *testing.T) {
 	cwd, err := os.Getwd()
 	require.NoError(t, err)
 
-	certPoolPath := path.Join(cwd, "testdata/certs")
+	certPoolPath := filepath.Join(cwd, "testdata", "certs")
 
 	testRepo := testhelper.TestRepository()
 

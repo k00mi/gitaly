@@ -3,7 +3,7 @@ package repository
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -28,7 +28,7 @@ func TestCreateRepositorySuccess(t *testing.T) {
 	storageDir, err := helper.GetStorageByName("default")
 	require.NoError(t, err)
 	relativePath := "create-repository-test.git"
-	repoDir := path.Join(storageDir, relativePath)
+	repoDir := filepath.Join(storageDir, relativePath)
 	require.NoError(t, os.RemoveAll(repoDir))
 
 	repo := &gitalypb.Repository{StorageName: "default", RelativePath: relativePath}
@@ -41,7 +41,7 @@ func TestCreateRepositorySuccess(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "drwxr-x---", fi.Mode().String())
 
-	for _, dir := range []string{repoDir, path.Join(repoDir, "refs")} {
+	for _, dir := range []string{repoDir, filepath.Join(repoDir, "refs")} {
 		fi, err := os.Stat(dir)
 		require.NoError(t, err)
 		require.True(t, fi.IsDir(), "%q must be a directory", fi.Name())
@@ -60,7 +60,7 @@ func TestCreateRepositoryFailure(t *testing.T) {
 
 	storagePath, err := helper.GetStorageByName("default")
 	require.NoError(t, err)
-	fullPath := path.Join(storagePath, "foo.git")
+	fullPath := filepath.Join(storagePath, "foo.git")
 
 	_, err = os.Create(fullPath)
 	require.NoError(t, err)

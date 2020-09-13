@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"path"
+	"path/filepath"
 	"strconv"
 	"syscall"
 	"time"
@@ -152,7 +152,7 @@ func isGitaly(p *os.Process, gitalyBin string) bool {
 		return false
 	}
 
-	if path.Base(command) == path.Base(gitalyBin) {
+	if filepath.Base(command) == filepath.Base(gitalyBin) {
 		return true
 	}
 

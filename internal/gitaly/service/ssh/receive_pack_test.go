@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -155,7 +154,7 @@ func TestReceivePackPushHookFailure(t *testing.T) {
 	require.NoError(t, os.MkdirAll(hooks.Path(), 0755))
 
 	hookContent := []byte("#!/bin/sh\nexit 1")
-	ioutil.WriteFile(path.Join(hooks.Path(), "pre-receive"), hookContent, 0755)
+	ioutil.WriteFile(filepath.Join(hooks.Path(), "pre-receive"), hookContent, 0755)
 
 	_, _, err = testCloneAndPush(t, serverSocketPath, pushParams{storageName: testRepo.GetStorageName(), glID: "1"})
 	require.Error(t, err)
@@ -277,9 +276,9 @@ type SSHCloneDetails struct {
 func setupSSHClone(t *testing.T) (SSHCloneDetails, func()) {
 	storagePath := testhelper.GitlabTestStoragePath()
 	tempRepo := "gitlab-test-ssh-receive-pack.git"
-	testRepoPath := path.Join(storagePath, testRepo.GetRelativePath())
-	remoteRepoPath := path.Join(storagePath, tempRepo)
-	localRepoPath := path.Join(storagePath, "gitlab-test-ssh-receive-pack-local")
+	testRepoPath := filepath.Join(storagePath, testRepo.GetRelativePath())
+	remoteRepoPath := filepath.Join(storagePath, tempRepo)
+	localRepoPath := filepath.Join(storagePath, "gitlab-test-ssh-receive-pack-local")
 	// Make a bare clone of the test repo to act as a remote one and to leave the original repo intact for other tests
 	if err := os.RemoveAll(remoteRepoPath); err != nil && !os.IsNotExist(err) {
 		t.Fatal(err)

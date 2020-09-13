@@ -2,7 +2,7 @@ package helper
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -195,8 +195,8 @@ func TestGetRepoPath(t *testing.T) {
 }
 
 func assertInvalidRepoWithoutFile(t *testing.T, repo *gitalypb.Repository, repoPath, file string) {
-	oldRoute := path.Join(repoPath, file)
-	renamedRoute := path.Join(repoPath, file+"moved")
+	oldRoute := filepath.Join(repoPath, file)
+	renamedRoute := filepath.Join(repoPath, file+"moved")
 	os.Rename(oldRoute, renamedRoute)
 	defer func() {
 		os.Rename(renamedRoute, oldRoute)
@@ -210,7 +210,7 @@ func assertInvalidRepoWithoutFile(t *testing.T, repo *gitalypb.Repository, repoP
 func TestGetRepoPathWithCorruptedRepo(t *testing.T) {
 	testRepo := testhelper.TestRepository()
 	testRepoStoragePath := testhelper.GitlabTestStoragePath()
-	testRepoPath := path.Join(testRepoStoragePath, testRepo.RelativePath)
+	testRepoPath := filepath.Join(testRepoStoragePath, testRepo.RelativePath)
 
 	for _, file := range []string{"objects", "refs", "HEAD"} {
 		assertInvalidRepoWithoutFile(t, testRepo, testRepoPath, file)
@@ -233,7 +233,7 @@ func TestGetObjectDirectoryPath(t *testing.T) {
 		{
 			desc: "storages configured",
 			repo: &gitalypb.Repository{StorageName: "default", RelativePath: testhelper.TestRelativePath, GitObjectDirectory: "objects/"},
-			path: path.Join(repoPath, "objects/"),
+			path: filepath.Join(repoPath, "objects/"),
 		},
 		{
 			desc: "no GitObjectDirectoryPath",

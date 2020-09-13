@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git"
@@ -57,7 +57,7 @@ func (s *server) CreateRepositoryFromBundle(stream gitalypb.RepositoryService_Cr
 		return status.Error(codes.Internal, cleanError)
 	}
 
-	bundlePath := path.Join(tmpDir, "repo.bundle")
+	bundlePath := filepath.Join(tmpDir, "repo.bundle")
 	file, err := os.Create(bundlePath)
 	if err != nil {
 		cleanError := sanitizedError(tmpDir, "CreateRepositoryFromBundle: new bundle file failed: %v", err)

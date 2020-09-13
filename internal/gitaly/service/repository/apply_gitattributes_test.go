@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,9 +23,9 @@ func TestApplyGitattributesSuccess(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	infoPath := path.Join(testhelper.GitlabTestStoragePath(),
+	infoPath := filepath.Join(testhelper.GitlabTestStoragePath(),
 		testRepo.GetRelativePath(), "info")
-	attributesPath := path.Join(infoPath, "attributes")
+	attributesPath := filepath.Join(infoPath, "attributes")
 
 	tests := []struct {
 		desc     string

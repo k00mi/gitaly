@@ -7,7 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -39,9 +39,9 @@ func TestSuccessfullBackupCustomHooksRequest(t *testing.T) {
 		"custom_hooks/prepare-commit-msg.sample",
 		"custom_hooks/pre-push.sample",
 	}
-	require.NoError(t, os.Mkdir(path.Join(repoPath, "custom_hooks"), 0700), "Could not create custom_hooks dir")
+	require.NoError(t, os.Mkdir(filepath.Join(repoPath, "custom_hooks"), 0700), "Could not create custom_hooks dir")
 	for _, fileName := range expectedTarResponse[1:] {
-		require.NoError(t, ioutil.WriteFile(path.Join(repoPath, fileName), []byte("Some hooks"), 0700), fmt.Sprintf("Could not create %s", fileName))
+		require.NoError(t, ioutil.WriteFile(filepath.Join(repoPath, fileName), []byte("Some hooks"), 0700), fmt.Sprintf("Could not create %s", fileName))
 	}
 
 	backupRequest := &gitalypb.BackupCustomHooksRequest{Repository: testRepo}
@@ -83,7 +83,7 @@ func TestSuccessfullBackupCustomHooksSymlink(t *testing.T) {
 	require.NoError(t, err)
 
 	linkTarget := "/var/empty"
-	require.NoError(t, os.Symlink(linkTarget, path.Join(repoPath, "custom_hooks")), "Could not create custom_hooks symlink")
+	require.NoError(t, os.Symlink(linkTarget, filepath.Join(repoPath, "custom_hooks")), "Could not create custom_hooks symlink")
 
 	backupRequest := &gitalypb.BackupCustomHooksRequest{Repository: testRepo}
 	backupStream, err := client.BackupCustomHooks(ctx, backupRequest)

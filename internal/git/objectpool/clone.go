@@ -3,7 +3,7 @@ package objectpool
 import (
 	"context"
 	"os"
-	"path"
+	"path/filepath"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -37,5 +37,5 @@ func (o *ObjectPool) clone(ctx context.Context, repo *gitalypb.Repository) error
 }
 
 func (o *ObjectPool) removeHooksDir() error {
-	return os.RemoveAll(path.Join(o.FullPath(), "hooks"))
+	return os.RemoveAll(filepath.Join(o.FullPath(), "hooks"))
 }

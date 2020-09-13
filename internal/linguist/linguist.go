@@ -9,7 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
@@ -97,7 +97,7 @@ func startGitLinguist(ctx context.Context, repoPath string, commitID string, lin
 	// Git's directory to PATH. But as our internal command interface will
 	// overwrite PATH even if we pass it in here, we need to work around it
 	// and instead execute the command with `env PATH=$GITDIR:$PATH`.
-	gitDir := path.Dir(command.GitPath())
+	gitDir := filepath.Dir(command.GitPath())
 	if path, ok := os.LookupEnv("PATH"); ok && gitDir != "." {
 		args = append([]string{
 			"env", fmt.Sprintf("PATH=%s:%s", gitDir, path),
@@ -152,7 +152,7 @@ func openLanguagesJSON(cfg config.Cfg) (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	return os.Open(path.Join(linguistPathSymlink.Name(), "lib/linguist/languages.json"))
+	return os.Open(filepath.Join(linguistPathSymlink.Name(), "lib", "linguist", "languages.json"))
 }
 
 func exportEnvironment() []string {

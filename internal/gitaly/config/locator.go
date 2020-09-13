@@ -2,7 +2,7 @@ package config
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
@@ -65,7 +65,7 @@ func (l *configLocator) GetPath(repo repository.GitRepo) (string, error) {
 		return "", status.Errorf(codes.InvalidArgument, "GetRepoPath: %s", err)
 	}
 
-	return path.Join(storagePath, relativePath), nil
+	return filepath.Join(storagePath, relativePath), nil
 }
 
 // GetStorageByName will return the path for the storage, which is fetched by
@@ -98,7 +98,7 @@ func (l *configLocator) GetObjectDirectoryPath(repo repository.GitRepo) (string,
 		return "", status.Errorf(codes.InvalidArgument, "GetObjectDirectoryPath: %s", err)
 	}
 
-	fullPath := path.Join(repoPath, objectDirectoryPath)
+	fullPath := filepath.Join(repoPath, objectDirectoryPath)
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
 		return "", status.Errorf(codes.NotFound, "GetObjectDirectoryPath: does not exist: %q", fullPath)
 	}

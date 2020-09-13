@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"testing"
 	"time"
@@ -47,8 +46,8 @@ func TestSuccessfulUploadPackRequest(t *testing.T) {
 	storagePath := testhelper.GitlabTestStoragePath()
 	remoteRepoRelativePath := "gitlab-test-remote"
 	localRepoRelativePath := "gitlab-test-local"
-	remoteRepoPath := path.Join(storagePath, remoteRepoRelativePath)
-	localRepoPath := path.Join(storagePath, localRepoRelativePath)
+	remoteRepoPath := filepath.Join(storagePath, remoteRepoRelativePath)
+	localRepoPath := filepath.Join(storagePath, localRepoRelativePath)
 	// Make a non-bare clone of the test repo to act as a remote one
 	testhelper.MustRunCommand(t, nil, "git", "clone", testRepoPath, remoteRepoPath)
 	// Make a bare clone of the test repo to act as a local one and to leave the original repo intact for other tests
@@ -82,7 +81,7 @@ func TestSuccessfulUploadPackRequest(t *testing.T) {
 	req := &gitalypb.PostUploadPackRequest{
 		Repository: &gitalypb.Repository{
 			StorageName:  "default",
-			RelativePath: path.Join(remoteRepoRelativePath, ".git"),
+			RelativePath: filepath.Join(remoteRepoRelativePath, ".git"),
 		},
 	}
 	responseBuffer, err := makePostUploadPackRequest(ctx, t, serverSocketPath, req, requestBuffer)
@@ -116,7 +115,7 @@ func TestUploadPackRequestWithGitConfigOptions(t *testing.T) {
 
 	storagePath := testhelper.GitlabTestStoragePath()
 	ourRepoRelativePath := "gitlab-test-remote"
-	ourRepoPath := path.Join(storagePath, ourRepoRelativePath)
+	ourRepoPath := filepath.Join(storagePath, ourRepoRelativePath)
 
 	// Make a clone of the test repo to modify
 	testhelper.MustRunCommand(t, nil, "git", "clone", "--bare", testRepoPath, ourRepoPath)
@@ -342,8 +341,8 @@ func TestUploadPackRequestForPartialCloneSuccess(t *testing.T) {
 	storagePath := testhelper.GitlabTestStoragePath()
 	remoteRepoRelativePath := "gitlab-test-remote"
 	localRepoRelativePath := "gitlab-test-local"
-	remoteRepoPath := path.Join(storagePath, remoteRepoRelativePath)
-	localRepoPath := path.Join(storagePath, localRepoRelativePath)
+	remoteRepoPath := filepath.Join(storagePath, remoteRepoRelativePath)
+	localRepoPath := filepath.Join(storagePath, localRepoRelativePath)
 	// Make a non-bare clone of the test repo to act as a remote one
 	testhelper.MustRunCommand(t, nil, "git", "clone", testRepoPath, remoteRepoPath)
 	// Make a bare clone of the test repo to act as a local one and to leave the original repo intact for other tests
@@ -378,7 +377,7 @@ func TestUploadPackRequestForPartialCloneSuccess(t *testing.T) {
 	req := &gitalypb.PostUploadPackRequest{
 		Repository: &gitalypb.Repository{
 			StorageName:  "default",
-			RelativePath: path.Join(remoteRepoRelativePath, ".git"),
+			RelativePath: filepath.Join(remoteRepoRelativePath, ".git"),
 		},
 	}
 

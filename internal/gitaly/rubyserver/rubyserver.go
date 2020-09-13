@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"path"
 	"path/filepath"
 	"strconv"
 	"sync"
@@ -117,7 +116,7 @@ func (s *Server) start() error {
 		env = append(env, "SENTRY_ENVIRONMENT="+sentryEnvironment)
 	}
 
-	gitalyRuby := path.Join(cfg.Ruby.Dir, "bin", "gitaly-ruby")
+	gitalyRuby := filepath.Join(cfg.Ruby.Dir, "bin", "gitaly-ruby")
 
 	numWorkers := cfg.Ruby.NumWorkers
 	balancer.ConfigureBuilder(numWorkers, 0)

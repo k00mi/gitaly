@@ -3,7 +3,7 @@ package repository
 import (
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -24,11 +24,11 @@ func TestSuccessfulCalculateChecksum(t *testing.T) {
 	defer cleanupFn()
 
 	// Force the refs database of testRepo into a known state
-	require.NoError(t, os.RemoveAll(path.Join(testRepoPath, "refs")))
+	require.NoError(t, os.RemoveAll(filepath.Join(testRepoPath, "refs")))
 	for _, d := range []string{"refs/heads", "refs/tags", "refs/notes"} {
-		require.NoError(t, os.MkdirAll(path.Join(testRepoPath, d), 0755))
+		require.NoError(t, os.MkdirAll(filepath.Join(testRepoPath, d), 0755))
 	}
-	require.NoError(t, exec.Command("cp", "testdata/checksum-test-packed-refs", path.Join(testRepoPath, "packed-refs")).Run())
+	require.NoError(t, exec.Command("cp", "testdata/checksum-test-packed-refs", filepath.Join(testRepoPath, "packed-refs")).Run())
 	require.NoError(t, exec.Command(command.GitPath(), "-C", testRepoPath, "symbolic-ref", "HEAD", "refs/heads/feature").Run())
 
 	request := &gitalypb.CalculateChecksumRequest{Repository: testRepo}
@@ -100,7 +100,7 @@ func TestBrokenRepositoryCalculateChecksum(t *testing.T) {
 	defer cleanupFn()
 
 	// Force an empty HEAD file
-	require.NoError(t, os.Truncate(path.Join(testRepoPath, "HEAD"), 0))
+	require.NoError(t, os.Truncate(filepath.Join(testRepoPath, "HEAD"), 0))
 
 	request := &gitalypb.CalculateChecksumRequest{Repository: repo}
 	testCtx, cancelCtx := testhelper.Context()
@@ -156,11 +156,11 @@ func TestInvalidRefsCalculateChecksum(t *testing.T) {
 	defer cleanupFn()
 
 	// Force the refs database of testRepo into a known state
-	require.NoError(t, os.RemoveAll(path.Join(testRepoPath, "refs")))
+	require.NoError(t, os.RemoveAll(filepath.Join(testRepoPath, "refs")))
 	for _, d := range []string{"refs/heads", "refs/tags", "refs/notes"} {
-		require.NoError(t, os.MkdirAll(path.Join(testRepoPath, d), 0755))
+		require.NoError(t, os.MkdirAll(filepath.Join(testRepoPath, d), 0755))
 	}
-	require.NoError(t, exec.Command("cp", "testdata/checksum-test-invalid-refs", path.Join(testRepoPath, "packed-refs")).Run())
+	require.NoError(t, exec.Command("cp", "testdata/checksum-test-invalid-refs", filepath.Join(testRepoPath, "packed-refs")).Run())
 
 	request := &gitalypb.CalculateChecksumRequest{Repository: testRepo}
 	testCtx, cancelCtx := testhelper.Context()

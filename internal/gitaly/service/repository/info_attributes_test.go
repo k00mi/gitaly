@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,12 +23,12 @@ func TestGetInfoAttributesExisting(t *testing.T) {
 	testRepo, repoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	infoPath := path.Join(repoPath, "info")
+	infoPath := filepath.Join(repoPath, "info")
 	os.MkdirAll(infoPath, 0755)
 
 	buffSize := streamio.WriteBufferSize + 1
 	data := bytes.Repeat([]byte("*.pbxproj binary\n"), buffSize)
-	attrsPath := path.Join(infoPath, "attributes")
+	attrsPath := filepath.Join(infoPath, "attributes")
 	err := ioutil.WriteFile(attrsPath, data, 0644)
 	require.NoError(t, err)
 
