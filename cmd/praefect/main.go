@@ -95,6 +95,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/bootstrap"
 	"gitlab.com/gitlab-org/gitaly/internal/bootstrap/starter"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config/sentry"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/log"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
@@ -352,7 +353,7 @@ func run(cfgs []starter.Config, conf config.Config) error {
 		} else {
 			r := reconciler.NewReconciler(logger, db, nodeManager, conf.StorageNames(), conf.Reconciliation.HistogramBuckets)
 			prometheus.MustRegister(r)
-			go r.Run(ctx, reconciler.NewTimer(interval))
+			go r.Run(ctx, helper.NewTimerTicker(interval))
 		}
 	}
 
