@@ -97,7 +97,7 @@ func runOperationServiceServerWithRubyServer(t *testing.T, ruby *rubyserver.Serv
 	gitalypb.RegisterRepositoryServiceServer(srv.GrpcServer(), repository.NewServer(ruby, locator, internalSocket))
 	gitalypb.RegisterRefServiceServer(srv.GrpcServer(), ref.NewServer(locator))
 	gitalypb.RegisterCommitServiceServer(srv.GrpcServer(), commit.NewServer(locator))
-	gitalypb.RegisterSSHServiceServer(srv.GrpcServer(), ssh.NewServer())
+	gitalypb.RegisterSSHServiceServer(srv.GrpcServer(), ssh.NewServer(locator))
 	reflection.Register(srv.GrpcServer())
 
 	require.NoError(t, srv.Start())
