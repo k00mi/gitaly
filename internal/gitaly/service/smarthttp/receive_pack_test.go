@@ -446,7 +446,7 @@ func runSmartHTTPHookServiceServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	gitalypb.RegisterSmartHTTPServiceServer(server, NewServer())
+	gitalypb.RegisterSmartHTTPServiceServer(server, NewServer(config.NewLocator(config.Config)))
 	gitalypb.RegisterHookServiceServer(server, hook.NewServer(gitalyhook.NewManager(gitalyhook.GitlabAPIStub, config.Config)))
 	reflection.Register(server)
 
@@ -513,7 +513,7 @@ func TestPostReceiveWithTransactionsViaPraefect(t *testing.T) {
 			testhelper.WriteShellSecretFile(t, gitlabShellDir, secretToken)
 
 			gitalyServer := testhelper.NewServerWithAuth(t, nil, nil, config.Config.Auth.Token)
-			gitalypb.RegisterSmartHTTPServiceServer(gitalyServer.GrpcServer(), NewServer())
+			gitalypb.RegisterSmartHTTPServiceServer(gitalyServer.GrpcServer(), NewServer(config.NewLocator(config.Config)))
 			gitalypb.RegisterHookServiceServer(gitalyServer.GrpcServer(), hook.NewServer(gitalyhook.NewManager(gitalyhook.GitlabAPIStub, config.Config)))
 			reflection.Register(gitalyServer.GrpcServer())
 			require.NoError(t, gitalyServer.Start())
@@ -562,7 +562,7 @@ func TestPostReceiveWithReferenceTransactionHook(t *testing.T) {
 	refTransactionServer := &testTransactionServer{}
 
 	gitalyServer := testhelper.NewTestGrpcServer(t, nil, nil)
-	gitalypb.RegisterSmartHTTPServiceServer(gitalyServer, NewServer())
+	gitalypb.RegisterSmartHTTPServiceServer(gitalyServer, NewServer(config.NewLocator(config.Config)))
 	gitalypb.RegisterHookServiceServer(gitalyServer, hook.NewServer(gitalyhook.NewManager(gitalyhook.GitlabAPIStub, config.Config)))
 	gitalypb.RegisterRefTransactionServer(gitalyServer, refTransactionServer)
 	reflection.Register(gitalyServer)

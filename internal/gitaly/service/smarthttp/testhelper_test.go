@@ -55,7 +55,7 @@ func runSmartHTTPServer(t *testing.T, serverOpts ...ServerOpt) (string, func()) 
 		},
 	)
 
-	gitalypb.RegisterSmartHTTPServiceServer(srv.GrpcServer(), NewServer(serverOpts...))
+	gitalypb.RegisterSmartHTTPServiceServer(srv.GrpcServer(), NewServer(config.NewLocator(config.Config), serverOpts...))
 	reflection.Register(srv.GrpcServer())
 
 	require.NoError(t, srv.Start())

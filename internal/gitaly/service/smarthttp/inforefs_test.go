@@ -20,7 +20,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git/objectpool"
 	"gitlab.com/gitlab-org/gitaly/internal/git/stats"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/tempdir"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -358,7 +357,7 @@ func TestCacheInfoRefsUploadPack(t *testing.T) {
 			StorageName:  testRepo.StorageName,
 		},
 	} // invalid request because repo is empty
-	invalidRepoCleanup := createInvalidRepo(t, invalidReq.Repository)
+	invalidRepoCleanup := createInvalidRepo(t, filepath.Join(testhelper.GitlabTestStoragePath(), invalidReq.Repository.RelativePath))
 	defer invalidRepoCleanup()
 
 	_, err = makeInfoRefsUploadPackRequest(ctx, t, serverSocketPath, invalidReq)
@@ -381,9 +380,7 @@ func TestCacheInfoRefsUploadPack(t *testing.T) {
 	require.True(t, happened)
 }
 
-func createInvalidRepo(t testing.TB, repo *gitalypb.Repository) func() {
-	repoDir, err := helper.GetPath(repo)
-	require.NoError(t, err)
+func createInvalidRepo(t testing.TB, repoDir string) func() {
 	for _, subDir := range []string{"objects", "refs", "HEAD"} {
 		require.NoError(t, os.MkdirAll(filepath.Join(repoDir, subDir), 0755))
 	}

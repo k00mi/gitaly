@@ -80,6 +80,7 @@ func RegisterAll(grpcServer *grpc.Server, cfg config.Cfg, rubyServer *rubyserver
 		ssh.WithPackfileNegotiationMetrics(sshPackfileNegotiationMetrics),
 	))
 	gitalypb.RegisterSmartHTTPServiceServer(grpcServer, smarthttp.NewServer(
+		locator,
 		smarthttp.WithPackfileNegotiationMetrics(smarthttpPackfileNegotiationMetrics),
 	))
 	gitalypb.RegisterWikiServiceServer(grpcServer, wiki.NewServer(rubyServer))

@@ -44,7 +44,7 @@ func (s *server) PostReceivePack(stream gitalypb.SmartHTTPService_PostReceivePac
 	}
 	env := append(hookEnv, "GL_PROTOCOL=http")
 
-	repoPath, err := helper.GetRepoPath(req.Repository)
+	repoPath, err := s.locator.GetRepoPath(req.Repository)
 	if err != nil {
 		return err
 	}
