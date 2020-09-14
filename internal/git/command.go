@@ -9,12 +9,14 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
 )
 
-// unsafeCmd creates a git.unsafeCmd with the given args and Repository
-func unsafeCmd(ctx context.Context, repo repository.GitRepo, args ...string) (*command.Command, error) {
+// unsafeCmdWithEnv creates a git.unsafeCmd with the given args, environment, and Repository
+func unsafeCmdWithEnv(ctx context.Context, extraEnv []string, repo repository.GitRepo, args ...string) (*command.Command, error) {
 	args, env, err := argsAndEnv(repo, args...)
 	if err != nil {
 		return nil, err
 	}
+
+	env = append(env, extraEnv...)
 
 	return unsafeBareCmd(ctx, CmdStream{}, env, args...)
 }

@@ -57,6 +57,7 @@ const (
 	testGitEnv          = "testdata/git-env"
 	GlRepository        = "project-1"
 	GlID                = "user-123"
+	GlProjectPath       = "gitlab-org/gitlab-test"
 )
 
 var configureOnce sync.Once
@@ -501,9 +502,10 @@ func Context(opts ...ContextOpt) (context.Context, func()) {
 func CreateRepo(t testing.TB, storagePath, relativePath string) *gitalypb.Repository {
 	require.NoError(t, os.MkdirAll(filepath.Dir(storagePath), 0755), "making repo parent dir")
 	return &gitalypb.Repository{
-		StorageName:  "default",
-		RelativePath: relativePath,
-		GlRepository: GlRepository,
+		StorageName:   "default",
+		RelativePath:  relativePath,
+		GlRepository:  GlRepository,
+		GlProjectPath: GlProjectPath,
 	}
 }
 

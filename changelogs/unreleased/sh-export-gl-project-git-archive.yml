@@ -1,0 +1,5 @@
+---
+title: Export GL_REPOSITORY and GL_PROJECT_PATH in git archive call
+merge_request: 2557
+author:
+type: changed

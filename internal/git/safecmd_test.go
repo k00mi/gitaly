@@ -200,6 +200,11 @@ func TestSafeCmdValid(t *testing.T) {
 		// ignore first 3 indeterministic args (executable path and repo args)
 		require.Equal(t, tt.expectArgs, cmd.Args()[3:])
 
+		cmd, err = git.SafeCmdWithEnv(ctx, nil, testRepo, tt.globals, tt.subCmd)
+		require.NoError(t, err)
+		// ignore first 3 indeterministic args (executable path and repo args)
+		require.Equal(t, tt.expectArgs, cmd.Args()[3:])
+
 		cmd, err = git.SafeStdinCmd(ctx, testRepo, tt.globals, tt.subCmd)
 		require.NoError(t, err)
 		require.Equal(t, tt.expectArgs, cmd.Args()[3:])
@@ -213,6 +218,33 @@ func TestSafeCmdValid(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, tt.expectArgs, cmd.Args()[1:])
 	}
+}
+
+func TestSafeCmdWithEnv(t *testing.T) {
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	reenableGitCmd := disableGitCmd()
+	defer reenableGitCmd()
+
+	globals := []git.Option{
+		git.Flag{Name: "--aaaa-bbbb"},
+	}
+
+	subCmd := git.SubCmd{Name: "cccc"}
+	endOfOptions := "--end-of-options"
+	expectArgs := []string{"--aaaa-bbbb", "cccc", endOfOptions}
+
+	env := []string{"TEST_VAR1=1", "TEST_VAR2=2"}
+
+	cmd, err := git.SafeCmdWithEnv(ctx, env, testRepo, globals, subCmd)
+	require.NoError(t, err)
+	// ignore first 3 indeterministic args (executable path and repo args)
+	require.Equal(t, expectArgs, cmd.Args()[3:])
+	require.Subset(t, cmd.Env(), env)
 }
 
 func disableGitCmd() testhelper.Cleanup {
