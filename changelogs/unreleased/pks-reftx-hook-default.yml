@@ -1,0 +1,5 @@
+---
+title: Enable voting via reference-transaction hook by default
+merge_request: 2558
+author:
+type: changed

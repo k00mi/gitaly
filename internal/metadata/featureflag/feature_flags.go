@@ -28,7 +28,7 @@ var (
 	ReferenceTransactionsPrimaryWins = FeatureFlag{Name: "reference_transactions_primary_wins", OnByDefault: false}
 	// ReferenceTransactionHook will enable the reference-transaction hook
 	// introduced with Git v2.28.0 for voting on transactions
-	ReferenceTransactionHook = FeatureFlag{Name: "reference_transaction_hook", OnByDefault: false}
+	ReferenceTransactionHook = FeatureFlag{Name: "reference_transaction_hook", OnByDefault: true}
 	// LogCommandStats will log additional rusage stats for commands
 	LogCommandStats = FeatureFlag{Name: "log_command_stats", OnByDefault: false}
 )
