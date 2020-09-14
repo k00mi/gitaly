@@ -27,3 +27,4 @@ gitaly.pid
 /vendor
 /gitaly-*.gem
 /gitaly-blackbox
+/proto.diff
