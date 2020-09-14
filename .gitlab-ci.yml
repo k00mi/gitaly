@@ -95,6 +95,7 @@ proto:
     paths:
     - ruby/proto/gitaly/*
     - proto/go/gitalypb/*
+    - proto.diff
     when: on_failure
 
 build:

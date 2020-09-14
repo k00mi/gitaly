@@ -280,7 +280,7 @@ clean-ruby-vendor-go:
 	mkdir -p ${SOURCE_DIR}/ruby/vendor && find ${SOURCE_DIR}/ruby/vendor -type f -name '*.go' -delete
 
 .PHONY: check-proto
-check-proto: proto no-changes
+check-proto: proto no-proto-changes
 
 .PHONY: rubocop
 rubocop: ${SOURCE_DIR}/.ruby-bundle
@@ -329,6 +329,11 @@ proto-lint: ${PROTOC} ${PROTOC_GEN_GO}
 .PHONY: no-changes
 no-changes:
 	${Q}${GIT} status --porcelain | awk '{ print } END { if (NR > 0) { exit 1 } }'
+
+.PHONY: no-proto-changes
+no-proto-changes:
+	${Q}${GIT} diff -- '*.pb.go' 'ruby/proto/gitaly' >proto.diff
+	${Q}if [ -s proto.diff ]; then echo "There is a difference in generated proto files. Please take a look at proto.diff file." && exit 1; fi
 
 .PHONY: smoke-test
 smoke-test: all rspec
