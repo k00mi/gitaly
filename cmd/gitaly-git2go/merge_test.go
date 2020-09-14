@@ -140,7 +140,7 @@ func buildCommit(t *testing.T, repoPath string, parent *git.Oid, fileContents ma
 	committer := git.Signature{
 		Name:  "Foo",
 		Email: "foo@example.com",
-		When:  time.Unix(0, 0),
+		When:  time.Date(2020, 1, 1, 1, 1, 1, 1, time.FixedZone("UTC+2", 2*60*60)),
 	}
 
 	var commit *git.Oid
@@ -178,7 +178,7 @@ func TestMergeTrees(t *testing.T) {
 			expected: map[string]string{
 				"file": "a",
 			},
-			expectedStdout: "a37b6d1d8594a61389c6212fe55bbc22dee90109\n",
+			expectedStdout: "7d5ae8fb6d2b301c53560bd728004d77778998df\n",
 		},
 		{
 			desc: "non-trivial merge succeeds",
@@ -194,7 +194,7 @@ func TestMergeTrees(t *testing.T) {
 			expected: map[string]string{
 				"file": "0\na\nb\nc\nd\ne\nf\n0\n",
 			},
-			expectedStdout: "6e73db4dfa48cb4228bc414654990ef84cb0cc83\n",
+			expectedStdout: "348b9b489c3ca128a4555c7a51b20335262519c7\n",
 		},
 		{
 			desc: "multiple files succeed",
@@ -218,7 +218,7 @@ func TestMergeTrees(t *testing.T) {
 				"2": "modified",
 				"3": "qux",
 			},
-			expectedStdout: "526b97aad4855f70324d7588317322f3a179328b\n",
+			expectedStdout: "e9be4578f89ea52d44936fb36517e837d698b34b\n",
 		},
 		{
 			desc: "conflicting merge fails",
