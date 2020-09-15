@@ -1012,9 +1012,12 @@ func TestErrorThreshold(t *testing.T) {
 				require.Equal(t, expectedErr, err)
 			}
 
-			time.Sleep(10 * time.Millisecond)
-
-			_, err = nodeMgr.GetShard("default")
+			for i := 0; i < 50; i++ {
+				if _, err = nodeMgr.GetShard("default"); err != nil {
+					break
+				}
+				time.Sleep(1 * time.Millisecond)
+			}
 			require.Equal(t, nodes.ErrPrimaryNotHealthy, err)
 		})
 	}
