@@ -82,6 +82,7 @@ module Gitlab
             if repository.ancestor?(remote_target&.id, local_target&.id)
               true
             else
+              Gitlab::GitLogger.info("Divergent ref in #{repository.path} due to ancestry -- remote:#{remote_target&.id}, local:#{local_target&.id}")
               @divergent_refs << ref.refname
               false
             end
