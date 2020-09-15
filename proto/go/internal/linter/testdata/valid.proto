@@ -46,6 +46,14 @@ message ValidStorageInnerNestedRequest {
   Header header = 1;
 }
 
+service InterceptedService {
+  // intercepted services do not need method operation and scope
+  // annotations.
+  option (gitaly.intercepted) = true;
+
+  rpc TestMethod(ValidRequest) returns (ValidResponse);
+}
+
 service ValidService {
   rpc TestMethod(ValidRequest) returns (ValidResponse) {
     option (gitaly.op_type) = {

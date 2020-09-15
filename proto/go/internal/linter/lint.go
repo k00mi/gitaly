@@ -4,10 +4,11 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	plugin "github.com/golang/protobuf/protoc-gen-go/plugin"
+	"gitlab.com/gitlab-org/gitaly/internal/protoutil"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
-	"gitlab.com/gitlab-org/gitaly/proto/go/internal"
 )
 
 // ensureMethodOpType will ensure that method includes the op_type option.
@@ -17,8 +18,12 @@ import (
 //     option (op_type).op = ACCESSOR;
 //   }
 func ensureMethodOpType(fileDesc *descriptor.FileDescriptorProto, m *descriptor.MethodDescriptorProto, req *plugin.CodeGeneratorRequest) error {
-	opMsg, err := internal.GetOpExtension(m)
+	opMsg, err := protoutil.GetOpExtension(m)
 	if err != nil {
+		if errors.Is(err, proto.ErrMissingExtension) {
+			return fmt.Errorf("missing op_type extension")
+		}
+
 		return err
 	}
 
@@ -46,25 +51,41 @@ func ensureMethodOpType(fileDesc *descriptor.FileDescriptorProto, m *descriptor.
 	}
 }
 
+func validateMethod(file *descriptor.FileDescriptorProto, service *descriptor.ServiceDescriptorProto, method *descriptor.MethodDescriptorProto, req *plugin.CodeGeneratorRequest) error {
+	if intercepted, err := protoutil.IsInterceptedService(service); err != nil {
+		return fmt.Errorf("is intercepted service: %w", err)
+	} else if intercepted {
+		if _, err := protoutil.GetOpExtension(method); err != nil {
+			if errors.Is(err, proto.ErrMissingExtension) {
+				return nil
+			}
+
+			return err
+		}
+
+		return fmt.Errorf("operation type defined on an intercepted method")
+	}
+
+	return ensureMethodOpType(file, method, req)
+}
+
 // LintFile ensures the file described meets Gitaly required processes.
 // Currently, this is limited to validating if request messages contain
 // a mandatory operation code.
 func LintFile(file *descriptor.FileDescriptorProto, req *plugin.CodeGeneratorRequest) []error {
 	var errs []error
 
-	for _, serviceDescriptorProto := range file.GetService() {
-		for _, methodDescriptorProto := range serviceDescriptorProto.GetMethod() {
-			err := ensureMethodOpType(file, methodDescriptorProto, req)
-			if err != nil {
-				// decorate error with current file and method
-				err = fmt.Errorf(
-					"%s: Method %q: %s",
-					file.GetName(), methodDescriptorProto.GetName(), err,
-				)
-				errs = append(errs, err)
+	for _, service := range file.GetService() {
+		for _, method := range service.GetMethod() {
+			if err := validateMethod(file, service, method, req); err != nil {
+				errs = append(errs, formatError(file.GetName(), service.GetName(), method.GetName(), err))
 			}
 		}
 	}
 
 	return errs
+}
+
+func formatError(file, service, method string, err error) error {
+	return fmt.Errorf("%s: service %q: method: %q: %w", file, service, method, err)
 }

@@ -19,8 +19,10 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/status"
 )
 
 //go:generate make testdata/stream.pb.go
@@ -119,6 +121,10 @@ func TestInvalidators(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, cache.MethodErrCount.Method["/grpc.health.v1.Health/Check"])
 
+	_, err = testdata.NewInterceptedServiceClient(cc).IgnoredMethod(ctx, &testdata.Request{})
+	require.Equal(t, status.Error(codes.Unimplemented, "method IgnoredMethod not implemented"), err)
+	require.Equal(t, 0, cache.MethodErrCount.Method["/testdata.InterceptedService/IgnoredMethod"])
+
 	require.Equal(t, expectedInvalidations, mCache.(*mockCache).invalidatedRepos)
 	require.Equal(t, expectedSvcRequests, svc.repoRequests)
 	require.Equal(t, 3, mCache.(*mockCache).endedLeases.count)
@@ -157,7 +163,7 @@ func (mc *mockCache) StartLease(repo *gitalypb.Repository) (diskcache.LeaseEnder
 }
 
 func streamFileDesc(t testing.TB) *descriptor.FileDescriptorProto {
-	fdp, err := protoregistry.ExtractFileDescriptor(proto.FileDescriptor("stream.proto"))
+	fdp, err := protoregistry.ExtractFileDescriptor(proto.FileDescriptor("middleware/cache/testdata/stream.proto"))
 	require.NoError(t, err)
 	return fdp
 }
@@ -167,6 +173,7 @@ func newTestSvc(t testing.TB, ctx context.Context, srvr *grpc.Server, svc testda
 	grpc_health_v1.RegisterHealthServer(srvr, healthSrvr)
 	healthSrvr.SetServingStatus("TestService", grpc_health_v1.HealthCheckResponse_SERVING)
 	testdata.RegisterTestServiceServer(srvr, svc)
+	testdata.RegisterInterceptedServiceServer(srvr, &testdata.UnimplementedInterceptedServiceServer{})
 
 	lis, err := net.Listen("tcp", ":0")
 	require.NoError(t, err)

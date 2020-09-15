@@ -319,7 +319,8 @@ proto: ${PROTOC_GEN_GITALY} ${SOURCE_DIR}/.ruby-bundle
 	${SOURCE_DIR}/_support/generate-proto-ruby
 	${Q}# this part is related to the generation of sources from testing proto files
 	${PROTOC} --plugin=${PROTOC_GEN_GO} --go_out=plugins=grpc:. internal/praefect/grpc-proxy/testdata/test.proto
-	${PROTOC} -I proto --plugin=${PROTOC_GEN_GO} --go_out=plugins=grpc:proto proto/go/internal/linter/testdata/*.proto
+	${PROTOC} -I proto -I internal --plugin=${PROTOC_GEN_GO} --go_out=paths=source_relative,plugins=grpc:internal internal/middleware/cache/testdata/stream.proto
+	${PROTOC} -I proto --plugin=${PROTOC_GEN_GO} --go_out=paths=source_relative,plugins=grpc:proto proto/go/internal/linter/testdata/*.proto
 
 .PHONY: proto-lint
 proto-lint: ${PROTOC} ${PROTOC_GEN_GO}

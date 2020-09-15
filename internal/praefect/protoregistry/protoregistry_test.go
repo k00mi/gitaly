@@ -151,9 +151,6 @@ func TestNewProtoRegistry(t *testing.T) {
 			"BackupCustomHooks":            protoregistry.OpAccessor,
 			"FetchHTTPRemote":              protoregistry.OpMutator,
 		},
-		"ServerService": map[string]protoregistry.OpType{
-			"ServerInfo": protoregistry.OpAccessor,
-		},
 		"SmartHTTPService": map[string]protoregistry.OpType{
 			"InfoRefsUploadPack":  protoregistry.OpAccessor,
 			"InfoRefsReceivePack": protoregistry.OpAccessor,
@@ -179,10 +176,39 @@ func TestNewProtoRegistry(t *testing.T) {
 
 	for serviceName, methods := range expectedResults {
 		for methodName, opType := range methods {
-			methodInfo, err := r.LookupMethod(fmt.Sprintf("/gitaly.%s/%s", serviceName, methodName))
+			method := fmt.Sprintf("/gitaly.%s/%s", serviceName, methodName)
+			methodInfo, err := r.LookupMethod(method)
 			require.NoError(t, err)
 			assert.Equalf(t, opType, methodInfo.Operation, "expect %s:%s to have the correct op type", serviceName, methodName)
+			require.False(t, r.IsInterceptedMethod(method), method)
 		}
+	}
+}
+
+func TestNewProtoRegistry_IsInterceptedMethod(t *testing.T) {
+	for service, methods := range map[string][]string{
+		"ServerService": {
+			"ServerInfo",
+			"DiskStatistics",
+		},
+		"PraefectInfoService": {
+			"RepositoryReplicas",
+			"ConsistencyCheck",
+			"DatalossCheck",
+			"SetAuthoritativeStorage",
+		},
+	} {
+		t.Run(service, func(t *testing.T) {
+			for _, method := range methods {
+				t.Run(method, func(t *testing.T) {
+					fullMethodName := fmt.Sprintf("/gitaly.%s/%s", service, method)
+					require.True(t, protoregistry.GitalyProtoPreregistered.IsInterceptedMethod(fullMethodName))
+					methodInfo, err := protoregistry.GitalyProtoPreregistered.LookupMethod(fullMethodName)
+					require.Empty(t, methodInfo)
+					require.Error(t, err, "full method name not found:")
+				})
+			}
+		})
 	}
 }
 
@@ -204,10 +230,6 @@ func TestMethodInfoScope(t *testing.T) {
 		{
 			method: "/gitaly.RepositoryService/RepositoryExists",
 			scope:  protoregistry.ScopeRepository,
-		},
-		{
-			method: "/gitaly.ServerService/ServerInfo",
-			scope:  protoregistry.ScopeServer,
 		},
 	} {
 		t.Run(tt.method, func(t *testing.T) {
