@@ -1,0 +1,27 @@
+- name: GCloud login
+  block:
+    - name: GCloud login status
+      command: gcloud auth application-default print-access-token
+      changed_when: false
+  rescue:
+    - name: GCloud login
+      command: gcloud auth application-default login
+
+- name: terraform.tfvars
+  template:
+    src: terraform.tfvars.j2
+    dest: "{{ playbook_dir }}/terraform/terraform.tfvars"
+
+- name: terraform apply
+  terraform:
+    project_path: "{{ playbook_dir }}/terraform"
+    variables_file: terraform.tfvars
+    force_init: true
+  register: tfstate
+  notify:
+    - add hostkeys
+
+- name: hosts.ini
+  template:
+    src: hosts.ini.j2
+    dest: "{{ playbook_dir }}/hosts.ini"

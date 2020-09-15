@@ -1,0 +1,7 @@
+# This variable will be prefixed to all machines created by terraform
+praefect_demo_cluster_name = "{{ praefect_demo_cluster_name }}"
+
+ssh_user = "{{ ssh_username }}"
+ssh_pubkey = "{{ lookup('file', ssh_pubkey) }}"
+praefect_sql_password = "{{ praefect_sql_password }}"
+gitlab_root_password = "{{ gitlab_root_password }}"

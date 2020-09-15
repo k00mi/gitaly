@@ -1,0 +1,12 @@
+- name: scan SSH keys
+  command: "ssh-keyscan {{ item }}"
+  register: ssh_keys
+  with_items: "{{ tfstate.outputs.gitaly_ssh_ip.value.values() | list + tfstate.outputs.praefect_ssh_ip.value.values() | list + [tfstate.outputs.gitlab_external_ip.value] }}"
+  listen: add hostkeys
+
+- name: add SSH keys to known hosts
+  known_hosts:
+    name: "{{ item.item }}"
+    key: "{{ item.stdout }}"
+  with_items: "{{ ssh_keys.results }}"
+  listen: add hostkeys

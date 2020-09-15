@@ -1,4 +1,3 @@
-/*.tfstate*
-/.terraform*
 /hosts.ini
-/terraform.tfvars
+/terraform/*
+!/terraform/main.tf
