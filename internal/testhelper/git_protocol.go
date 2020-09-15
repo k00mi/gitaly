@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -26,7 +26,7 @@ exec "%s" "$@"
 	dir, err := ioutil.TempDir("", "gitaly-test-*")
 	require.NoError(t, err)
 
-	path := path.Join(dir, "git")
+	path := filepath.Join(dir, "git")
 
 	cleanup, err := WriteExecutable(path, []byte(script))
 	require.NoError(t, err)

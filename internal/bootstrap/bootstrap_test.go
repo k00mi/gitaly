@@ -7,7 +7,7 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"syscall"
 	"testing"
@@ -59,7 +59,7 @@ func (s *testServer) slowRequest(duration time.Duration) <-chan error {
 }
 
 func TestCreateUnixListener(t *testing.T) {
-	socketPath := path.Join(os.TempDir(), "gitaly-test-unix-socket")
+	socketPath := filepath.Join(os.TempDir(), "gitaly-test-unix-socket")
 	if err := os.Remove(socketPath); err != nil {
 		require.True(t, os.IsNotExist(err), "cannot delete dangling socket: %v", err)
 	}
@@ -290,7 +290,7 @@ func makeBootstrap(t *testing.T) (*Bootstrap, *testServer) {
 
 	for network, address := range map[string]string{
 		"tcp":  "127.0.0.1:0",
-		"unix": path.Join(os.TempDir(), "gitaly-test-unix-socket"),
+		"unix": filepath.Join(os.TempDir(), "gitaly-test-unix-socket"),
 	} {
 		b.RegisterStarter(start(network, address))
 	}

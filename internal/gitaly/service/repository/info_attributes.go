@@ -3,7 +3,7 @@ package repository
 import (
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
@@ -17,7 +17,7 @@ func (s *server) GetInfoAttributes(in *gitalypb.GetInfoAttributesRequest, stream
 		return err
 	}
 
-	attrFile := path.Join(repoPath, "info", "attributes")
+	attrFile := filepath.Join(repoPath, "info", "attributes")
 	f, err := os.Open(attrFile)
 	if err != nil {
 		if os.IsNotExist(err) {

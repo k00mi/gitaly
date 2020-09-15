@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -38,7 +38,7 @@ func (s *server) IsRebaseInProgress(ctx context.Context, req *gitalypb.IsRebaseI
 }
 
 func freshWorktree(ctx context.Context, repoPath, prefix, id string) (bool, error) {
-	worktreePath := path.Join(repoPath, worktreePrefix, fmt.Sprintf("%s-%s", prefix, id))
+	worktreePath := filepath.Join(repoPath, worktreePrefix, fmt.Sprintf("%s-%s", prefix, id))
 
 	fs, err := os.Stat(worktreePath)
 	if err != nil {

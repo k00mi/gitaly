@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strconv"
 	"syscall"
@@ -43,7 +42,7 @@ func testMain(m *testing.M) int {
 		log.Fatal(err)
 	}
 
-	testExe = path.Join(testDir, "pid-server")
+	testExe = filepath.Join(testDir, "pid-server")
 	buildCmd := exec.Command("go", "build", "-o", testExe, scriptPath)
 	buildCmd.Dir = filepath.Dir(scriptPath)
 	buildCmd.Stderr = os.Stderr
@@ -52,7 +51,7 @@ func testMain(m *testing.M) int {
 		log.Fatal(err)
 	}
 
-	socketPath = path.Join(testDir, "socket")
+	socketPath = filepath.Join(testDir, "socket")
 
 	return m.Run()
 }
@@ -99,7 +98,7 @@ func TestSpawnFailure(t *testing.T) {
 
 	config.CrashWaitTime = 2 * time.Second
 
-	notFoundExe := path.Join(testDir, "not-found")
+	notFoundExe := filepath.Join(testDir, "not-found")
 	require.NoError(t, os.RemoveAll(notFoundExe))
 	defer os.Remove(notFoundExe)
 

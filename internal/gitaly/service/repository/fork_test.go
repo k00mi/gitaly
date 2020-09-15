@@ -4,7 +4,7 @@ import (
 	"crypto/x509"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -85,7 +85,7 @@ func TestSuccessfulCreateForkRequest(t *testing.T) {
 			remotes := testhelper.MustRunCommand(t, nil, "git", "-C", forkedRepoPath, "remote")
 			require.NotContains(t, string(remotes), "origin")
 
-			info, err := os.Lstat(path.Join(forkedRepoPath, "hooks"))
+			info, err := os.Lstat(filepath.Join(forkedRepoPath, "hooks"))
 			require.NoError(t, err)
 			require.NotEqual(t, 0, info.Mode()&os.ModeSymlink)
 		})

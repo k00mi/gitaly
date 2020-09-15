@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
-	"path"
 	"path/filepath"
 	"testing"
 
@@ -63,7 +62,7 @@ func TestReplicateRepository(t *testing.T) {
 	defer conn.Close()
 
 	// write info attributes
-	attrFilePath := path.Join(testRepoPath, "info", "attributes")
+	attrFilePath := filepath.Join(testRepoPath, "info", "attributes")
 	attrData := []byte("*.pbxproj binary\n")
 	require.NoError(t, ioutil.WriteFile(attrFilePath, attrData, 0644))
 
@@ -86,7 +85,7 @@ func TestReplicateRepository(t *testing.T) {
 
 	testhelper.MustRunCommand(t, nil, "git", "-C", targetRepoPath, "fsck")
 
-	replicatedAttrFilePath := path.Join(targetRepoPath, "info", "attributes")
+	replicatedAttrFilePath := filepath.Join(targetRepoPath, "info", "attributes")
 	replicatedAttrData, err := ioutil.ReadFile(replicatedAttrFilePath)
 	require.NoError(t, err)
 	require.Equal(t, string(attrData), string(replicatedAttrData), "info/attributes files must match")

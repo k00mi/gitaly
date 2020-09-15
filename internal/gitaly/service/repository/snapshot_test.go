@@ -8,7 +8,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -145,7 +144,7 @@ func TestGetSnapshotWithDedupe(t *testing.T) {
 			// write alternates file to point to alt objects folder
 			alternatesPath, err := git.InfoAlternatesPath(testRepo)
 			require.NoError(t, err)
-			require.NoError(t, ioutil.WriteFile(alternatesPath, []byte(path.Join(repoPath, ".git", fmt.Sprintf("%s\n", alternateObjDir))), 0644))
+			require.NoError(t, ioutil.WriteFile(alternatesPath, []byte(filepath.Join(repoPath, ".git", fmt.Sprintf("%s\n", alternateObjDir))), 0644))
 
 			// write another commit and ensure we can find it
 			cmd = exec.Command(command.GitPath(), "-C", repoPath,
@@ -175,7 +174,7 @@ func TestGetSnapshotWithDedupeSoftFailures(t *testing.T) {
 
 	// write alternates file to point to alternates objects folder that doesn't exist
 	alternateObjDir := "./alt-objects"
-	alternateObjPath := path.Join(repoPath, ".git", alternateObjDir)
+	alternateObjPath := filepath.Join(repoPath, ".git", alternateObjDir)
 	alternatesPath, err := git.InfoAlternatesPath(testRepo)
 	require.NoError(t, err)
 	require.NoError(t, ioutil.WriteFile(alternatesPath, []byte(fmt.Sprintf("%s\n", alternateObjPath)), 0644))

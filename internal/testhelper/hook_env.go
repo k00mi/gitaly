@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
 	"testing"
 
@@ -45,7 +44,7 @@ func ConfigureGitalyHooksBinary() {
 	goBuildArgs := []string{
 		"build",
 		"-o",
-		path.Join(config.Config.BinDir, "gitaly-hooks"),
+		filepath.Join(config.Config.BinDir, "gitaly-hooks"),
 		"gitlab.com/gitlab-org/gitaly/cmd/gitaly-hooks",
 	}
 	MustRunCommand(nil, nil, "go", goBuildArgs...)

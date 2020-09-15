@@ -2,7 +2,7 @@ package repository
 
 import (
 	"bytes"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -61,7 +61,7 @@ func TestWriteRefSuccessful(t *testing.T) {
 			require.NoError(t, err)
 
 			if bytes.Equal(tc.req.Ref, []byte("HEAD")) {
-				content := testhelper.MustReadFile(t, path.Join(testRepoPath, "HEAD"))
+				content := testhelper.MustReadFile(t, filepath.Join(testRepoPath, "HEAD"))
 
 				refRevision := bytes.Join([][]byte{[]byte("ref: "), tc.req.Revision, []byte("\n")}, nil)
 

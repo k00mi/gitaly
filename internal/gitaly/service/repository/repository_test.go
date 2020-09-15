@@ -3,7 +3,7 @@ package repository
 import (
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -131,7 +131,7 @@ func TestSuccessfulHasLocalBranches(t *testing.T) {
 	defer cleanupFn()
 
 	emptyRepoName := "empty-repo.git"
-	emptyRepoPath := path.Join(testhelper.GitlabTestStoragePath(), emptyRepoName)
+	emptyRepoPath := filepath.Join(testhelper.GitlabTestStoragePath(), emptyRepoName)
 	testhelper.MustRunCommand(t, nil, "git", "init", "--bare", emptyRepoPath)
 	defer os.RemoveAll(emptyRepoPath)
 

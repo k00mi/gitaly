@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -156,7 +156,7 @@ func updateWikiPage(t *testing.T, client gitalypb.WikiServiceClient, wikiRepo *g
 func setupWikiRepo(t *testing.T) (*gitalypb.Repository, string, func()) {
 	relPath := strings.Join([]string{t.Name(), "wiki-test.git"}, "-")
 	storagePath := testhelper.GitlabTestStoragePath()
-	wikiRepoPath := path.Join(storagePath, relPath)
+	wikiRepoPath := filepath.Join(storagePath, relPath)
 
 	testhelper.MustRunCommand(nil, nil, "git", "init", "--bare", wikiRepoPath)
 

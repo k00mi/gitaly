@@ -1,7 +1,7 @@
 package objectpool
 
 import (
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -24,7 +24,7 @@ func TestClone(t *testing.T) {
 	defer pool.Remove(ctx)
 
 	require.DirExists(t, pool.FullPath())
-	require.DirExists(t, path.Join(pool.FullPath(), "objects"))
+	require.DirExists(t, filepath.Join(pool.FullPath(), "objects"))
 }
 
 func TestCloneExistingPool(t *testing.T) {

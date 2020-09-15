@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"testing"
 	"time"
@@ -88,7 +87,7 @@ func TestGarbageCollectSuccess(t *testing.T) {
 		},
 	}
 
-	packPath := path.Join(testhelper.GitlabTestStoragePath(), testRepo.GetRelativePath(), "objects", "pack")
+	packPath := filepath.Join(testhelper.GitlabTestStoragePath(), testRepo.GetRelativePath(), "objects", "pack")
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
@@ -105,7 +104,7 @@ func TestGarbageCollectSuccess(t *testing.T) {
 			// Entire `path`-folder gets updated so this is fine :D
 			assertModTimeAfter(t, testTime, packPath)
 
-			bmPath, err := filepath.Glob(path.Join(packPath, "pack-*.bitmap"))
+			bmPath, err := filepath.Glob(filepath.Join(packPath, "pack-*.bitmap"))
 			if err != nil {
 				t.Fatalf("Error globbing bitmaps: %v", err)
 			}

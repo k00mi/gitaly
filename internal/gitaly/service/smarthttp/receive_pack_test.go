@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -152,7 +151,7 @@ func TestFailedReceivePackRequestDueToHooksFailure(t *testing.T) {
 	require.NoError(t, os.MkdirAll(hooks.Path(), 0755))
 
 	hookContent := []byte("#!/bin/sh\nexit 1")
-	ioutil.WriteFile(path.Join(hooks.Path(), "pre-receive"), hookContent, 0755)
+	ioutil.WriteFile(filepath.Join(hooks.Path(), "pre-receive"), hookContent, 0755)
 
 	serverSocketPath, stop := runSmartHTTPServer(t)
 	defer stop()
@@ -249,7 +248,7 @@ func createCommit(t *testing.T, repoPath string, fileContents []byte) (oldHead s
 	oldHead = text.ChompBytes(testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "rev-parse", "master"))
 
 	changedFile := "README.md"
-	require.NoError(t, ioutil.WriteFile(path.Join(repoPath, changedFile), fileContents, 0644))
+	require.NoError(t, ioutil.WriteFile(filepath.Join(repoPath, changedFile), fileContents, 0644))
 
 	testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "add", changedFile)
 	testhelper.MustRunCommand(t, nil, "git", "-C", repoPath,

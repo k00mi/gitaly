@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,7 +33,7 @@ func TestSuccessfulCreateRepositoryFromBundleRequest(t *testing.T) {
 
 	tmpdir, err := tempdir.New(ctx, testRepo)
 	require.NoError(t, err)
-	bundlePath := path.Join(tmpdir, "original.bundle")
+	bundlePath := filepath.Join(tmpdir, "original.bundle")
 
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "update-ref", "refs/custom-refs/ref1", "HEAD")
 
@@ -76,7 +76,7 @@ func TestSuccessfulCreateRepositoryFromBundleRequest(t *testing.T) {
 
 	testhelper.MustRunCommand(t, nil, "git", "-C", importedRepoPath, "fsck")
 
-	info, err := os.Lstat(path.Join(importedRepoPath, "hooks"))
+	info, err := os.Lstat(filepath.Join(importedRepoPath, "hooks"))
 	require.NoError(t, err)
 	require.NotEqual(t, 0, info.Mode()&os.ModeSymlink)
 

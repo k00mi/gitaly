@@ -3,7 +3,6 @@ package objectpool
 import (
 	"bytes"
 	"encoding/json"
-	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -53,7 +52,7 @@ func TestFetchIntoObjectPool_Success(t *testing.T) {
 	// No problems
 	testhelper.MustRunCommand(t, nil, "git", "-C", pool.FullPath(), "fsck")
 
-	packFiles, err := filepath.Glob(path.Join(pool.FullPath(), "objects", "pack", "pack-*.pack"))
+	packFiles, err := filepath.Glob(filepath.Join(pool.FullPath(), "objects", "pack", "pack-*.pack"))
 	require.NoError(t, err)
 	require.Len(t, packFiles, 1, "ensure commits got packed")
 

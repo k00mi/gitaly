@@ -3,7 +3,7 @@ package tempdir
 import (
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -30,7 +30,7 @@ func TestNewAsRepositorySuccess(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, tempDir, calculatedPath)
 
-	err = ioutil.WriteFile(path.Join(tempDir, "test"), []byte("hello"), 0644)
+	err = ioutil.WriteFile(filepath.Join(tempDir, "test"), []byte("hello"), 0644)
 	require.NoError(t, err, "write file in tempdir")
 
 	cancel() // This should trigger async removal of the temporary directory
@@ -54,7 +54,7 @@ func TestNewAsRepositoryFailStorageUnknown(t *testing.T) {
 	require.Error(t, err)
 }
 
-var cleanRoot = path.Join("testdata/clean", tmpRootPrefix)
+var cleanRoot = filepath.Join("testdata", "clean", tmpRootPrefix)
 
 func TestCleanerSafety(t *testing.T) {
 	defer func() {
@@ -121,11 +121,11 @@ func TestCleanTempDir(t *testing.T) {
 }
 
 func chmod(p string, mode os.FileMode) error {
-	return os.Chmod(path.Join(cleanRoot, p), mode)
+	return os.Chmod(filepath.Join(cleanRoot, p), mode)
 }
 
 func chtimes(p string, t time.Time) error {
-	return os.Chtimes(path.Join(cleanRoot, p), t, t)
+	return os.Chtimes(filepath.Join(cleanRoot, p), t, t)
 }
 
 func assertEntries(t *testing.T, entries ...string) {
@@ -140,20 +140,20 @@ func assertEntries(t *testing.T, entries ...string) {
 }
 
 func makeFile(t *testing.T, filePath string, mtime time.Time) {
-	fullPath := path.Join(cleanRoot, filePath)
+	fullPath := filepath.Join(cleanRoot, filePath)
 	require.NoError(t, ioutil.WriteFile(fullPath, nil, 0644))
 	require.NoError(t, os.Chtimes(fullPath, mtime, mtime))
 }
 
 func makeDir(t *testing.T, dirPath string, mtime time.Time) {
-	fullPath := path.Join(cleanRoot, dirPath)
+	fullPath := filepath.Join(cleanRoot, dirPath)
 	require.NoError(t, os.MkdirAll(fullPath, 0700))
 	require.NoError(t, os.Chtimes(fullPath, mtime, mtime))
 }
 
 func TestCleanNoTmpExists(t *testing.T) {
 	// This directory is valid because it ends in the special prefix
-	dir := path.Join("testdata", "does-not-exist", tmpRootPrefix)
+	dir := filepath.Join("testdata", "does-not-exist", tmpRootPrefix)
 
 	require.NoError(t, clean(dir))
 }

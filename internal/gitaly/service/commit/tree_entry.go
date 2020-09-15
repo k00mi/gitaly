@@ -108,8 +108,8 @@ func (s *server) TreeEntry(in *gitalypb.TreeEntryRequest, stream gitalypb.Commit
 	}
 
 	requestPath := string(in.GetPath())
-	// path.Dir("api/docs") => "api" Correct!
-	// path.Dir("api/docs/") => "api/docs" WRONG!
+	// filepath.Dir("api/docs") => "api" Correct!
+	// filepath.Dir("api/docs/") => "api/docs" WRONG!
 	if len(requestPath) > 1 {
 		requestPath = strings.TrimRight(requestPath, "/")
 	}

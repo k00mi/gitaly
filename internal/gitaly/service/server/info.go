@@ -4,7 +4,7 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
@@ -54,7 +54,7 @@ func shardCheck(shardPath string) (readable bool, writeable bool) {
 	}
 
 	// the path uses a `+` to avoid naming collisions
-	testPath := path.Join(shardPath, "+testWrite")
+	testPath := filepath.Join(shardPath, "+testWrite")
 
 	content := []byte("testWrite")
 	if err := ioutil.WriteFile(testPath, content, 0644); err == nil {

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -32,12 +31,12 @@ func TestRepackIncrementalSuccess(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	packPath := path.Join(testhelper.GitlabTestStoragePath(), testRepo.GetRelativePath(), "objects", "pack")
+	packPath := filepath.Join(testhelper.GitlabTestStoragePath(), testRepo.GetRelativePath(), "objects", "pack")
 
 	// Reset mtime to a long while ago since some filesystems don't have sub-second
 	// precision on `mtime`.
 	// Stamp taken from https://golang.org/pkg/time/#pkg-constants
-	testhelper.MustRunCommand(t, nil, "touch", "-t", testTimeString, path.Join(packPath, "*"))
+	testhelper.MustRunCommand(t, nil, "touch", "-t", testTimeString, filepath.Join(packPath, "*"))
 	testTime := time.Date(2006, 01, 02, 15, 04, 05, 0, time.UTC)
 	ctx, cancel := testhelper.Context()
 	defer cancel()
@@ -108,7 +107,7 @@ func TestRepackLocal(t *testing.T) {
 	_, err := client.RepackFull(ctx, &gitalypb.RepackFullRequest{Repository: testRepo})
 	require.NoError(t, err)
 
-	packFiles, err := filepath.Glob(path.Join(repoPath, ".git", "objects", "pack", "pack-*.pack"))
+	packFiles, err := filepath.Glob(filepath.Join(repoPath, ".git", "objects", "pack", "pack-*.pack"))
 	require.NoError(t, err)
 	require.Len(t, packFiles, 1)
 
@@ -163,7 +162,7 @@ func TestRepackFullSuccess(t *testing.T) {
 		{req: &gitalypb.RepackFullRequest{Repository: testRepo, CreateBitmap: false}, desc: "without bitmap"},
 	}
 
-	packPath := path.Join(testRepoPath, "objects", "pack")
+	packPath := filepath.Join(testRepoPath, "objects", "pack")
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
@@ -180,7 +179,7 @@ func TestRepackFullSuccess(t *testing.T) {
 			// Entire `path`-folder gets updated so this is fine :D
 			assertModTimeAfter(t, testTime, packPath)
 
-			bmPath, err := filepath.Glob(path.Join(packPath, "pack-*.bitmap"))
+			bmPath, err := filepath.Glob(filepath.Join(packPath, "pack-*.bitmap"))
 			if err != nil {
 				t.Fatalf("Error globbing bitmaps: %v", err)
 			}

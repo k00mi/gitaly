@@ -5,7 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -27,7 +27,7 @@ func TestSuccessfulWikiFindFileRequest(t *testing.T) {
 	committerName := "Scrooge McDuck"
 	committerEmail := "scrooge@mcduck.com"
 	storagePath := testhelper.GitlabTestStoragePath()
-	sandboxWikiPath := path.Join(storagePath, "find-file-sandbox")
+	sandboxWikiPath := filepath.Join(storagePath, "find-file-sandbox")
 
 	testhelper.MustRunCommand(t, nil, "git", "clone", wikiRepoPath, sandboxWikiPath)
 	defer os.RemoveAll(sandboxWikiPath)
@@ -40,10 +40,10 @@ func TestSuccessfulWikiFindFileRequest(t *testing.T) {
 	content, err := ioutil.ReadFile("testdata/clouds.png")
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(path.Join(sandboxWikiPath, "cloúds.png"), content, 0644)
+	err = ioutil.WriteFile(filepath.Join(sandboxWikiPath, "cloúds.png"), content, 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(path.Join(sandboxWikiPath, "no_content.png"), nil, 0644)
+	err = ioutil.WriteFile(filepath.Join(sandboxWikiPath, "no_content.png"), nil, 0644)
 	require.NoError(t, err)
 
 	// Sandbox wiki is empty, so we create a commit to be used later

@@ -3,7 +3,7 @@ package repository
 import (
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -24,7 +24,7 @@ func (s *server) BackupCustomHooks(in *gitalypb.BackupCustomHooksRequest, stream
 		return stream.Send(&gitalypb.BackupCustomHooksResponse{Data: p})
 	})
 
-	if _, err := os.Lstat(path.Join(repoPath, customHooksDir)); os.IsNotExist(err) {
+	if _, err := os.Lstat(filepath.Join(repoPath, customHooksDir)); os.IsNotExist(err) {
 		return nil
 	}
 

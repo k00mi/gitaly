@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"testing"
 
@@ -59,7 +58,7 @@ func TestSuccessfulCreateRepositoryFromURLRequest(t *testing.T) {
 	remotes := testhelper.MustRunCommand(t, nil, "git", "-C", importedRepoPath, "remote")
 	require.NotContains(t, string(remotes), "origin")
 
-	info, err := os.Lstat(path.Join(importedRepoPath, "hooks"))
+	info, err := os.Lstat(filepath.Join(importedRepoPath, "hooks"))
 	require.NoError(t, err)
 	require.NotEqual(t, 0, info.Mode()&os.ModeSymlink)
 }

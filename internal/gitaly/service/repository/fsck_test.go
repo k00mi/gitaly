@@ -2,7 +2,7 @@ package repository
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -46,8 +46,8 @@ func TestFsckFailureSeverelyBrokenRepo(t *testing.T) {
 
 	// This makes the repo severely broken so that `git` does not identify it as a
 	// proper repo.
-	require.NoError(t, os.RemoveAll(path.Join(testRepoPath, "objects")))
-	fd, err := os.Create(path.Join(testRepoPath, "objects"))
+	require.NoError(t, os.RemoveAll(filepath.Join(testRepoPath, "objects")))
+	fd, err := os.Create(filepath.Join(testRepoPath, "objects"))
 	require.NoError(t, err)
 	require.NoError(t, fd.Close())
 
@@ -72,7 +72,7 @@ func TestFsckFailureSlightlyBrokenRepo(t *testing.T) {
 
 	// This makes the repo slightly broken so that `git` still identify it as a
 	// proper repo, but `fsck` complains about broken refs...
-	require.NoError(t, os.RemoveAll(path.Join(testRepoPath, "objects", "pack")))
+	require.NoError(t, os.RemoveAll(filepath.Join(testRepoPath, "objects", "pack")))
 
 	c, err := client.Fsck(ctx, &gitalypb.FsckRequest{Repository: testRepo})
 	assert.NoError(t, err)
