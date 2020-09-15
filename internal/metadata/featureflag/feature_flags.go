@@ -31,6 +31,8 @@ var (
 	ReferenceTransactionHook = FeatureFlag{Name: "reference_transaction_hook", OnByDefault: true}
 	// LogCommandStats will log additional rusage stats for commands
 	LogCommandStats = FeatureFlag{Name: "log_command_stats", OnByDefault: false}
+	// GoUserMergeBranch enables the Go implementation of UserMergeBranch
+	GoUserMergeBranch = FeatureFlag{Name: "go_user_merge_branch", OnByDefault: false}
 )
 
 // All includes all feature flags.
@@ -44,6 +46,7 @@ var All = []FeatureFlag{
 	ReferenceTransactionsSSHService,
 	ReferenceTransactionsPrimaryWins,
 	ReferenceTransactionHook,
+	GoUserMergeBranch,
 }
 
 const (

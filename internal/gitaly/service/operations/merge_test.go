@@ -13,6 +13,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
@@ -24,11 +25,26 @@ var (
 	mergeBranchHeadBefore = "281d3a76f31c812dbf48abce82ccf6860adedd81"
 )
 
-func TestSuccessfulMerge(t *testing.T) {
-	ctx, cancel := testhelper.Context()
-	defer cancel()
+func testUserMergeBranch(t *testing.T, testcase func(*testing.T, context.Context)) {
+	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.GoUserMergeBranch,
+	})
+	require.NoError(t, err)
 
-	testSuccessfulMerge(t, ctx)
+	for _, featureSet := range featureSets {
+		t.Run("disabled "+featureSet.String(), func(t *testing.T) {
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			ctx = featureSet.Disable(ctx)
+
+			testcase(t, ctx)
+		})
+	}
+}
+
+func TestSuccessfulMerge(t *testing.T) {
+	testUserMergeBranch(t, testSuccessfulMerge)
 }
 
 func testSuccessfulMerge(t *testing.T, ctx context.Context) {
@@ -105,9 +121,10 @@ func testSuccessfulMerge(t *testing.T, ctx context.Context) {
 }
 
 func TestAbortedMerge(t *testing.T) {
-	ctx, cancel := testhelper.Context()
-	defer cancel()
+	testUserMergeBranch(t, testAbortedMerge)
+}
 
+func testAbortedMerge(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -173,9 +190,10 @@ func TestAbortedMerge(t *testing.T) {
 }
 
 func TestFailedMergeConcurrentUpdate(t *testing.T) {
-	ctx, cancel := testhelper.Context()
-	defer cancel()
+	testUserMergeBranch(t, testFailedMergeConcurrentUpdate)
+}
 
+func testFailedMergeConcurrentUpdate(t *testing.T, ctx context.Context) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
@@ -220,6 +238,10 @@ func TestFailedMergeConcurrentUpdate(t *testing.T) {
 }
 
 func TestFailedMergeDueToHooks(t *testing.T) {
+	testUserMergeBranch(t, testFailedMergeDueToHooks)
+}
+
+func testFailedMergeDueToHooks(t *testing.T, ctx context.Context) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
@@ -239,7 +261,7 @@ func TestFailedMergeDueToHooks(t *testing.T) {
 			require.NoError(t, err)
 			defer remove()
 
-			ctx, cancel := testhelper.Context()
+			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 
 			mergeBidi, err := client.UserMergeBranch(ctx)
