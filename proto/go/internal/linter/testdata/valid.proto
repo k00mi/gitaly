@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package test;
 
+import "lint.proto";
 import "shared.proto";
 
 message ValidRequest {

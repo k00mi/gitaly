@@ -4,9 +4,13 @@
 package test
 
 import (
+	context "context"
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
 	gitalypb "gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
+	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 	math "math"
 )
 
@@ -20,34 +24,6 @@ var _ = math.Inf
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
-
-type UserRevertResponse_CreateTreeError int32
-
-const (
-	UserRevertResponse_NONE     UserRevertResponse_CreateTreeError = 0
-	UserRevertResponse_EMPTY    UserRevertResponse_CreateTreeError = 1
-	UserRevertResponse_CONFLICT UserRevertResponse_CreateTreeError = 2
-)
-
-var UserRevertResponse_CreateTreeError_name = map[int32]string{
-	0: "NONE",
-	1: "EMPTY",
-	2: "CONFLICT",
-}
-
-var UserRevertResponse_CreateTreeError_value = map[string]int32{
-	"NONE":     0,
-	"EMPTY":    1,
-	"CONFLICT": 2,
-}
-
-func (x UserRevertResponse_CreateTreeError) String() string {
-	return proto.EnumName(UserRevertResponse_CreateTreeError_name, int32(x))
-}
-
-func (UserRevertResponse_CreateTreeError) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_7058768ff0db2cf7, []int{10, 0}
-}
 
 type ValidRequest struct {
 	Destination          *gitalypb.Repository `protobuf:"bytes,1,opt,name=destination,proto3" json:"destination,omitempty"`
@@ -462,224 +438,7 @@ func (m *ValidStorageInnerNestedRequest_Header) GetStorageName() string {
 	return ""
 }
 
-type UserRevertRequest struct {
-	Repository           *gitalypb.Repository `protobuf:"bytes,1,opt,name=repository,proto3" json:"repository,omitempty"`
-	User                 *gitalypb.User       `protobuf:"bytes,2,opt,name=user,proto3" json:"user,omitempty"`
-	Commit               *gitalypb.GitCommit  `protobuf:"bytes,3,opt,name=commit,proto3" json:"commit,omitempty"`
-	BranchName           []byte               `protobuf:"bytes,4,opt,name=branch_name,json=branchName,proto3" json:"branch_name,omitempty"`
-	Message              []byte               `protobuf:"bytes,5,opt,name=message,proto3" json:"message,omitempty"`
-	StartBranchName      []byte               `protobuf:"bytes,6,opt,name=start_branch_name,json=startBranchName,proto3" json:"start_branch_name,omitempty"`
-	StartRepository      *gitalypb.Repository `protobuf:"bytes,7,opt,name=start_repository,json=startRepository,proto3" json:"start_repository,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
-	XXX_unrecognized     []byte               `json:"-"`
-	XXX_sizecache        int32                `json:"-"`
-}
-
-func (m *UserRevertRequest) Reset()         { *m = UserRevertRequest{} }
-func (m *UserRevertRequest) String() string { return proto.CompactTextString(m) }
-func (*UserRevertRequest) ProtoMessage()    {}
-func (*UserRevertRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_7058768ff0db2cf7, []int{9}
-}
-
-func (m *UserRevertRequest) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_UserRevertRequest.Unmarshal(m, b)
-}
-func (m *UserRevertRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_UserRevertRequest.Marshal(b, m, deterministic)
-}
-func (m *UserRevertRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_UserRevertRequest.Merge(m, src)
-}
-func (m *UserRevertRequest) XXX_Size() int {
-	return xxx_messageInfo_UserRevertRequest.Size(m)
-}
-func (m *UserRevertRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_UserRevertRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_UserRevertRequest proto.InternalMessageInfo
-
-func (m *UserRevertRequest) GetRepository() *gitalypb.Repository {
-	if m != nil {
-		return m.Repository
-	}
-	return nil
-}
-
-func (m *UserRevertRequest) GetUser() *gitalypb.User {
-	if m != nil {
-		return m.User
-	}
-	return nil
-}
-
-func (m *UserRevertRequest) GetCommit() *gitalypb.GitCommit {
-	if m != nil {
-		return m.Commit
-	}
-	return nil
-}
-
-func (m *UserRevertRequest) GetBranchName() []byte {
-	if m != nil {
-		return m.BranchName
-	}
-	return nil
-}
-
-func (m *UserRevertRequest) GetMessage() []byte {
-	if m != nil {
-		return m.Message
-	}
-	return nil
-}
-
-func (m *UserRevertRequest) GetStartBranchName() []byte {
-	if m != nil {
-		return m.StartBranchName
-	}
-	return nil
-}
-
-func (m *UserRevertRequest) GetStartRepository() *gitalypb.Repository {
-	if m != nil {
-		return m.StartRepository
-	}
-	return nil
-}
-
-type UserRevertResponse struct {
-	BranchUpdate         *OperationBranchUpdate             `protobuf:"bytes,1,opt,name=branch_update,json=branchUpdate,proto3" json:"branch_update,omitempty"`
-	CreateTreeError      string                             `protobuf:"bytes,2,opt,name=create_tree_error,json=createTreeError,proto3" json:"create_tree_error,omitempty"`
-	CommitError          string                             `protobuf:"bytes,3,opt,name=commit_error,json=commitError,proto3" json:"commit_error,omitempty"`
-	PreReceiveError      string                             `protobuf:"bytes,4,opt,name=pre_receive_error,json=preReceiveError,proto3" json:"pre_receive_error,omitempty"`
-	CreateTreeErrorCode  UserRevertResponse_CreateTreeError `protobuf:"varint,5,opt,name=create_tree_error_code,json=createTreeErrorCode,proto3,enum=test.UserRevertResponse_CreateTreeError" json:"create_tree_error_code,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                           `json:"-"`
-	XXX_unrecognized     []byte                             `json:"-"`
-	XXX_sizecache        int32                              `json:"-"`
-}
-
-func (m *UserRevertResponse) Reset()         { *m = UserRevertResponse{} }
-func (m *UserRevertResponse) String() string { return proto.CompactTextString(m) }
-func (*UserRevertResponse) ProtoMessage()    {}
-func (*UserRevertResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_7058768ff0db2cf7, []int{10}
-}
-
-func (m *UserRevertResponse) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_UserRevertResponse.Unmarshal(m, b)
-}
-func (m *UserRevertResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_UserRevertResponse.Marshal(b, m, deterministic)
-}
-func (m *UserRevertResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_UserRevertResponse.Merge(m, src)
-}
-func (m *UserRevertResponse) XXX_Size() int {
-	return xxx_messageInfo_UserRevertResponse.Size(m)
-}
-func (m *UserRevertResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_UserRevertResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_UserRevertResponse proto.InternalMessageInfo
-
-func (m *UserRevertResponse) GetBranchUpdate() *OperationBranchUpdate {
-	if m != nil {
-		return m.BranchUpdate
-	}
-	return nil
-}
-
-func (m *UserRevertResponse) GetCreateTreeError() string {
-	if m != nil {
-		return m.CreateTreeError
-	}
-	return ""
-}
-
-func (m *UserRevertResponse) GetCommitError() string {
-	if m != nil {
-		return m.CommitError
-	}
-	return ""
-}
-
-func (m *UserRevertResponse) GetPreReceiveError() string {
-	if m != nil {
-		return m.PreReceiveError
-	}
-	return ""
-}
-
-func (m *UserRevertResponse) GetCreateTreeErrorCode() UserRevertResponse_CreateTreeError {
-	if m != nil {
-		return m.CreateTreeErrorCode
-	}
-	return UserRevertResponse_NONE
-}
-
-type OperationBranchUpdate struct {
-	// If this string is non-empty the branch has been updated.
-	CommitId string `protobuf:"bytes,1,opt,name=commit_id,json=commitId,proto3" json:"commit_id,omitempty"`
-	// Used for cache invalidation in GitLab
-	RepoCreated bool `protobuf:"varint,2,opt,name=repo_created,json=repoCreated,proto3" json:"repo_created,omitempty"`
-	// Used for cache invalidation in GitLab
-	BranchCreated        bool     `protobuf:"varint,3,opt,name=branch_created,json=branchCreated,proto3" json:"branch_created,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *OperationBranchUpdate) Reset()         { *m = OperationBranchUpdate{} }
-func (m *OperationBranchUpdate) String() string { return proto.CompactTextString(m) }
-func (*OperationBranchUpdate) ProtoMessage()    {}
-func (*OperationBranchUpdate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_7058768ff0db2cf7, []int{11}
-}
-
-func (m *OperationBranchUpdate) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_OperationBranchUpdate.Unmarshal(m, b)
-}
-func (m *OperationBranchUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_OperationBranchUpdate.Marshal(b, m, deterministic)
-}
-func (m *OperationBranchUpdate) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_OperationBranchUpdate.Merge(m, src)
-}
-func (m *OperationBranchUpdate) XXX_Size() int {
-	return xxx_messageInfo_OperationBranchUpdate.Size(m)
-}
-func (m *OperationBranchUpdate) XXX_DiscardUnknown() {
-	xxx_messageInfo_OperationBranchUpdate.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_OperationBranchUpdate proto.InternalMessageInfo
-
-func (m *OperationBranchUpdate) GetCommitId() string {
-	if m != nil {
-		return m.CommitId
-	}
-	return ""
-}
-
-func (m *OperationBranchUpdate) GetRepoCreated() bool {
-	if m != nil {
-		return m.RepoCreated
-	}
-	return false
-}
-
-func (m *OperationBranchUpdate) GetBranchCreated() bool {
-	if m != nil {
-		return m.BranchCreated
-	}
-	return false
-}
-
 func init() {
-	proto.RegisterEnum("test.UserRevertResponse_CreateTreeError", UserRevertResponse_CreateTreeError_name, UserRevertResponse_CreateTreeError_value)
 	proto.RegisterType((*ValidRequest)(nil), "test.ValidRequest")
 	proto.RegisterType((*ValidRequestWithoutRepo)(nil), "test.ValidRequestWithoutRepo")
 	proto.RegisterType((*ValidStorageRequest)(nil), "test.ValidStorageRequest")
@@ -691,9 +450,6 @@ func init() {
 	proto.RegisterType((*ValidInnerNestedRequest_Header)(nil), "test.ValidInnerNestedRequest.Header")
 	proto.RegisterType((*ValidStorageInnerNestedRequest)(nil), "test.ValidStorageInnerNestedRequest")
 	proto.RegisterType((*ValidStorageInnerNestedRequest_Header)(nil), "test.ValidStorageInnerNestedRequest.Header")
-	proto.RegisterType((*UserRevertRequest)(nil), "test.UserRevertRequest")
-	proto.RegisterType((*UserRevertResponse)(nil), "test.UserRevertResponse")
-	proto.RegisterType((*OperationBranchUpdate)(nil), "test.OperationBranchUpdate")
 }
 
 func init() {
@@ -701,61 +457,406 @@ func init() {
 }
 
 var fileDescriptor_7058768ff0db2cf7 = []byte{
-	// 887 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x56, 0xdd, 0x6e, 0x1b, 0x45,
-	0x18, 0x65, 0x9d, 0xad, 0xeb, 0x7c, 0xde, 0x34, 0xce, 0x44, 0x50, 0x27, 0x15, 0x6d, 0x58, 0x15,
-	0xd5, 0x14, 0xe4, 0xd0, 0xb4, 0xd0, 0x82, 0x20, 0x42, 0x71, 0xd3, 0x90, 0x82, 0x9d, 0x6a, 0xe3,
-	0x82, 0x10, 0x42, 0xab, 0xb1, 0xf7, 0x93, 0xbd, 0xc8, 0xde, 0x59, 0x66, 0x27, 0x96, 0x7a, 0xc3,
-	0x35, 0x6f, 0xd0, 0xde, 0xf0, 0x08, 0xbc, 0x03, 0x57, 0x3c, 0x0a, 0x0f, 0xd1, 0x2b, 0xb4, 0x33,
-	0xb3, 0xf6, 0xac, 0xd7, 0x71, 0x12, 0x71, 0xe7, 0x3d, 0x73, 0xbe, 0x33, 0xe7, 0x3b, 0xf3, 0x67,
-	0xb8, 0x37, 0x60, 0xbb, 0x61, 0x24, 0x90, 0x47, 0x74, 0xb4, 0x3b, 0x92, 0xbf, 0x76, 0x05, 0x26,
-	0x22, 0xa0, 0x82, 0xee, 0x4e, 0xe8, 0x28, 0x0c, 0x9a, 0x31, 0x67, 0x82, 0x11, 0x3b, 0x45, 0xb7,
-	0x9d, 0x64, 0x48, 0x39, 0x6a, 0xcc, 0x7d, 0x0e, 0xce, 0x0f, 0x29, 0xc5, 0xc3, 0xdf, 0xce, 0x30,
-	0x11, 0xe4, 0x4b, 0xa8, 0x06, 0x98, 0x88, 0x30, 0xa2, 0x22, 0x64, 0x51, 0xdd, 0xda, 0xb1, 0x1a,
-	0xd5, 0x3d, 0xd2, 0x1c, 0x84, 0x82, 0x8e, 0x5e, 0x35, 0x3d, 0x8c, 0x59, 0x12, 0x0a, 0xc6, 0x5f,
-	0x1d, 0xd8, 0x6f, 0xfe, 0xf9, 0xc4, 0xf2, 0x4c, 0xb2, 0xbb, 0x05, 0x37, 0x4d, 0xad, 0x1f, 0x43,
-	0x31, 0x64, 0x67, 0x22, 0xad, 0x71, 0xf7, 0x61, 0x53, 0x0e, 0x9d, 0x0a, 0xc6, 0xe9, 0x00, 0xb3,
-	0xd9, 0xee, 0x81, 0x93, 0x28, 0xc4, 0x8f, 0xe8, 0x18, 0xe5, 0x74, 0xab, 0x07, 0xf6, 0x1f, 0x52,
-	0x5a, 0x8f, 0x74, 0xe8, 0x18, 0xdd, 0x75, 0x58, 0xd3, 0xd2, 0x49, 0xcc, 0xa2, 0x04, 0xdd, 0x36,
-	0x10, 0x09, 0x74, 0x30, 0x11, 0x38, 0x75, 0xff, 0x18, 0xd6, 0xc2, 0x28, 0x42, 0xee, 0x8f, 0x31,
-	0x49, 0xe8, 0x00, 0xa7, 0xfe, 0xd3, 0xce, 0x9b, 0xa6, 0x39, 0xcf, 0x91, 0xc4, 0xb6, 0xe2, 0xb9,
-	0x3f, 0xc3, 0x96, 0xe9, 0x2f, 0xaf, 0xba, 0xbf, 0x58, 0x75, 0xcb, 0x50, 0xcd, 0xf7, 0x35, 0x27,
-	0xde, 0x83, 0xba, 0xe1, 0xf5, 0x54, 0xc6, 0x9f, 0x69, 0x3f, 0x03, 0x12, 0x49, 0xd8, 0x17, 0x94,
-	0x0f, 0x50, 0xf8, 0x1c, 0x63, 0x36, 0x1f, 0xfb, 0x49, 0xef, 0x57, 0xec, 0x8b, 0x17, 0x8c, 0x8d,
-	0x74, 0xec, 0x35, 0x55, 0xd3, 0x95, 0x25, 0x32, 0xe0, 0x3f, 0x2d, 0x1d, 0xfe, 0x71, 0x3a, 0x73,
-	0xde, 0xff, 0x57, 0x50, 0x1e, 0x22, 0x0d, 0x90, 0x6b, 0xdd, 0xbb, 0x86, 0xf1, 0x22, 0xbd, 0xf9,
-	0xad, 0xe4, 0x7a, 0xba, 0x66, 0xfb, 0x29, 0x94, 0x15, 0xf2, 0xbf, 0xf6, 0xc6, 0x1b, 0x0b, 0x6e,
-	0x9b, 0x49, 0x2d, 0xb0, 0xd9, 0x9a, 0xb3, 0xf9, 0x71, 0x31, 0xdf, 0x8b, 0xdd, 0x3e, 0x98, 0xba,
-	0xbd, 0xf4, 0xde, 0xfa, 0xbb, 0x04, 0x1b, 0x2f, 0x13, 0xe4, 0x1e, 0x4e, 0x90, 0x8b, 0xcc, 0xcd,
-	0x13, 0x00, 0x3e, 0xed, 0xe8, 0xc2, 0x5e, 0x0d, 0x2e, 0xd9, 0x01, 0xfb, 0x2c, 0x41, 0x5e, 0x2f,
-	0xc9, 0x1a, 0x27, 0xab, 0x91, 0x53, 0xc8, 0x11, 0xf2, 0x11, 0x94, 0xfb, 0x6c, 0x3c, 0x0e, 0x45,
-	0x7d, 0x45, 0x72, 0x36, 0x32, 0xce, 0x51, 0x28, 0x5a, 0x72, 0xc0, 0xd3, 0x04, 0x72, 0x07, 0xaa,
-	0x3d, 0x4e, 0xa3, 0xfe, 0x50, 0x35, 0x61, 0xef, 0x58, 0x0d, 0xc7, 0x03, 0x05, 0xa5, 0xee, 0x49,
-	0x1d, 0xae, 0x67, 0xdb, 0xf2, 0x9a, 0x1c, 0xcc, 0x3e, 0xc9, 0x7d, 0xd8, 0x48, 0x04, 0xe5, 0xc2,
-	0x37, 0x05, 0xca, 0x92, 0xb3, 0x2e, 0x07, 0x0e, 0x66, 0x2a, 0x5f, 0x43, 0x4d, 0x71, 0x8d, 0x9e,
-	0xaf, 0x9f, 0xd7, 0xb3, 0x2e, 0x9f, 0x01, 0xee, 0xbf, 0x25, 0x20, 0x66, 0x84, 0xea, 0x90, 0x92,
-	0x6f, 0x60, 0x4d, 0xcf, 0x7d, 0x16, 0x07, 0x54, 0x64, 0x07, 0xe7, 0x96, 0x5a, 0xd8, 0x93, 0x18,
-	0xb9, 0xdc, 0x1c, 0xca, 0xc7, 0x4b, 0x49, 0xf1, 0x9c, 0x9e, 0xf1, 0x95, 0xf6, 0xd0, 0xe7, 0x48,
-	0x05, 0xfa, 0x82, 0x23, 0xfa, 0xc8, 0x39, 0x53, 0xc1, 0xae, 0x7a, 0xeb, 0x6a, 0xa0, 0xcb, 0x11,
-	0x0f, 0x53, 0x98, 0x7c, 0x00, 0x8e, 0x0a, 0x4d, 0xd3, 0x56, 0x24, 0xad, 0xaa, 0x30, 0x45, 0xb9,
-	0x0f, 0x1b, 0x31, 0x47, 0x9f, 0x63, 0x1f, 0xc3, 0x49, 0x26, 0x67, 0x2b, 0xb9, 0x98, 0xa3, 0xa7,
-	0x70, 0xc5, 0xfd, 0x05, 0xde, 0x2b, 0x4c, 0xed, 0xf7, 0x59, 0xa0, 0x72, 0xbe, 0xb1, 0xd7, 0x50,
-	0x5d, 0x14, 0xdb, 0x6e, 0xb6, 0xf2, 0xc6, 0xbc, 0xcd, 0x39, 0xa7, 0x2d, 0x16, 0xa0, 0xfb, 0x08,
-	0xd6, 0xe7, 0x78, 0xa4, 0x02, 0x76, 0xe7, 0xa4, 0x73, 0x58, 0x7b, 0x87, 0xac, 0xc2, 0xb5, 0xc3,
-	0xf6, 0x8b, 0xee, 0x4f, 0x35, 0x8b, 0x38, 0x50, 0x69, 0x9d, 0x74, 0x9e, 0x7d, 0x7f, 0xdc, 0xea,
-	0xd6, 0x4a, 0xee, 0xef, 0xf0, 0xee, 0xc2, 0xd8, 0xc8, 0x2d, 0x58, 0xd5, 0xcd, 0x87, 0x81, 0xda,
-	0xea, 0x5e, 0x45, 0x01, 0xc7, 0x41, 0x9a, 0x4c, 0xba, 0xae, 0xbe, 0xf2, 0x11, 0xc8, 0x00, 0x2b,
-	0x5e, 0x35, 0xc5, 0x94, 0x87, 0x80, 0x7c, 0x08, 0x37, 0xf4, 0x52, 0x65, 0xa4, 0x15, 0x49, 0xd2,
-	0x0b, 0xa8, 0x69, 0x7b, 0x7f, 0x95, 0xf5, 0x7b, 0x71, 0x8a, 0x7c, 0x12, 0xf6, 0xd3, 0x8d, 0x03,
-	0x5d, 0x4c, 0x44, 0x1b, 0xc5, 0x90, 0x05, 0x64, 0xc1, 0x45, 0xbb, 0xbd, 0x99, 0xc3, 0xf4, 0xf5,
-	0x5d, 0x7e, 0xfb, 0xba, 0x51, 0xaa, 0x94, 0xc8, 0x3e, 0x54, 0x67, 0xe5, 0x7b, 0x57, 0xad, 0xb7,
-	0xf2, 0xf5, 0x0f, 0xaf, 0x5e, 0xff, 0x9d, 0x59, 0xff, 0x88, 0xbc, 0x5f, 0xac, 0x37, 0x5e, 0xb1,
-	0xc5, 0x52, 0x95, 0xb7, 0xaf, 0x1b, 0x76, 0xc5, 0xaa, 0x59, 0xe4, 0xa9, 0x29, 0xf6, 0x19, 0xa9,
-	0x1b, 0xec, 0xdc, 0x9d, 0xb5, 0xdc, 0xd2, 0x73, 0x53, 0xe5, 0x73, 0x72, 0xbb, 0xa0, 0x92, 0x7b,
-	0x40, 0x96, 0x6b, 0x1d, 0x9b, 0x5a, 0x8f, 0x73, 0xed, 0x15, 0xaf, 0xd2, 0xe5, 0x52, 0x47, 0xa6,
-	0xd4, 0x13, 0x72, 0xfe, 0xe3, 0xb7, 0x3c, 0xa5, 0x12, 0x69, 0x9b, 0x42, 0x5f, 0x90, 0x3b, 0x45,
-	0xa1, 0x4b, 0xb8, 0x9a, 0xc9, 0x9d, 0x82, 0x33, 0x93, 0x7b, 0xf0, 0x29, 0xb9, 0x7b, 0x99, 0x57,
-	0xe3, 0x22, 0xd1, 0x23, 0x80, 0xd9, 0xb9, 0x26, 0x37, 0x8b, 0x27, 0x5d, 0xa9, 0xd4, 0xcf, 0xbb,
-	0x02, 0xb2, 0xd4, 0x7a, 0x65, 0xf9, 0x2f, 0xeb, 0xe1, 0x7f, 0x01, 0x00, 0x00, 0xff, 0xff, 0x69,
-	0xfe, 0x7e, 0x52, 0xa4, 0x09, 0x00, 0x00,
+	// 522 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x94, 0x41, 0x6b, 0x13, 0x41,
+	0x14, 0xc7, 0xd9, 0x10, 0x43, 0x7c, 0x49, 0xb1, 0x4c, 0x0f, 0x26, 0x01, 0xab, 0x2c, 0x42, 0x03,
+	0xca, 0x06, 0x53, 0xb5, 0x2a, 0x9a, 0x43, 0x2d, 0x6a, 0x2b, 0xa9, 0xb2, 0x29, 0x7a, 0xf0, 0x10,
+	0x26, 0xdd, 0xc7, 0x66, 0x65, 0xb3, 0x13, 0x67, 0x5e, 0x0b, 0xfd, 0x06, 0xde, 0x3c, 0xb6, 0x17,
+	0xbf, 0x8e, 0x1f, 0xaa, 0x27, 0xd9, 0xd9, 0x69, 0x9c, 0xcd, 0xc6, 0xd8, 0xe0, 0x2d, 0xbc, 0x79,
+	0xff, 0xdf, 0xfc, 0xe7, 0x9f, 0xf7, 0x16, 0xb6, 0x42, 0xd1, 0x89, 0x12, 0x42, 0x99, 0xf0, 0xb8,
+	0x13, 0xeb, 0x5f, 0x1d, 0x42, 0x45, 0x01, 0x27, 0xde, 0x39, 0xe5, 0x71, 0x14, 0x78, 0x53, 0x29,
+	0x48, 0xb0, 0x72, 0x5a, 0x6d, 0x41, 0xda, 0x92, 0x55, 0x5a, 0x75, 0x35, 0xe6, 0x12, 0xcd, 0xb9,
+	0x7b, 0x00, 0xf5, 0x4f, 0x69, 0xbb, 0x8f, 0xdf, 0x4e, 0x50, 0x11, 0x7b, 0x01, 0xb5, 0x00, 0x15,
+	0x45, 0x09, 0xa7, 0x48, 0x24, 0x0d, 0xe7, 0x9e, 0xd3, 0xae, 0x75, 0x99, 0x17, 0x46, 0xc4, 0xe3,
+	0x33, 0xcf, 0xc7, 0xa9, 0x50, 0x11, 0x09, 0x79, 0xb6, 0x5b, 0xbe, 0xf8, 0xf5, 0xd0, 0xf1, 0xed,
+	0x66, 0xb7, 0x09, 0xb7, 0x6d, 0xd6, 0xe7, 0x88, 0xc6, 0xe2, 0x84, 0x52, 0x8d, 0xdb, 0x83, 0x0d,
+	0x7d, 0x34, 0x20, 0x21, 0x79, 0x88, 0x57, 0xb7, 0x6d, 0x41, 0x5d, 0x65, 0x95, 0x61, 0xc2, 0x27,
+	0xa8, 0xaf, 0xbb, 0xb9, 0x5b, 0xfe, 0xae, 0xd1, 0xe6, 0xe4, 0x90, 0x4f, 0xd0, 0xbd, 0x05, 0x6b,
+	0x06, 0xad, 0xa6, 0x22, 0x51, 0xe8, 0xf6, 0x81, 0xe9, 0xc2, 0x21, 0x2a, 0xc2, 0x99, 0xfb, 0x1d,
+	0x58, 0x8b, 0x92, 0x04, 0xe5, 0x70, 0x82, 0x4a, 0xf1, 0x10, 0x67, 0xfe, 0xd3, 0x14, 0x3c, 0xdb,
+	0x9c, 0x5f, 0xd7, 0x8d, 0xfd, 0xac, 0xcf, 0xfd, 0x02, 0x4d, 0xdb, 0x5f, 0x9e, 0xda, 0x5b, 0x4c,
+	0x6d, 0x5a, 0xd4, 0xfc, 0xbb, 0xe6, 0xe0, 0x23, 0x68, 0x58, 0x5e, 0x07, 0x3a, 0xfe, 0x2b, 0xf6,
+	0x1b, 0x60, 0x89, 0x2e, 0x0f, 0x89, 0xcb, 0x10, 0x69, 0x28, 0x71, 0x2a, 0xe6, 0x63, 0xff, 0x30,
+	0xfa, 0x8a, 0xc7, 0xf4, 0x51, 0x88, 0xd8, 0xc4, 0xbe, 0x9e, 0x69, 0x8e, 0xb4, 0x44, 0x07, 0xfc,
+	0xd3, 0x31, 0xe1, 0xef, 0xa7, 0x37, 0xe7, 0xfd, 0xbf, 0x84, 0xca, 0x18, 0x79, 0x80, 0xd2, 0x70,
+	0xef, 0x5b, 0xc6, 0x8b, 0xed, 0xde, 0x3b, 0xdd, 0xeb, 0x1b, 0x4d, 0x6b, 0x0f, 0x2a, 0x59, 0xe5,
+	0xbf, 0x66, 0xe3, 0xc2, 0x81, 0x4d, 0x3b, 0xa9, 0x05, 0x36, 0x5f, 0xcf, 0xd9, 0x7c, 0x50, 0xcc,
+	0xf7, 0xdf, 0x6e, 0x1f, 0xcd, 0xdc, 0x5e, 0x77, 0xb6, 0xba, 0x3f, 0x6e, 0x98, 0x1d, 0x18, 0xa0,
+	0x3c, 0x8d, 0x8e, 0x91, 0xbd, 0x02, 0x38, 0x42, 0x45, 0x7d, 0xa4, 0xb1, 0x08, 0xd8, 0x82, 0xe1,
+	0x69, 0x6d, 0xe4, 0x6a, 0x66, 0x24, 0x2b, 0x97, 0xe7, 0xed, 0x52, 0xb5, 0xc4, 0x7a, 0x50, 0xfb,
+	0x23, 0xef, 0xae, 0xaa, 0x77, 0xf2, 0xfa, 0xed, 0xd5, 0xf5, 0xef, 0x6d, 0xfd, 0x63, 0x76, 0xa7,
+	0xa8, 0xb7, 0x36, 0x73, 0x31, 0xaa, 0x7a, 0x79, 0xde, 0x2e, 0x57, 0x9d, 0x75, 0x87, 0xed, 0xd9,
+	0xb0, 0x27, 0xac, 0x61, 0x75, 0xe7, 0xfe, 0x87, 0xe5, 0x96, 0x0e, 0x6c, 0xca, 0x53, 0xb6, 0x59,
+	0xa0, 0xe4, 0x96, 0x62, 0x39, 0x6b, 0xdf, 0x66, 0xed, 0xe4, 0x9e, 0x57, 0x1c, 0x8f, 0xe5, 0xa8,
+	0xb7, 0x36, 0xea, 0x19, 0xfb, 0xfb, 0x42, 0x2f, 0x4f, 0xa9, 0xc4, 0xfa, 0x36, 0xe8, 0x39, 0xbb,
+	0x5b, 0x04, 0x5d, 0xc3, 0xd5, 0x0c, 0x37, 0xaa, 0xe8, 0x6f, 0xf3, 0xf6, 0xef, 0x00, 0x00, 0x00,
+	0xff, 0xff, 0x5b, 0xad, 0x81, 0x34, 0xe6, 0x05, 0x00, 0x00,
+}
+
+// Reference imports to suppress errors if they are not otherwise used.
+var _ context.Context
+var _ grpc.ClientConn
+
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the grpc package it is being compiled against.
+const _ = grpc.SupportPackageIsVersion4
+
+// ValidServiceClient is the client API for ValidService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type ValidServiceClient interface {
+	TestMethod(ctx context.Context, in *ValidRequest, opts ...grpc.CallOption) (*ValidResponse, error)
+	TestMethod2(ctx context.Context, in *ValidRequest, opts ...grpc.CallOption) (*ValidResponse, error)
+	TestMethod3(ctx context.Context, in *ValidRequest, opts ...grpc.CallOption) (*ValidResponse, error)
+	TestMethod4(ctx context.Context, in *ValidRequestWithoutRepo, opts ...grpc.CallOption) (*ValidResponse, error)
+	TestMethod5(ctx context.Context, in *ValidNestedRequest, opts ...grpc.CallOption) (*ValidResponse, error)
+	TestMethod6(ctx context.Context, in *ValidNestedSharedRequest, opts ...grpc.CallOption) (*ValidResponse, error)
+	TestMethod7(ctx context.Context, in *ValidInnerNestedRequest, opts ...grpc.CallOption) (*ValidResponse, error)
+	TestMethod8(ctx context.Context, in *ValidStorageRequest, opts ...grpc.CallOption) (*ValidResponse, error)
+	TestMethod9(ctx context.Context, in *ValidStorageNestedRequest, opts ...grpc.CallOption) (*ValidResponse, error)
+}
+
+type validServiceClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewValidServiceClient(cc *grpc.ClientConn) ValidServiceClient {
+	return &validServiceClient{cc}
+}
+
+func (c *validServiceClient) TestMethod(ctx context.Context, in *ValidRequest, opts ...grpc.CallOption) (*ValidResponse, error) {
+	out := new(ValidResponse)
+	err := c.cc.Invoke(ctx, "/test.ValidService/TestMethod", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *validServiceClient) TestMethod2(ctx context.Context, in *ValidRequest, opts ...grpc.CallOption) (*ValidResponse, error) {
+	out := new(ValidResponse)
+	err := c.cc.Invoke(ctx, "/test.ValidService/TestMethod2", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *validServiceClient) TestMethod3(ctx context.Context, in *ValidRequest, opts ...grpc.CallOption) (*ValidResponse, error) {
+	out := new(ValidResponse)
+	err := c.cc.Invoke(ctx, "/test.ValidService/TestMethod3", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *validServiceClient) TestMethod4(ctx context.Context, in *ValidRequestWithoutRepo, opts ...grpc.CallOption) (*ValidResponse, error) {
+	out := new(ValidResponse)
+	err := c.cc.Invoke(ctx, "/test.ValidService/TestMethod4", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *validServiceClient) TestMethod5(ctx context.Context, in *ValidNestedRequest, opts ...grpc.CallOption) (*ValidResponse, error) {
+	out := new(ValidResponse)
+	err := c.cc.Invoke(ctx, "/test.ValidService/TestMethod5", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *validServiceClient) TestMethod6(ctx context.Context, in *ValidNestedSharedRequest, opts ...grpc.CallOption) (*ValidResponse, error) {
+	out := new(ValidResponse)
+	err := c.cc.Invoke(ctx, "/test.ValidService/TestMethod6", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *validServiceClient) TestMethod7(ctx context.Context, in *ValidInnerNestedRequest, opts ...grpc.CallOption) (*ValidResponse, error) {
+	out := new(ValidResponse)
+	err := c.cc.Invoke(ctx, "/test.ValidService/TestMethod7", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *validServiceClient) TestMethod8(ctx context.Context, in *ValidStorageRequest, opts ...grpc.CallOption) (*ValidResponse, error) {
+	out := new(ValidResponse)
+	err := c.cc.Invoke(ctx, "/test.ValidService/TestMethod8", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *validServiceClient) TestMethod9(ctx context.Context, in *ValidStorageNestedRequest, opts ...grpc.CallOption) (*ValidResponse, error) {
+	out := new(ValidResponse)
+	err := c.cc.Invoke(ctx, "/test.ValidService/TestMethod9", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ValidServiceServer is the server API for ValidService service.
+type ValidServiceServer interface {
+	TestMethod(context.Context, *ValidRequest) (*ValidResponse, error)
+	TestMethod2(context.Context, *ValidRequest) (*ValidResponse, error)
+	TestMethod3(context.Context, *ValidRequest) (*ValidResponse, error)
+	TestMethod4(context.Context, *ValidRequestWithoutRepo) (*ValidResponse, error)
+	TestMethod5(context.Context, *ValidNestedRequest) (*ValidResponse, error)
+	TestMethod6(context.Context, *ValidNestedSharedRequest) (*ValidResponse, error)
+	TestMethod7(context.Context, *ValidInnerNestedRequest) (*ValidResponse, error)
+	TestMethod8(context.Context, *ValidStorageRequest) (*ValidResponse, error)
+	TestMethod9(context.Context, *ValidStorageNestedRequest) (*ValidResponse, error)
+}
+
+// UnimplementedValidServiceServer can be embedded to have forward compatible implementations.
+type UnimplementedValidServiceServer struct {
+}
+
+func (*UnimplementedValidServiceServer) TestMethod(ctx context.Context, req *ValidRequest) (*ValidResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TestMethod not implemented")
+}
+func (*UnimplementedValidServiceServer) TestMethod2(ctx context.Context, req *ValidRequest) (*ValidResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TestMethod2 not implemented")
+}
+func (*UnimplementedValidServiceServer) TestMethod3(ctx context.Context, req *ValidRequest) (*ValidResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TestMethod3 not implemented")
+}
+func (*UnimplementedValidServiceServer) TestMethod4(ctx context.Context, req *ValidRequestWithoutRepo) (*ValidResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TestMethod4 not implemented")
+}
+func (*UnimplementedValidServiceServer) TestMethod5(ctx context.Context, req *ValidNestedRequest) (*ValidResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TestMethod5 not implemented")
+}
+func (*UnimplementedValidServiceServer) TestMethod6(ctx context.Context, req *ValidNestedSharedRequest) (*ValidResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TestMethod6 not implemented")
+}
+func (*UnimplementedValidServiceServer) TestMethod7(ctx context.Context, req *ValidInnerNestedRequest) (*ValidResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TestMethod7 not implemented")
+}
+func (*UnimplementedValidServiceServer) TestMethod8(ctx context.Context, req *ValidStorageRequest) (*ValidResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TestMethod8 not implemented")
+}
+func (*UnimplementedValidServiceServer) TestMethod9(ctx context.Context, req *ValidStorageNestedRequest) (*ValidResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TestMethod9 not implemented")
+}
+
+func RegisterValidServiceServer(s *grpc.Server, srv ValidServiceServer) {
+	s.RegisterService(&_ValidService_serviceDesc, srv)
+}
+
+func _ValidService_TestMethod_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ValidServiceServer).TestMethod(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.ValidService/TestMethod",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ValidServiceServer).TestMethod(ctx, req.(*ValidRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ValidService_TestMethod2_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ValidServiceServer).TestMethod2(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.ValidService/TestMethod2",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ValidServiceServer).TestMethod2(ctx, req.(*ValidRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ValidService_TestMethod3_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ValidServiceServer).TestMethod3(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.ValidService/TestMethod3",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ValidServiceServer).TestMethod3(ctx, req.(*ValidRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ValidService_TestMethod4_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidRequestWithoutRepo)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ValidServiceServer).TestMethod4(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.ValidService/TestMethod4",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ValidServiceServer).TestMethod4(ctx, req.(*ValidRequestWithoutRepo))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ValidService_TestMethod5_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidNestedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ValidServiceServer).TestMethod5(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.ValidService/TestMethod5",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ValidServiceServer).TestMethod5(ctx, req.(*ValidNestedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ValidService_TestMethod6_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidNestedSharedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ValidServiceServer).TestMethod6(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.ValidService/TestMethod6",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ValidServiceServer).TestMethod6(ctx, req.(*ValidNestedSharedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ValidService_TestMethod7_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidInnerNestedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ValidServiceServer).TestMethod7(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.ValidService/TestMethod7",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ValidServiceServer).TestMethod7(ctx, req.(*ValidInnerNestedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ValidService_TestMethod8_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidStorageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ValidServiceServer).TestMethod8(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.ValidService/TestMethod8",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ValidServiceServer).TestMethod8(ctx, req.(*ValidStorageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ValidService_TestMethod9_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidStorageNestedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ValidServiceServer).TestMethod9(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.ValidService/TestMethod9",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ValidServiceServer).TestMethod9(ctx, req.(*ValidStorageNestedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _ValidService_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "test.ValidService",
+	HandlerType: (*ValidServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "TestMethod",
+			Handler:    _ValidService_TestMethod_Handler,
+		},
+		{
+			MethodName: "TestMethod2",
+			Handler:    _ValidService_TestMethod2_Handler,
+		},
+		{
+			MethodName: "TestMethod3",
+			Handler:    _ValidService_TestMethod3_Handler,
+		},
+		{
+			MethodName: "TestMethod4",
+			Handler:    _ValidService_TestMethod4_Handler,
+		},
+		{
+			MethodName: "TestMethod5",
+			Handler:    _ValidService_TestMethod5_Handler,
+		},
+		{
+			MethodName: "TestMethod6",
+			Handler:    _ValidService_TestMethod6_Handler,
+		},
+		{
+			MethodName: "TestMethod7",
+			Handler:    _ValidService_TestMethod7_Handler,
+		},
+		{
+			MethodName: "TestMethod8",
+			Handler:    _ValidService_TestMethod8_Handler,
+		},
+		{
+			MethodName: "TestMethod9",
+			Handler:    _ValidService_TestMethod9_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "go/internal/linter/testdata/valid.proto",
 }

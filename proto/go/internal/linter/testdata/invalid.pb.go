@@ -4,9 +4,13 @@
 package test
 
 import (
+	context "context"
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
 	gitalypb "gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
+	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 	math "math"
 )
 
@@ -639,48 +643,663 @@ func init() {
 }
 
 var fileDescriptor_506a53e91b227711 = []byte{
-	// 688 bytes of a gzipped FileDescriptorProto
+	// 693 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x96, 0x5d, 0x4f, 0x13, 0x4d,
-	0x14, 0xc7, 0x9f, 0x69, 0xfa, 0x34, 0x30, 0xe0, 0xdb, 0x44, 0x05, 0xeb, 0x0b, 0x64, 0xf1, 0x05,
-	0x95, 0x6c, 0xa1, 0xa0, 0x22, 0xc1, 0x0b, 0x1a, 0x63, 0x44, 0x42, 0x13, 0x0b, 0x49, 0x13, 0x5f,
-	0x52, 0x47, 0xf7, 0x64, 0xbb, 0xc9, 0x76, 0x77, 0xdd, 0x19, 0x30, 0xbd, 0xf3, 0xd2, 0x78, 0xe5,
-	0x95, 0xf8, 0x1d, 0xfc, 0x02, 0xc6, 0x0f, 0xe0, 0x87, 0xe2, 0xca, 0xec, 0x4b, 0xcb, 0xee, 0xcc,
-	0x2c, 0x8e, 0xc5, 0xbb, 0xcd, 0xf4, 0x9c, 0xff, 0xf9, 0xcd, 0x7f, 0xce, 0xc9, 0x29, 0xbe, 0x6d,
-	0xfb, 0x35, 0xc7, 0xe3, 0x10, 0x7a, 0xd4, 0xad, 0xb9, 0xf1, 0x57, 0x8d, 0x03, 0xe3, 0x16, 0xe5,
-	0xb4, 0xe6, 0x78, 0xfb, 0xd4, 0x75, 0x2c, 0x33, 0x08, 0x7d, 0xee, 0x93, 0x72, 0x74, 0x5e, 0x9d,
-	0x64, 0x5d, 0x1a, 0x42, 0x7a, 0x66, 0x5c, 0xc4, 0xe7, 0x37, 0x93, 0xa0, 0x6d, 0xe0, 0x5d, 0xdf,
-	0x6a, 0xc1, 0xfb, 0x3d, 0x60, 0xdc, 0x78, 0x81, 0xaf, 0xa8, 0xce, 0xdb, 0x0e, 0xef, 0xb6, 0x20,
-	0xf0, 0xc9, 0x1a, 0x9e, 0xb0, 0x80, 0x71, 0xc7, 0xa3, 0xdc, 0xf1, 0xbd, 0x69, 0x34, 0x8b, 0xe6,
-	0x27, 0xea, 0xc4, 0xb4, 0x1d, 0x4e, 0xdd, 0xbe, 0x19, 0x85, 0x30, 0x87, 0xfb, 0x61, 0xbf, 0x51,
-	0xfe, 0xf6, 0x6b, 0x01, 0xb5, 0xb2, 0xc1, 0xc6, 0x2a, 0x3e, 0x97, 0x6a, 0xef, 0xd2, 0xd0, 0x06,
-	0xbe, 0xdb, 0x0f, 0x80, 0xcc, 0x61, 0xfc, 0x21, 0xf4, 0x3d, 0xbb, 0xc3, 0xfb, 0x01, 0xc4, 0x7a,
-	0xff, 0xa7, 0xb9, 0xe3, 0xf1, 0x79, 0x14, 0x64, 0x4c, 0xe1, 0x0b, 0x02, 0x15, 0x0b, 0x7c, 0x8f,
-	0x81, 0xb1, 0x3b, 0xbc, 0x46, 0x13, 0x18, 0x87, 0x01, 0x2e, 0x59, 0xc7, 0xa7, 0x1c, 0xcf, 0x83,
-	0xb0, 0xd3, 0x03, 0xc6, 0xa8, 0x0d, 0x29, 0xe8, 0x94, 0x19, 0x59, 0x61, 0x4a, 0x14, 0xad, 0xc9,
-	0x38, 0x7a, 0x3b, 0x09, 0x36, 0x18, 0x26, 0x99, 0x7b, 0xef, 0x70, 0x3f, 0xa4, 0x36, 0x90, 0x5b,
-	0x78, 0x92, 0x25, 0x9f, 0x1d, 0x8f, 0xf6, 0x12, 0xc9, 0xf1, 0x46, 0xf9, 0x53, 0x7c, 0xcf, 0xf4,
-	0x97, 0x26, 0xed, 0x01, 0x59, 0xc9, 0x7b, 0x54, 0x2a, 0xf2, 0x28, 0xef, 0xce, 0x47, 0x84, 0x2f,
-	0xc9, 0x55, 0x37, 0x3c, 0x2b, 0xf6, 0x5d, 0xbb, 0xf8, 0x9a, 0x66, 0x71, 0xd5, 0x03, 0xd9, 0x78,
-	0x26, 0x43, 0x90, 0x38, 0x2a, 0x70, 0x3c, 0x56, 0x1b, 0x3b, 0x93, 0x18, 0x5b, 0xc8, 0x2f, 0x18,
-	0xfc, 0x19, 0xe1, 0xd9, 0x4c, 0xec, 0xf6, 0x9e, 0xcb, 0x9d, 0xc0, 0x85, 0x5c, 0x45, 0xf2, 0x48,
-	0x5d, 0x6a, 0xba, 0xa8, 0x54, 0xbe, 0x86, 0xe4, 0x58, 0xa9, 0xc0, 0x31, 0xe3, 0x2b, 0xc2, 0x57,
-	0x33, 0x6a, 0x9b, 0x91, 0x48, 0x9e, 0xa4, 0x81, 0x2b, 0x5d, 0xa0, 0x16, 0x84, 0x29, 0xc2, 0x1d,
-	0x09, 0x41, 0x4e, 0x32, 0x9f, 0xc6, 0x19, 0xad, 0x34, 0xb3, 0xba, 0x84, 0x2b, 0xc9, 0x89, 0xf6,
-	0x53, 0x1a, 0x3f, 0x10, 0xbe, 0x96, 0xa9, 0xd1, 0x1e, 0x8c, 0xc3, 0xd1, 0x23, 0x92, 0x4d, 0x81,
-	0xec, 0xae, 0x44, 0xa6, 0xc8, 0x4a, 0xd1, 0xd2, 0x0e, 0x18, 0x00, 0x6e, 0x0d, 0x01, 0x37, 0x30,
-	0x0e, 0x87, 0xc1, 0xa9, 0xf0, 0xe5, 0xdc, 0xe4, 0xe4, 0xa7, 0xb0, 0x51, 0xfe, 0x12, 0x09, 0x65,
-	0x92, 0x8c, 0xef, 0x48, 0xd1, 0x4a, 0x11, 0x41, 0xd3, 0xe7, 0x4f, 0x5c, 0x6a, 0xdb, 0x60, 0x91,
-	0x67, 0x02, 0xfb, 0x82, 0xc4, 0xae, 0x4a, 0x53, 0xc3, 0xaf, 0x0f, 0xe1, 0xeb, 0x0a, 0x78, 0xd5,
-	0xec, 0x65, 0xa2, 0xea, 0x3f, 0x31, 0x3e, 0x9d, 0xde, 0x6c, 0x07, 0xc2, 0x7d, 0xe7, 0x1d, 0x90,
-	0xad, 0xe1, 0x49, 0x72, 0xd7, 0x45, 0x52, 0x55, 0x3a, 0x10, 0xb3, 0x56, 0x8f, 0x73, 0xc7, 0xf8,
-	0x8f, 0x3c, 0x17, 0xc4, 0x96, 0x46, 0x17, 0xab, 0x1c, 0x1e, 0xcc, 0x97, 0xc6, 0x64, 0xc9, 0xfa,
-	0x49, 0x25, 0x4b, 0xe4, 0xa5, 0x20, 0xb9, 0x4c, 0x8c, 0x62, 0xc9, 0xc1, 0x42, 0x38, 0x5e, 0x7a,
-	0xec, 0xf0, 0x60, 0xbe, 0x3c, 0x86, 0xce, 0x22, 0x89, 0x77, 0xe5, 0xa4, 0xbc, 0x48, 0xe2, 0xbd,
-	0x47, 0xae, 0xeb, 0x74, 0xbf, 0x9e, 0xf8, 0x2b, 0x41, 0xfc, 0x3e, 0xb9, 0xa1, 0xd5, 0x9e, 0x7a,
-	0xea, 0x4d, 0x41, 0xfd, 0x01, 0x29, 0xda, 0x4c, 0x7a, 0x7a, 0xa2, 0xbb, 0xab, 0x82, 0xbb, 0xb9,
-	0xe5, 0x38, 0x9a, 0xbb, 0x0f, 0xff, 0x5d, 0x37, 0x94, 0x48, 0x1b, 0x9f, 0xc9, 0x0f, 0xc4, 0x22,
-	0xf9, 0xd3, 0x06, 0xd1, 0xeb, 0xe1, 0xd7, 0xa2, 0xf0, 0x52, 0xe1, 0xbb, 0xfd, 0xbd, 0x3c, 0x92,
-	0xe5, 0xeb, 0x64, 0x4e, 0x63, 0x17, 0xe8, 0x0f, 0x89, 0x20, 0xbf, 0x3c, 0x62, 0x5f, 0x1c, 0x39,
-	0xfd, 0x46, 0x94, 0x5c, 0x21, 0x37, 0x25, 0x62, 0xe5, 0xfe, 0xd5, 0xac, 0xf0, 0xb6, 0x12, 0xff,
-	0xa1, 0x5c, 0xfe, 0x1d, 0x00, 0x00, 0xff, 0xff, 0x3b, 0x0f, 0xf4, 0x8a, 0x91, 0x0a, 0x00, 0x00,
+	0x14, 0xc7, 0x9f, 0x69, 0xfa, 0x34, 0x70, 0xc0, 0xb7, 0x89, 0x0a, 0xd6, 0x17, 0xc8, 0xe2, 0x0b,
+	0x2a, 0x69, 0xa1, 0xa0, 0x22, 0xc1, 0x0b, 0x1a, 0x63, 0x44, 0x42, 0x13, 0x0b, 0x09, 0x89, 0x2f,
+	0xc1, 0xd1, 0x3d, 0xd9, 0x6e, 0xb2, 0xec, 0xd6, 0x9d, 0x01, 0xd3, 0x3b, 0x2f, 0x8d, 0x57, 0x5e,
+	0x89, 0xdf, 0xc1, 0x2f, 0x60, 0xfc, 0x00, 0x7e, 0x28, 0xae, 0xcc, 0xbe, 0xb4, 0xec, 0xce, 0xcc,
+	0xe2, 0x08, 0xde, 0x35, 0xb3, 0xe7, 0xfc, 0xcf, 0x6f, 0xfe, 0x73, 0x4e, 0x4e, 0xe1, 0xb6, 0x13,
+	0xd4, 0x5d, 0x5f, 0x60, 0xe8, 0x33, 0xaf, 0xee, 0xc5, 0xbf, 0xea, 0x02, 0xb9, 0xb0, 0x99, 0x60,
+	0x75, 0xd7, 0xdf, 0x63, 0x9e, 0x6b, 0xd7, 0xba, 0x61, 0x20, 0x02, 0x5a, 0x8e, 0xce, 0xab, 0x10,
+	0x05, 0x25, 0x27, 0xd5, 0x51, 0xde, 0x61, 0x21, 0xa6, 0xdf, 0xad, 0x8b, 0x70, 0x7e, 0x35, 0x49,
+	0x58, 0x47, 0xd1, 0x09, 0xec, 0x36, 0xbe, 0xdf, 0x45, 0x2e, 0xac, 0x17, 0x70, 0x45, 0x77, 0xbe,
+	0xe5, 0x8a, 0x4e, 0x1b, 0xbb, 0x01, 0x5d, 0x82, 0x11, 0x1b, 0xb9, 0x70, 0x7d, 0x26, 0xdc, 0xc0,
+	0x1f, 0x27, 0x93, 0x64, 0x7a, 0xa4, 0x41, 0x6b, 0x8e, 0x2b, 0x98, 0xd7, 0xab, 0x45, 0x21, 0xdc,
+	0x15, 0x41, 0xd8, 0x6b, 0x96, 0xbf, 0xfd, 0x9a, 0x21, 0xed, 0x6c, 0xb0, 0xb5, 0x08, 0xe7, 0x52,
+	0xed, 0x4d, 0x16, 0x3a, 0x28, 0x36, 0x7b, 0x5d, 0xa4, 0x53, 0x00, 0x1f, 0xc2, 0xc0, 0x77, 0xb6,
+	0x45, 0xaf, 0x8b, 0xb1, 0xde, 0xff, 0x69, 0xee, 0x70, 0x7c, 0x1e, 0x05, 0x59, 0x63, 0x70, 0x41,
+	0xa2, 0xe2, 0xdd, 0xc0, 0xe7, 0x68, 0x6d, 0x0e, 0xae, 0xd1, 0x42, 0x2e, 0xb0, 0x8f, 0x4b, 0x97,
+	0xe1, 0x94, 0xeb, 0xfb, 0x18, 0x6e, 0xef, 0x20, 0xe7, 0xcc, 0xc1, 0x14, 0x74, 0xac, 0x16, 0xd9,
+	0x52, 0x53, 0x28, 0xda, 0xa3, 0x71, 0xf4, 0x7a, 0x12, 0x6c, 0x71, 0xa0, 0x99, 0x7b, 0x6f, 0x88,
+	0x20, 0x64, 0x0e, 0xd2, 0x5b, 0x30, 0xca, 0x93, 0x9f, 0xdb, 0x3e, 0xdb, 0x49, 0x24, 0x87, 0x9b,
+	0xe5, 0x4f, 0xf1, 0x3d, 0xd3, 0x2f, 0x2d, 0xb6, 0x83, 0x74, 0x21, 0xef, 0x51, 0xa9, 0xc8, 0xa3,
+	0xbc, 0x3b, 0x1f, 0x09, 0x5c, 0x52, 0xab, 0xae, 0xf8, 0x76, 0xec, 0xbb, 0x71, 0xf1, 0x25, 0xc3,
+	0xe2, 0xba, 0x07, 0x72, 0x60, 0x22, 0x43, 0x90, 0x38, 0x2a, 0x71, 0x3c, 0xd6, 0x1b, 0x3b, 0x91,
+	0x18, 0x5b, 0xc8, 0x2f, 0x19, 0xfc, 0x99, 0xc0, 0x64, 0x26, 0x76, 0x7d, 0xd7, 0x13, 0x6e, 0xd7,
+	0xc3, 0x5c, 0x45, 0xfa, 0x48, 0x5f, 0x6a, 0xbc, 0xa8, 0x54, 0xbe, 0x86, 0xe2, 0x58, 0xa9, 0xc0,
+	0x31, 0xeb, 0x2b, 0x81, 0xab, 0x19, 0xb5, 0xd5, 0x48, 0x24, 0x4f, 0xd2, 0x84, 0x4a, 0x07, 0x99,
+	0x8d, 0x61, 0x8a, 0x70, 0x47, 0x41, 0x50, 0x93, 0x6a, 0x4f, 0xe3, 0x8c, 0x76, 0x9a, 0x59, 0x9d,
+	0x83, 0x4a, 0x72, 0x62, 0xfc, 0x94, 0xd6, 0x0f, 0x02, 0xd7, 0x32, 0x35, 0xb6, 0xfa, 0xe3, 0x70,
+	0xf8, 0x88, 0x74, 0x55, 0x22, 0xbb, 0xab, 0x90, 0x69, 0xb2, 0x52, 0xb4, 0xb4, 0x03, 0xfa, 0x80,
+	0x6b, 0x03, 0xc0, 0x15, 0x80, 0x70, 0x10, 0x9c, 0x0a, 0x5f, 0xce, 0x4d, 0x4e, 0x7e, 0x0a, 0x9b,
+	0xe5, 0x2f, 0x91, 0x50, 0x26, 0xc9, 0xfa, 0x4e, 0x34, 0xad, 0x14, 0x11, 0xb4, 0x02, 0xf1, 0xc4,
+	0x63, 0x8e, 0x83, 0x36, 0x7d, 0x26, 0xb1, 0xcf, 0x28, 0xec, 0xba, 0x34, 0x3d, 0xfc, 0xf2, 0x00,
+	0xbe, 0xa1, 0x81, 0xd7, 0xcd, 0x5e, 0x26, 0xaa, 0xf1, 0x13, 0xe0, 0x74, 0x7a, 0xb3, 0x0d, 0x0c,
+	0xf7, 0xdc, 0x77, 0x48, 0xd7, 0x06, 0x27, 0xc9, 0x5d, 0x67, 0x69, 0x55, 0xeb, 0x40, 0xcc, 0x5a,
+	0x3d, 0xca, 0x1d, 0xeb, 0x3f, 0xfa, 0x5c, 0x12, 0x9b, 0x3b, 0xbe, 0x58, 0xe5, 0x60, 0x7f, 0xba,
+	0x34, 0xa4, 0x4a, 0x36, 0x4e, 0x2a, 0x59, 0xa2, 0x2f, 0x25, 0xc9, 0x79, 0x6a, 0x15, 0x4b, 0xf6,
+	0x17, 0xc2, 0xd1, 0xd2, 0x43, 0x07, 0xfb, 0xd3, 0xe5, 0x21, 0x72, 0x96, 0x28, 0xbc, 0x0b, 0x27,
+	0xe5, 0x25, 0x0a, 0xef, 0x3d, 0x7a, 0xdd, 0xa4, 0xfb, 0xcd, 0xc4, 0x5f, 0x49, 0xe2, 0xf7, 0xe9,
+	0x0d, 0xa3, 0xf6, 0x34, 0x53, 0x6f, 0x49, 0xea, 0x0f, 0x68, 0xd1, 0x66, 0x32, 0xd3, 0x93, 0xdd,
+	0x5d, 0x94, 0xdc, 0xcd, 0x2d, 0xc7, 0xe3, 0xb9, 0xfb, 0xf0, 0xdf, 0x75, 0x43, 0x89, 0x6e, 0xc1,
+	0x99, 0xfc, 0x40, 0xcc, 0xd2, 0x3f, 0x6d, 0x10, 0xb3, 0x1e, 0x7e, 0x2d, 0x0b, 0xcf, 0x15, 0xbe,
+	0xdb, 0xdf, 0xcb, 0x13, 0x55, 0xbe, 0x41, 0xa7, 0x0c, 0x76, 0x81, 0xf9, 0x90, 0x48, 0xf2, 0xf3,
+	0xc7, 0xec, 0x8b, 0x43, 0xa7, 0xdf, 0xc8, 0x92, 0x0b, 0xf4, 0xa6, 0x42, 0xac, 0xdd, 0xbf, 0x86,
+	0x15, 0xde, 0x56, 0xe2, 0x3f, 0x94, 0xf3, 0xbf, 0x03, 0x00, 0x00, 0xff, 0xff, 0xb6, 0xa4, 0xe9,
+	0x68, 0x9d, 0x0a, 0x00, 0x00,
+}
+
+// Reference imports to suppress errors if they are not otherwise used.
+var _ context.Context
+var _ grpc.ClientConn
+
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the grpc package it is being compiled against.
+const _ = grpc.SupportPackageIsVersion4
+
+// InvalidServiceClient is the client API for InvalidService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type InvalidServiceClient interface {
+	// should fail if op_type extension is missing
+	InvalidMethod0(ctx context.Context, in *InvalidMethodRequest, opts ...grpc.CallOption) (*InvalidMethodResponse, error)
+	// should fail if op type is unknown
+	InvalidMethod1(ctx context.Context, in *InvalidMethodRequest, opts ...grpc.CallOption) (*InvalidMethodResponse, error)
+	// should fail if target repo is not provided for accessor
+	InvalidMethod2(ctx context.Context, in *InvalidMethodRequest, opts ...grpc.CallOption) (*InvalidMethodResponse, error)
+	// should fail if target repo is provided for server-scoped mutator
+	InvalidMethod3(ctx context.Context, in *InvalidMethodRequestWithRepo, opts ...grpc.CallOption) (*InvalidMethodResponse, error)
+	// should fail if missing either target repo or non-repo-scope for mutator
+	InvalidMethod4(ctx context.Context, in *InvalidMethodRequest, opts ...grpc.CallOption) (*InvalidMethodResponse, error)
+	// should fail if repository is not of type Repository
+	InvalidMethod5(ctx context.Context, in *RequestWithWrongTypeRepository, opts ...grpc.CallOption) (*InvalidMethodResponse, error)
+	// should fail if nested repository isn't flagged
+	InvalidMethod6(ctx context.Context, in *RequestWithNestedRepoNotFlagged, opts ...grpc.CallOption) (*InvalidMethodResponse, error)
+	// should fail if target field type is not of type Repository
+	InvalidMethod7(ctx context.Context, in *InvalidTargetType, opts ...grpc.CallOption) (*InvalidMethodResponse, error)
+	// should fail if nested target field type is not of type Repository
+	InvalidMethod8(ctx context.Context, in *InvalidNestedRequest, opts ...grpc.CallOption) (*InvalidMethodResponse, error)
+	// should fail if target repo is specified for storage scoped RPC
+	InvalidMethod9(ctx context.Context, in *InvalidMethodRequestWithRepo, opts ...grpc.CallOption) (*InvalidMethodResponse, error)
+	// should fail if storage is specified for implicit repository scoped RPC
+	InvalidMethod10(ctx context.Context, in *RequestWithStorageAndRepo, opts ...grpc.CallOption) (*InvalidMethodResponse, error)
+	// should fail if storage is specified for repository scoped RPC
+	InvalidMethod11(ctx context.Context, in *RequestWithNestedStorageAndRepo, opts ...grpc.CallOption) (*InvalidMethodResponse, error)
+	// should fail if storage is specified for server scoped RPC
+	InvalidMethod12(ctx context.Context, in *RequestWithInnerNestedStorage, opts ...grpc.CallOption) (*InvalidMethodResponse, error)
+	// should fail if storage isn't specified for storage scoped RPC
+	InvalidMethod13(ctx context.Context, in *InvalidTargetType, opts ...grpc.CallOption) (*InvalidMethodResponse, error)
+	// should fail if multiple storage is specified for storage scoped RPC
+	InvalidMethod14(ctx context.Context, in *RequestWithMultipleNestedStorage, opts ...grpc.CallOption) (*InvalidMethodResponse, error)
+}
+
+type invalidServiceClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewInvalidServiceClient(cc *grpc.ClientConn) InvalidServiceClient {
+	return &invalidServiceClient{cc}
+}
+
+func (c *invalidServiceClient) InvalidMethod0(ctx context.Context, in *InvalidMethodRequest, opts ...grpc.CallOption) (*InvalidMethodResponse, error) {
+	out := new(InvalidMethodResponse)
+	err := c.cc.Invoke(ctx, "/test.InvalidService/InvalidMethod0", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *invalidServiceClient) InvalidMethod1(ctx context.Context, in *InvalidMethodRequest, opts ...grpc.CallOption) (*InvalidMethodResponse, error) {
+	out := new(InvalidMethodResponse)
+	err := c.cc.Invoke(ctx, "/test.InvalidService/InvalidMethod1", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *invalidServiceClient) InvalidMethod2(ctx context.Context, in *InvalidMethodRequest, opts ...grpc.CallOption) (*InvalidMethodResponse, error) {
+	out := new(InvalidMethodResponse)
+	err := c.cc.Invoke(ctx, "/test.InvalidService/InvalidMethod2", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *invalidServiceClient) InvalidMethod3(ctx context.Context, in *InvalidMethodRequestWithRepo, opts ...grpc.CallOption) (*InvalidMethodResponse, error) {
+	out := new(InvalidMethodResponse)
+	err := c.cc.Invoke(ctx, "/test.InvalidService/InvalidMethod3", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *invalidServiceClient) InvalidMethod4(ctx context.Context, in *InvalidMethodRequest, opts ...grpc.CallOption) (*InvalidMethodResponse, error) {
+	out := new(InvalidMethodResponse)
+	err := c.cc.Invoke(ctx, "/test.InvalidService/InvalidMethod4", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *invalidServiceClient) InvalidMethod5(ctx context.Context, in *RequestWithWrongTypeRepository, opts ...grpc.CallOption) (*InvalidMethodResponse, error) {
+	out := new(InvalidMethodResponse)
+	err := c.cc.Invoke(ctx, "/test.InvalidService/InvalidMethod5", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *invalidServiceClient) InvalidMethod6(ctx context.Context, in *RequestWithNestedRepoNotFlagged, opts ...grpc.CallOption) (*InvalidMethodResponse, error) {
+	out := new(InvalidMethodResponse)
+	err := c.cc.Invoke(ctx, "/test.InvalidService/InvalidMethod6", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *invalidServiceClient) InvalidMethod7(ctx context.Context, in *InvalidTargetType, opts ...grpc.CallOption) (*InvalidMethodResponse, error) {
+	out := new(InvalidMethodResponse)
+	err := c.cc.Invoke(ctx, "/test.InvalidService/InvalidMethod7", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *invalidServiceClient) InvalidMethod8(ctx context.Context, in *InvalidNestedRequest, opts ...grpc.CallOption) (*InvalidMethodResponse, error) {
+	out := new(InvalidMethodResponse)
+	err := c.cc.Invoke(ctx, "/test.InvalidService/InvalidMethod8", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *invalidServiceClient) InvalidMethod9(ctx context.Context, in *InvalidMethodRequestWithRepo, opts ...grpc.CallOption) (*InvalidMethodResponse, error) {
+	out := new(InvalidMethodResponse)
+	err := c.cc.Invoke(ctx, "/test.InvalidService/InvalidMethod9", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *invalidServiceClient) InvalidMethod10(ctx context.Context, in *RequestWithStorageAndRepo, opts ...grpc.CallOption) (*InvalidMethodResponse, error) {
+	out := new(InvalidMethodResponse)
+	err := c.cc.Invoke(ctx, "/test.InvalidService/InvalidMethod10", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *invalidServiceClient) InvalidMethod11(ctx context.Context, in *RequestWithNestedStorageAndRepo, opts ...grpc.CallOption) (*InvalidMethodResponse, error) {
+	out := new(InvalidMethodResponse)
+	err := c.cc.Invoke(ctx, "/test.InvalidService/InvalidMethod11", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *invalidServiceClient) InvalidMethod12(ctx context.Context, in *RequestWithInnerNestedStorage, opts ...grpc.CallOption) (*InvalidMethodResponse, error) {
+	out := new(InvalidMethodResponse)
+	err := c.cc.Invoke(ctx, "/test.InvalidService/InvalidMethod12", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *invalidServiceClient) InvalidMethod13(ctx context.Context, in *InvalidTargetType, opts ...grpc.CallOption) (*InvalidMethodResponse, error) {
+	out := new(InvalidMethodResponse)
+	err := c.cc.Invoke(ctx, "/test.InvalidService/InvalidMethod13", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *invalidServiceClient) InvalidMethod14(ctx context.Context, in *RequestWithMultipleNestedStorage, opts ...grpc.CallOption) (*InvalidMethodResponse, error) {
+	out := new(InvalidMethodResponse)
+	err := c.cc.Invoke(ctx, "/test.InvalidService/InvalidMethod14", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// InvalidServiceServer is the server API for InvalidService service.
+type InvalidServiceServer interface {
+	// should fail if op_type extension is missing
+	InvalidMethod0(context.Context, *InvalidMethodRequest) (*InvalidMethodResponse, error)
+	// should fail if op type is unknown
+	InvalidMethod1(context.Context, *InvalidMethodRequest) (*InvalidMethodResponse, error)
+	// should fail if target repo is not provided for accessor
+	InvalidMethod2(context.Context, *InvalidMethodRequest) (*InvalidMethodResponse, error)
+	// should fail if target repo is provided for server-scoped mutator
+	InvalidMethod3(context.Context, *InvalidMethodRequestWithRepo) (*InvalidMethodResponse, error)
+	// should fail if missing either target repo or non-repo-scope for mutator
+	InvalidMethod4(context.Context, *InvalidMethodRequest) (*InvalidMethodResponse, error)
+	// should fail if repository is not of type Repository
+	InvalidMethod5(context.Context, *RequestWithWrongTypeRepository) (*InvalidMethodResponse, error)
+	// should fail if nested repository isn't flagged
+	InvalidMethod6(context.Context, *RequestWithNestedRepoNotFlagged) (*InvalidMethodResponse, error)
+	// should fail if target field type is not of type Repository
+	InvalidMethod7(context.Context, *InvalidTargetType) (*InvalidMethodResponse, error)
+	// should fail if nested target field type is not of type Repository
+	InvalidMethod8(context.Context, *InvalidNestedRequest) (*InvalidMethodResponse, error)
+	// should fail if target repo is specified for storage scoped RPC
+	InvalidMethod9(context.Context, *InvalidMethodRequestWithRepo) (*InvalidMethodResponse, error)
+	// should fail if storage is specified for implicit repository scoped RPC
+	InvalidMethod10(context.Context, *RequestWithStorageAndRepo) (*InvalidMethodResponse, error)
+	// should fail if storage is specified for repository scoped RPC
+	InvalidMethod11(context.Context, *RequestWithNestedStorageAndRepo) (*InvalidMethodResponse, error)
+	// should fail if storage is specified for server scoped RPC
+	InvalidMethod12(context.Context, *RequestWithInnerNestedStorage) (*InvalidMethodResponse, error)
+	// should fail if storage isn't specified for storage scoped RPC
+	InvalidMethod13(context.Context, *InvalidTargetType) (*InvalidMethodResponse, error)
+	// should fail if multiple storage is specified for storage scoped RPC
+	InvalidMethod14(context.Context, *RequestWithMultipleNestedStorage) (*InvalidMethodResponse, error)
+}
+
+// UnimplementedInvalidServiceServer can be embedded to have forward compatible implementations.
+type UnimplementedInvalidServiceServer struct {
+}
+
+func (*UnimplementedInvalidServiceServer) InvalidMethod0(ctx context.Context, req *InvalidMethodRequest) (*InvalidMethodResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InvalidMethod0 not implemented")
+}
+func (*UnimplementedInvalidServiceServer) InvalidMethod1(ctx context.Context, req *InvalidMethodRequest) (*InvalidMethodResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InvalidMethod1 not implemented")
+}
+func (*UnimplementedInvalidServiceServer) InvalidMethod2(ctx context.Context, req *InvalidMethodRequest) (*InvalidMethodResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InvalidMethod2 not implemented")
+}
+func (*UnimplementedInvalidServiceServer) InvalidMethod3(ctx context.Context, req *InvalidMethodRequestWithRepo) (*InvalidMethodResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InvalidMethod3 not implemented")
+}
+func (*UnimplementedInvalidServiceServer) InvalidMethod4(ctx context.Context, req *InvalidMethodRequest) (*InvalidMethodResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InvalidMethod4 not implemented")
+}
+func (*UnimplementedInvalidServiceServer) InvalidMethod5(ctx context.Context, req *RequestWithWrongTypeRepository) (*InvalidMethodResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InvalidMethod5 not implemented")
+}
+func (*UnimplementedInvalidServiceServer) InvalidMethod6(ctx context.Context, req *RequestWithNestedRepoNotFlagged) (*InvalidMethodResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InvalidMethod6 not implemented")
+}
+func (*UnimplementedInvalidServiceServer) InvalidMethod7(ctx context.Context, req *InvalidTargetType) (*InvalidMethodResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InvalidMethod7 not implemented")
+}
+func (*UnimplementedInvalidServiceServer) InvalidMethod8(ctx context.Context, req *InvalidNestedRequest) (*InvalidMethodResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InvalidMethod8 not implemented")
+}
+func (*UnimplementedInvalidServiceServer) InvalidMethod9(ctx context.Context, req *InvalidMethodRequestWithRepo) (*InvalidMethodResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InvalidMethod9 not implemented")
+}
+func (*UnimplementedInvalidServiceServer) InvalidMethod10(ctx context.Context, req *RequestWithStorageAndRepo) (*InvalidMethodResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InvalidMethod10 not implemented")
+}
+func (*UnimplementedInvalidServiceServer) InvalidMethod11(ctx context.Context, req *RequestWithNestedStorageAndRepo) (*InvalidMethodResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InvalidMethod11 not implemented")
+}
+func (*UnimplementedInvalidServiceServer) InvalidMethod12(ctx context.Context, req *RequestWithInnerNestedStorage) (*InvalidMethodResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InvalidMethod12 not implemented")
+}
+func (*UnimplementedInvalidServiceServer) InvalidMethod13(ctx context.Context, req *InvalidTargetType) (*InvalidMethodResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InvalidMethod13 not implemented")
+}
+func (*UnimplementedInvalidServiceServer) InvalidMethod14(ctx context.Context, req *RequestWithMultipleNestedStorage) (*InvalidMethodResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InvalidMethod14 not implemented")
+}
+
+func RegisterInvalidServiceServer(s *grpc.Server, srv InvalidServiceServer) {
+	s.RegisterService(&_InvalidService_serviceDesc, srv)
+}
+
+func _InvalidService_InvalidMethod0_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InvalidMethodRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InvalidServiceServer).InvalidMethod0(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.InvalidService/InvalidMethod0",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InvalidServiceServer).InvalidMethod0(ctx, req.(*InvalidMethodRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InvalidService_InvalidMethod1_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InvalidMethodRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InvalidServiceServer).InvalidMethod1(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.InvalidService/InvalidMethod1",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InvalidServiceServer).InvalidMethod1(ctx, req.(*InvalidMethodRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InvalidService_InvalidMethod2_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InvalidMethodRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InvalidServiceServer).InvalidMethod2(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.InvalidService/InvalidMethod2",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InvalidServiceServer).InvalidMethod2(ctx, req.(*InvalidMethodRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InvalidService_InvalidMethod3_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InvalidMethodRequestWithRepo)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InvalidServiceServer).InvalidMethod3(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.InvalidService/InvalidMethod3",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InvalidServiceServer).InvalidMethod3(ctx, req.(*InvalidMethodRequestWithRepo))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InvalidService_InvalidMethod4_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InvalidMethodRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InvalidServiceServer).InvalidMethod4(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.InvalidService/InvalidMethod4",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InvalidServiceServer).InvalidMethod4(ctx, req.(*InvalidMethodRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InvalidService_InvalidMethod5_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestWithWrongTypeRepository)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InvalidServiceServer).InvalidMethod5(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.InvalidService/InvalidMethod5",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InvalidServiceServer).InvalidMethod5(ctx, req.(*RequestWithWrongTypeRepository))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InvalidService_InvalidMethod6_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestWithNestedRepoNotFlagged)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InvalidServiceServer).InvalidMethod6(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.InvalidService/InvalidMethod6",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InvalidServiceServer).InvalidMethod6(ctx, req.(*RequestWithNestedRepoNotFlagged))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InvalidService_InvalidMethod7_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InvalidTargetType)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InvalidServiceServer).InvalidMethod7(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.InvalidService/InvalidMethod7",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InvalidServiceServer).InvalidMethod7(ctx, req.(*InvalidTargetType))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InvalidService_InvalidMethod8_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InvalidNestedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InvalidServiceServer).InvalidMethod8(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.InvalidService/InvalidMethod8",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InvalidServiceServer).InvalidMethod8(ctx, req.(*InvalidNestedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InvalidService_InvalidMethod9_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InvalidMethodRequestWithRepo)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InvalidServiceServer).InvalidMethod9(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.InvalidService/InvalidMethod9",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InvalidServiceServer).InvalidMethod9(ctx, req.(*InvalidMethodRequestWithRepo))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InvalidService_InvalidMethod10_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestWithStorageAndRepo)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InvalidServiceServer).InvalidMethod10(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.InvalidService/InvalidMethod10",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InvalidServiceServer).InvalidMethod10(ctx, req.(*RequestWithStorageAndRepo))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InvalidService_InvalidMethod11_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestWithNestedStorageAndRepo)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InvalidServiceServer).InvalidMethod11(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.InvalidService/InvalidMethod11",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InvalidServiceServer).InvalidMethod11(ctx, req.(*RequestWithNestedStorageAndRepo))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InvalidService_InvalidMethod12_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestWithInnerNestedStorage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InvalidServiceServer).InvalidMethod12(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.InvalidService/InvalidMethod12",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InvalidServiceServer).InvalidMethod12(ctx, req.(*RequestWithInnerNestedStorage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InvalidService_InvalidMethod13_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InvalidTargetType)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InvalidServiceServer).InvalidMethod13(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.InvalidService/InvalidMethod13",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InvalidServiceServer).InvalidMethod13(ctx, req.(*InvalidTargetType))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InvalidService_InvalidMethod14_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestWithMultipleNestedStorage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InvalidServiceServer).InvalidMethod14(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.InvalidService/InvalidMethod14",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InvalidServiceServer).InvalidMethod14(ctx, req.(*RequestWithMultipleNestedStorage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _InvalidService_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "test.InvalidService",
+	HandlerType: (*InvalidServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "InvalidMethod0",
+			Handler:    _InvalidService_InvalidMethod0_Handler,
+		},
+		{
+			MethodName: "InvalidMethod1",
+			Handler:    _InvalidService_InvalidMethod1_Handler,
+		},
+		{
+			MethodName: "InvalidMethod2",
+			Handler:    _InvalidService_InvalidMethod2_Handler,
+		},
+		{
+			MethodName: "InvalidMethod3",
+			Handler:    _InvalidService_InvalidMethod3_Handler,
+		},
+		{
+			MethodName: "InvalidMethod4",
+			Handler:    _InvalidService_InvalidMethod4_Handler,
+		},
+		{
+			MethodName: "InvalidMethod5",
+			Handler:    _InvalidService_InvalidMethod5_Handler,
+		},
+		{
+			MethodName: "InvalidMethod6",
+			Handler:    _InvalidService_InvalidMethod6_Handler,
+		},
+		{
+			MethodName: "InvalidMethod7",
+			Handler:    _InvalidService_InvalidMethod7_Handler,
+		},
+		{
+			MethodName: "InvalidMethod8",
+			Handler:    _InvalidService_InvalidMethod8_Handler,
+		},
+		{
+			MethodName: "InvalidMethod9",
+			Handler:    _InvalidService_InvalidMethod9_Handler,
+		},
+		{
+			MethodName: "InvalidMethod10",
+			Handler:    _InvalidService_InvalidMethod10_Handler,
+		},
+		{
+			MethodName: "InvalidMethod11",
+			Handler:    _InvalidService_InvalidMethod11_Handler,
+		},
+		{
+			MethodName: "InvalidMethod12",
+			Handler:    _InvalidService_InvalidMethod12_Handler,
+		},
+		{
+			MethodName: "InvalidMethod13",
+			Handler:    _InvalidService_InvalidMethod13_Handler,
+		},
+		{
+			MethodName: "InvalidMethod14",
+			Handler:    _InvalidService_InvalidMethod14_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "go/internal/linter/testdata/invalid.proto",
 }
