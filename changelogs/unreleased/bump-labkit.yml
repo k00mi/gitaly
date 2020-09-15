@@ -1,0 +1,5 @@
+---
+title: Bump labkit dependency to get mutex profiling
+merge_request: 2562
+author:
+type: other
