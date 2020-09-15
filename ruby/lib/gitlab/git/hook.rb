@@ -35,6 +35,8 @@ module Gitlab
           case name
           when "pre-receive", "post-receive"
             call_receive_hook(gl_id, gl_username, oldrev, newrev, ref, push_options, transaction)
+          when "reference-transaction"
+            call_reference_transaction_hook(gl_id, gl_username, oldrev, newrev, ref, transaction)
           when "update"
             call_update_hook(gl_id, gl_username, oldrev, newrev, ref)
           end
@@ -83,6 +85,15 @@ module Gitlab
         vars.merge!(transaction.env_vars) if transaction
 
         call_stdin_hook([], changes, vars)
+      end
+
+      def call_reference_transaction_hook(gl_id, gl_username, oldrev, newrev, ref, transaction)
+        changes = [oldrev, newrev, ref].join(" ")
+
+        vars = env_base_vars(gl_id, gl_username)
+        vars.merge!(transaction.env_vars) if transaction
+
+        call_stdin_hook(["prepared"], changes, vars)
       end
 
       def call_update_hook(gl_id, gl_username, oldrev, newrev, ref)
