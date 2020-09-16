@@ -12,8 +12,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
+	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
 // printAllScript is a bash script that prints out stdin, the arguments,
@@ -47,7 +49,7 @@ echo "$0"
 exit 0`)
 
 func TestCustomHooksSuccess(t *testing.T) {
-	_, testRepoPath, cleanup := testhelper.NewTestRepo(t)
+	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
 	testCases := []struct {
@@ -84,21 +86,21 @@ func TestCustomHooksSuccess(t *testing.T) {
 
 			// hook is in project custom hook directory <repository>.git/custom_hooks/<hook_name>
 			hookDir := filepath.Join(testRepoPath, "custom_hooks")
-			callAndVerifyHooks(t, testRepoPath, tc.hookName, globalCustomHooksDir, hookDir, tc.stdin, tc.args, tc.env)
+			callAndVerifyHooks(t, testRepo, tc.hookName, globalCustomHooksDir, hookDir, tc.stdin, tc.args, tc.env)
 
 			// hook is in project custom hooks directory <repository>.git/custom_hooks/<hook_name>.d/*
 			hookDir = filepath.Join(testRepoPath, "custom_hooks", fmt.Sprintf("%s.d", tc.hookName))
-			callAndVerifyHooks(t, testRepoPath, tc.hookName, globalCustomHooksDir, hookDir, tc.stdin, tc.args, tc.env)
+			callAndVerifyHooks(t, testRepo, tc.hookName, globalCustomHooksDir, hookDir, tc.stdin, tc.args, tc.env)
 
 			// hook is in global custom hooks directory <global_custom_hooks_dir>/<hook_name>.d/*
 			hookDir = filepath.Join(globalCustomHooksDir, fmt.Sprintf("%s.d", tc.hookName))
-			callAndVerifyHooks(t, testRepoPath, tc.hookName, globalCustomHooksDir, hookDir, tc.stdin, tc.args, tc.env)
+			callAndVerifyHooks(t, testRepo, tc.hookName, globalCustomHooksDir, hookDir, tc.stdin, tc.args, tc.env)
 		})
 	}
 }
 
 func TestCustomHookPartialFailure(t *testing.T) {
-	_, testRepoPath, cleanup := testhelper.NewTestRepo(t)
+	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
 	globalCustomHooksDir, cleanup := testhelper.TempDir(t)
@@ -147,8 +149,13 @@ func TestCustomHookPartialFailure(t *testing.T) {
 			cleanup = writeCustomHook(t, tc.hook, globalHookPath, globalHookScript)
 			defer cleanup()
 
-			mgr := GitLabHookManager{}
-			caller, err := mgr.NewCustomHooksExecutor(testRepoPath, globalCustomHooksDir, tc.hook)
+			mgr := GitLabHookManager{
+				hooksConfig: config.Hooks{
+					CustomHooksDir: globalCustomHooksDir,
+				},
+			}
+
+			caller, err := mgr.newCustomHooksExecutor(testRepo, tc.hook)
 			require.NoError(t, err)
 
 			var stdout, stderr bytes.Buffer
@@ -168,7 +175,7 @@ func TestCustomHookPartialFailure(t *testing.T) {
 }
 
 func TestCustomHooksMultipleHooks(t *testing.T) {
-	_, testRepoPath, cleanup := testhelper.NewTestRepo(t)
+	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
 	globalCustomHooksDir, cleanup := testhelper.TempDir(t)
@@ -196,8 +203,12 @@ func TestCustomHooksMultipleHooks(t *testing.T) {
 		expectedExecutedScripts = append(expectedExecutedScripts, filepath.Join(globalHooksPath, fileName))
 	}
 
-	mgr := GitLabHookManager{}
-	hooksExecutor, err := mgr.NewCustomHooksExecutor(testRepoPath, globalCustomHooksDir, "update")
+	mgr := GitLabHookManager{
+		hooksConfig: config.Hooks{
+			CustomHooksDir: globalCustomHooksDir,
+		},
+	}
+	hooksExecutor, err := mgr.newCustomHooksExecutor(testRepo, "update")
 	require.NoError(t, err)
 
 	var stdout, stderr bytes.Buffer
@@ -213,7 +224,7 @@ func TestCustomHooksMultipleHooks(t *testing.T) {
 }
 
 func TestMultilineStdin(t *testing.T) {
-	_, testRepoPath, cleanup := testhelper.NewTestRepo(t)
+	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
 	globalCustomHooksDir, cleanup := testhelper.TempDir(t)
@@ -225,9 +236,13 @@ func TestMultilineStdin(t *testing.T) {
 	projectHooksPath := filepath.Join(testRepoPath, "custom_hooks", "pre-receive.d")
 
 	writeCustomHook(t, "pre-receive-script", projectHooksPath, printStdinScript)
+	mgr := GitLabHookManager{
+		hooksConfig: config.Hooks{
+			CustomHooksDir: globalCustomHooksDir,
+		},
+	}
 
-	mgr := GitLabHookManager{}
-	hooksExecutor, err := mgr.NewCustomHooksExecutor(testRepoPath, globalCustomHooksDir, "pre-receive")
+	hooksExecutor, err := mgr.newCustomHooksExecutor(testRepo, "pre-receive")
 	require.NoError(t, err)
 
 	changes := `old1 new1 ref1
@@ -242,7 +257,7 @@ old3 new3 ref3
 }
 
 func TestMultipleScriptsStdin(t *testing.T) {
-	_, testRepoPath, cleanup := testhelper.NewTestRepo(t)
+	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
 	globalCustomHooksDir, cleanup := testhelper.TempDir(t)
@@ -259,8 +274,13 @@ func TestMultipleScriptsStdin(t *testing.T) {
 		writeCustomHook(t, fileName, projectHooksPath, printStdinScript)
 	}
 
-	mgr := GitLabHookManager{}
-	hooksExecutor, err := mgr.NewCustomHooksExecutor(testRepoPath, globalCustomHooksDir, "pre-receive")
+	mgr := GitLabHookManager{
+		hooksConfig: config.Hooks{
+			CustomHooksDir: globalCustomHooksDir,
+		},
+	}
+
+	hooksExecutor, err := mgr.newCustomHooksExecutor(testRepo, "pre-receive")
 	require.NoError(t, err)
 
 	changes := "oldref11 newref00 ref123445"
@@ -277,7 +297,7 @@ func TestMultipleScriptsStdin(t *testing.T) {
 	}
 }
 
-func callAndVerifyHooks(t *testing.T, repoPath, hookName, globalHooksDir, hookDir, stdin string, args, env []string) {
+func callAndVerifyHooks(t *testing.T, repo *gitalypb.Repository, hookName, globalHooksDir, hookDir, stdin string, args, env []string) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 	var stdout, stderr bytes.Buffer
@@ -285,8 +305,13 @@ func callAndVerifyHooks(t *testing.T, repoPath, hookName, globalHooksDir, hookDi
 	cleanup := writeCustomHook(t, hookName, hookDir, printAllScript)
 	defer cleanup()
 
-	mgr := GitLabHookManager{}
-	callHooks, err := mgr.NewCustomHooksExecutor(repoPath, globalHooksDir, hookName)
+	mgr := GitLabHookManager{
+		hooksConfig: config.Hooks{
+			CustomHooksDir: globalHooksDir,
+		},
+	}
+
+	callHooks, err := mgr.newCustomHooksExecutor(repo, hookName)
 	require.NoError(t, err)
 
 	require.NoError(t, callHooks(ctx, args, env, bytes.NewBufferString(stdin), &stdout, &stderr))
