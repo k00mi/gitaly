@@ -133,7 +133,8 @@ module Gitlab
           'GIT_DIR' => repo_path,
           'GITALY_REPO' => repository.gitaly_repository.to_json,
           'GITALY_SOCKET' => Gitlab.config.gitaly.internal_socket,
-          'GITALY_GO_POSTRECEIVE' => repository.feature_enabled?('go-postreceive-hook').to_s
+          'GITALY_GO_POSTRECEIVE' => repository.feature_enabled?('go-postreceive-hook').to_s,
+          'GITALY_REFERENCE_TRANSACTION_HOOK' => repository.feature_enabled?('reference-transaction-hook').to_s
         }
       end
     end
