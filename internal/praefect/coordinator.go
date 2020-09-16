@@ -447,23 +447,6 @@ func (c *Coordinator) StreamDirector(ctx context.Context, fullMethodName string,
 		return c.directStorageScopedMessage(ctx, mi, m)
 	}
 
-	// TODO: please refer to https://gitlab.com/gitlab-org/gitaly/-/issues/2974
-	if mi.Scope == protoregistry.ScopeServer {
-		shard, err := c.nodeMgr.GetShard(c.conf.VirtualStorages[0].Name)
-		if err != nil {
-			if errors.Is(err, nodes.ErrVirtualStorageNotExist) {
-				return nil, helper.ErrInvalidArgument(err)
-			}
-			return nil, err
-		}
-
-		return proxy.NewStreamParameters(proxy.Destination{
-			Ctx:  helper.IncomingToOutgoing(ctx),
-			Conn: shard.Primary.GetConnection(),
-			Msg:  payload,
-		}, nil, func() error { return nil }, nil), nil
-	}
-
 	return nil, helper.ErrInternalf("rpc with undefined scope %q", mi.Scope)
 }
 

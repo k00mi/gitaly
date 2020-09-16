@@ -34,15 +34,6 @@ import (
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
-func waitUntil(t *testing.T, ch <-chan struct{}, timeout time.Duration) {
-	select {
-	case <-ch:
-		break
-	case <-time.After(timeout):
-		t.Errorf("timed out waiting for channel after %s", timeout)
-	}
-}
-
 // generates a praefect configuration with the specified number of backend
 // nodes
 func testConfig(backends int) config.Config {

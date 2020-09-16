@@ -46,53 +46,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func TestServerRouteServerAccessor(t *testing.T) {
-	var (
-		conf = testConfig(1)
-		reqQ = make(chan *mock.SimpleRequest)
-
-		expectResp = &mock.SimpleResponse{Value: 2}
-
-		// note: a server scoped RPC will be randomly routed
-		// to an available backend server. To simplify our
-		// test, a single backend server is used.
-		backends = map[string]mock.SimpleServiceServer{
-			conf.VirtualStorages[0].Nodes[0].Storage: &mockSvc{
-				serverAccessor: func(_ context.Context, req *mock.SimpleRequest) (*mock.SimpleResponse, error) {
-					reqQ <- req
-					return expectResp, nil
-				},
-			},
-		}
-	)
-
-	cc, _, cleanup := runPraefectServerWithMock(t, conf, nil, backends)
-	defer cleanup()
-
-	cli := mock.NewSimpleServiceClient(cc)
-
-	expectReq := &mock.SimpleRequest{Value: 1}
-
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-
-		actualReq := <-reqQ
-		assert.True(t, proto.Equal(expectReq, actualReq),
-			"received unexpected request value: %+v instead of %+v", actualReq, expectReq)
-	}()
-
-	ctx, cancel := testhelper.Context(testhelper.ContextWithTimeout(time.Second))
-	defer cancel()
-
-	actualResp, err := cli.ServerAccessor(ctx, expectReq)
-	require.NoError(t, err)
-	require.True(t, proto.Equal(expectResp, actualResp),
-		"expected response was not routed back")
-
-	waitUntil(t, done, time.Second)
-}
-
 func TestGitalyServerInfo(t *testing.T) {
 	gitVersion, err := git.Version()
 	require.NoError(t, err)
