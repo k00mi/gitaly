@@ -458,3 +458,8 @@ func checkNullArgv(cmd *exec.Cmd) error {
 func (c *Command) Args() []string {
 	return c.cmd.Args
 }
+
+// Env is an accessor for the environment variables
+func (c *Command) Env() []string {
+	return c.cmd.Env
+}

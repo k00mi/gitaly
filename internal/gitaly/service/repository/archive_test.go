@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
@@ -367,6 +368,50 @@ func TestGetArchivePathInjection(t *testing.T) {
 
 	require.NotContains(t, string(authorizedKeysFileBytes), evilPubKeyFile) // this should fail first in pre-fix failing test
 	require.Zero(t, authorizedKeysFileStat.Size())
+}
+
+func TestGetArchiveEnv(t *testing.T) {
+	serverSocketPath, stop := runRepoServer(t)
+	defer stop()
+
+	client, conn := newRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	commitID := "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863"
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	req := &gitalypb.GetArchiveRequest{
+		Repository: testRepo,
+		CommitId:   commitID,
+	}
+
+	tmpFile, err := ioutil.TempFile("", "archive.sh")
+	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
+
+	err = tmpFile.Chmod(0755)
+	require.NoError(t, err)
+
+	tmpFile.Write([]byte(`#!/bin/sh
+env | grep ^GL_`))
+	tmpFile.Close()
+
+	oldBinPath := config.Config.Git.BinPath
+	config.Config.Git.BinPath = tmpFile.Name()
+	defer func() { config.Config.Git.BinPath = oldBinPath }()
+
+	stream, err := client.GetArchive(ctx, req)
+	require.NoError(t, err)
+
+	data, err := consumeArchive(stream)
+	require.NoError(t, err)
+	require.Contains(t, string(data), "GL_REPOSITORY="+testhelper.GlRepository)
+	require.Contains(t, string(data), "GL_PROJECT_PATH="+testhelper.GlProjectPath)
 }
 
 func compressedFileContents(t *testing.T, format gitalypb.GetArchiveRequest_Format, name string) []byte {

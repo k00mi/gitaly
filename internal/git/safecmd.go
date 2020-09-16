@@ -213,15 +213,21 @@ func ConvertGlobalOptions(options *gitalypb.GlobalOptions) []Option {
 	return globals
 }
 
-// SafeCmd creates a git.Command with the given args and Repository. It
+// SafeCmd creates a command.Command with the given args and Repository. It
 // validates the arguments in the command before executing.
 func SafeCmd(ctx context.Context, repo repository.GitRepo, globals []Option, sc Cmd) (*command.Command, error) {
+	return SafeCmdWithEnv(ctx, nil, repo, globals, sc)
+}
+
+// SafeCmdWithEnv creates a command.Command with the given args, environment, and Repository. It
+// validates the arguments in the command before executing.
+func SafeCmdWithEnv(ctx context.Context, env []string, repo repository.GitRepo, globals []Option, sc Cmd) (*command.Command, error) {
 	args, err := combineArgs(globals, sc)
 	if err != nil {
 		return nil, err
 	}
 
-	return unsafeCmd(ctx, repo, args...)
+	return unsafeCmdWithEnv(ctx, env, repo, args...)
 }
 
 // SafeBareCmd creates a git.Command with the given args, stream, and env. It

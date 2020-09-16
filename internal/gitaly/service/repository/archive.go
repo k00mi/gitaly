@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -150,7 +151,12 @@ func handleArchive(ctx context.Context, writer io.Writer, in *gitalypb.GetArchiv
 		pathspecs = append(pathspecs, ":(exclude)"+exclude)
 	}
 
-	archiveCommand, err := git.SafeCmd(ctx, in.GetRepository(), nil, git.SubCmd{
+	env := []string{
+		fmt.Sprintf("GL_REPOSITORY=%s", in.GetRepository().GetGlRepository()),
+		fmt.Sprintf("GL_PROJECT_PATH=%s", in.GetRepository().GetGlProjectPath()),
+	}
+
+	archiveCommand, err := git.SafeCmdWithEnv(ctx, env, in.GetRepository(), nil, git.SubCmd{
 		Name:        "archive",
 		Flags:       []git.Option{git.ValueFlag{"--format", format}, git.ValueFlag{"--prefix", in.GetPrefix() + "/"}},
 		Args:        args,
