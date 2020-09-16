@@ -1,0 +1,5 @@
+---
+title: Introduce Locator abstraction to diff service
+merge_request: 2559
+author:
+type: changed
