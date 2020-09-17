@@ -45,6 +45,12 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
       optional :repository, :message, 1, "gitaly.Repository"
       repeated :environment_variables, :string, 2
       optional :stdin, :bytes, 3
+      optional :state, :enum, 4, "gitaly.ReferenceTransactionHookRequest.State"
+    end
+    add_enum "gitaly.ReferenceTransactionHookRequest.State" do
+      value :PREPARED, 0
+      value :COMMITTED, 1
+      value :ABORTED, 2
     end
     add_message "gitaly.ReferenceTransactionHookResponse" do
       optional :stdout, :bytes, 1
@@ -62,5 +68,6 @@ module Gitaly
   UpdateHookRequest = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.UpdateHookRequest").msgclass
   UpdateHookResponse = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.UpdateHookResponse").msgclass
   ReferenceTransactionHookRequest = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.ReferenceTransactionHookRequest").msgclass
+  ReferenceTransactionHookRequest::State = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.ReferenceTransactionHookRequest.State").enummodule
   ReferenceTransactionHookResponse = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.ReferenceTransactionHookResponse").msgclass
 end
