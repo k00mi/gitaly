@@ -1,0 +1,5 @@
+---
+title: 'hooks: Call reference-transaction hook from Ruby HooksService'
+merge_request: 2566
+author:
+type: added

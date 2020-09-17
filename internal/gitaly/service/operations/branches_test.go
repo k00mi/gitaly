@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -109,6 +110,15 @@ func TestSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T) {
 }
 
 func TestUserCreateBranchWithTransaction(t *testing.T) {
+	t.Run("with reftx hook", func(t *testing.T) {
+		testUserCreateBranchWithTransaction(t, true)
+	})
+	t.Run("without reftx hook ", func(t *testing.T) {
+		testUserCreateBranchWithTransaction(t, false)
+	})
+}
+
+func testUserCreateBranchWithTransaction(t *testing.T, withRefTxHook bool) {
 	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
@@ -177,6 +187,12 @@ func TestUserCreateBranchWithTransaction(t *testing.T) {
 			require.NoError(t, err)
 			ctx = helper.IncomingToOutgoing(ctx)
 
+			ctx = featureflag.OutgoingCtxWithFeatureFlagValue(
+				ctx,
+				featureflag.RubyReferenceTransactionHook,
+				strconv.FormatBool(withRefTxHook),
+			)
+
 			request := &gitalypb.UserCreateBranchRequest{
 				Repository: testRepo,
 				BranchName: []byte("new-branch"),
@@ -188,7 +204,12 @@ func TestUserCreateBranchWithTransaction(t *testing.T) {
 			response, err := client.UserCreateBranch(ctx, request)
 			require.NoError(t, err)
 			require.Empty(t, response.PreReceiveError)
-			require.Equal(t, 1, transactionServer.called)
+
+			if withRefTxHook {
+				require.Equal(t, 2, transactionServer.called)
+			} else {
+				require.Equal(t, 1, transactionServer.called)
+			}
 		})
 	}
 }

@@ -35,6 +35,8 @@ module Gitlab
           case name
           when "pre-receive", "post-receive"
             call_receive_hook(gl_id, gl_username, oldrev, newrev, ref, push_options, transaction)
+          when "reference-transaction"
+            call_reference_transaction_hook(gl_id, gl_username, oldrev, newrev, ref, transaction)
           when "update"
             call_update_hook(gl_id, gl_username, oldrev, newrev, ref)
           end
@@ -43,30 +45,22 @@ module Gitlab
 
       private
 
-      def call_receive_hook(gl_id, gl_username, oldrev, newrev, ref, push_options, transaction)
-        changes = [oldrev, newrev, ref].join(" ")
-
+      def call_stdin_hook(args, input, env)
         exit_status = false
         exit_message = nil
-
-        vars = env_base_vars(gl_id, gl_username)
-        vars.merge!(push_options.env_data) if push_options
-        vars.merge!(transaction.env_vars) if transaction
 
         options = {
           chdir: repo_path
         }
 
-        Open3.popen3(vars, path, options) do |stdin, stdout, stderr, wait_thr|
+        Open3.popen3(env, path, *args, options) do |stdin, stdout, stderr, wait_thr|
           exit_status = true
           stdin.sync = true
 
-          # in git, pre- and post- receive hooks may just exit without
-          # reading stdin. We catch the exception to avoid a broken pipe
-          # warning
+          # in git, hooks may just exit without reading stdin. We catch the
+          # exception to avoid a broken pipe warning
           begin
-            # inject all the changes as stdin to the hook
-            changes.lines do |line|
+            input.lines do |line|
               stdin.puts line
             end
           rescue Errno::EPIPE
@@ -81,6 +75,25 @@ module Gitlab
         end
 
         [exit_status, exit_message]
+      end
+
+      def call_receive_hook(gl_id, gl_username, oldrev, newrev, ref, push_options, transaction)
+        changes = [oldrev, newrev, ref].join(" ")
+
+        vars = env_base_vars(gl_id, gl_username)
+        vars.merge!(push_options.env_data) if push_options
+        vars.merge!(transaction.env_vars) if transaction
+
+        call_stdin_hook([], changes, vars)
+      end
+
+      def call_reference_transaction_hook(gl_id, gl_username, oldrev, newrev, ref, transaction)
+        changes = [oldrev, newrev, ref].join(" ")
+
+        vars = env_base_vars(gl_id, gl_username)
+        vars.merge!(transaction.env_vars) if transaction
+
+        call_stdin_hook(["prepared"], changes, vars)
       end
 
       def call_update_hook(gl_id, gl_username, oldrev, newrev, ref)
@@ -120,7 +133,8 @@ module Gitlab
           'GIT_DIR' => repo_path,
           'GITALY_REPO' => repository.gitaly_repository.to_json,
           'GITALY_SOCKET' => Gitlab.config.gitaly.internal_socket,
-          'GITALY_GO_POSTRECEIVE' => repository.feature_enabled?('go-postreceive-hook').to_s
+          'GITALY_GO_POSTRECEIVE' => repository.feature_enabled?('go-postreceive-hook').to_s,
+          'GITALY_REFERENCE_TRANSACTION_HOOK' => repository.feature_enabled?('reference-transaction-hook').to_s
         }
       end
     end
