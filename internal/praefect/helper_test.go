@@ -331,7 +331,7 @@ func mustLoadProtoReg(t testing.TB) *descriptor.FileDescriptorProto {
 }
 
 func listenAvailPort(tb testing.TB) (net.Listener, int) {
-	listener, err := net.Listen("tcp", ":0")
+	listener, err := net.Listen("tcp", "localhost:0")
 	require.NoError(tb, err)
 
 	return listener, listener.Addr().(*net.TCPAddr).Port

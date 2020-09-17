@@ -79,7 +79,7 @@ func TestGitalyServerFactory(t *testing.T) {
 	t.Run("insecure", func(t *testing.T) {
 		sf := NewGitalyServerFactory(nil)
 
-		_, cleanup := checkHealth(t, sf, starter.TCP, ":0")
+		_, cleanup := checkHealth(t, sf, starter.TCP, "localhost:0")
 		defer cleanup()
 	})
 
@@ -96,7 +96,7 @@ func TestGitalyServerFactory(t *testing.T) {
 		sf := NewGitalyServerFactory(nil)
 		defer sf.Stop()
 
-		_, cleanup := checkHealth(t, sf, starter.TLS, ":0")
+		_, cleanup := checkHealth(t, sf, starter.TLS, "localhost:0")
 		defer cleanup()
 	})
 
@@ -104,7 +104,7 @@ func TestGitalyServerFactory(t *testing.T) {
 		sf := NewGitalyServerFactory(nil)
 		defer sf.Stop()
 
-		tcpHealthClient, tcpCleanup := checkHealth(t, sf, starter.TCP, ":0")
+		tcpHealthClient, tcpCleanup := checkHealth(t, sf, starter.TCP, "localhost:0")
 		defer tcpCleanup()
 
 		socket := testhelper.GetTemporaryGitalySocketFileName()

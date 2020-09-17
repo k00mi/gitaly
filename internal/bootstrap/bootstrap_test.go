@@ -204,14 +204,14 @@ func TestPortReuse(t *testing.T) {
 	b, err := New()
 	require.NoError(t, err)
 
-	l, err := b.listen("tcp", "0.0.0.0:")
+	l, err := b.listen("tcp", "localhost:")
 	require.NoError(t, err, "failed to bind")
 
 	addr = l.Addr().String()
 	_, port, err := net.SplitHostPort(addr)
 	require.NoError(t, err)
 
-	l, err = b.listen("tcp", "0.0.0.0:"+port)
+	l, err = b.listen("tcp", "localhost:"+port)
 	require.NoError(t, err, "failed to bind")
 	require.NoError(t, l.Close())
 }
