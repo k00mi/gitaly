@@ -43,11 +43,6 @@ func (s *server) PostReceiveHook(stream gitalypb.HookService_PostReceiveHookServ
 		return postReceiveHookRuby(firstRequest, stream)
 	}
 
-	hookEnv, err := hookRequestEnv(firstRequest)
-	if err != nil {
-		return helper.ErrInternal(err)
-	}
-
 	stdin := streamio.NewReader(func() ([]byte, error) {
 		req, err := stream.Recv()
 		return req.GetStdin(), err
@@ -55,11 +50,16 @@ func (s *server) PostReceiveHook(stream gitalypb.HookService_PostReceiveHookServ
 	stdout := streamio.NewWriter(func(p []byte) error { return stream.Send(&gitalypb.PostReceiveHookResponse{Stdout: p}) })
 	stderr := streamio.NewWriter(func(p []byte) error { return stream.Send(&gitalypb.PostReceiveHookResponse{Stderr: p}) })
 
+	env, err := hookRequestEnv(firstRequest)
+	if err != nil {
+		return err
+	}
+
 	if err := s.manager.PostReceiveHook(
 		stream.Context(),
 		firstRequest.Repository,
 		firstRequest.GetGitPushOptions(),
-		hookEnv,
+		env,
 		stdin,
 		stdout,
 		stderr,
