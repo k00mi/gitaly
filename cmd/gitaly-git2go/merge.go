@@ -59,13 +59,8 @@ func (cmd *mergeSubcommand) Run() error {
 		return err
 	}
 
-	var date time.Time = time.Now()
-	if request.AuthorDate != "" {
-		var err error
-		date, err = time.Parse("Mon Jan 2 15:04:05 2006 -0700", request.AuthorDate)
-		if err != nil {
-			return err
-		}
+	if request.AuthorDate.IsZero() {
+		request.AuthorDate = time.Now()
 	}
 
 	repo, err := git.OpenRepository(request.Repository)
@@ -100,7 +95,7 @@ func (cmd *mergeSubcommand) Run() error {
 	committer := git.Signature{
 		Name:  sanitizeSignatureInfo(request.AuthorName),
 		Email: sanitizeSignatureInfo(request.AuthorMail),
-		When:  date,
+		When:  request.AuthorDate,
 	}
 
 	commit, err := repo.CreateCommitFromIds("", &committer, &committer, request.Message, tree, ours.Id(), theirs.Id())

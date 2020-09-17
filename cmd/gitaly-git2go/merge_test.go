@@ -213,6 +213,8 @@ func TestMergeTrees(t *testing.T) {
 		ours := buildCommit(t, repoPath, base, tc.ours)
 		theirs := buildCommit(t, repoPath, base, tc.theirs)
 
+		authorDate := time.Date(2020, 7, 30, 7, 45, 50, 0, time.FixedZone("UTC+2", +2*60*60))
+
 		t.Run(tc.desc, func(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
@@ -221,7 +223,7 @@ func TestMergeTrees(t *testing.T) {
 				Repository: repoPath,
 				AuthorName: "John Doe",
 				AuthorMail: "john.doe@example.com",
-				AuthorDate: "Thu Jul 30 07:45:50 2020 +0200",
+				AuthorDate: authorDate,
 				Message:    "Merge message",
 				Ours:       ours.String(),
 				Theirs:     theirs.String(),

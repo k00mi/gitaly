@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+	"time"
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
@@ -29,7 +30,7 @@ type MergeCommand struct {
 	// AuthorMail is the author mail of merge commit.
 	AuthorMail string `json:"author_mail"`
 	// AuthorDate is the auithor date of merge commit.
-	AuthorDate string `json:"author_date"`
+	AuthorDate time.Time `json:"author_date"`
 	// Message is the message to be used for the merge commit.
 	Message string `json:"message"`
 	// Ours is the commit that is to be merged into theirs.
