@@ -220,7 +220,7 @@ func runPraefectServer(t testing.TB, conf config.Config, opt buildOptions) (*grp
 	coordinator := NewCoordinator(
 		opt.withQueue,
 		rs,
-		opt.withNodeMgr,
+		NewNodeManagerRouter(opt.withNodeMgr, rs),
 		opt.withTxMgr,
 		conf,
 		opt.withAnnotations,

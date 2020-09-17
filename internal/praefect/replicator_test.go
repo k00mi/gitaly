@@ -321,7 +321,14 @@ func TestPropagateReplicationJob(t *testing.T) {
 
 	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
 
-	coordinator := NewCoordinator(queue, rs, nodeMgr, txMgr, conf, protoregistry.GitalyProtoPreregistered)
+	coordinator := NewCoordinator(
+		queue,
+		rs,
+		NewNodeManagerRouter(nodeMgr, rs),
+		txMgr,
+		conf,
+		protoregistry.GitalyProtoPreregistered,
+	)
 
 	replmgr := NewReplMgr(logEntry, conf.VirtualStorageNames(), queue, rs, nodeMgr)
 

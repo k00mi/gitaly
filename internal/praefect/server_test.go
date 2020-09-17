@@ -760,7 +760,7 @@ func TestProxyWrites(t *testing.T) {
 	coordinator := NewCoordinator(
 		queue,
 		rs,
-		nodeMgr,
+		NewNodeManagerRouter(nodeMgr, rs),
 		txMgr,
 		conf,
 		protoregistry.GitalyProtoPreregistered,
@@ -925,7 +925,14 @@ func TestErrorThreshold(t *testing.T) {
 			nodeMgr, err := nodes.NewManager(entry, conf, nil, rs, promtest.NewMockHistogramVec(), registry, errorTracker)
 			require.NoError(t, err)
 
-			coordinator := NewCoordinator(queue, rs, nodeMgr, nil, conf, registry)
+			coordinator := NewCoordinator(
+				queue,
+				rs,
+				NewNodeManagerRouter(nodeMgr, rs),
+				nil,
+				conf,
+				registry,
+			)
 
 			server := grpc.NewServer(
 				grpc.CustomCodec(proxy.NewCodec()),
