@@ -7,7 +7,6 @@ import (
 
 type server struct {
 	packfileNegotiationMetrics *prometheus.CounterVec
-	gitalypb.UnimplementedSmartHTTPServiceServer
 }
 
 // NewServer creates a new instance of a grpc SmartHTTPServer

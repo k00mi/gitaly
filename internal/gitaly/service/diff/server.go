@@ -10,7 +10,6 @@ const msgSizeThreshold = 5 * 1024
 type server struct {
 	MsgSizeThreshold int
 	locator          storage.Locator
-	gitalypb.UnimplementedDiffServiceServer
 }
 
 // NewServer creates a new instance of a gRPC DiffServer

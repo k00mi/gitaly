@@ -7,7 +7,6 @@ import (
 
 type server struct {
 	ruby *rubyserver.Server
-	gitalypb.UnimplementedWikiServiceServer
 }
 
 // NewServer creates a new instance of a grpc WikiServiceServer

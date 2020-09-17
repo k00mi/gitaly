@@ -8,7 +8,6 @@ import (
 
 // Server is a ServerService server
 type Server struct {
-	*gitalypb.UnimplementedPraefectInfoServiceServer
 	nodeMgr nodes.Manager
 	conf    config.Config
 }

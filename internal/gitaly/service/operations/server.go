@@ -13,7 +13,6 @@ type server struct {
 	ruby        *rubyserver.Server
 	hookManager hook.Manager
 	locator     storage.Locator
-	gitalypb.UnimplementedOperationServiceServer
 }
 
 // NewServer creates a new instance of a grpc OperationServiceServer

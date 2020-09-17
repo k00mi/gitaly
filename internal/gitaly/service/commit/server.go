@@ -7,7 +7,6 @@ import (
 )
 
 type server struct {
-	gitalypb.UnimplementedCommitServiceServer
 	locator storage.Locator
 }
 

@@ -6,7 +6,6 @@ import (
 )
 
 type server struct {
-	gitalypb.UnimplementedObjectPoolServiceServer
 	locator storage.Locator
 }
 
