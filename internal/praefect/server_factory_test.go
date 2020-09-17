@@ -86,7 +86,14 @@ func TestServerFactory(t *testing.T) {
 	txMgr := transactions.NewManager(conf)
 	registry := protoregistry.GitalyProtoPreregistered
 	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
-	coordinator := NewCoordinator(queue, rs, nodeMgr, txMgr, conf, registry)
+	coordinator := NewCoordinator(
+		queue,
+		rs,
+		NewNodeManagerRouter(nodeMgr, rs),
+		txMgr,
+		conf,
+		registry,
+	)
 
 	checkOwnRegisteredServices := func(ctx context.Context, t *testing.T, cc *grpc.ClientConn) healthpb.HealthClient {
 		t.Helper()

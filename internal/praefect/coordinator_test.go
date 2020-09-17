@@ -75,7 +75,7 @@ func TestStreamDirectorReadOnlyEnforcement(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			rs := datastore.NewMemoryRepositoryStore(nil)
+			rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
 			require.NoError(t, rs.SetGeneration(ctx, virtualStorage, relativePath, storage, 1))
 			if tc.readOnly {
 				require.NoError(t, rs.SetGeneration(ctx, virtualStorage, relativePath, storage, 0))
@@ -84,14 +84,14 @@ func TestStreamDirectorReadOnlyEnforcement(t *testing.T) {
 			coordinator := NewCoordinator(
 				datastore.NewMemoryReplicationEventQueue(conf),
 				rs,
-				&nodes.MockManager{GetShardFunc: func(vs string) (nodes.Shard, error) {
+				NewNodeManagerRouter(&nodes.MockManager{GetShardFunc: func(vs string) (nodes.Shard, error) {
 					require.Equal(t, virtualStorage, vs)
 					return nodes.Shard{
 						Primary: &nodes.MockNode{GetStorageMethod: func() string {
 							return storage
 						}},
 					}, nil
-				}},
+				}}, rs),
 				transactions.NewManager(conf),
 				conf,
 				protoregistry.GitalyProtoPreregistered,
@@ -156,11 +156,12 @@ func TestStreamDirectorMutator(t *testing.T) {
 	nodeMgr.Start(0, time.Hour)
 
 	txMgr := transactions.NewManager(conf)
+	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
 
 	coordinator := NewCoordinator(
 		queueInterceptor,
-		datastore.NewMemoryRepositoryStore(conf.StorageNames()),
-		nodeMgr,
+		rs,
+		NewNodeManagerRouter(nodeMgr, rs),
 		txMgr,
 		conf,
 		protoregistry.GitalyProtoPreregistered,
@@ -383,7 +384,14 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 				require.NoError(t, rs.SetGeneration(ctx, repo.StorageName, repo.RelativePath, storageNodes[i].Storage, n.generation))
 			}
 
-			coordinator := NewCoordinator(queueInterceptor, rs, nodeMgr, txMgr, conf, protoregistry.GitalyProtoPreregistered)
+			coordinator := NewCoordinator(
+				queueInterceptor,
+				rs,
+				NewNodeManagerRouter(nodeMgr, rs),
+				txMgr,
+				conf,
+				protoregistry.GitalyProtoPreregistered,
+			)
 
 			fullMethod := "/gitaly.SmartHTTPService/PostReceivePack"
 
@@ -509,11 +517,12 @@ func TestStreamDirectorAccessor(t *testing.T) {
 	nodeMgr.Start(0, time.Minute)
 
 	txMgr := transactions.NewManager(conf)
+	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
 
 	coordinator := NewCoordinator(
 		queue,
-		datastore.NewMemoryRepositoryStore(conf.StorageNames()),
-		nodeMgr,
+		rs,
+		NewNodeManagerRouter(nodeMgr, rs),
 		txMgr,
 		conf,
 		protoregistry.GitalyProtoPreregistered,
@@ -602,7 +611,7 @@ func TestCoordinatorStreamDirector_distributesReads(t *testing.T) {
 	coordinator := NewCoordinator(
 		queue,
 		repoStore,
-		nodeMgr,
+		NewNodeManagerRouter(nodeMgr, repoStore),
 		txMgr,
 		conf,
 		protoregistry.GitalyProtoPreregistered,
@@ -797,11 +806,12 @@ func TestAbsentCorrelationID(t *testing.T) {
 	nodeMgr.Start(0, time.Hour)
 
 	txMgr := transactions.NewManager(conf)
+	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
 
 	coordinator := NewCoordinator(
 		queueInterceptor,
-		datastore.NewMemoryRepositoryStore(conf.StorageNames()),
-		nodeMgr,
+		rs,
+		NewNodeManagerRouter(nodeMgr, rs),
 		txMgr,
 		conf,
 		protoregistry.GitalyProtoPreregistered,
@@ -921,7 +931,14 @@ func TestStreamDirectorStorageScope(t *testing.T) {
 	nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf, nil, nil, promtest.NewMockHistogramVec(), protoregistry.GitalyProtoPreregistered, nil)
 	require.NoError(t, err)
 	nodeMgr.Start(0, time.Second)
-	coordinator := NewCoordinator(nil, rs, nodeMgr, nil, conf, protoregistry.GitalyProtoPreregistered)
+	coordinator := NewCoordinator(
+		nil,
+		rs,
+		NewNodeManagerRouter(nodeMgr, rs),
+		nil,
+		conf,
+		protoregistry.GitalyProtoPreregistered,
+	)
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
@@ -978,10 +995,12 @@ func TestStreamDirectorStorageScopeError(t *testing.T) {
 				return nodes.Shard{}, assert.AnError
 			},
 		}
+
+		rs := datastore.NewMemoryRepositoryStore(nil)
 		coordinator := NewCoordinator(
 			nil,
-			datastore.NewMemoryRepositoryStore(nil),
-			mgr,
+			rs,
+			NewNodeManagerRouter(mgr, rs),
 			nil,
 			config.Config{},
 			protoregistry.GitalyProtoPreregistered,
@@ -1005,10 +1024,12 @@ func TestStreamDirectorStorageScopeError(t *testing.T) {
 				return nodes.Shard{}, nodes.ErrVirtualStorageNotExist
 			},
 		}
+
+		rs := datastore.NewMemoryRepositoryStore(nil)
 		coordinator := NewCoordinator(
 			nil,
-			datastore.NewMemoryRepositoryStore(nil),
-			mgr,
+			rs,
+			NewNodeManagerRouter(mgr, rs),
 			nil,
 			config.Config{},
 			protoregistry.GitalyProtoPreregistered,
@@ -1033,10 +1054,12 @@ func TestStreamDirectorStorageScopeError(t *testing.T) {
 					return nodes.Shard{}, nodes.ErrPrimaryNotHealthy
 				},
 			}
+
+			rs := datastore.NewMemoryRepositoryStore(nil)
 			coordinator := NewCoordinator(
 				nil,
-				datastore.NewMemoryRepositoryStore(nil),
-				mgr,
+				rs,
+				NewNodeManagerRouter(mgr, rs),
 				nil,
 				config.Config{},
 				protoregistry.GitalyProtoPreregistered,
@@ -1053,7 +1076,7 @@ func TestStreamDirectorStorageScopeError(t *testing.T) {
 			result, ok := status.FromError(err)
 			require.True(t, ok)
 			require.Equal(t, codes.Internal, result.Code())
-			require.Equal(t, `accessor storage scoped: get shard "fake": primary is not healthy`, result.Message())
+			require.Equal(t, `accessor storage scoped: route storage accessor "fake": primary is not healthy`, result.Message())
 		})
 
 		t.Run("mutator", func(t *testing.T) {
@@ -1063,10 +1086,11 @@ func TestStreamDirectorStorageScopeError(t *testing.T) {
 					return nodes.Shard{}, nodes.ErrPrimaryNotHealthy
 				},
 			}
+			rs := datastore.NewMemoryRepositoryStore(nil)
 			coordinator := NewCoordinator(
 				nil,
-				datastore.NewMemoryRepositoryStore(nil),
-				mgr,
+				rs,
+				NewNodeManagerRouter(mgr, rs),
 				nil,
 				config.Config{},
 				protoregistry.GitalyProtoPreregistered,

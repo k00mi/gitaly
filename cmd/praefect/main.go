@@ -272,7 +272,7 @@ func run(cfgs []starter.Config, conf config.Config) error {
 		coordinator = praefect.NewCoordinator(
 			queue,
 			rs,
-			nodeManager,
+			praefect.NewNodeManagerRouter(nodeManager, rs),
 			transactionManager,
 			conf,
 			protoregistry.GitalyProtoPreregistered,

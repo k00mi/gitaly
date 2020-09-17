@@ -75,7 +75,7 @@ type grpcCall struct {
 // downstream server. The coordinator is thread safe; concurrent calls to
 // register nodes are safe.
 type Coordinator struct {
-	nodeMgr      nodes.Manager
+	router       Router
 	txMgr        *transactions.Manager
 	queue        datastore.ReplicationEventQueue
 	rs           datastore.RepositoryStore
@@ -88,7 +88,7 @@ type Coordinator struct {
 func NewCoordinator(
 	queue datastore.ReplicationEventQueue,
 	rs datastore.RepositoryStore,
-	nodeMgr nodes.Manager,
+	router Router,
 	txMgr *transactions.Manager,
 	conf config.Config,
 	r *protoregistry.Registry,
@@ -104,7 +104,7 @@ func NewCoordinator(
 		queue:    queue,
 		rs:       rs,
 		registry: r,
-		nodeMgr:  nodeMgr,
+		router:   router,
 		txMgr:    txMgr,
 		conf:     conf,
 		votersMetric: prometheus.NewHistogramVec(
@@ -173,22 +173,21 @@ func (c *Coordinator) accessorStreamParameters(ctx context.Context, call grpcCal
 	repoPath := targetRepo.GetRelativePath()
 	virtualStorage := targetRepo.StorageName
 
-	node, err := c.nodeMgr.GetSyncedNode(ctx, virtualStorage, repoPath)
+	node, err := c.router.RouteRepositoryAccessor(ctx, virtualStorage, repoPath)
 	if err != nil {
-		return nil, fmt.Errorf("accessor call: get synced: %w", err)
+		return nil, fmt.Errorf("accessor call: route repository accessor: %w", err)
 	}
 
-	storage := node.GetStorage()
-	b, err := rewrittenRepositoryMessage(call.methodInfo, call.msg, storage)
+	b, err := rewrittenRepositoryMessage(call.methodInfo, call.msg, node.Storage)
 	if err != nil {
 		return nil, fmt.Errorf("accessor call: rewrite storage: %w", err)
 	}
 
-	metrics.ReadDistribution.WithLabelValues(virtualStorage, storage).Inc()
+	metrics.ReadDistribution.WithLabelValues(virtualStorage, node.Storage).Inc()
 
 	return proxy.NewStreamParameters(proxy.Destination{
 		Ctx:  helper.IncomingToOutgoing(ctx),
-		Conn: node.GetConnection(),
+		Conn: node.Connection,
 		Msg:  b,
 	}, nil, nil, nil), nil
 }
@@ -220,7 +219,7 @@ func shouldUseTransaction(ctx context.Context, method string) bool {
 	return true
 }
 
-func (c *Coordinator) registerTransaction(ctx context.Context, primary nodes.Node, secondaries []nodes.Node) (*transactions.Transaction, transactions.CancelFunc, error) {
+func (c *Coordinator) registerTransaction(ctx context.Context, primary Node, secondaries []Node) (*transactions.Transaction, transactions.CancelFunc, error) {
 	var voters []transactions.Voter
 	var threshold uint
 
@@ -230,14 +229,14 @@ func (c *Coordinator) registerTransaction(ctx context.Context, primary nodes.Nod
 		// not matter.
 
 		voters = append(voters, transactions.Voter{
-			Name:  primary.GetStorage(),
+			Name:  primary.Storage,
 			Votes: 1,
 		})
 		threshold = 1
 
 		for _, node := range secondaries {
 			voters = append(voters, transactions.Voter{
-				Name:  node.GetStorage(),
+				Name:  node.Storage,
 				Votes: 0,
 			})
 		}
@@ -250,14 +249,14 @@ func (c *Coordinator) registerTransaction(ctx context.Context, primary nodes.Nod
 		// In order to ensure that no quorum can be reached without the primary, its number
 		// of votes needs to exceed the number of secondaries.
 		voters = append(voters, transactions.Voter{
-			Name:  primary.GetStorage(),
+			Name:  primary.Storage,
 			Votes: secondaryLen + 1,
 		})
 		threshold = secondaryLen + 1
 
 		for _, secondary := range secondaries {
 			voters = append(voters, transactions.Voter{
-				Name:  secondary.GetStorage(),
+				Name:  secondary.Storage,
 				Votes: 1,
 			})
 		}
@@ -277,18 +276,16 @@ func (c *Coordinator) registerTransaction(ctx context.Context, primary nodes.Nod
 func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall, targetRepo *gitalypb.Repository) (*proxy.StreamParameters, error) {
 	virtualStorage := targetRepo.StorageName
 
-	shard, err := c.nodeMgr.GetShard(virtualStorage)
+	route, err := c.router.RouteRepositoryMutator(ctx, virtualStorage, call.targetRepo.RelativePath)
 	if err != nil {
-		return nil, fmt.Errorf("mutator call: get shard: %w", err)
+		if errors.Is(err, ErrRepositoryReadOnly) {
+			return nil, err
+		}
+
+		return nil, fmt.Errorf("mutator call: route repository mutator: %w", err)
 	}
 
-	if latest, err := c.rs.IsLatestGeneration(ctx, virtualStorage, call.targetRepo.RelativePath, shard.Primary.GetStorage()); err != nil {
-		return nil, fmt.Errorf("check generation: %w", err)
-	} else if !latest {
-		return nil, ErrRepositoryReadOnly
-	}
-
-	primaryMessage, err := rewrittenRepositoryMessage(call.methodInfo, call.msg, shard.Primary.GetStorage())
+	primaryMessage, err := rewrittenRepositoryMessage(call.methodInfo, call.msg, route.Primary.Storage)
 	if err != nil {
 		return nil, fmt.Errorf("mutator call: rewrite storage: %w", err)
 	}
@@ -302,62 +299,46 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 
 	primaryDest := proxy.Destination{
 		Ctx:  helper.IncomingToOutgoing(ctx),
-		Conn: shard.Primary.GetConnection(),
+		Conn: route.Primary.Connection,
 		Msg:  primaryMessage,
 	}
 
 	var secondaryDests []proxy.Destination
 
 	if shouldUseTransaction(ctx, call.fullMethodName) {
-		// Only healthy secondaries which are consistent with the primary are allowed to take
-		// part in the transaction. Unhealthy nodes would block the transaction until they come back.
-		// Inconsistent nodes will anyway need repair so including them doesn't make sense. They
-		// also might vote to abort which might unnecessarily fail the transaction.
-		consistentSecondaries, err := c.rs.GetConsistentSecondaries(ctx, virtualStorage, targetRepo.RelativePath, shard.Primary.GetStorage())
+		c.votersMetric.WithLabelValues(virtualStorage).Observe(float64(1 + len(route.Secondaries)))
+
+		transaction, transactionCleanup, err := c.registerTransaction(ctx, route.Primary, route.Secondaries)
 		if err != nil {
 			return nil, err
 		}
 
-		participatingSecondaries := make([]nodes.Node, 0, len(consistentSecondaries))
-		for _, secondary := range shard.GetHealthySecondaries() {
-			if _, ok := consistentSecondaries[secondary.GetStorage()]; ok {
-				participatingSecondaries = append(participatingSecondaries, secondary)
-			}
-		}
-
-		c.votersMetric.WithLabelValues(virtualStorage).Observe(float64(1 + len(participatingSecondaries)))
-
-		transaction, transactionCleanup, err := c.registerTransaction(ctx, shard.Primary, participatingSecondaries)
-		if err != nil {
-			return nil, err
-		}
-
-		injectedCtx, err := metadata.InjectTransaction(ctx, transaction.ID(), shard.Primary.GetStorage(), true)
+		injectedCtx, err := metadata.InjectTransaction(ctx, transaction.ID(), route.Primary.Storage, true)
 		if err != nil {
 			return nil, err
 		}
 		primaryDest.Ctx = helper.IncomingToOutgoing(injectedCtx)
 
-		for _, secondary := range participatingSecondaries {
-			secondaryMsg, err := rewrittenRepositoryMessage(call.methodInfo, call.msg, secondary.GetStorage())
+		for _, secondary := range route.Secondaries {
+			secondaryMsg, err := rewrittenRepositoryMessage(call.methodInfo, call.msg, secondary.Storage)
 			if err != nil {
 				return nil, err
 			}
 
-			injectedCtx, err := metadata.InjectTransaction(ctx, transaction.ID(), secondary.GetStorage(), false)
+			injectedCtx, err := metadata.InjectTransaction(ctx, transaction.ID(), secondary.Storage, false)
 			if err != nil {
 				return nil, err
 			}
 
 			secondaryDests = append(secondaryDests, proxy.Destination{
 				Ctx:  helper.IncomingToOutgoing(injectedCtx),
-				Conn: secondary.GetConnection(),
+				Conn: secondary.Connection,
 				Msg:  secondaryMsg,
 			})
 		}
 
 		finalizers = append(finalizers,
-			transactionCleanup, c.createTransactionFinalizer(ctx, transaction, shard, virtualStorage, call.targetRepo, change, params),
+			transactionCleanup, c.createTransactionFinalizer(ctx, transaction, route, virtualStorage, call.targetRepo, change, params),
 		)
 	} else {
 		finalizers = append(finalizers,
@@ -365,9 +346,9 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 				ctx,
 				virtualStorage,
 				call.targetRepo,
-				shard.Primary.GetStorage(),
+				route.Primary.Storage,
 				nil,
-				nodesToStorages(shard.Secondaries),
+				append(nodesToStorages(route.Secondaries), route.ReplicationTargets...),
 				change,
 				params,
 			))
@@ -473,17 +454,15 @@ func (c *Coordinator) directStorageScopedMessage(ctx context.Context, mi protore
 }
 
 func (c *Coordinator) accessorStorageStreamParameters(ctx context.Context, mi protoregistry.MethodInfo, msg proto.Message, virtualStorage string) (*proxy.StreamParameters, error) {
-	shard, err := c.nodeMgr.GetShard(virtualStorage)
+	node, err := c.router.RouteStorageAccessor(ctx, virtualStorage)
 	if err != nil {
 		if errors.Is(err, nodes.ErrVirtualStorageNotExist) {
 			return nil, helper.ErrInvalidArgument(err)
 		}
-		return nil, helper.ErrInternalf("accessor storage scoped: get shard %q: %w", virtualStorage, err)
+		return nil, helper.ErrInternalf("accessor storage scoped: route storage accessor %q: %w", virtualStorage, err)
 	}
 
-	primaryStorage := shard.Primary.GetStorage()
-
-	b, err := rewrittenStorageMessage(mi, msg, primaryStorage)
+	b, err := rewrittenStorageMessage(mi, msg, node.Storage)
 	if err != nil {
 		return nil, helper.ErrInvalidArgument(fmt.Errorf("accessor storage scoped: %w", err))
 	}
@@ -493,7 +472,7 @@ func (c *Coordinator) accessorStorageStreamParameters(ctx context.Context, mi pr
 	// https://gitlab.com/gitlab-org/gitaly/-/issues/2972
 	primaryDest := proxy.Destination{
 		Ctx:  ctx,
-		Conn: shard.Primary.GetConnection(),
+		Conn: node.Connection,
 		Msg:  b,
 	}
 
@@ -501,7 +480,7 @@ func (c *Coordinator) accessorStorageStreamParameters(ctx context.Context, mi pr
 }
 
 func (c *Coordinator) mutatorStorageStreamParameters(ctx context.Context, mi protoregistry.MethodInfo, msg proto.Message, virtualStorage string) (*proxy.StreamParameters, error) {
-	shard, err := c.nodeMgr.GetShard(virtualStorage)
+	route, err := c.router.RouteStorageMutator(ctx, virtualStorage)
 	if err != nil {
 		if errors.Is(err, nodes.ErrVirtualStorageNotExist) {
 			return nil, helper.ErrInvalidArgument(err)
@@ -509,27 +488,24 @@ func (c *Coordinator) mutatorStorageStreamParameters(ctx context.Context, mi pro
 		return nil, helper.ErrInternalf("mutator storage scoped: get shard %q: %w", virtualStorage, err)
 	}
 
-	primaryStorage := shard.Primary.GetStorage()
-
-	b, err := rewrittenStorageMessage(mi, msg, primaryStorage)
+	b, err := rewrittenStorageMessage(mi, msg, route.Primary.Storage)
 	if err != nil {
 		return nil, helper.ErrInvalidArgument(fmt.Errorf("mutator storage scoped: %w", err))
 	}
 
 	primaryDest := proxy.Destination{
 		Ctx:  ctx,
-		Conn: shard.Primary.GetConnection(),
+		Conn: route.Primary.Connection,
 		Msg:  b,
 	}
 
-	secondaries := shard.GetHealthySecondaries()
-	secondaryDests := make([]proxy.Destination, len(secondaries))
-	for i, secondary := range secondaries {
-		b, err := rewrittenStorageMessage(mi, msg, secondary.GetStorage())
+	secondaryDests := make([]proxy.Destination, len(route.Secondaries))
+	for i, secondary := range route.Secondaries {
+		b, err := rewrittenStorageMessage(mi, msg, secondary.Storage)
 		if err != nil {
 			return nil, helper.ErrInvalidArgument(fmt.Errorf("mutator storage scoped: %w", err))
 		}
-		secondaryDests[i] = proxy.Destination{Ctx: ctx, Conn: secondary.GetConnection(), Msg: b}
+		secondaryDests[i] = proxy.Destination{Ctx: ctx, Conn: secondary.Connection, Msg: b}
 	}
 
 	return proxy.NewStreamParameters(primaryDest, secondaryDests, func() error { return nil }, nil), nil
@@ -581,7 +557,7 @@ func protoMessage(mi protoregistry.MethodInfo, frame []byte) (proto.Message, err
 func (c *Coordinator) createTransactionFinalizer(
 	ctx context.Context,
 	transaction *transactions.Transaction,
-	shard nodes.Shard,
+	route RepositoryMutatorRoute,
 	virtualStorage string,
 	targetRepo *gitalypb.Repository,
 	change datastore.ChangeType,
@@ -596,24 +572,24 @@ func (c *Coordinator) createTransactionFinalizer(
 		if transaction.CountSubtransactions() == 0 {
 			secondaries := make([]string, 0, len(successByNode))
 			for secondary := range successByNode {
-				if secondary == shard.Primary.GetStorage() {
+				if secondary == route.Primary.Storage {
 					continue
 				}
 				secondaries = append(secondaries, secondary)
 			}
 
 			return c.newRequestFinalizer(
-				ctx, virtualStorage, targetRepo, shard.Primary.GetStorage(),
+				ctx, virtualStorage, targetRepo, route.Primary.Storage,
 				nil, secondaries, change, params)()
 		}
 
 		// If the primary node failed the transaction, then
 		// there's no sense in trying to replicate from primary
 		// to secondaries.
-		if !successByNode[shard.Primary.GetStorage()] {
+		if !successByNode[route.Primary.Storage] {
 			return fmt.Errorf("transaction: primary failed vote")
 		}
-		delete(successByNode, shard.Primary.GetStorage())
+		delete(successByNode, route.Primary.Storage)
 
 		updatedSecondaries := make([]string, 0, len(successByNode))
 		var outdatedSecondaries []string
@@ -628,15 +604,15 @@ func (c *Coordinator) createTransactionFinalizer(
 		}
 
 		return c.newRequestFinalizer(
-			ctx, virtualStorage, targetRepo, shard.Primary.GetStorage(),
+			ctx, virtualStorage, targetRepo, route.Primary.Storage,
 			updatedSecondaries, outdatedSecondaries, change, params)()
 	}
 }
 
-func nodesToStorages(nodes []nodes.Node) []string {
+func nodesToStorages(nodes []Node) []string {
 	storages := make([]string, len(nodes))
 	for i, n := range nodes {
-		storages[i] = n.GetStorage()
+		storages[i] = n.Storage
 	}
 	return storages
 }
