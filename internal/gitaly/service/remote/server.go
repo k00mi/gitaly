@@ -7,9 +7,7 @@ import (
 )
 
 type server struct {
-	ruby *rubyserver.Server
-	gitalypb.UnimplementedRemoteServiceServer
-
+	ruby  *rubyserver.Server
 	conns *client.Pool
 }
 

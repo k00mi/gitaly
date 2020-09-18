@@ -7,7 +7,6 @@ import (
 
 type server struct {
 	ruby *rubyserver.Server
-	gitalypb.UnimplementedConflictsServiceServer
 }
 
 // NewServer creates a new instance of a grpc ConflictsServer

@@ -7,7 +7,6 @@ import (
 
 type server struct {
 	storages []config.Storage
-	gitalypb.UnimplementedServerServiceServer
 }
 
 // NewServer creates a new instance of a grpc ServerServiceServer

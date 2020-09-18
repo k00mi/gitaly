@@ -16,7 +16,6 @@ type server struct {
 	uploadPackRequestTimeout    time.Duration
 	uploadArchiveRequestTimeout time.Duration
 	packfileNegotiationMetrics  *prometheus.CounterVec
-	gitalypb.UnimplementedSSHServiceServer
 }
 
 // NewServer creates a new instance of a grpc SSHServer

@@ -7,7 +7,6 @@ import (
 
 type server struct {
 	ruby *rubyserver.Server
-	gitalypb.UnimplementedBlobServiceServer
 }
 
 // NewServer creates a new instance of a grpc BlobServer

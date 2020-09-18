@@ -5,7 +5,6 @@ import (
 )
 
 type server struct {
-	gitalypb.UnimplementedCleanupServiceServer
 }
 
 // NewServer creates a new instance of a grpc CleanupServer
