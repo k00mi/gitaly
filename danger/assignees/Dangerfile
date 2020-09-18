@@ -1,7 +1,7 @@
 if gitlab.mr_json["assignees"].none?
   warn "This merge request does not have any assignee yet. Setting an assignee clarifies who needs to take action on the merge request at any given time."
 
-  suggestions = (GITALY_TEAM - [gitlab.mr_author]).sample(2)
+  suggestions = (REVIEWERS - [gitlab.mr_author]).sample(2)
 
   case suggestions.size
   when 0
