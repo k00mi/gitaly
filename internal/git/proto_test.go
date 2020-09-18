@@ -105,6 +105,7 @@ func TestSupportsReferenceTransactionHook(t *testing.T) {
 		{"2.28.0.rc0", true},
 		{"2.28.0.rc2", true},
 		{"2.28.1", true},
+		{"2.28.0.468.g1be91c4e2f", true},
 		{"3.0.0", true},
 	} {
 		actual, err := git.SupportsReferenceTransactionHook(tc.version)
