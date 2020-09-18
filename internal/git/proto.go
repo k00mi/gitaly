@@ -151,8 +151,6 @@ func parseVersion(versionStr string) (version, error) {
 	if len(versionSplit) == 4 {
 		if strings.HasPrefix(versionSplit[3], "rc") {
 			ver.rc = true
-		} else {
-			return version{}, fmt.Errorf("unknown pre-release identifier %q", versionSplit[3])
 		}
 	}
 
