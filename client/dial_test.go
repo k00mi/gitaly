@@ -358,7 +358,7 @@ func (*healthServer) Watch(*healthpb.HealthCheckRequest, healthpb.Health_WatchSe
 
 // startTCPListener will start a insecure TCP listener on a random unused port
 func startTCPListener() (func(), string, error) {
-	listener, err := net.Listen("tcp", ":0")
+	listener, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		return nil, "", err
 	}
@@ -394,7 +394,7 @@ func startUnixListener() (func(), string, error) {
 
 // startTLSListener will start a secure TLS listener on a random unused port
 func startTLSListener() (func(), string, error) {
-	listener, err := net.Listen("tcp", ":0")
+	listener, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		return nil, "", err
 	}

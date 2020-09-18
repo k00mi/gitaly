@@ -33,7 +33,7 @@ func TestServerFactory(t *testing.T) {
 	defer gitalyServerFactory.Stop()
 
 	// start gitaly serving on public endpoint
-	gitalyListener, err := net.Listen(starter.TCP, ":0")
+	gitalyListener, err := net.Listen(starter.TCP, "localhost:0")
 	require.NoError(t, err)
 	defer func() { require.NoError(t, gitalyListener.Close()) }()
 	go gitalyServerFactory.Serve(gitalyListener, false)
@@ -118,7 +118,7 @@ func TestServerFactory(t *testing.T) {
 		praefectServerFactory := NewServerFactory(conf, logger, coordinator.StreamDirector, nodeMgr, txMgr, queue, rs, registry)
 		defer praefectServerFactory.Stop()
 
-		listener, err := net.Listen(starter.TCP, ":0")
+		listener, err := net.Listen(starter.TCP, "localhost:0")
 		require.NoError(t, err)
 		defer func() { require.NoError(t, listener.Close()) }()
 
@@ -147,7 +147,7 @@ func TestServerFactory(t *testing.T) {
 		praefectServerFactory := NewServerFactory(conf, logger, coordinator.StreamDirector, nodeMgr, txMgr, queue, rs, registry)
 		defer praefectServerFactory.Stop()
 
-		listener, err := net.Listen(starter.TCP, ":0")
+		listener, err := net.Listen(starter.TCP, "localhost:0")
 		require.NoError(t, err)
 		defer func() { require.NoError(t, listener.Close()) }()
 
@@ -187,7 +187,7 @@ func TestServerFactory(t *testing.T) {
 		defer praefectServerFactory.Stop()
 
 		// start with tcp address
-		tcpListener, err := net.Listen(starter.TCP, ":0")
+		tcpListener, err := net.Listen(starter.TCP, "localhost:0")
 		require.NoError(t, err)
 		defer tcpListener.Close()
 
@@ -203,7 +203,7 @@ func TestServerFactory(t *testing.T) {
 		tcpHealthClient := checkOwnRegisteredServices(ctx, t, tcpCC)
 
 		// start with tls address
-		tlsListener, err := net.Listen(starter.TCP, ":0")
+		tlsListener, err := net.Listen(starter.TCP, "localhost:0")
 		require.NoError(t, err)
 		defer tlsListener.Close()
 
