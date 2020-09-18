@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package test;
 
+import "lint.proto";
 import "shared.proto";
 
 message InvalidMethodRequest {}
@@ -61,6 +62,17 @@ message RequestWithNestedRepoNotFlagged {
   }
 
   Header header = 1 [(gitaly.target_repository) = true];
+}
+
+service InterceptedWithOperationType {
+  option (gitaly.intercepted) = true;
+
+  // intercepted services can't have operation type annotations.
+  rpc InvalidMethod(InvalidMethodRequest) returns (InvalidMethodResponse) {
+    option (gitaly.op_type) = {
+      op: ACCESSOR
+    };
+  }
 }
 
 service InvalidService {

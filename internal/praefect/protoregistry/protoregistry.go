@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
+	"gitlab.com/gitlab-org/gitaly/internal/protoutil"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
@@ -171,49 +172,44 @@ func (mi MethodInfo) UnmarshalRequestProto(b []byte) (proto.Message, error) {
 // Registry contains info about RPC methods
 type Registry struct {
 	protos map[string]MethodInfo
+	// interceptedMethods contains the set of methods which are intercepted
+	// by Praefect instead of proxying.
+	interceptedMethods map[string]struct{}
 }
 
 // New creates a new ProtoRegistry with info from one or more descriptor.FileDescriptorProto
 func New(protos ...*descriptor.FileDescriptorProto) (*Registry, error) {
 	methods := make(map[string]MethodInfo)
+	interceptedMethods := make(map[string]struct{})
 
 	for _, p := range protos {
 		for _, svc := range p.GetService() {
 			for _, method := range svc.GetMethod() {
+				fullMethodName := fmt.Sprintf("/%s.%s/%s",
+					p.GetPackage(), svc.GetName(), method.GetName(),
+				)
+
+				if intercepted, err := protoutil.IsInterceptedService(svc); err != nil {
+					return nil, fmt.Errorf("is intercepted: %w", err)
+				} else if intercepted {
+					interceptedMethods[fullMethodName] = struct{}{}
+					continue
+				}
+
 				mi, err := parseMethodInfo(p, method)
 				if err != nil {
 					return nil, err
 				}
 
-				fullMethodName := fmt.Sprintf(
-					"/%s.%s/%s",
-					p.GetPackage(), svc.GetName(), method.GetName(),
-				)
 				methods[fullMethodName] = mi
 			}
 		}
 	}
 
-	return &Registry{protos: methods}, nil
-}
-
-func getOpExtension(m *descriptor.MethodDescriptorProto) (*gitalypb.OperationMsg, error) {
-	options := m.GetOptions()
-
-	if !proto.HasExtension(options, gitalypb.E_OpType) {
-		return nil, fmt.Errorf("method %s missing op_type option", m.GetName())
-	}
-
-	ext, err := proto.GetExtension(options, gitalypb.E_OpType)
-	if err != nil {
-		return nil, fmt.Errorf("unable to get Gitaly custom OpType extension: %s", err)
-	}
-
-	opMsg, ok := ext.(*gitalypb.OperationMsg)
-	if !ok {
-		return nil, fmt.Errorf("unable to obtain OperationMsg from %#v", ext)
-	}
-	return opMsg, nil
+	return &Registry{
+		protos:             methods,
+		interceptedMethods: interceptedMethods,
+	}, nil
 }
 
 type protoFactory func([]byte) (proto.Message, error)
@@ -245,7 +241,7 @@ func methodReqFactory(method *descriptor.MethodDescriptorProto) (protoFactory, e
 }
 
 func parseMethodInfo(p *descriptor.FileDescriptorProto, methodDesc *descriptor.MethodDescriptorProto) (MethodInfo, error) {
-	opMsg, err := getOpExtension(methodDesc)
+	opMsg, err := protoutil.GetOpExtension(methodDesc)
 	if err != nil {
 		return MethodInfo{}, err
 	}
@@ -295,8 +291,8 @@ func parseMethodInfo(p *descriptor.FileDescriptorProto, methodDesc *descriptor.M
 
 	if scope == ScopeRepository {
 		m := matcher{
-			match:        getTargetRepositoryExtension,
-			subMatch:     getRepositoryExtension,
+			match:        protoutil.GetTargetRepositoryExtension,
+			subMatch:     protoutil.GetRepositoryExtension,
 			expectedType: ".gitaly.Repository",
 			topLevelMsgs: topLevelMsgs,
 		}
@@ -310,7 +306,7 @@ func parseMethodInfo(p *descriptor.FileDescriptorProto, methodDesc *descriptor.M
 		}
 		mi.targetRepo = targetRepo
 
-		m.match = getAdditionalRepositoryExtension
+		m.match = protoutil.GetAdditionalRepositoryExtension
 		additionalRepo, err := m.findField(topLevelMsgs[typeName])
 		if err != nil {
 			return MethodInfo{}, err
@@ -318,7 +314,7 @@ func parseMethodInfo(p *descriptor.FileDescriptorProto, methodDesc *descriptor.M
 		mi.additionalRepo = additionalRepo
 	} else if scope == ScopeStorage {
 		m := matcher{
-			match:        getStorageExtension,
+			match:        protoutil.GetStorageExtension,
 			topLevelMsgs: topLevelMsgs,
 		}
 		storage, err := m.findField(topLevelMsgs[typeName])
@@ -363,46 +359,6 @@ func getTopLevelMsgs(p *descriptor.FileDescriptorProto) (map[string]*descriptor.
 		topLevelMsgs[msg.GetName()] = msg
 	}
 	return topLevelMsgs, nil
-}
-
-func getStorageExtension(m *descriptor.FieldDescriptorProto) (bool, error) {
-	return getBoolExtension(m, gitalypb.E_Storage)
-}
-
-func getTargetRepositoryExtension(m *descriptor.FieldDescriptorProto) (bool, error) {
-	return getBoolExtension(m, gitalypb.E_TargetRepository)
-}
-
-func getAdditionalRepositoryExtension(m *descriptor.FieldDescriptorProto) (bool, error) {
-	return getBoolExtension(m, gitalypb.E_AdditionalRepository)
-}
-
-func getRepositoryExtension(m *descriptor.FieldDescriptorProto) (bool, error) {
-	return getBoolExtension(m, gitalypb.E_Repository)
-}
-
-func getBoolExtension(m *descriptor.FieldDescriptorProto, extension *proto.ExtensionDesc) (bool, error) {
-	options := m.GetOptions()
-
-	if !proto.HasExtension(options, extension) {
-		return false, nil
-	}
-
-	ext, err := proto.GetExtension(options, extension)
-	if err != nil {
-		return false, err
-	}
-
-	storageMsg, ok := ext.(*bool)
-	if !ok {
-		return false, fmt.Errorf("unable to obtain bool from %#v", ext)
-	}
-
-	if storageMsg == nil {
-		return false, nil
-	}
-
-	return *storageMsg, nil
 }
 
 // Matcher helps find field matching credentials. At first match method is used to check fields
@@ -493,6 +449,12 @@ func (pr *Registry) LookupMethod(fullMethodName string) (MethodInfo, error) {
 		return MethodInfo{}, fmt.Errorf("full method name not found: %v", fullMethodName)
 	}
 	return methodInfo, nil
+}
+
+// IsInterceptedMethod returns whether Praefect intercepts the method call instead of proxying it.
+func (pr *Registry) IsInterceptedMethod(fullMethodName string) bool {
+	_, ok := pr.interceptedMethods[fullMethodName]
+	return ok
 }
 
 // ExtractFileDescriptor extracts a FileDescriptorProto from a gzip'd buffer.

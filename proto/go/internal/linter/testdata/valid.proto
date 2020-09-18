@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package test;
 
+import "lint.proto";
 import "shared.proto";
 
 message ValidRequest {
@@ -43,6 +44,14 @@ message ValidStorageInnerNestedRequest {
   }
 
   Header header = 1;
+}
+
+service InterceptedService {
+  // intercepted services do not need method operation and scope
+  // annotations.
+  option (gitaly.intercepted) = true;
+
+  rpc TestMethod(ValidRequest) returns (ValidResponse);
 }
 
 service ValidService {

@@ -8,44 +8,26 @@ import "lint.proto";
 import "shared.proto";
 
 service PraefectInfoService {
-  rpc RepositoryReplicas(RepositoryReplicasRequest) returns (RepositoryReplicasResponse) {
-    option (op_type) = {
-      op: ACCESSOR
-      scope_level: SERVER
-    };
-  }
+  option (intercepted) = true;
+
+  rpc RepositoryReplicas(RepositoryReplicasRequest) returns (RepositoryReplicasResponse);
   // ConsistencyCheck will perform a consistency check on the requested
   // virtual storage backend. A stream of repository statuses will be sent
   // back indicating which repos are consistent with the primary and which ones
   // need repair.
-  rpc ConsistencyCheck(ConsistencyCheckRequest) returns (stream ConsistencyCheckResponse) {
-    option (op_type) = {
-      op: ACCESSOR
-      scope_level: STORAGE
-    };
-  }
+  rpc ConsistencyCheck(ConsistencyCheckRequest) returns (stream ConsistencyCheckResponse);
 
   // DatalossCheck checks for outdated repository replicas.
-  rpc DatalossCheck(DatalossCheckRequest) returns (DatalossCheckResponse) {
-    option (op_type) = {
-      op: ACCESSOR
-      scope_level: SERVER
-    };
-  }
+  rpc DatalossCheck(DatalossCheckRequest) returns (DatalossCheckResponse);
 
   // SetAuthoritativeStorage sets the authoritative storage for a repository on a given virtual storage.
   // This causes the current version of the repository on the authoritative storage to be considered the
   // latest and overwrite any other version on the virtual storage.
-  rpc SetAuthoritativeStorage(SetAuthoritativeStorageRequest) returns (SetAuthoritativeStorageResponse) {
-    option (op_type) = {
-      op: MUTATOR
-      scope_level: STORAGE
-    };
-  }
+  rpc SetAuthoritativeStorage(SetAuthoritativeStorageRequest) returns (SetAuthoritativeStorageResponse);
 }
 
 message SetAuthoritativeStorageRequest {
-  string virtual_storage = 1 [(storage)=true];
+  string virtual_storage = 1;
   string relative_path = 2;
   string authoritative_storage = 3;
 }
@@ -53,7 +35,7 @@ message SetAuthoritativeStorageRequest {
 message SetAuthoritativeStorageResponse {}
 
 message DatalossCheckRequest {
-  string virtual_storage = 1 [(storage)=true];
+  string virtual_storage = 1;
   // include_partially_replicated decides whether to include repositories which are fully up to date
   // on the primary but are outdated on some secondaries. Such repositories are still writable and do
   // not suffer from data loss. The data on the primary is not fully replicated which increases the
@@ -100,7 +82,7 @@ message RepositoryReplicasResponse{
 }
 
 message ConsistencyCheckRequest {
-  string virtual_storage = 1 [(storage)=true];
+  string virtual_storage = 1;
   // The target storage is the storage you wish to check for inconsistencies
   // against a reference storage (typically the current primary).
   string target_storage = 2;

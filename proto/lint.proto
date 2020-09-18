@@ -28,6 +28,13 @@ message OperationMsg {
   Scope scope_level = 2;
 }
 
+extend google.protobuf.ServiceOptions {
+  // intercepted indicates whether the proxy intercepts and handles the call
+  // instead of proxying. Intercepted services do not require scope or operation
+  // annotations.
+  bool intercepted = 82302;
+}
+
 extend google.protobuf.MethodOptions {
   // Random high number..
   OperationMsg op_type = 82303;

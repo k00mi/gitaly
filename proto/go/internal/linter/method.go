@@ -7,8 +7,8 @@ import (
 
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	plugin "github.com/golang/protobuf/protoc-gen-go/plugin"
+	"gitlab.com/gitlab-org/gitaly/internal/protoutil"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
-	"gitlab.com/gitlab-org/gitaly/proto/go/internal"
 )
 
 type methodLinter struct {
@@ -88,7 +88,7 @@ func (ml methodLinter) ensureValidStorage(expected int) error {
 	msgT := topLevelMsgs[reqMsgName]
 
 	m := matcher{
-		match:        internal.GetStorageExtension,
+		match:        protoutil.GetStorageExtension,
 		subMatch:     nil,
 		expectedType: "",
 		topLevelMsgs: topLevelMsgs,
@@ -120,8 +120,8 @@ func (ml methodLinter) ensureValidTargetRepository(expected int) error {
 	msgT := topLevelMsgs[reqMsgName]
 
 	m := matcher{
-		match:        internal.GetTargetRepositoryExtension,
-		subMatch:     internal.GetRepositoryExtension,
+		match:        protoutil.GetTargetRepositoryExtension,
+		subMatch:     protoutil.GetRepositoryExtension,
 		expectedType: ".gitaly.Repository",
 		topLevelMsgs: topLevelMsgs,
 	}

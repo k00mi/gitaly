@@ -32,6 +32,10 @@ func MethodTypeStreamInterceptor(r *protoregistry.Registry) grpc.StreamServerInt
 }
 
 func observeMethodType(registry *protoregistry.Registry, fullMethod string) {
+	if registry.IsInterceptedMethod(fullMethod) {
+		return
+	}
+
 	mi, err := registry.LookupMethod(fullMethod)
 	if err != nil {
 		logrus.WithField("full_method_name", fullMethod).WithError(err).Warn("error when looking up method info")

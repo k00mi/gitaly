@@ -7,18 +7,10 @@ option go_package = "gitlab.com/gitlab-org/gitaly/proto/go/gitalypb";
 import "lint.proto";
 
 service ServerService {
-  rpc ServerInfo(ServerInfoRequest) returns (ServerInfoResponse) {
-    option (op_type) = {
-      op: ACCESSOR
-      scope_level: SERVER
-    };
-  }
-  rpc DiskStatistics(DiskStatisticsRequest) returns (DiskStatisticsResponse) {
-    option (op_type) = {
-      op: ACCESSOR
-      scope_level: SERVER
-    };
-  }
+  option (intercepted) = true;
+
+  rpc ServerInfo(ServerInfoRequest) returns (ServerInfoResponse);
+  rpc DiskStatistics(DiskStatisticsRequest) returns (DiskStatisticsResponse);
 }
 
 message ServerInfoRequest {}

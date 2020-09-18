@@ -2,15 +2,20 @@ syntax = "proto3";
 
 package testdata;
 
+import "lint.proto";
 import "shared.proto";
-
-option go_package = "gitlab.com/gitlab-org/gitaly/internal/middleware/cache/testdata";
 
 message Request {
   gitaly.Repository destination = 1 [(gitaly.target_repository)=true];
 }
 
 message Response{}
+
+service InterceptedService {
+  option (gitaly.intercepted) = true;
+
+  rpc IgnoredMethod(Request) returns (Response);
+}
 
 service TestService {
   rpc ClientStreamRepoMutator(Request) returns (stream Response) {
