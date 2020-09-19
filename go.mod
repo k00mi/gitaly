@@ -17,10 +17,10 @@ require (
 	github.com/prometheus/client_golang v1.0.0
 	github.com/prometheus/procfs v0.0.3 // indirect
 	github.com/rubenv/sql-migrate v0.0.0-20191213152630-06338513c237
-	github.com/sirupsen/logrus v1.4.2
+	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.4.0
 	github.com/uber/jaeger-client-go v2.15.0+incompatible
-	gitlab.com/gitlab-org/gitlab-shell v0.0.0-20200821152636-82ec8144fb2a
+	gitlab.com/gitlab-org/gitlab-shell v0.0.0-20200921044701-1a2bfecd2f0e
 	gitlab.com/gitlab-org/labkit v0.0.0-20200908084045-45895e129029
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	golang.org/x/sys v0.0.0-20200113162924-86b910548bc1

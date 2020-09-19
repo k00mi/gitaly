@@ -1,6 +1,7 @@
 package hook_test
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -104,7 +105,7 @@ func TestAllowedVerifyParams(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		allowed, _, err := c.Allowed(tc.repo, tc.glRepository, tc.glID, tc.protocol, tc.changes)
+		allowed, _, err := c.Allowed(context.Background(), tc.repo, tc.glRepository, tc.glID, tc.protocol, tc.changes)
 		require.NoError(t, err)
 		require.Equal(t, tc.allowed, allowed)
 	}
@@ -199,7 +200,7 @@ func TestEscapedAndRelativeURLs(t *testing.T) {
 				},
 			})
 			require.NoError(t, err)
-			allowed, _, err := c.Allowed(testRepo, glRepository, glID, protocol, changes)
+			allowed, _, err := c.Allowed(context.Background(), testRepo, glRepository, glID, protocol, changes)
 			require.NoError(t, err)
 			require.True(t, allowed)
 		})
@@ -332,7 +333,7 @@ func TestAllowedResponseHandling(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			allowed, message, err := c.Allowed(testRepo, "repo-1", "key-123", "http", "a\nb\nc\nd")
+			allowed, message, err := c.Allowed(context.Background(), testRepo, "repo-1", "key-123", "http", "a\nb\nc\nd")
 			require.Equal(t, tc.allowed, allowed)
 			if err != nil {
 				require.Contains(t, err.Error(), tc.errMsg)
@@ -420,7 +421,7 @@ func TestPrereceive(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			success, err := c.PreReceive("key-123")
+			success, err := c.PreReceive(context.Background(), "key-123")
 			require.Equal(t, tc.success, success)
 			if err != nil {
 				require.Contains(t, err.Error(), tc.errMsg)
@@ -499,7 +500,7 @@ func TestPostReceive(t *testing.T) {
 			repositoryID := "project-123"
 			identifier := "key-123"
 			changes := "000 000 refs/heads/master"
-			success, _, err := c.PostReceive(repositoryID, identifier, changes, tc.pushOptions...)
+			success, _, err := c.PostReceive(context.Background(), repositoryID, identifier, changes, tc.pushOptions...)
 			require.Equal(t, tc.success, success)
 			if err != nil {
 				require.Contains(t, err.Error(), tc.errMsg)
