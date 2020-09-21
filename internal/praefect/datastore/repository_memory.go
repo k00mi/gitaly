@@ -51,9 +51,9 @@ func (s storages) storages(virtualStorage string) ([]string, error) {
 	return storages, nil
 }
 
-// virtualStorageStates represents the virtual storage's view of what state the repositories should be in.
-// It structured as virtual-storage->relative_path->generation.
-type virtualStorageState map[string]map[string]int
+// virtualStorageStates represents the virtual storage's view of which repositories should exist.
+// It's structured as virtual-storage->relative_path.
+type virtualStorageState map[string]map[string]struct{}
 
 // storageState contains individual storage's repository states.
 // It structured as virtual-storage->relative_path->storage->generation.
@@ -144,7 +144,7 @@ func (m *MemoryRepositoryStore) RenameRepository(ctx context.Context, virtualSto
 
 	if latestGen != GenerationUnknown {
 		m.deleteRepository(virtualStorage, relativePath)
-		m.setRepositoryGeneration(virtualStorage, newRelativePath, latestGen)
+		m.createRepository(virtualStorage, newRelativePath)
 	}
 
 	if storageGen != GenerationUnknown {
@@ -192,7 +192,7 @@ func (m *MemoryRepositoryStore) GetConsistentSecondaries(ctx context.Context, vi
 		return nil, err
 	}
 
-	expectedGen := m.getStorageGeneration(virtualStorage, relativePath, primary)
+	expectedGen := m.getRepositoryGeneration(virtualStorage, relativePath)
 	if expectedGen == GenerationUnknown {
 		return nil, nil
 	}
@@ -237,7 +237,9 @@ func (m *MemoryRepositoryStore) GetOutdatedRepositories(ctx context.Context, vir
 		return outdatedRepos, nil
 	}
 
-	for relativePath, latestGeneration := range repositories {
+	for relativePath := range repositories {
+		latestGeneration := m.getRepositoryGeneration(virtualStorage, relativePath)
+
 		for _, storage := range storages {
 			if gen := m.getStorageGeneration(virtualStorage, relativePath, storage); gen < latestGeneration {
 				if outdatedRepos[relativePath] == nil {
@@ -260,7 +262,8 @@ func (m *MemoryRepositoryStore) CountReadOnlyRepositories(ctx context.Context, v
 	for vs, primary := range vsPrimaries {
 		vsReadOnly[vs] = 0
 		relativePaths := m.virtualStorageState[vs]
-		for relativePath, expectedGeneration := range relativePaths {
+		for relativePath := range relativePaths {
+			expectedGeneration := m.getRepositoryGeneration(vs, relativePath)
 			actualGeneration := m.getStorageGeneration(vs, relativePath, primary)
 			if actualGeneration < expectedGeneration {
 				vsReadOnly[vs]++
@@ -272,12 +275,19 @@ func (m *MemoryRepositoryStore) CountReadOnlyRepositories(ctx context.Context, v
 }
 
 func (m *MemoryRepositoryStore) getRepositoryGeneration(virtualStorage, relativePath string) int {
-	gen, ok := m.virtualStorageState[virtualStorage][relativePath]
+	generations, ok := m.storageState[virtualStorage][relativePath]
 	if !ok {
 		return GenerationUnknown
 	}
 
-	return gen
+	max := GenerationUnknown
+	for _, generation := range generations {
+		if generation > max {
+			max = generation
+		}
+	}
+
+	return max
 }
 
 func (m *MemoryRepositoryStore) getStorageGeneration(virtualStorage, relativePath, storage string) int {
@@ -318,21 +328,16 @@ func (m *MemoryRepositoryStore) deleteStorageRepository(virtualStorage, relative
 }
 
 func (m *MemoryRepositoryStore) setGeneration(virtualStorage, relativePath, storage string, generation int) {
-	m.setRepositoryGeneration(virtualStorage, relativePath, generation)
+	m.createRepository(virtualStorage, relativePath)
 	m.setStorageGeneration(virtualStorage, relativePath, storage, generation)
 }
 
-func (m *MemoryRepositoryStore) setRepositoryGeneration(virtualStorage, relativePath string, generation int) {
-	current := m.getRepositoryGeneration(virtualStorage, relativePath)
-	if generation <= current {
-		return
-	}
-
+func (m *MemoryRepositoryStore) createRepository(virtualStorage, relativePath string) {
 	if m.virtualStorageState[virtualStorage] == nil {
-		m.virtualStorageState[virtualStorage] = make(map[string]int)
+		m.virtualStorageState[virtualStorage] = make(map[string]struct{})
 	}
 
-	m.virtualStorageState[virtualStorage][relativePath] = generation
+	m.virtualStorageState[virtualStorage][relativePath] = struct{}{}
 }
 
 func (m *MemoryRepositoryStore) setStorageGeneration(virtualStorage, relativePath, storage string, generation int) {

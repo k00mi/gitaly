@@ -76,6 +76,7 @@ func TestStreamDirectorReadOnlyEnforcement(t *testing.T) {
 			defer cancel()
 
 			rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
+			require.NoError(t, rs.SetGeneration(ctx, virtualStorage, relativePath, "latest", 1))
 			require.NoError(t, rs.SetGeneration(ctx, virtualStorage, relativePath, storage, 1))
 			if tc.readOnly {
 				require.NoError(t, rs.SetGeneration(ctx, virtualStorage, relativePath, storage, 0))

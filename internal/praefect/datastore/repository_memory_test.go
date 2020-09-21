@@ -40,7 +40,7 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 			requireState(t, ctx,
 				virtualStorageState{
 					"virtual-storage-1": {
-						"repository-1": 0,
+						"repository-1": struct{}{},
 					},
 				},
 				storageState{
@@ -61,7 +61,7 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 			requireState(t, ctx,
 				virtualStorageState{
 					"virtual-storage-1": {
-						"repository-1": 1,
+						"repository-1": struct{}{},
 					},
 				},
 				storageState{
@@ -83,7 +83,7 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 			requireState(t, ctx,
 				virtualStorageState{
 					"virtual-storage-1": {
-						"repository-1": 1,
+						"repository-1": struct{}{},
 					},
 				},
 				storageState{
@@ -102,7 +102,7 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 			requireState(t, ctx,
 				virtualStorageState{
 					"virtual-storage-1": {
-						"repository-1": 2,
+						"repository-1": struct{}{},
 					},
 				},
 				storageState{
@@ -127,7 +127,7 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 			requireState(t, ctx,
 				virtualStorageState{
 					"virtual-storage-1": {
-						"repository-1": 1,
+						"repository-1": struct{}{},
 					},
 				},
 				storageState{
@@ -148,67 +148,13 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 			requireState(t, ctx,
 				virtualStorageState{
 					"virtual-storage-1": {
-						"repository-1": 1,
+						"repository-1": struct{}{},
 					},
 				},
 				storageState{
 					"virtual-storage-1": {
 						"repository-1": {
 							"storage-1": 0,
-						},
-					},
-				},
-			)
-		})
-
-		t.Run("increments stays monotonic", func(t *testing.T) {
-			rs, requireState := newStore(t, nil)
-
-			require.NoError(t, rs.SetGeneration(ctx, vs, repo, stor, 1))
-			require.NoError(t, rs.SetGeneration(ctx, vs, repo, stor, 0))
-			requireState(t, ctx,
-				virtualStorageState{
-					"virtual-storage-1": {
-						"repository-1": 1,
-					},
-				},
-				storageState{
-					"virtual-storage-1": {
-						"repository-1": {
-							"storage-1": 0,
-						},
-					},
-				},
-			)
-
-			require.NoError(t, rs.IncrementGeneration(ctx, vs, repo, stor, nil))
-			requireState(t, ctx,
-				virtualStorageState{
-					"virtual-storage-1": {
-						"repository-1": 2,
-					},
-				},
-				storageState{
-					"virtual-storage-1": {
-						"repository-1": {
-							"storage-1": 2,
-						},
-					},
-				},
-			)
-
-			require.NoError(t, rs.IncrementGeneration(ctx, vs, repo, "storage-2", nil))
-			requireState(t, ctx,
-				virtualStorageState{
-					"virtual-storage-1": {
-						"repository-1": 3,
-					},
-				},
-				storageState{
-					"virtual-storage-1": {
-						"repository-1": {
-							"storage-1": 2,
-							"storage-2": 3,
 						},
 					},
 				},
@@ -300,14 +246,14 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 			requireState(t, ctx,
 				virtualStorageState{
 					"deleted": {
-						"deleted": 0,
+						"deleted": struct{}{},
 					},
 					"virtual-storage-1": {
-						"other-storages-remain": 0,
+						"other-storages-remain": struct{}{},
 					},
 					"virtual-storage-2": {
-						"deleted-repo":       0,
-						"other-repo-remains": 0,
+						"deleted-repo":       struct{}{},
+						"other-repo-remains": struct{}{},
 					},
 				},
 				storageState{
@@ -340,7 +286,7 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 			requireState(t, ctx,
 				virtualStorageState{
 					"virtual-storage-2": {
-						"other-repo-remains": 0,
+						"other-repo-remains": struct{}{},
 					},
 				},
 				storageState{
@@ -379,8 +325,8 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 			requireState(t, ctx,
 				virtualStorageState{
 					"virtual-storage-1": {
-						"renamed-all":  0,
-						"renamed-some": 0,
+						"renamed-all":  struct{}{},
+						"renamed-some": struct{}{},
 					},
 				},
 				storageState{
@@ -402,8 +348,8 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 			requireState(t, ctx,
 				virtualStorageState{
 					"virtual-storage-1": {
-						"renamed-all-new":  0,
-						"renamed-some-new": 0,
+						"renamed-all-new":  struct{}{},
+						"renamed-some-new": struct{}{},
 					},
 				},
 				storageState{
@@ -440,7 +386,7 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 		requireState(t, ctx,
 			virtualStorageState{
 				"virtual-storage-1": {
-					"repository-1": 1,
+					"repository-1": struct{}{},
 				},
 			},
 			storageState{
@@ -460,10 +406,12 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 			require.Equal(t, map[string]struct{}{"consistent-secondary": struct{}{}}, secondaries)
 		})
 
-		t.Run("primary on unknown generation", func(t *testing.T) {
-			secondaries, err := rs.GetConsistentSecondaries(ctx, vs, repo, "no-record")
+		require.NoError(t, rs.SetGeneration(ctx, vs, repo, "primary", 0))
+
+		t.Run("outdated primary", func(t *testing.T) {
+			secondaries, err := rs.GetConsistentSecondaries(ctx, vs, repo, "primary")
 			require.NoError(t, err)
-			require.Empty(t, secondaries)
+			require.Equal(t, map[string]struct{}{"consistent-secondary": struct{}{}}, secondaries)
 		})
 	})
 
@@ -604,12 +552,12 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 			requireState(t, ctx,
 				virtualStorageState{
 					"some-read-only": {
-						"read-only-outdated":  1,
-						"read-only-no-record": 0,
-						"writable":            0,
+						"read-only-outdated":  struct{}{},
+						"read-only-no-record": struct{}{},
+						"writable":            struct{}{},
 					},
 					"all-writable": {
-						"writable": 0,
+						"writable": struct{}{},
 					},
 				},
 				storageState{
