@@ -3,119 +3,83 @@
 package main
 
 import (
-	"bytes"
-	"os/exec"
-	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
 	git "github.com/libgit2/git2go/v30"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/internal/command"
+	"gitlab.com/gitlab-org/gitaly/internal/git2go"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
-
-func merge(t *testing.T, opts mergeSubcommand) (string, string, error) {
-	t.Helper()
-
-	valuesByArg := map[string]string{
-		"-repository":  opts.repository,
-		"-author-name": opts.authorName,
-		"-author-mail": opts.authorMail,
-		"-author-date": opts.authorDate,
-		"-message":     opts.message,
-		"-ours":        opts.ours,
-		"-theirs":      opts.theirs,
-	}
-
-	args := make([]string, 0, len(valuesByArg)*2+1)
-	args = append(args, "merge")
-	for arg, value := range valuesByArg {
-		if value == "" {
-			continue
-		}
-		args = append(args, arg, value)
-	}
-
-	binary := filepath.Join(config.Config.BinDir, "gitaly-git2go")
-
-	ctx, cancel := testhelper.Context()
-	defer cancel()
-
-	var stdout, stderr bytes.Buffer
-	cmd, err := command.New(ctx, exec.Command(binary, args...), nil, &stdout, &stderr)
-	require.NoError(t, err)
-
-	err = cmd.Wait()
-
-	return stdout.String(), stderr.String(), err
-}
 
 func TestMergeFailsWithMissingArguments(t *testing.T) {
 	_, repoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
 	testcases := []struct {
-		desc           string
-		opts           mergeSubcommand
-		expectedStderr string
+		desc        string
+		request     git2go.MergeCommand
+		expectedErr string
 	}{
 		{
-			desc:           "no arguments",
-			expectedStderr: "merge: invalid options: missing repository\n",
+			desc:        "no arguments",
+			expectedErr: "merge: invalid parameters: missing repository",
 		},
 		{
-			desc:           "missing repository",
-			opts:           mergeSubcommand{authorName: "Foo", authorMail: "foo@example.com", message: "Foo", ours: "HEAD", theirs: "HEAD"},
-			expectedStderr: "merge: invalid options: missing repository\n",
+			desc:        "missing repository",
+			request:     git2go.MergeCommand{AuthorName: "Foo", AuthorMail: "foo@example.com", Message: "Foo", Ours: "HEAD", Theirs: "HEAD"},
+			expectedErr: "merge: invalid parameters: missing repository",
 		},
 		{
-			desc:           "missing author name",
-			opts:           mergeSubcommand{repository: repoPath, authorMail: "foo@example.com", message: "Foo", ours: "HEAD", theirs: "HEAD"},
-			expectedStderr: "merge: invalid options: missing author name\n",
+			desc:        "missing author name",
+			request:     git2go.MergeCommand{Repository: repoPath, AuthorMail: "foo@example.com", Message: "Foo", Ours: "HEAD", Theirs: "HEAD"},
+			expectedErr: "merge: invalid parameters: missing author name",
 		},
 		{
-			desc:           "missing author mail",
-			opts:           mergeSubcommand{repository: repoPath, authorName: "Foo", message: "Foo", ours: "HEAD", theirs: "HEAD"},
-			expectedStderr: "merge: invalid options: missing author mail\n",
+			desc:        "missing author mail",
+			request:     git2go.MergeCommand{Repository: repoPath, AuthorName: "Foo", Message: "Foo", Ours: "HEAD", Theirs: "HEAD"},
+			expectedErr: "merge: invalid parameters: missing author mail",
 		},
 		{
-			desc:           "missing message",
-			opts:           mergeSubcommand{repository: repoPath, authorName: "Foo", authorMail: "foo@example.com", ours: "HEAD", theirs: "HEAD"},
-			expectedStderr: "merge: invalid options: missing message\n",
+			desc:        "missing message",
+			request:     git2go.MergeCommand{Repository: repoPath, AuthorName: "Foo", AuthorMail: "foo@example.com", Ours: "HEAD", Theirs: "HEAD"},
+			expectedErr: "merge: invalid parameters: missing message",
 		},
 		{
-			desc:           "missing ours",
-			opts:           mergeSubcommand{repository: repoPath, authorName: "Foo", authorMail: "foo@example.com", message: "Foo", theirs: "HEAD"},
-			expectedStderr: "merge: invalid options: missing ours\n",
+			desc:        "missing ours",
+			request:     git2go.MergeCommand{Repository: repoPath, AuthorName: "Foo", AuthorMail: "foo@example.com", Message: "Foo", Theirs: "HEAD"},
+			expectedErr: "merge: invalid parameters: missing ours",
 		},
 		{
-			desc:           "missing theirs",
-			opts:           mergeSubcommand{repository: repoPath, authorName: "Foo", authorMail: "foo@example.com", message: "Foo", ours: "HEAD"},
-			expectedStderr: "merge: invalid options: missing theirs\n",
+			desc:        "missing theirs",
+			request:     git2go.MergeCommand{Repository: repoPath, AuthorName: "Foo", AuthorMail: "foo@example.com", Message: "Foo", Ours: "HEAD"},
+			expectedErr: "merge: invalid parameters: missing theirs",
 		},
 	}
 
 	for _, tc := range testcases {
 		t.Run(tc.desc, func(t *testing.T) {
-			stdout, stderr, err := merge(t, tc.opts)
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			_, err := tc.request.Run(ctx, config.Config)
 			require.Error(t, err)
-			require.Equal(t, "", stdout)
-			require.Equal(t, tc.expectedStderr, stderr)
+			require.Equal(t, tc.expectedErr, err.Error())
 		})
 	}
 }
 
 func TestMergeFailsWithInvalidRepositoryPath(t *testing.T) {
-	stdout, stderr, err := merge(t, mergeSubcommand{
-		repository: "/does/not/exist", authorName: "Foo", authorMail: "foo@example.com", message: "Foo", ours: "HEAD", theirs: "HEAD",
-	})
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	_, err := git2go.MergeCommand{
+		Repository: "/does/not/exist", AuthorName: "Foo", AuthorMail: "foo@example.com", Message: "Foo", Ours: "HEAD", Theirs: "HEAD",
+	}.Run(ctx, config.Config)
 	require.Error(t, err)
-	require.Equal(t, "", stdout)
-	require.Contains(t, stderr, "merge: could not open repository")
+	require.Contains(t, err.Error(), "merge: could not open repository")
 }
 
 func buildCommit(t *testing.T, repoPath string, parent *git.Oid, fileContents map[string]string) *git.Oid {
@@ -156,13 +120,13 @@ func buildCommit(t *testing.T, repoPath string, parent *git.Oid, fileContents ma
 
 func TestMergeTrees(t *testing.T) {
 	testcases := []struct {
-		desc           string
-		base           map[string]string
-		ours           map[string]string
-		theirs         map[string]string
-		expected       map[string]string
-		expectedStdout string
-		expectedStderr string
+		desc             string
+		base             map[string]string
+		ours             map[string]string
+		theirs           map[string]string
+		expected         map[string]string
+		expectedResponse git2go.MergeResult
+		expectedStderr   string
 	}{
 		{
 			desc: "trivial merge succeeds",
@@ -178,7 +142,9 @@ func TestMergeTrees(t *testing.T) {
 			expected: map[string]string{
 				"file": "a",
 			},
-			expectedStdout: "7d5ae8fb6d2b301c53560bd728004d77778998df\n",
+			expectedResponse: git2go.MergeResult{
+				CommitID: "7d5ae8fb6d2b301c53560bd728004d77778998df",
+			},
 		},
 		{
 			desc: "non-trivial merge succeeds",
@@ -194,7 +160,9 @@ func TestMergeTrees(t *testing.T) {
 			expected: map[string]string{
 				"file": "0\na\nb\nc\nd\ne\nf\n0\n",
 			},
-			expectedStdout: "348b9b489c3ca128a4555c7a51b20335262519c7\n",
+			expectedResponse: git2go.MergeResult{
+				CommitID: "348b9b489c3ca128a4555c7a51b20335262519c7",
+			},
 		},
 		{
 			desc: "multiple files succeed",
@@ -218,7 +186,9 @@ func TestMergeTrees(t *testing.T) {
 				"2": "modified",
 				"3": "qux",
 			},
-			expectedStdout: "e9be4578f89ea52d44936fb36517e837d698b34b\n",
+			expectedResponse: git2go.MergeResult{
+				CommitID: "e9be4578f89ea52d44936fb36517e837d698b34b",
+			},
 		},
 		{
 			desc: "conflicting merge fails",
@@ -243,47 +213,51 @@ func TestMergeTrees(t *testing.T) {
 		ours := buildCommit(t, repoPath, base, tc.ours)
 		theirs := buildCommit(t, repoPath, base, tc.theirs)
 
+		authorDate := time.Date(2020, 7, 30, 7, 45, 50, 0, time.FixedZone("UTC+2", +2*60*60))
+
 		t.Run(tc.desc, func(t *testing.T) {
-			stdout, stderr, err := merge(t, mergeSubcommand{
-				repository: repoPath,
-				authorName: "John Doe",
-				authorMail: "john.doe@example.com",
-				authorDate: "Thu Jul 30 07:45:50 2020 +0200",
-				message:    "Merge message",
-				ours:       ours.String(),
-				theirs:     theirs.String(),
-			})
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			response, err := git2go.MergeCommand{
+				Repository: repoPath,
+				AuthorName: "John Doe",
+				AuthorMail: "john.doe@example.com",
+				AuthorDate: authorDate,
+				Message:    "Merge message",
+				Ours:       ours.String(),
+				Theirs:     theirs.String(),
+			}.Run(ctx, config.Config)
 
 			if tc.expectedStderr != "" {
 				assert.Error(t, err)
-				assert.Equal(t, "", stdout)
-				assert.Contains(t, stderr, tc.expectedStderr)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, "", stderr)
-				assert.Equal(t, tc.expectedStdout, stdout)
+				assert.Contains(t, err.Error(), tc.expectedStderr)
+				return
+			}
 
-				repo, err := git.OpenRepository(repoPath)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedResponse, response)
+
+			repo, err := git.OpenRepository(repoPath)
+			require.NoError(t, err)
+
+			commitOid, err := git.NewOid(response.CommitID)
+			require.NoError(t, err)
+
+			commit, err := repo.LookupCommit(commitOid)
+			require.NoError(t, err)
+
+			tree, err := commit.Tree()
+			require.NoError(t, err)
+			require.Equal(t, uint64(len(tc.expected)), tree.EntryCount())
+
+			for name, contents := range tc.expected {
+				entry := tree.EntryByName(name)
+				require.NotNil(t, entry)
+
+				blob, err := repo.LookupBlob(entry.Id)
 				require.NoError(t, err)
-
-				commitOid, err := git.NewOid(strings.TrimSpace(stdout))
-				require.NoError(t, err)
-
-				commit, err := repo.LookupCommit(commitOid)
-				require.NoError(t, err)
-
-				tree, err := commit.Tree()
-				require.NoError(t, err)
-				require.Equal(t, uint64(len(tc.expected)), tree.EntryCount())
-
-				for name, contents := range tc.expected {
-					entry := tree.EntryByName(name)
-					require.NotNil(t, entry)
-
-					blob, err := repo.LookupBlob(entry.Id)
-					require.NoError(t, err)
-					require.Equal(t, []byte(contents), blob.Contents())
-				}
+				require.Equal(t, []byte(contents), blob.Contents())
 			}
 		})
 	}

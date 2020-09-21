@@ -6,13 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os/exec"
-	"path"
 	"strings"
 
-	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/updateref"
+	"gitlab.com/gitlab-org/gitaly/internal/git2go"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
@@ -201,34 +199,23 @@ func (s *server) userMergeBranch(stream gitalypb.OperationService_UserMergeBranc
 		return err
 	}
 
-	binary := path.Join(s.cfg.BinDir, "gitaly-git2go")
-	args := []string{
-		"merge",
-		"-repository", repoPath,
-		"-author-name", string(firstRequest.User.Name),
-		"-author-mail", string(firstRequest.User.Email),
-		"-message", string(firstRequest.Message),
-		"-ours", firstRequest.CommitId,
-		"-theirs", revision,
-	}
-
-	var stderr, stdout bytes.Buffer
-	mergeCommand, err := command.New(ctx, exec.Command(binary, args...), nil, &stdout, &stderr)
+	merge, err := git2go.MergeCommand{
+		Repository: repoPath,
+		AuthorName: string(firstRequest.User.Name),
+		AuthorMail: string(firstRequest.User.Email),
+		Message:    string(firstRequest.Message),
+		Ours:       firstRequest.CommitId,
+		Theirs:     revision,
+	}.Run(ctx, s.cfg)
 	if err != nil {
-		return err
-	}
-
-	if err := mergeCommand.Wait(); err != nil {
-		if _, ok := err.(*exec.ExitError); ok {
-			return fmt.Errorf("%w: %s", err, stderr.String())
+		if errors.Is(err, git2go.ErrInvalidArgument) {
+			return helper.ErrInvalidArgument(err)
 		}
 		return err
 	}
 
-	mergeCommit := text.ChompBytes(stdout.Bytes())
-
 	if err := stream.Send(&gitalypb.UserMergeBranchResponse{
-		CommitId: mergeCommit,
+		CommitId: merge.CommitID,
 	}); err != nil {
 		return err
 	}
@@ -242,7 +229,7 @@ func (s *server) userMergeBranch(stream gitalypb.OperationService_UserMergeBranc
 	}
 
 	branch := "refs/heads/" + text.ChompBytes(firstRequest.Branch)
-	if err := s.updateReferenceWithHooks(ctx, firstRequest.Repository, firstRequest.User, branch, mergeCommit, revision); err != nil {
+	if err := s.updateReferenceWithHooks(ctx, firstRequest.Repository, firstRequest.User, branch, merge.CommitID, revision); err != nil {
 		var preReceiveError preReceiveError
 		var updateRefError updateRefError
 
@@ -262,7 +249,7 @@ func (s *server) userMergeBranch(stream gitalypb.OperationService_UserMergeBranc
 
 	if err := stream.Send(&gitalypb.UserMergeBranchResponse{
 		BranchUpdate: &gitalypb.OperationBranchUpdate{
-			CommitId:      mergeCommit,
+			CommitId:      merge.CommitID,
 			RepoCreated:   false,
 			BranchCreated: false,
 		},

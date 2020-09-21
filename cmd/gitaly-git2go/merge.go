@@ -10,50 +10,17 @@ import (
 	"time"
 
 	git "github.com/libgit2/git2go/v30"
+	"gitlab.com/gitlab-org/gitaly/internal/git2go"
 )
 
 type mergeSubcommand struct {
-	repository string
-	authorName string
-	authorMail string
-	authorDate string
-	message    string
-	ours       string
-	theirs     string
+	request string
 }
 
 func (cmd *mergeSubcommand) Flags() *flag.FlagSet {
 	flags := flag.NewFlagSet("merge", flag.ExitOnError)
-	flags.StringVar(&cmd.repository, "repository", "", "repository to merge branches in")
-	flags.StringVar(&cmd.authorName, "author-name", "", "author name to use for the merge commit")
-	flags.StringVar(&cmd.authorMail, "author-mail", "", "author mail to use for the merge commit")
-	flags.StringVar(&cmd.authorDate, "author-date", "", "author date to use for the merge commit")
-	flags.StringVar(&cmd.message, "message", "", "the commit message to use for the merge commit")
-	flags.StringVar(&cmd.ours, "ours", "", "the commit that reflects the destination tree")
-	flags.StringVar(&cmd.theirs, "theirs", "", "the commit to merge into the destination tree")
+	flags.StringVar(&cmd.request, "request", "", "git2go.MergeCommand")
 	return flags
-}
-
-func (cmd *mergeSubcommand) verifyOptions() error {
-	if cmd.repository == "" {
-		return errors.New("missing repository")
-	}
-	if cmd.authorName == "" {
-		return errors.New("missing author name")
-	}
-	if cmd.authorMail == "" {
-		return errors.New("missing author mail")
-	}
-	if cmd.message == "" {
-		return errors.New("missing message")
-	}
-	if cmd.ours == "" {
-		return errors.New("missing ours")
-	}
-	if cmd.theirs == "" {
-		return errors.New("missing theirs")
-	}
-	return nil
 }
 
 func lookupCommit(repo *git.Repository, ref string) (*git.Commit, error) {
@@ -87,32 +54,28 @@ func sanitizeSignatureInfo(info string) string {
 }
 
 func (cmd *mergeSubcommand) Run() error {
-	if err := cmd.verifyOptions(); err != nil {
-		return fmt.Errorf("invalid options: %w", err)
+	request, err := git2go.MergeCommandFromSerialized(cmd.request)
+	if err != nil {
+		return err
 	}
 
-	var date time.Time = time.Now()
-	if cmd.authorDate != "" {
-		var err error
-		date, err = time.Parse("Mon Jan 2 15:04:05 2006 -0700", cmd.authorDate)
-		if err != nil {
-			return err
-		}
+	if request.AuthorDate.IsZero() {
+		request.AuthorDate = time.Now()
 	}
 
-	repo, err := git.OpenRepository(cmd.repository)
+	repo, err := git.OpenRepository(request.Repository)
 	if err != nil {
 		return fmt.Errorf("could not open repository: %w", err)
 	}
 
-	ours, err := lookupCommit(repo, cmd.ours)
+	ours, err := lookupCommit(repo, request.Ours)
 	if err != nil {
-		return fmt.Errorf("could not lookup commit %q: %w", cmd.ours, err)
+		return fmt.Errorf("could not lookup commit %q: %w", request.Ours, err)
 	}
 
-	theirs, err := lookupCommit(repo, cmd.theirs)
+	theirs, err := lookupCommit(repo, request.Theirs)
 	if err != nil {
-		return fmt.Errorf("could not lookup commit %q: %w", cmd.theirs, err)
+		return fmt.Errorf("could not lookup commit %q: %w", request.Theirs, err)
 	}
 
 	index, err := repo.MergeCommits(ours, theirs, nil)
@@ -130,17 +93,26 @@ func (cmd *mergeSubcommand) Run() error {
 	}
 
 	committer := git.Signature{
-		Name:  sanitizeSignatureInfo(cmd.authorName),
-		Email: sanitizeSignatureInfo(cmd.authorMail),
-		When:  date,
+		Name:  sanitizeSignatureInfo(request.AuthorName),
+		Email: sanitizeSignatureInfo(request.AuthorMail),
+		When:  request.AuthorDate,
 	}
 
-	commit, err := repo.CreateCommitFromIds("", &committer, &committer, cmd.message, tree, ours.Id(), theirs.Id())
+	commit, err := repo.CreateCommitFromIds("", &committer, &committer, request.Message, tree, ours.Id(), theirs.Id())
 	if err != nil {
 		return fmt.Errorf("could not create merge commit: %w", err)
 	}
 
-	fmt.Println(commit.String())
+	response := git2go.MergeResult{
+		CommitID: commit.String(),
+	}
+
+	serialized, err := response.Serialize()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(serialized)
 
 	return nil
 }
