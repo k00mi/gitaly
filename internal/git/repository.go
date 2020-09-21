@@ -35,6 +35,13 @@ type Repository interface {
 
 	// GetBranches returns all branches.
 	GetBranches(ctx context.Context) ([]Reference, error)
+
+	// UpdateRef updates reference from oldrev to newrev. If oldrev is a
+	// non-empty string, the update will fail it the reference is not
+	// currently at that revision. If newrev is the zero OID, the reference
+	// will be deleted. If oldrev is the zero OID, the reference will
+	// created.
+	UpdateRef(ctx context.Context, reference, newrev, oldrev string) error
 }
 
 // localRepository represents a local Git repository.
@@ -52,8 +59,8 @@ func NewRepository(repo repository.GitRepo) Repository {
 // command creates a Git Command with the given args and Repository, executed
 // in the Repository. It validates the arguments in the command before
 // executing.
-func (repo *localRepository) command(ctx context.Context, globals []Option, cmd Cmd) (*command.Command, error) {
-	return SafeCmd(ctx, repo.repo, globals, cmd)
+func (repo *localRepository) command(ctx context.Context, globals []Option, cmd SubCmd) (*command.Command, error) {
+	return SafeStdinCmd(ctx, repo.repo, globals, cmd)
 }
 
 func (repo *localRepository) ContainsRef(ctx context.Context, ref string) (bool, error) {
@@ -147,4 +154,24 @@ func (repo *localRepository) GetBranch(ctx context.Context, branch string) (Refe
 
 func (repo *localRepository) GetBranches(ctx context.Context) ([]Reference, error) {
 	return repo.GetReferences(ctx, "refs/heads/")
+}
+
+func (repo *localRepository) UpdateRef(ctx context.Context, reference, newrev, oldrev string) error {
+	cmd, err := repo.command(ctx, nil, SubCmd{
+		Name:  "update-ref",
+		Flags: []Option{Flag{Name: "-z"}, Flag{Name: "--stdin"}},
+	})
+	if err != nil {
+		return err
+	}
+
+	if _, err := fmt.Fprintf(cmd, "update %s\x00%s\x00%s\x00", reference, newrev, oldrev); err != nil {
+		return err
+	}
+
+	if err := cmd.Wait(); err != nil {
+		return fmt.Errorf("UpdateRef: failed updating reference %q from %q to %q: %v", reference, newrev, oldrev, err)
+	}
+
+	return nil
 }
