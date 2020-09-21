@@ -1,5 +1,0 @@
----
-title: 'git: Optimize check for reference existence'
-merge_request: 2549
-author:
-type: performance

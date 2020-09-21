@@ -1,5 +1,0 @@
----
-title: Change timeformat to not omit trailing 0s
-merge_request: 256
-author:
-type: fixed

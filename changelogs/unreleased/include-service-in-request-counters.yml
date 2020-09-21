@@ -1,5 +1,0 @@
----
-title: Include grpc_service in gitaly_service_client_requests_total metric
-merge_request: 2536
-author:
-type: other

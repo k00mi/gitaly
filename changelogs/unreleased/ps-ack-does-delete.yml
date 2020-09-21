@@ -1,5 +1,0 @@
----
-title: Replication job acknowledge removes 'completed' and 'dead' events.
-merge_request: 2457
-author:
-type: added

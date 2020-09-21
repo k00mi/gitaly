@@ -1,5 +1,0 @@
----
-title: 'Makefile: Avoid Git2Go being linked against stale libgit2'
-merge_request: 2525
-author:
-type: fixed

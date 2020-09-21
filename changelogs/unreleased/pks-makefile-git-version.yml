@@ -1,5 +1,0 @@
----
-title: Fix GIT_VERSION build flag overriding Git's version
-merge_request: 2507
-author:
-type: fixed
