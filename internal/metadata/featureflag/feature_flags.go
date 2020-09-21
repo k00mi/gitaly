@@ -36,6 +36,8 @@ var (
 	LogCommandStats = FeatureFlag{Name: "log_command_stats", OnByDefault: false}
 	// GoUserMergeBranch enables the Go implementation of UserMergeBranch
 	GoUserMergeBranch = FeatureFlag{Name: "go_user_merge_branch", OnByDefault: false}
+	// GoUserMergeToRef enable the Go implementation of UserMergeToRef
+	GoUserMergeToRef = FeatureFlag{Name: "go_user_merge_to_ref", OnByDefault: false}
 )
 
 // All includes all feature flags.
@@ -51,6 +53,7 @@ var All = []FeatureFlag{
 	ReferenceTransactionHook,
 	RubyReferenceTransactionHook,
 	GoUserMergeBranch,
+	GoUserMergeToRef,
 }
 
 const (

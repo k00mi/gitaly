@@ -475,6 +475,10 @@ func TestFailedUserFFBranchDueToHooks(t *testing.T) {
 }
 
 func TestSuccessfulUserMergeToRefRequest(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserMergeToRef, testSuccessfulUserMergeToRefRequest)
+}
+
+func testSuccessfulUserMergeToRefRequest(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -536,9 +540,6 @@ func TestSuccessfulUserMergeToRefRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			ctx, cancel := testhelper.Context()
-			defer cancel()
-
 			request := &gitalypb.UserMergeToRefRequest{
 				Repository:     testRepo,
 				User:           testCase.user,
@@ -584,6 +585,10 @@ func TestSuccessfulUserMergeToRefRequest(t *testing.T) {
 }
 
 func TestFailedUserMergeToRefRequest(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserMergeToRef, testFailedUserMergeToRefRequest)
+}
+
+func testFailedUserMergeToRefRequest(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -669,9 +674,6 @@ func TestFailedUserMergeToRefRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			ctx, cancel := testhelper.Context()
-			defer cancel()
-
 			request := &gitalypb.UserMergeToRefRequest{
 				Repository: testCase.repo,
 				User:       testCase.user,
@@ -686,6 +688,10 @@ func TestFailedUserMergeToRefRequest(t *testing.T) {
 }
 
 func TestUserMergeToRefIgnoreHooksRequest(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserMergeToRef, testUserMergeToRefIgnoreHooksRequest)
+}
+
+func testUserMergeToRefIgnoreHooksRequest(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -716,9 +722,6 @@ func TestUserMergeToRefIgnoreHooksRequest(t *testing.T) {
 			remove, err := testhelper.WriteCustomHook(testRepoPath, hookName, hookContent)
 			require.NoError(t, err)
 			defer remove()
-
-			ctx, cancel := testhelper.Context()
-			defer cancel()
 
 			resp, err := client.UserMergeToRef(ctx, request)
 			require.NoError(t, err)

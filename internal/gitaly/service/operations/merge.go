@@ -318,9 +318,75 @@ func validateUserMergeToRefRequest(in *gitalypb.UserMergeToRefRequest) error {
 	return nil
 }
 
+// userMergeToRef overwrites the given TargetRef to point to either Branch or
+// FirstParentRef. Afterwards, it performs a merge of SourceSHA with either
+// Branch or FirstParentRef and updates TargetRef to the merge commit.
+func (s *server) userMergeToRef(ctx context.Context, request *gitalypb.UserMergeToRefRequest) (*gitalypb.UserMergeToRefResponse, error) {
+	repoPath, err := s.locator.GetPath(request.Repository)
+	if err != nil {
+		return nil, err
+	}
+
+	repo := git.NewRepository(request.Repository)
+
+	refName := string(request.Branch)
+	if request.FirstParentRef != nil {
+		refName = string(request.FirstParentRef)
+	}
+
+	ref, err := repo.ResolveRefish(ctx, refName)
+	if err != nil {
+		//nolint:stylecheck
+		return nil, helper.ErrInvalidArgument(errors.New("Invalid merge source"))
+	}
+
+	sourceRef, err := repo.ResolveRefish(ctx, request.SourceSha)
+	if err != nil {
+		//nolint:stylecheck
+		return nil, helper.ErrInvalidArgument(errors.New("Invalid merge source"))
+	}
+
+	// First, overwrite the reference with the target reference.
+	if err := repo.UpdateRef(ctx, string(request.TargetRef), ref, ""); err != nil {
+		return nil, updateRefError{reference: string(request.TargetRef)}
+	}
+
+	// Now, we create the merge commit...
+	merge, err := git2go.MergeCommand{
+		Repository: repoPath,
+		AuthorName: string(request.User.Name),
+		AuthorMail: string(request.User.Email),
+		Message:    string(request.Message),
+		Ours:       ref,
+		Theirs:     sourceRef,
+	}.Run(ctx, s.cfg)
+	if err != nil {
+		if errors.Is(err, git2go.ErrInvalidArgument) {
+			return nil, helper.ErrInvalidArgument(err)
+		}
+		//nolint:stylecheck
+		return nil, fmt.Errorf("Failed to create merge commit for source_sha %s and target_sha %s at %s", sourceRef, string(request.TargetRef), refName)
+	}
+
+	// ... and move branch from target ref to the merge commit. The Ruby
+	// implementation doesn't invoke hooks, so we don't either.
+	if err := repo.UpdateRef(ctx, string(request.TargetRef), merge.CommitID, ref); err != nil {
+		//nolint:stylecheck
+		return nil, helper.ErrPreconditionFailed(fmt.Errorf("Could not update %s. Please refresh and try again", string(request.TargetRef)))
+	}
+
+	return &gitalypb.UserMergeToRefResponse{
+		CommitId: merge.CommitID,
+	}, nil
+}
+
 func (s *server) UserMergeToRef(ctx context.Context, in *gitalypb.UserMergeToRefRequest) (*gitalypb.UserMergeToRefResponse, error) {
 	if err := validateUserMergeToRefRequest(in); err != nil {
 		return nil, helper.ErrInvalidArgument(err)
+	}
+
+	if featureflag.IsEnabled(ctx, featureflag.GoUserMergeBranch) {
+		return s.userMergeToRef(ctx, in)
 	}
 
 	client, err := s.ruby.OperationServiceClient(ctx)
