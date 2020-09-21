@@ -80,6 +80,9 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Since the environment is sanitized at the moment, we're only
+	// using this to extract the correlation ID. The finished() call
+	// to clean up the tracing will be a NOP here.
 	ctx, finished := tracing.ExtractFromEnv(ctx)
 	defer finished()
 
