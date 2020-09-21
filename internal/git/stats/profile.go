@@ -3,6 +3,7 @@ package stats
 import (
 	"context"
 	"errors"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -27,19 +28,36 @@ func HasBitmap(repo repository.GitRepo) (bool, error) {
 	return hasBitmap, nil
 }
 
-// Packfiles returns the number of packfiles a repository has.
-func Packfiles(repository repository.GitRepo) (int, error) {
+// PackfilesCount returns the number of packfiles a repository has.
+func PackfilesCount(repository repository.GitRepo) (int, error) {
 	repoPath, err := helper.GetRepoPath(repository)
 	if err != nil {
 		return 0, err
 	}
 
-	packFiles, err := filepath.Glob(filepath.Join(repoPath, "objects", "pack", "*.pack"))
+	packFiles, err := GetPackfiles(repoPath)
 	if err != nil {
 		return 0, err
 	}
 
 	return len(packFiles), nil
+}
+
+// GetPackfiles returns the FileInfo of packfiles inside a repository.
+func GetPackfiles(repoPath string) ([]os.FileInfo, error) {
+	files, err := ioutil.ReadDir(filepath.Join(repoPath, "objects/pack/"))
+	if err != nil {
+		return nil, err
+	}
+
+	var packFiles []os.FileInfo
+	for _, f := range files {
+		if filepath.Ext(f.Name()) == ".pack" {
+			packFiles = append(packFiles, f)
+		}
+	}
+
+	return packFiles, nil
 }
 
 // UnpackedObjects returns the number of loose objects that have a timestamp later than the newest
