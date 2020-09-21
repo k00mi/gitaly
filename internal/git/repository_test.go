@@ -14,6 +14,63 @@ const (
 	NonexistentID = "ba4f184e126b751d1bffad5897f263108befc780"
 )
 
+func TestLocalRepository_ResolveRefish(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	repo := NewRepository(testhelper.TestRepository())
+
+	testcases := []struct {
+		desc     string
+		refish   string
+		expected string
+	}{
+		{
+			desc:     "unqualified master branch",
+			refish:   "master",
+			expected: MasterID,
+		},
+		{
+			desc:     "fully qualified master branch",
+			refish:   "refs/heads/master",
+			expected: MasterID,
+		},
+		{
+			desc:     "typed commit",
+			refish:   "refs/heads/master^{commit}",
+			expected: MasterID,
+		},
+		{
+			desc:     "extended SHA notation",
+			refish:   "refs/heads/master^2",
+			expected: "c1c67abbaf91f624347bb3ae96eabe3a1b742478",
+		},
+		{
+			desc:   "nonexistent branch",
+			refish: "refs/heads/foobar",
+		},
+		{
+			desc:   "SHA notation gone wrong",
+			refish: "refs/heads/master^3",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.desc, func(t *testing.T) {
+			oid, err := repo.ResolveRefish(ctx, tc.refish)
+
+			if tc.expected == "" {
+				require.Error(t, err)
+				require.Equal(t, err, ErrReferenceNotFound)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, oid)
+		})
+	}
+}
+
 func TestLocalRepository_ContainsRef(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()

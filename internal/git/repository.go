@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os/exec"
 	"strings"
 
@@ -19,6 +20,11 @@ var (
 
 // Repository represents a Git repository.
 type Repository interface {
+	// ResolveRef resolves the given refish to its object ID. This uses the
+	// typical DWIM mechanism of Git to resolve the reference. See
+	// gitrevisions(1) for accepted syntax.
+	ResolveRefish(ctx context.Context, ref string) (string, error)
+
 	// ContainsRef checks if a ref in the repository exists.
 	ContainsRef(ctx context.Context, ref string) (bool, error)
 
@@ -63,27 +69,45 @@ func (repo *localRepository) command(ctx context.Context, globals []Option, cmd 
 	return SafeStdinCmd(ctx, repo.repo, globals, cmd)
 }
 
-func (repo *localRepository) ContainsRef(ctx context.Context, ref string) (bool, error) {
-	if ref == "" {
-		return false, errors.New("repository cannot contain empty reference name")
+func (repo *localRepository) ResolveRefish(ctx context.Context, refish string) (string, error) {
+	if refish == "" {
+		return "", errors.New("repository cannot contain empty reference name")
 	}
 
 	cmd, err := repo.command(ctx, nil, SubCmd{
 		Name:  "rev-parse",
 		Flags: []Option{Flag{Name: "--verify"}},
-		Args:  []string{ref},
+		Args:  []string{refish},
 	})
 	if err != nil {
-		return false, err
+		return "", err
 	}
+
+	var stdout bytes.Buffer
+	io.Copy(&stdout, cmd)
 
 	if err := cmd.Wait(); err != nil {
 		if _, ok := err.(*exec.ExitError); ok {
+			return "", ErrReferenceNotFound
+		}
+		return "", err
+	}
+
+	oid := strings.TrimSpace(stdout.String())
+	if len(oid) != 40 {
+		return "", fmt.Errorf("unsupported object hash %q", oid)
+	}
+
+	return oid, nil
+}
+
+func (repo *localRepository) ContainsRef(ctx context.Context, ref string) (bool, error) {
+	if _, err := repo.ResolveRefish(ctx, ref); err != nil {
+		if errors.Is(err, ErrReferenceNotFound) {
 			return false, nil
 		}
 		return false, err
 	}
-
 	return true, nil
 }
 
