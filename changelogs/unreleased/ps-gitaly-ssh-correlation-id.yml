@@ -1,5 +1,0 @@
----
-title: Pass correlation_id over to gitaly-ssh
-merge_request: 2530
-author:
-type: fixed

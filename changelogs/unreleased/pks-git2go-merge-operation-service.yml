@@ -1,5 +1,0 @@
----
-title: Port OperationService.UserMergeBranch to Go
-merge_request: 2540
-author:
-type: performance

@@ -1,5 +1,0 @@
----
-title: Fix potentially executing linguist with wrong version of bundle
-merge_request: 2495
-author:
-type: fixed

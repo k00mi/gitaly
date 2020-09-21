@@ -1,5 +1,67 @@
 # Gitaly changelog
 
+## 13.4.0
+
+### Removed (1 change)
+
+- Remove server scoped handling from coordinator. !2546
+
+### Fixed (13 changes)
+
+- Change timeformat to not omit trailing 0s. !256
+- Fix sparse checkout file list for rebase onto remote branch. !2447
+- Fix Git hooks when GitLab relative URL path and UNIX socket in use. !2485
+- Relabel smarthttp.InfoRefsReceivePack as accessor. !2487
+- Move fake git path to test target. !2490
+- Fix potentially executing linguist with wrong version of bundle. !2495
+- Fixup reference-transaction hook name based on arguments. !2506
+- Fix GIT_VERSION build flag overriding Git's version. !2507
+- Fix stale connections to Praefect due to keepalive policy. !2511
+- Fix downgrade error handling. !2522
+- Makefile: Avoid Git2Go being linked against stale libgit2. !2525
+- Pass correlation_id over to gitaly-ssh. !2530
+- Fix logging of replication events processing. !2547
+
+### Changed (6 changes)
+
+- hooks: Remove update feature flag. !2501
+- hooks: Remove prereceive hook Ruby implementation. !2519
+- transactions: Enable majority-wins voting strategy by default. !2529
+- Export GL_REPOSITORY and GL_PROJECT_PATH in git archive call. !2557
+- Enable voting via reference-transaction hook by default. !2558
+- Introduce Locator abstraction to diff service. !2559
+
+### Performance (3 changes)
+
+- Improved SQL to get up to date storages for repository. !2514
+- Port OperationService.UserMergeBranch to Go. !2540
+- git: Optimize check for reference existence. !2549
+
+### Added (12 changes)
+
+- Use error tracker to determine if node is healthy. !2341
+- Daily maintenance scheduler. !2423
+- Bump default Git version to v2.28.0. !2432
+- In-memory merges via Git2Go. !2433
+- Add Git2Go integration. !2438
+- Replication job acknowledge removes 'completed' and 'dead' events. !2457
+- Automatic repository reconciliation. !2462
+- Implement majority-wins transaction voting strategy. !2476
+- Provide generic "git" Makefile target. !2488
+- Rebuild targets only if Makefile content changes. !2492
+- Transactional voting via reference-transaction hook. !2509
+- hooks: Call reference-transaction hook from Ruby HooksService. !2566
+
+### Other (6 changes)
+
+- Add fuzz testing to objectinfo parser. !2481
+- Update rbtrace gem to v0.4.14. !2491
+- Upgrade sentry-raven and Faraday gems to v1.0.1. !2533
+- Include grpc_service in gitaly_service_client_requests_total metric. !2536
+- Bump labkit dependency to get mutex profiling. !2562
+- Update Nokogiri gem to v1.10.10. !2567
+
+
 ## 13.3.6
 
 - No changes.

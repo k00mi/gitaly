@@ -1,5 +1,0 @@
----
-title: Fix logging of replication events processing.
-merge_request: 2547
-author:
-type: fixed
