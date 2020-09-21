@@ -206,9 +206,9 @@ func testUserCreateBranchWithTransaction(t *testing.T, withRefTxHook bool) {
 			require.Empty(t, response.PreReceiveError)
 
 			if withRefTxHook {
-				require.Equal(t, 2, transactionServer.called)
-			} else {
 				require.Equal(t, 1, transactionServer.called)
+			} else {
+				require.Equal(t, 0, transactionServer.called)
 			}
 		})
 	}

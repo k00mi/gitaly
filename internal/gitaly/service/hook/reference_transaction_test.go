@@ -1,6 +1,7 @@
 package hook
 
 import (
+	"context"
 	"crypto/sha1"
 	"net"
 	"testing"
@@ -14,6 +15,17 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 )
+
+type testTransactionServer struct {
+	handler func(in *gitalypb.VoteTransactionRequest) (*gitalypb.VoteTransactionResponse, error)
+}
+
+func (s *testTransactionServer) VoteTransaction(ctx context.Context, in *gitalypb.VoteTransactionRequest) (*gitalypb.VoteTransactionResponse, error) {
+	if s.handler != nil {
+		return s.handler(in)
+	}
+	return nil, nil
+}
 
 func TestReferenceTransactionHookInvalidArgument(t *testing.T) {
 	serverSocketPath, stop := runHooksServer(t, config.Config)

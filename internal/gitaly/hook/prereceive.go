@@ -3,7 +3,6 @@ package hook
 import (
 	"bytes"
 	"context"
-	"crypto/sha1"
 	"errors"
 	"fmt"
 	"io"
@@ -104,11 +103,6 @@ func (m *GitLabHookManager) PreReceiveHook(ctx context.Context, repo *gitalypb.R
 		if !ok {
 			return errors.New("")
 		}
-	}
-
-	hash := sha1.Sum(changes)
-	if err := m.VoteOnTransaction(ctx, hash[:], env); err != nil {
-		return helper.ErrInternalf("error voting on transaction: %v", err)
 	}
 
 	return nil

@@ -659,9 +659,9 @@ func TestPostReceiveWithReferenceTransactionHook(t *testing.T) {
 			// If the reference-transaction hook is not supported or the feature flag is
 			// not enabled, voting only happens via the pre-receive hook.
 			if features.IsDisabled(featureflag.ReferenceTransactionHook) || !supported {
-				require.Equal(t, 1, refTransactionServer.called)
+				require.Equal(t, 0, refTransactionServer.called)
 			} else {
-				require.Equal(t, 5, refTransactionServer.called)
+				require.Equal(t, 4, refTransactionServer.called)
 			}
 		})
 	}
