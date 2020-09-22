@@ -34,7 +34,7 @@ func (m *GitLabHookManager) getPraefectConn(ctx context.Context, server *metadat
 	return m.conns.Dial(ctx, address, server.Token)
 }
 
-func (m *GitLabHookManager) VoteOnTransaction(ctx context.Context, hash []byte, env []string) error {
+func (m *GitLabHookManager) voteOnTransaction(ctx context.Context, hash []byte, env []string) error {
 	tx, err := metadata.TransactionFromEnv(env)
 	if err != nil {
 		if errors.Is(err, metadata.ErrTransactionNotFound) {
