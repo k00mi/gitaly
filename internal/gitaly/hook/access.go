@@ -1,6 +1,7 @@
 package hook
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -54,11 +55,11 @@ func marshallGitObjectDirs(gitObjectDirRel string, gitAltObjectDirsRel []string)
 // GitlabAPI is an interface for accessing the gitlab internal API
 type GitlabAPI interface {
 	// Allowed queries the gitlab internal api /allowed endpoint to determine if a ref change for a given repository and user is allowed
-	Allowed(repo *gitalypb.Repository, glRepository, glID, glProtocol, changes string) (bool, string, error)
+	Allowed(ctx context.Context, repo *gitalypb.Repository, glRepository, glID, glProtocol, changes string) (bool, string, error)
 	// PreReceive queries the gitlab internal api /pre_receive to increase the reference counter
-	PreReceive(glRepository string) (bool, error)
+	PreReceive(ctx context.Context, glRepository string) (bool, error)
 	// PostReceive queries the gitlab internal api /post_receive to decrease the reference counter
-	PostReceive(glRepository, glID, changes string, pushOptions ...string) (bool, []PostReceiveMessage, error)
+	PostReceive(ctx context.Context, glRepository, glID, changes string, pushOptions ...string) (bool, []PostReceiveMessage, error)
 }
 
 // gitlabAPI is a wrapper around client.GitlabNetClient with API methods for gitlab git receive hooks
@@ -102,7 +103,7 @@ func NewGitlabAPI(gitlabCfg config.Gitlab) (GitlabAPI, error) {
 }
 
 // Allowed checks if a ref change for a given repository is allowed through the gitlab internal api /allowed endpoint
-func (a *gitlabAPI) Allowed(repo *gitalypb.Repository, glRepository, glID, glProtocol, changes string) (bool, string, error) {
+func (a *gitlabAPI) Allowed(ctx context.Context, repo *gitalypb.Repository, glRepository, glID, glProtocol, changes string) (bool, string, error) {
 	repoPath, err := helper.GetRepoPath(repo)
 	if err != nil {
 		return false, "", fmt.Errorf("getting the repository path: %w", err)
@@ -126,7 +127,7 @@ func (a *gitlabAPI) Allowed(repo *gitalypb.Repository, glRepository, glID, glPro
 		return false, "", fmt.Errorf("setting gl_id: %w", err)
 	}
 
-	resp, err := a.client.Post("/allowed", &req)
+	resp, err := a.client.Post(ctx, "/allowed", &req)
 	if err != nil {
 		return false, "", err
 	}
@@ -166,8 +167,8 @@ type preReceiveResponse struct {
 }
 
 // PreReceive increases the reference counter for a push for a given gl_repository through the gitlab internal API /pre_receive endpoint
-func (a *gitlabAPI) PreReceive(glRepository string) (bool, error) {
-	resp, err := a.client.Post("/pre_receive", map[string]string{"gl_repository": glRepository})
+func (a *gitlabAPI) PreReceive(ctx context.Context, glRepository string) (bool, error) {
+	resp, err := a.client.Post(ctx, "/pre_receive", map[string]string{"gl_repository": glRepository})
 	if err != nil {
 		return false, fmt.Errorf("http post to gitlab api /pre_receive endpoint: %w", err)
 	}
@@ -212,8 +213,8 @@ type PostReceiveMessage struct {
 }
 
 // PostReceive decreases the reference counter for a push for a given gl_repository through the gitlab internal API /post_receive endpoint
-func (a *gitlabAPI) PostReceive(glRepository, glID, changes string, pushOptions ...string) (bool, []PostReceiveMessage, error) {
-	resp, err := a.client.Post("/post_receive", map[string]interface{}{"gl_repository": glRepository, "identifier": glID, "changes": changes, "push_options": pushOptions})
+func (a *gitlabAPI) PostReceive(ctx context.Context, glRepository, glID, changes string, pushOptions ...string) (bool, []PostReceiveMessage, error) {
+	resp, err := a.client.Post(ctx, "/post_receive", map[string]interface{}{"gl_repository": glRepository, "identifier": glID, "changes": changes, "push_options": pushOptions})
 	if err != nil {
 		return false, nil, fmt.Errorf("http post to gitlab api /post_receive endpoint: %w", err)
 	}
@@ -273,15 +274,15 @@ func (a *AllowedRequest) parseAndSetGLID(glID string) error {
 type mockAPI struct {
 }
 
-func (m *mockAPI) Allowed(repo *gitalypb.Repository, glRepository, glID, glProtocol, changes string) (bool, string, error) {
+func (m *mockAPI) Allowed(ctx context.Context, repo *gitalypb.Repository, glRepository, glID, glProtocol, changes string) (bool, string, error) {
 	return true, "", nil
 }
 
-func (m *mockAPI) PreReceive(glRepository string) (bool, error) {
+func (m *mockAPI) PreReceive(ctx context.Context, glRepository string) (bool, error) {
 	return true, nil
 }
 
-func (m *mockAPI) PostReceive(glRepository, glID, changes string, gitPushOptions ...string) (bool, []PostReceiveMessage, error) {
+func (m *mockAPI) PostReceive(ctx context.Context, glRepository, glID, changes string, gitPushOptions ...string) (bool, []PostReceiveMessage, error) {
 	return true, nil, nil
 }
 

@@ -25,6 +25,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/stream"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
+	"gitlab.com/gitlab-org/labkit/tracing"
 	"google.golang.org/grpc"
 )
 
@@ -78,6 +79,12 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// Since the environment is sanitized at the moment, we're only
+	// using this to extract the correlation ID. The finished() call
+	// to clean up the tracing will be a NOP here.
+	ctx, finished := tracing.ExtractFromEnv(ctx)
+	defer finished()
 
 	repository, err := repositoryFromEnv()
 	if err != nil {

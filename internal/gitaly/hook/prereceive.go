@@ -69,7 +69,7 @@ func (m *GitLabHookManager) PreReceiveHook(ctx context.Context, repo *gitalypb.R
 
 	// Only the primary should execute hooks and increment reference counters.
 	if primary {
-		allowed, message, err := m.gitlabAPI.Allowed(repo, glRepo, glID, glProtocol, string(changes))
+		allowed, message, err := m.gitlabAPI.Allowed(ctx, repo, glRepo, glID, glProtocol, string(changes))
 		if err != nil {
 			return fmt.Errorf("GitLab: %v", err)
 		}
@@ -95,7 +95,7 @@ func (m *GitLabHookManager) PreReceiveHook(ctx context.Context, repo *gitalypb.R
 		}
 
 		// reference counter
-		ok, err := m.gitlabAPI.PreReceive(glRepo)
+		ok, err := m.gitlabAPI.PreReceive(ctx, glRepo)
 		if err != nil {
 			return helper.ErrInternalf("calling pre_receive endpoint: %v", err)
 		}

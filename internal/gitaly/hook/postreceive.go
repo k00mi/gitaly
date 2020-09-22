@@ -133,7 +133,7 @@ func (m *GitLabHookManager) PostReceiveHook(ctx context.Context, repo *gitalypb.
 
 	glID, glRepo := getEnvVar("GL_ID", env), getEnvVar("GL_REPOSITORY", env)
 
-	ok, messages, err := m.gitlabAPI.PostReceive(glRepo, glID, string(changes), pushOptions...)
+	ok, messages, err := m.gitlabAPI.PostReceive(ctx, glRepo, glID, string(changes), pushOptions...)
 	if err != nil {
 		return fmt.Errorf("GitLab: %v", err)
 	}
