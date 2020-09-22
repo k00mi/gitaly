@@ -756,7 +756,7 @@ func TestPostgresReplicationEventQueue_StartHealthUpdate(t *testing.T) {
 			if updatedJobLocks[i].JobID == dequeuedEventsUntriggered[0].ID {
 				require.Equal(t, initialJobLocks[i].TriggeredAt, updatedJobLocks[i].TriggeredAt, "no update expected as it was not submitted")
 			} else {
-				require.True(t, updatedJobLocks[i].TriggeredAt.After(initialJobLocks[i].TriggeredAt))
+				require.GreaterOrEqual(t, updatedJobLocks[i].TriggeredAt.UnixNano(), initialJobLocks[i].TriggeredAt.UnixNano())
 			}
 		}
 

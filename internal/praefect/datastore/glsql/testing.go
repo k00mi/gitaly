@@ -116,13 +116,30 @@ func GetDBConfig(t testing.TB, database string) config.DB {
 	require.NoError(t, pErr, "PGPORT must be a port number of the Postgres database listens for incoming connections")
 
 	// connect to 'postgres' database first to re-create testing database from scratch
-	return config.DB{
-		Host:    host,
-		Port:    portNumber,
-		DBName:  database,
-		SSLMode: "disable",
-		User:    os.Getenv("PGUSER"),
+	conf := config.DB{
+		Host:      host,
+		ProxyHost: host,
+		Port:      portNumber,
+		ProxyPort: portNumber,
+		DBName:    database,
+		SSLMode:   "disable",
+		User:      os.Getenv("PGUSER"),
 	}
+
+	bouncerHost, bouncerHostFound := os.LookupEnv("PGHOST_PGBOUNCER")
+	if bouncerHostFound {
+		conf.ProxyHost = bouncerHost
+	}
+
+	bouncerPort, bouncerPortFound := os.LookupEnv("PGPORT_PGBOUNCER")
+	if bouncerPortFound {
+		bouncerPortNumber, pErr := strconv.Atoi(bouncerPort)
+		require.NoError(t, pErr, "PGPORT_PGBOUNCER must be a port number of the PgBouncer")
+
+		conf.ProxyPort = bouncerPortNumber
+	}
+
+	return conf
 }
 
 func initGitalyTestDB(t testing.TB, database string) *sql.DB {
