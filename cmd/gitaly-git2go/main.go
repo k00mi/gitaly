@@ -14,7 +14,8 @@ type subcmd interface {
 }
 
 var subcommands = map[string]subcmd{
-	"merge": &mergeSubcommand{},
+	"conflicts": &conflictsSubcommand{},
+	"merge":     &mergeSubcommand{},
 }
 
 const programName = "gitaly-git2go"
