@@ -648,7 +648,7 @@ func TestPostReceiveWithReferenceTransactionHook(t *testing.T) {
 			if features.IsDisabled(featureflag.ReferenceTransactionHook) || !supported {
 				require.Equal(t, 0, refTransactionServer.called)
 			} else {
-				require.Equal(t, 4, refTransactionServer.called)
+				require.Equal(t, 2, refTransactionServer.called)
 			}
 		})
 	}

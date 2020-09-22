@@ -10,6 +10,13 @@ import (
 )
 
 func (m *GitLabHookManager) ReferenceTransactionHook(ctx context.Context, state ReferenceTransactionState, env []string, stdin io.Reader) error {
+	// We're only voting in prepared state as this is the only stage in
+	// Git's reference transaction which allows us to abort the
+	// transaction.
+	if state != ReferenceTransactionPrepared {
+		return nil
+	}
+
 	changes, err := ioutil.ReadAll(stdin)
 	if err != nil {
 		return helper.ErrInternalf("reading stdin from request: %w", err)
