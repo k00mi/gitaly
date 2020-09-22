@@ -25,7 +25,7 @@ var (
 	mergeBranchHeadBefore = "281d3a76f31c812dbf48abce82ccf6860adedd81"
 )
 
-func testUserMergeBranch(t *testing.T, testcase func(*testing.T, context.Context)) {
+func testWithFeature(t *testing.T, feature featureflag.FeatureFlag, testcase func(*testing.T, context.Context)) {
 	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{
 		featureflag.GoUserMergeBranch,
 	})
@@ -44,7 +44,7 @@ func testUserMergeBranch(t *testing.T, testcase func(*testing.T, context.Context
 }
 
 func TestSuccessfulMerge(t *testing.T) {
-	testUserMergeBranch(t, testSuccessfulMerge)
+	testWithFeature(t, featureflag.GoUserMergeBranch, testSuccessfulMerge)
 }
 
 func testSuccessfulMerge(t *testing.T, ctx context.Context) {
@@ -121,7 +121,7 @@ func testSuccessfulMerge(t *testing.T, ctx context.Context) {
 }
 
 func TestAbortedMerge(t *testing.T) {
-	testUserMergeBranch(t, testAbortedMerge)
+	testWithFeature(t, featureflag.GoUserMergeBranch, testAbortedMerge)
 }
 
 func testAbortedMerge(t *testing.T, ctx context.Context) {
@@ -190,7 +190,7 @@ func testAbortedMerge(t *testing.T, ctx context.Context) {
 }
 
 func TestFailedMergeConcurrentUpdate(t *testing.T) {
-	testUserMergeBranch(t, testFailedMergeConcurrentUpdate)
+	testWithFeature(t, featureflag.GoUserMergeBranch, testFailedMergeConcurrentUpdate)
 }
 
 func testFailedMergeConcurrentUpdate(t *testing.T, ctx context.Context) {
@@ -238,7 +238,7 @@ func testFailedMergeConcurrentUpdate(t *testing.T, ctx context.Context) {
 }
 
 func TestFailedMergeDueToHooks(t *testing.T) {
-	testUserMergeBranch(t, testFailedMergeDueToHooks)
+	testWithFeature(t, featureflag.GoUserMergeBranch, testFailedMergeDueToHooks)
 }
 
 func testFailedMergeDueToHooks(t *testing.T, ctx context.Context) {
@@ -475,6 +475,10 @@ func TestFailedUserFFBranchDueToHooks(t *testing.T) {
 }
 
 func TestSuccessfulUserMergeToRefRequest(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserMergeToRef, testSuccessfulUserMergeToRefRequest)
+}
+
+func testSuccessfulUserMergeToRefRequest(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -536,9 +540,6 @@ func TestSuccessfulUserMergeToRefRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			ctx, cancel := testhelper.Context()
-			defer cancel()
-
 			request := &gitalypb.UserMergeToRefRequest{
 				Repository:     testRepo,
 				User:           testCase.user,
@@ -584,6 +585,10 @@ func TestSuccessfulUserMergeToRefRequest(t *testing.T) {
 }
 
 func TestFailedUserMergeToRefRequest(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserMergeToRef, testFailedUserMergeToRefRequest)
+}
+
+func testFailedUserMergeToRefRequest(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -669,9 +674,6 @@ func TestFailedUserMergeToRefRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			ctx, cancel := testhelper.Context()
-			defer cancel()
-
 			request := &gitalypb.UserMergeToRefRequest{
 				Repository: testCase.repo,
 				User:       testCase.user,
@@ -686,6 +688,10 @@ func TestFailedUserMergeToRefRequest(t *testing.T) {
 }
 
 func TestUserMergeToRefIgnoreHooksRequest(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserMergeToRef, testUserMergeToRefIgnoreHooksRequest)
+}
+
+func testUserMergeToRefIgnoreHooksRequest(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -716,9 +722,6 @@ func TestUserMergeToRefIgnoreHooksRequest(t *testing.T) {
 			remove, err := testhelper.WriteCustomHook(testRepoPath, hookName, hookContent)
 			require.NoError(t, err)
 			defer remove()
-
-			ctx, cancel := testhelper.Context()
-			defer cancel()
 
 			resp, err := client.UserMergeToRef(ctx, request)
 			require.NoError(t, err)
