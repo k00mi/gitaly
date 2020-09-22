@@ -2,11 +2,8 @@ package hook
 
 import (
 	"bytes"
-	"context"
-	"crypto/sha1"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -22,7 +19,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 )
 
@@ -331,17 +327,6 @@ exit %d
 	assert.Equal(t, customHookReturnMsg, text.ChompBytes(stderr), "hook stderr")
 }
 
-type testTransactionServer struct {
-	handler func(in *gitalypb.VoteTransactionRequest) (*gitalypb.VoteTransactionResponse, error)
-}
-
-func (s *testTransactionServer) VoteTransaction(ctx context.Context, in *gitalypb.VoteTransactionRequest) (*gitalypb.VoteTransactionResponse, error) {
-	if s.handler != nil {
-		return s.handler(in)
-	}
-	return nil, nil
-}
-
 func TestPreReceiveHook_Primary(t *testing.T) {
 	rubyDir := config.Config.Ruby.Dir
 	defer func(rubyDir string) {
@@ -357,11 +342,9 @@ func TestPreReceiveHook_Primary(t *testing.T) {
 		primary            bool
 		allowedHandler     http.HandlerFunc
 		preReceiveHandler  http.HandlerFunc
-		stdin              []byte
 		hookExitCode       int32
 		expectedExitStatus int32
 		expectedStderr     string
-		expectedReftxHash  []byte
 	}{
 		{
 			desc:               "primary checks for permissions",
@@ -375,7 +358,6 @@ func TestPreReceiveHook_Primary(t *testing.T) {
 			primary:            false,
 			allowedHandler:     allowedHandler(false),
 			expectedExitStatus: 0,
-			expectedReftxHash:  []byte{},
 		},
 		{
 			desc:               "primary tries to increase reference counter",
@@ -391,7 +373,6 @@ func TestPreReceiveHook_Primary(t *testing.T) {
 			allowedHandler:     allowedHandler(true),
 			preReceiveHandler:  preReceiveHandler(false),
 			expectedExitStatus: 0,
-			expectedReftxHash:  []byte{},
 		},
 		{
 			desc:               "primary executes hook",
@@ -408,76 +389,11 @@ func TestPreReceiveHook_Primary(t *testing.T) {
 			preReceiveHandler:  preReceiveHandler(true),
 			hookExitCode:       123,
 			expectedExitStatus: 0,
-			expectedReftxHash:  []byte{},
-		},
-		{
-			desc:               "primary hook triggers transaction",
-			primary:            true,
-			stdin:              []byte("foobar"),
-			allowedHandler:     allowedHandler(true),
-			preReceiveHandler:  preReceiveHandler(true),
-			hookExitCode:       0,
-			expectedExitStatus: 0,
-			expectedReftxHash:  []byte("foobar"),
-		},
-		{
-			desc:               "secondary hook triggers transaction",
-			primary:            false,
-			stdin:              []byte("foobar"),
-			allowedHandler:     allowedHandler(true),
-			preReceiveHandler:  preReceiveHandler(true),
-			hookExitCode:       0,
-			expectedExitStatus: 0,
-			expectedReftxHash:  []byte("foobar"),
-		},
-		{
-			desc:               "primary Ruby hook triggers transaction",
-			primary:            true,
-			stdin:              []byte("foobar"),
-			allowedHandler:     allowedHandler(true),
-			preReceiveHandler:  preReceiveHandler(true),
-			hookExitCode:       0,
-			expectedExitStatus: 0,
-			expectedReftxHash:  []byte("foobar"),
-		},
-		{
-			desc:               "secondary Ruby hook triggers transaction",
-			primary:            false,
-			stdin:              []byte("foobar"),
-			allowedHandler:     allowedHandler(true),
-			preReceiveHandler:  preReceiveHandler(true),
-			hookExitCode:       0,
-			expectedExitStatus: 0,
-			expectedReftxHash:  []byte("foobar"),
 		},
 	}
 
-	transactionServer := &testTransactionServer{}
-	grpcServer := grpc.NewServer()
-	gitalypb.RegisterRefTransactionServer(grpcServer, transactionServer)
-
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	require.NoError(t, err)
-
-	errQ := make(chan error)
-	go func() {
-		errQ <- grpcServer.Serve(listener)
-	}()
-	defer func() {
-		grpcServer.Stop()
-		require.NoError(t, <-errQ)
-	}()
-
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			var reftxHash []byte
-			transactionServer.handler = func(in *gitalypb.VoteTransactionRequest) (*gitalypb.VoteTransactionResponse, error) {
-				reftxHash = in.ReferenceUpdatesHash
-				return &gitalypb.VoteTransactionResponse{
-					State: gitalypb.VoteTransactionResponse_COMMIT,
-				}, nil
-			}
-
 			testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 			defer cleanupFn()
 
@@ -509,12 +425,6 @@ func TestPreReceiveHook_Primary(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			transactionServer := metadata.PraefectServer{
-				ListenAddr: "tcp://" + listener.Addr().String(),
-			}
-			transactionServerEnv, err := transactionServer.Env()
-			require.NoError(t, err)
-
 			transaction := metadata.Transaction{
 				ID:      1234,
 				Node:    "node-1",
@@ -529,7 +439,6 @@ func TestPreReceiveHook_Primary(t *testing.T) {
 				"GL_USERNAME=username",
 				"GL_REPOSITORY=repository",
 				transactionEnv,
-				transactionServerEnv,
 			}
 
 			stream, err := client.PreReceiveHook(ctx)
@@ -538,22 +447,12 @@ func TestPreReceiveHook_Primary(t *testing.T) {
 				Repository:           testRepo,
 				EnvironmentVariables: environment,
 			}))
-			require.NoError(t, stream.Send(&gitalypb.PreReceiveHookRequest{
-				Stdin: tc.stdin,
-			}))
 			require.NoError(t, stream.CloseSend())
 
 			_, stderr, status, _ := sendPreReceiveHookRequest(t, stream, &bytes.Buffer{})
 
-			var expectedReftxHash []byte
-			if tc.expectedReftxHash != nil {
-				hash := sha1.Sum(tc.expectedReftxHash)
-				expectedReftxHash = hash[:]
-			}
-
 			require.Equal(t, tc.expectedExitStatus, status)
 			require.Equal(t, tc.expectedStderr, text.ChompBytes(stderr))
-			require.Equal(t, expectedReftxHash[:], reftxHash)
 		})
 	}
 }

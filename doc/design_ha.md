@@ -287,17 +287,13 @@ would thus hook into this reference transaction mechanism directly via
 githooks(5), which has been implemented in git-core and is going to be part of
 release v2.28.0.
 
-As a first iteration, we will approximate hooking into the reference transaction
-mechanism by instead implementing strong consistency via the pre-receive hook.
-This hook gets executed whenever a client pushes to a repository. While this
-will not cover all the different ways a reference may be update,  it can be used
-as a proof of concept to establish whether strong consistency via hooks is a
-viable route to go.
+Strong consistency is implemented via the reference-transaction hook. This hook
+gets executed whenever a Git command updates any reference in a repository.
 
-### Strong Consistency via Pre-Receive Hooks
+### Strong Consistency via Reference-Transaction Hook
 
 The following diagram shows the flow of a ReceivePack operation from Praefect
-via Gitaly to Git and finally to the pre-receive hook:
+via Gitaly to Git and finally to the reference-transaction hook:
 
 ```mermaid
 sequenceDiagram
@@ -316,10 +312,10 @@ sequenceDiagram
    nodes.
 1. Gitaly executes `git receive-pack` and passes incoming data to it.
 1. After `git receive-pack` has received all references that are to be updated,
-   it executes the pre-receive hook and writes all references that are to be
-   updated to its standard input.
-1. The pre-receive hook reaches out to Praefect and notifies it about all the
-   reference updates it wants to perform.
+   it executes the reference-transaction hook for each reference which is to be
+   updated.
+1. The reference-transaction hook reaches out to Praefect and notifies it about
+   all reference update it wants to perform.
 1. Praefect waits until all Gitaly nodes have notified it about the reference
    update. After it has received all notifications, it verifies that all nodes
    want to perform the same update. If so, it notifies them that they may go
@@ -457,20 +453,38 @@ impossible to determine the root cause, replication jobs from primary to
 secondaries needs to be created unconditionally to replicate any potential
 changes.
 
-## Enabling Strong Consistency
+## Using Strong Consistency
 
-The current implementation of strong consistency via pre-receive hooks is
-guarded by feature flags. In order to make use of it, you thus need to disable
-the following feature flag:
+The current implementation of strong consistency via reference-transaction hook
+is enabled by default. You can use the following feature flags to change its
+behavior:
 
-- `gitaly_reference_transactions_primary_wins`: This feature flag is enabled by
-  default and will cause transactions to always succeed for the primary, no
-  matter what secondaries vote for. To enable strong consistency where nodes
-  need to agree, this feature flag needs to be disabled.
+- `gitaly_reference_transactions`: This feature flag is enabled by default. If
+  disabled, reference transactions will not be used.
 
-In order to observe reference transactions, two metrics
-`gitaly_praefect_transactions_total` and
-`gitaly_praefect_transactions_delay_seconds` are exposed.
+- `gitaly_reference_transactions_primary_wins`: This feature flag is disabled by
+  default. If enabled, it will cause transactions to always succeed for the
+  primary, no matter what secondaries vote for.
+
+- `gitaly_reference_transaction_hook`: This feature flag is enabled by default.
+  If disabled, reference transactions will be created but no voting will happen.
+
+- `gitaly_ruby_reference_transaction_hook`: This feature flag is disabled by
+  default. If enabled, it will cause Ruby RPCs to perform voting via the
+  reference-transaction hook.
+
+In order to observe reference transactions, the following metrics can be used:
+
+- `gitaly_praefect_transactions_total`: The number of transactions created.
+
+- `gitaly_praefect_transactions_delay_seconds`: Server-side delay between
+  casting a vote and reaching quorum.
+
+- `gitaly_praefect_subtransactions_per_transaction_total`: Number of
+  subtransactions created for each transaction.
+
+- `gitaly_praefect_voters_per_transaction_total`: Number of nodes which have
+  cast a vote in a given transaction.
 
 **Note:** Required work is only present in Gitaly starting with release
 v13.1.0-rc3.
