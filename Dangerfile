@@ -6,6 +6,7 @@ GITALY_TEAM = %w[
   pokstad1
   proglottis
   samihiltunen
+  toon
   zj-gitlab
 ]
 
