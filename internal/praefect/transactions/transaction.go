@@ -21,6 +21,13 @@ var (
 	ErrSubtransactionFailed = errors.New("subtransaction has failed")
 )
 
+type transactionState int
+
+const (
+	transactionOpen = transactionState(iota)
+	transactionCanceled
+)
+
 // Voter is a participant in a given transaction that may cast a vote.
 type Voter struct {
 	// Name of the voter, usually Gitaly's storage name.
@@ -44,6 +51,7 @@ type Transaction struct {
 	voters    []Voter
 
 	lock            sync.Mutex
+	state           transactionState
 	subtransactions []*subtransaction
 }
 
@@ -79,6 +87,7 @@ func newTransaction(id uint64, voters []Voter, threshold uint) (*Transaction, er
 		id:        id,
 		threshold: threshold,
 		voters:    voters,
+		state:     transactionOpen,
 	}, nil
 }
 
@@ -89,6 +98,8 @@ func (t *Transaction) cancel() {
 	for _, subtransaction := range t.subtransactions {
 		subtransaction.cancel()
 	}
+
+	t.state = transactionCanceled
 }
 
 // ID returns the identifier used to uniquely identify a transaction.
@@ -144,6 +155,15 @@ func (t *Transaction) CountSubtransactions() int {
 func (t *Transaction) getOrCreateSubtransaction(node string) (*subtransaction, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
+
+	switch t.state {
+	case transactionOpen:
+		// expected state, nothing to do
+	case transactionCanceled:
+		return nil, ErrTransactionCanceled
+	default:
+		return nil, errors.New("invalid transaction state")
+	}
 
 	for _, subtransaction := range t.subtransactions {
 		result, err := subtransaction.getResult(node)
