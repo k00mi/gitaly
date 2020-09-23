@@ -271,8 +271,8 @@ func TestConfigParsing(t *testing.T) {
 					SSLCert:     "/path/to/cert",
 					SSLKey:      "/path/to/key",
 					SSLRootCert: "/path/to/root-cert",
-					ProxyHost:   "2.3.4.5",
-					ProxyPort:   6432,
+					HostNoProxy: "2.3.4.5",
+					PortNoProxy: 6432,
 				},
 				MemoryQueueEnabled:  true,
 				GracefulStopTimeout: config.Duration(30 * time.Second),
@@ -360,14 +360,14 @@ func TestStorageNames(t *testing.T) {
 
 func TestToPQString(t *testing.T) {
 	testCases := []struct {
-		desc     string
-		in       DB
-		useProxy bool
-		out      string
+		desc   string
+		in     DB
+		direct bool
+		out    string
 	}{
 		{desc: "empty", in: DB{}, out: "binary_parameters=yes"},
 		{
-			desc: "basic example",
+			desc: "proxy connection",
 			in: DB{
 				Host:        "1.2.3.4",
 				Port:        2345,
@@ -379,32 +379,14 @@ func TestToPQString(t *testing.T) {
 				SSLKey:      "/path/to/key",
 				SSLRootCert: "/path/to/root-cert",
 			},
-			useProxy: false,
-			out:      `port=2345 host=1.2.3.4 user=praefect-user password=secret dbname=praefect_production sslmode=require sslcert=/path/to/cert sslkey=/path/to/key sslrootcert=/path/to/root-cert binary_parameters=yes`,
+			direct: false,
+			out:    `port=2345 host=1.2.3.4 user=praefect-user password=secret dbname=praefect_production sslmode=require sslcert=/path/to/cert sslkey=/path/to/key sslrootcert=/path/to/root-cert binary_parameters=yes`,
 		},
 		{
-			desc: "with proxy and set proxy values",
+			desc: "direct connection",
 			in: DB{
-				Host:        "1.2.3.4",
-				Port:        2345,
-				User:        "praefect-user",
-				Password:    "secret",
-				DBName:      "praefect_production",
-				SSLMode:     "require",
-				SSLCert:     "/path/to/cert",
-				SSLKey:      "/path/to/key",
-				SSLRootCert: "/path/to/root-cert",
-				ProxyHost:   "2.2.3.4",
-				ProxyPort:   1234,
-			},
-			useProxy: true,
-			out:      `port=1234 host=2.2.3.4 user=praefect-user password=secret dbname=praefect_production sslmode=require sslcert=/path/to/cert sslkey=/path/to/key sslrootcert=/path/to/root-cert binary_parameters=yes`,
-		},
-		{
-			desc: "with proxy and no proxy values set",
-			in: DB{
-				Host:        "1.2.3.4",
-				Port:        2345,
+				HostNoProxy: "1.2.3.4",
+				PortNoProxy: 2345,
 				User:        "praefect-user",
 				Password:    "secret",
 				DBName:      "praefect_production",
@@ -413,8 +395,8 @@ func TestToPQString(t *testing.T) {
 				SSLKey:      "/path/to/key",
 				SSLRootCert: "/path/to/root-cert",
 			},
-			useProxy: true,
-			out:      `port=2345 host=1.2.3.4 user=praefect-user password=secret dbname=praefect_production sslmode=require sslcert=/path/to/cert sslkey=/path/to/key sslrootcert=/path/to/root-cert binary_parameters=yes`,
+			direct: true,
+			out:    `port=2345 host=1.2.3.4 user=praefect-user password=secret dbname=praefect_production sslmode=require sslcert=/path/to/cert sslkey=/path/to/key sslrootcert=/path/to/root-cert binary_parameters=yes`,
 		},
 		{
 			desc: "with spaces and quotes",
@@ -427,7 +409,7 @@ func TestToPQString(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			require.Equal(t, tc.out, tc.in.ToPQString(tc.useProxy))
+			require.Equal(t, tc.out, tc.in.ToPQString(tc.direct))
 		})
 	}
 }

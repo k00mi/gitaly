@@ -258,23 +258,21 @@ type DB struct {
 	SSLCert     string `toml:"sslcert"`
 	SSLKey      string `toml:"sslkey"`
 	SSLRootCert string `toml:"sslrootcert"`
-	ProxyHost   string `toml:"proxy_host"`
-	ProxyPort   int    `toml:"proxy_port"`
+	HostNoProxy string `toml:"host_no_proxy"`
+	PortNoProxy int    `toml:"port_no_proxy"`
 }
 
 // ToPQString returns a connection string that can be passed to github.com/lib/pq.
-func (db DB) ToPQString(useProxy bool) string {
-	hostVal := db.Host
-	portVal := db.Port
+func (db DB) ToPQString(direct bool) string {
+	var hostVal string
+	var portVal int
 
-	if useProxy {
-		if db.ProxyHost != "" {
-			hostVal = db.ProxyHost
-		}
-
-		if db.ProxyPort != 0 {
-			portVal = db.ProxyPort
-		}
+	if direct {
+		hostVal = db.HostNoProxy
+		portVal = db.PortNoProxy
+	} else {
+		hostVal = db.Host
+		portVal = db.Port
 	}
 
 	var fields []string

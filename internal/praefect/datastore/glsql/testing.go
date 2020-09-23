@@ -117,18 +117,18 @@ func GetDBConfig(t testing.TB, database string) config.DB {
 
 	// connect to 'postgres' database first to re-create testing database from scratch
 	conf := config.DB{
-		Host:      host,
-		ProxyHost: host,
-		Port:      portNumber,
-		ProxyPort: portNumber,
-		DBName:    database,
-		SSLMode:   "disable",
-		User:      os.Getenv("PGUSER"),
+		Host:        host,
+		HostNoProxy: host,
+		Port:        portNumber,
+		PortNoProxy: portNumber,
+		DBName:      database,
+		SSLMode:     "disable",
+		User:        os.Getenv("PGUSER"),
 	}
 
 	bouncerHost, bouncerHostFound := os.LookupEnv("PGHOST_PGBOUNCER")
 	if bouncerHostFound {
-		conf.ProxyHost = bouncerHost
+		conf.Host = bouncerHost
 	}
 
 	bouncerPort, bouncerPortFound := os.LookupEnv("PGPORT_PGBOUNCER")
@@ -136,7 +136,7 @@ func GetDBConfig(t testing.TB, database string) config.DB {
 		bouncerPortNumber, pErr := strconv.Atoi(bouncerPort)
 		require.NoError(t, pErr, "PGPORT_PGBOUNCER must be a port number of the PgBouncer")
 
-		conf.ProxyPort = bouncerPortNumber
+		conf.Port = bouncerPortNumber
 	}
 
 	return conf
