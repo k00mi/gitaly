@@ -2,10 +2,12 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
@@ -64,7 +66,12 @@ func (s *server) GetArchive(in *gitalypb.GetArchiveRequest, stream gitalypb.Repo
 		return stream.Send(&gitalypb.GetArchiveResponse{Data: p})
 	})
 
-	return handleArchive(ctx, writer, in, compressCmd, format, path, exclude)
+	gitlabConfig, err := json.Marshal(s.cfg)
+	if err != nil {
+		return err
+	}
+
+	return handleArchive(ctx, writer, in, compressCmd, format, path, exclude, gitlabConfig, s.binDir)
 }
 
 func parseArchiveFormat(format gitalypb.GetArchiveRequest_Format) (*exec.Cmd, string) {
@@ -132,16 +139,16 @@ func findGetArchivePath(f *commit.TreeEntryFinder, commitID, path string) (ok bo
 	return true, nil
 }
 
-func handleArchive(ctx context.Context, writer io.Writer, in *gitalypb.GetArchiveRequest, compressCmd *exec.Cmd, format string, path string, exclude []string) error {
+func handleArchive(ctx context.Context, writer io.Writer, in *gitalypb.GetArchiveRequest, compressCmd *exec.Cmd, format string, archivePath string, exclude []string, internalCfg []byte, binDir string) error {
 	var args []string
 	pathspecs := make([]string, 0, len(exclude)+1)
 	if !in.GetElidePath() {
 		// git archive [options] <commit ID> -- <path> [exclude*]
 		args = []string{in.GetCommitId()}
-		pathspecs = append(pathspecs, path)
-	} else if path != "." {
+		pathspecs = append(pathspecs, archivePath)
+	} else if archivePath != "." {
 		// git archive [options] <commit ID>:<path> -- [exclude*]
-		args = []string{in.GetCommitId() + ":" + path}
+		args = []string{in.GetCommitId() + ":" + archivePath}
 	} else {
 		// git archive [options] <commit ID> -- [exclude*]
 		args = []string{in.GetCommitId()}
@@ -154,9 +161,17 @@ func handleArchive(ctx context.Context, writer io.Writer, in *gitalypb.GetArchiv
 	env := []string{
 		fmt.Sprintf("GL_REPOSITORY=%s", in.GetRepository().GetGlRepository()),
 		fmt.Sprintf("GL_PROJECT_PATH=%s", in.GetRepository().GetGlProjectPath()),
+		fmt.Sprintf("GL_INTERNAL_CONFIG=%s", internalCfg),
 	}
 
-	archiveCommand, err := git.SafeCmdWithEnv(ctx, env, in.GetRepository(), nil, git.SubCmd{
+	var globals []git.Option
+
+	if in.GetIncludeLfsBlobs() {
+		binary := filepath.Join(binDir, "gitaly-lfs-smudge")
+		globals = append(globals, git.ValueFlag{"-c", fmt.Sprintf("filter.lfs.smudge=%s", binary)})
+	}
+
+	archiveCommand, err := git.SafeCmdWithEnv(ctx, env, in.GetRepository(), globals, git.SubCmd{
 		Name:        "archive",
 		Flags:       []git.Option{git.ValueFlag{"--format", format}, git.ValueFlag{"--prefix", in.GetPrefix() + "/"}},
 		Args:        args,

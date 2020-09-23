@@ -1,0 +1,5 @@
+---
+title: Add support for using LFS smudge filter
+merge_request: 2621
+author:
+type: added

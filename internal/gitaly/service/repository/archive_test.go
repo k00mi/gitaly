@@ -1,6 +1,9 @@
 package repository
 
 import (
+	"archive/zip"
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -14,6 +17,11 @@ import (
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 	"google.golang.org/grpc/codes"
+)
+
+const (
+	secretToken = "topsecret"
+	lfsBody     = "hello world\n"
 )
 
 func TestGetArchiveSuccess(t *testing.T) {
@@ -159,6 +167,113 @@ func TestGetArchiveSuccess(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestGetArchiveWithLfsSuccess(t *testing.T) {
+	testhelper.ConfigureGitalyLfsSmudge()
+
+	defaultOptions := testhelper.GitlabTestServerOptions{
+		SecretToken: secretToken,
+		LfsBody:     lfsBody,
+	}
+
+	url, cleanup := testhelper.SetupAndStartGitlabServer(t, &defaultOptions)
+	defer cleanup()
+
+	cfg := config.Config
+	cfg.Gitlab.URL = url
+	cfg.Gitlab.SecretFile = filepath.Join(cfg.GitlabShell.Dir, ".gitlab_shell_secret")
+	serverSocketPath, stop := runRepoServerWithConfig(t, cfg)
+	defer stop()
+
+	client, conn := newRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	// lfs-moar branch SHA
+	sha := "46abbb087fcc0fd02c340f0f2f052bd2c7708da3"
+
+	testCases := []struct {
+		desc            string
+		prefix          string
+		path            []byte
+		includeLfsBlobs bool
+	}{
+		{
+			desc:            "without prefix and with LFS blobs",
+			prefix:          "",
+			includeLfsBlobs: true,
+		},
+		{
+			desc:            "without prefix and without LFS blobs",
+			prefix:          "",
+			includeLfsBlobs: false,
+		},
+		{
+			desc:            "with prefix and with LFS blobs",
+			prefix:          "my-prefix",
+			includeLfsBlobs: true,
+		},
+		{
+			desc:            "with prefix and without LFS blobs",
+			prefix:          "my-prefix",
+			includeLfsBlobs: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			req := &gitalypb.GetArchiveRequest{
+				Repository:      testRepo,
+				CommitId:        sha,
+				Prefix:          tc.prefix,
+				Format:          gitalypb.GetArchiveRequest_ZIP,
+				Path:            tc.path,
+				IncludeLfsBlobs: tc.includeLfsBlobs,
+			}
+			stream, err := client.GetArchive(ctx, req)
+			require.NoError(t, err)
+
+			data, err := consumeArchive(stream)
+			require.NoError(t, err)
+			reader := bytes.NewReader(data)
+
+			zipReader, err := zip.NewReader(reader, int64(reader.Len()))
+			require.NoError(t, err)
+
+			lfsFiles := []string{"/30170.lfs", "/another.lfs"}
+			for _, lfsFile := range lfsFiles {
+				found := false
+				for _, f := range zipReader.File {
+					if f.Name != tc.prefix+lfsFile {
+						continue
+					}
+
+					found = true
+
+					fc, err := f.Open()
+					require.NoError(t, err)
+					defer fc.Close()
+
+					data, err := ioutil.ReadAll(fc)
+					require.NoError(t, err)
+
+					if tc.includeLfsBlobs {
+						require.Equal(t, lfsBody, string(data))
+					} else {
+						require.Contains(t, string(data), "oid sha256:")
+					}
+				}
+
+				require.True(t, found, "expected to find LFS file")
+			}
+		})
 	}
 }
 
@@ -405,6 +520,9 @@ env | grep ^GL_`))
 	config.Config.Git.BinPath = tmpFile.Name()
 	defer func() { config.Config.Git.BinPath = oldBinPath }()
 
+	cfgData, err := json.Marshal(config.Config.Gitlab)
+	require.NoError(t, err)
+
 	stream, err := client.GetArchive(ctx, req)
 	require.NoError(t, err)
 
@@ -412,6 +530,7 @@ env | grep ^GL_`))
 	require.NoError(t, err)
 	require.Contains(t, string(data), "GL_REPOSITORY="+testhelper.GlRepository)
 	require.Contains(t, string(data), "GL_PROJECT_PATH="+testhelper.GlProjectPath)
+	require.Contains(t, string(data), "GL_INTERNAL_CONFIG="+string(cfgData))
 }
 
 func compressedFileContents(t *testing.T, format gitalypb.GetArchiveRequest_Format, name string) []byte {
