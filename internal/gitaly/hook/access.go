@@ -67,8 +67,8 @@ type gitlabAPI struct {
 	client *client.GitlabNetClient
 }
 
-// New creates a new GitlabAPI
-func NewGitlabAPI(gitlabCfg config.Gitlab) (GitlabAPI, error) {
+// NewGitlabNetClient creates an HTTP client to talk to the Rails internal API
+func NewGitlabNetClient(gitlabCfg config.Gitlab) (*client.GitlabNetClient, error) {
 	url, err := url.PathUnescape(gitlabCfg.URL)
 	if err != nil {
 		return nil, err
@@ -97,9 +97,17 @@ func NewGitlabAPI(gitlabCfg config.Gitlab) (GitlabAPI, error) {
 		return nil, fmt.Errorf("instantiating gitlab net client: %w", err)
 	}
 
-	return &gitlabAPI{
-		client: gitlabnetClient,
-	}, nil
+	return gitlabnetClient, nil
+}
+
+// NewGitlabAPI creates a GitLabAPI to talk to the Rails internal API
+func NewGitlabAPI(gitlabCfg config.Gitlab) (GitlabAPI, error) {
+	client, err := NewGitlabNetClient(gitlabCfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &gitlabAPI{client: client}, nil
 }
 
 // Allowed checks if a ref change for a given repository is allowed through the gitlab internal api /allowed endpoint
