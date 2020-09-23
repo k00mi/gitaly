@@ -68,10 +68,12 @@ danger-review:
   services:
     - postgres:11.8
   variables:
-    PGHOST: 0.0.0.0
+    PGHOST: postgres
     PGPORT: 5432
     PGUSER: postgres
     POSTGRES_HOST_AUTH_METHOD: trust
+    PGHOST_PGBOUNCER: 0.0.0.0
+    PGPORT_PGBOUNCER: 6432
   before_script:
     - go version
     - git version

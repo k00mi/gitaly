@@ -258,17 +258,30 @@ type DB struct {
 	SSLCert     string `toml:"sslcert"`
 	SSLKey      string `toml:"sslkey"`
 	SSLRootCert string `toml:"sslrootcert"`
+	HostNoProxy string `toml:"host_no_proxy"`
+	PortNoProxy int    `toml:"port_no_proxy"`
 }
 
 // ToPQString returns a connection string that can be passed to github.com/lib/pq.
-func (db DB) ToPQString() string {
+func (db DB) ToPQString(direct bool) string {
+	var hostVal string
+	var portVal int
+
+	if direct {
+		hostVal = db.HostNoProxy
+		portVal = db.PortNoProxy
+	} else {
+		hostVal = db.Host
+		portVal = db.Port
+	}
+
 	var fields []string
-	if db.Port > 0 {
-		fields = append(fields, fmt.Sprintf("port=%d", db.Port))
+	if portVal > 0 {
+		fields = append(fields, fmt.Sprintf("port=%d", portVal))
 	}
 
 	for _, kv := range []struct{ key, value string }{
-		{"host", db.Host},
+		{"host", hostVal},
 		{"user", db.User},
 		{"password", db.Password},
 		{"dbname", db.DBName},

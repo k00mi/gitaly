@@ -271,6 +271,8 @@ func TestConfigParsing(t *testing.T) {
 					SSLCert:     "/path/to/cert",
 					SSLKey:      "/path/to/key",
 					SSLRootCert: "/path/to/root-cert",
+					HostNoProxy: "2.3.4.5",
+					PortNoProxy: 6432,
 				},
 				MemoryQueueEnabled:  true,
 				GracefulStopTimeout: config.Duration(30 * time.Second),
@@ -358,13 +360,14 @@ func TestStorageNames(t *testing.T) {
 
 func TestToPQString(t *testing.T) {
 	testCases := []struct {
-		desc string
-		in   DB
-		out  string
+		desc   string
+		in     DB
+		direct bool
+		out    string
 	}{
 		{desc: "empty", in: DB{}, out: "binary_parameters=yes"},
 		{
-			desc: "basic example",
+			desc: "proxy connection",
 			in: DB{
 				Host:        "1.2.3.4",
 				Port:        2345,
@@ -376,7 +379,24 @@ func TestToPQString(t *testing.T) {
 				SSLKey:      "/path/to/key",
 				SSLRootCert: "/path/to/root-cert",
 			},
-			out: `port=2345 host=1.2.3.4 user=praefect-user password=secret dbname=praefect_production sslmode=require sslcert=/path/to/cert sslkey=/path/to/key sslrootcert=/path/to/root-cert binary_parameters=yes`,
+			direct: false,
+			out:    `port=2345 host=1.2.3.4 user=praefect-user password=secret dbname=praefect_production sslmode=require sslcert=/path/to/cert sslkey=/path/to/key sslrootcert=/path/to/root-cert binary_parameters=yes`,
+		},
+		{
+			desc: "direct connection",
+			in: DB{
+				HostNoProxy: "1.2.3.4",
+				PortNoProxy: 2345,
+				User:        "praefect-user",
+				Password:    "secret",
+				DBName:      "praefect_production",
+				SSLMode:     "require",
+				SSLCert:     "/path/to/cert",
+				SSLKey:      "/path/to/key",
+				SSLRootCert: "/path/to/root-cert",
+			},
+			direct: true,
+			out:    `port=2345 host=1.2.3.4 user=praefect-user password=secret dbname=praefect_production sslmode=require sslcert=/path/to/cert sslkey=/path/to/key sslrootcert=/path/to/root-cert binary_parameters=yes`,
 		},
 		{
 			desc: "with spaces and quotes",
@@ -389,7 +409,7 @@ func TestToPQString(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			require.Equal(t, tc.out, tc.in.ToPQString())
+			require.Equal(t, tc.out, tc.in.ToPQString(tc.direct))
 		})
 	}
 }

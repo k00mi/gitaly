@@ -53,6 +53,8 @@ sslmode = "require"
 sslcert = "/path/to/cert"
 sslkey = "/path/to/key"
 sslrootcert = "/path/to/root-cert"
+host_no_proxy = "2.3.4.5"
+port_no_proxy = 6432
 
 [failover]
 error_threshold_window = "20s"
