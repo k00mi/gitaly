@@ -301,42 +301,53 @@ func testFailedMergeDueToHooks(t *testing.T, ctx context.Context) {
 }
 
 func TestSuccessfulUserFFBranchRequest(t *testing.T) {
-	ctx, cancel := testhelper.Context()
-	defer cancel()
-
-	serverSocketPath, stop := runOperationServiceServer(t)
-	defer stop()
-
-	client, conn := newOperationClient(t, serverSocketPath)
-	defer conn.Close()
-
-	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
-	defer cleanupFn()
-
-	commitID := "cfe32cf61b73a0d5e9f13e774abde7ff789b1660"
-	branchName := "test-ff-target-branch"
-	request := &gitalypb.UserFFBranchRequest{
-		Repository: testRepo,
-		CommitId:   commitID,
-		Branch:     []byte(branchName),
-		User:       testhelper.TestUser,
-	}
-	expectedResponse := &gitalypb.UserFFBranchResponse{
-		BranchUpdate: &gitalypb.OperationBranchUpdate{
-			RepoCreated:   false,
-			BranchCreated: false,
-			CommitId:      commitID,
-		},
-	}
-
-	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", "-f", branchName, "6d394385cf567f80a8fd85055db1ab4c5295806f")
-	defer exec.Command(command.GitPath(), "-C", testRepoPath, "branch", "-d", branchName).Run()
-
-	resp, err := client.UserFFBranch(ctx, request)
+	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.GoUserFFBranch,
+	})
 	require.NoError(t, err)
-	testhelper.ProtoEqual(t, expectedResponse, resp)
-	newBranchHead := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", branchName)
-	require.Equal(t, commitID, text.ChompBytes(newBranchHead), "branch head not updated")
+
+	for _, featureSet := range featureSets {
+		t.Run("disabled "+featureSet.String(), func(t *testing.T) {
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			ctx = featureSet.Disable(ctx)
+
+			serverSocketPath, stop := runOperationServiceServer(t)
+			defer stop()
+
+			client, conn := newOperationClient(t, serverSocketPath)
+			defer conn.Close()
+
+			testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+			defer cleanupFn()
+
+			commitID := "cfe32cf61b73a0d5e9f13e774abde7ff789b1660"
+			branchName := "test-ff-target-branch"
+			request := &gitalypb.UserFFBranchRequest{
+				Repository: testRepo,
+				CommitId:   commitID,
+				Branch:     []byte(branchName),
+				User:       testhelper.TestUser,
+			}
+			expectedResponse := &gitalypb.UserFFBranchResponse{
+				BranchUpdate: &gitalypb.OperationBranchUpdate{
+					RepoCreated:   false,
+					BranchCreated: false,
+					CommitId:      commitID,
+				},
+			}
+
+			testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", "-f", branchName, "6d394385cf567f80a8fd85055db1ab4c5295806f")
+			defer exec.Command(command.GitPath(), "-C", testRepoPath, "branch", "-d", branchName).Run()
+
+			resp, err := client.UserFFBranch(ctx, request)
+			require.NoError(t, err)
+			testhelper.ProtoEqual(t, expectedResponse, resp)
+			newBranchHead := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", branchName)
+			require.Equal(t, commitID, text.ChompBytes(newBranchHead), "branch head not updated")
+		})
+	}
 }
 
 func TestFailedUserFFBranchRequest(t *testing.T) {
@@ -354,6 +365,11 @@ func TestFailedUserFFBranchRequest(t *testing.T) {
 
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", "-f", branchName, "6d394385cf567f80a8fd85055db1ab4c5295806f")
 	defer exec.Command(command.GitPath(), "-C", testRepoPath, "branch", "-d", branchName).Run()
+
+	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.GoUserFFBranch,
+	})
+	require.NoError(t, err)
 
 	testCases := []struct {
 		desc     string
@@ -417,19 +433,25 @@ func TestFailedUserFFBranchRequest(t *testing.T) {
 		},
 	}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.desc, func(t *testing.T) {
-			ctx, cancel := testhelper.Context()
-			defer cancel()
+	for _, featureSet := range featureSets {
+		t.Run("disabled "+featureSet.String(), func(t *testing.T) {
+			for _, testCase := range testCases {
+				t.Run(testCase.desc, func(t *testing.T) {
+					ctx, cancel := testhelper.Context()
+					defer cancel()
 
-			request := &gitalypb.UserFFBranchRequest{
-				Repository: testCase.repo,
-				User:       testCase.user,
-				Branch:     testCase.branch,
-				CommitId:   testCase.commitID,
+					ctx = featureSet.Disable(ctx)
+
+					request := &gitalypb.UserFFBranchRequest{
+						Repository: testCase.repo,
+						User:       testCase.user,
+						Branch:     testCase.branch,
+						CommitId:   testCase.commitID,
+					}
+					_, err := client.UserFFBranch(ctx, request)
+					testhelper.RequireGrpcError(t, err, testCase.code)
+				})
 			}
-			_, err := client.UserFFBranch(ctx, request)
-			testhelper.RequireGrpcError(t, err, testCase.code)
 		})
 	}
 }
@@ -458,18 +480,29 @@ func TestFailedUserFFBranchDueToHooks(t *testing.T) {
 
 	hookContent := []byte("#!/bin/sh\necho 'failure'\nexit 1")
 
-	for _, hookName := range gitlabPreHooks {
-		t.Run(hookName, func(t *testing.T) {
-			remove, err := testhelper.WriteCustomHook(testRepoPath, hookName, hookContent)
-			require.NoError(t, err)
-			defer remove()
+	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.GoUserFFBranch,
+	})
+	require.NoError(t, err)
 
-			ctx, cancel := testhelper.Context()
-			defer cancel()
+	for _, featureSet := range featureSets {
+		t.Run("disabled "+featureSet.String(), func(t *testing.T) {
+			for _, hookName := range gitlabPreHooks {
+				t.Run(hookName, func(t *testing.T) {
+					remove, err := testhelper.WriteCustomHook(testRepoPath, hookName, hookContent)
+					require.NoError(t, err)
+					defer remove()
 
-			resp, err := client.UserFFBranch(ctx, request)
-			require.Nil(t, err)
-			require.Contains(t, resp.PreReceiveError, "failure")
+					ctx, cancel := testhelper.Context()
+					defer cancel()
+
+					ctx = featureSet.Disable(ctx)
+
+					resp, err := client.UserFFBranch(ctx, request)
+					require.Nil(t, err)
+					require.Contains(t, resp.PreReceiveError, "failure")
+				})
+			}
 		})
 	}
 }

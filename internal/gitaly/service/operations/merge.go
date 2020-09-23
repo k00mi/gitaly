@@ -8,6 +8,7 @@ import (
 	"io"
 	"strings"
 
+	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/updateref"
 	"gitlab.com/gitlab-org/gitaly/internal/git2go"
@@ -281,6 +282,64 @@ func (s *server) UserFFBranch(ctx context.Context, in *gitalypb.UserFFBranchRequ
 		return nil, helper.ErrInvalidArgument(err)
 	}
 
+	if featureflag.IsDisabled(ctx, featureflag.GoUserFFBranch) {
+		return s.userFFBranchRuby(ctx, in)
+	}
+
+	revision, err := parseRevision(ctx, in.Repository, string(in.Branch))
+	if err != nil {
+		return nil, helper.ErrInvalidArgument(err)
+	}
+
+	cmd, err := git.SafeCmd(ctx, in.Repository, nil, git.SubCmd{
+		Name:  "merge-base",
+		Flags: []git.Option{git.Flag{Name: "--is-ancestor"}},
+		Args:  []string{revision, in.CommitId},
+	})
+	if err != nil {
+		return nil, helper.ErrInternal(err)
+	}
+	if err := cmd.Wait(); err != nil {
+		status, ok := command.ExitStatus(err)
+		if !ok {
+			return nil, helper.ErrInternal(err)
+		}
+		// --is-ancestor errors are signaled by a non-zero status that is not 1.
+		// https://git-scm.com/docs/git-merge-base#Documentation/git-merge-base.txt---is-ancestor
+		if status != 1 {
+			return nil, helper.ErrInvalidArgument(err)
+		}
+		return nil, helper.ErrPreconditionFailedf("not fast forward")
+	}
+
+	branch := fmt.Sprintf("refs/heads/%s", in.Branch)
+	if err := s.updateReferenceWithHooks(ctx, in.Repository, in.User, branch, in.CommitId, revision); err != nil {
+		var preReceiveError preReceiveError
+		if errors.As(err, &preReceiveError) {
+			return &gitalypb.UserFFBranchResponse{
+				PreReceiveError: preReceiveError.message,
+			}, nil
+		}
+
+		var updateRefError updateRefError
+		if errors.As(err, &updateRefError) {
+			// When an error happens updating the reference, e.g. because of a race
+			// with another update, then Ruby code didn't send an error but just an
+			// empty response.
+			return &gitalypb.UserFFBranchResponse{}, nil
+		}
+
+		return nil, err
+	}
+
+	return &gitalypb.UserFFBranchResponse{
+		BranchUpdate: &gitalypb.OperationBranchUpdate{
+			CommitId: in.CommitId,
+		},
+	}, nil
+}
+
+func (s *server) userFFBranchRuby(ctx context.Context, in *gitalypb.UserFFBranchRequest) (*gitalypb.UserFFBranchResponse, error) {
 	client, err := s.ruby.OperationServiceClient(ctx)
 	if err != nil {
 		return nil, err
