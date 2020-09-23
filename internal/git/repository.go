@@ -22,10 +22,15 @@ var (
 type Repository interface {
 	// ResolveRef resolves the given refish to its object ID. This uses the
 	// typical DWIM mechanism of Git to resolve the reference. See
-	// gitrevisions(1) for accepted syntax.
+	// gitrevisions(1) for accepted syntax. This will not verify whether the
+	// object ID exists. To do so, you can peel the reference to a given
+	// object type, e.g. by passing `refs/heads/master^{commit}`.
 	ResolveRefish(ctx context.Context, ref string) (string, error)
 
-	// ContainsRef checks if a ref in the repository exists.
+	// ContainsRef checks if a ref in the repository exists. This will not
+	// verify whether the target object exists. To do so, you can peel the
+	// reference to a given object type, e.g. by passing
+	// `refs/heads/master^{commit}`.
 	ContainsRef(ctx context.Context, ref string) (bool, error)
 
 	// GetReference looks up and returns the given reference. Returns a
