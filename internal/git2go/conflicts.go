@@ -19,14 +19,22 @@ type ConflictsCommand struct {
 	Theirs string `json:"theirs"`
 }
 
+// ConflictEntry represents a conflict entry which is one of the sides of a conflict.
+type ConflictEntry struct {
+	// Path is the path of the conflicting file.
+	Path string `json:"path"`
+	// Mode is the mode of the conflicting file.
+	Mode int32 `json:"mode"`
+}
+
 // Conflict represents a merge conflict for a single file.
 type Conflict struct {
-	// AncestorPath is the path of the ancestor.
-	AncestorPath string `json:"ancestor_path"`
-	// OurPath is the path of ours.
-	OurPath string `json:"our_path"`
-	// TheirPath is the path of theirs.
-	TheirPath string `json:"their_path"`
+	// Ancestor is the conflict entry of the merge-base.
+	Ancestor ConflictEntry `json:"ancestor"`
+	// Our is the conflict entry of ours.
+	Our ConflictEntry `json:"our"`
+	// Their is the conflict entry of theirs.
+	Their ConflictEntry `json:"their"`
 	// Content contains the conflicting merge results.
 	Content string `json:"content"`
 }

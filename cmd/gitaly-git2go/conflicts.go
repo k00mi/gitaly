@@ -22,11 +22,14 @@ func (cmd *conflictsSubcommand) Flags() *flag.FlagSet {
 	return flags
 }
 
-func indexEntryPath(entry *git.IndexEntry) string {
+func conflictEntryFromIndex(entry *git.IndexEntry) git2go.ConflictEntry {
 	if entry == nil {
-		return ""
+		return git2go.ConflictEntry{}
 	}
-	return entry.Path
+	return git2go.ConflictEntry{
+		Path: entry.Path,
+		Mode: int32(entry.Mode),
+	}
 }
 
 func conflictContent(repo *git.Repository, conflict git.IndexConflict) (string, error) {
@@ -108,10 +111,10 @@ func (cmd *conflictsSubcommand) Run() error {
 		}
 
 		result.Conflicts = append(result.Conflicts, git2go.Conflict{
-			AncestorPath: indexEntryPath(conflict.Ancestor),
-			OurPath:      indexEntryPath(conflict.Our),
-			TheirPath:    indexEntryPath(conflict.Their),
-			Content:      content,
+			Ancestor: conflictEntryFromIndex(conflict.Ancestor),
+			Our:      conflictEntryFromIndex(conflict.Our),
+			Their:    conflictEntryFromIndex(conflict.Their),
+			Content:  content,
 		})
 	}
 
