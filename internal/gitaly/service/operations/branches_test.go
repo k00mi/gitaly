@@ -23,6 +23,7 @@ import (
 )
 
 type testTransactionServer struct {
+	gitalypb.UnimplementedRefTransactionServer
 	called int
 }
 

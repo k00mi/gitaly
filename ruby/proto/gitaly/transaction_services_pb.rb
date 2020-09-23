@@ -15,6 +15,7 @@ module Gitaly
       self.service_name = 'gitaly.RefTransaction'
 
       rpc :VoteTransaction, Gitaly::VoteTransactionRequest, Gitaly::VoteTransactionResponse
+      rpc :StopTransaction, Gitaly::StopTransactionRequest, Gitaly::StopTransactionResponse
     end
 
     Stub = Service.rpc_stub_class
