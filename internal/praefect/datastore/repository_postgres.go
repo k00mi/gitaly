@@ -145,7 +145,7 @@ WITH next_generation AS (
 		generation
 	) VALUES ($1, $2, 0)
 	ON CONFLICT (virtual_storage, relative_path) DO
-		UPDATE SET generation = repositories.generation + 1
+		UPDATE SET generation = COALESCE(repositories.generation, -1) + 1
 	RETURNING virtual_storage, relative_path, generation
 ), base_generation AS (
 	SELECT virtual_storage, relative_path, generation
@@ -193,7 +193,7 @@ WITH repository AS (
 	) VALUES ($1, $2, $4)
 	ON CONFLICT (virtual_storage, relative_path) DO
 		UPDATE SET generation = EXCLUDED.generation
-		WHERE repositories.generation < EXCLUDED.generation
+		WHERE COALESCE(repositories.generation, -1) < EXCLUDED.generation
 )
 
 INSERT INTO storage_repositories (
@@ -330,25 +330,34 @@ AND storage = $3
 
 func (rs *PostgresRepositoryStore) GetConsistentSecondaries(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error) {
 	const q = `
-		WITH storage_gen AS (
-		    SELECT storage, generation
-		    FROM storage_repositories
-		    WHERE virtual_storage = $1
-		      AND relative_path = $2
-		      AND storage = ANY($4::text[])
-		)
+WITH expected_repositories AS (
+	SELECT virtual_storage, relative_path, unnest($3::text[]) AS storage, MAX(generation) AS generation
+	FROM storage_repositories
+	WHERE virtual_storage = $1
+	AND relative_path = $2
+	GROUP BY virtual_storage, relative_path
+)
 
-		SELECT DISTINCT sec.storage
-		FROM (SELECT generation FROM storage_gen WHERE storage = $3) AS prim
-		JOIN storage_gen AS sec ON sec.storage != $3 AND prim.generation = sec.generation`
+SELECT storage
+FROM storage_repositories
+JOIN expected_repositories USING (virtual_storage, relative_path, storage, generation)
+`
 
 	storages, err := rs.storages.storages(virtualStorage)
 	if err != nil {
 		return nil, err
 	}
-	storages = append(storages, primary)
 
-	rows, err := rs.db.QueryContext(ctx, q, virtualStorage, relativePath, primary, pq.StringArray(storages))
+	secondaries := make([]string, 0, len(storages)-1)
+	for _, storage := range storages {
+		if storage == primary {
+			continue
+		}
+
+		secondaries = append(secondaries, storage)
+	}
+
+	rows, err := rs.db.QueryContext(ctx, q, virtualStorage, relativePath, pq.StringArray(secondaries))
 	if err != nil {
 		return nil, err
 	}
@@ -369,14 +378,15 @@ func (rs *PostgresRepositoryStore) GetConsistentSecondaries(ctx context.Context,
 
 func (rs *PostgresRepositoryStore) IsLatestGeneration(ctx context.Context, virtualStorage, relativePath, storage string) (bool, error) {
 	const q = `
-SELECT COALESCE(r.generation = sr.generation, false)
-FROM repositories AS r
-LEFT JOIN storage_repositories AS sr
-	ON sr.virtual_storage = r.virtual_storage
-	AND sr.relative_path = r.relative_path
-	AND sr.storage = $3
-WHERE r.virtual_storage = $1
-AND r.relative_path = $2
+SELECT COALESCE(expected_repository.generation = storage_repositories.generation, false)
+FROM (
+	SELECT virtual_storage, relative_path, $3 AS storage, MAX(generation) AS generation
+	FROM storage_repositories
+	WHERE virtual_storage = $1
+	AND relative_path = $2
+	GROUP BY virtual_storage, relative_path
+) AS expected_repository
+LEFT JOIN storage_repositories USING (virtual_storage, relative_path, storage)
 `
 
 	var isLatest bool
@@ -417,15 +427,16 @@ func (rs *PostgresRepositoryStore) GetOutdatedRepositories(ctx context.Context, 
 	// As some storages might be missing records from the table, we do a cross join between the repositories and the
 	// configured storages. If a storage is missing an entry, it is considered fully outdated.
 	const q = `
-SELECT relative_path, storage, expected.generation - COALESCE(actual.generation, -1) AS behind_by
+SELECT relative_path, storage, expected_repositories.generation - COALESCE(storage_repositories.generation, -1) AS behind_by
 FROM (
-	SELECT virtual_storage, relative_path, storage, generation
+	SELECT virtual_storage, relative_path, unnest($2::text[]) AS storage, MAX(storage_repositories.generation) AS generation
 	FROM repositories
-	CROSS JOIN (SELECT unnest($2::text[]) AS storage) AS storages
+	JOIN storage_repositories USING (virtual_storage, relative_path)
 	WHERE virtual_storage = $1
-) AS expected
-LEFT JOIN storage_repositories AS actual USING (virtual_storage, relative_path, storage)
-WHERE COALESCE(actual.generation, -1) < expected.generation
+	GROUP BY virtual_storage, relative_path
+) AS expected_repositories
+LEFT JOIN storage_repositories USING (virtual_storage, relative_path, storage)
+WHERE COALESCE(storage_repositories.generation, -1) < expected_repositories.generation
 `
 	storages, ok := rs.storages[virtualStorage]
 	if !ok {
@@ -458,21 +469,21 @@ WHERE COALESCE(actual.generation, -1) < expected.generation
 
 func (rs *PostgresRepositoryStore) CountReadOnlyRepositories(ctx context.Context, virtualStoragePrimaries map[string]string) (map[string]int, error) {
 	const q = `
-		WITH primaries AS (
-			SELECT
-				unnest($1::text[]) AS virtual_storage,
-				unnest($2::text[]) AS storage
-		), expected_repositories AS (
-			SELECT virtual_storage, relative_path, storage, generation
-			FROM repositories
-			NATURAL JOIN primaries
-		)
-
-		SELECT virtual_storage, COUNT(*)
-		FROM expected_repositories
-		LEFT JOIN storage_repositories USING (virtual_storage, relative_path, storage)
-		WHERE COALESCE(storage_repositories.generation, -1) < expected_repositories.generation
-		GROUP BY virtual_storage
+SELECT virtual_storage, COUNT(*)
+FROM (
+	SELECT virtual_storage, relative_path, MAX(storage_repositories.generation) AS generation
+	FROM repositories
+	JOIN storage_repositories USING (virtual_storage, relative_path)
+	GROUP BY virtual_storage, relative_path
+) AS expected_repositories
+JOIN (
+	SELECT
+		unnest($1::text[]) AS virtual_storage,
+		unnest($2::text[]) AS storage
+) AS primaries USING (virtual_storage)
+LEFT JOIN storage_repositories USING (virtual_storage, relative_path, storage)
+WHERE COALESCE(storage_repositories.generation, -1) < expected_repositories.generation
+GROUP BY virtual_storage
 	`
 
 	virtualStorages := make([]string, 0, len(virtualStoragePrimaries))

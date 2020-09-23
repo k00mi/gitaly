@@ -16,7 +16,7 @@ func TestRepositoryStore_Postgres(t *testing.T) {
 
 		requireVirtualStorageState := func(t *testing.T, ctx context.Context, exp virtualStorageState) {
 			rows, err := db.QueryContext(ctx, `
-SELECT virtual_storage, relative_path, generation
+SELECT virtual_storage, relative_path
 FROM repositories
 				`)
 			require.NoError(t, err)
@@ -25,13 +25,12 @@ FROM repositories
 			act := make(virtualStorageState)
 			for rows.Next() {
 				var vs, rel string
-				var gen int
-				require.NoError(t, rows.Scan(&vs, &rel, &gen))
+				require.NoError(t, rows.Scan(&vs, &rel))
 				if act[vs] == nil {
-					act[vs] = make(map[string]int)
+					act[vs] = make(map[string]struct{})
 				}
 
-				act[vs][rel] = gen
+				act[vs][rel] = struct{}{}
 			}
 
 			require.NoError(t, rows.Err())
