@@ -36,7 +36,7 @@ type Conflict struct {
 	// Their is the conflict entry of theirs.
 	Their ConflictEntry `json:"their"`
 	// Content contains the conflicting merge results.
-	Content string `json:"content"`
+	Content []byte `json:"content"`
 }
 
 // ConflictsResult contains all conflicts resulting from a merge.

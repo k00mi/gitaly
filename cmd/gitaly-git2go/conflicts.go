@@ -32,7 +32,7 @@ func conflictEntryFromIndex(entry *git.IndexEntry) git2go.ConflictEntry {
 	}
 }
 
-func conflictContent(repo *git.Repository, conflict git.IndexConflict) (string, error) {
+func conflictContent(repo *git.Repository, conflict git.IndexConflict) ([]byte, error) {
 	var ancestor, our, their git.MergeFileInput
 
 	for entry, input := range map[*git.IndexEntry]*git.MergeFileInput{
@@ -46,7 +46,7 @@ func conflictContent(repo *git.Repository, conflict git.IndexConflict) (string, 
 
 		blob, err := repo.LookupBlob(entry.Id)
 		if err != nil {
-			return "", fmt.Errorf("could not get conflicting blob: %w", err)
+			return nil, fmt.Errorf("could not get conflicting blob: %w", err)
 		}
 
 		input.Path = entry.Path
@@ -56,10 +56,10 @@ func conflictContent(repo *git.Repository, conflict git.IndexConflict) (string, 
 
 	merge, err := git.MergeFile(ancestor, our, their, nil)
 	if err != nil {
-		return "", fmt.Errorf("could not compute conflicts: %w", err)
+		return nil, fmt.Errorf("could not compute conflicts: %w", err)
 	}
 
-	return string(merge.Contents), nil
+	return merge.Contents, nil
 }
 
 // Run performs a merge and prints resulting conflicts to stdout.
