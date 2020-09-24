@@ -1,6 +1,7 @@
 package git2go
 
 import (
+	"bytes"
 	"testing"
 	"time"
 
@@ -108,9 +109,10 @@ func TestGit2Go_MergeCommandSerialization(t *testing.T) {
 
 func TestGit2Go_MergeResultSerialization(t *testing.T) {
 	serializeResult := func(t *testing.T, result MergeResult) string {
-		serialized, err := result.Serialize()
+		var buf bytes.Buffer
+		err := result.SerializeTo(&buf)
 		require.NoError(t, err)
-		return serialized
+		return buf.String()
 	}
 
 	testcases := []struct {

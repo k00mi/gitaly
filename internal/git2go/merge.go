@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
@@ -52,9 +53,9 @@ func MergeCommandFromSerialized(serialized string) (MergeCommand, error) {
 	return request, nil
 }
 
-// Serialize serializes the merge response into its JSON representation and encodes it with base64.
-func (m MergeResult) Serialize() (string, error) {
-	return serialize(m)
+// SerializeTo serializes the merge result and writes it into the writer.
+func (m MergeResult) SerializeTo(w io.Writer) error {
+	return serializeTo(w, m)
 }
 
 // Merge performs a merge via gitaly-git2go.

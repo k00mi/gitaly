@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -88,12 +89,9 @@ func (cmd *mergeSubcommand) Run() error {
 		CommitID: commit.String(),
 	}
 
-	serialized, err := response.Serialize()
-	if err != nil {
+	if err := response.SerializeTo(os.Stdout); err != nil {
 		return err
 	}
-
-	fmt.Println(serialized)
 
 	return nil
 }
