@@ -1,0 +1,5 @@
+---
+title: 'transactions: Remove service-specific feature flags'
+merge_request: 2599
+author:
+type: changed

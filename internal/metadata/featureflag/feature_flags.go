@@ -17,12 +17,6 @@ var (
 	GoPostReceiveHook = FeatureFlag{Name: "go_postreceive_hook", OnByDefault: true}
 	// ReferenceTransactions will handle Git reference updates via the transaction service for strong consistency
 	ReferenceTransactions = FeatureFlag{Name: "reference_transactions", OnByDefault: true}
-	// ReferenceTransactionsOperationService will enable reference transactions for the OperationService
-	ReferenceTransactionsOperationService = FeatureFlag{Name: "reference_transactions_operation_service", OnByDefault: true}
-	// ReferenceTransactionsSmartHTTPService will enable reference transactions for the SmartHTTPService
-	ReferenceTransactionsSmartHTTPService = FeatureFlag{Name: "reference_transactions_smarthttp_service", OnByDefault: true}
-	// ReferenceTransactionsSSHService will enable reference transactions for the SSHService
-	ReferenceTransactionsSSHService = FeatureFlag{Name: "reference_transactions_ssh_service", OnByDefault: true}
 	// ReferenceTranasctiionsPrimaryWins will change transaction registration such that
 	// secondaries will take part in transactions, but not influence their outcome.
 	ReferenceTransactionsPrimaryWins = FeatureFlag{Name: "reference_transactions_primary_wins", OnByDefault: false}
@@ -48,9 +42,6 @@ var All = []FeatureFlag{
 	DistributedReads,
 	GoPostReceiveHook,
 	ReferenceTransactions,
-	ReferenceTransactionsOperationService,
-	ReferenceTransactionsSmartHTTPService,
-	ReferenceTransactionsSSHService,
 	ReferenceTransactionsPrimaryWins,
 	ReferenceTransactionHook,
 	RubyReferenceTransactionHook,
