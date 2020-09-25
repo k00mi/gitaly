@@ -192,31 +192,22 @@ func (c *Coordinator) accessorStreamParameters(ctx context.Context, call grpcCal
 	}, nil, nil, nil), nil
 }
 
-var transactionRPCs = map[string]featureflag.FeatureFlag{
-	"/gitaly.OperationService/UserCreateBranch": featureflag.ReferenceTransactionsOperationService,
-	"/gitaly.OperationService/UserCreateTag":    featureflag.ReferenceTransactionsOperationService,
-	"/gitaly.OperationService/UserDeleteBranch": featureflag.ReferenceTransactionsOperationService,
-	"/gitaly.OperationService/UserDeleteTag":    featureflag.ReferenceTransactionsOperationService,
-	"/gitaly.OperationService/UserUpdateBranch": featureflag.ReferenceTransactionsOperationService,
-	"/gitaly.SSHService/SSHReceivePack":         featureflag.ReferenceTransactionsSSHService,
-	"/gitaly.SmartHTTPService/PostReceivePack":  featureflag.ReferenceTransactionsSmartHTTPService,
+var transactionRPCs = map[string]interface{}{
+	"/gitaly.OperationService/UserCreateBranch": nil,
+	"/gitaly.OperationService/UserCreateTag":    nil,
+	"/gitaly.OperationService/UserDeleteBranch": nil,
+	"/gitaly.OperationService/UserDeleteTag":    nil,
+	"/gitaly.OperationService/UserUpdateBranch": nil,
+	"/gitaly.SSHService/SSHReceivePack":         nil,
+	"/gitaly.SmartHTTPService/PostReceivePack":  nil,
 }
 
 func shouldUseTransaction(ctx context.Context, method string) bool {
 	if !featureflag.IsEnabled(ctx, featureflag.ReferenceTransactions) {
 		return false
 	}
-
-	flag, ok := transactionRPCs[method]
-	if !ok {
-		return false
-	}
-
-	if !featureflag.IsEnabled(ctx, flag) {
-		return false
-	}
-
-	return true
+	_, ok := transactionRPCs[method]
+	return ok
 }
 
 func (c *Coordinator) registerTransaction(ctx context.Context, primary Node, secondaries []Node) (*transactions.Transaction, transactions.CancelFunc, error) {
