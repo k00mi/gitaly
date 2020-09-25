@@ -7,9 +7,8 @@ import (
 	"bytes"
 )
 
-func Fuzz(data [] byte) int {
+func Fuzz(data []byte) int {
 	reader := bufio.NewReader(bytes.NewReader(data))
 	ParseObjectInfo(reader)
 	return 0
 }
-

@@ -248,7 +248,8 @@ lint: ${GOLANGCI_LINT} libgit2
 	${Q}${GOLANGCI_LINT} cache clean && ${GOLANGCI_LINT} run --build-tags "${GO_BUILD_TAGS}" --out-format tab --config ${SOURCE_DIR}/.golangci.yml
 
 .PHONY: check-formatting
-check-formatting: ${GITALYFMT}
+check-formatting: ${GOIMPORTS} ${GITALYFMT}
+	${Q}${GOIMPORTS} -l $(call find_go_sources) | awk '{ print } END { if(NR>0) { print "goimports error, run make format"; exit(1) } }'
 	${Q}${GITALYFMT} $(call find_go_sources) | awk '{ print } END { if(NR>0) { print "Formatting error, run make format"; exit(1) } }'
 
 .PHONY: format
