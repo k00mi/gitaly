@@ -20,7 +20,10 @@ module Gitlab
 
       def update
         ssh_auth.setup do |env|
-          updated_branches = changed_refs(local_branches, remote_branches(env: env))
+          # Retrieve the remote branches first since they may take a while to load,
+          # and the local branches may have changed during this time.
+          remote_branch_list = remote_branches(env: env)
+          updated_branches = changed_refs(local_branches, remote_branch_list)
           push_refs(default_branch_first(updated_branches.keys), env: env)
           delete_refs(local_branches, remote_branches(env: env), env: env)
 
