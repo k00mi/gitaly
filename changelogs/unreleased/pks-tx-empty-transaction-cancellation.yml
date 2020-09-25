@@ -1,0 +1,5 @@
+---
+title: 'transactions: Correctly handle cancellation of empty transactions'
+merge_request: 2594
+author:
+type: fixed
