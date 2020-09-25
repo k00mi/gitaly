@@ -27,6 +27,8 @@ const (
 	voteCommitted
 	// voteAborted means that the voter aborted his vote.
 	voteAborted
+	// voteStopped means that the transaction was gracefully stopped.
+	voteStopped
 )
 
 type vote [sha1.Size]byte
@@ -50,6 +52,7 @@ func (v vote) isEmpty() bool {
 type subtransaction struct {
 	doneCh   chan interface{}
 	cancelCh chan interface{}
+	stopCh   chan interface{}
 
 	threshold uint
 
@@ -68,6 +71,7 @@ func newSubtransaction(voters []Voter, threshold uint) (*subtransaction, error) 
 	return &subtransaction{
 		doneCh:       make(chan interface{}),
 		cancelCh:     make(chan interface{}),
+		stopCh:       make(chan interface{}),
 		threshold:    threshold,
 		votersByNode: votersByNode,
 		voteCounts:   make(map[vote]uint, len(voters)),
@@ -88,6 +92,31 @@ func (t *subtransaction) cancel() {
 	}
 
 	close(t.cancelCh)
+}
+
+func (t *subtransaction) stop() error {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	for _, voter := range t.votersByNode {
+		switch voter.result {
+		case voteAborted:
+			// If the vote was aborted already, we cannot stop it.
+			return ErrTransactionCanceled
+		case voteStopped:
+			// Similar if the vote was stopped already.
+			return ErrTransactionStopped
+		case voteUndecided:
+			// Undecided voters will get stopped, ...
+			voter.result = voteStopped
+		case voteCommitted:
+			// ... while decided voters cannot be changed anymore.
+			continue
+		}
+	}
+
+	close(t.stopCh)
+	return nil
 }
 
 func (t *subtransaction) state() map[string]bool {
@@ -166,6 +195,8 @@ func (t *subtransaction) collectVotes(ctx context.Context, node string) error {
 		return ctx.Err()
 	case <-t.cancelCh:
 		return ErrTransactionCanceled
+	case <-t.stopCh:
+		return ErrTransactionStopped
 	case <-t.doneCh:
 		break
 	}
@@ -178,8 +209,18 @@ func (t *subtransaction) collectVotes(ctx context.Context, node string) error {
 		return fmt.Errorf("invalid node for transaction: %q", node)
 	}
 
-	if voter.result != voteUndecided {
-		return fmt.Errorf("voter has already settled on an outcome: %q", node)
+	switch voter.result {
+	case voteUndecided:
+		// Happy case, no decision was yet made.
+	case voteAborted:
+		// It may happen that the vote was cancelled or stopped just after majority was
+		// reached. In that case, the node's state is now voteAborted/voteStopped, so we
+		// have to return an error here.
+		return ErrTransactionCanceled
+	case voteStopped:
+		return ErrTransactionStopped
+	default:
+		return fmt.Errorf("voter is in invalid state %d: %q", voter.result, node)
 	}
 
 	// See if our vote crossed the threshold. As there can be only one vote

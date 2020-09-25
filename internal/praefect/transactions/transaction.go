@@ -19,6 +19,8 @@ var (
 	// ErrSubtransactionFailed indicates a vote was cast on a
 	// subtransaction which failed already.
 	ErrSubtransactionFailed = errors.New("subtransaction has failed")
+	// ErrTransactionStopped indicates the transaction was gracefully stopped.
+	ErrTransactionStopped = errors.New("transaction has been stopped")
 )
 
 type transactionState int
@@ -26,6 +28,7 @@ type transactionState int
 const (
 	transactionOpen = transactionState(iota)
 	transactionCanceled
+	transactionStopped
 )
 
 // Voter is a participant in a given transaction that may cast a vote.
@@ -102,6 +105,20 @@ func (t *Transaction) cancel() {
 	t.state = transactionCanceled
 }
 
+func (t *Transaction) stop() error {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	for _, subtransaction := range t.subtransactions {
+		if err := subtransaction.stop(); err != nil {
+			return err
+		}
+	}
+	t.state = transactionStopped
+
+	return nil
+}
+
 // ID returns the identifier used to uniquely identify a transaction.
 func (t *Transaction) ID() uint64 {
 	return t.id
@@ -161,6 +178,8 @@ func (t *Transaction) getOrCreateSubtransaction(node string) (*subtransaction, e
 		// expected state, nothing to do
 	case transactionCanceled:
 		return nil, ErrTransactionCanceled
+	case transactionStopped:
+		return nil, ErrTransactionStopped
 	default:
 		return nil, errors.New("invalid transaction state")
 	}
@@ -184,6 +203,10 @@ func (t *Transaction) getOrCreateSubtransaction(node string) (*subtransaction, e
 			// fail as we cannot proceed if the path leading to the
 			// end result has intermittent failures.
 			return nil, ErrSubtransactionFailed
+		case voteStopped:
+			// If the transaction was stopped, then we need to fail
+			// with a graceful error.
+			return nil, ErrTransactionStopped
 		}
 	}
 

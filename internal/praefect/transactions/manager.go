@@ -223,16 +223,24 @@ func (mgr *Manager) VoteTransaction(ctx context.Context, transactionID uint64, n
 	}).Debug("VoteTransaction")
 
 	if err := mgr.voteTransaction(ctx, transactionID, node, hash); err != nil {
-		mgr.log(ctx).WithFields(logrus.Fields{
-			"transaction_id": transactionID,
-			"node":           node,
-			"hash":           hex.EncodeToString(hash),
-		}).WithError(err).Error("VoteTransaction: vote failed")
-
-		if errors.Is(err, ErrTransactionVoteFailed) {
+		if errors.Is(err, ErrTransactionStopped) {
+			mgr.counterMetric.WithLabelValues("stopped").Inc()
+		} else if errors.Is(err, ErrTransactionVoteFailed) {
 			mgr.counterMetric.WithLabelValues("aborted").Inc()
+
+			mgr.log(ctx).WithFields(logrus.Fields{
+				"transaction_id": transactionID,
+				"node":           node,
+				"hash":           hex.EncodeToString(hash),
+			}).WithError(err).Error("VoteTransaction: did not reach quorum")
 		} else {
 			mgr.counterMetric.WithLabelValues("invalid").Inc()
+
+			mgr.log(ctx).WithFields(logrus.Fields{
+				"transaction_id": transactionID,
+				"node":           node,
+				"hash":           hex.EncodeToString(hash),
+			}).WithError(err).Error("VoteTransaction: vote failed")
 		}
 
 		return err
@@ -245,6 +253,28 @@ func (mgr *Manager) VoteTransaction(ctx context.Context, transactionID uint64, n
 	}).Debug("VoteTransaction: transaction committed")
 
 	mgr.counterMetric.WithLabelValues("committed").Inc()
+
+	return nil
+}
+
+// StopTransaction will gracefully stop a transaction.
+func (mgr *Manager) StopTransaction(ctx context.Context, transactionID uint64) error {
+	mgr.lock.Lock()
+	transaction, ok := mgr.transactions[transactionID]
+	mgr.lock.Unlock()
+
+	if !ok {
+		return ErrNotFound
+	}
+
+	if err := transaction.stop(); err != nil {
+		return err
+	}
+
+	mgr.log(ctx).WithFields(logrus.Fields{
+		"transaction_id": transactionID,
+	}).Debug("VoteTransaction: transaction stopped")
+	mgr.counterMetric.WithLabelValues("stopped").Inc()
 
 	return nil
 }
