@@ -1,0 +1,5 @@
+---
+title: Ensure local branches are current when syncing remote mirrors
+merge_request: 2606
+author:
+type: fixed
