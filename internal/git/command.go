@@ -10,7 +10,7 @@ import (
 )
 
 // unsafeCmdWithEnv creates a git.unsafeCmd with the given args, environment, and Repository
-func unsafeCmdWithEnv(ctx context.Context, extraEnv []string, repo repository.GitRepo, args ...string) (*command.Command, error) {
+func unsafeCmdWithEnv(ctx context.Context, extraEnv []string, stream CmdStream, repo repository.GitRepo, args ...string) (*command.Command, error) {
 	args, env, err := argsAndEnv(repo, args...)
 	if err != nil {
 		return nil, err
@@ -18,7 +18,7 @@ func unsafeCmdWithEnv(ctx context.Context, extraEnv []string, repo repository.Gi
 
 	env = append(env, extraEnv...)
 
-	return unsafeBareCmd(ctx, CmdStream{}, env, args...)
+	return unsafeBareCmd(ctx, stream, env, args...)
 }
 
 // unsafeStdinCmd creates a git.Command with the given args and Repository that is

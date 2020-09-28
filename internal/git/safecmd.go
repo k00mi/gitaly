@@ -214,11 +214,38 @@ func ConvertGlobalOptions(options *gitalypb.GlobalOptions) []Option {
 }
 
 type cmdCfg struct {
-	env []string
+	env    []string
+	stdin  io.Reader
+	stdout io.Writer
+	stderr io.Writer
 }
 
 // CmdOpt is an option for running a command
 type CmdOpt func(*cmdCfg) error
+
+// WithStdin sets the command's stdin.
+func WithStdin(r io.Reader) CmdOpt {
+	return func(c *cmdCfg) error {
+		c.stdin = r
+		return nil
+	}
+}
+
+// WithStdout sets the command's stdout.
+func WithStdout(w io.Writer) CmdOpt {
+	return func(c *cmdCfg) error {
+		c.stdout = w
+		return nil
+	}
+}
+
+// WithStderr sets the command's stderr.
+func WithStderr(w io.Writer) CmdOpt {
+	return func(c *cmdCfg) error {
+		c.stderr = w
+		return nil
+	}
+}
 
 func handleOpts(cc *cmdCfg, opts []CmdOpt) error {
 	for _, opt := range opts {
@@ -249,7 +276,11 @@ func SafeCmdWithEnv(ctx context.Context, env []string, repo repository.GitRepo, 
 		return nil, err
 	}
 
-	return unsafeCmdWithEnv(ctx, append(env, cc.env...), repo, args...)
+	return unsafeCmdWithEnv(ctx, append(env, cc.env...), CmdStream{
+		In:  cc.stdin,
+		Out: cc.stdout,
+		Err: cc.stderr,
+	}, repo, args...)
 }
 
 // SafeBareCmd creates a git.Command with the given args, stream, and env. It

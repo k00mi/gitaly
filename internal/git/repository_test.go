@@ -2,9 +2,14 @@ package git
 
 import (
 	"errors"
+	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
@@ -248,6 +253,113 @@ func TestLocalRepository_GetReferences(t *testing.T) {
 			refs, err := repo.GetReferences(ctx, tc.pattern)
 			require.NoError(t, err)
 			tc.match(t, refs)
+		})
+	}
+}
+
+type ReaderFunc func([]byte) (int, error)
+
+func (fn ReaderFunc) Read(b []byte) (int, error) { return fn(b) }
+
+func TestLocalRepository_WriteBlob(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	pbRepo, repoPath, clean := testhelper.InitBareRepo(t)
+	defer clean()
+
+	// write attributes file so we can verify WriteBlob runs the files through filters as
+	// appropriate
+	require.NoError(t, ioutil.WriteFile(filepath.Join(repoPath, "info", "attributes"), []byte(`
+crlf binary
+lf   text
+	`), os.ModePerm))
+
+	repo := NewRepository(pbRepo)
+
+	for _, tc := range []struct {
+		desc    string
+		path    string
+		input   io.Reader
+		sha     string
+		error   error
+		content string
+	}{
+		{
+			desc:  "error reading",
+			input: ReaderFunc(func([]byte) (int, error) { return 0, assert.AnError }),
+			error: errorWithStderr(assert.AnError, nil),
+		},
+		{
+			desc:    "successful empty blob",
+			input:   strings.NewReader(""),
+			sha:     "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+			content: "",
+		},
+		{
+			desc:    "successful blob",
+			input:   strings.NewReader("some content"),
+			sha:     "f0eec86f614944a81f87d879ebdc9a79aea0d7ea",
+			content: "some content",
+		},
+		{
+			desc:    "line endings not normalized",
+			path:    "crlf",
+			input:   strings.NewReader("\r\n"),
+			sha:     "d3f5a12faa99758192ecc4ed3fc22c9249232e86",
+			content: "\r\n",
+		},
+		{
+			desc:    "line endings normalized",
+			path:    "lf",
+			input:   strings.NewReader("\r\n"),
+			sha:     "8b137891791fe96927ad78e64b0aad7bded08bdc",
+			content: "\n",
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			sha, err := repo.WriteBlob(ctx, tc.path, tc.input)
+			require.Equal(t, tc.error, err)
+			if tc.error != nil {
+				return
+			}
+
+			assert.Equal(t, tc.sha, sha)
+			content, err := repo.CatFile(ctx, sha)
+			require.NoError(t, err)
+			assert.Equal(t, tc.content, string(content))
+		})
+	}
+}
+
+func TestLocalRepository_CatFile(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	repo := NewRepository(testhelper.TestRepository())
+
+	for _, tc := range []struct {
+		desc    string
+		oid     string
+		content string
+		error   error
+	}{
+		{
+			desc:  "invalid object",
+			oid:   NullSHA,
+			error: InvalidObjectError(NullSHA),
+		},
+		{
+			desc: "valid object",
+			// README in gitlab-test
+			oid:     "3742e48c1108ced3bf45ac633b34b65ac3f2af04",
+			content: "Sample repo for testing gitlab features\n",
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			content, err := repo.CatFile(ctx, tc.oid)
+			require.Equal(t, tc.error, err)
+			require.Equal(t, tc.content, string(content))
 		})
 	}
 }
