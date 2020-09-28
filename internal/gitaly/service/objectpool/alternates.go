@@ -32,15 +32,15 @@ func (s *server) DisconnectGitAlternates(ctx context.Context, req *gitalypb.Disc
 		return nil, helper.ErrInvalidArgument(errors.New("no repository"))
 	}
 
-	if err := disconnectAlternates(ctx, repo); err != nil {
+	if err := s.disconnectAlternates(ctx, repo); err != nil {
 		return nil, helper.ErrInternal(err)
 	}
 
 	return &gitalypb.DisconnectGitAlternatesResponse{}, nil
 }
 
-func disconnectAlternates(ctx context.Context, repo *gitalypb.Repository) error {
-	repoPath, err := helper.GetRepoPath(repo)
+func (s *server) disconnectAlternates(ctx context.Context, repo *gitalypb.Repository) error {
+	repoPath, err := s.locator.GetRepoPath(repo)
 	if err != nil {
 		return err
 	}
