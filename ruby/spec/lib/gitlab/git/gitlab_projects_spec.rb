@@ -106,7 +106,7 @@ describe Gitlab::Git::GitlabProjects do
     let(:args) { { force: force, tags: tags, env: env, prune: prune } }
     let(:cmd) { %W(#{Gitlab.config.git.bin_path} -c http.followRedirects=false fetch #{remote_name} --quiet --prune --tags) }
 
-    subject { gl_projects.fetch_remote(remote_name, 600, args) }
+    subject { gl_projects.fetch_remote(remote_name, 600, **args) }
 
     context 'with default args' do
       it 'executes the command' do
