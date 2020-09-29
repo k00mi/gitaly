@@ -336,6 +336,7 @@ message GetArchiveRequest {
   // `README.md`. `elide_path` has no effect if `path` refers to the repository
   // root. `elide_path = true` is not supported if `path` refers to a file.
   bool elide_path = 7;
+  bool include_lfs_blobs = 8;
 }
 
 message GetArchiveResponse {
