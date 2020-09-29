@@ -74,7 +74,7 @@ func RegisterAll(grpcServer *grpc.Server, cfg config.Cfg, rubyServer *rubyserver
 	gitalypb.RegisterDiffServiceServer(grpcServer, diff.NewServer(locator))
 	gitalypb.RegisterNamespaceServiceServer(grpcServer, namespace.NewServer())
 	gitalypb.RegisterOperationServiceServer(grpcServer, operations.NewServer(cfg, rubyServer, hookManager, locator))
-	gitalypb.RegisterRefServiceServer(grpcServer, ref.NewServer())
+	gitalypb.RegisterRefServiceServer(grpcServer, ref.NewServer(locator))
 	gitalypb.RegisterRepositoryServiceServer(grpcServer, repository.NewServer(rubyServer, locator, config.GitalyInternalSocketPath()))
 	gitalypb.RegisterSSHServiceServer(grpcServer, ssh.NewServer(
 		ssh.WithPackfileNegotiationMetrics(sshPackfileNegotiationMetrics),
@@ -84,7 +84,7 @@ func RegisterAll(grpcServer *grpc.Server, cfg config.Cfg, rubyServer *rubyserver
 	))
 	gitalypb.RegisterWikiServiceServer(grpcServer, wiki.NewServer(rubyServer))
 	gitalypb.RegisterConflictsServiceServer(grpcServer, conflicts.NewServer(rubyServer))
-	gitalypb.RegisterRemoteServiceServer(grpcServer, remote.NewServer(rubyServer))
+	gitalypb.RegisterRemoteServiceServer(grpcServer, remote.NewServer(rubyServer, locator))
 	gitalypb.RegisterServerServiceServer(grpcServer, server.NewServer(cfg.Storages))
 	gitalypb.RegisterObjectPoolServiceServer(grpcServer, objectpool.NewServer(locator))
 	gitalypb.RegisterHookServiceServer(grpcServer, hook.NewServer(hookManager))

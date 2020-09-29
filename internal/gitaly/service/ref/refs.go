@@ -131,7 +131,7 @@ func parseAndReturnTags(ctx context.Context, repo *gitalypb.Repository, stream g
 func (s *server) FindAllTags(in *gitalypb.FindAllTagsRequest, stream gitalypb.RefService_FindAllTagsServer) error {
 	ctx := stream.Context()
 
-	if err := validateFindAllTagsRequest(in); err != nil {
+	if err := s.validateFindAllTagsRequest(in); err != nil {
 		return helper.ErrInvalidArgument(err)
 	}
 
@@ -141,12 +141,12 @@ func (s *server) FindAllTags(in *gitalypb.FindAllTagsRequest, stream gitalypb.Re
 	return nil
 }
 
-func validateFindAllTagsRequest(request *gitalypb.FindAllTagsRequest) error {
+func (s *server) validateFindAllTagsRequest(request *gitalypb.FindAllTagsRequest) error {
 	if request.GetRepository() == nil {
 		return errors.New("empty Repository")
 	}
 
-	if _, err := helper.GetRepoPath(request.GetRepository()); err != nil {
+	if _, err := s.locator.GetRepoPath(request.GetRepository()); err != nil {
 		return fmt.Errorf("invalid git directory: %v", err)
 	}
 
@@ -364,7 +364,7 @@ func findAllBranches(in *gitalypb.FindAllBranchesRequest, stream gitalypb.RefSer
 
 func (s *server) FindTag(ctx context.Context, in *gitalypb.FindTagRequest) (*gitalypb.FindTagResponse, error) {
 	var err error
-	if err = validateFindTagRequest(in); err != nil {
+	if err = s.validateFindTagRequest(in); err != nil {
 		return nil, helper.ErrInvalidArgument(err)
 	}
 
@@ -447,12 +447,12 @@ func findTag(ctx context.Context, repository *gitalypb.Repository, tagName []byt
 	return tag, nil
 }
 
-func validateFindTagRequest(in *gitalypb.FindTagRequest) error {
+func (s *server) validateFindTagRequest(in *gitalypb.FindTagRequest) error {
 	if in.GetRepository() == nil {
 		return errors.New("repository is empty")
 	}
 
-	if _, err := helper.GetRepoPath(in.GetRepository()); err != nil {
+	if _, err := s.locator.GetRepoPath(in.GetRepository()); err != nil {
 		return fmt.Errorf("invalid git directory: %v", err)
 	}
 
