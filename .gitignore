@@ -13,7 +13,6 @@ cmd/gitaly-wrapper/gitaly-wrapper
 /_support/bin
 /internal/service/smarthttp/testdata
 /internal/testhelper/testdata/data
-/internal/testhelper/testdata/gitaly-libexec
 /*.toml
 /.ruby-bundle
 /ruby/vendor/bundle

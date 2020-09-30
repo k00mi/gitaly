@@ -4,14 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
-	"path/filepath"
-	"strings"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
-	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
-	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 )
@@ -43,24 +39,6 @@ func preReceiveEnv(req prePostRequest) ([]string, error) {
 	env = append(env, hooks.GitPushOptions(req.GetGitPushOptions())...)
 
 	return env, nil
-}
-
-func gitlabShellHook(hookName string) string {
-	return filepath.Join(config.Config.Ruby.Dir, "gitlab-shell", "hooks", hookName)
-}
-
-func isPrimary(env []string) (bool, error) {
-	tx, err := metadata.TransactionFromEnv(env)
-	if err != nil {
-		if errors.Is(err, metadata.ErrTransactionNotFound) {
-			// If there is no transaction, then we only ever write
-			// to the primary. Thus, we return true.
-			return true, nil
-		}
-		return false, err
-	}
-
-	return tx.Primary, nil
 }
 
 func (s *server) PreReceiveHook(stream gitalypb.HookService_PreReceiveHookServer) error {
@@ -123,15 +101,4 @@ func preReceiveHookResponse(stream gitalypb.HookService_PreReceiveHookServer, co
 	}
 
 	return nil
-}
-
-func getEnvVar(key string, vars []string) string {
-	for _, varPair := range vars {
-		kv := strings.SplitN(varPair, "=", 2)
-		if kv[0] == key {
-			return kv[1]
-		}
-	}
-
-	return ""
 }

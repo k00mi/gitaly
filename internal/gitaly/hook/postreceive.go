@@ -10,6 +10,7 @@ import (
 	"math"
 	"strings"
 
+	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -129,8 +130,6 @@ func (m *GitLabHookManager) PostReceiveHook(ctx context.Context, repo *gitalypb.
 		return nil
 	}
 
-	env = append(env, pushOptions...)
-
 	glID, glRepo := getEnvVar("GL_ID", env), getEnvVar("GL_REPOSITORY", env)
 
 	ok, messages, err := m.gitlabAPI.PostReceive(ctx, glRepo, glID, string(changes), pushOptions...)
@@ -154,7 +153,7 @@ func (m *GitLabHookManager) PostReceiveHook(ctx context.Context, repo *gitalypb.
 	if err = executor(
 		ctx,
 		nil,
-		env,
+		append(env, hooks.GitPushOptions(pushOptions)...),
 		bytes.NewReader(changes),
 		stdout,
 		stderr,
