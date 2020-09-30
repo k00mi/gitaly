@@ -35,6 +35,10 @@ func (s *testTransactionServer) VoteTransaction(ctx context.Context, in *gitalyp
 }
 
 func TestSuccessfulCreateBranchRequest(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserCreateBranch, testSuccessfulCreateBranchRequest)
+}
+
+func testSuccessfulCreateBranchRequest(t *testing.T, ctx context.Context) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
@@ -43,9 +47,6 @@ func TestSuccessfulCreateBranchRequest(t *testing.T) {
 
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
-
-	ctx, cancel := testhelper.Context()
-	defer cancel()
 
 	startPoint := "c7fbe50c7c7419d9701eebe64b1fdacc3df5b9dd"
 	startPointCommit, err := log.GetCommit(ctx, testRepo, startPoint)
@@ -97,7 +98,10 @@ func TestSuccessfulCreateBranchRequest(t *testing.T) {
 }
 
 func TestSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T) {
-	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.ReferenceTransactions})
+	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.ReferenceTransactions,
+		featureflag.GoUserCreateBranch,
+	})
 	require.NoError(t, err)
 
 	for _, featureSet := range featureSets {
@@ -132,8 +136,12 @@ func testUserCreateBranchWithTransaction(t *testing.T, withRefTxHook bool) {
 
 	transactionServer := &testTransactionServer{}
 	srv := testhelper.NewServerWithAuth(t, nil, nil, config.Config.Auth.Token)
-	gitalypb.RegisterOperationServiceServer(srv.GrpcServer(), &server{ruby: RubyServer})
-	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hook.NewServer(gitalyhook.NewManager(gitalyhook.GitlabAPIStub, config.Config)))
+	hookManager := gitalyhook.NewManager(gitalyhook.GitlabAPIStub, config.Config)
+	locator := config.NewLocator(config.Config)
+	server := NewServer(config.Config, RubyServer, hookManager, locator)
+
+	gitalypb.RegisterOperationServiceServer(srv.GrpcServer(), server)
+	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hook.NewServer(hookManager))
 	gitalypb.RegisterRefTransactionServer(srv.GrpcServer(), transactionServer)
 
 	require.NoError(t, srv.Start())
@@ -251,6 +259,10 @@ func testSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T, ctx context.
 }
 
 func TestFailedUserCreateBranchDueToHooks(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserCreateBranch, testFailedUserCreateBranchDueToHooks)
+}
+
+func testFailedUserCreateBranchDueToHooks(t *testing.T, ctx context.Context) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
@@ -275,9 +287,6 @@ func TestFailedUserCreateBranchDueToHooks(t *testing.T) {
 		require.NoError(t, err)
 		defer remove()
 
-		ctx, cancel := testhelper.Context()
-		defer cancel()
-
 		response, err := client.UserCreateBranch(ctx, request)
 		require.Nil(t, err)
 		require.Contains(t, response.PreReceiveError, "GL_USERNAME="+testhelper.TestUser.GlUsername)
@@ -285,6 +294,10 @@ func TestFailedUserCreateBranchDueToHooks(t *testing.T) {
 }
 
 func TestFailedUserCreateBranchRequest(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserCreateBranch, testFailedUserCreateBranchRequest)
+}
+
+func testFailedUserCreateBranchRequest(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -340,9 +353,6 @@ func TestFailedUserCreateBranchRequest(t *testing.T) {
 				StartPoint: []byte(testCase.startPoint),
 				User:       testCase.user,
 			}
-
-			ctx, cancel := testhelper.Context()
-			defer cancel()
 
 			_, err := client.UserCreateBranch(ctx, request)
 			testhelper.RequireGrpcError(t, err, testCase.code)
