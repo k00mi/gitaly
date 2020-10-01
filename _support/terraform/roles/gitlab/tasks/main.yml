@@ -7,7 +7,7 @@
     - gitlab-ctl restart
     - wait gitlab
     - verify gitaly configuration
-    - verify gitlab-shell
+    - verify gitaly-hooks configuration
 
 - name: Set Grafana password
   command:
