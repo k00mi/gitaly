@@ -30,3 +30,4 @@
 /*.toml
 *.socket
 gitaly.pid
+ruby/git-hooks/.gitlab_shell_secret

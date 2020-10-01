@@ -54,13 +54,13 @@ func TestGitHooksConfig(t *testing.T) {
 
 	jsonShellConfig := ""
 	for _, envVar := range env {
-		if strings.HasPrefix(envVar, "GITALY_GITLAB_SHELL_CONFIG") {
+		if strings.HasPrefix(envVar, "GITALY_GITLAB_SHELL_CONFIG=") {
 			jsonShellConfig = strings.SplitN(envVar, "=", 2)[1]
 			break
 		}
 	}
 
-	configMap := make(map[string]interface{})
+	var configMap map[string]interface{}
 
 	require.NoError(t, json.Unmarshal([]byte(jsonShellConfig), &configMap))
 	require.Equal(t, config.Config.Logging.Level, configMap["log_level"])

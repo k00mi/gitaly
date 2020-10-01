@@ -32,7 +32,7 @@ hooks are built in ruby and then get shelled out to `gitaly-hooks`.
 
 ## What does gitaly-hooks do?
 
-`gitaly-hooks` will take the arguments and make an RPC call to `PreReceiveHook`, `UpdateHook`, or `PostReceiveHook` accordingly. These RPCs then call out to the [ruby hooks](https://gitlab.com/gitlab-org/gitaly/-/tree/master/ruby/gitlab-shell/hooks). The goal is to port these ruby hooks into Go.
+`gitaly-hooks` will take the arguments and make an RPC call to `PreReceiveHook`, `UpdateHook`, or `PostReceiveHook` accordingly. 
 
 **Note:**
 Currently `gitaly-hooks` will only make an RPC call to `PreReceiveHook`, `UpdateHook`, or `PostReceiveHook` if a feature flag `gitaly_hook_rpc` is enabled. Otherwise, `gitaly-hooks` falls back to calling the ruby hooks directly.
