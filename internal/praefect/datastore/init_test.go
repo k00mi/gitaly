@@ -20,5 +20,8 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func getDB(t testing.TB) glsql.DB        { return glsql.GetDB(t, "datastore") }
-func getDBConfig(t testing.TB) config.DB { return glsql.GetDBConfig(t, "datastore") }
+const databaseName = "datastore"
+
+func getDB(t testing.TB) glsql.DB { return glsql.GetDB(t, databaseName) }
+
+func getDBConfig(t testing.TB) config.DB { return glsql.GetDBConfig(t, databaseName) }
