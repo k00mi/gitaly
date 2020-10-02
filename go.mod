@@ -15,6 +15,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.2
 	github.com/opentracing/opentracing-go v1.0.2
 	github.com/prometheus/client_golang v1.0.0
+	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
 	github.com/prometheus/procfs v0.0.3 // indirect
 	github.com/rubenv/sql-migrate v0.0.0-20191213152630-06338513c237
 	github.com/sirupsen/logrus v1.6.0
