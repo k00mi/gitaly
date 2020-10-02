@@ -75,18 +75,16 @@ func (s *server) FetchInternalRemote(ctx context.Context, req *gitalypb.FetchInt
 
 // getRemoteDefaultBranch gets the default branch of a repository hosted on another Gitaly node
 func (s *server) getRemoteDefaultBranch(ctx context.Context, repo *gitalypb.Repository) ([]byte, error) {
-	server, err := helper.ExtractGitalyServer(ctx, repo.StorageName)
+	serverInfo, err := helper.ExtractGitalyServer(ctx, repo.StorageName)
 	if err != nil {
 		return nil, fmt.Errorf("getRemoteDefaultBranch: %w", err)
 	}
 
-	address := server["address"]
-	if address == "" {
+	if serverInfo.Address == "" {
 		return nil, errors.New("getRemoteDefaultBranch: empty Gitaly address")
 	}
-	token := server["token"]
 
-	conn, err := s.conns.Dial(ctx, address, token)
+	conn, err := s.conns.Dial(ctx, serverInfo.Address, serverInfo.Token)
 	if err != nil {
 		return nil, fmt.Errorf("getRemoteDefaultBranch: %w", err)
 	}

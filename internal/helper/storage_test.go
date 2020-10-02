@@ -41,7 +41,7 @@ func TestExtractGitalyServers(t *testing.T) {
 		{
 			desc:     "properly-encoded string",
 			metadata: metadata.Pairs("gitaly-servers", base64.StdEncoding.EncodeToString([]byte(`{"default":{"address":"unix:///tmp/sock","token":"hunter1"}}`))),
-			info:     storage.GitalyServers{"default": {"address": "unix:///tmp/sock", "token": "hunter1"}},
+			info:     storage.GitalyServers{"default": storage.ServerInfo{Address: "unix:///tmp/sock", Token: "hunter1"}},
 		},
 	}
 
