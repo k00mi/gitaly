@@ -605,15 +605,15 @@ describe Gitlab::Git::Repository do # rubocop:disable Metrics/BlockLength
         remote_branch: remote_branch
       }
 
-      repository.rebase(user, rebase_id, opts)
+      repository.rebase(user, rebase_id, **opts)
     end
 
     describe 'sparse checkout' do
       let(:expected_files) { %w[files/images/emoji.png] }
 
       it 'lists files modified in source branch in sparse-checkout' do
-        allow(repository).to receive(:with_worktree).and_wrap_original do |m, *args|
-          m.call(*args) do
+        allow(repository).to receive(:with_worktree).and_wrap_original do |m, *args, **kwargs|
+          m.call(*args, **kwargs) do
             worktree = args[0]
             sparse = repository.path + "/worktrees/#{worktree.name}/info/sparse-checkout"
             diff_files = IO.readlines(sparse, chomp: true)
@@ -641,15 +641,15 @@ describe Gitlab::Git::Repository do # rubocop:disable Metrics/BlockLength
         message: 'Squash commit message'
       }
 
-      repository.squash(user, squash_id, opts)
+      repository.squash(user, squash_id, **opts)
     end
 
     describe 'sparse checkout' do
       let(:expected_files) { %w[files files/js files/js/application.js] }
 
       it 'checks out only the files in the diff' do
-        allow(repository).to receive(:with_worktree).and_wrap_original do |m, *args|
-          m.call(*args) do
+        allow(repository).to receive(:with_worktree).and_wrap_original do |m, *args, **kwargs|
+          m.call(*args, **kwargs) do
             worktree = args[0]
             files_pattern = File.join(worktree.path, '**', '*')
             expected = expected_files.map do |path|
@@ -672,8 +672,8 @@ describe Gitlab::Git::Repository do # rubocop:disable Metrics/BlockLength
         end
 
         it 'does not include the renamed file in the sparse checkout' do
-          allow(repository).to receive(:with_worktree).and_wrap_original do |m, *args|
-            m.call(*args) do
+          allow(repository).to receive(:with_worktree).and_wrap_original do |m, *args, **kwargs|
+            m.call(*args, **kwargs) do
               worktree = args[0]
               files_pattern = File.join(worktree.path, '**', '*')
 

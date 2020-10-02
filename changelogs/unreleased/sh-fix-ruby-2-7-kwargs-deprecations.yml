@@ -1,0 +1,5 @@
+---
+title: Fix Ruby 2.7 keyword deprecation deprecation warnings
+merge_request: 2611
+author:
+type: other

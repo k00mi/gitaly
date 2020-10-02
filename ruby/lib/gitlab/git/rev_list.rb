@@ -33,7 +33,7 @@ module Gitlab
           require_path: require_path
         }
 
-        get_objects(opts, &lazy_block)
+        get_objects(**opts, &lazy_block)
       end
 
       def all_objects(options: [], require_path: nil, &lazy_block)
@@ -45,14 +45,14 @@ module Gitlab
 
       private
 
-      def execute(args)
-        repository.rev_list(args).split("\n")
+      def execute(**args)
+        repository.rev_list(**args).split("\n")
       end
 
       def get_objects(including: [], excluding: [], options: [], require_path: nil)
         opts = { including: including, excluding: excluding, options: options, objects: true }
 
-        repository.rev_list(opts) do |lazy_output|
+        repository.rev_list(**opts) do |lazy_output|
           objects = objects_from_output(lazy_output, require_path: require_path)
 
           yield(objects)
