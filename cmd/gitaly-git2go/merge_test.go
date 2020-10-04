@@ -82,9 +82,10 @@ func TestMergeFailsWithInvalidRepositoryPath(t *testing.T) {
 	require.Contains(t, err.Error(), "merge: could not open repository")
 }
 
-func buildCommit(t *testing.T, repoPath string, parent *git.Oid, fileContents map[string]string) *git.Oid {
+func buildCommit(t testing.TB, repoPath string, parent *git.Oid, fileContents map[string]string) *git.Oid {
 	repo, err := git.OpenRepository(repoPath)
 	require.NoError(t, err)
+	defer repo.Free()
 
 	odb, err := repo.Odb()
 	require.NoError(t, err)
@@ -230,16 +231,17 @@ func TestMergeTrees(t *testing.T) {
 			}.Run(ctx, config.Config)
 
 			if tc.expectedStderr != "" {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tc.expectedStderr)
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.expectedStderr)
 				return
 			}
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tc.expectedResponse, response)
 
 			repo, err := git.OpenRepository(repoPath)
 			require.NoError(t, err)
+			defer repo.Free()
 
 			commitOid, err := git.NewOid(response.CommitID)
 			require.NoError(t, err)
@@ -249,7 +251,7 @@ func TestMergeTrees(t *testing.T) {
 
 			tree, err := commit.Tree()
 			require.NoError(t, err)
-			require.Equal(t, uint64(len(tc.expected)), tree.EntryCount())
+			require.EqualValues(t, len(tc.expected), tree.EntryCount())
 
 			for name, contents := range tc.expected {
 				entry := tree.EntryByName(name)

@@ -49,6 +49,7 @@ func (cmd *mergeSubcommand) Run() error {
 	if err != nil {
 		return fmt.Errorf("could not open repository: %w", err)
 	}
+	defer repo.Free()
 
 	ours, err := lookupCommit(repo, request.Ours)
 	if err != nil {
@@ -64,6 +65,7 @@ func (cmd *mergeSubcommand) Run() error {
 	if err != nil {
 		return fmt.Errorf("could not merge commits: %w", err)
 	}
+	defer index.Free()
 
 	if index.HasConflicts() {
 		return errors.New("could not auto-merge due to conflicts")
