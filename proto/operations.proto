@@ -183,6 +183,9 @@ message UserMergeToRefRequest {
   bytes target_ref = 5;
   bytes message = 6;
   bytes first_parent_ref = 7;
+  // Allow conflicts to occur. Any conflict markers will be part of the merge commit.
+  // Only text conflicts are handled, tree-based conflicts are not supported.
+  bool allow_conflicts = 8;
 }
 
 message UserMergeToRefResponse {

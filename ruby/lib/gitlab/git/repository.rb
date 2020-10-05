@@ -277,7 +277,7 @@ module Gitlab
         tags.find { |tag| tag.name.b == name_b }
       end
 
-      def merge_to_ref(user, source_sha, branch, target_ref, message, first_parent_ref)
+      def merge_to_ref(user, source_sha, branch, target_ref, message, first_parent_ref, allow_conflicts = false)
         ref = if first_parent_ref.present?
                 find_ref(first_parent_ref)
               else
@@ -290,7 +290,7 @@ module Gitlab
           our_commit = ref.target
           their_commit = source_sha
 
-          create_merge_commit(user, our_commit, their_commit, message)
+          create_merge_commit(user, our_commit, their_commit, message, allow_conflicts)
         end
       rescue Rugged::ReferenceError, InvalidRef
         raise ArgumentError, 'Invalid merge source'
@@ -745,14 +745,16 @@ module Gitlab
         run_git!(%w[config core.sparseCheckout false], include_stderr: true)
       end
 
-      def create_merge_commit(user, our_commit, their_commit, message)
+      def create_merge_commit(user, our_commit, their_commit, message, allow_conflicts = false)
         raise 'Invalid merge target' unless our_commit
         raise 'Invalid merge source' unless their_commit
 
         committer = user_to_committer(user)
 
         merge_index = rugged.merge_commits(our_commit, their_commit)
-        return if merge_index.conflicts?
+        process_conflicts(rugged, merge_index, allow_conflicts)
+
+        return if merge_index.conflicts? # some conflicts are still unresolved
 
         options = {
           parents: [our_commit, their_commit],
@@ -763,6 +765,19 @@ module Gitlab
         }
 
         create_commit(options)
+      end
+
+      def process_conflicts(rugged, merge_index, allow_conflicts)
+        return unless allow_conflicts
+
+        merge_index.conflicts.each do |conflict|
+          path = conflict[:ancestor][:path]
+          file = merge_index.merge_file(path)
+          merge_index.add(path: path, oid: rugged.write(file[:data], :blob), mode: file[:filemode])
+          merge_index.conflict_remove(path)
+        end
+      rescue RuntimeError # conflicts cannot be resolved
+        nil
       end
 
       def run_git(args, chdir: path, env: {}, nice: false, include_stderr: false, lazy_block: nil, &block)

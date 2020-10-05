@@ -1,6 +1,7 @@
 package operations
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -617,6 +618,57 @@ func testSuccessfulUserMergeToRefRequest(t *testing.T, ctx context.Context) {
 	}
 }
 
+func TestConflictsOnUserMergeToRefRequest(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserMergeToRef, testConflictsOnUserMergeToRefRequest)
+}
+
+func testConflictsOnUserMergeToRefRequest(t *testing.T, ctx context.Context) {
+	serverSocketPath, stop := runOperationServiceServer(t)
+	defer stop()
+
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	prepareMergeBranchWithHead(t, testRepoPath, "824be604a34828eb682305f0d963056cfac87b2d")
+
+	request := &gitalypb.UserMergeToRefRequest{
+		Repository:     testRepo,
+		User:           testhelper.TestUser,
+		TargetRef:      []byte("refs/merge-requests/x/written"),
+		SourceSha:      "1450cd639e0bc6721eb02800169e464f212cde06",
+		Message:        []byte("message1"),
+		FirstParentRef: []byte("refs/heads/" + mergeBranchName),
+	}
+
+	t.Run("allow conflicts to be merged with markers", func(t *testing.T) {
+		request.AllowConflicts = true
+
+		resp, err := client.UserMergeToRef(ctx, request)
+		require.NoError(t, err)
+
+		var buf bytes.Buffer
+		cmd := exec.Command(command.GitPath(), "-C", testRepoPath, "show", resp.CommitId)
+		cmd.Stdout = &buf
+		require.NoError(t, cmd.Run())
+
+		bufStr := buf.String()
+		require.Contains(t, bufStr, "+<<<<<<< files/ruby/popen.rb")
+		require.Contains(t, bufStr, "+>>>>>>> files/ruby/popen.rb")
+		require.Contains(t, bufStr, "+<<<<<<< files/ruby/regex.rb")
+		require.Contains(t, bufStr, "+>>>>>>> files/ruby/regex.rb")
+	})
+
+	t.Run("disallow conflicts to be merged", func(t *testing.T) {
+		request.AllowConflicts = false
+
+		_, err := client.UserMergeToRef(ctx, request)
+		require.Error(t, err)
+	})
+}
+
 func TestFailedUserMergeToRefRequest(t *testing.T) {
 	testWithFeature(t, featureflag.GoUserMergeToRef, testFailedUserMergeToRefRequest)
 }
@@ -764,8 +816,12 @@ func testUserMergeToRefIgnoreHooksRequest(t *testing.T, ctx context.Context) {
 }
 
 func prepareMergeBranch(t *testing.T, testRepoPath string) {
+	prepareMergeBranchWithHead(t, testRepoPath, mergeBranchHeadBefore)
+}
+
+func prepareMergeBranchWithHead(t *testing.T, testRepoPath, mergeBranchHead string) {
 	deleteBranch(testRepoPath, mergeBranchName)
-	out, err := exec.Command(command.GitPath(), "-C", testRepoPath, "branch", mergeBranchName, mergeBranchHeadBefore).CombinedOutput()
+	out, err := exec.Command(command.GitPath(), "-C", testRepoPath, "branch", mergeBranchName, mergeBranchHead).CombinedOutput()
 	require.NoError(t, err, "set up branch to merge into: %s", out)
 }
 
