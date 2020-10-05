@@ -74,5 +74,5 @@ func InjectGitalyServers(ctx context.Context, name, address, token string) (cont
 		return nil, err
 	}
 
-	return metadata.NewOutgoingContext(ctx, metadata.Pairs("gitaly-servers", base64.StdEncoding.EncodeToString(gitalyServersJSON))), nil
+	return metadata.AppendToOutgoingContext(ctx, "gitaly-servers", base64.StdEncoding.EncodeToString(gitalyServersJSON)), nil
 }

@@ -1,7 +1,10 @@
 package helper
 
 import (
+	"context"
 	"encoding/base64"
+	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -55,4 +58,42 @@ func TestExtractGitalyServers(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestInjectGitalyServers(t *testing.T) {
+	check := func(t *testing.T, ctx context.Context) {
+		t.Helper()
+
+		newCtx, err := InjectGitalyServers(ctx, "gitaly-1", "1.1.1.1", "secret")
+		require.NoError(t, err)
+
+		md, found := metadata.FromOutgoingContext(newCtx)
+		require.True(t, found)
+
+		gs, found := md["gitaly-servers"]
+		require.True(t, found)
+
+		require.Len(t, gs, 1)
+
+		var servers map[string]interface{}
+		require.NoError(t, json.NewDecoder(base64.NewDecoder(base64.StdEncoding, strings.NewReader(gs[0]))).Decode(&servers), "received %s", gs[0])
+		require.EqualValues(t, map[string]interface{}{"gitaly-1": map[string]interface{}{"address": "1.1.1.1", "token": "secret"}}, servers)
+	}
+
+	t.Run("brand new context", func(t *testing.T) {
+		ctx := context.Background()
+
+		check(t, ctx)
+	})
+
+	t.Run("context with existing outgoing metadata should not be re-written", func(t *testing.T) {
+		existing := metadata.New(map[string]string{"foo": "bar"})
+
+		ctx := metadata.NewOutgoingContext(context.Background(), existing)
+		check(t, ctx)
+
+		md, found := metadata.FromOutgoingContext(ctx)
+		require.True(t, found)
+		require.Equal(t, []string{"bar"}, md["foo"])
+	})
 }
