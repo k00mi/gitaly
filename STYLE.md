@@ -170,6 +170,24 @@ A type should be declared before its first use.
 
 ## Tests
 
+### Naming
+
+Prefer to name tests in the same style as [examples](https://golang.org/pkg/testing/#hdr-Examples).
+
+To declare a test for the package, a function F, a type T and method M on type T are:
+```
+func TestF() { ... }
+func TestT() { ... }
+func TestT_M() { ... }
+```
+
+A suffix may be appended to distinguish between test cases. The suffix must start with a lower-case letter.
+```
+func TestF_suffix() { ... }
+func TestT_suffix() { ... }
+func TestT_M_suffix() { ... }
+```
+
 ### Table-driven tests
 
 We like table-driven tests ([Table-driven tests using subtests](https://blog.golang.org/subtests#TOC_4.), [Cheney blog post], [Golang wiki]).

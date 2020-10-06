@@ -18,7 +18,7 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-func TestSuccessfulCreateRepositoryFromBundleRequest(t *testing.T) {
+func TestServer_CreateRepositoryFromBundle_successful(t *testing.T) {
 	locator := config.NewLocator(config.Config)
 	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
@@ -86,7 +86,7 @@ func TestSuccessfulCreateRepositoryFromBundleRequest(t *testing.T) {
 	require.NotNil(t, commit)
 }
 
-func TestFailedCreateRepositoryFromBundleRequestDueToInvalidBundle(t *testing.T) {
+func TestServer_CreateRepositoryFromBundle_failed_invalid_bundle(t *testing.T) {
 	locator := config.NewLocator(config.Config)
 	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
@@ -129,7 +129,7 @@ func TestFailedCreateRepositoryFromBundleRequestDueToInvalidBundle(t *testing.T)
 	require.Contains(t, err.Error(), "invalid gitfile format")
 }
 
-func TestFailedCreateRepositoryFromBundleRequestDueToValidations(t *testing.T) {
+func TestServer_CreateRepositoryFromBundle_failed_validations(t *testing.T) {
 	locator := config.NewLocator(config.Config)
 	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
@@ -149,7 +149,7 @@ func TestFailedCreateRepositoryFromBundleRequestDueToValidations(t *testing.T) {
 	testhelper.RequireGrpcError(t, err, codes.InvalidArgument)
 }
 
-func TestFailedCreateRepositoryFromBundle_ExistingDirectory(t *testing.T) {
+func TestServer_CreateRepositoryFromBundle_failed_existing_directory(t *testing.T) {
 	locator := config.NewLocator(config.Config)
 	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
