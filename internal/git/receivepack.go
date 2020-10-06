@@ -29,26 +29,24 @@ var jsonpbMarshaller = &jsonpb.Marshaler{}
 // ReceivePackHookEnv is information we pass down to the Git hooks during
 // git-receive-pack.
 func ReceivePackHookEnv(ctx context.Context, req ReceivePackRequest) ([]string, error) {
-	repo, err := jsonpbMarshaller.MarshalToString(req.GetRepository())
-	if err != nil {
-		return nil, err
-	}
-
 	gitlabshellEnv, err := gitlabshell.Env()
 	if err != nil {
 		return nil, err
 	}
 
-	env := append([]string{
+	env, err := refHookEnv(ctx, req.GetRepository(), config.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	env = append(env,
 		fmt.Sprintf("GL_ID=%s", req.GetGlId()),
 		fmt.Sprintf("GL_USERNAME=%s", req.GetGlUsername()),
 		fmt.Sprintf("GL_REPOSITORY=%s", req.GetGlRepository()),
 		fmt.Sprintf("GL_PROJECT_PATH=%s", req.GetRepository().GetGlProjectPath()),
-		fmt.Sprintf("GITALY_SOCKET=" + config.GitalyInternalSocketPath()),
-		fmt.Sprintf("GITALY_REPO=%s", repo),
-		fmt.Sprintf("GITALY_TOKEN=%s", config.Config.Auth.Token),
 		fmt.Sprintf("%s=%s", featureflag.ReferenceTransactionHookEnvVar, strconv.FormatBool(featureflag.IsEnabled(ctx, featureflag.ReferenceTransactionHook))),
-	}, gitlabshellEnv...)
+	)
+	env = append(env, gitlabshellEnv...)
 
 	transaction, err := metadata.TransactionFromContext(ctx)
 	if err == nil {
