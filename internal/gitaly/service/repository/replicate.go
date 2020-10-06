@@ -237,7 +237,7 @@ func (s *server) newRepoClient(ctx context.Context, storageName string) (gitalyp
 		return nil, err
 	}
 
-	conn, err := s.conns.Dial(ctx, gitalyServerInfo["address"], gitalyServerInfo["token"])
+	conn, err := s.conns.Dial(ctx, gitalyServerInfo.Address, gitalyServerInfo.Token)
 	if err != nil {
 		return nil, err
 	}

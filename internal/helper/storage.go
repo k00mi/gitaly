@@ -36,15 +36,15 @@ func ExtractGitalyServers(ctx context.Context) (gitalyServersInfo storage.Gitaly
 }
 
 // ExtractGitalyServer extracts server information for a specific storage
-func ExtractGitalyServer(ctx context.Context, storageName string) (map[string]string, error) {
+func ExtractGitalyServer(ctx context.Context, storageName string) (storage.ServerInfo, error) {
 	gitalyServers, err := ExtractGitalyServers(ctx)
 	if err != nil {
-		return nil, err
+		return storage.ServerInfo{}, err
 	}
 
 	gitalyServer, ok := gitalyServers[storageName]
 	if !ok {
-		return nil, errors.New("storage name not found")
+		return storage.ServerInfo{}, errors.New("storage name not found")
 	}
 
 	return gitalyServer, nil
@@ -64,8 +64,8 @@ func IncomingToOutgoing(ctx context.Context) context.Context {
 func InjectGitalyServers(ctx context.Context, name, address, token string) (context.Context, error) {
 	gitalyServers := storage.GitalyServers{
 		name: {
-			"address": address,
-			"token":   token,
+			Address: address,
+			Token:   token,
 		},
 	}
 

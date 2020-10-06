@@ -52,20 +52,17 @@ func commandEnv(ctx context.Context, storageName, command string, message proto.
 		return nil, status.Errorf(codes.InvalidArgument, "commandEnv: no storage info for %s", storageName)
 	}
 
-	address := storageInfo["address"]
-	if address == "" {
+	if storageInfo.Address == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "commandEnv: empty gitaly address")
 	}
-
-	token := storageInfo["token"]
 
 	featureFlagPairs := featureflag.AllFlags(ctx)
 
 	return []string{
 		fmt.Sprintf("GITALY_PAYLOAD=%s", payload),
 		fmt.Sprintf("GIT_SSH_COMMAND=%s %s", gitalySSHPath(), command),
-		fmt.Sprintf("GITALY_ADDRESS=%s", address),
-		fmt.Sprintf("GITALY_TOKEN=%s", token),
+		fmt.Sprintf("GITALY_ADDRESS=%s", storageInfo.Address),
+		fmt.Sprintf("GITALY_TOKEN=%s", storageInfo.Token),
 		fmt.Sprintf("GITALY_FEATUREFLAGS=%s", strings.Join(featureFlagPairs, ",")),
 		fmt.Sprintf("CORRELATION_ID=%s", getCorrelationID(ctx)),
 		// Pass through the SSL_CERT_* variables that indicate which
