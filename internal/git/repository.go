@@ -110,6 +110,14 @@ func (UnimplementedRepo) UpdateRef(ctx context.Context, reference, newrev, oldre
 	return ErrUnimplemented
 }
 
+func (UnimplementedRepo) WriteBlob(context.Context, string, io.Reader) (string, error) {
+	return "", ErrUnimplemented
+}
+
+func (UnimplementedRepo) CatFile(context.Context, string) ([]byte, error) {
+	return nil, ErrUnimplemented
+}
+
 var _ Repository = UnimplementedRepo{} // compile time assertion
 
 // localRepository represents a local Git repository.
