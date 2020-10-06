@@ -74,6 +74,44 @@ type Repository interface {
 	CatFile(ctx context.Context, oid string) ([]byte, error)
 }
 
+// ErrUnimplemented indicates the repository abstraction does not yet implement
+// a specific behavior
+var ErrUnimplemented = errors.New("behavior not implemented yet")
+
+// UnimplementedRepo satisfies the Repository interface to reduce friction in
+// writing new Repository implementations
+type UnimplementedRepo struct{}
+
+func (UnimplementedRepo) ResolveRefish(ctx context.Context, ref string) (string, error) {
+	return "", ErrUnimplemented
+}
+
+func (UnimplementedRepo) ContainsRef(ctx context.Context, ref string) (bool, error) {
+	return false, ErrUnimplemented
+}
+
+func (UnimplementedRepo) GetReference(ctx context.Context, ref string) (Reference, error) {
+	return Reference{}, ErrUnimplemented
+}
+
+func (UnimplementedRepo) GetReferences(ctx context.Context, pattern string) ([]Reference, error) {
+	return nil, ErrUnimplemented
+}
+
+func (UnimplementedRepo) GetBranch(ctx context.Context, branch string) (Reference, error) {
+	return Reference{}, ErrUnimplemented
+}
+
+func (UnimplementedRepo) GetBranches(ctx context.Context) ([]Reference, error) {
+	return nil, ErrUnimplemented
+}
+
+func (UnimplementedRepo) UpdateRef(ctx context.Context, reference, newrev, oldrev string) error {
+	return ErrUnimplemented
+}
+
+var _ Repository = UnimplementedRepo{} // compile time assertion
+
 // localRepository represents a local Git repository.
 type localRepository struct {
 	repo repository.GitRepo
