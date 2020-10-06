@@ -213,44 +213,78 @@ func ConvertGlobalOptions(options *gitalypb.GlobalOptions) []Option {
 	return globals
 }
 
+type cmdCfg struct {
+	env []string
+}
+
+// CmdOpt is an option for running a command
+type CmdOpt func(*cmdCfg) error
+
+func handleOpts(cc *cmdCfg, opts []CmdOpt) error {
+	for _, opt := range opts {
+		if err := opt(cc); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // SafeCmd creates a command.Command with the given args and Repository. It
 // validates the arguments in the command before executing.
-func SafeCmd(ctx context.Context, repo repository.GitRepo, globals []Option, sc Cmd) (*command.Command, error) {
-	return SafeCmdWithEnv(ctx, nil, repo, globals, sc)
+func SafeCmd(ctx context.Context, repo repository.GitRepo, globals []Option, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
+	return SafeCmdWithEnv(ctx, nil, repo, globals, sc, opts...)
 }
 
 // SafeCmdWithEnv creates a command.Command with the given args, environment, and Repository. It
 // validates the arguments in the command before executing.
-func SafeCmdWithEnv(ctx context.Context, env []string, repo repository.GitRepo, globals []Option, sc Cmd) (*command.Command, error) {
+func SafeCmdWithEnv(ctx context.Context, env []string, repo repository.GitRepo, globals []Option, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
+	cc := &cmdCfg{}
+
+	if err := handleOpts(cc, opts); err != nil {
+		return nil, err
+	}
+
 	args, err := combineArgs(globals, sc)
 	if err != nil {
 		return nil, err
 	}
 
-	return unsafeCmdWithEnv(ctx, env, repo, args...)
+	return unsafeCmdWithEnv(ctx, append(env, cc.env...), repo, args...)
 }
 
 // SafeBareCmd creates a git.Command with the given args, stream, and env. It
 // validates the arguments in the command before executing.
-func SafeBareCmd(ctx context.Context, stream CmdStream, env []string, globals []Option, sc Cmd) (*command.Command, error) {
+func SafeBareCmd(ctx context.Context, stream CmdStream, env []string, globals []Option, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
+	cc := &cmdCfg{}
+
+	if err := handleOpts(cc, opts); err != nil {
+		return nil, err
+	}
+
 	args, err := combineArgs(globals, sc)
 	if err != nil {
 		return nil, err
 	}
 
-	return unsafeBareCmd(ctx, stream, env, args...)
+	return unsafeBareCmd(ctx, stream, append(env, cc.env...), args...)
 }
 
 // SafeStdinCmd creates a git.Command with the given args and Repository that is
 // suitable for Write()ing to. It validates the arguments in the command before
 // executing.
-func SafeStdinCmd(ctx context.Context, repo repository.GitRepo, globals []Option, sc SubCmd) (*command.Command, error) {
+func SafeStdinCmd(ctx context.Context, repo repository.GitRepo, globals []Option, sc SubCmd, opts ...CmdOpt) (*command.Command, error) {
+	cc := &cmdCfg{}
+
+	if err := handleOpts(cc, opts); err != nil {
+		return nil, err
+	}
+
 	args, err := combineArgs(globals, sc)
 	if err != nil {
 		return nil, err
 	}
 
-	return unsafeStdinCmd(ctx, repo, args...)
+	return unsafeStdinCmd(ctx, cc.env, repo, args...)
 }
 
 // SafeCmdWithoutRepo works like Command but without a git repository. It

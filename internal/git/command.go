@@ -23,11 +23,13 @@ func unsafeCmdWithEnv(ctx context.Context, extraEnv []string, repo repository.Gi
 
 // unsafeStdinCmd creates a git.Command with the given args and Repository that is
 // suitable for Write()ing to
-func unsafeStdinCmd(ctx context.Context, repo repository.GitRepo, args ...string) (*command.Command, error) {
+func unsafeStdinCmd(ctx context.Context, extraEnv []string, repo repository.GitRepo, args ...string) (*command.Command, error) {
 	args, env, err := argsAndEnv(repo, args...)
 	if err != nil {
 		return nil, err
 	}
+
+	env = append(env, extraEnv...)
 
 	return unsafeBareCmd(ctx, CmdStream{In: command.SetupStdin}, env, args...)
 }
