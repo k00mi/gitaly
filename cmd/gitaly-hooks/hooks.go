@@ -12,8 +12,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/BurntSushi/toml"
 	"github.com/golang/protobuf/jsonpb"
+	"github.com/pelletier/go-toml"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
@@ -329,7 +329,7 @@ func check(configPath string) (int, error) {
 
 	var c config.Cfg
 
-	if _, err := toml.DecodeReader(cfgFile, &c); err != nil {
+	if err := toml.NewDecoder(cfgFile).Decode(&c); err != nil {
 		return 1, fmt.Errorf("failed to decode toml: %w", err)
 	}
 
