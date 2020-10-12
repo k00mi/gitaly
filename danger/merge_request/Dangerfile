@@ -1,4 +1,4 @@
-unless /^([[:alpha:]][[:lower:]]+: )?[[:upper:]]/ =~ gitlab.mr_title
+unless /^([[:alnum:]][[:lower:]]+: )?[[:upper:]]/ =~ gitlab.mr_title
   warn("Please capitalize the merge request title")
 end
 
