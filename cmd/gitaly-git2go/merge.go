@@ -23,25 +23,6 @@ func (cmd *mergeSubcommand) Flags() *flag.FlagSet {
 	return flags
 }
 
-func lookupCommit(repo *git.Repository, ref string) (*git.Commit, error) {
-	object, err := repo.RevparseSingle(ref)
-	if err != nil {
-		return nil, fmt.Errorf("could not lookup reference: %w", err)
-	}
-
-	peeled, err := object.Peel(git.ObjectCommit)
-	if err != nil {
-		return nil, fmt.Errorf("could not peel reference: %w", err)
-	}
-
-	commit, err := peeled.AsCommit()
-	if err != nil {
-		return nil, fmt.Errorf("could not cast to commit: %w", err)
-	}
-
-	return commit, nil
-}
-
 func sanitizeSignatureInfo(info string) string {
 	return strings.Map(func(r rune) rune {
 		switch r {
