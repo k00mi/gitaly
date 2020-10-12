@@ -725,6 +725,44 @@ type postReceiveMessage struct {
 	Type    string `json:"type"`
 }
 
+func handleLfs(options GitlabTestServerOptions) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "couldn't parse form", http.StatusBadRequest)
+			return
+		}
+
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not GET", http.StatusMethodNotAllowed)
+			return
+		}
+
+		if options.LfsOid != "" {
+			if r.FormValue("oid") != options.LfsOid {
+				http.Error(w, "oid parameter does not match", http.StatusBadRequest)
+				return
+			}
+		}
+
+		if options.GlRepository != "" {
+			if r.FormValue("gl_repository") != options.GlRepository {
+				http.Error(w, "gl_repository parameter does not match", http.StatusBadRequest)
+				return
+			}
+		}
+
+		w.Header().Set("Content-Type", "application/octet-stream")
+
+		if options.LfsStatusCode != 0 {
+			w.WriteHeader(options.LfsStatusCode)
+		}
+
+		if options.LfsBody != "" {
+			w.Write([]byte(options.LfsBody))
+		}
+	}
+}
+
 func handleCheck(options GitlabTestServerOptions) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		u, p, ok := r.BasicAuth()
@@ -754,6 +792,10 @@ type GitlabTestServerOptions struct {
 	RepoPath                    string
 	UnixSocket                  bool
 	RelativeURLRoot             string
+	LfsOid                      string
+	GlRepository                string
+	LfsBody                     string
+	LfsStatusCode               int
 }
 
 // NewGitlabTestServer returns a mock gitlab server that responds to the hook api endpoints
@@ -764,6 +806,7 @@ func NewGitlabTestServer(t FatalLogger, options GitlabTestServerOptions) (url st
 	mux.Handle(prefix+"/pre_receive", http.HandlerFunc(handlePreReceive(options)))
 	mux.Handle(prefix+"/post_receive", http.HandlerFunc(handlePostReceive(options)))
 	mux.Handle(prefix+"/check", http.HandlerFunc(handleCheck(options)))
+	mux.Handle(prefix+"/lfs", http.HandlerFunc(handleLfs(options)))
 
 	if options.UnixSocket {
 		return startSocketHTTPServer(t, mux)
