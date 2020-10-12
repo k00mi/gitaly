@@ -147,6 +147,8 @@ export GOPROXY                   ?= https://proxy.golang.org
 export PATH                      := ${BUILD_DIR}/bin:${PATH}
 export PKG_CONFIG_PATH           := ${LIBGIT2_INSTALL_DIR}/lib/pkgconfig
 export GITALY_TESTING_GIT_BINARY ?= ${GIT_INSTALL_DIR}/bin/git
+# Allow the linker flag -D_THREAD_SAFE as libgit2 is compiled with it on FreeBSD
+export CGO_LDFLAGS_ALLOW          = -D_THREAD_SAFE
 
 .NOTPARALLEL:
 
