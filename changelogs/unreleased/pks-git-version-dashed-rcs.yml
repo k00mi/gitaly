@@ -1,0 +1,5 @@
+---
+title: 'git: Fix parsing of dashed -rc versions'
+merge_request: 2639
+author:
+type: fixed
