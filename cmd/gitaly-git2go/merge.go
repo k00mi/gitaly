@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -21,25 +22,6 @@ func (cmd *mergeSubcommand) Flags() *flag.FlagSet {
 	flags := flag.NewFlagSet("merge", flag.ExitOnError)
 	flags.StringVar(&cmd.request, "request", "", "git2go.MergeCommand")
 	return flags
-}
-
-func lookupCommit(repo *git.Repository, ref string) (*git.Commit, error) {
-	object, err := repo.RevparseSingle(ref)
-	if err != nil {
-		return nil, fmt.Errorf("could not lookup reference: %w", err)
-	}
-
-	peeled, err := object.Peel(git.ObjectCommit)
-	if err != nil {
-		return nil, fmt.Errorf("could not peel reference: %w", err)
-	}
-
-	commit, err := peeled.AsCommit()
-	if err != nil {
-		return nil, fmt.Errorf("could not cast to commit: %w", err)
-	}
-
-	return commit, nil
 }
 
 func sanitizeSignatureInfo(info string) string {
@@ -107,12 +89,9 @@ func (cmd *mergeSubcommand) Run() error {
 		CommitID: commit.String(),
 	}
 
-	serialized, err := response.Serialize()
-	if err != nil {
+	if err := response.SerializeTo(os.Stdout); err != nil {
 		return err
 	}
-
-	fmt.Println(serialized)
 
 	return nil
 }
