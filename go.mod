@@ -1,7 +1,6 @@
 module gitlab.com/gitlab-org/gitaly
 
 require (
-	github.com/BurntSushi/toml v0.3.1
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cloudflare/tableflip v1.2.1-0.20200514155827-4baec9811f2b
 	github.com/getsentry/sentry-go v0.5.1
@@ -14,6 +13,7 @@ require (
 	github.com/libgit2/git2go/v30 v30.0.5
 	github.com/olekukonko/tablewriter v0.0.2
 	github.com/opentracing/opentracing-go v1.0.2
+	github.com/pelletier/go-toml v1.8.1
 	github.com/prometheus/client_golang v1.0.0
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
 	github.com/prometheus/procfs v0.0.3 // indirect

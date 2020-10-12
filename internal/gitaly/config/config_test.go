@@ -831,7 +831,7 @@ storages = ["default"]
 			rawCfg: `[daily_maintenance]
 			duration = "meow"`,
 			expect:  DailyJob{},
-			loadErr: errors.New("load toml: time: invalid duration meow"),
+			loadErr: errors.New("load toml: (2, 4): unmarshal text: time: invalid duration meow"),
 		}, {
 			rawCfg: `[daily_maintenance]
 			storages = ["default"]`,

@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/BurntSushi/toml"
+	"github.com/pelletier/go-toml"
 	logconfig "gitlab.com/gitlab-org/gitaly/internal/gitaly/config/log"
 )
 
@@ -26,7 +26,7 @@ type Probe struct {
 
 func ParseConfig(raw string) (*Config, error) {
 	config := &Config{}
-	if _, err := toml.Decode(raw, config); err != nil {
+	if err := toml.Unmarshal([]byte(raw), config); err != nil {
 		return nil, err
 	}
 

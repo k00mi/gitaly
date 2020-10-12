@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/BurntSushi/toml"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/pelletier/go-toml"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config/auth"
 	internallog "gitlab.com/gitlab-org/gitaly/internal/gitaly/config/log"
@@ -128,7 +128,7 @@ type Concurrency struct {
 func Load(file io.Reader) error {
 	Config = Cfg{}
 
-	if _, err := toml.DecodeReader(file, &Config); err != nil {
+	if err := toml.NewDecoder(file).Decode(&Config); err != nil {
 		return fmt.Errorf("load toml: %v", err)
 	}
 

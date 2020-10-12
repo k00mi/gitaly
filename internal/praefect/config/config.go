@@ -3,10 +3,11 @@ package config
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"strings"
 	"time"
 
-	"github.com/BurntSushi/toml"
+	"github.com/pelletier/go-toml"
 	promclient "github.com/prometheus/client_golang/prometheus"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config/auth"
@@ -112,13 +113,18 @@ type VirtualStorage struct {
 
 // FromFile loads the config for the passed file path
 func FromFile(filePath string) (Config, error) {
+	b, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return Config{}, err
+	}
+
 	conf := &Config{
 		Reconciliation: DefaultReconciliationConfig(),
 		Replication:    DefaultReplicationConfig(),
 		// Sets the default Failover, to be overwritten when deserializing the TOML
 		Failover: Failover{Enabled: true, ElectionStrategy: sqlFailoverValue},
 	}
-	if _, err := toml.DecodeFile(filePath, conf); err != nil {
+	if err := toml.Unmarshal(b, conf); err != nil {
 		return Config{}, err
 	}
 
