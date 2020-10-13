@@ -41,7 +41,7 @@ type Voter struct {
 	Votes uint
 
 	vote   vote
-	result voteResult
+	result VoteResult
 }
 
 // Transaction is a session where a set of voters votes on one or more
@@ -191,19 +191,19 @@ func (t *Transaction) getOrCreateSubtransaction(node string) (*subtransaction, e
 		}
 
 		switch result {
-		case voteUndecided:
+		case VoteUndecided:
 			// An undecided vote means we should vote on this one.
 			return subtransaction, nil
-		case voteCommitted:
+		case VoteCommitted:
 			// If we have committed this subtransaction, we're good
 			// to go.
 			continue
-		case voteAborted:
+		case VoteAborted:
 			// If the subtransaction was aborted, then we need to
 			// fail as we cannot proceed if the path leading to the
 			// end result has intermittent failures.
 			return nil, ErrSubtransactionFailed
-		case voteStopped:
+		case VoteStopped:
 			// If the transaction was stopped, then we need to fail
 			// with a graceful error.
 			return nil, ErrTransactionStopped
