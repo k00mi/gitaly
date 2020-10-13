@@ -88,6 +88,9 @@ func TestVersionComparator(t *testing.T) {
 		{"1.1.1.rc0", "1.1.1", true},
 		{"1.1.1.rc0", "1.1.1.rc0", false},
 		{"1.1.1.rc0", "1.1.0", false},
+		{"1.1.1-rc0", "1.1.1-rc0", false},
+		{"1.1.1-rc0", "1.1.1", true},
+		{"1.1.1", "1.1.1-rc0", false},
 	} {
 		actual, err := git.VersionLessThan(tc.v1, tc.v2)
 		require.NoError(t, err)
@@ -106,6 +109,7 @@ func TestSupportsReferenceTransactionHook(t *testing.T) {
 		{"2.28.0.rc2", true},
 		{"2.28.1", true},
 		{"2.28.0.468.g1be91c4e2f", true},
+		{"2.29.0-rc1", true},
 		{"3.0.0", true},
 	} {
 		actual, err := git.SupportsReferenceTransactionHook(tc.version)

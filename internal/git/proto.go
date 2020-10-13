@@ -140,9 +140,14 @@ func parseVersion(versionStr string) (version, error) {
 	var ver version
 
 	for i, v := range []*uint32{&ver.major, &ver.minor, &ver.patch} {
-		n64, err := strconv.ParseUint(versionSplit[i], 10, 32)
+		rcSplit := strings.SplitN(versionSplit[i], "-", 2)
+		n64, err := strconv.ParseUint(rcSplit[0], 10, 32)
 		if err != nil {
 			return version{}, err
+		}
+
+		if len(rcSplit) == 2 && strings.HasPrefix(rcSplit[1], "rc") {
+			ver.rc = true
 		}
 
 		*v = uint32(n64)
