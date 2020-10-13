@@ -53,6 +53,9 @@ func (m *GitLabHookManager) PreReceiveHook(ctx context.Context, repo *gitalypb.R
 	// Only the primary should execute hooks and increment reference counters.
 	if primary {
 		if err := m.preReceiveHook(ctx, repo, env, changes, stdout, stderr); err != nil {
+			// If the pre-receive hook declines the push, then we need to stop any
+			// secondaries voting on the transaction.
+			m.stopTransaction(ctx, env)
 			return err
 		}
 	}

@@ -87,8 +87,26 @@ func (m *GitLabHookManager) voteOnTransaction(ctx context.Context, hash []byte, 
 			return err
 		}
 
-		if response.State != gitalypb.VoteTransactionResponse_COMMIT {
+		switch response.State {
+		case gitalypb.VoteTransactionResponse_COMMIT:
+			return nil
+		case gitalypb.VoteTransactionResponse_ABORT:
 			return errors.New("transaction was aborted")
+		case gitalypb.VoteTransactionResponse_STOP:
+			return errors.New("transaction was stopped")
+		default:
+			return errors.New("invalid transaction state")
+		}
+	})
+}
+
+func (m *GitLabHookManager) stopTransaction(ctx context.Context, env []string) error {
+	return m.runWithTransaction(ctx, env, func(ctx context.Context, tx metadata.Transaction, client gitalypb.RefTransactionClient) error {
+		_, err := client.StopTransaction(ctx, &gitalypb.StopTransactionRequest{
+			TransactionId: tx.ID,
+		})
+		if err != nil {
+			return err
 		}
 
 		return nil
