@@ -21,13 +21,19 @@ import (
 )
 
 func TestSuccessfulFetchInternalRemote(t *testing.T) {
+	defer func(oldConf config.Cfg) { config.Config = oldConf }(config.Config)
+
+	conf, getGitalySSHInvocationParams, cleanup := testhelper.ListenGitalySSHCalls(t, config.Config)
+	defer cleanup()
+
+	config.Config = conf
+
 	gitaly0Dir, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 
 	gitaly1Dir, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 
-	defer func(oldStorages []config.Storage) { config.Config.Storages = oldStorages }(config.Config.Storages)
 	config.Config.Storages = append(config.Config.Storages, []config.Storage{
 		{
 			Name: "gitaly-0",
@@ -80,6 +86,10 @@ func TestSuccessfulFetchInternalRemote(t *testing.T) {
 		string(testhelper.MustRunCommand(t, nil, "git", "-C", gitaly0RepoPath, "show-ref", "--head")),
 		string(testhelper.MustRunCommand(t, nil, "git", "-C", gitaly1RepoPath, "show-ref", "--head")),
 	)
+
+	gitalySSHInvocationParams := getGitalySSHInvocationParams()
+	// TODO: This should be fixed in scope of https://gitlab.com/gitlab-org/gitaly/-/issues/3047 - only single invocation should be done.
+	require.Len(t, gitalySSHInvocationParams, 2, "expected 2 calls of gitaly-ssh binary")
 }
 
 func TestFailedFetchInternalRemote(t *testing.T) {
