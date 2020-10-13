@@ -12,7 +12,17 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
+	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 )
+
+// InvalidObjectError is returned when trying to get an object id that is invalid or does not exist.
+type InvalidObjectError string
+
+func (err InvalidObjectError) Error() string { return fmt.Sprintf("invalid object %q", string(err)) }
+
+func errorWithStderr(err error, stderr []byte) error {
+	return fmt.Errorf("%w, stderr: %q", err, stderr)
+}
 
 var (
 	ErrReferenceNotFound = errors.New("reference not found")
@@ -53,6 +63,15 @@ type Repository interface {
 	// will be deleted. If oldrev is the zero OID, the reference will
 	// created.
 	UpdateRef(ctx context.Context, reference, newrev, oldrev string) error
+
+	// WriteBlob writes a blob to the repository's object database and
+	// returns its object ID. Path is used by git to decide which filters to
+	// run on the content.
+	WriteBlob(ctx context.Context, path string, content io.Reader) (string, error)
+
+	// CatFile reads an object from the repository's object database. InvalidObjectError
+	// is returned if the oid does not refer to a valid object.
+	CatFile(ctx context.Context, oid string) ([]byte, error)
 }
 
 // localRepository represents a local Git repository.
@@ -70,8 +89,65 @@ func NewRepository(repo repository.GitRepo) Repository {
 // command creates a Git Command with the given args and Repository, executed
 // in the Repository. It validates the arguments in the command before
 // executing.
-func (repo *localRepository) command(ctx context.Context, globals []Option, cmd SubCmd) (*command.Command, error) {
-	return SafeStdinCmd(ctx, repo.repo, globals, cmd)
+func (repo *localRepository) command(ctx context.Context, globals []Option, cmd SubCmd, opts ...CmdOpt) (*command.Command, error) {
+	return SafeCmd(ctx, repo.repo, globals, cmd, opts...)
+}
+
+func (repo *localRepository) WriteBlob(ctx context.Context, path string, content io.Reader) (string, error) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+
+	cmd, err := repo.command(ctx, nil,
+		SubCmd{
+			Name: "hash-object",
+			Flags: []Option{
+				ValueFlag{Name: "--path", Value: path},
+				Flag{Name: "--stdin"}, Flag{Name: "-w"},
+			},
+		},
+		WithStdin(content),
+		WithStdout(stdout),
+		WithStderr(stderr),
+	)
+	if err != nil {
+		return "", err
+	}
+
+	if err := cmd.Wait(); err != nil {
+		return "", errorWithStderr(err, stderr.Bytes())
+	}
+
+	return text.ChompBytes(stdout.Bytes()), nil
+}
+
+func (repo *localRepository) CatFile(ctx context.Context, oid string) ([]byte, error) {
+	const msgInvalidObject = "fatal: Not a valid object name "
+
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	cmd, err := repo.command(ctx, nil,
+		SubCmd{
+			Name:  "cat-file",
+			Flags: []Option{Flag{"-p"}},
+			Args:  []string{oid},
+		},
+		WithStdout(stdout),
+		WithStderr(stderr),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := cmd.Wait(); err != nil {
+		msg := text.ChompBytes(stderr.Bytes())
+		if strings.HasPrefix(msg, msgInvalidObject) {
+			return nil, InvalidObjectError(strings.TrimPrefix(msg, msgInvalidObject))
+		}
+
+		return nil, errorWithStderr(err, stderr.Bytes())
+	}
+
+	return stdout.Bytes(), nil
 }
 
 func (repo *localRepository) ResolveRefish(ctx context.Context, refish string) (string, error) {
@@ -189,12 +265,8 @@ func (repo *localRepository) UpdateRef(ctx context.Context, reference, newrev, o
 	cmd, err := repo.command(ctx, nil, SubCmd{
 		Name:  "update-ref",
 		Flags: []Option{Flag{Name: "-z"}, Flag{Name: "--stdin"}},
-	})
+	}, WithStdin(strings.NewReader(fmt.Sprintf("update %s\x00%s\x00%s\x00", reference, newrev, oldrev))))
 	if err != nil {
-		return err
-	}
-
-	if _, err := fmt.Fprintf(cmd, "update %s\x00%s\x00%s\x00", reference, newrev, oldrev); err != nil {
 		return err
 	}
 
