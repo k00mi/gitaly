@@ -581,6 +581,12 @@ func (c *Coordinator) createTransactionFinalizer(
 		// there's no sense in trying to replicate from primary
 		// to secondaries.
 		if nodeStates[route.Primary.Storage] != transactions.VoteCommitted {
+			// If the transaction was gracefully stopped, then we don't want to return
+			// an explicit error here as it indicates an error somewhere else which
+			// already got returned.
+			if nodeStates[route.Primary.Storage] == transactions.VoteStopped {
+				return nil
+			}
 			return fmt.Errorf("transaction: primary failed vote")
 		}
 		delete(nodeStates, route.Primary.Storage)
