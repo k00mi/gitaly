@@ -4,6 +4,7 @@
 /gitaly-debug
 /gitaly-git2go
 /gitaly-hooks
+/gitaly-lfs-smudge
 /gitaly-ssh
 /gitaly-wrapper
 /praefect
