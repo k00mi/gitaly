@@ -7,6 +7,8 @@ import (
 	"io"
 
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // ConflictsCommand contains parameters to perform a merge and return its conflicts.
@@ -39,10 +41,19 @@ type Conflict struct {
 	Content []byte `json:"content"`
 }
 
+type ConflictError struct {
+	// Code is the GRPC error code
+	Code codes.Code
+	// Message is the error message
+	Message string
+}
+
 // ConflictsResult contains all conflicts resulting from a merge.
 type ConflictsResult struct {
 	// Conflicts
 	Conflicts []Conflict `json:"conflicts"`
+	// Error is an optional conflict error
+	Error ConflictError `json:"error"`
 }
 
 // ConflictsCommandFromSerialized constructs a ConflictsCommand from its serialized representation.
@@ -83,6 +94,10 @@ func (c ConflictsCommand) Run(ctx context.Context, cfg config.Cfg) (ConflictsRes
 	var response ConflictsResult
 	if err := deserialize(stdout, &response); err != nil {
 		return ConflictsResult{}, err
+	}
+
+	if response.Error.Code != codes.OK {
+		return ConflictsResult{}, status.Error(response.Error.Code, response.Error.Message)
 	}
 
 	return response, nil

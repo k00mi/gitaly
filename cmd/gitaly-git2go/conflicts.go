@@ -10,6 +10,9 @@ import (
 
 	git "github.com/libgit2/git2go/v30"
 	"gitlab.com/gitlab-org/gitaly/internal/git2go"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type conflictsSubcommand struct {
@@ -46,7 +49,7 @@ func conflictContent(repo *git.Repository, conflict git.IndexConflict) ([]byte, 
 
 		blob, err := repo.LookupBlob(entry.Id)
 		if err != nil {
-			return nil, fmt.Errorf("could not get conflicting blob: %w", err)
+			return nil, helper.ErrPreconditionFailedf("could not get conflicting blob: %w", err)
 		}
 
 		input.Path = entry.Path
@@ -60,6 +63,21 @@ func conflictContent(repo *git.Repository, conflict git.IndexConflict) ([]byte, 
 	}
 
 	return merge.Contents, nil
+}
+
+func conflictError(code codes.Code, message string) error {
+	result := git2go.ConflictsResult{
+		Error: git2go.ConflictError{
+			Code:    code,
+			Message: message,
+		},
+	}
+
+	if err := result.SerializeTo(os.Stdout); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Run performs a merge and prints resulting conflicts to stdout.
@@ -96,7 +114,7 @@ func (cmd *conflictsSubcommand) Run() error {
 
 	index, err := repo.MergeCommits(ours, theirs, nil)
 	if err != nil {
-		return fmt.Errorf("could not merge commits: %w", err)
+		return conflictError(codes.FailedPrecondition, fmt.Sprintf("could not merge commits: %v", err))
 	}
 
 	conflicts, err := index.ConflictIterator()
@@ -117,6 +135,9 @@ func (cmd *conflictsSubcommand) Run() error {
 
 		content, err := conflictContent(repo, conflict)
 		if err != nil {
+			if status, ok := status.FromError(err); ok {
+				return conflictError(status.Code(), status.Message())
+			}
 			return err
 		}
 

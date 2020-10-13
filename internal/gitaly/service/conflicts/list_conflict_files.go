@@ -51,7 +51,7 @@ func (s *server) listConflictFiles(request *gitalypb.ListConflictFilesRequest, s
 		if errors.Is(err, git2go.ErrInvalidArgument) {
 			return helper.ErrInvalidArgument(err)
 		}
-		return helper.ErrPreconditionFailed(err)
+		return helper.ErrInternal(err)
 	}
 
 	var conflictFiles []*gitalypb.ConflictFile
