@@ -31,6 +31,10 @@ func (s *Server) VoteTransaction(ctx context.Context, in *gitalypb.VoteTransacti
 			return nil, helper.ErrNotFound(err)
 		case errors.Is(err, transactions.ErrTransactionCanceled):
 			return nil, helper.DecorateError(codes.Canceled, err)
+		case errors.Is(err, transactions.ErrTransactionStopped):
+			return &gitalypb.VoteTransactionResponse{
+				State: gitalypb.VoteTransactionResponse_STOP,
+			}, nil
 		case errors.Is(err, transactions.ErrTransactionVoteFailed):
 			return &gitalypb.VoteTransactionResponse{
 				State: gitalypb.VoteTransactionResponse_ABORT,
@@ -43,4 +47,25 @@ func (s *Server) VoteTransaction(ctx context.Context, in *gitalypb.VoteTransacti
 	return &gitalypb.VoteTransactionResponse{
 		State: gitalypb.VoteTransactionResponse_COMMIT,
 	}, nil
+}
+
+// StopTransaction is called by a client who wants to gracefully stop a
+// transaction. All voters waiting for quorum will be stopped and new votes
+// will not get accepted anymore. It is fine to call this RPC multiple times on
+// the same transaction.
+func (s *Server) StopTransaction(ctx context.Context, in *gitalypb.StopTransactionRequest) (*gitalypb.StopTransactionResponse, error) {
+	if err := s.txMgr.StopTransaction(ctx, in.TransactionId); err != nil {
+		switch {
+		case errors.Is(err, transactions.ErrNotFound):
+			return nil, helper.ErrNotFound(err)
+		case errors.Is(err, transactions.ErrTransactionCanceled):
+			return nil, helper.DecorateError(codes.Canceled, err)
+		case errors.Is(err, transactions.ErrTransactionStopped):
+			return &gitalypb.StopTransactionResponse{}, nil
+		default:
+			return nil, helper.ErrInternal(err)
+		}
+	}
+
+	return &gitalypb.StopTransactionResponse{}, nil
 }

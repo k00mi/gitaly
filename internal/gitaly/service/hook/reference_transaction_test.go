@@ -17,6 +17,7 @@ import (
 )
 
 type testTransactionServer struct {
+	gitalypb.UnimplementedRefTransactionServer
 	handler func(in *gitalypb.VoteTransactionRequest) (*gitalypb.VoteTransactionResponse, error)
 }
 

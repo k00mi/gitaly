@@ -16,6 +16,13 @@ service RefTransaction {
     };
   }
 
+  rpc StopTransaction (StopTransactionRequest) returns (StopTransactionResponse) {
+    option (op_type) = {
+      op:          MUTATOR
+      scope_level: REPOSITORY
+    };
+  }
+
 }
 
 message VoteTransactionRequest {
@@ -34,7 +41,16 @@ message VoteTransactionResponse {
   enum TransactionState {
     COMMIT = 0;
     ABORT = 1;
+    STOP = 2;
   }
 
   TransactionState state = 1;
 }
+
+message StopTransactionRequest {
+  Repository repository = 1[(target_repository)=true];
+  // ID of the transaction we're processing
+  uint64 transaction_id = 2;
+}
+
+message StopTransactionResponse {}

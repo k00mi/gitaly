@@ -548,6 +548,7 @@ func TestPostReceiveWithTransactionsViaPraefect(t *testing.T) {
 }
 
 type testTransactionServer struct {
+	gitalypb.UnimplementedRefTransactionServer
 	called int
 }
 
