@@ -127,36 +127,37 @@ func (t *Transaction) ID() uint64 {
 // State returns the voting state mapped by voters. A voting state of `true`
 // means all subtransactions were successful, a voting state of `false` means
 // either no subtransactions were created or any of the subtransactions failed.
-func (t *Transaction) State() map[string]bool {
+func (t *Transaction) State() (map[string]VoteResult, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	results := make(map[string]bool, len(t.voters))
+	results := make(map[string]VoteResult, len(t.voters))
 
 	if len(t.subtransactions) == 0 {
-		// If there's no subtransactions, we simply return `false` for
-		// every voter.
 		for _, voter := range t.voters {
-			results[voter.Name] = false
+			switch t.state {
+			case transactionOpen:
+				results[voter.Name] = VoteUndecided
+			case transactionCanceled:
+				results[voter.Name] = VoteAborted
+			case transactionStopped:
+				results[voter.Name] = VoteStopped
+			default:
+				return nil, errors.New("invalid transaction state")
+			}
 		}
-		return results
+		return results, nil
 	}
 
-	// We need to collect outcomes of all subtransactions. If any of the
-	// subtransactions failed, then the overall transaction failed for that
-	// node as well. Otherwise, if all subtransactions for the node
-	// succeeded, the transaction did as well.
+	// Collect all subtransactions. As they are ordered by reverse recency, we can simply
+	// overwrite our own results.
 	for _, subtransaction := range t.subtransactions {
 		for voter, result := range subtransaction.state() {
-			// If there already is an entry indicating failure, keep it.
-			if didSucceed, ok := results[voter]; ok && !didSucceed {
-				continue
-			}
 			results[voter] = result
 		}
 	}
 
-	return results
+	return results, nil
 }
 
 // CountSubtransactions counts the number of subtransactions created as part of

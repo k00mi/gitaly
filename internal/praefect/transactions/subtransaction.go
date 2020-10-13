@@ -119,13 +119,13 @@ func (t *subtransaction) stop() error {
 	return nil
 }
 
-func (t *subtransaction) state() map[string]bool {
+func (t *subtransaction) state() map[string]VoteResult {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	results := make(map[string]bool, len(t.votersByNode))
+	results := make(map[string]VoteResult, len(t.votersByNode))
 	for node, voter := range t.votersByNode {
-		results[node] = voter.result == VoteCommitted
+		results[node] = voter.result
 	}
 
 	return results
