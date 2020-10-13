@@ -56,6 +56,8 @@ func marshallGitObjectDirs(gitObjectDirRel string, gitAltObjectDirsRel []string)
 type GitlabAPI interface {
 	// Allowed queries the gitlab internal api /allowed endpoint to determine if a ref change for a given repository and user is allowed
 	Allowed(ctx context.Context, repo *gitalypb.Repository, glRepository, glID, glProtocol, changes string) (bool, string, error)
+	// Check verifies that GitLab can be reached, and authenticated to
+	Check(ctx context.Context) (*CheckInfo, error)
 	// PreReceive queries the gitlab internal api /pre_receive to increase the reference counter
 	PreReceive(ctx context.Context, glRepository string) (bool, error)
 	// PostReceive queries the gitlab internal api /post_receive to decrease the reference counter
@@ -279,11 +281,19 @@ func (a *AllowedRequest) parseAndSetGLID(glID string) error {
 }
 
 // mockAPI is a noop gitlab API client
-type mockAPI struct {
-}
+type mockAPI struct{}
 
 func (m *mockAPI) Allowed(ctx context.Context, repo *gitalypb.Repository, glRepository, glID, glProtocol, changes string) (bool, string, error) {
 	return true, "", nil
+}
+
+func (m *mockAPI) Check(ctx context.Context) (*CheckInfo, error) {
+	return &CheckInfo{
+		Version:        "v13.5.0",
+		Revision:       "deadbeef",
+		APIVersion:     "v4",
+		RedisReachable: true,
+	}, nil
 }
 
 func (m *mockAPI) PreReceive(ctx context.Context, glRepository string) (bool, error) {
