@@ -42,6 +42,7 @@ func TestUploadPackEnv(t *testing.T) {
 		fmt.Sprintf("GIT_SSH_COMMAND=%s upload-pack", filepath.Join(config.Config.BinDir, "gitaly-ssh")),
 		fmt.Sprintf("GITALY_PAYLOAD=%s", expectedPayload),
 		"CORRELATION_ID=correlation-id-1",
+		"GIT_SSH_VARIANT=simple",
 	})
 }
 
