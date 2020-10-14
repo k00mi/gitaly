@@ -35,7 +35,9 @@ type Repository interface {
 	// gitrevisions(1) for accepted syntax. This will not verify whether the
 	// object ID exists. To do so, you can peel the reference to a given
 	// object type, e.g. by passing `refs/heads/master^{commit}`.
-	ResolveRefish(ctx context.Context, ref string) (string, error)
+	// Verify indicates if you want to return an error when no valid SHA-1
+	// can be returned for a given refish.
+	ResolveRefish(ctx context.Context, ref string, verify bool) (string, error)
 
 	// ContainsRef checks if a ref in the repository exists. This will not
 	// verify whether the target object exists. To do so, you can peel the
@@ -73,6 +75,52 @@ type Repository interface {
 	// is returned if the oid does not refer to a valid object.
 	CatFile(ctx context.Context, oid string) ([]byte, error)
 }
+
+// ErrUnimplemented indicates the repository abstraction does not yet implement
+// a specific behavior
+var ErrUnimplemented = errors.New("behavior not implemented yet")
+
+// UnimplementedRepo satisfies the Repository interface to reduce friction in
+// writing new Repository implementations
+type UnimplementedRepo struct{}
+
+func (UnimplementedRepo) ResolveRefish(ctx context.Context, ref string, verify bool) (string, error) {
+	return "", ErrUnimplemented
+}
+
+func (UnimplementedRepo) ContainsRef(ctx context.Context, ref string) (bool, error) {
+	return false, ErrUnimplemented
+}
+
+func (UnimplementedRepo) GetReference(ctx context.Context, ref string) (Reference, error) {
+	return Reference{}, ErrUnimplemented
+}
+
+func (UnimplementedRepo) GetReferences(ctx context.Context, pattern string) ([]Reference, error) {
+	return nil, ErrUnimplemented
+}
+
+func (UnimplementedRepo) GetBranch(ctx context.Context, branch string) (Reference, error) {
+	return Reference{}, ErrUnimplemented
+}
+
+func (UnimplementedRepo) GetBranches(ctx context.Context) ([]Reference, error) {
+	return nil, ErrUnimplemented
+}
+
+func (UnimplementedRepo) UpdateRef(ctx context.Context, reference, newrev, oldrev string) error {
+	return ErrUnimplemented
+}
+
+func (UnimplementedRepo) WriteBlob(context.Context, string, io.Reader) (string, error) {
+	return "", ErrUnimplemented
+}
+
+func (UnimplementedRepo) CatFile(context.Context, string) ([]byte, error) {
+	return nil, ErrUnimplemented
+}
+
+var _ Repository = UnimplementedRepo{} // compile time assertion
 
 // localRepository represents a local Git repository.
 type localRepository struct {
@@ -150,14 +198,19 @@ func (repo *localRepository) CatFile(ctx context.Context, oid string) ([]byte, e
 	return stdout.Bytes(), nil
 }
 
-func (repo *localRepository) ResolveRefish(ctx context.Context, refish string) (string, error) {
+func (repo *localRepository) ResolveRefish(ctx context.Context, refish string, verify bool) (string, error) {
 	if refish == "" {
 		return "", errors.New("repository cannot contain empty reference name")
 	}
 
+	var flags []Option
+	if verify {
+		flags = append(flags, Flag{Name: "--verify"})
+	}
+
 	cmd, err := repo.command(ctx, nil, SubCmd{
 		Name:  "rev-parse",
-		Flags: []Option{Flag{Name: "--verify"}},
+		Flags: flags,
 		Args:  []string{refish},
 	})
 	if err != nil {
@@ -183,7 +236,7 @@ func (repo *localRepository) ResolveRefish(ctx context.Context, refish string) (
 }
 
 func (repo *localRepository) ContainsRef(ctx context.Context, ref string) (bool, error) {
-	if _, err := repo.ResolveRefish(ctx, ref); err != nil {
+	if _, err := repo.ResolveRefish(ctx, ref, true); err != nil {
 		if errors.Is(err, ErrReferenceNotFound) {
 			return false, nil
 		}
