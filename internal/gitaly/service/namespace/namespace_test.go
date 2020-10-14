@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
@@ -41,7 +42,8 @@ func testMain(m *testing.M) int {
 }
 
 func TestNamespaceExists(t *testing.T) {
-	server, serverSocketPath := runNamespaceServer(t)
+	locator := config.NewLocator(config.Config)
+	server, serverSocketPath := runNamespaceServer(t, locator)
 	defer server.Stop()
 
 	client, conn := newNamespaceClient(t, serverSocketPath)
@@ -56,7 +58,7 @@ func TestNamespaceExists(t *testing.T) {
 		existingNamespace = "existing"
 	)
 
-	storageDir := prepareStorageDir(t, existingStorage)
+	storageDir := prepareStorageDir(t, locator, existingStorage)
 	require.NoError(t, os.MkdirAll(filepath.Join(storageDir, existingNamespace), 0755))
 
 	queries := []struct {
@@ -115,8 +117,8 @@ func TestNamespaceExists(t *testing.T) {
 	}
 }
 
-func prepareStorageDir(t *testing.T, storageName string) string {
-	storageDir, err := helper.GetStorageByName(storageName)
+func prepareStorageDir(t *testing.T, locator storage.Locator, storageName string) string {
+	storageDir, err := locator.GetStorageByName(storageName)
 	require.NoError(t, err)
 	require.NoError(t, os.RemoveAll(storageDir))
 	require.NoError(t, os.MkdirAll(storageDir, 0755))
@@ -124,14 +126,15 @@ func prepareStorageDir(t *testing.T, storageName string) string {
 }
 
 func TestAddNamespace(t *testing.T) {
-	server, serverSocketPath := runNamespaceServer(t)
+	locator := config.NewLocator(config.Config)
+	server, serverSocketPath := runNamespaceServer(t, locator)
 	defer server.Stop()
 
 	client, conn := newNamespaceClient(t, serverSocketPath)
 	defer conn.Close()
 
 	const existingStorage = "default"
-	storageDir := prepareStorageDir(t, existingStorage)
+	storageDir := prepareStorageDir(t, locator, existingStorage)
 
 	queries := []struct {
 		desc      string
@@ -192,7 +195,8 @@ func TestAddNamespace(t *testing.T) {
 }
 
 func TestRemoveNamespace(t *testing.T) {
-	server, serverSocketPath := runNamespaceServer(t)
+	locator := config.NewLocator(config.Config)
+	server, serverSocketPath := runNamespaceServer(t, locator)
 	defer server.Stop()
 
 	client, conn := newNamespaceClient(t, serverSocketPath)
@@ -206,7 +210,7 @@ func TestRemoveNamespace(t *testing.T) {
 		existingNamespace = "created"
 	)
 
-	storageDir := prepareStorageDir(t, existingStorage)
+	storageDir := prepareStorageDir(t, locator, existingStorage)
 
 	queries := []struct {
 		desc      string
@@ -255,7 +259,8 @@ func TestRemoveNamespace(t *testing.T) {
 }
 
 func TestRenameNamespace(t *testing.T) {
-	server, serverSocketPath := runNamespaceServer(t)
+	locator := config.NewLocator(config.Config)
+	server, serverSocketPath := runNamespaceServer(t, locator)
 	defer server.Stop()
 
 	client, conn := newNamespaceClient(t, serverSocketPath)
@@ -269,7 +274,7 @@ func TestRenameNamespace(t *testing.T) {
 		existingNamespace = "existing"
 	)
 
-	storageDir := prepareStorageDir(t, existingStorage)
+	storageDir := prepareStorageDir(t, locator, existingStorage)
 	require.NoError(t, os.MkdirAll(filepath.Join(storageDir, existingNamespace), 0755))
 
 	queries := []struct {
@@ -337,7 +342,8 @@ func requireIsDir(t *testing.T, dir string) {
 }
 
 func TestRenameNamespaceWithNonexistentParentDir(t *testing.T) {
-	server, serverSocketPath := runNamespaceServer(t)
+	locator := config.NewLocator(config.Config)
+	server, serverSocketPath := runNamespaceServer(t, locator)
 	defer server.Stop()
 
 	client, conn := newNamespaceClient(t, serverSocketPath)
@@ -377,7 +383,7 @@ func TestRenameNamespaceWithNonexistentParentDir(t *testing.T) {
 			require.Equal(t, tc.errorCode, helper.GrpcCode(err))
 
 			if tc.errorCode == codes.OK {
-				storagePath, err := helper.GetStorageByName(tc.request.StorageName)
+				storagePath, err := locator.GetStorageByName(tc.request.StorageName)
 				require.NoError(t, err)
 
 				toDir := namespacePath(storagePath, tc.request.GetTo())

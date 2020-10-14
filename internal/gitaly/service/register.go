@@ -72,7 +72,7 @@ func RegisterAll(grpcServer *grpc.Server, cfg config.Cfg, rubyServer *rubyserver
 	gitalypb.RegisterCleanupServiceServer(grpcServer, cleanup.NewServer())
 	gitalypb.RegisterCommitServiceServer(grpcServer, commit.NewServer(locator))
 	gitalypb.RegisterDiffServiceServer(grpcServer, diff.NewServer(locator))
-	gitalypb.RegisterNamespaceServiceServer(grpcServer, namespace.NewServer())
+	gitalypb.RegisterNamespaceServiceServer(grpcServer, namespace.NewServer(locator))
 	gitalypb.RegisterOperationServiceServer(grpcServer, operations.NewServer(cfg, rubyServer, hookManager, locator))
 	gitalypb.RegisterRefServiceServer(grpcServer, ref.NewServer(locator))
 	gitalypb.RegisterRepositoryServiceServer(grpcServer, repository.NewServer(rubyServer, locator, config.GitalyInternalSocketPath()))

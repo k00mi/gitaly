@@ -16,7 +16,7 @@ import (
 var noNameError = status.Errorf(codes.InvalidArgument, "Name: cannot be empty")
 
 func (s *server) NamespaceExists(ctx context.Context, in *gitalypb.NamespaceExistsRequest) (*gitalypb.NamespaceExistsResponse, error) {
-	storagePath, err := helper.GetStorageByName(in.GetStorageName())
+	storagePath, err := s.locator.GetStorageByName(in.GetStorageName())
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +37,7 @@ func (s *server) NamespaceExists(ctx context.Context, in *gitalypb.NamespaceExis
 }
 
 func (s *server) AddNamespace(ctx context.Context, in *gitalypb.AddNamespaceRequest) (*gitalypb.AddNamespaceResponse, error) {
-	storagePath, err := helper.GetStorageByName(in.GetStorageName())
+	storagePath, err := s.locator.GetStorageByName(in.GetStorageName())
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (s *server) RenameNamespace(ctx context.Context, in *gitalypb.RenameNamespa
 		return nil, helper.ErrInvalidArgument(err)
 	}
 
-	storagePath, err := helper.GetStorageByName(in.GetStorageName())
+	storagePath, err := s.locator.GetStorageByName(in.GetStorageName())
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (s *server) RenameNamespace(ctx context.Context, in *gitalypb.RenameNamespa
 }
 
 func (s *server) RemoveNamespace(ctx context.Context, in *gitalypb.RemoveNamespaceRequest) (*gitalypb.RemoveNamespaceResponse, error) {
-	storagePath, err := helper.GetStorageByName(in.GetStorageName())
+	storagePath, err := s.locator.GetStorageByName(in.GetStorageName())
 	if err != nil {
 		return nil, err
 	}
