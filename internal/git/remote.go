@@ -34,11 +34,7 @@ func NewRemoteRepository(ctx context.Context, repo *gitalypb.Repository, pool *c
 
 // ResolveRefish will dial to the remote repository and attempt to resolve the
 // refish string via the gRPC interface
-func (rr remoteRepository) ResolveRefish(ctx context.Context, ref string, verify bool) (string, error) {
-	if verify {
-		return "", ErrUnimplemented
-	}
-
+func (rr remoteRepository) ResolveRefish(ctx context.Context, ref string) (string, error) {
 	cc, err := rr.pool.Dial(ctx, rr.server.Address, rr.server.Token)
 	if err != nil {
 		return "", err
@@ -53,5 +49,10 @@ func (rr remoteRepository) ResolveRefish(ctx context.Context, ref string, verify
 		return "", err
 	}
 
-	return resp.GetCommit().GetId(), nil
+	oid := resp.GetCommit().GetId()
+	if oid == "" {
+		return "", ErrReferenceNotFound
+	}
+
+	return oid, nil
 }

@@ -35,9 +35,7 @@ type Repository interface {
 	// gitrevisions(1) for accepted syntax. This will not verify whether the
 	// object ID exists. To do so, you can peel the reference to a given
 	// object type, e.g. by passing `refs/heads/master^{commit}`.
-	// Verify indicates if you want to return an error when no valid SHA-1
-	// can be returned for a given refish.
-	ResolveRefish(ctx context.Context, ref string, verify bool) (string, error)
+	ResolveRefish(ctx context.Context, ref string) (string, error)
 
 	// ContainsRef checks if a ref in the repository exists. This will not
 	// verify whether the target object exists. To do so, you can peel the
@@ -84,7 +82,7 @@ var ErrUnimplemented = errors.New("behavior not implemented yet")
 // writing new Repository implementations
 type UnimplementedRepo struct{}
 
-func (UnimplementedRepo) ResolveRefish(ctx context.Context, ref string, verify bool) (string, error) {
+func (UnimplementedRepo) ResolveRefish(ctx context.Context, ref string) (string, error) {
 	return "", ErrUnimplemented
 }
 
@@ -198,19 +196,14 @@ func (repo *localRepository) CatFile(ctx context.Context, oid string) ([]byte, e
 	return stdout.Bytes(), nil
 }
 
-func (repo *localRepository) ResolveRefish(ctx context.Context, refish string, verify bool) (string, error) {
+func (repo *localRepository) ResolveRefish(ctx context.Context, refish string) (string, error) {
 	if refish == "" {
 		return "", errors.New("repository cannot contain empty reference name")
 	}
 
-	var flags []Option
-	if verify {
-		flags = append(flags, Flag{Name: "--verify"})
-	}
-
 	cmd, err := repo.command(ctx, nil, SubCmd{
 		Name:  "rev-parse",
-		Flags: flags,
+		Flags: []Option{Flag{Name: "--verify"}},
 		Args:  []string{refish},
 	})
 	if err != nil {
@@ -236,7 +229,7 @@ func (repo *localRepository) ResolveRefish(ctx context.Context, refish string, v
 }
 
 func (repo *localRepository) ContainsRef(ctx context.Context, ref string) (bool, error) {
-	if _, err := repo.ResolveRefish(ctx, ref, true); err != nil {
+	if _, err := repo.ResolveRefish(ctx, ref); err != nil {
 		if errors.Is(err, ErrReferenceNotFound) {
 			return false, nil
 		}

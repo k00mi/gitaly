@@ -85,13 +85,9 @@ func TestRepository_ResolveRefish(t *testing.T) {
 		t.Run(fmt.Sprintf("%T", repo), func(t *testing.T) {
 			for _, tc := range testcases {
 				t.Run(tc.desc, func(t *testing.T) {
-					oid, err := repo.ResolveRefish(ctx, tc.refish, true)
-					if errors.Is(err, git.ErrUnimplemented) {
-						t.Skip()
-					}
+					oid, err := repo.ResolveRefish(ctx, tc.refish)
 
 					if tc.expected == "" {
-						require.Error(t, err)
 						require.Equal(t, err, git.ErrReferenceNotFound)
 						return
 					}

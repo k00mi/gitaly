@@ -11,11 +11,15 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+// ErrEmptyMetadata indicates that the gRPC metadata was not found in the
+// context
+var ErrEmptyMetadata = errors.New("empty metadata")
+
 // ExtractGitalyServers extracts `storage.GitalyServers` from an incoming context.
 func ExtractGitalyServers(ctx context.Context) (gitalyServersInfo storage.GitalyServers, err error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return nil, fmt.Errorf("empty metadata")
+		return nil, ErrEmptyMetadata
 	}
 
 	gitalyServersJSONEncoded := md["gitaly-servers"]

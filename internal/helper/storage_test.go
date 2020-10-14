@@ -104,7 +104,8 @@ func TestOutgoingToIncoming(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = ExtractGitalyServer(ctx, "a")
-	require.Error(t, err, "server should not be found in the incoming context")
+	require.Equal(t, ErrEmptyMetadata, err,
+		"server should not be found in the incoming context")
 
 	ctx = OutgoingToIncoming(ctx)
 
