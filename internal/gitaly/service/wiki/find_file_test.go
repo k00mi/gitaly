@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
@@ -18,7 +19,8 @@ func TestSuccessfulWikiFindFileRequest(t *testing.T) {
 	_, wikiRepoPath, cleanupFunc := setupWikiRepo(t)
 	defer cleanupFunc()
 
-	stop, serverSocketPath := runWikiServiceServer(t)
+	locator := config.NewLocator(config.Config)
+	stop, serverSocketPath := runWikiServiceServer(t, locator)
 	defer stop()
 
 	client, conn := newWikiClient(t, serverSocketPath)
@@ -156,7 +158,8 @@ func TestFailedWikiFindFileDueToValidation(t *testing.T) {
 	wikiRepo, _, cleanupFunc := setupWikiRepo(t)
 	defer cleanupFunc()
 
-	stop, serverSocketPath := runWikiServiceServer(t)
+	locator := config.NewLocator(config.Config)
+	stop, serverSocketPath := runWikiServiceServer(t, locator)
 	defer stop()
 
 	client, conn := newWikiClient(t, serverSocketPath)

@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
@@ -18,7 +19,8 @@ func TestSuccessfulWikiWritePageRequest(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	stop, serverSocketPath := runWikiServiceServer(t)
+	locator := config.NewLocator(config.Config)
+	stop, serverSocketPath := runWikiServiceServer(t, locator)
 	defer stop()
 
 	client, conn := newWikiClient(t, serverSocketPath)
@@ -117,7 +119,8 @@ func TestFailedWikiWritePageDueToDuplicatePage(t *testing.T) {
 	wikiRepo, _, cleanupFunc := setupWikiRepo(t)
 	defer cleanupFunc()
 
-	stop, serverSocketPath := runWikiServiceServer(t)
+	locator := config.NewLocator(config.Config)
+	stop, serverSocketPath := runWikiServiceServer(t, locator)
 	defer stop()
 
 	client, conn := newWikiClient(t, serverSocketPath)
@@ -162,7 +165,8 @@ func TestFailedWikiWritePageInPathDueToDuplicatePage(t *testing.T) {
 	wikiRepo, _, cleanupFunc := setupWikiRepo(t)
 	defer cleanupFunc()
 
-	stop, serverSocketPath := runWikiServiceServer(t)
+	locator := config.NewLocator(config.Config)
+	stop, serverSocketPath := runWikiServiceServer(t, locator)
 	defer stop()
 
 	client, conn := newWikiClient(t, serverSocketPath)
@@ -206,7 +210,8 @@ func TestFailedWikiWritePageInPathDueToDuplicatePage(t *testing.T) {
 func TestFailedWikiWritePageDueToValidations(t *testing.T) {
 	wikiRepo := &gitalypb.Repository{}
 
-	stop, serverSocketPath := runWikiServiceServer(t)
+	locator := config.NewLocator(config.Config)
+	stop, serverSocketPath := runWikiServiceServer(t, locator)
 	defer stop()
 
 	client, conn := newWikiClient(t, serverSocketPath)
