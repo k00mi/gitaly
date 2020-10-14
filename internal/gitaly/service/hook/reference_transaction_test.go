@@ -50,16 +50,37 @@ func TestReferenceTransactionHook(t *testing.T) {
 	testCases := []struct {
 		desc              string
 		stdin             []byte
+		state             gitalypb.ReferenceTransactionHookRequest_State
 		voteResponse      gitalypb.VoteTransactionResponse_TransactionState
 		expectedCode      codes.Code
 		expectedReftxHash []byte
 	}{
 		{
-			desc:              "hook triggers transaction",
+			desc:              "hook triggers transaction with default state",
 			stdin:             []byte("foobar"),
 			voteResponse:      gitalypb.VoteTransactionResponse_COMMIT,
 			expectedCode:      codes.OK,
 			expectedReftxHash: []byte("foobar"),
+		},
+		{
+			desc:              "hook triggers transaction with explicit prepared state",
+			stdin:             []byte("foobar"),
+			state:             gitalypb.ReferenceTransactionHookRequest_PREPARED,
+			voteResponse:      gitalypb.VoteTransactionResponse_COMMIT,
+			expectedCode:      codes.OK,
+			expectedReftxHash: []byte("foobar"),
+		},
+		{
+			desc:         "hook does not trigger transaction with aborted state",
+			stdin:        []byte("foobar"),
+			state:        gitalypb.ReferenceTransactionHookRequest_ABORTED,
+			expectedCode: codes.OK,
+		},
+		{
+			desc:         "hook does not trigger transaction with committed state",
+			stdin:        []byte("foobar"),
+			state:        gitalypb.ReferenceTransactionHookRequest_COMMITTED,
+			expectedCode: codes.OK,
 		},
 		{
 			desc:              "hook fails with failed vote",
@@ -130,6 +151,7 @@ func TestReferenceTransactionHook(t *testing.T) {
 			require.NoError(t, err)
 			require.NoError(t, stream.Send(&gitalypb.ReferenceTransactionHookRequest{
 				Repository:           testRepo,
+				State:                tc.state,
 				EnvironmentVariables: environment,
 			}))
 			require.NoError(t, stream.Send(&gitalypb.ReferenceTransactionHookRequest{

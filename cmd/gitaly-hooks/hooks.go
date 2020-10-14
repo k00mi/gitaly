@@ -104,7 +104,7 @@ func main() {
 	case "update":
 		args := fixedArgs[2:]
 		if len(args) != 3 {
-			logger.Fatalf("hook %q is missing required arguments", subCmd)
+			logger.Fatalf("hook %q expects exactly three arguments", subCmd)
 		}
 		ref, oldValue, newValue := args[0], args[1], args[2]
 
@@ -194,6 +194,22 @@ func main() {
 			os.Exit(0)
 		}
 
+		if len(fixedArgs) != 3 {
+			logger.Fatalf("hook %q is missing required arguments", subCmd)
+		}
+
+		var state gitalypb.ReferenceTransactionHookRequest_State
+		switch fixedArgs[2] {
+		case "prepared":
+			state = gitalypb.ReferenceTransactionHookRequest_PREPARED
+		case "committed":
+			state = gitalypb.ReferenceTransactionHookRequest_COMMITTED
+		case "aborted":
+			state = gitalypb.ReferenceTransactionHookRequest_ABORTED
+		default:
+			logger.Fatalf("hook %q has invalid state %s", subCmd, fixedArgs[2])
+		}
+
 		referenceTransactionHookStream, err := hookClient.ReferenceTransactionHook(ctx)
 		if err != nil {
 			logger.Fatalf("error when getting referenceTransactionHookStream client for %q: %v", subCmd, err)
@@ -211,6 +227,7 @@ func main() {
 		if err := referenceTransactionHookStream.Send(&gitalypb.ReferenceTransactionHookRequest{
 			Repository:           repository,
 			EnvironmentVariables: environment,
+			State:                state,
 		}); err != nil {
 			logger.Fatalf("error when sending request for %q: %v", subCmd, err)
 		}

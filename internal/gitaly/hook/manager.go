@@ -10,6 +10,22 @@ import (
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
+// ReferenceTransactionState is the state of the Git reference transaction. It reflects the first
+// parameter of the reference-transaction hook. See githooks(1) for more information.
+type ReferenceTransactionState int
+
+const (
+	// ReferenceTransactionPrepared indicates all reference updates have been queued to the
+	// transaction and were locked on disk.
+	ReferenceTransactionPrepared = ReferenceTransactionState(iota)
+	// ReferenceTransactionCommitted indicates the reference transaction was committed and all
+	// references now have their respective new value.
+	ReferenceTransactionCommitted
+	// ReferenceTransactionAborted indicates the transaction was aborted, no changes were
+	// performed and the reference locks have been released.
+	ReferenceTransactionAborted
+)
+
 // Manager is an interface providing the ability to execute Git hooks.
 type Manager interface {
 	// PreReceiveHook executes the pre-receive Git hook and any installed custom hooks. stdin
@@ -26,7 +42,7 @@ type Manager interface {
 
 	// ReferenceTransactionHook executes the reference-transaction Git hook. stdin must contain
 	// all references to be updated and match the format specified in githooks(5).
-	ReferenceTransactionHook(ctx context.Context, env []string, stdin io.Reader) error
+	ReferenceTransactionHook(ctx context.Context, state ReferenceTransactionState, env []string, stdin io.Reader) error
 }
 
 // GitLabHookManager is a hook manager containing Git hook business logic. It
