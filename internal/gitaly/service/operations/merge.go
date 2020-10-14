@@ -125,10 +125,10 @@ func (s *server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 		fmt.Sprintf("GITALY_TOKEN=%s", s.cfg.Auth.Token),
 	}, gitlabshellEnv...)
 
-	stdin := bytes.NewBufferString(fmt.Sprintf("%s %s %s\n", oldrev, newrev, reference))
+	changes := fmt.Sprintf("%s %s %s\n", oldrev, newrev, reference)
 	var stdout, stderr bytes.Buffer
 
-	if err := s.hookManager.PreReceiveHook(ctx, repo, env, stdin, &stdout, &stderr); err != nil {
+	if err := s.hookManager.PreReceiveHook(ctx, repo, env, strings.NewReader(changes), &stdout, &stderr); err != nil {
 		return preReceiveError{message: stdout.String()}
 	}
 	if err := s.hookManager.UpdateHook(ctx, repo, reference, oldrev, newrev, env, &stdout, &stderr); err != nil {
@@ -148,7 +148,7 @@ func (s *server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 		return updateRefError{reference: reference}
 	}
 
-	if err := s.hookManager.PostReceiveHook(ctx, repo, nil, env, stdin, &stdout, &stderr); err != nil {
+	if err := s.hookManager.PostReceiveHook(ctx, repo, nil, env, strings.NewReader(changes), &stdout, &stderr); err != nil {
 		return err
 	}
 
