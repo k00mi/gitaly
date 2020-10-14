@@ -74,6 +74,12 @@ message ReferenceTransactionHookRequest {
   Repository repository = 1 [(target_repository)=true];
   repeated string environment_variables = 2;
   bytes stdin = 3;
+  enum State {
+    PREPARED = 0;
+    COMMITTED = 1;
+    ABORTED = 2;
+  }
+  State state = 4;
 }
 
 message ReferenceTransactionHookResponse {
