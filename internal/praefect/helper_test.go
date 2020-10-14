@@ -14,9 +14,6 @@ import (
 	gconfig "gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	internalauth "gitlab.com/gitlab-org/gitaly/internal/gitaly/config/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/server/auth"
-	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/internalgitaly"
-	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/repository"
-	gitalyserver "gitlab.com/gitlab-org/gitaly/internal/gitaly/service/server"
 	"gitlab.com/gitlab-org/gitaly/internal/log"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
@@ -27,7 +24,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/transactions"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper/promtest"
-	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper/testserver"
 	correlation "gitlab.com/gitlab-org/labkit/correlation/grpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -144,7 +141,7 @@ func flattenVirtualStoragesToStoragePath(virtualStorages []*config.VirtualStorag
 func withRealGitalyShared(t testing.TB) func([]*config.VirtualStorage) []testhelper.Cleanup {
 	return func(virtualStorages []*config.VirtualStorage) []testhelper.Cleanup {
 		gStorages := flattenVirtualStoragesToStoragePath(virtualStorages, testhelper.GitlabTestStoragePath())
-		_, backendAddr, cleanupGitaly := runInternalGitalyServer(t, gStorages, virtualStorages[0].Nodes[0].Token)
+		_, backendAddr, cleanupGitaly := testserver.RunInternalGitalyServer(t, gStorages, virtualStorages[0].Nodes[0].Token)
 
 		for _, vs := range virtualStorages {
 			for i, node := range vs.Nodes {
@@ -261,66 +258,6 @@ func runPraefectServer(t testing.TB, conf config.Config, opt buildOptions) (*grp
 	}
 
 	return cc, prf, cleanup
-}
-
-// partialGitaly is a subset of Gitaly's behavior needed to properly test
-// Praefect
-type partialGitaly interface {
-	gitalypb.ServerServiceServer
-	gitalypb.RepositoryServiceServer
-	gitalypb.InternalGitalyServer
-	healthpb.HealthServer
-}
-
-func registerGitalyServices(server *grpc.Server, pg partialGitaly) {
-	gitalypb.RegisterServerServiceServer(server, pg)
-	gitalypb.RegisterRepositoryServiceServer(server, pg)
-	gitalypb.RegisterInternalGitalyServer(server, pg)
-	healthpb.RegisterHealthServer(server, pg)
-}
-
-func realGitaly(storages []gconfig.Storage, authToken, internalSocketPath string) partialGitaly {
-	return struct {
-		gitalypb.ServerServiceServer
-		gitalypb.RepositoryServiceServer
-		gitalypb.InternalGitalyServer
-		healthpb.HealthServer
-	}{
-		gitalyserver.NewServer(storages),
-		repository.NewServer(RubyServer, gconfig.NewLocator(gconfig.Config), internalSocketPath),
-		internalgitaly.NewServer(gconfig.Config.Storages),
-		health.NewServer(),
-	}
-}
-
-func runInternalGitalyServer(t testing.TB, storages []gconfig.Storage, token string) (*grpc.Server, string, func()) {
-	streamInt := []grpc.StreamServerInterceptor{auth.StreamServerInterceptor(internalauth.Config{Token: token})}
-	unaryInt := []grpc.UnaryServerInterceptor{auth.UnaryServerInterceptor(internalauth.Config{Token: token})}
-
-	server := testhelper.NewTestGrpcServer(t, streamInt, unaryInt)
-	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
-
-	listener, err := net.Listen("unix", serverSocketPath)
-	require.NoError(t, err)
-
-	internalSocketPath := gconfig.GitalyInternalSocketPath()
-	internalListener, err := net.Listen("unix", internalSocketPath)
-	require.NoError(t, err)
-
-	registerGitalyServices(server, realGitaly(storages, token, internalSocketPath))
-
-	errQ := make(chan error)
-
-	go func() { errQ <- server.Serve(listener) }()
-	go func() { errQ <- server.Serve(internalListener) }()
-
-	cleanup := func() {
-		server.Stop()
-		require.NoError(t, <-errQ)
-		require.NoError(t, <-errQ)
-	}
-
-	return server, "unix://" + serverSocketPath, cleanup
 }
 
 func mustLoadProtoReg(t testing.TB) *descriptor.FileDescriptorProto {
