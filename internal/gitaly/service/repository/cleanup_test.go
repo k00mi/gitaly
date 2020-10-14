@@ -11,12 +11,14 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
 func TestCleanupDeletesRefsLocks(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -59,7 +61,8 @@ func TestCleanupDeletesRefsLocks(t *testing.T) {
 }
 
 func TestCleanupDeletesPackedRefsLock(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -128,7 +131,8 @@ func TestCleanupDeletesPackedRefsLock(t *testing.T) {
 // TODO: replace emulated rebase RPC with actual
 // https://gitlab.com/gitlab-org/gitaly/issues/1750
 func TestCleanupDeletesStaleWorktrees(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -200,7 +204,8 @@ func TestCleanupDisconnectedWorktrees(t *testing.T) {
 		worktreeAdminDir = "worktrees"
 	)
 
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -259,7 +264,8 @@ func TestCleanupDisconnectedWorktrees(t *testing.T) {
 }
 
 func TestCleanupFileLocks(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -294,7 +300,8 @@ func TestCleanupFileLocks(t *testing.T) {
 }
 
 func TestCleanupDeletesPackedRefsNew(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)

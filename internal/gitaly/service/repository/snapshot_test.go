@@ -18,7 +18,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/archive"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
@@ -26,7 +26,8 @@ import (
 )
 
 func getSnapshot(t *testing.T, req *gitalypb.GetSnapshotRequest) ([]byte, error) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -172,6 +173,8 @@ func TestGetSnapshotWithDedupeSoftFailures(t *testing.T) {
 	testRepo, repoPath, cleanup := testhelper.NewTestRepoWithWorktree(t)
 	defer cleanup()
 
+	locator := config.NewLocator(config.Config)
+
 	// write alternates file to point to alternates objects folder that doesn't exist
 	alternateObjDir := "./alt-objects"
 	alternateObjPath := filepath.Join(repoPath, ".git", alternateObjDir)
@@ -185,7 +188,7 @@ func TestGetSnapshotWithDedupeSoftFailures(t *testing.T) {
 	require.NoError(t, os.Remove(alternatesPath))
 
 	// write alternates file to point outside storage root
-	storageRoot, err := helper.GetStorageByName(testRepo.GetStorageName())
+	storageRoot, err := locator.GetStorageByName(testRepo.GetStorageName())
 	require.NoError(t, err)
 	require.NoError(t, ioutil.WriteFile(alternatesPath, []byte(filepath.Join(storageRoot, "..")), 0600))
 

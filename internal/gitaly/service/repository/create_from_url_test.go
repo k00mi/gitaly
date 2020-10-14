@@ -10,14 +10,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
 )
 
 func TestSuccessfulCreateRepositoryFromURLRequest(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -49,7 +50,7 @@ func TestSuccessfulCreateRepositoryFromURLRequest(t *testing.T) {
 	_, err := client.CreateRepositoryFromURL(ctx, req)
 	require.NoError(t, err)
 
-	importedRepoPath, err := helper.GetRepoPath(importedRepo)
+	importedRepoPath, err := locator.GetRepoPath(importedRepo)
 	require.NoError(t, err)
 	defer os.RemoveAll(importedRepoPath)
 
@@ -85,7 +86,8 @@ func TestCloneRepositoryFromUrlCommand(t *testing.T) {
 }
 
 func TestFailedCreateRepositoryFromURLRequestDueToExistingTarget(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -118,7 +120,7 @@ func TestFailedCreateRepositoryFromURLRequestDueToExistingTarget(t *testing.T) {
 				StorageName:  testhelper.DefaultStorageName,
 			}
 
-			importedRepoPath, err := helper.GetPath(importedRepo)
+			importedRepoPath, err := locator.GetPath(importedRepo)
 			require.NoError(t, err)
 
 			if testCase.isDir {
@@ -140,7 +142,8 @@ func TestFailedCreateRepositoryFromURLRequestDueToExistingTarget(t *testing.T) {
 }
 
 func TestPreventingRedirect(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)

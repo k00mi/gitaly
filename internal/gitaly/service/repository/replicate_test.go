@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/repository"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -80,7 +79,8 @@ func TestReplicateRepository(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	targetRepoPath, err := helper.GetRepoPath(&targetRepo)
+	locator := config.NewLocator(config.Config)
+	targetRepoPath, err := locator.GetRepoPath(&targetRepo)
 	require.NoError(t, err)
 
 	testhelper.MustRunCommand(t, nil, "git", "-C", targetRepoPath, "fsck")
@@ -178,7 +178,8 @@ func TestReplicateRepositoryInvalidArguments(t *testing.T) {
 		},
 	}
 
-	serverSocketPath, stop := repository.RunRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := repository.RunRepoServer(t, locator)
 	defer stop()
 
 	client, conn := repository.NewRepositoryClient(t, serverSocketPath)
@@ -220,6 +221,8 @@ func TestReplicateRepository_BadRepository(t *testing.T) {
 	server, serverSocketPath := runFullServer(t)
 	defer server.Stop()
 
+	locator := config.NewLocator(config.Config)
+
 	testRepo, _, cleanupRepo := testhelper.NewTestRepo(t)
 	defer cleanupRepo()
 
@@ -231,7 +234,7 @@ func TestReplicateRepository_BadRepository(t *testing.T) {
 	targetRepo := *testRepo
 	targetRepo.StorageName = "replica"
 
-	targetRepoPath, err := helper.GetPath(&targetRepo)
+	targetRepoPath, err := locator.GetPath(&targetRepo)
 	require.NoError(t, err)
 
 	require.NoError(t, os.MkdirAll(targetRepoPath, 0755))
@@ -277,6 +280,8 @@ func TestReplicateRepository_FailedFetchInternalRemote(t *testing.T) {
 	server, serverSocketPath := runServerWithBadFetchInternalRemote(t)
 	defer server.Stop()
 
+	locator := config.NewLocator(config.Config)
+
 	testRepo, _, cleanupRepo := testhelper.NewTestRepo(t)
 	defer cleanupRepo()
 
@@ -288,7 +293,7 @@ func TestReplicateRepository_FailedFetchInternalRemote(t *testing.T) {
 	targetRepo := *testRepo
 	targetRepo.StorageName = "replica"
 
-	targetRepoPath, err := helper.GetPath(&targetRepo)
+	targetRepoPath, err := locator.GetPath(&targetRepo)
 	require.NoError(t, err)
 
 	require.NoError(t, os.MkdirAll(targetRepoPath, 0755))

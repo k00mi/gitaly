@@ -10,8 +10,8 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	serverPkg "gitlab.com/gitlab-org/gitaly/internal/gitaly/server"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/repository"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
+	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
@@ -22,6 +22,8 @@ import (
 func TestFetchSourceBranchSourceRepositorySuccess(t *testing.T) {
 	server, serverSocketPath := runFullServer(t)
 	defer server.Stop()
+
+	locator := config.NewLocator(config.Config)
 
 	client, conn := repository.NewRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
@@ -49,10 +51,10 @@ func TestFetchSourceBranchSourceRepositorySuccess(t *testing.T) {
 				ctx = featureflag.OutgoingCtxWithFeatureFlagValue(ctx, feature, "true")
 			}
 
-			targetRepo, _, cleanup := newTestRepo(t, "fetch-source-target.git")
+			targetRepo, _, cleanup := newTestRepo(t, locator, "fetch-source-target.git")
 			defer cleanup()
 
-			sourceRepo, sourcePath, cleanup := newTestRepo(t, "fetch-source-source.git")
+			sourceRepo, sourcePath, cleanup := newTestRepo(t, locator, "fetch-source-source.git")
 			defer cleanup()
 
 			sourceBranch := "fetch-source-branch-test-branch"
@@ -81,6 +83,8 @@ func TestFetchSourceBranchSameRepositorySuccess(t *testing.T) {
 	server, serverSocketPath := runFullServer(t)
 	defer server.Stop()
 
+	locator := config.NewLocator(config.Config)
+
 	client, conn := repository.NewRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
 
@@ -107,7 +111,7 @@ func TestFetchSourceBranchSameRepositorySuccess(t *testing.T) {
 				ctx = featureflag.OutgoingCtxWithFeatureFlagValue(ctx, feature, "false")
 			}
 
-			repo, repoPath, cleanup := newTestRepo(t, "fetch-source-source.git")
+			repo, repoPath, cleanup := newTestRepo(t, locator, "fetch-source-source.git")
 			defer cleanup()
 
 			sourceBranch := "fetch-source-branch-test-branch"
@@ -136,6 +140,8 @@ func TestFetchSourceBranchBranchNotFound(t *testing.T) {
 	server, serverSocketPath := runFullServer(t)
 	defer server.Stop()
 
+	locator := config.NewLocator(config.Config)
+
 	client, conn := repository.NewRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
 
@@ -162,10 +168,10 @@ func TestFetchSourceBranchBranchNotFound(t *testing.T) {
 				ctx = featureflag.OutgoingCtxWithFeatureFlagValue(ctx, feature, "false")
 			}
 
-			targetRepo, _, cleanup := newTestRepo(t, "fetch-source-target.git")
+			targetRepo, _, cleanup := newTestRepo(t, locator, "fetch-source-target.git")
 			defer cleanup()
 
-			sourceRepo, _, cleanup := newTestRepo(t, "fetch-source-source.git")
+			sourceRepo, _, cleanup := newTestRepo(t, locator, "fetch-source-source.git")
 			defer cleanup()
 
 			sourceBranch := "does-not-exist"
@@ -210,6 +216,8 @@ func TestFetchSourceBranchWrongRef(t *testing.T) {
 	server, serverSocketPath := runFullServer(t)
 	defer server.Stop()
 
+	locator := config.NewLocator(config.Config)
+
 	client, conn := repository.NewRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
 
@@ -219,10 +227,10 @@ func TestFetchSourceBranchWrongRef(t *testing.T) {
 	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
 	ctx = testhelper.MergeOutgoingMetadata(ctx, md)
 
-	targetRepo, _, cleanup := newTestRepo(t, "fetch-source-target.git")
+	targetRepo, _, cleanup := newTestRepo(t, locator, "fetch-source-target.git")
 	defer cleanup()
 
-	sourceRepo, sourceRepoPath, cleanup := newTestRepo(t, "fetch-source-source.git")
+	sourceRepo, sourceRepoPath, cleanup := newTestRepo(t, locator, "fetch-source-source.git")
 	defer cleanup()
 
 	sourceBranch := "fetch-source-branch-testmas-branch"
@@ -360,13 +368,13 @@ func TestFetchFullServerRequiresAuthentication(t *testing.T) {
 	testhelper.RequireGrpcError(t, err, codes.Unauthenticated)
 }
 
-func newTestRepo(t *testing.T, relativePath string) (*gitalypb.Repository, string, func()) {
+func newTestRepo(t *testing.T, locator storage.Locator, relativePath string) (*gitalypb.Repository, string, func()) {
 	_, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
 	repo := &gitalypb.Repository{StorageName: "default", RelativePath: relativePath}
 
-	repoPath, err := helper.GetPath(repo)
+	repoPath, err := locator.GetPath(repo)
 	require.NoError(t, err)
 
 	require.NoError(t, os.RemoveAll(repoPath))

@@ -20,15 +20,15 @@ const (
 	MidxRelPath = "objects/pack/multi-pack-index"
 )
 
-func (*server) MidxRepack(ctx context.Context, in *gitalypb.MidxRepackRequest) (*gitalypb.MidxRepackResponse, error) {
+func (s *server) MidxRepack(ctx context.Context, in *gitalypb.MidxRepackRequest) (*gitalypb.MidxRepackResponse, error) {
 	repo := in.GetRepository()
 
 	if err := midxSetConfig(ctx, repo); err != nil {
 		return nil, err
 	}
 
-	for _, cmd := range []midxSubCommand{midxWrite, midxExpire, midxRepack} {
-		if err := safeMidxCommand(ctx, repo, cmd); err != nil {
+	for _, cmd := range []midxSubCommand{midxWrite, midxExpire, s.midxRepack} {
+		if err := s.safeMidxCommand(ctx, repo, cmd); err != nil {
 			if git.IsInvalidArgErr(err) {
 				return nil, helper.ErrInvalidArgumentf("MidxRepack: %w", err)
 			}
@@ -45,12 +45,12 @@ func (*server) MidxRepack(ctx context.Context, in *gitalypb.MidxRepackRequest) (
 // midxSubCommand is a helper type to group the helper functions in multi-pack-index
 type midxSubCommand func(ctx context.Context, repo repository.GitRepo) error
 
-func safeMidxCommand(ctx context.Context, repo repository.GitRepo, cmd midxSubCommand) error {
+func (s *server) safeMidxCommand(ctx context.Context, repo repository.GitRepo, cmd midxSubCommand) error {
 	if err := cmd(ctx, repo); err != nil {
 		return err
 	}
 
-	return midxEnsureExists(ctx, repo)
+	return s.midxEnsureExists(ctx, repo)
 }
 
 func midxSetConfig(ctx context.Context, repo repository.GitRepo) error {
@@ -95,7 +95,7 @@ func midxWrite(ctx context.Context, repo repository.GitRepo) error {
 	return nil
 }
 
-func midxEnsureExists(ctx context.Context, repo repository.GitRepo) error {
+func (s *server) midxEnsureExists(ctx context.Context, repo repository.GitRepo) error {
 	ctxlogger := ctxlogrus.Extract(ctx)
 
 	if err := midxVerify(ctx, repo); err != nil {
@@ -104,7 +104,7 @@ func midxEnsureExists(ctx context.Context, repo repository.GitRepo) error {
 			WithFields(log.Fields{"verify_success": false}).
 			Error("MidxRepack")
 
-		return midxRewrite(ctx, repo)
+		return s.midxRewrite(ctx, repo)
 	}
 
 	return nil
@@ -135,8 +135,8 @@ func midxVerify(ctx context.Context, repo repository.GitRepo) error {
 	return nil
 }
 
-func midxRewrite(ctx context.Context, repo repository.GitRepo) error {
-	repoPath, err := helper.GetRepoPath(repo)
+func (s *server) midxRewrite(ctx context.Context, repo repository.GitRepo) error {
+	repoPath, err := s.locator.GetRepoPath(repo)
 	if err != nil {
 		return err
 	}
@@ -170,8 +170,8 @@ func midxExpire(ctx context.Context, repo repository.GitRepo) error {
 	return nil
 }
 
-func midxRepack(ctx context.Context, repo repository.GitRepo) error {
-	repoPath, err := helper.GetRepoPath(repo)
+func (s *server) midxRepack(ctx context.Context, repo repository.GitRepo) error {
+	repoPath, err := s.locator.GetRepoPath(repo)
 	if err != nil {
 		return err
 	}

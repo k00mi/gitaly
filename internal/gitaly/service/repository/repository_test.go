@@ -31,7 +31,8 @@ func TestRepositoryExists(t *testing.T) {
 	}(config.Config.Storages)
 	config.Config.Storages = testStorages
 
-	serverSocketPath, stop := runRepoServer(t, testhelper.WithStorages([]string{"default", "other", "broken"}))
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator, testhelper.WithStorages([]string{"default", "other", "broken"}))
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -121,7 +122,8 @@ func TestRepositoryExists(t *testing.T) {
 }
 
 func TestSuccessfulHasLocalBranches(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -176,7 +178,8 @@ func TestSuccessfulHasLocalBranches(t *testing.T) {
 }
 
 func TestFailedHasLocalBranches(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)

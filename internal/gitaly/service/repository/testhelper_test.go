@@ -17,6 +17,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
 	mcache "gitlab.com/gitlab-org/gitaly/internal/middleware/cache"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
+	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
@@ -65,7 +66,7 @@ func newSecureRepoClient(t *testing.T, serverSocketPath string, pool *x509.CertP
 
 var NewSecureRepoClient = newSecureRepoClient
 
-func runRepoServerWithConfig(t *testing.T, cfg config.Cfg, opts ...testhelper.TestServerOpt) (string, func()) {
+func runRepoServerWithConfig(t *testing.T, cfg config.Cfg, locator storage.Locator, opts ...testhelper.TestServerOpt) (string, func()) {
 	streamInt := []grpc.StreamServerInterceptor{
 		mcache.StreamInvalidator(dcache.LeaseKeyer{}, protoregistry.GitalyProtoPreregistered),
 	}
@@ -75,7 +76,7 @@ func runRepoServerWithConfig(t *testing.T, cfg config.Cfg, opts ...testhelper.Te
 
 	srv := testhelper.NewServerWithAuth(t, streamInt, unaryInt, cfg.Auth.Token, opts...)
 
-	gitalypb.RegisterRepositoryServiceServer(srv.GrpcServer(), NewServer(cfg, RubyServer, config.NewLocator(cfg), config.GitalyInternalSocketPath()))
+	gitalypb.RegisterRepositoryServiceServer(srv.GrpcServer(), NewServer(cfg, RubyServer, locator, config.GitalyInternalSocketPath()))
 	reflection.Register(srv.GrpcServer())
 
 	require.NoError(t, srv.Start())
@@ -83,12 +84,13 @@ func runRepoServerWithConfig(t *testing.T, cfg config.Cfg, opts ...testhelper.Te
 	return "unix://" + srv.Socket(), srv.Stop
 }
 
-func runRepoServer(t *testing.T, opts ...testhelper.TestServerOpt) (string, func()) {
-	return runRepoServerWithConfig(t, config.Config, opts...)
+func runRepoServer(t *testing.T, locator storage.Locator, opts ...testhelper.TestServerOpt) (string, func()) {
+	return runRepoServerWithConfig(t, config.Config, locator, opts...)
 }
 
 func TestRepoNoAuth(t *testing.T) {
-	socket, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	socket, stop := runRepoServer(t, locator)
 	defer stop()
 
 	connOpts := []grpc.DialOption{

@@ -7,12 +7,14 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
 func TestWriteCommitGraph(t *testing.T) {
-	s, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	s, stop := runRepoServer(t, locator)
 	defer stop()
 
 	c, conn := newRepositoryClient(t, s)
@@ -44,7 +46,8 @@ func TestWriteCommitGraph(t *testing.T) {
 }
 
 func TestUpdateCommitGraph(t *testing.T) {
-	s, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	s, stop := runRepoServer(t, locator)
 	defer stop()
 
 	c, conn := newRepositoryClient(t, s)
