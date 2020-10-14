@@ -325,14 +325,14 @@ lf   text
 			}
 
 			assert.Equal(t, tc.sha, sha)
-			content, err := repo.CatFile(ctx, sha)
+			content, err := repo.ReadObject(ctx, sha)
 			require.NoError(t, err)
 			assert.Equal(t, tc.content, string(content))
 		})
 	}
 }
 
-func TestLocalRepository_CatFile(t *testing.T) {
+func TestLocalRepository_ReadObject(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
@@ -357,7 +357,7 @@ func TestLocalRepository_CatFile(t *testing.T) {
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
-			content, err := repo.CatFile(ctx, tc.oid)
+			content, err := repo.ReadObject(ctx, tc.oid)
 			require.Equal(t, tc.error, err)
 			require.Equal(t, tc.content, string(content))
 		})

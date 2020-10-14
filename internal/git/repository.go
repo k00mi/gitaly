@@ -69,9 +69,9 @@ type Repository interface {
 	// run on the content.
 	WriteBlob(ctx context.Context, path string, content io.Reader) (string, error)
 
-	// CatFile reads an object from the repository's object database. InvalidObjectError
+	// ReadObject reads an object from the repository's object database. InvalidObjectError
 	// is returned if the oid does not refer to a valid object.
-	CatFile(ctx context.Context, oid string) ([]byte, error)
+	ReadObject(ctx context.Context, oid string) ([]byte, error)
 }
 
 // localRepository represents a local Git repository.
@@ -120,7 +120,7 @@ func (repo *localRepository) WriteBlob(ctx context.Context, path string, content
 	return text.ChompBytes(stdout.Bytes()), nil
 }
 
-func (repo *localRepository) CatFile(ctx context.Context, oid string) ([]byte, error) {
+func (repo *localRepository) ReadObject(ctx context.Context, oid string) ([]byte, error) {
 	const msgInvalidObject = "fatal: Not a valid object name "
 
 	stdout := &bytes.Buffer{}
