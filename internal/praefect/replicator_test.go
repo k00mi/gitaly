@@ -979,7 +979,7 @@ func newReplicationService(tb testing.TB) (*grpc.Server, string) {
 	gitalypb.RegisterRepositoryServiceServer(svr, repository.NewServer(RubyServer, locator, internalSocketName))
 	gitalypb.RegisterObjectPoolServiceServer(svr, objectpoolservice.NewServer(locator))
 	gitalypb.RegisterRemoteServiceServer(svr, remote.NewServer(RubyServer, locator))
-	gitalypb.RegisterSSHServiceServer(svr, ssh.NewServer())
+	gitalypb.RegisterSSHServiceServer(svr, ssh.NewServer(locator))
 	gitalypb.RegisterRefServiceServer(svr, ref.NewServer(locator))
 	healthpb.RegisterHealthServer(svr, health.NewServer())
 	reflection.Register(svr)

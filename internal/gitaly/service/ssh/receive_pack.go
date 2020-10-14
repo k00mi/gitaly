@@ -31,14 +31,14 @@ func (s *server) SSHReceivePack(stream gitalypb.SSHService_SSHReceivePackServer)
 		return helper.ErrInvalidArgument(err)
 	}
 
-	if err := sshReceivePack(stream, req); err != nil {
+	if err := s.sshReceivePack(stream, req); err != nil {
 		return helper.ErrInternal(err)
 	}
 
 	return nil
 }
 
-func sshReceivePack(stream gitalypb.SSHService_SSHReceivePackServer, req *gitalypb.SSHReceivePackRequest) error {
+func (s *server) sshReceivePack(stream gitalypb.SSHService_SSHReceivePackServer, req *gitalypb.SSHReceivePackRequest) error {
 	ctx := stream.Context()
 
 	stdin := streamio.NewReader(func() ([]byte, error) {
@@ -58,7 +58,7 @@ func sshReceivePack(stream gitalypb.SSHService_SSHReceivePackServer, req *gitaly
 	}
 	env := append(hookEnv, "GL_PROTOCOL=ssh")
 
-	repoPath, err := helper.GetRepoPath(req.Repository)
+	repoPath, err := s.locator.GetRepoPath(req.Repository)
 	if err != nil {
 		return err
 	}

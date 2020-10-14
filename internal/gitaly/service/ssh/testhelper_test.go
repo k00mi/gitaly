@@ -55,7 +55,7 @@ func testMain(m *testing.M) int {
 func runSSHServer(t *testing.T, serverOpts ...ServerOpt) (string, func()) {
 	srv := testhelper.NewServer(t, nil, nil)
 
-	gitalypb.RegisterSSHServiceServer(srv.GrpcServer(), NewServer(serverOpts...))
+	gitalypb.RegisterSSHServiceServer(srv.GrpcServer(), NewServer(config.NewLocator(config.Config), serverOpts...))
 	reflection.Register(srv.GrpcServer())
 
 	require.NoError(t, srv.Start())

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
@@ -13,14 +14,16 @@ var (
 )
 
 type server struct {
+	locator                     storage.Locator
 	uploadPackRequestTimeout    time.Duration
 	uploadArchiveRequestTimeout time.Duration
 	packfileNegotiationMetrics  *prometheus.CounterVec
 }
 
 // NewServer creates a new instance of a grpc SSHServer
-func NewServer(serverOpts ...ServerOpt) gitalypb.SSHServiceServer {
+func NewServer(locator storage.Locator, serverOpts ...ServerOpt) gitalypb.SSHServiceServer {
 	s := &server{
+		locator:                     locator,
 		uploadPackRequestTimeout:    defaultUploadPackRequestTimeout,
 		uploadArchiveRequestTimeout: defaultUploadArchiveRequestTimeout,
 		packfileNegotiationMetrics: prometheus.NewCounterVec(
