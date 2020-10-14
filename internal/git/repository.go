@@ -114,7 +114,7 @@ func (UnimplementedRepo) WriteBlob(context.Context, string, io.Reader) (string, 
 	return "", ErrUnimplemented
 }
 
-func (UnimplementedRepo) CatFile(context.Context, string) ([]byte, error) {
+func (UnimplementedRepo) ReadObject(context.Context, string) ([]byte, error) {
 	return nil, ErrUnimplemented
 }
 
