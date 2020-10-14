@@ -11,8 +11,8 @@
   command:
     cmd: gitlab-rake gitlab:gitaly:check
 
-- name: verify gitlab-shell
+- name: verify gitaly-hooks configuration
   command:
-    cmd: /opt/gitlab/embedded/service/gitlab-shell/bin/check -config /opt/gitlab/embedded/service/gitlab-shell/config.yml
+    cmd: /opt/gitlab/embedded/bin/gitaly-hooks check /var/opt/gitlab/gitaly/config.toml
   delegate_to: '{{ item }}'
   with_items: '{{ groups.gitalies }}'
