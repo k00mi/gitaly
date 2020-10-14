@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
@@ -22,14 +23,17 @@ var (
 )
 
 func testImplementations(t *testing.T, test func(t *testing.T, ctx context.Context)) {
-	ctx, cancel := testhelper.Context()
+	goCtx, cancel := testhelper.Context()
 	defer cancel()
+
+	rubyCtx := featureflag.OutgoingCtxWithDisabledFeatureFlags(goCtx, featureflag.GoUserCommitFiles)
 
 	for _, tc := range []struct {
 		desc    string
 		context context.Context
 	}{
-		{desc: "ruby", context: ctx},
+		{desc: "go", context: goCtx},
+		{desc: "ruby", context: rubyCtx},
 	} {
 		t.Run(tc.desc, func(t *testing.T) { test(t, tc.context) })
 	}
