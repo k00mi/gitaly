@@ -393,13 +393,13 @@ func (s *server) userMergeToRef(ctx context.Context, request *gitalypb.UserMerge
 		refName = string(request.FirstParentRef)
 	}
 
-	ref, err := repo.ResolveRefish(ctx, refName, true)
+	ref, err := repo.ResolveRefish(ctx, refName)
 	if err != nil {
 		//nolint:stylecheck
 		return nil, helper.ErrInvalidArgument(errors.New("Invalid merge source"))
 	}
 
-	sourceRef, err := repo.ResolveRefish(ctx, request.SourceSha, true)
+	sourceRef, err := repo.ResolveRefish(ctx, request.SourceSha)
 	if err != nil {
 		//nolint:stylecheck
 		return nil, helper.ErrInvalidArgument(errors.New("Invalid merge source"))
