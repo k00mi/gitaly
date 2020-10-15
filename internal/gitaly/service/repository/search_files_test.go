@@ -210,7 +210,7 @@ func TestSearchFilesByContentLargeFile(t *testing.T) {
 }
 
 func TestSearchFilesByContentFailure(t *testing.T) {
-	server := NewServer(RubyServer, config.NewLocator(config.Config), config.GitalyInternalSocketPath())
+	server := NewServer(config.Config, RubyServer, config.NewLocator(config.Config), config.GitalyInternalSocketPath())
 
 	testRepo, _, cleanupRepo := testhelper.NewTestRepo(t)
 	defer cleanupRepo()
@@ -331,7 +331,7 @@ func TestSearchFilesByNameSuccessful(t *testing.T) {
 }
 
 func TestSearchFilesByNameFailure(t *testing.T) {
-	server := NewServer(RubyServer, config.NewLocator(config.Config), config.GitalyInternalSocketPath())
+	server := NewServer(config.Config, RubyServer, config.NewLocator(config.Config), config.GitalyInternalSocketPath())
 
 	testCases := []struct {
 		desc   string

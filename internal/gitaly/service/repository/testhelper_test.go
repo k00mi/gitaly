@@ -65,7 +65,7 @@ func newSecureRepoClient(t *testing.T, serverSocketPath string, pool *x509.CertP
 
 var NewSecureRepoClient = newSecureRepoClient
 
-func runRepoServer(t *testing.T, opts ...testhelper.TestServerOpt) (string, func()) {
+func runRepoServerWithConfig(t *testing.T, cfg config.Cfg, opts ...testhelper.TestServerOpt) (string, func()) {
 	streamInt := []grpc.StreamServerInterceptor{
 		mcache.StreamInvalidator(dcache.LeaseKeyer{}, protoregistry.GitalyProtoPreregistered),
 	}
@@ -73,14 +73,18 @@ func runRepoServer(t *testing.T, opts ...testhelper.TestServerOpt) (string, func
 		mcache.UnaryInvalidator(dcache.LeaseKeyer{}, protoregistry.GitalyProtoPreregistered),
 	}
 
-	srv := testhelper.NewServerWithAuth(t, streamInt, unaryInt, config.Config.Auth.Token, opts...)
+	srv := testhelper.NewServerWithAuth(t, streamInt, unaryInt, cfg.Auth.Token, opts...)
 
-	gitalypb.RegisterRepositoryServiceServer(srv.GrpcServer(), NewServer(RubyServer, config.NewLocator(config.Config), config.GitalyInternalSocketPath()))
+	gitalypb.RegisterRepositoryServiceServer(srv.GrpcServer(), NewServer(cfg, RubyServer, config.NewLocator(cfg), config.GitalyInternalSocketPath()))
 	reflection.Register(srv.GrpcServer())
 
 	require.NoError(t, srv.Start())
 
 	return "unix://" + srv.Socket(), srv.Stop
+}
+
+func runRepoServer(t *testing.T, opts ...testhelper.TestServerOpt) (string, func()) {
+	return runRepoServerWithConfig(t, config.Config, opts...)
 }
 
 func TestRepoNoAuth(t *testing.T) {

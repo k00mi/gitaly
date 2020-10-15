@@ -23,8 +23,9 @@ type mockOptimizer struct {
 
 func (mo *mockOptimizer) OptimizeRepository(ctx context.Context, req *gitalypb.OptimizeRepositoryRequest, _ ...grpc.CallOption) (*gitalypb.OptimizeRepositoryResponse, error) {
 	mo.actual = append(mo.actual, req.Repository)
-	l := config.NewLocator(config.Cfg{Storages: mo.storages})
-	resp, err := repository.NewServer(nil, l, "").OptimizeRepository(ctx, req)
+	cfg := config.Cfg{Storages: mo.storages}
+	l := config.NewLocator(cfg)
+	resp, err := repository.NewServer(cfg, nil, l, "").OptimizeRepository(ctx, req)
 	assert.NoError(mo.t, err)
 	return resp, err
 }

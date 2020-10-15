@@ -724,6 +724,21 @@ func ConfigureGitalyGit2Go() {
 	MustRunCommand(nil, nil, "go", goBuildArgs...)
 }
 
+// ConfigureGitalyLfsSmudge configures the gitaly-lfs-smudge command for tests
+func ConfigureGitalyLfsSmudge() {
+	if config.Config.BinDir == "" {
+		log.Fatal("config.Config.BinDir must be set")
+	}
+
+	goBuildArgs := []string{
+		"build",
+		"-o",
+		filepath.Join(config.Config.BinDir, "gitaly-lfs-smudge"),
+		"gitlab.com/gitlab-org/gitaly/cmd/gitaly-lfs-smudge",
+	}
+	MustRunCommand(nil, nil, "go", goBuildArgs...)
+}
+
 // GetRepositoryRefs gives a list of each repository ref as a string
 func GetRepositoryRefs(t testing.TB, repoPath string) string {
 	refs := MustRunCommand(t, nil, "git", "-C", repoPath, "for-each-ref")

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"gitlab.com/gitlab-org/gitaly/client"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
@@ -15,15 +16,19 @@ type server struct {
 	conns                *client.Pool
 	internalGitalySocket string
 	locator              storage.Locator
+	cfg                  config.Gitlab
+	binDir               string
 }
 
 // NewServer creates a new instance of a gRPC repo server
-func NewServer(rs *rubyserver.Server, locator storage.Locator, internalGitalySocket string) gitalypb.RepositoryServiceServer {
+func NewServer(cfg config.Cfg, rs *rubyserver.Server, locator storage.Locator, internalGitalySocket string) gitalypb.RepositoryServiceServer {
 	return &server{
 		ruby:                 rs,
 		locator:              locator,
 		conns:                client.NewPool(),
 		internalGitalySocket: internalGitalySocket,
+		cfg:                  cfg.Gitlab,
+		binDir:               cfg.BinDir,
 	}
 }
 
