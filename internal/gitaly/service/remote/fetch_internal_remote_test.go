@@ -89,8 +89,17 @@ func TestSuccessfulFetchInternalRemote(t *testing.T) {
 	)
 
 	gitalySSHInvocationParams := getGitalySSHInvocationParams()
-	// TODO: This should be fixed in scope of https://gitlab.com/gitlab-org/gitaly/-/issues/3047 - only single invocation should be done.
-	require.Len(t, gitalySSHInvocationParams, 2, "expected 2 calls of gitaly-ssh binary")
+	require.Len(t, gitalySSHInvocationParams, 1)
+	require.Equal(t, []string{"upload-pack", "gitaly", "git-upload-pack", "'/internal.git'\n"}, gitalySSHInvocationParams[0].Args)
+	require.Subset(t,
+		gitalySSHInvocationParams[0].EnvVars,
+		[]string{
+			"GIT_TERMINAL_PROMPT=0",
+			"GIT_SSH_VARIANT=simple",
+			"LANG=en_US.UTF-8",
+			"GITALY_ADDRESS=unix://" + gitaly0Server.Socket(),
+		},
+	)
 }
 
 func TestFailedFetchInternalRemote(t *testing.T) {

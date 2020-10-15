@@ -65,6 +65,8 @@ func commandEnv(ctx context.Context, storageName, command string, message proto.
 		fmt.Sprintf("GITALY_TOKEN=%s", storageInfo.Token),
 		fmt.Sprintf("GITALY_FEATUREFLAGS=%s", strings.Join(featureFlagPairs, ",")),
 		fmt.Sprintf("CORRELATION_ID=%s", getCorrelationID(ctx)),
+		// please see https://github.com/git/git/commit/0da0e49ba12225684b75e86a4c9344ad121652cb for mote details
+		"GIT_SSH_VARIANT=simple",
 		// Pass through the SSL_CERT_* variables that indicate which
 		// system certs to trust
 		fmt.Sprintf("%s=%s", gitaly_x509.SSLCertDir, os.Getenv(gitaly_x509.SSLCertDir)),
