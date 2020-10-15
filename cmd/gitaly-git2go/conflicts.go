@@ -10,6 +10,9 @@ import (
 
 	git "github.com/libgit2/git2go/v30"
 	"gitlab.com/gitlab-org/gitaly/internal/git2go"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type conflictsSubcommand struct {
@@ -22,14 +25,17 @@ func (cmd *conflictsSubcommand) Flags() *flag.FlagSet {
 	return flags
 }
 
-func indexEntryPath(entry *git.IndexEntry) string {
+func conflictEntryFromIndex(entry *git.IndexEntry) git2go.ConflictEntry {
 	if entry == nil {
-		return ""
+		return git2go.ConflictEntry{}
 	}
-	return entry.Path
+	return git2go.ConflictEntry{
+		Path: entry.Path,
+		Mode: int32(entry.Mode),
+	}
 }
 
-func conflictContent(repo *git.Repository, conflict git.IndexConflict) (string, error) {
+func conflictContent(repo *git.Repository, conflict git.IndexConflict) ([]byte, error) {
 	var ancestor, our, their git.MergeFileInput
 
 	for entry, input := range map[*git.IndexEntry]*git.MergeFileInput{
@@ -43,7 +49,7 @@ func conflictContent(repo *git.Repository, conflict git.IndexConflict) (string, 
 
 		blob, err := repo.LookupBlob(entry.Id)
 		if err != nil {
-			return "", fmt.Errorf("could not get conflicting blob: %w", err)
+			return nil, helper.ErrPreconditionFailedf("could not get conflicting blob: %w", err)
 		}
 
 		input.Path = entry.Path
@@ -53,10 +59,25 @@ func conflictContent(repo *git.Repository, conflict git.IndexConflict) (string, 
 
 	merge, err := git.MergeFile(ancestor, our, their, nil)
 	if err != nil {
-		return "", fmt.Errorf("could not compute conflicts: %w", err)
+		return nil, fmt.Errorf("could not compute conflicts: %w", err)
 	}
 
-	return string(merge.Contents), nil
+	return merge.Contents, nil
+}
+
+func conflictError(code codes.Code, message string) error {
+	result := git2go.ConflictsResult{
+		Error: git2go.ConflictError{
+			Code:    code,
+			Message: message,
+		},
+	}
+
+	if err := result.SerializeTo(os.Stdout); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Run performs a merge and prints resulting conflicts to stdout.
@@ -71,19 +92,29 @@ func (cmd *conflictsSubcommand) Run() error {
 		return fmt.Errorf("could not open repository: %w", err)
 	}
 
-	ours, err := lookupCommit(repo, request.Ours)
+	oursOid, err := git.NewOid(request.Ours)
 	if err != nil {
-		return fmt.Errorf("could not lookup commit %q: %w", request.Ours, err)
+		return err
 	}
 
-	theirs, err := lookupCommit(repo, request.Theirs)
+	ours, err := repo.LookupCommit(oursOid)
 	if err != nil {
-		return fmt.Errorf("could not lookup commit %q: %w", request.Theirs, err)
+		return err
+	}
+
+	theirsOid, err := git.NewOid(request.Theirs)
+	if err != nil {
+		return err
+	}
+
+	theirs, err := repo.LookupCommit(theirsOid)
+	if err != nil {
+		return err
 	}
 
 	index, err := repo.MergeCommits(ours, theirs, nil)
 	if err != nil {
-		return fmt.Errorf("could not merge commits: %w", err)
+		return conflictError(codes.FailedPrecondition, fmt.Sprintf("could not merge commits: %v", err))
 	}
 
 	conflicts, err := index.ConflictIterator()
@@ -104,14 +135,17 @@ func (cmd *conflictsSubcommand) Run() error {
 
 		content, err := conflictContent(repo, conflict)
 		if err != nil {
+			if status, ok := status.FromError(err); ok {
+				return conflictError(status.Code(), status.Message())
+			}
 			return err
 		}
 
 		result.Conflicts = append(result.Conflicts, git2go.Conflict{
-			AncestorPath: indexEntryPath(conflict.Ancestor),
-			OurPath:      indexEntryPath(conflict.Our),
-			TheirPath:    indexEntryPath(conflict.Their),
-			Content:      content,
+			Ancestor: conflictEntryFromIndex(conflict.Ancestor),
+			Our:      conflictEntryFromIndex(conflict.Our),
+			Their:    conflictEntryFromIndex(conflict.Their),
+			Content:  content,
 		})
 	}
 

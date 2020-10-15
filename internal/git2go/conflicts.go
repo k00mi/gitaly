@@ -7,6 +7,8 @@ import (
 	"io"
 
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // ConflictsCommand contains parameters to perform a merge and return its conflicts.
@@ -19,22 +21,39 @@ type ConflictsCommand struct {
 	Theirs string `json:"theirs"`
 }
 
+// ConflictEntry represents a conflict entry which is one of the sides of a conflict.
+type ConflictEntry struct {
+	// Path is the path of the conflicting file.
+	Path string `json:"path"`
+	// Mode is the mode of the conflicting file.
+	Mode int32 `json:"mode"`
+}
+
 // Conflict represents a merge conflict for a single file.
 type Conflict struct {
-	// AncestorPath is the path of the ancestor.
-	AncestorPath string `json:"ancestor_path"`
-	// OurPath is the path of ours.
-	OurPath string `json:"our_path"`
-	// TheirPath is the path of theirs.
-	TheirPath string `json:"their_path"`
+	// Ancestor is the conflict entry of the merge-base.
+	Ancestor ConflictEntry `json:"ancestor"`
+	// Our is the conflict entry of ours.
+	Our ConflictEntry `json:"our"`
+	// Their is the conflict entry of theirs.
+	Their ConflictEntry `json:"their"`
 	// Content contains the conflicting merge results.
-	Content string `json:"content"`
+	Content []byte `json:"content"`
+}
+
+type ConflictError struct {
+	// Code is the GRPC error code
+	Code codes.Code
+	// Message is the error message
+	Message string
 }
 
 // ConflictsResult contains all conflicts resulting from a merge.
 type ConflictsResult struct {
 	// Conflicts
 	Conflicts []Conflict `json:"conflicts"`
+	// Error is an optional conflict error
+	Error ConflictError `json:"error"`
 }
 
 // ConflictsCommandFromSerialized constructs a ConflictsCommand from its serialized representation.
@@ -75,6 +94,10 @@ func (c ConflictsCommand) Run(ctx context.Context, cfg config.Cfg) (ConflictsRes
 	var response ConflictsResult
 	if err := deserialize(stdout, &response); err != nil {
 		return ConflictsResult{}, err
+	}
+
+	if response.Error.Code != codes.OK {
+		return ConflictsResult{}, status.Error(response.Error.Code, response.Error.Message)
 	}
 
 	return response, nil

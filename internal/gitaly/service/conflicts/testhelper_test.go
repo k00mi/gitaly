@@ -26,6 +26,8 @@ var RubyServer = &rubyserver.Server{}
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
+	testhelper.ConfigureGitalyGit2Go()
+
 	tempDir, err := ioutil.TempDir("", "gitaly")
 	if err != nil {
 		log.Fatal(err)
@@ -45,8 +47,9 @@ func testMain(m *testing.M) int {
 
 func runConflictsServer(t *testing.T) (string, func()) {
 	srv := testhelper.NewServer(t, nil, nil)
+	locator := config.NewLocator(config.Config)
 
-	gitalypb.RegisterConflictsServiceServer(srv.GrpcServer(), NewServer(RubyServer))
+	gitalypb.RegisterConflictsServiceServer(srv.GrpcServer(), NewServer(RubyServer, config.Config, locator))
 	reflection.Register(srv.GrpcServer())
 
 	require.NoError(t, srv.Start())
