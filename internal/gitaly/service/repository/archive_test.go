@@ -25,7 +25,8 @@ const (
 )
 
 func TestGetArchiveSuccess(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -184,7 +185,7 @@ func TestGetArchiveWithLfsSuccess(t *testing.T) {
 	cfg := config.Config
 	cfg.Gitlab.URL = url
 	cfg.Gitlab.SecretFile = filepath.Join(cfg.GitlabShell.Dir, ".gitlab_shell_secret")
-	serverSocketPath, stop := runRepoServerWithConfig(t, cfg)
+	serverSocketPath, stop := runRepoServerWithConfig(t, cfg, config.NewLocator(cfg))
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -278,7 +279,8 @@ func TestGetArchiveWithLfsSuccess(t *testing.T) {
 }
 
 func TestGetArchiveFailure(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -412,7 +414,8 @@ func TestGetArchiveFailure(t *testing.T) {
 }
 
 func TestGetArchivePathInjection(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -486,7 +489,8 @@ func TestGetArchivePathInjection(t *testing.T) {
 }
 
 func TestGetArchiveEnv(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)

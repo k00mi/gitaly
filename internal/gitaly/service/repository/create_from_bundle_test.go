@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/tempdir"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -19,7 +19,8 @@ import (
 )
 
 func TestSuccessfulCreateRepositoryFromBundleRequest(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -47,7 +48,7 @@ func TestSuccessfulCreateRepositoryFromBundleRequest(t *testing.T) {
 		StorageName:  testhelper.DefaultStorageName,
 		RelativePath: "a-repo-from-bundle",
 	}
-	importedRepoPath, err := helper.GetPath(importedRepo)
+	importedRepoPath, err := locator.GetPath(importedRepo)
 	require.NoError(t, err)
 	defer os.RemoveAll(importedRepoPath)
 
@@ -86,7 +87,8 @@ func TestSuccessfulCreateRepositoryFromBundleRequest(t *testing.T) {
 }
 
 func TestFailedCreateRepositoryFromBundleRequestDueToInvalidBundle(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -102,7 +104,7 @@ func TestFailedCreateRepositoryFromBundleRequestDueToInvalidBundle(t *testing.T)
 		StorageName:  testhelper.DefaultStorageName,
 		RelativePath: "a-repo-from-bundle",
 	}
-	importedRepoPath, err := helper.GetPath(importedRepo)
+	importedRepoPath, err := locator.GetPath(importedRepo)
 	require.NoError(t, err)
 	defer os.RemoveAll(importedRepoPath)
 
@@ -128,7 +130,8 @@ func TestFailedCreateRepositoryFromBundleRequestDueToInvalidBundle(t *testing.T)
 }
 
 func TestFailedCreateRepositoryFromBundleRequestDueToValidations(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -147,7 +150,8 @@ func TestFailedCreateRepositoryFromBundleRequestDueToValidations(t *testing.T) {
 }
 
 func TestFailedCreateRepositoryFromBundle_ExistingDirectory(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	testRepo, _, cleanup := testhelper.NewTestRepo(t)

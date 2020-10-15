@@ -8,13 +8,15 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
 )
 
 func TestSuccessfulCalculateChecksum(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -71,7 +73,8 @@ func TestRefWhitelist(t *testing.T) {
 }
 
 func TestEmptyRepositoryCalculateChecksum(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -90,7 +93,8 @@ func TestEmptyRepositoryCalculateChecksum(t *testing.T) {
 }
 
 func TestBrokenRepositoryCalculateChecksum(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -111,7 +115,8 @@ func TestBrokenRepositoryCalculateChecksum(t *testing.T) {
 }
 
 func TestFailedCalculateChecksum(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -146,7 +151,8 @@ func TestFailedCalculateChecksum(t *testing.T) {
 }
 
 func TestInvalidRefsCalculateChecksum(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)

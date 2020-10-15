@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git/gittest"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -28,7 +29,8 @@ var (
 )
 
 func TestGarbageCollectCommitGraph(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -64,7 +66,8 @@ func TestGarbageCollectCommitGraph(t *testing.T) {
 }
 
 func TestGarbageCollectSuccess(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -125,7 +128,8 @@ func TestGarbageCollectWithPrune(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -180,7 +184,8 @@ func TestGarbageCollectLogStatistics(t *testing.T) {
 	defer cancel()
 	ctx = ctxlogrus.ToContext(ctx, log.WithField("test", "logging"))
 
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -196,7 +201,8 @@ func TestGarbageCollectLogStatistics(t *testing.T) {
 }
 
 func TestGarbageCollectDeletesRefsLocks(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -244,7 +250,8 @@ func TestGarbageCollectDeletesRefsLocks(t *testing.T) {
 }
 
 func TestGarbageCollectFailure(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -274,7 +281,8 @@ func TestGarbageCollectFailure(t *testing.T) {
 }
 
 func TestCleanupInvalidKeepAroundRefs(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -372,7 +380,8 @@ func mustCreateFileWithTimes(t testing.TB, path string, mTime time.Time) {
 }
 
 func TestGarbageCollectDeltaIslands(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)

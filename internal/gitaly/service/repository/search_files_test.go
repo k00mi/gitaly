@@ -81,7 +81,8 @@ func TestSearchFilesByContentSuccessful(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -153,7 +154,8 @@ func TestSearchFilesByContentLargeFile(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -269,7 +271,8 @@ func TestSearchFilesByNameSuccessful(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)

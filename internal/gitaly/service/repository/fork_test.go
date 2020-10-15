@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/repository"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	gitaly_x509 "gitlab.com/gitlab-org/gitaly/internal/x509"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -20,6 +19,8 @@ import (
 )
 
 func TestSuccessfulCreateForkRequest(t *testing.T) {
+	locator := config.NewLocator(config.Config)
+
 	for _, tt := range []struct {
 		name   string
 		secure bool
@@ -67,7 +68,7 @@ func TestSuccessfulCreateForkRequest(t *testing.T) {
 				StorageName:  testRepo.StorageName,
 			}
 
-			forkedRepoPath, err := helper.GetPath(forkedRepo)
+			forkedRepoPath, err := locator.GetPath(forkedRepo)
 			require.NoError(t, err)
 			require.NoError(t, os.RemoveAll(forkedRepoPath))
 
@@ -95,6 +96,8 @@ func TestSuccessfulCreateForkRequest(t *testing.T) {
 func TestFailedCreateForkRequestDueToExistingTarget(t *testing.T) {
 	server, serverSocketPath := runFullServer(t)
 	defer server.Stop()
+
+	locator := config.NewLocator(config.Config)
 
 	client, conn := repository.NewRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
@@ -132,7 +135,7 @@ func TestFailedCreateForkRequestDueToExistingTarget(t *testing.T) {
 				StorageName:  testRepo.StorageName,
 			}
 
-			forkedRepoPath, err := helper.GetPath(forkedRepo)
+			forkedRepoPath, err := locator.GetPath(forkedRepo)
 			require.NoError(t, err)
 
 			if testCase.isDir {

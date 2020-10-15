@@ -9,14 +9,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
 )
 
 func TestCreateRepositorySuccess(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -25,7 +26,7 @@ func TestCreateRepositorySuccess(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	storageDir, err := helper.GetStorageByName("default")
+	storageDir, err := locator.GetStorageByName("default")
 	require.NoError(t, err)
 	relativePath := "create-repository-test.git"
 	repoDir := filepath.Join(storageDir, relativePath)
@@ -49,7 +50,8 @@ func TestCreateRepositorySuccess(t *testing.T) {
 }
 
 func TestCreateRepositoryFailure(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -58,7 +60,7 @@ func TestCreateRepositoryFailure(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	storagePath, err := helper.GetStorageByName("default")
+	storagePath, err := locator.GetStorageByName("default")
 	require.NoError(t, err)
 	fullPath := filepath.Join(storagePath, "foo.git")
 
@@ -74,7 +76,8 @@ func TestCreateRepositoryFailure(t *testing.T) {
 }
 
 func TestCreateRepositoryFailureInvalidArgs(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -104,7 +107,8 @@ func TestCreateRepositoryFailureInvalidArgs(t *testing.T) {
 }
 
 func TestCreateRepositoryIdempotent(t *testing.T) {
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)

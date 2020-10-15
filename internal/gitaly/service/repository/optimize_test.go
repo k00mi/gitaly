@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git/stats"
 	"gitlab.com/gitlab-org/gitaly/internal/git/updateref"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
@@ -52,7 +53,8 @@ func TestOptimizeRepository(t *testing.T) {
 
 	testhelper.CreateCommit(t, testRepoPath, "master", nil)
 
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	repoClient, conn := NewRepositoryClient(t, serverSocketPath)
@@ -131,7 +133,8 @@ func TestOptimizeRepositoryValidation(t *testing.T) {
 		},
 	}
 
-	serverSocketPath, stop := runRepoServer(t)
+	locator := config.NewLocator(config.Config)
+	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
 	repoClient, conn := NewRepositoryClient(t, serverSocketPath)

@@ -26,7 +26,7 @@ func (s *server) FetchSourceBranch(ctx context.Context, req *gitalypb.FetchSourc
 		return nil, helper.ErrInvalidArgument(err)
 	}
 
-	repoPath, err := helper.GetRepoPath(req.Repository)
+	repoPath, err := s.locator.GetRepoPath(req.Repository)
 	if err != nil {
 		return nil, err
 	}
