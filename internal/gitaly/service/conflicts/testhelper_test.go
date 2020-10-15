@@ -26,6 +26,8 @@ var RubyServer = &rubyserver.Server{}
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
+	testhelper.ConfigureGitalyGit2Go()
+
 	tempDir, err := ioutil.TempDir("", "gitaly")
 	if err != nil {
 		log.Fatal(err)

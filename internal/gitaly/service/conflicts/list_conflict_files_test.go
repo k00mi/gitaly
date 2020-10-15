@@ -1,11 +1,17 @@
 package conflicts
 
 import (
+	"bytes"
+	"context"
 	"io"
+	"io/ioutil"
+	"path/filepath"
 	"testing"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
@@ -16,7 +22,29 @@ type conflictFile struct {
 	content []byte
 }
 
+func testListConflictFiles(t *testing.T, testcase func(t *testing.T, ctx context.Context)) {
+	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.GoListConflictFiles,
+	})
+	require.NoError(t, err)
+
+	for _, featureSet := range featureSets {
+		t.Run("disabled "+featureSet.String(), func(t *testing.T) {
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			ctx = featureSet.Disable(ctx)
+
+			testcase(t, ctx)
+		})
+	}
+}
+
 func TestSuccessfulListConflictFilesRequest(t *testing.T) {
+	testListConflictFiles(t, testSuccessfulListConflictFilesRequest)
+}
+
+func testSuccessfulListConflictFilesRequest(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runConflictsServer(t)
 	defer stop()
 
@@ -47,9 +75,6 @@ class Conflict
 >>>>>>> files/ruby/feature.rb
 end
 `
-
-	ctx, cancel := testhelper.Context()
-	defer cancel()
 
 	request := &gitalypb.ListConflictFilesRequest{
 		Repository:     testRepo,
@@ -88,11 +113,88 @@ end
 
 	for i := 0; i < len(expectedFiles); i++ {
 		require.True(t, proto.Equal(receivedFiles[i].header, expectedFiles[i].header))
-		require.Equal(t, receivedFiles[i].content, expectedFiles[i].content)
+		require.Equal(t, expectedFiles[i].content, receivedFiles[i].content)
 	}
 }
 
+func TestListConflictFilesHugeDiff(t *testing.T) {
+	testListConflictFiles(t, testListConflictFilesHugeDiff)
+}
+
+func testListConflictFilesHugeDiff(t *testing.T, ctx context.Context) {
+	serverSocketPath, stop := runConflictsServer(t)
+	defer stop()
+
+	client, conn := NewConflictsClient(t, serverSocketPath)
+	defer conn.Close()
+
+	repo, repoPath, cleanupFn := testhelper.NewTestRepoWithWorktree(t)
+	defer cleanupFn()
+
+	our := buildCommit(t, ctx, repo, repoPath, map[string][]byte{
+		"a": bytes.Repeat([]byte("a\n"), 128*1024),
+		"b": bytes.Repeat([]byte("b\n"), 128*1024),
+	})
+
+	their := buildCommit(t, ctx, repo, repoPath, map[string][]byte{
+		"a": bytes.Repeat([]byte("x\n"), 128*1024),
+		"b": bytes.Repeat([]byte("y\n"), 128*1024),
+	})
+
+	request := &gitalypb.ListConflictFilesRequest{
+		Repository:     repo,
+		OurCommitOid:   our,
+		TheirCommitOid: their,
+	}
+
+	c, err := client.ListConflictFiles(ctx, request)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	receivedFiles := getConflictFiles(t, c)
+	require.Len(t, receivedFiles, 2)
+	require.True(t,
+		proto.Equal(&gitalypb.ConflictFileHeader{
+			CommitOid: our,
+			OurMode:   int32(0100644),
+			OurPath:   []byte("a"),
+			TheirPath: []byte("a"),
+		}, receivedFiles[0].header),
+	)
+
+	require.True(t,
+		proto.Equal(&gitalypb.ConflictFileHeader{
+			CommitOid: our,
+			OurMode:   int32(0100644),
+			OurPath:   []byte("b"),
+			TheirPath: []byte("b"),
+		}, receivedFiles[1].header),
+	)
+}
+
+func buildCommit(t *testing.T, ctx context.Context, repo *gitalypb.Repository, repoPath string, files map[string][]byte) string {
+	for file, contents := range files {
+		filePath := filepath.Join(repoPath, file)
+		require.NoError(t, ioutil.WriteFile(filePath, contents, 0666))
+		testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "add", filePath)
+	}
+
+	testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "commit", "-m", "message")
+
+	oid, err := git.NewRepository(repo).ResolveRefish(ctx, "HEAD")
+	require.NoError(t, err)
+
+	testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "reset", "--hard", "HEAD~")
+
+	return oid
+}
+
 func TestListConflictFilesFailedPrecondition(t *testing.T) {
+	testListConflictFiles(t, testListConflictFilesFailedPrecondition)
+}
+
+func testListConflictFilesFailedPrecondition(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runConflictsServer(t)
 	defer stop()
 
@@ -101,9 +203,6 @@ func TestListConflictFilesFailedPrecondition(t *testing.T) {
 
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
-
-	ctx, cancel := testhelper.Context()
-	defer cancel()
 
 	testCases := []struct {
 		desc           string
@@ -158,6 +257,10 @@ func TestListConflictFilesFailedPrecondition(t *testing.T) {
 }
 
 func TestFailedListConflictFilesRequestDueToValidation(t *testing.T) {
+	testListConflictFiles(t, testFailedListConflictFilesRequestDueToValidation)
+}
+
+func testFailedListConflictFilesRequestDueToValidation(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runConflictsServer(t)
 	defer stop()
 
@@ -206,9 +309,6 @@ func TestFailedListConflictFilesRequestDueToValidation(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			ctx, cancel := testhelper.Context()
-			defer cancel()
-
 			c, _ := client.ListConflictFiles(ctx, testCase.request)
 			testhelper.RequireGrpcError(t, drainListConflictFilesResponse(c), testCase.code)
 		})

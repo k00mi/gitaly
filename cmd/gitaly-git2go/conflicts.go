@@ -74,14 +74,24 @@ func (cmd *conflictsSubcommand) Run() error {
 		return fmt.Errorf("could not open repository: %w", err)
 	}
 
-	ours, err := lookupCommit(repo, request.Ours)
+	oursOid, err := git.NewOid(request.Ours)
 	if err != nil {
-		return fmt.Errorf("could not lookup commit %q: %w", request.Ours, err)
+		return err
 	}
 
-	theirs, err := lookupCommit(repo, request.Theirs)
+	ours, err := repo.LookupCommit(oursOid)
 	if err != nil {
-		return fmt.Errorf("could not lookup commit %q: %w", request.Theirs, err)
+		return err
+	}
+
+	theirsOid, err := git.NewOid(request.Theirs)
+	if err != nil {
+		return err
+	}
+
+	theirs, err := repo.LookupCommit(theirsOid)
+	if err != nil {
+		return err
 	}
 
 	index, err := repo.MergeCommits(ours, theirs, nil)
