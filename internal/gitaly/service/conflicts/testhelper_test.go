@@ -45,8 +45,9 @@ func testMain(m *testing.M) int {
 
 func runConflictsServer(t *testing.T) (string, func()) {
 	srv := testhelper.NewServer(t, nil, nil)
+	locator := config.NewLocator(config.Config)
 
-	gitalypb.RegisterConflictsServiceServer(srv.GrpcServer(), NewServer(RubyServer))
+	gitalypb.RegisterConflictsServiceServer(srv.GrpcServer(), NewServer(RubyServer, config.Config, locator))
 	reflection.Register(srv.GrpcServer())
 
 	require.NoError(t, srv.Start())
