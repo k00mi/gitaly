@@ -34,6 +34,8 @@ var (
 	GoUserFFBranch = FeatureFlag{Name: "go_user_ff_branch", OnByDefault: false}
 	// GoUserDeleteBranch enables the Go implementation of UserDeleteBranch
 	GoUserDeleteBranch = FeatureFlag{Name: "go_user_delete_branch", OnByDefault: false}
+	// GoUserSquash enable the Go implementation of UserSquash
+	GoUserSquash = FeatureFlag{Name: "go_user_squash", OnByDefault: false}
 )
 
 // All includes all feature flags.
@@ -48,6 +50,7 @@ var All = []FeatureFlag{
 	GoUserMergeToRef,
 	GoUserFFBranch,
 	GoUserDeleteBranch,
+	GoUserSquash,
 }
 
 const (

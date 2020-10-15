@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"io"
 	"os/exec"
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
@@ -34,6 +35,16 @@ func unsafeStdinCmd(ctx context.Context, extraEnv []string, repo repository.GitR
 	return unsafeBareCmd(ctx, CmdStream{In: command.SetupStdin}, env, args...)
 }
 
+// unsafeStderrCmd runs unsafeBareCmd with stderr directed to passed stderr.
+func unsafeStderrCmd(ctx context.Context, stderr io.Writer, repo repository.GitRepo, args ...string) (*command.Command, error) {
+	args, env, err := argsAndEnv(repo, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	return unsafeBareCmd(ctx, CmdStream{Err: stderr}, env, args...)
+}
+
 func argsAndEnv(repo repository.GitRepo, args ...string) ([]string, []string, error) {
 	repoPath, env, err := alternates.PathAndEnv(repo)
 	if err != nil {
@@ -50,6 +61,15 @@ func unsafeBareCmd(ctx context.Context, stream CmdStream, env []string, args ...
 	env = append(env, command.GitEnv...)
 
 	return command.New(ctx, exec.Command(command.GitPath(), args...), stream.In, stream.Out, stream.Err, env...)
+}
+
+// unsafeBareCmdInDir calls unsafeBareCmd in dir.
+func unsafeBareCmdInDir(ctx context.Context, dir string, stream CmdStream, env []string, args ...string) (*command.Command, error) {
+	env = append(env, command.GitEnv...)
+
+	cmd := exec.Command(command.GitPath(), args...)
+	cmd.Dir = dir
+	return command.New(ctx, cmd, stream.In, stream.Out, stream.Err, env...)
 }
 
 // unsafeCmdWithoutRepo works like Command but without a git repository

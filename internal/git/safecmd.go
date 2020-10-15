@@ -62,7 +62,7 @@ func (sc SubCmd) IsCmd() {}
 
 func (sc SubCmd) supportsEndOfOptions() bool {
 	switch sc.Name {
-	case "linguist", "for-each-ref", "archive", "upload-archive", "grep", "clone", "config", "rev-parse", "remote", "blame", "ls-tree":
+	case "checkout", "linguist", "for-each-ref", "archive", "upload-archive", "grep", "clone", "config", "rev-parse", "remote", "blame", "ls-tree":
 		return false
 	}
 	return true
@@ -300,6 +300,20 @@ func SafeBareCmd(ctx context.Context, stream CmdStream, env []string, globals []
 	return unsafeBareCmd(ctx, stream, append(env, cc.env...), args...)
 }
 
+// SafeBareCmdInDir runs SafeBareCmd in the dir.
+func SafeBareCmdInDir(ctx context.Context, dir string, stream CmdStream, env []string, globals []Option, sc Cmd) (*command.Command, error) {
+	if dir == "" {
+		return nil, errors.New("no 'dir' provided")
+	}
+
+	args, err := combineArgs(globals, sc)
+	if err != nil {
+		return nil, err
+	}
+
+	return unsafeBareCmdInDir(ctx, dir, stream, env, args...)
+}
+
 // SafeStdinCmd creates a git.Command with the given args and Repository that is
 // suitable for Write()ing to. It validates the arguments in the command before
 // executing.
@@ -316,6 +330,17 @@ func SafeStdinCmd(ctx context.Context, repo repository.GitRepo, globals []Option
 	}
 
 	return unsafeStdinCmd(ctx, cc.env, repo, args...)
+}
+
+// SafeStderrCmd creates a git.Command with the given args and Repository that
+// writes its standard error stream into provided stderr.
+func SafeStderrCmd(ctx context.Context, stderr io.Writer, repo repository.GitRepo, globals []Option, sc SubCmd) (*command.Command, error) {
+	args, err := combineArgs(globals, sc)
+	if err != nil {
+		return nil, err
+	}
+
+	return unsafeStderrCmd(ctx, stderr, repo, args...)
 }
 
 // SafeCmdWithoutRepo works like Command but without a git repository. It

@@ -1,12 +1,15 @@
 package git_test
 
 import (
+	"bytes"
 	"context"
+	"io/ioutil"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -251,4 +254,98 @@ func disableGitCmd() testhelper.Cleanup {
 	oldBinPath := config.Config.Git.BinPath
 	config.Config.Git.BinPath = "/bin/echo"
 	return func() { config.Config.Git.BinPath = oldBinPath }
+}
+
+func TestSafeBareCmdInDir(t *testing.T) {
+	t.Run("no dir specified", func(t *testing.T) {
+		ctx, cancel := testhelper.Context()
+		defer cancel()
+
+		_, err := git.SafeBareCmdInDir(ctx, "", git.CmdStream{}, nil, nil, nil)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "no 'dir' provided")
+	})
+
+	t.Run("runs in dir", func(t *testing.T) {
+		_, repoPath, cleanup := testhelper.NewTestRepoWithWorktree(t)
+		defer cleanup()
+
+		ctx, cancel := testhelper.Context()
+		defer cancel()
+
+		var stderr bytes.Buffer
+		cmd, err := git.SafeBareCmdInDir(ctx, repoPath, git.CmdStream{Err: &stderr}, nil, nil, git.SubCmd{
+			Name: "rev-parse",
+			Args: []string{"master"},
+		})
+		require.NoError(t, err)
+
+		revData, err := ioutil.ReadAll(cmd)
+		require.NoError(t, err)
+
+		require.NoError(t, cmd.Wait(), stderr.String())
+
+		require.Equal(t, "1e292f8fedd741b75372e19097c76d327140c312", text.ChompBytes(revData))
+	})
+
+	t.Run("doesn't runs in non existing dir", func(t *testing.T) {
+		ctx, cancel := testhelper.Context()
+		defer cancel()
+
+		var stderr bytes.Buffer
+		_, err := git.SafeBareCmdInDir(ctx, "non-existing-dir", git.CmdStream{Err: &stderr}, nil, nil, git.SubCmd{
+			Name: "rev-parse",
+			Args: []string{"master"},
+		})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "no such file or directory")
+	})
+}
+
+func TestSafeStderrCmd(t *testing.T) {
+	t.Run("stderr is empty if no error", func(t *testing.T) {
+		repo, _, cleanup := testhelper.NewTestRepoWithWorktree(t)
+		defer cleanup()
+
+		ctx, cancel := testhelper.Context()
+		defer cancel()
+
+		var stderr bytes.Buffer
+		cmd, err := git.SafeStderrCmd(ctx, &stderr, repo, nil, git.SubCmd{
+			Name: "rev-parse",
+			Args: []string{"master"},
+		})
+		require.NoError(t, err)
+
+		revData, err := ioutil.ReadAll(cmd)
+		require.NoError(t, err)
+
+		require.NoError(t, cmd.Wait(), stderr.String())
+
+		require.Equal(t, "1e292f8fedd741b75372e19097c76d327140c312", text.ChompBytes(revData))
+		require.Empty(t, stderr.String())
+	})
+
+	t.Run("stderr contains error message on failure", func(t *testing.T) {
+		repo, _, cleanup := testhelper.NewTestRepoWithWorktree(t)
+		defer cleanup()
+
+		ctx, cancel := testhelper.Context()
+		defer cancel()
+
+		var stderr bytes.Buffer
+		cmd, err := git.SafeStderrCmd(ctx, &stderr, repo, nil, git.SubCmd{
+			Name: "rev-parse",
+			Args: []string{"invalid-ref"},
+		})
+		require.NoError(t, err)
+
+		revData, err := ioutil.ReadAll(cmd)
+		require.NoError(t, err)
+
+		require.Error(t, cmd.Wait())
+
+		require.Equal(t, "invalid-ref", text.ChompBytes(revData))
+		require.Contains(t, stderr.String(), "fatal: ambiguous argument 'invalid-ref': unknown revision or path not in the working tree.")
+	})
 }
