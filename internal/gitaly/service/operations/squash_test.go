@@ -8,12 +8,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var (
@@ -28,13 +31,31 @@ var (
 )
 
 func TestSuccessfulUserSquashRequest(t *testing.T) {
-	ctx, cancel := testhelper.Context()
-	defer cancel()
+	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoUserSquash})
+	require.NoError(t, err)
+	for _, featureSet := range featureSets {
+		t.Run("with sparse checkout: disabled "+featureSet.String(), func(t *testing.T) {
+			ctx, cancel := testhelper.Context()
+			defer cancel()
 
-	testSuccessfulUserSquashRequest(t, ctx)
+			ctx = featureSet.Disable(ctx)
+
+			testSuccessfulUserSquashRequest(t, ctx, startSha, endSha)
+		})
+
+		t.Run("without sparse checkout: disabled "+featureSet.String(), func(t *testing.T) {
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			ctx = featureSet.Disable(ctx)
+
+			// there are no files that could be used for sparse checkout for those two commits
+			testSuccessfulUserSquashRequest(t, ctx, "60ecb67744cb56576c30214ff52294f8ce2def98", "c84ff944ff4529a70788a5e9003c2b7feae29047")
+		})
+	}
 }
 
-func testSuccessfulUserSquashRequest(t *testing.T, ctx context.Context) {
+func testSuccessfulUserSquashRequest(t *testing.T, ctx context.Context, start, end string) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -50,8 +71,8 @@ func testSuccessfulUserSquashRequest(t *testing.T, ctx context.Context) {
 		SquashId:      "1",
 		Author:        author,
 		CommitMessage: commitMessage,
-		StartSha:      startSha,
-		EndSha:        endSha,
+		StartSha:      start,
+		EndSha:        end,
 	}
 
 	response, err := client.UserSquash(ctx, request)
@@ -60,7 +81,7 @@ func testSuccessfulUserSquashRequest(t *testing.T, ctx context.Context) {
 
 	commit, err := log.GetCommit(ctx, testRepo, response.SquashSha)
 	require.NoError(t, err)
-	require.Equal(t, []string{startSha}, commit.ParentIds)
+	require.Equal(t, []string{start}, commit.ParentIds)
 	require.Equal(t, author.Name, commit.Author.Name)
 	require.Equal(t, author.Email, commit.Author.Email)
 	require.Equal(t, testhelper.TestUser.Name, commit.Committer.Name)
@@ -358,6 +379,19 @@ func TestFailedUserSquashRequestDueToValidations(t *testing.T) {
 			},
 			code: codes.InvalidArgument,
 		},
+		{
+			desc: "worktree id can't contain slashes",
+			request: &gitalypb.UserSquashRequest{
+				Repository:    testRepo,
+				User:          testhelper.TestUser,
+				SquashId:      "1/2",
+				Author:        testhelper.TestUser,
+				CommitMessage: commitMessage,
+				StartSha:      startSha,
+				EndSha:        endSha,
+			},
+			code: codes.InvalidArgument,
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -368,6 +402,90 @@ func TestFailedUserSquashRequestDueToValidations(t *testing.T) {
 			_, err := client.UserSquash(ctx, testCase.request)
 			testhelper.RequireGrpcError(t, err, testCase.code)
 			require.Contains(t, err.Error(), testCase.desc)
+		})
+	}
+}
+
+func TestUserSquashWithGitError(t *testing.T) {
+	serverSocketPath, stop := runOperationServiceServer(t)
+	defer stop()
+
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	testCases := []struct {
+		desc     string
+		request  *gitalypb.UserSquashRequest
+		gitError string
+	}{
+		{
+			desc: "not existing start SHA",
+			request: &gitalypb.UserSquashRequest{
+				Repository:    testRepo,
+				SquashId:      "1",
+				User:          testhelper.TestUser,
+				Author:        testhelper.TestUser,
+				CommitMessage: commitMessage,
+				StartSha:      "doesntexisting",
+				EndSha:        endSha,
+			},
+			gitError: "fatal: ambiguous argument 'doesntexisting...54cec5282aa9f21856362fe321c800c236a61615'",
+		},
+		{
+			desc: "not existing end SHA",
+			request: &gitalypb.UserSquashRequest{
+				Repository:    testRepo,
+				SquashId:      "1",
+				User:          testhelper.TestUser,
+				Author:        testhelper.TestUser,
+				CommitMessage: commitMessage,
+				StartSha:      startSha,
+				EndSha:        "doesntexisting",
+			},
+			gitError: "fatal: ambiguous argument 'b83d6e391c22777fca1ed3012fce84f633d7fed0...doesntexisting'",
+		},
+		{
+			desc: "user has no name set",
+			request: &gitalypb.UserSquashRequest{
+				Repository:    testRepo,
+				SquashId:      "1",
+				User:          &gitalypb.User{Email: testhelper.TestUser.Email},
+				Author:        testhelper.TestUser,
+				CommitMessage: commitMessage,
+				StartSha:      startSha,
+				EndSha:        endSha,
+			},
+			gitError: "fatal: empty ident name (for <janedoe@gitlab.com>) not allowed",
+		},
+		{
+			desc: "author has no name set",
+			request: &gitalypb.UserSquashRequest{
+				Repository:    testRepo,
+				SquashId:      "1",
+				User:          testhelper.TestUser,
+				Author:        &gitalypb.User{Email: testhelper.TestUser.Email},
+				CommitMessage: commitMessage,
+				StartSha:      startSha,
+				EndSha:        endSha,
+			},
+			gitError: "fatal: empty ident name (for <janedoe@gitlab.com>) not allowed",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			resp, err := client.UserSquash(ctx, testCase.request)
+			s, ok := status.FromError(err)
+			require.True(t, ok)
+			assert.Equal(t, codes.OK, s.Code())
+			assert.Empty(t, resp.SquashSha)
+			assert.Contains(t, resp.GitError, testCase.gitError)
 		})
 	}
 }
