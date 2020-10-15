@@ -11,14 +11,15 @@ import (
 
 // CheckInfo represents the response of GitLabs `check` API endpoint
 type CheckInfo struct {
-	// GitLab Server version
+	// Version of the GitLab Rails component
 	Version string `json:"gitlab_version"`
 	// Revision of the Git object of the running GitLab
 	Revision string `json:"gitlab_revision"`
-	// The version of the API, expected to be v4
+	// APIVersion of GitLab, expected to be v4
 	APIVersion string `json:"api_version"`
-	// GitLab needs a working Redis, even if the check result is successful
-	// GitLab might still not be able to handle hook API calls without it
+	// RedisReachable shows if GitLab can reach Redis. This can be false
+	// while the check itself succeeds. Normal hook API calls will likely
+	// fail.
 	RedisReachable bool `json:"redis"`
 }
 

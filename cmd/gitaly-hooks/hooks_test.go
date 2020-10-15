@@ -139,6 +139,10 @@ func TestReftxHookFixup(t *testing.T) {
 }
 
 func TestHooksPrePostWithSymlinkedStoragePath(t *testing.T) {
+	defer func(cfg config.Cfg) {
+		config.Config = cfg
+	}(config.Config)
+
 	tempDir, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 
@@ -155,14 +159,14 @@ func TestHooksPrePostWithSymlinkedStoragePath(t *testing.T) {
 }
 
 func TestHooksPrePostReceive(t *testing.T) {
-	testHooksPrePostReceive(t)
-}
-
-func testHooksPrePostReceive(t *testing.T) {
 	defer func(cfg config.Cfg) {
 		config.Config = cfg
 	}(config.Config)
 
+	testHooksPrePostReceive(t)
+}
+
+func testHooksPrePostReceive(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
@@ -629,7 +633,7 @@ func TestCheckOK(t *testing.T) {
 	configPath, cleanup := testhelper.WriteTemporaryGitalyConfigFile(t, tempDir, serverURL, user, password, path.Join(gitlabShellDir, ".gitlab_shell_secret"))
 	defer cleanup()
 
-	cmd := exec.Command(fmt.Sprintf("%s/gitaly-hooks", config.Config.BinDir), "check", configPath)
+	cmd := exec.Command(filepath.Join(config.Config.BinDir, "gitaly-hooks"), "check", configPath)
 
 	var stderr, stdout bytes.Buffer
 	cmd.Stderr = &stderr
@@ -637,7 +641,7 @@ func TestCheckOK(t *testing.T) {
 
 	err = cmd.Run()
 	require.NoError(t, err)
-	require.Contains(t, stderr.String(), "status=200")
+	require.Empty(t, stderr.String())
 
 	output := stdout.String()
 	require.Contains(t, output, "Checking GitLab API access: OK")
@@ -645,6 +649,10 @@ func TestCheckOK(t *testing.T) {
 }
 
 func TestCheckBadCreds(t *testing.T) {
+	defer func(cfg config.Cfg) {
+		config.Config = cfg
+	}(config.Config)
+
 	user, password := "user123", "password321"
 
 	c := testhelper.GitlabTestServerOptions{

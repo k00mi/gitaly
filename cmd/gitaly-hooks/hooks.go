@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/jsonpb"
+	"github.com/sirupsen/logrus"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
@@ -64,8 +65,12 @@ func main() {
 	subCmd := fixedArgs[1]
 
 	if subCmd == "check" {
-		configPath := fixedArgs[2]
+		logrus.SetLevel(logrus.ErrorLevel)
+		if len(fixedArgs) != 3 {
+			logger.Fatal(errors.New("no configuration file path provided invoke with: gitaly-hooks check <config_path>"))
+		}
 
+		configPath := fixedArgs[2]
 		fmt.Print("Checking GitLab API access: ")
 
 		info, err := check(configPath)
