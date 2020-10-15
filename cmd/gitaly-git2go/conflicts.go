@@ -3,9 +3,11 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 
 	git "github.com/libgit2/git2go/v30"
@@ -81,7 +83,7 @@ func conflictError(code codes.Code, message string) error {
 }
 
 // Run performs a merge and prints resulting conflicts to stdout.
-func (cmd *conflictsSubcommand) Run() error {
+func (cmd *conflictsSubcommand) Run(context.Context, io.Reader, io.Writer) error {
 	request, err := git2go.ConflictsCommandFromSerialized(cmd.request)
 	if err != nil {
 		return err

@@ -69,13 +69,13 @@ func (m MergeCommand) Run(ctx context.Context, cfg config.Cfg) (MergeResult, err
 		return MergeResult{}, err
 	}
 
-	stdout, err := run(ctx, cfg, "merge", serialized)
+	stdout, err := run(ctx, binaryPathFromCfg(cfg), nil, "merge", "-request", serialized)
 	if err != nil {
 		return MergeResult{}, err
 	}
 
 	var response MergeResult
-	if err := deserialize(stdout, &response); err != nil {
+	if err := deserialize(stdout.String(), &response); err != nil {
 		return MergeResult{}, err
 	}
 
