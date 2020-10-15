@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/pktline"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
@@ -40,8 +39,7 @@ func TestSuccessfulUploadPackRequest(t *testing.T) {
 	defer cancel()
 
 	testRepo := testhelper.TestRepository()
-	testRepoPath, err := helper.GetRepoPath(testRepo)
-	require.NoError(t, err)
+	testRepoPath := filepath.Join(testhelper.GitlabTestStoragePath(), testRepo.RelativePath)
 
 	storagePath := testhelper.GitlabTestStoragePath()
 	remoteRepoRelativePath := "gitlab-test-remote"
@@ -110,8 +108,7 @@ func TestUploadPackRequestWithGitConfigOptions(t *testing.T) {
 	defer cancel()
 
 	testRepo := testhelper.TestRepository()
-	testRepoPath, err := helper.GetRepoPath(testRepo)
-	require.NoError(t, err)
+	testRepoPath := filepath.Join(testhelper.GitlabTestStoragePath(), testRepo.RelativePath)
 
 	storagePath := testhelper.GitlabTestStoragePath()
 	ourRepoRelativePath := "gitlab-test-remote"
@@ -177,8 +174,7 @@ func TestUploadPackRequestWithGitProtocol(t *testing.T) {
 	defer cancel()
 
 	testRepo := testhelper.TestRepository()
-	testRepoPath, err := helper.GetRepoPath(testRepo)
-	require.NoError(t, err)
+	testRepoPath := filepath.Join(testhelper.GitlabTestStoragePath(), testRepo.RelativePath)
 
 	storagePath := testhelper.GitlabTestStoragePath()
 	relativePath, err := filepath.Rel(storagePath, testRepoPath)
@@ -335,8 +331,7 @@ func TestUploadPackRequestForPartialCloneSuccess(t *testing.T) {
 	defer stop()
 
 	testRepo := testhelper.TestRepository()
-	testRepoPath, err := helper.GetRepoPath(testRepo)
-	require.NoError(t, err)
+	testRepoPath := filepath.Join(testhelper.GitlabTestStoragePath(), testRepo.RelativePath)
 
 	storagePath := testhelper.GitlabTestStoragePath()
 	remoteRepoRelativePath := "gitlab-test-remote"

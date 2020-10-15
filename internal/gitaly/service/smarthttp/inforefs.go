@@ -9,7 +9,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/pktline"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 	"google.golang.org/grpc/codes"
@@ -27,7 +26,7 @@ func (s *server) InfoRefsUploadPack(in *gitalypb.InfoRefsRequest, stream gitalyp
 	})
 
 	return tryCache(stream.Context(), in, w, func(w io.Writer) error {
-		return handleInfoRefs(stream.Context(), uploadPackSvc, in, w)
+		return s.handleInfoRefs(stream.Context(), uploadPackSvc, in, w)
 	})
 }
 
@@ -35,17 +34,17 @@ func (s *server) InfoRefsReceivePack(in *gitalypb.InfoRefsRequest, stream gitaly
 	w := streamio.NewWriter(func(p []byte) error {
 		return stream.Send(&gitalypb.InfoRefsResponse{Data: p})
 	})
-	return handleInfoRefs(stream.Context(), receivePackSvc, in, w)
+	return s.handleInfoRefs(stream.Context(), receivePackSvc, in, w)
 }
 
-func handleInfoRefs(ctx context.Context, service string, req *gitalypb.InfoRefsRequest, w io.Writer) error {
+func (s *server) handleInfoRefs(ctx context.Context, service string, req *gitalypb.InfoRefsRequest, w io.Writer) error {
 	ctxlogrus.Extract(ctx).WithFields(log.Fields{
 		"service": service,
 	}).Debug("handleInfoRefs")
 
 	env := git.AddGitProtocolEnv(ctx, req, []string{})
 
-	repoPath, err := helper.GetRepoPath(req.Repository)
+	repoPath, err := s.locator.GetRepoPath(req.Repository)
 	if err != nil {
 		return err
 	}
