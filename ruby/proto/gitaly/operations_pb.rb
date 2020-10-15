@@ -76,6 +76,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
       optional :target_ref, :bytes, 5
       optional :message, :bytes, 6
       optional :first_parent_ref, :bytes, 7
+      optional :allow_conflicts, :bool, 8
     end
     add_message "gitaly.UserMergeToRefResponse" do
       optional :commit_id, :string, 1
