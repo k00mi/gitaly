@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -65,10 +66,18 @@ func testSuccessfulMerge(t *testing.T, ctx context.Context) {
 
 	hooks := GitlabHooks
 	hookTempfiles := make([]string, len(hooks))
-	for i, h := range hooks {
-		var cleanup func()
-		hookTempfiles[i], cleanup = testhelper.WriteEnvToCustomHook(t, testRepoPath, h)
+	for i, hook := range hooks {
+		outputFile, err := ioutil.TempFile("", "")
+		require.NoError(t, err)
+		require.NoError(t, outputFile.Close())
+		defer os.Remove(outputFile.Name())
+
+		script := fmt.Sprintf("#!/bin/sh\n(cat && env) >%s \n", outputFile.Name())
+		cleanup, err := testhelper.WriteCustomHook(testRepoPath, hook, []byte(script))
+		require.NoError(t, err)
 		defer cleanup()
+
+		hookTempfiles[i] = outputFile.Name()
 	}
 
 	mergeCommitMessage := "Merged by Gitaly"
@@ -117,7 +126,13 @@ func testSuccessfulMerge(t *testing.T, ctx context.Context) {
 	for i, h := range hooks {
 		hookEnv, err := ioutil.ReadFile(hookTempfiles[i])
 		require.NoError(t, err)
-		require.Contains(t, strings.Split(string(hookEnv), "\n"), expectedGlID, "expected env of hook %q to contain %q", h, expectedGlID)
+
+		lines := strings.Split(string(hookEnv), "\n")
+		require.Contains(t, lines, expectedGlID, "expected env of hook %q to contain %q", h, expectedGlID)
+
+		if h == "pre-receive" || h == "post-receive" {
+			require.Regexp(t, mergeBranchHeadBefore+" .* refs/heads/"+mergeBranchName, lines[0], "expected env of hook %q to contain reference change", h)
+		}
 	}
 }
 
