@@ -8,7 +8,9 @@ import (
 	"time"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	gitaly_auth "gitlab.com/gitlab-org/gitaly/internal/gitaly/config/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/server/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -27,9 +29,12 @@ func TestPoolDial(t *testing.T) {
 	secure, cleanup := runServer(t, creds)
 	defer cleanup()
 
+	var dialFuncInvocationCounter int
+
 	testCases := []struct {
-		desc string
-		test func(t *testing.T, ctx context.Context, pool *Pool)
+		desc        string
+		poolOptions []PoolOption
+		test        func(t *testing.T, ctx context.Context, pool *Pool)
 	}{
 		{
 			desc: "dialing once succeeds",
@@ -122,11 +127,39 @@ func TestPoolDial(t *testing.T) {
 				verifyConnection(t, conn, codes.Unauthenticated)
 			},
 		},
+		{
+			desc: "dialing with dial options succeeds",
+			poolOptions: []PoolOption{
+				WithDialOptions(grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(creds))),
+			},
+			test: func(t *testing.T, ctx context.Context, pool *Pool) {
+				conn, err := pool.Dial(ctx, secure, "") // no creds here
+				require.NoError(t, err)
+				verifyConnection(t, conn, codes.OK) // auth passes
+			},
+		},
+		{
+			desc: "dial options function is invoked per dial",
+			poolOptions: []PoolOption{
+				WithDialer(func(ctx context.Context, address string, dialOptions []grpc.DialOption) (*grpc.ClientConn, error) {
+					dialFuncInvocationCounter++
+					return DialContext(ctx, address, dialOptions)
+				}),
+			},
+			test: func(t *testing.T, ctx context.Context, pool *Pool) {
+				_, err := pool.Dial(ctx, secure, "")
+				require.NoError(t, err)
+				assert.Equal(t, 1, dialFuncInvocationCounter)
+				_, err = pool.Dial(ctx, insecure, "")
+				require.NoError(t, err)
+				assert.Equal(t, 2, dialFuncInvocationCounter)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			pool := NewPool()
+			pool := NewPoolWithOptions(tc.poolOptions...)
 			defer func() {
 				require.NoError(t, pool.Close())
 			}()
