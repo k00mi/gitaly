@@ -16,19 +16,19 @@ var (
 	ErrTransactionCanceled = errors.New("transaction was canceled")
 )
 
-// voteResult represents the outcome of a transaction for a single voter.
-type voteResult int
+// VoteResult represents the outcome of a transaction for a single voter.
+type VoteResult int
 
 const (
-	// voteUndecided means that the voter either didn't yet show up or that
+	// VoteUndecided means that the voter either didn't yet show up or that
 	// the vote couldn't yet be decided due to there being no majority yet.
-	voteUndecided voteResult = iota
-	// voteCommitted means that the voter committed his vote.
-	voteCommitted
+	VoteUndecided VoteResult = iota
+	// VoteCommitted means that the voter committed his vote.
+	VoteCommitted
 	// voteAborted means that the voter aborted his vote.
-	voteAborted
-	// voteStopped means that the transaction was gracefully stopped.
-	voteStopped
+	VoteAborted
+	// VoteStopped means that the transaction was gracefully stopped.
+	VoteStopped
 )
 
 type vote [sha1.Size]byte
@@ -86,8 +86,8 @@ func (t *subtransaction) cancel() {
 		// If a voter didn't yet show up or is still undecided, we need
 		// to mark it as failed so it won't get the idea of committing
 		// the transaction at a later point anymore.
-		if voter.result == voteUndecided {
-			voter.result = voteAborted
+		if voter.result == VoteUndecided {
+			voter.result = VoteAborted
 		}
 	}
 
@@ -100,16 +100,16 @@ func (t *subtransaction) stop() error {
 
 	for _, voter := range t.votersByNode {
 		switch voter.result {
-		case voteAborted:
+		case VoteAborted:
 			// If the vote was aborted already, we cannot stop it.
 			return ErrTransactionCanceled
-		case voteStopped:
+		case VoteStopped:
 			// Similar if the vote was stopped already.
 			return ErrTransactionStopped
-		case voteUndecided:
+		case VoteUndecided:
 			// Undecided voters will get stopped, ...
-			voter.result = voteStopped
-		case voteCommitted:
+			voter.result = VoteStopped
+		case VoteCommitted:
 			// ... while decided voters cannot be changed anymore.
 			continue
 		}
@@ -119,13 +119,13 @@ func (t *subtransaction) stop() error {
 	return nil
 }
 
-func (t *subtransaction) state() map[string]bool {
+func (t *subtransaction) state() map[string]VoteResult {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	results := make(map[string]bool, len(t.votersByNode))
+	results := make(map[string]VoteResult, len(t.votersByNode))
 	for node, voter := range t.votersByNode {
-		results[node] = voter.result == voteCommitted
+		results[node] = voter.result
 	}
 
 	return results
@@ -210,14 +210,14 @@ func (t *subtransaction) collectVotes(ctx context.Context, node string) error {
 	}
 
 	switch voter.result {
-	case voteUndecided:
+	case VoteUndecided:
 		// Happy case, no decision was yet made.
-	case voteAborted:
+	case VoteAborted:
 		// It may happen that the vote was cancelled or stopped just after majority was
-		// reached. In that case, the node's state is now voteAborted/voteStopped, so we
+		// reached. In that case, the node's state is now VoteAborted/VoteStopped, so we
 		// have to return an error here.
 		return ErrTransactionCanceled
-	case voteStopped:
+	case VoteStopped:
 		return ErrTransactionStopped
 	default:
 		return fmt.Errorf("voter is in invalid state %d: %q", voter.result, node)
@@ -226,21 +226,21 @@ func (t *subtransaction) collectVotes(ctx context.Context, node string) error {
 	// See if our vote crossed the threshold. As there can be only one vote
 	// exceeding it, we know we're the winner in that case.
 	if t.voteCounts[voter.vote] < t.threshold {
-		voter.result = voteAborted
+		voter.result = VoteAborted
 		return fmt.Errorf("%w: got %d/%d votes", ErrTransactionVoteFailed, t.voteCounts[voter.vote], t.threshold)
 	}
 
-	voter.result = voteCommitted
+	voter.result = VoteCommitted
 	return nil
 }
 
-func (t *subtransaction) getResult(node string) (voteResult, error) {
+func (t *subtransaction) getResult(node string) (VoteResult, error) {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
 	voter, ok := t.votersByNode[node]
 	if !ok {
-		return voteAborted, fmt.Errorf("invalid node for transaction: %q", node)
+		return VoteAborted, fmt.Errorf("invalid node for transaction: %q", node)
 	}
 
 	return voter.result, nil

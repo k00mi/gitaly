@@ -173,9 +173,13 @@ func (mgr *Manager) cancelTransaction(ctx context.Context, transaction *Transact
 	mgr.subtransactionsMetric.Observe(float64(transaction.CountSubtransactions()))
 
 	var committed uint64
-	state := transaction.State()
-	for _, success := range state {
-		if success {
+	state, err := transaction.State()
+	if err != nil {
+		return err
+	}
+
+	for _, result := range state {
+		if result == VoteCommitted {
 			committed++
 		}
 	}

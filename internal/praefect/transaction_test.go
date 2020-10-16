@@ -543,9 +543,14 @@ func TestTransactionWithMultipleVotes(t *testing.T) {
 			wg.Wait()
 
 			require.NoError(t, cancel())
-			results := transaction.State()
+			results, err := transaction.State()
+			require.NoError(t, err)
 			for i, voter := range tc.voters {
-				require.Equal(t, voter.shouldSucceed, results[fmt.Sprintf("node-%d", i)])
+				if voter.shouldSucceed {
+					require.Equal(t, transactions.VoteCommitted, results[fmt.Sprintf("node-%d", i)])
+				} else {
+					require.Equal(t, transactions.VoteAborted, results[fmt.Sprintf("node-%d", i)])
+				}
 			}
 		})
 	}
@@ -672,9 +677,14 @@ func TestTransactionCancellation(t *testing.T) {
 
 			require.NoError(t, cancelTransaction())
 
-			results := transaction.State()
+			results, err := transaction.State()
+			require.NoError(t, err)
 			for i, v := range tc.voters {
-				require.Equal(t, results[fmt.Sprintf("node-%d", i)], v.shouldSucceed, "result mismatches expected node state")
+				if v.shouldSucceed {
+					require.Equal(t, transactions.VoteCommitted, results[fmt.Sprintf("node-%d", i)], "result mismatches expected node state")
+				} else {
+					require.Equal(t, transactions.VoteAborted, results[fmt.Sprintf("node-%d", i)], "result mismatches expected node state")
+				}
 			}
 
 			verifyCounterMetrics(t, txMgr, tc.expectedMetrics)
@@ -761,8 +771,9 @@ func TestStopTransaction(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, gitalypb.VoteTransactionResponse_STOP, response.State)
 
-		results := transaction.State()
-		require.Equal(t, results["voter"], false)
+		results, err := transaction.State()
+		require.NoError(t, err)
+		require.Equal(t, transactions.VoteStopped, results["voter"])
 		verifyCounterMetrics(t, txMgr, counterMetrics{
 			registered: 1,
 			started:    1,
@@ -809,9 +820,10 @@ func TestStopTransaction(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, gitalypb.VoteTransactionResponse_STOP, response.State)
 
-		results := transaction.State()
-		require.True(t, results["successful-voter"], "Successful voter should succeed")
-		require.False(t, results["failing-voter"], "Failing voter should fail")
+		results, err := transaction.State()
+		require.NoError(t, err)
+		require.Equal(t, transactions.VoteCommitted, results["successful-voter"], "Successful voter should succeed")
+		require.Equal(t, transactions.VoteStopped, results["failing-voter"], "Failing voter should fail")
 		verifyCounterMetrics(t, txMgr, counterMetrics{
 			committed:  1,
 			registered: 2,

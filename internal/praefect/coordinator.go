@@ -555,14 +555,17 @@ func (c *Coordinator) createTransactionFinalizer(
 	params datastore.Params,
 ) func() error {
 	return func() error {
-		successByNode := transaction.State()
+		nodeStates, err := transaction.State()
+		if err != nil {
+			return err
+		}
 
 		// If no subtransaction happened, then the called RPC may not be aware of
 		// transactions at all. We thus need to assume it changed repository state
 		// and need to create replication jobs.
 		if transaction.CountSubtransactions() == 0 {
-			secondaries := make([]string, 0, len(successByNode))
-			for secondary := range successByNode {
+			secondaries := make([]string, 0, len(nodeStates))
+			for secondary := range nodeStates {
 				if secondary == route.Primary.Storage {
 					continue
 				}
@@ -577,16 +580,22 @@ func (c *Coordinator) createTransactionFinalizer(
 		// If the primary node failed the transaction, then
 		// there's no sense in trying to replicate from primary
 		// to secondaries.
-		if !successByNode[route.Primary.Storage] {
+		if nodeStates[route.Primary.Storage] != transactions.VoteCommitted {
+			// If the transaction was gracefully stopped, then we don't want to return
+			// an explicit error here as it indicates an error somewhere else which
+			// already got returned.
+			if nodeStates[route.Primary.Storage] == transactions.VoteStopped {
+				return nil
+			}
 			return fmt.Errorf("transaction: primary failed vote")
 		}
-		delete(successByNode, route.Primary.Storage)
+		delete(nodeStates, route.Primary.Storage)
 
-		updatedSecondaries := make([]string, 0, len(successByNode))
+		updatedSecondaries := make([]string, 0, len(nodeStates))
 		var outdatedSecondaries []string
 
-		for node, success := range successByNode {
-			if success {
+		for node, state := range nodeStates {
+			if state == transactions.VoteCommitted {
 				updatedSecondaries = append(updatedSecondaries, node)
 				continue
 			}
