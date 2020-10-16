@@ -16,6 +16,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
+	"gitlab.com/gitlab-org/labkit/correlation"
 	"google.golang.org/grpc/codes"
 )
 
@@ -504,6 +505,9 @@ func TestGetArchiveEnv(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	correlationID, _ := correlation.RandomID()
+	ctx = correlation.ContextWithCorrelation(ctx, correlationID)
+
 	req := &gitalypb.GetArchiveRequest{
 		Repository: testRepo,
 		CommitId:   commitID,
@@ -517,7 +521,7 @@ func TestGetArchiveEnv(t *testing.T) {
 	require.NoError(t, err)
 
 	tmpFile.Write([]byte(`#!/bin/sh
-env | grep ^GL_`))
+env | grep -E "^GL_|CORRELATION"`))
 	tmpFile.Close()
 
 	oldBinPath := config.Config.Git.BinPath
@@ -535,6 +539,7 @@ env | grep ^GL_`))
 	require.Contains(t, string(data), "GL_REPOSITORY="+testhelper.GlRepository)
 	require.Contains(t, string(data), "GL_PROJECT_PATH="+testhelper.GlProjectPath)
 	require.Contains(t, string(data), "GL_INTERNAL_CONFIG="+string(cfgData))
+	require.Contains(t, string(data), "CORRELATION_ID="+correlationID)
 }
 
 func compressedFileContents(t *testing.T, format gitalypb.GetArchiveRequest_Format, name string) []byte {
