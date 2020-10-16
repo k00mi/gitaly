@@ -10,19 +10,30 @@ import (
 	"google.golang.org/grpc"
 )
 
+// Dialer is used by the Pool to create a *grpc.ClientConn.
+type Dialer func(ctx context.Context, address string, dialOptions []grpc.DialOption) (*grpc.ClientConn, error)
+
 // Pool is a pool of GRPC connections. Connections created by it are safe for
 // concurrent use.
 type Pool struct {
 	lock           sync.RWMutex
 	connsByAddress map[string]*grpc.ClientConn
+	dialer         Dialer
 	dialOptions    []grpc.DialOption
 }
 
 // NewPool creates a new connection pool that's ready for use.
 func NewPool(dialOptions ...grpc.DialOption) *Pool {
+	return NewPoolWithOptions(WithDialOptions(dialOptions...))
+}
+
+// NewPool creates a new connection pool that's ready for use.
+func NewPoolWithOptions(poolOptions ...PoolOption) *Pool {
+	opts := applyPoolOptions(poolOptions)
 	return &Pool{
 		connsByAddress: make(map[string]*grpc.ClientConn),
-		dialOptions:    dialOptions,
+		dialer:         opts.dialer,
+		dialOptions:    opts.dialOptions,
 	}
 }
 
@@ -77,7 +88,7 @@ func (p *Pool) getOrCreateConnection(ctx context.Context, address, token string)
 		opts = append(opts, grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(token)))
 	}
 
-	cc, err := DialContext(ctx, address, opts)
+	cc, err := p.dialer(ctx, address, opts)
 	if err != nil {
 		return nil, fmt.Errorf("could not dial source: %v", err)
 	}
