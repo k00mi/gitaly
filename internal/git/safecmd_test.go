@@ -37,10 +37,10 @@ func TestFlagValidation(t *testing.T) {
 		{option: git.SubSubCmd{"meow"}, valid: true},
 
 		// valid ConfigPair inputs
-		{option: git.ConfigPair{"a.b.c", "d"}, valid: true},
-		{option: git.ConfigPair{"core.sound", "meow"}, valid: true},
-		{option: git.ConfigPair{"asdf-qwer.1234-5678", ""}, valid: true},
-		{option: git.ConfigPair{"http.https://user@example.com/repo.git.user", "kitty"}, valid: true},
+		{option: git.ConfigPair{Key: "a.b.c", Value: "d"}, valid: true},
+		{option: git.ConfigPair{Key: "core.sound", Value: "meow"}, valid: true},
+		{option: git.ConfigPair{Key: "asdf-qwer.1234-5678", Value: ""}, valid: true},
+		{option: git.ConfigPair{Key: "http.https://user@example.com/repo.git.user", Value: "kitty"}, valid: true},
 
 		// invalid Flag inputs
 		{option: git.Flag{Name: "-*"}},          // invalid character
@@ -56,13 +56,13 @@ func TestFlagValidation(t *testing.T) {
 		{option: git.SubSubCmd{"--meow"}}, // cannot start with dash
 
 		// invalid ConfigPair inputs
-		{option: git.ConfigPair{"", ""}},            // key cannot be empty
-		{option: git.ConfigPair{" ", ""}},           // key cannot be whitespace
-		{option: git.ConfigPair{"asdf", ""}},        // two components required
-		{option: git.ConfigPair{"asdf.", ""}},       // 2nd component must be non-empty
-		{option: git.ConfigPair{"--asdf.asdf", ""}}, // key cannot start with dash
-		{option: git.ConfigPair{"as[[df.asdf", ""}}, // 1st component cannot contain non-alphanumeric
-		{option: git.ConfigPair{"asdf.as]]df", ""}}, // 2nd component cannot contain non-alphanumeric
+		{option: git.ConfigPair{Key: "", Value: ""}},            // key cannot be empty
+		{option: git.ConfigPair{Key: " ", Value: ""}},           // key cannot be whitespace
+		{option: git.ConfigPair{Key: "asdf", Value: ""}},        // two components required
+		{option: git.ConfigPair{Key: "asdf.", Value: ""}},       // 2nd component must be non-empty
+		{option: git.ConfigPair{Key: "--asdf.asdf", Value: ""}}, // key cannot start with dash
+		{option: git.ConfigPair{Key: "as[[df.asdf", Value: ""}}, // 1st component cannot contain non-alphanumeric
+		{option: git.ConfigPair{Key: "asdf.as]]df", Value: ""}}, // 2nd component cannot contain non-alphanumeric
 	} {
 		args, err := tt.option.ValidateArgs()
 		if tt.valid {
