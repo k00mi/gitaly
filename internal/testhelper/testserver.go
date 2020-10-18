@@ -782,20 +782,20 @@ type GitlabTestServerOptions struct {
 	GLID                        string
 	GLRepository                string
 	Changes                     string
-	PostReceiveCounterDecreased bool
 	PostReceiveMessages         []string
 	PostReceiveAlerts           []string
+	PostReceiveCounterDecreased bool
+	UnixSocket                  bool
+	LfsStatusCode               int
+	LfsOid                      string
+	LfsBody                     string
 	Protocol                    string
 	GitPushOptions              []string
 	GitObjectDir                string
 	GitAlternateObjectDirs      []string
 	RepoPath                    string
-	UnixSocket                  bool
 	RelativeURLRoot             string
-	LfsOid                      string
 	GlRepository                string
-	LfsBody                     string
-	LfsStatusCode               int
 }
 
 // NewGitlabTestServer returns a mock gitlab server that responds to the hook api endpoints
