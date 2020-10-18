@@ -46,7 +46,7 @@ var httpClient = &http.Client{
 }
 
 func untar(ctx context.Context, path string, in *gitalypb.CreateRepositoryFromSnapshotRequest) error {
-	req, err := http.NewRequest("GET", in.HttpUrl, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", in.HttpUrl, nil)
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Bad HTTP URL: %v", err)
 	}
