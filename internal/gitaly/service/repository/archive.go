@@ -18,6 +18,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
+	"gitlab.com/gitlab-org/labkit/correlation"
 )
 
 func (s *server) GetArchive(in *gitalypb.GetArchiveRequest, stream gitalypb.RepositoryService_GetArchiveServer) error {
@@ -162,6 +163,7 @@ func handleArchive(ctx context.Context, writer io.Writer, in *gitalypb.GetArchiv
 		fmt.Sprintf("GL_REPOSITORY=%s", in.GetRepository().GetGlRepository()),
 		fmt.Sprintf("GL_PROJECT_PATH=%s", in.GetRepository().GetGlProjectPath()),
 		fmt.Sprintf("GL_INTERNAL_CONFIG=%s", internalCfg),
+		fmt.Sprintf("CORRELATION_ID=%s", correlation.ExtractFromContext(ctx)),
 	}
 
 	var globals []git.Option

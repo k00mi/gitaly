@@ -39,7 +39,7 @@ func newRepositoryClient(t *testing.T, serverSocketPath string) (gitalypb.Reposi
 		grpc.WithInsecure(),
 		grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(config.Config.Auth.Token)),
 	}
-	conn, err := grpc.Dial(serverSocketPath, connOpts...)
+	conn, err := client.Dial(serverSocketPath, connOpts)
 	if err != nil {
 		t.Fatal(err)
 	}
