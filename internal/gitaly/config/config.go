@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -20,6 +21,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config/prometheus"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config/sentry"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
+	"golang.org/x/sys/unix"
 )
 
 var (
@@ -212,13 +214,11 @@ func validateShell() error {
 }
 
 func checkExecutable(path string) error {
-	fi, err := os.Stat(path)
-	if err != nil {
+	if err := unix.Access(path, unix.X_OK); err != nil {
+		if errors.Is(err, os.ErrPermission) {
+			return fmt.Errorf("not executable: %v", path)
+		}
 		return err
-	}
-
-	if fi.Mode()&0755 < 0755 {
-		return fmt.Errorf("not executable: %v", path)
 	}
 
 	return nil
