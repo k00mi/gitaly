@@ -17,6 +17,8 @@ linters:
     - varcheck
     - misspell
     - unconvert
+    - maligned
+    - noctx
 
 issues:
   # Excluding configuration per-path, per-linter, per-text and per-source
@@ -25,6 +27,10 @@ issues:
     - linters:
         - govet
       text: "composite literal uses unkeyed fields"
+    - path: "_test.go"
+      linters:
+        - maligned
+        - noctx
   # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
   max-issues-per-linter: 0
   # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.

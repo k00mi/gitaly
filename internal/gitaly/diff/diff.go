@@ -16,19 +16,19 @@ const blankID = "0000000000000000000000000000000000000000"
 
 // Diff represents a single parsed diff entry
 type Diff struct {
+	Binary         bool
+	OverflowMarker bool
+	Collapsed      bool
+	TooLarge       bool
+	Status         byte
+	lineCount      int
 	FromID         string
 	ToID           string
 	OldMode        int32
 	NewMode        int32
 	FromPath       []byte
 	ToPath         []byte
-	Binary         bool
-	Status         byte
 	Patch          []byte
-	OverflowMarker bool
-	Collapsed      bool
-	TooLarge       bool
-	lineCount      int
 }
 
 // Parser holds necessary state for parsing a diff stream
