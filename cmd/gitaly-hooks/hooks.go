@@ -7,18 +7,16 @@ import (
 	"io"
 	"log"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/golang/protobuf/jsonpb"
-	"github.com/pelletier/go-toml"
+	"github.com/sirupsen/logrus"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
-	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	gitalylog "gitlab.com/gitlab-org/gitaly/internal/log"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
@@ -67,14 +65,27 @@ func main() {
 	subCmd := fixedArgs[1]
 
 	if subCmd == "check" {
-		configPath := fixedArgs[2]
+		logrus.SetLevel(logrus.ErrorLevel)
+		if len(fixedArgs) != 3 {
+			logger.Fatal(errors.New("no configuration file path provided invoke with: gitaly-hooks check <config_path>"))
+		}
 
-		status, err := check(configPath)
+		configPath := fixedArgs[2]
+		fmt.Print("Checking GitLab API access: ")
+
+		info, err := check(configPath)
 		if err != nil {
+			fmt.Print("FAIL\n")
 			log.Fatal(err)
 		}
 
-		os.Exit(status)
+		fmt.Print("OK\n")
+		fmt.Printf("GitLab version: %s\n", info.Version)
+		fmt.Printf("GitLab revision: %s\n", info.Revision)
+		fmt.Printf("GitLab Api version: %s\n", info.APIVersion)
+		fmt.Printf("Redis reachable for GitLab: %t\n", info.RedisReachable)
+		fmt.Println("OK")
+		os.Exit(0)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -337,35 +348,21 @@ func sendFunc(reqWriter io.Writer, stream grpc.ClientStream, stdin io.Reader) fu
 	}
 }
 
-func check(configPath string) (int, error) {
+func check(configPath string) (*hook.CheckInfo, error) {
 	cfgFile, err := os.Open(configPath)
 	if err != nil {
-		return 1, fmt.Errorf("failed to open config file: %w", err)
+		return nil, fmt.Errorf("failed to open config file: %w", err)
 	}
 	defer cfgFile.Close()
 
-	var c config.Cfg
-
-	if err := toml.NewDecoder(cfgFile).Decode(&c); err != nil {
-		return 1, fmt.Errorf("failed to decode toml: %w", err)
+	if err := config.Load(cfgFile); err != nil {
+		return nil, err
 	}
 
-	cmd := exec.Command(filepath.Join(c.GitlabShell.Dir, "bin", "check"))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	gitlabshellEnv, err := gitlabshell.EnvFromConfig(c)
+	gitlabAPI, err := hook.NewGitlabAPI(config.Config.Gitlab)
 	if err != nil {
-		return 1, err
+		return nil, err
 	}
 
-	cmd.Env = append(os.Environ(), gitlabshellEnv...)
-
-	if err = cmd.Run(); err != nil {
-		if status, ok := command.ExitStatus(err); ok {
-			return status, nil
-		}
-		return 1, fmt.Errorf("failed to run %q: %w", cmd.String(), err)
-	}
-
-	return 0, nil
+	return hook.NewManager(gitlabAPI, config.Config).Check(context.TODO())
 }

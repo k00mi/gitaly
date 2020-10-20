@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -138,6 +139,10 @@ func TestReftxHookFixup(t *testing.T) {
 }
 
 func TestHooksPrePostWithSymlinkedStoragePath(t *testing.T) {
+	defer func(cfg config.Cfg) {
+		config.Config = cfg
+	}(config.Config)
+
 	tempDir, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 
@@ -154,14 +159,14 @@ func TestHooksPrePostWithSymlinkedStoragePath(t *testing.T) {
 }
 
 func TestHooksPrePostReceive(t *testing.T) {
-	testHooksPrePostReceive(t)
-}
-
-func testHooksPrePostReceive(t *testing.T) {
 	defer func(cfg config.Cfg) {
 		config.Config = cfg
 	}(config.Config)
 
+	testHooksPrePostReceive(t)
+}
+
+func testHooksPrePostReceive(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
@@ -622,33 +627,32 @@ func TestCheckOK(t *testing.T) {
 	}()
 
 	gitlabShellDir := filepath.Join(tempDir, "gitlab-shell")
-	binDir := filepath.Join(gitlabShellDir, "bin")
 	require.NoError(t, os.MkdirAll(gitlabShellDir, 0755))
-	require.NoError(t, os.MkdirAll(binDir, 0755))
-	cwd, err := os.Getwd()
-	require.NoError(t, err)
-	require.NoError(t, os.Symlink(filepath.Join(cwd, "../../ruby/gitlab-shell/bin/check"), filepath.Join(binDir, "check")))
 
 	testhelper.WriteShellSecretFile(t, gitlabShellDir, "the secret")
-	testhelper.WriteTemporaryGitlabShellConfigFile(t,
-		gitlabShellDir,
-		testhelper.GitlabShellConfig{GitlabURL: serverURL, HTTPSettings: testhelper.HTTPSettings{User: user, Password: password}})
-
-	configPath, cleanup := testhelper.WriteTemporaryGitalyConfigFile(t, tempDir, serverURL, user, password)
+	configPath, cleanup := testhelper.WriteTemporaryGitalyConfigFile(t, tempDir, serverURL, user, password, path.Join(gitlabShellDir, ".gitlab_shell_secret"))
 	defer cleanup()
-	cmd := exec.Command(fmt.Sprintf("%s/gitaly-hooks", config.Config.BinDir), "check", configPath)
+
+	cmd := exec.Command(filepath.Join(config.Config.BinDir, "gitaly-hooks"), "check", configPath)
 
 	var stderr, stdout bytes.Buffer
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
 
-	require.NoError(t, cmd.Run())
+	err = cmd.Run()
+	require.NoError(t, err)
 	require.Empty(t, stderr.String())
-	expectedCheckOutput := "Check GitLab API access: OK\nRedis available via internal API: OK\n"
-	require.Equal(t, expectedCheckOutput, stdout.String())
+
+	output := stdout.String()
+	require.Contains(t, output, "Checking GitLab API access: OK")
+	require.Contains(t, output, "Redis reachable for GitLab: true")
 }
 
 func TestCheckBadCreds(t *testing.T) {
+	defer func(cfg config.Cfg) {
+		config.Config = cfg
+	}(config.Config)
+
 	user, password := "user123", "password321"
 
 	c := testhelper.GitlabTestServerOptions{
@@ -671,28 +675,22 @@ func TestCheckBadCreds(t *testing.T) {
 	}()
 
 	gitlabShellDir := filepath.Join(tempDir, "gitlab-shell")
-	binDir := filepath.Join(gitlabShellDir, "bin")
 	require.NoError(t, os.MkdirAll(gitlabShellDir, 0755))
-	require.NoError(t, os.MkdirAll(binDir, 0755))
-	cwd, err := os.Getwd()
-	require.NoError(t, err)
-	require.NoError(t, os.Symlink(filepath.Join(cwd, "../../ruby/gitlab-shell/bin/check"), filepath.Join(binDir, "check")))
-
-	testhelper.WriteTemporaryGitlabShellConfigFile(t, gitlabShellDir, testhelper.GitlabShellConfig{GitlabURL: serverURL, HTTPSettings: testhelper.HTTPSettings{User: user + "wrong", Password: password}})
 	testhelper.WriteShellSecretFile(t, gitlabShellDir, "the secret")
 
-	configPath, cleanup := testhelper.WriteTemporaryGitalyConfigFile(t, tempDir, serverURL, "wrong", password)
+	config.Config.Gitlab.URL = serverURL
+	configPath, cleanup := testhelper.WriteTemporaryGitalyConfigFile(t, tempDir, serverURL, "wrong", password, path.Join(gitlabShellDir, ".gitlab_shell_secret"))
 	defer cleanup()
 
-	cmd := exec.Command(fmt.Sprintf("%s/gitaly-hooks", config.Config.BinDir), "check", configPath)
+	cmd := exec.Command(filepath.Join(config.Config.BinDir, "gitaly-hooks"), "check", configPath)
 
 	var stderr, stdout bytes.Buffer
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
 
 	require.Error(t, cmd.Run())
-	require.Equal(t, "Check GitLab API access: ", stdout.String())
-	require.Equal(t, "FAILED. code: 401\n", stderr.String())
+	require.Contains(t, stderr.String(), "Internal API error (401)")
+	require.Equal(t, "Checking GitLab API access: FAIL\n", stdout.String())
 }
 
 func runHookServiceServer(t *testing.T, token string) (string, func()) {
