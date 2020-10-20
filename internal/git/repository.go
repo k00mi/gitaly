@@ -26,6 +26,8 @@ func errorWithStderr(err error, stderr []byte) error {
 
 var (
 	ErrReferenceNotFound = errors.New("reference not found")
+	// ErrNotFound represents an error when the resource can't be found.
+	ErrNotFound = errors.New("not found")
 )
 
 // Repository represents a Git repository.
@@ -72,6 +74,9 @@ type Repository interface {
 	// ReadObject reads an object from the repository's object database. InvalidObjectError
 	// is returned if the oid does not refer to a valid object.
 	ReadObject(ctx context.Context, oid string) ([]byte, error)
+
+	// Config returns executor of the 'config' sub-command.
+	Config() Config
 }
 
 // ErrUnimplemented indicates the repository abstraction does not yet implement
@@ -116,6 +121,10 @@ func (UnimplementedRepo) WriteBlob(context.Context, string, io.Reader) (string, 
 
 func (UnimplementedRepo) ReadObject(context.Context, string) ([]byte, error) {
 	return nil, ErrUnimplemented
+}
+
+func (UnimplementedRepo) Config() Config {
+	return UnimplementedConfig{}
 }
 
 var _ Repository = UnimplementedRepo{} // compile time assertion
@@ -320,5 +329,25 @@ func (repo *localRepository) UpdateRef(ctx context.Context, reference, newrev, o
 		return fmt.Errorf("UpdateRef: failed updating reference %q from %q to %q: %v", reference, newrev, oldrev, err)
 	}
 
+	return nil
+}
+
+func (repo *localRepository) Config() Config {
+	return RepositoryConfig{repo: repo.repo}
+}
+
+func isExitWithCode(err error, code int) bool {
+	actual, ok := command.ExitStatus(err)
+	if !ok {
+		return false
+	}
+
+	return code == actual
+}
+
+func validateNotBlank(val, name string) error {
+	if strings.TrimSpace(val) == "" {
+		return fmt.Errorf("%w: %q is blank or empty", ErrInvalidArg, name)
+	}
 	return nil
 }

@@ -514,3 +514,10 @@ func TestLocalRepository_UpdateRef(t *testing.T) {
 		})
 	}
 }
+
+func TestLocalRepository_Config(t *testing.T) {
+	repo := git.NewRepository(nil)
+	conf := repo.Config()
+	require.NotNil(t, conf)
+	require.IsType(t, git.RepositoryConfig{}, conf)
+}
