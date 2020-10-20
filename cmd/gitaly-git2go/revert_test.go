@@ -9,6 +9,7 @@ import (
 	git "github.com/libgit2/git2go/v30"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	cmdtesthelper "gitlab.com/gitlab-org/gitaly/cmd/gitaly-git2go/testhelper"
 	"gitlab.com/gitlab-org/gitaly/internal/git2go"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -81,15 +82,15 @@ func TestRevert_trees(t *testing.T) {
 		{
 			desc: "trivial revert succeeds",
 			setupRepo: func(t testing.TB, repoPath string) (ours, revert string) {
-				baseOid := buildCommit(t, repoPath, nil, map[string]string{
+				baseOid := cmdtesthelper.BuildCommit(t, repoPath, nil, map[string]string{
 					"a": "apple",
 					"b": "banana",
 				})
-				revertOid := buildCommit(t, repoPath, baseOid, map[string]string{
+				revertOid := cmdtesthelper.BuildCommit(t, repoPath, baseOid, map[string]string{
 					"a": "apple",
 					"b": "pineapple",
 				})
-				oursOid := buildCommit(t, repoPath, revertOid, map[string]string{
+				oursOid := cmdtesthelper.BuildCommit(t, repoPath, revertOid, map[string]string{
 					"a": "apple",
 					"b": "pineapple",
 					"c": "carrot",
@@ -109,13 +110,13 @@ func TestRevert_trees(t *testing.T) {
 		{
 			desc: "conflicting revert fails",
 			setupRepo: func(t testing.TB, repoPath string) (ours, revert string) {
-				baseOid := buildCommit(t, repoPath, nil, map[string]string{
+				baseOid := cmdtesthelper.BuildCommit(t, repoPath, nil, map[string]string{
 					"a": "apple",
 				})
-				revertOid := buildCommit(t, repoPath, baseOid, map[string]string{
+				revertOid := cmdtesthelper.BuildCommit(t, repoPath, baseOid, map[string]string{
 					"a": "pineapple",
 				})
-				oursOid := buildCommit(t, repoPath, revertOid, map[string]string{
+				oursOid := cmdtesthelper.BuildCommit(t, repoPath, revertOid, map[string]string{
 					"a": "carrot",
 				})
 
@@ -126,7 +127,7 @@ func TestRevert_trees(t *testing.T) {
 		{
 			desc: "nonexistent ours fails",
 			setupRepo: func(t testing.TB, repoPath string) (ours, revert string) {
-				revertOid := buildCommit(t, repoPath, nil, map[string]string{
+				revertOid := cmdtesthelper.BuildCommit(t, repoPath, nil, map[string]string{
 					"a": "apple",
 				})
 
@@ -137,7 +138,7 @@ func TestRevert_trees(t *testing.T) {
 		{
 			desc: "nonexistent revert fails",
 			setupRepo: func(t testing.TB, repoPath string) (ours, revert string) {
-				oursOid := buildCommit(t, repoPath, nil, map[string]string{
+				oursOid := cmdtesthelper.BuildCommit(t, repoPath, nil, map[string]string{
 					"a": "apple",
 				})
 
