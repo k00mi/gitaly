@@ -176,6 +176,61 @@ func testServerUserRevertSuccessful(t *testing.T, ctxOuter context.Context) {
 	}
 }
 
+func TestServer_UserRevert_successful_into_empty_repo(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserRevert, testServerUserRevertSuccessfulIntoNewRepo)
+}
+
+func testServerUserRevertSuccessfulIntoNewRepo(t *testing.T, ctxOuter context.Context) {
+	serverSocketPath, stop := runOperationServiceServer(t)
+	defer stop()
+
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	startRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	revertedCommit, err := log.GetCommit(ctxOuter, startRepo, "d59c60028b053793cecfb4022de34602e1a9218e")
+	require.NoError(t, err)
+
+	masterHeadCommit, err := log.GetCommit(ctxOuter, startRepo, "master")
+	require.NoError(t, err)
+
+	testRepo, _, cleanup := testhelper.InitBareRepo(t)
+	defer cleanup()
+
+	request := &gitalypb.UserRevertRequest{
+		Repository:      testRepo,
+		User:            testhelper.TestUser,
+		Commit:          revertedCommit,
+		BranchName:      []byte("dst-branch"),
+		Message:         []byte("Reverting " + revertedCommit.Id),
+		StartRepository: startRepo,
+		StartBranchName: []byte("master"),
+	}
+
+	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
+	ctx := testhelper.MergeOutgoingMetadata(ctxOuter, md)
+
+	response, err := client.UserRevert(ctx, request)
+	require.NoError(t, err)
+
+	headCommit, err := log.GetCommit(ctx, testRepo, string(request.BranchName))
+	require.NoError(t, err)
+
+	expectedBranchUpdate := &gitalypb.OperationBranchUpdate{
+		BranchCreated: true,
+		RepoCreated:   true,
+		CommitId:      headCommit.Id,
+	}
+
+	require.Equal(t, expectedBranchUpdate, response.BranchUpdate)
+	require.Empty(t, response.CreateTreeError)
+	require.Empty(t, response.CreateTreeErrorCode)
+	require.Equal(t, request.Message, headCommit.Subject)
+	require.Equal(t, masterHeadCommit.Id, headCommit.ParentIds[0])
+}
+
 func TestServer_UserRevert_successful_git_hooks(t *testing.T) {
 	testWithFeature(t, featureflag.GoUserRevert, testServerUserRevertSuccessfulGitHooks)
 }
