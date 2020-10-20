@@ -332,17 +332,6 @@ func SafeStdinCmd(ctx context.Context, repo repository.GitRepo, globals []Option
 	return unsafeStdinCmd(ctx, cc.env, repo, args...)
 }
 
-// SafeStderrCmd creates a git.Command with the given args and Repository that
-// writes its standard error stream into provided stderr.
-func SafeStderrCmd(ctx context.Context, stderr io.Writer, repo repository.GitRepo, globals []Option, sc SubCmd) (*command.Command, error) {
-	args, err := combineArgs(globals, sc)
-	if err != nil {
-		return nil, err
-	}
-
-	return unsafeStderrCmd(ctx, stderr, repo, args...)
-}
-
 // SafeCmdWithoutRepo works like Command but without a git repository. It
 // validates the arguments in the command before executing.
 func SafeCmdWithoutRepo(ctx context.Context, stream CmdStream, globals []Option, sc SubCmd) (*command.Command, error) {

@@ -302,7 +302,7 @@ func TestSafeBareCmdInDir(t *testing.T) {
 	})
 }
 
-func TestSafeStderrCmd(t *testing.T) {
+func TestSafeCmd(t *testing.T) {
 	t.Run("stderr is empty if no error", func(t *testing.T) {
 		repo, _, cleanup := testhelper.NewTestRepoWithWorktree(t)
 		defer cleanup()
@@ -311,10 +311,13 @@ func TestSafeStderrCmd(t *testing.T) {
 		defer cancel()
 
 		var stderr bytes.Buffer
-		cmd, err := git.SafeStderrCmd(ctx, &stderr, repo, nil, git.SubCmd{
-			Name: "rev-parse",
-			Args: []string{"master"},
-		})
+		cmd, err := git.SafeCmd(ctx, repo, nil,
+			git.SubCmd{
+				Name: "rev-parse",
+				Args: []string{"master"},
+			},
+			git.WithStderr(&stderr),
+		)
 		require.NoError(t, err)
 
 		revData, err := ioutil.ReadAll(cmd)
@@ -334,10 +337,12 @@ func TestSafeStderrCmd(t *testing.T) {
 		defer cancel()
 
 		var stderr bytes.Buffer
-		cmd, err := git.SafeStderrCmd(ctx, &stderr, repo, nil, git.SubCmd{
+		cmd, err := git.SafeCmd(ctx, repo, nil, git.SubCmd{
 			Name: "rev-parse",
 			Args: []string{"invalid-ref"},
-		})
+		},
+			git.WithStderr(&stderr),
+		)
 		require.NoError(t, err)
 
 		revData, err := ioutil.ReadAll(cmd)
