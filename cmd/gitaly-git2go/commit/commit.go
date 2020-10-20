@@ -73,8 +73,9 @@ func commit(ctx context.Context, params git2go.CommitParams) (string, error) {
 		return "", fmt.Errorf("write tree: %w", err)
 	}
 
-	signature := git.Signature(params.Author)
-	commitID, err := repo.CreateCommitFromIds("", &signature, &signature, params.Message, treeOID, parents...)
+	author := git.Signature(params.Author)
+	committer := git.Signature(params.Committer)
+	commitID, err := repo.CreateCommitFromIds("", &author, &committer, params.Message, treeOID, parents...)
 	if err != nil {
 		if git.IsErrorClass(err, git.ErrClassInvalid) {
 			return "", git2go.InvalidArgumentError(err.Error())

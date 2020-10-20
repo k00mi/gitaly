@@ -312,9 +312,12 @@ func (s *server) userCommitFiles(ctx context.Context, header *gitalypb.UserCommi
 		authorEmail = header.CommitAuthorEmail
 	}
 
+	signature := git2go.NewSignature(string(authorName), string(authorEmail), time.Now())
+
 	commitID, err := s.git2go.Commit(ctx, git2go.CommitParams{
 		Repository: repoPath,
-		Author:     git2go.NewSignature(string(authorName), string(authorEmail), time.Now()),
+		Author:     signature,
+		Committer:  signature,
 		Message:    string(header.CommitMessage),
 		Parent:     parentCommitOID,
 		Actions:    actions,

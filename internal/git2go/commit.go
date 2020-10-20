@@ -39,6 +39,8 @@ type CommitParams struct {
 	Repository string
 	// Author is the author of the commit.
 	Author Signature
+	// Committer is the committer of the commit.
+	Committer Signature
 	// Message is message of the commit.
 	Message string
 	// Parent is the OID of the commit to use as the parent of this commit.
