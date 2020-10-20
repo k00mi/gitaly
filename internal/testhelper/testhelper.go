@@ -594,21 +594,6 @@ func AddWorktree(t testing.TB, repoPath string, worktreeName string) {
 	MustRunCommand(t, nil, "git", AddWorktreeArgs(repoPath, worktreeName)...)
 }
 
-// ConfigureGitalySSH configures the gitaly-ssh command for tests
-func ConfigureGitalySSH() {
-	if config.Config.BinDir == "" {
-		log.Fatal("config.Config.BinDir must be set")
-	}
-
-	goBuildArgs := []string{
-		"build",
-		"-o",
-		filepath.Join(config.Config.BinDir, "gitaly-ssh"),
-		"gitlab.com/gitlab-org/gitaly/cmd/gitaly-ssh",
-	}
-	MustRunCommand(nil, nil, "go", goBuildArgs...)
-}
-
 // GitalySSHParams contains parameters used to exec 'gitaly-ssh' binary.
 type GitalySSHParams struct {
 	Args    []string
@@ -709,8 +694,7 @@ func ListenGitalySSHCalls(t *testing.T, conf config.Cfg) (config.Cfg, func() []G
 	return conf, getSSHParams, clean
 }
 
-// ConfigureGitalyGit2Go configures the gitaly-git2go command for tests
-func ConfigureGitalyGit2Go() {
+func buildCommand(cmd string) {
 	if config.Config.BinDir == "" {
 		log.Fatal("config.Config.BinDir must be set")
 	}
@@ -718,25 +702,25 @@ func ConfigureGitalyGit2Go() {
 	goBuildArgs := []string{
 		"build",
 		"-tags", "static,system_libgit2",
-		"-o", filepath.Join(config.Config.BinDir, "gitaly-git2go"),
-		"gitlab.com/gitlab-org/gitaly/cmd/gitaly-git2go",
+		"-o", filepath.Join(config.Config.BinDir, cmd),
+		fmt.Sprintf("gitlab.com/gitlab-org/gitaly/cmd/%s", cmd),
 	}
 	MustRunCommand(nil, nil, "go", goBuildArgs...)
 }
 
+// ConfigureGitalyGit2Go configures the gitaly-git2go command for tests
+func ConfigureGitalyGit2Go() {
+	buildCommand("gitaly-git2go")
+}
+
 // ConfigureGitalyLfsSmudge configures the gitaly-lfs-smudge command for tests
 func ConfigureGitalyLfsSmudge() {
-	if config.Config.BinDir == "" {
-		log.Fatal("config.Config.BinDir must be set")
-	}
+	buildCommand("gitaly-lfs-smudge")
+}
 
-	goBuildArgs := []string{
-		"build",
-		"-o",
-		filepath.Join(config.Config.BinDir, "gitaly-lfs-smudge"),
-		"gitlab.com/gitlab-org/gitaly/cmd/gitaly-lfs-smudge",
-	}
-	MustRunCommand(nil, nil, "go", goBuildArgs...)
+// ConfigureGitalySSH configures the gitaly-ssh command for tests
+func ConfigureGitalySSH() {
+	buildCommand("gitaly-ssh")
 }
 
 // GetRepositoryRefs gives a list of each repository ref as a string
