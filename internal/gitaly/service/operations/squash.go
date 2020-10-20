@@ -310,11 +310,14 @@ func (s *server) addWorktree(ctx context.Context, repo *gitalypb.Repository, wor
 	}
 
 	var stderr bytes.Buffer
-	cmd, err := git.SafeStderrCmd(ctx, &stderr, repo, nil, git.SubCmd{
-		Name:  "worktree",
-		Flags: []git.Option{git.SubSubCmd{Name: "add"}, git.Flag{Name: "--detach"}, git.Flag{Name: "--no-checkout"}},
-		Args:  args,
-	})
+	cmd, err := git.SafeCmd(ctx, repo, nil,
+		git.SubCmd{
+			Name:  "worktree",
+			Flags: []git.Option{git.SubSubCmd{Name: "add"}, git.Flag{Name: "--detach"}, git.Flag{Name: "--no-checkout"}},
+			Args:  args,
+		},
+		git.WithStderr(&stderr),
+	)
 	if err != nil {
 		return fmt.Errorf("creation of 'git worktree add': %w", gitError{ErrMsg: stderr.String(), Err: err})
 	}
@@ -347,13 +350,16 @@ func (s *server) applyDiff(ctx context.Context, req *gitalypb.UserSquashRequest,
 	diffRange := diffRange(req)
 
 	var diffStderr bytes.Buffer
-	cmdDiff, err := git.SafeStderrCmd(ctx, &diffStderr, req.GetRepository(), nil, git.SubCmd{
-		Name: "diff",
-		Flags: []git.Option{
-			git.Flag{Name: "--binary"},
+	cmdDiff, err := git.SafeCmd(ctx, req.GetRepository(), nil,
+		git.SubCmd{
+			Name: "diff",
+			Flags: []git.Option{
+				git.Flag{Name: "--binary"},
+			},
+			Args: []string{diffRange},
 		},
-		Args: []string{diffRange},
-	})
+		git.WithStderr(&diffStderr),
+	)
 	if err != nil {
 		return "", fmt.Errorf("creation of 'git diff' for range %q: %w", diffRange, gitError{ErrMsg: diffStderr.String(), Err: err})
 	}
@@ -453,7 +459,7 @@ func newSquashWorktreePath(repoPath, squashID string) string {
 
 func runCmd(ctx context.Context, repo *gitalypb.Repository, cmd string, opts []git.Option, args []string) error {
 	var stderr bytes.Buffer
-	safeCmd, err := git.SafeStderrCmd(ctx, &stderr, repo, nil, git.SubCmd{Name: cmd, Flags: opts, Args: args})
+	safeCmd, err := git.SafeCmd(ctx, repo, nil, git.SubCmd{Name: cmd, Flags: opts, Args: args}, git.WithStderr(&stderr))
 	if err != nil {
 		return fmt.Errorf("create safe cmd %q: %w", cmd, gitError{ErrMsg: stderr.String(), Err: err})
 	}

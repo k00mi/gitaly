@@ -2,7 +2,6 @@ package git
 
 import (
 	"context"
-	"io"
 	"os/exec"
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
@@ -33,16 +32,6 @@ func unsafeStdinCmd(ctx context.Context, extraEnv []string, repo repository.GitR
 	env = append(env, extraEnv...)
 
 	return unsafeBareCmd(ctx, CmdStream{In: command.SetupStdin}, env, args...)
-}
-
-// unsafeStderrCmd runs unsafeBareCmd with stderr directed to passed stderr.
-func unsafeStderrCmd(ctx context.Context, stderr io.Writer, repo repository.GitRepo, args ...string) (*command.Command, error) {
-	args, env, err := argsAndEnv(repo, args...)
-	if err != nil {
-		return nil, err
-	}
-
-	return unsafeBareCmd(ctx, CmdStream{Err: stderr}, env, args...)
 }
 
 func argsAndEnv(repo repository.GitRepo, args ...string) ([]string, []string, error) {
