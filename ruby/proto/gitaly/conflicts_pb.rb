@@ -17,6 +17,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
       optional :their_path, :bytes, 3
       optional :our_path, :bytes, 4
       optional :our_mode, :int32, 5
+      optional :ancestor_path, :bytes, 6
     end
     add_message "gitaly.ConflictFile" do
       oneof :conflict_file_payload do

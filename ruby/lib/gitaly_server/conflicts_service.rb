@@ -76,7 +76,8 @@ module GitalyServer
         commit_oid: file.commit_oid,
         their_path: file.their_path.b,
         our_path: file.our_path.b,
-        our_mode: file.our_mode
+        our_mode: file.our_mode,
+        ancestor_path: file.ancestor_path&.b
       )
     end
 

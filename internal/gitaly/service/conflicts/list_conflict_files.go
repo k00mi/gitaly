@@ -69,10 +69,11 @@ func (s *server) listConflictFiles(request *gitalypb.ListConflictFilesRequest, s
 		conflictFiles = append(conflictFiles, &gitalypb.ConflictFile{
 			ConflictFilePayload: &gitalypb.ConflictFile_Header{
 				Header: &gitalypb.ConflictFileHeader{
-					CommitOid: request.OurCommitOid,
-					TheirPath: []byte(conflict.Their.Path),
-					OurPath:   []byte(conflict.Our.Path),
-					OurMode:   conflict.Our.Mode,
+					CommitOid:    request.OurCommitOid,
+					TheirPath:    []byte(conflict.Their.Path),
+					OurPath:      []byte(conflict.Our.Path),
+					AncestorPath: []byte(conflict.Ancestor.Path),
+					OurMode:      conflict.Our.Mode,
 				},
 			},
 		})

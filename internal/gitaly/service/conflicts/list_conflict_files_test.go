@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
@@ -83,9 +82,7 @@ end
 	}
 
 	c, err := client.ListConflictFiles(ctx, request)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	expectedFiles := []*conflictFile{
 		{
@@ -112,8 +109,63 @@ end
 	require.Len(t, receivedFiles, len(expectedFiles))
 
 	for i := 0; i < len(expectedFiles); i++ {
-		require.True(t, proto.Equal(receivedFiles[i].header, expectedFiles[i].header))
+		testhelper.ProtoEqual(t, receivedFiles[i].header, expectedFiles[i].header)
 		require.Equal(t, expectedFiles[i].content, receivedFiles[i].content)
+	}
+}
+
+func TestSuccessfulListConflictFilesRequestWithAncestor(t *testing.T) {
+	testListConflictFiles(t, testSuccessfulListConflictFilesRequestWithAncestor)
+}
+
+func testSuccessfulListConflictFilesRequestWithAncestor(t *testing.T, ctx context.Context) {
+	serverSocketPath, stop := runConflictsServer(t)
+	defer stop()
+
+	client, conn := NewConflictsClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	ourCommitOid := "824be604a34828eb682305f0d963056cfac87b2d"
+	theirCommitOid := "1450cd639e0bc6721eb02800169e464f212cde06"
+
+	request := &gitalypb.ListConflictFilesRequest{
+		Repository:     testRepo,
+		OurCommitOid:   ourCommitOid,
+		TheirCommitOid: theirCommitOid,
+	}
+
+	c, err := client.ListConflictFiles(ctx, request)
+	require.NoError(t, err)
+
+	expectedFiles := []*conflictFile{
+		{
+			header: &gitalypb.ConflictFileHeader{
+				CommitOid:    ourCommitOid,
+				OurMode:      int32(0100644),
+				OurPath:      []byte("files/ruby/popen.rb"),
+				TheirPath:    []byte("files/ruby/popen.rb"),
+				AncestorPath: []byte("files/ruby/popen.rb"),
+			},
+		},
+		{
+			header: &gitalypb.ConflictFileHeader{
+				CommitOid:    ourCommitOid,
+				OurMode:      int32(0100644),
+				OurPath:      []byte("files/ruby/regex.rb"),
+				TheirPath:    []byte("files/ruby/regex.rb"),
+				AncestorPath: []byte("files/ruby/regex.rb"),
+			},
+		},
+	}
+
+	receivedFiles := getConflictFiles(t, c)
+	require.Len(t, receivedFiles, len(expectedFiles))
+
+	for i := 0; i < len(expectedFiles); i++ {
+		testhelper.ProtoEqual(t, receivedFiles[i].header, expectedFiles[i].header)
 	}
 }
 
@@ -154,23 +206,19 @@ func testListConflictFilesHugeDiff(t *testing.T, ctx context.Context) {
 
 	receivedFiles := getConflictFiles(t, c)
 	require.Len(t, receivedFiles, 2)
-	require.True(t,
-		proto.Equal(&gitalypb.ConflictFileHeader{
-			CommitOid: our,
-			OurMode:   int32(0100644),
-			OurPath:   []byte("a"),
-			TheirPath: []byte("a"),
-		}, receivedFiles[0].header),
-	)
+	testhelper.ProtoEqual(t, &gitalypb.ConflictFileHeader{
+		CommitOid: our,
+		OurMode:   int32(0100644),
+		OurPath:   []byte("a"),
+		TheirPath: []byte("a"),
+	}, receivedFiles[0].header)
 
-	require.True(t,
-		proto.Equal(&gitalypb.ConflictFileHeader{
-			CommitOid: our,
-			OurMode:   int32(0100644),
-			OurPath:   []byte("b"),
-			TheirPath: []byte("b"),
-		}, receivedFiles[1].header),
-	)
+	testhelper.ProtoEqual(t, &gitalypb.ConflictFileHeader{
+		CommitOid: our,
+		OurMode:   int32(0100644),
+		OurPath:   []byte("b"),
+		TheirPath: []byte("b"),
+	}, receivedFiles[1].header)
 }
 
 func buildCommit(t *testing.T, ctx context.Context, repo *gitalypb.Repository, repoPath string, files map[string][]byte) string {
