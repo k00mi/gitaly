@@ -8,9 +8,11 @@ import (
 	"io/ioutil"
 	"sync"
 
+	opentracing "github.com/opentracing/opentracing-go"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/alternates"
 	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
+	"gitlab.com/gitlab-org/labkit/correlation"
 )
 
 // batch encapsulates a 'git cat-file --batch' process
@@ -43,6 +45,11 @@ func newBatchProcess(ctx context.Context, repo repository.GitRepo) (*batchProces
 
 	var stdinReader io.Reader
 	stdinReader, b.w = io.Pipe()
+
+	// batch processes are long-lived and reused across RPCs,
+	// so we de-correlate the process from the RPC
+	ctx = correlation.ContextWithCorrelation(ctx, "")
+	ctx = opentracing.ContextWithSpan(ctx, nil)
 
 	batchCmd, err := git.SafeBareCmd(ctx, git.CmdStream{In: stdinReader}, env,
 		[]git.Option{git.ValueFlag{Name: "--git-dir", Value: repoPath}},
