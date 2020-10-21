@@ -29,7 +29,7 @@ var (
 
 func testWithFeature(t *testing.T, feature featureflag.FeatureFlag, testcase func(*testing.T, context.Context)) {
 	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{
-		featureflag.GoUserMergeBranch,
+		feature,
 	})
 	require.NoError(t, err)
 
