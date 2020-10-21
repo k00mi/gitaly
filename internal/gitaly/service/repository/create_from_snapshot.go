@@ -2,10 +2,12 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
@@ -86,7 +88,7 @@ func (s *server) CreateRepositoryFromSnapshot(ctx context.Context, in *gitalypb.
 	// Perform all operations against a temporary directory, only moving it to
 	// the canonical location if retrieving and unpacking the snapshot is a
 	// success
-	tempRepo, tempPath, err := tempdir.NewAsRepository(ctx, in.Repository)
+	tempRepo, tempPath, err := tempdir.NewAsRepository(ctx, in.Repository, s.locator)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "couldn't create temporary directory: %v", err)
 	}
@@ -105,6 +107,10 @@ func (s *server) CreateRepositoryFromSnapshot(ctx context.Context, in *gitalypb.
 
 	if err := untar(ctx, tempPath, in); err != nil {
 		return nil, err
+	}
+
+	if err = os.MkdirAll(filepath.Dir(realPath), 0755); err != nil {
+		return nil, fmt.Errorf("create directory hierarchy: %w", err)
 	}
 
 	if err := os.Rename(tempPath, realPath); err != nil {

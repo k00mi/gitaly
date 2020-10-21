@@ -13,6 +13,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/dontpanic"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/housekeeping"
+	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
@@ -65,7 +66,7 @@ func AppendTempDir(storagePath string) string { return filepath.Join(storagePath
 // ForDeleteAllRepositories returns a temporary directory for the given storage. It is not context-scoped but it will get removed eventuall (after MaxAge).
 func ForDeleteAllRepositories(storageName string) (string, error) {
 	prefix := fmt.Sprintf("%s-repositories.old.%d.", storageName, time.Now().Unix())
-	_, path, err := newAsRepository(context.Background(), storageName, prefix)
+	_, path, err := newAsRepository(context.Background(), storageName, prefix, config.NewLocator(config.Config))
 
 	return path, err
 }
@@ -74,7 +75,7 @@ func ForDeleteAllRepositories(storageName string) (string, error) {
 // repository. The directory is removed with os.RemoveAll when ctx
 // expires.
 func New(ctx context.Context, repo *gitalypb.Repository) (string, error) {
-	_, path, err := NewAsRepository(ctx, repo)
+	_, path, err := NewAsRepository(ctx, repo, config.NewLocator(config.Config))
 	if err != nil {
 		return "", err
 	}
@@ -84,17 +85,17 @@ func New(ctx context.Context, repo *gitalypb.Repository) (string, error) {
 
 // NewAsRepository is the same as New, but it returns a *gitalypb.Repository for the
 // created directory as well as the bare path as a string
-func NewAsRepository(ctx context.Context, repo *gitalypb.Repository) (*gitalypb.Repository, string, error) {
-	return newAsRepository(ctx, repo.StorageName, "repo")
+func NewAsRepository(ctx context.Context, repo *gitalypb.Repository, loc storage.Locator) (*gitalypb.Repository, string, error) {
+	return newAsRepository(ctx, repo.StorageName, "repo", loc)
 }
 
-func newAsRepository(ctx context.Context, storageName string, prefix string) (*gitalypb.Repository, string, error) {
-	storage, ok := config.Config.Storage(storageName)
-	if !ok {
-		return nil, "", fmt.Errorf("storage not found: %v", storageName)
+func newAsRepository(ctx context.Context, storageName string, prefix string, loc storage.Locator) (*gitalypb.Repository, string, error) {
+	storagePath, err := loc.GetStorageByName(storageName)
+	if err != nil {
+		return nil, "", err
 	}
 
-	root := TempDir(storage)
+	root := AppendTempDir(storagePath)
 	if err := os.MkdirAll(root, 0700); err != nil {
 		return nil, "", err
 	}
@@ -110,7 +111,7 @@ func newAsRepository(ctx context.Context, storageName string, prefix string) (*g
 	}()
 
 	newAsRepo := &gitalypb.Repository{StorageName: storageName}
-	newAsRepo.RelativePath, err = filepath.Rel(storage.Path, tempDir)
+	newAsRepo.RelativePath, err = filepath.Rel(storagePath, tempDir)
 	return newAsRepo, tempDir, err
 }
 
