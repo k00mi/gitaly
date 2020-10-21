@@ -39,9 +39,11 @@ func (s *server) UserCreateBranch(ctx context.Context, req *gitalypb.UserCreateB
 		return nil, helper.ErrPreconditionFailed(err)
 	}
 
-	_, err = parseRevision(ctx, req.Repository, string(req.BranchName))
+	_, err = git.NewRepository(req.Repository).GetBranch(ctx, string(req.BranchName))
 	if err == nil {
 		return nil, status.Errorf(codes.FailedPrecondition, "Bad Request (branch exists)")
+	} else if !errors.Is(err, git.ErrReferenceNotFound) {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	branch := fmt.Sprintf("refs/heads/%s", req.BranchName)
