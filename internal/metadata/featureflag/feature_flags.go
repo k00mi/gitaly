@@ -15,9 +15,6 @@ var (
 	DistributedReads = FeatureFlag{Name: "distributed_reads", OnByDefault: false}
 	// ReferenceTransactions will handle Git reference updates via the transaction service for strong consistency
 	ReferenceTransactions = FeatureFlag{Name: "reference_transactions", OnByDefault: true}
-	// ReferenceTranasctiionsPrimaryWins will change transaction registration such that
-	// secondaries will take part in transactions, but not influence their outcome.
-	ReferenceTransactionsPrimaryWins = FeatureFlag{Name: "reference_transactions_primary_wins", OnByDefault: false}
 	// ReferenceTransactionHook will enable the reference-transaction hook
 	// introduced with Git v2.28.0 for voting on transactions
 	ReferenceTransactionHook = FeatureFlag{Name: "reference_transaction_hook", OnByDefault: true}
@@ -45,7 +42,6 @@ var All = []FeatureFlag{
 	GoFetchSourceBranch,
 	DistributedReads,
 	ReferenceTransactions,
-	ReferenceTransactionsPrimaryWins,
 	ReferenceTransactionHook,
 	RubyReferenceTransactionHook,
 	GoUserMergeBranch,

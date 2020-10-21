@@ -235,13 +235,11 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 	}
 
 	testcases := []struct {
-		desc            string
-		disableFeatures []featureflag.FeatureFlag
-		nodes           []node
+		desc  string
+		nodes []node
 	}{
 		{
-			desc:            "successful vote should not create replication jobs",
-			disableFeatures: []featureflag.FeatureFlag{featureflag.ReferenceTransactionsPrimaryWins},
+			desc: "successful vote should not create replication jobs",
 			nodes: []node{
 				{primary: true, vote: "foobar", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
 				{primary: false, vote: "foobar", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
@@ -249,8 +247,7 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 			},
 		},
 		{
-			desc:            "failing vote should not create replication jobs",
-			disableFeatures: []featureflag.FeatureFlag{featureflag.ReferenceTransactionsPrimaryWins},
+			desc: "failing vote should not create replication jobs",
 			nodes: []node{
 				{primary: true, vote: "foo", shouldSucceed: false, shouldGetRepl: false, shouldParticipate: true},
 				{primary: false, vote: "qux", shouldSucceed: false, shouldGetRepl: false, shouldParticipate: true},
@@ -258,16 +255,14 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 			},
 		},
 		{
-			desc:            "primary should reach quorum with disagreeing secondary",
-			disableFeatures: []featureflag.FeatureFlag{featureflag.ReferenceTransactionsPrimaryWins},
+			desc: "primary should reach quorum with disagreeing secondary",
 			nodes: []node{
 				{primary: true, vote: "foobar", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
 				{primary: false, vote: "barfoo", shouldSucceed: false, shouldGetRepl: true, shouldParticipate: true},
 			},
 		},
 		{
-			desc:            "quorum should create replication jobs for disagreeing node",
-			disableFeatures: []featureflag.FeatureFlag{featureflag.ReferenceTransactionsPrimaryWins},
+			desc: "quorum should create replication jobs for disagreeing node",
 			nodes: []node{
 				{primary: true, vote: "foobar", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
 				{primary: false, vote: "foobar", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
@@ -275,8 +270,7 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 			},
 		},
 		{
-			desc:            "only consistent secondaries should participate",
-			disableFeatures: []featureflag.FeatureFlag{featureflag.ReferenceTransactionsPrimaryWins},
+			desc: "only consistent secondaries should participate",
 			nodes: []node{
 				{primary: true, vote: "foobar", shouldSucceed: true, shouldParticipate: true, generation: 1},
 				{primary: false, vote: "foobar", shouldSucceed: true, shouldParticipate: true, generation: 1},
@@ -285,35 +279,17 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 			},
 		},
 		{
-			desc:            "secondaries should not participate when primary's generation is unknown",
-			disableFeatures: []featureflag.FeatureFlag{featureflag.ReferenceTransactionsPrimaryWins},
+			desc: "secondaries should not participate when primary's generation is unknown",
 			nodes: []node{
 				{primary: true, vote: "foobar", shouldSucceed: true, shouldParticipate: true, generation: datastore.GenerationUnknown},
 				{shouldParticipate: false, generation: datastore.GenerationUnknown},
 			},
 		},
 		{
-			desc: "primary succeeds with primary-wins strategy",
-			nodes: []node{
-				{primary: true, vote: "foo", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
-				{primary: false, vote: "qux", shouldSucceed: false, shouldGetRepl: true, shouldParticipate: true},
-				{primary: false, vote: "bar", shouldSucceed: false, shouldGetRepl: true, shouldParticipate: true},
-			},
-		},
-		{
-			desc: "only failing secondaries get replication jobs",
-			nodes: []node{
-				{primary: true, vote: "foo", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
-				{primary: false, vote: "qux", shouldSucceed: false, shouldGetRepl: true, shouldParticipate: true},
-				{primary: false, vote: "foo", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
-			},
-		},
-		{
 			// If the transaction didn't receive any votes at all, we need to assume
 			// that the RPC wasn't aware of transactions and thus need to schedule
 			// replication jobs.
-			desc:            "unstarted transaction should create replication jobs",
-			disableFeatures: []featureflag.FeatureFlag{featureflag.ReferenceTransactionsPrimaryWins},
+			desc: "unstarted transaction should create replication jobs",
 			nodes: []node{
 				{primary: true, shouldSucceed: true, shouldGetRepl: false},
 				{primary: false, shouldSucceed: false, shouldGetRepl: true},
@@ -355,10 +331,6 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 
 			ctx, cancel := testhelper.Context()
 			defer cancel()
-
-			for _, feature := range tc.disableFeatures {
-				ctx = featureflag.IncomingCtxWithDisabledFeatureFlag(ctx, feature)
-			}
 
 			nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf, nil, nil, promtest.NewMockHistogramVec(), protoregistry.GitalyProtoPreregistered, nil)
 			require.NoError(t, err)
