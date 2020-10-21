@@ -15,9 +15,6 @@ var (
 	DistributedReads = FeatureFlag{Name: "distributed_reads", OnByDefault: false}
 	// ReferenceTransactions will handle Git reference updates via the transaction service for strong consistency
 	ReferenceTransactions = FeatureFlag{Name: "reference_transactions", OnByDefault: true}
-	// ReferenceTransactionHook will enable the reference-transaction hook
-	// introduced with Git v2.28.0 for voting on transactions
-	ReferenceTransactionHook = FeatureFlag{Name: "reference_transaction_hook", OnByDefault: true}
 	// RubyReferenceTransactionHook will enable the reference-transaction hook
 	// introduced with Git v2.28.0 for voting on transactions in the Ruby sidecar.
 	RubyReferenceTransactionHook = FeatureFlag{Name: "ruby_reference_transaction_hook", OnByDefault: false}
@@ -42,7 +39,6 @@ var All = []FeatureFlag{
 	GoFetchSourceBranch,
 	DistributedReads,
 	ReferenceTransactions,
-	ReferenceTransactionHook,
 	RubyReferenceTransactionHook,
 	GoUserMergeBranch,
 	GoUserMergeToRef,
@@ -53,5 +49,7 @@ var All = []FeatureFlag{
 }
 
 const (
+	// This environment variable is still required by the Ruby reference transaction hook
+	// feature flag, even though it's unconditionally set by Go code.
 	ReferenceTransactionHookEnvVar = "GITALY_REFERENCE_TRANSACTION_HOOK"
 )

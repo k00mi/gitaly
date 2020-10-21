@@ -462,9 +462,6 @@ behavior:
 - `gitaly_reference_transactions`: This feature flag is enabled by default. If
   disabled, reference transactions will not be used.
 
-- `gitaly_reference_transaction_hook`: This feature flag is enabled by default.
-  If disabled, reference transactions will be created but no voting will happen.
-
 - `gitaly_ruby_reference_transaction_hook`: This feature flag is disabled by
   default. If enabled, it will cause Ruby RPCs to perform voting via the
   reference-transaction hook.

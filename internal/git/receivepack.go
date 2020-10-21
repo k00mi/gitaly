@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 
 	"github.com/golang/protobuf/jsonpb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
@@ -44,7 +43,7 @@ func ReceivePackHookEnv(ctx context.Context, req ReceivePackRequest) ([]string, 
 		fmt.Sprintf("GL_USERNAME=%s", req.GetGlUsername()),
 		fmt.Sprintf("GL_REPOSITORY=%s", req.GetGlRepository()),
 		fmt.Sprintf("GL_PROJECT_PATH=%s", req.GetRepository().GetGlProjectPath()),
-		fmt.Sprintf("%s=%s", featureflag.ReferenceTransactionHookEnvVar, strconv.FormatBool(featureflag.IsEnabled(ctx, featureflag.ReferenceTransactionHook))),
+		fmt.Sprintf("%s=true", featureflag.ReferenceTransactionHookEnvVar),
 	)
 	env = append(env, gitlabshellEnv...)
 
