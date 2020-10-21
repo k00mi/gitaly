@@ -376,7 +376,7 @@ func setupTempHookDirs(t *testing.T, m map[string]hookFileMode) (string, func())
 			path := filepath.Join(tempDir, hookName)
 			require.NoError(t, os.MkdirAll(filepath.Dir(path), 0755))
 
-			require.NoError(t, ioutil.WriteFile(filepath.Join(tempDir, hookName), nil, 0100))
+			require.NoError(t, ioutil.WriteFile(filepath.Join(tempDir, hookName), nil, 0644))
 
 			if mode&hookFileExecutable > 0 {
 				require.NoError(t, os.Chmod(filepath.Join(tempDir, hookName), 0755))
@@ -388,8 +388,8 @@ func setupTempHookDirs(t *testing.T, m map[string]hookFileMode) (string, func())
 }
 
 var (
-	fileNotExistsErrRegexSnippit  = "stat .+: no such file or directory"
-	fileNotExecutableRegexSnippit = "not executable: .+"
+	fileNotExistsErrRegexSnippit  = "no such file or directory"
+	fileNotExecutableRegexSnippit = "not executable: .*"
 )
 
 func TestValidateHooks(t *testing.T) {
