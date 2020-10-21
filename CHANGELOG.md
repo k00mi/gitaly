@@ -129,6 +129,10 @@
 - Update Nokogiri gem to v1.10.10. !2567
 
 
+## 13.3.8 (2020-10-21)
+
+- No changes.
+
 ## 13.3.6
 
 - No changes.
