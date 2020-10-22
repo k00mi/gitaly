@@ -13,11 +13,13 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git/updateref"
 	"gitlab.com/gitlab-org/gitaly/internal/git2go"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
@@ -125,6 +127,32 @@ func (s *server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 		fmt.Sprintf("GITALY_TOKEN=%s", s.cfg.Auth.Token),
 	}, gitlabshellEnv...)
 
+	transaction, err := metadata.TransactionFromContext(ctx)
+	if err != nil {
+		if err != metadata.ErrTransactionNotFound {
+			return err
+		}
+	}
+
+	if err == nil {
+		praefect, err := metadata.PraefectFromContext(ctx)
+		if err != nil {
+			return err
+		}
+
+		transactionEnv, err := transaction.Env()
+		if err != nil {
+			return err
+		}
+
+		praefectEnv, err := praefect.Env()
+		if err != nil {
+			return err
+		}
+
+		env = append(env, transactionEnv, praefectEnv)
+	}
+
 	changes := fmt.Sprintf("%s %s %s\n", oldrev, newrev, reference)
 	var stdout, stderr bytes.Buffer
 
@@ -133,6 +161,14 @@ func (s *server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 	}
 	if err := s.hookManager.UpdateHook(ctx, repo, reference, oldrev, newrev, env, &stdout, &stderr); err != nil {
 		return preReceiveError{message: stdout.String()}
+	}
+
+	// For backwards compatibility with Ruby, we need to only call the reference-transaction
+	// hook if the corresponding Ruby feature flag is set.
+	if featureflag.IsEnabled(ctx, featureflag.RubyReferenceTransactionHook) {
+		if err := s.hookManager.ReferenceTransactionHook(ctx, hook.ReferenceTransactionPrepared, env, strings.NewReader(changes)); err != nil {
+			return preReceiveError{message: stdout.String()}
+		}
 	}
 
 	updater, err := updateref.New(ctx, repo)

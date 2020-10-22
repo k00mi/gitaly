@@ -32,6 +32,8 @@ var (
 	GoUserMergeToRef = FeatureFlag{Name: "go_user_merge_to_ref", OnByDefault: false}
 	// GoUserFFBranch enables the Go implementation of UserFFBranch
 	GoUserFFBranch = FeatureFlag{Name: "go_user_ff_branch", OnByDefault: false}
+	// GoUserCreateBranch enables the Go implementation of UserCreateBranch
+	GoUserCreateBranch = FeatureFlag{Name: "go_user_create_branch", OnByDefault: false}
 	// GoUserDeleteBranch enables the Go implementation of UserDeleteBranch
 	GoUserDeleteBranch = FeatureFlag{Name: "go_user_delete_branch", OnByDefault: false}
 	// GoUserSquash enable the Go implementation of UserSquash
@@ -51,6 +53,7 @@ var All = []FeatureFlag{
 	GoUserMergeBranch,
 	GoUserMergeToRef,
 	GoUserFFBranch,
+	GoUserCreateBranch,
 	GoUserDeleteBranch,
 	GoUserSquash,
 	GoListConflictFiles,
