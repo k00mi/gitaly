@@ -121,6 +121,7 @@ ifeq (${LIBGIT2_BUILD_OPTIONS},)
 endif
 
 # These variables control test options and artifacts
+TEST_PKGS        ?= $(call find_go_packages)
 TEST_OPTIONS     ?=
 TEST_REPORT_DIR  ?= ${BUILD_DIR}/reports
 TEST_OUTPUT_NAME ?= go-${GO_VERSION}-git-${GIT_VERSION}
@@ -208,7 +209,7 @@ test: test-go rspec rspec-gitlab-shell
 test-go: prepare-tests ${GO_JUNIT_REPORT} libgit2
 	${Q}mkdir -p ${TEST_REPORT_DIR}
 	${Q}echo 0 >${TEST_EXIT}
-	${Q}go test ${TEST_OPTIONS} -v -tags "${GO_BUILD_TAGS}" -ldflags='${GO_TEST_LDFLAGS}' -count=1 $(call find_go_packages) 2>&1 | tee ${TEST_OUTPUT} || echo $$? >${TEST_EXIT}
+	${Q}go test ${TEST_OPTIONS} -v -tags "${GO_BUILD_TAGS}" -ldflags='${GO_TEST_LDFLAGS}' -count=1 ${TEST_PKGS} 2>&1 | tee ${TEST_OUTPUT} || echo $$? >${TEST_EXIT}
 	${Q}${GO_JUNIT_REPORT} <${TEST_OUTPUT} >${TEST_REPORT}
 	${Q}exit `cat ${TEST_EXIT}`
 
