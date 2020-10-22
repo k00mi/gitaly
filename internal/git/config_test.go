@@ -12,6 +12,14 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
+func TestLocalRepository_Config(t *testing.T) {
+	bareRepo, _, cleanup := testhelper.InitBareRepo(t)
+	defer cleanup()
+
+	repo := NewRepository(bareRepo)
+	require.Equal(t, RepositoryConfig{repo: bareRepo}, repo.Config())
+}
+
 func TestConfigAddOpts_buildFlags(t *testing.T) {
 	for _, tc := range []struct {
 		desc string
@@ -25,7 +33,7 @@ func TestConfigAddOpts_buildFlags(t *testing.T) {
 		},
 		{
 			desc: "all set",
-			opts: ConfigAddOpts{}.Type(ConfigTypeBoolOrInt),
+			opts: ConfigAddOpts{Type: ConfigTypeBoolOrInt},
 			exp:  []Option{Flag{Name: "--bool-or-int"}},
 		},
 	} {
@@ -60,7 +68,7 @@ func TestRepositoryConfig_Add(t *testing.T) {
 	})
 
 	t.Run("options are passed", func(t *testing.T) {
-		require.NoError(t, config.Add(ctx, "key.three", "3", ConfigAddOpts{}.Type(ConfigTypeInt)))
+		require.NoError(t, config.Add(ctx, "key.three", "3", ConfigAddOpts{Type: ConfigTypeInt}))
 
 		actual := text.ChompBytes(testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "config", "--int", "key.three"))
 		require.Equal(t, "3", actual)
@@ -119,22 +127,12 @@ func TestConfigGetRegexpOpts_buildFlags(t *testing.T) {
 		},
 		{
 			desc: "all set",
-			opts: ConfigGetRegexpOpts{}.
-				Type(ConfigTypeInt).
-				ShowOrigin(true).
-				ShowScope(true),
+			opts: ConfigGetRegexpOpts{Type: ConfigTypeInt, ShowOrigin: true, ShowScope: true},
 			exp: []Option{
 				Flag{Name: "--int"},
 				Flag{Name: "--show-origin"},
 				Flag{Name: "--show-scope"},
 			},
-		},
-		{
-			desc: "disabled flags",
-			opts: ConfigGetRegexpOpts{}.
-				ShowOrigin(false).
-				ShowScope(false),
-			exp: nil,
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -171,7 +169,7 @@ func TestRepositoryConfig_GetRegexp(t *testing.T) {
 			{Key: "key.five", Value: "five", Origin: "file:" + filepath.Join(repoPath, "config"), Scope: "local"},
 		}
 
-		vals, err := config.GetRegexp(ctx, "^key\\.f", ConfigGetRegexpOpts{}.ShowScope(true).ShowOrigin(true))
+		vals, err := config.GetRegexp(ctx, "^key\\.f", ConfigGetRegexpOpts{ShowScope: true, ShowOrigin: true})
 		require.NoError(t, err)
 		require.Equal(t, exp, vals)
 	})
@@ -185,7 +183,7 @@ func TestRepositoryConfig_GetRegexp(t *testing.T) {
 	t.Run("bad combination of regexp and type", func(t *testing.T) {
 		testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "config", "--add", "key.six", "key-six")
 
-		_, err := config.GetRegexp(ctx, "^key\\.six$", ConfigGetRegexpOpts{}.Type(ConfigTypeBool))
+		_, err := config.GetRegexp(ctx, "^key\\.six$", ConfigGetRegexpOpts{Type: ConfigTypeBool})
 		require.Error(t, err)
 		require.True(t, errors.Is(err, ErrInvalidArg))
 		require.Contains(t, err.Error(), "fetched result doesn't correspond to requested type")
@@ -234,7 +232,7 @@ func TestConfigUnsetOpts_buildFlags(t *testing.T) {
 		},
 		{
 			desc: "all set",
-			opts: ConfigUnsetOpts{}.All(true).Strict(true),
+			opts: ConfigUnsetOpts{All: true, NotStrict: true},
 			exp:  []Option{Flag{Name: "--unset-all"}},
 		},
 	} {
@@ -275,7 +273,7 @@ func TestRepositoryConfig_UnsetAll(t *testing.T) {
 		testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "config", "--add", "key.two", "key-two-1")
 		testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "config", "--add", "key.two", "key-two-2")
 
-		require.NoError(t, config.Unset(ctx, "key.two", ConfigUnsetOpts{}.All(true)))
+		require.NoError(t, config.Unset(ctx, "key.two", ConfigUnsetOpts{All: true}))
 
 		contains := configContains(t, repoPath)
 		contains(t, "key-two-1", false)
@@ -286,7 +284,7 @@ func TestRepositoryConfig_UnsetAll(t *testing.T) {
 		testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "config", "--add", "key.two", "key-two-1")
 		testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "config", "--add", "key.two", "key-two-2")
 
-		err := config.Unset(ctx, "key.two", ConfigUnsetOpts{}.Strict(true))
+		err := config.Unset(ctx, "key.two", ConfigUnsetOpts{})
 		require.Equal(t, ErrNotFound, err)
 
 		contains := configContains(t, repoPath)
@@ -307,7 +305,7 @@ func TestRepositoryConfig_UnsetAll(t *testing.T) {
 	t.Run("config key doesn't exist - not strict", func(t *testing.T) {
 		testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "config", "--add", "key.four", "key-four")
 
-		require.NoError(t, config.Unset(ctx, "some.stub", ConfigUnsetOpts{}.Strict(false)))
+		require.NoError(t, config.Unset(ctx, "some.stub", ConfigUnsetOpts{NotStrict: true}))
 
 		contains := configContains(t, repoPath)
 		contains(t, "key-four", true)

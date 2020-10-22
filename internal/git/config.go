@@ -60,6 +60,8 @@ func (t ConfigType) String() string {
 }
 
 var (
+	// ConfigTypeDefault is a default choice.
+	ConfigTypeDefault = ConfigType("")
 	// ConfigTypeInt is an integer type check.
 	// https://git-scm.com/docs/git-config/2.6.7#Documentation/git-config.txt---int
 	ConfigTypeInt = ConfigType("--int")
@@ -76,19 +78,14 @@ var (
 
 // ConfigAddOpts is used to configure invocation of the 'git config --add' command.
 type ConfigAddOpts struct {
-	ctype *ConfigType
-}
-
-// Type controls rules used to check the value.
-func (opts ConfigAddOpts) Type(t ConfigType) ConfigAddOpts {
-	opts.ctype = &t
-	return opts
+	// Type controls rules used to check the value.
+	Type ConfigType
 }
 
 func (opts ConfigAddOpts) buildFlags() []Option {
 	var flags []Option
-	if opts.ctype != nil {
-		flags = append(flags, Flag{Name: opts.ctype.String()})
+	if opts.Type != ConfigTypeDefault {
+		flags = append(flags, Flag{Name: opts.Type.String()})
 	}
 
 	return flags
@@ -127,40 +124,25 @@ func (repo RepositoryConfig) Add(ctx context.Context, name, value string, opts C
 
 // ConfigGetRegexpOpts is used to configure invocation of the 'git config --get-regexp' command.
 type ConfigGetRegexpOpts struct {
-	ctype      *ConfigType
-	showOrigin bool
-	showScope  bool
-}
-
-// Type allows to specify an expected type for the configuration.
-func (opts ConfigGetRegexpOpts) Type(t ConfigType) ConfigGetRegexpOpts {
-	opts.ctype = &t
-	return opts
-}
-
-// ShowOrigin controls if origin needs to be fetched.
-func (opts ConfigGetRegexpOpts) ShowOrigin(o bool) ConfigGetRegexpOpts {
-	opts.showOrigin = o
-	return opts
-}
-
-// ShowScope controls if scope needs to be fetched.
-func (opts ConfigGetRegexpOpts) ShowScope(s bool) ConfigGetRegexpOpts {
-	opts.showScope = s
-	return opts
+	// Type allows to specify an expected type for the configuration.
+	Type ConfigType
+	// ShowOrigin controls if origin needs to be fetched.
+	ShowOrigin bool
+	// ShowScope controls if scope needs to be fetched.
+	ShowScope bool
 }
 
 func (opts ConfigGetRegexpOpts) buildFlags() []Option {
 	var flags []Option
-	if opts.ctype != nil {
-		flags = append(flags, Flag{Name: opts.ctype.String()})
+	if opts.Type != ConfigTypeDefault {
+		flags = append(flags, Flag{Name: opts.Type.String()})
 	}
 
-	if opts.showOrigin {
+	if opts.ShowOrigin {
 		flags = append(flags, Flag{Name: "--show-origin"})
 	}
 
-	if opts.showScope {
+	if opts.ShowScope {
 		flags = append(flags, Flag{Name: "--show-scope"})
 	}
 
@@ -228,14 +210,14 @@ func (repo RepositoryConfig) parseConfig(data []byte, opts ConfigGetRegexpOpts) 
 		// The format is: <scope> NUL <origin> NUL <KEY> NL <VALUE> NUL
 		// Where the <scope> and <origin> are optional and depend on corresponding configuration options.
 		var scope []byte
-		if opts.showScope {
+		if opts.ShowScope {
 			if scope, err = reader.ReadBytes(0); err != nil {
 				break
 			}
 		}
 
 		var origin []byte
-		if opts.showOrigin {
+		if opts.ShowOrigin {
 			if origin, err = reader.ReadBytes(0); err != nil {
 				break
 			}
@@ -268,26 +250,15 @@ func (repo RepositoryConfig) parseConfig(data []byte, opts ConfigGetRegexpOpts) 
 
 // ConfigGetRegexpOpts allows to configure fetching of the configurations using regexp.
 type ConfigUnsetOpts struct {
-	all       bool
-	notStrict bool
-}
-
-// All controls if all values associated with the key needs to be unset.
-func (opts ConfigUnsetOpts) All(a bool) ConfigUnsetOpts {
-	opts.all = a
-	return opts
-}
-
-// Strict if set to false it won't return an error if the configuration was not found
-// or in case multiple values exist for a given key and All option is not set.
-// Enabled by default.
-func (opts ConfigUnsetOpts) Strict(s bool) ConfigUnsetOpts {
-	opts.notStrict = !s
-	return opts
+	// All controls if all values associated with the key needs to be unset.
+	All bool
+	// NotStrict if set to true it won't return an error if the configuration was not found
+	// or in case multiple values exist for a given key and All option is not set.
+	NotStrict bool
 }
 
 func (opts ConfigUnsetOpts) buildFlags() []Option {
-	if opts.all {
+	if opts.All {
 		return []Option{Flag{Name: "--unset-all"}}
 	}
 
@@ -315,7 +286,7 @@ func (repo RepositoryConfig) Unset(ctx context.Context, name string, opts Config
 			return fmt.Errorf("%w: missing section or name", ErrInvalidArg)
 		case isExitWithCode(err, 5):
 			// unset an option which does not exist
-			if opts.notStrict {
+			if opts.NotStrict {
 				return nil
 			}
 
