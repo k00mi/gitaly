@@ -58,7 +58,7 @@ GO_BUILD_TAGS   := tracer_static,tracer_static_jaeger,continuous_profiler_stackd
 GOLANGCI_LINT_VERSION     ?= 1.31.0
 PROTOC_VERSION            ?= 3.12.4
 PROTOC_GEN_GO_VERSION     ?= 1.3.2
-GIT_VERSION               ?= v2.28.0
+GIT_VERSION               ?= v2.29.0
 GIT2GO_VERSION            ?= v30
 LIBGIT2_VERSION       	  ?= v1.0.1
 GOCOVER_COBERTURA_VERSION ?= aaee18c8195c3f2d90e5ef80ca918d265463842a
@@ -75,7 +75,7 @@ endif
 # Git target
 GIT_REPO_URL      ?= https://gitlab.com/gitlab-org/gitlab-git.git
 GIT_BINARIES_URL  ?= https://gitlab.com/gitlab-org/gitlab-git/-/jobs/artifacts/${GIT_VERSION}/raw/git_full_bins.tgz?job=build
-GIT_BINARIES_HASH ?= 6609d175609ac48899971693e615aee1c5fac8bd7b18e14a95f97572e5128e50
+GIT_BINARIES_HASH ?= 8c88d2adb46d1d07f258904b227c93b8a5a4942ac32a1e54057f215401332141
 GIT_INSTALL_DIR   := ${BUILD_DIR}/git
 GIT_SOURCE_DIR    := ${BUILD_DIR}/src/git
 

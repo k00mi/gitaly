@@ -13,7 +13,7 @@ variables:
   CUSTOM_IMAGE_VERSION: ruby-2.6-golang-1.13-git-2.28
   SAST_DISABLE_DIND: "true"
   SAST_DEFAULT_ANALYZERS: "gosec"
-  GIT_VERSION: "v2.27.0"
+  GIT_VERSION: "v2.29.0"
 
 danger-review:
   image: registry.gitlab.com/gitlab-org/gitlab-build-images:danger
@@ -111,7 +111,7 @@ build:
   parallel:
     matrix:
       - GO_VERSION: [ "1.13", "1.14" ]
-        GIT_VERSION: [ "v2.26.2", "v2.27.0", "v2.28.0" ]
+        GIT_VERSION: [ "v2.26.2", "v2.27.0", "v2.28.0", "v2.29.0" ]
 
 binaries:
   <<: *cache_definition
@@ -132,7 +132,7 @@ binaries:
   parallel:
     matrix:
       - GO_VERSION: "1.14"
-        GIT_VERSION: "v2.27.0"
+        GIT_VERSION: "v2.29.0"
       - GO_VERSION: "1.13"
         GIT_VERSION: "v2.26.2"
 
@@ -151,10 +151,10 @@ test:
   parallel:
     matrix:
       - GO_VERSION: [ "1.13", "1.14" ]
-        GIT_VERSION: [ "v2.26.2", "v2.27.0", "v2.28.0" ]
+        GIT_VERSION: [ "v2.26.2", "v2.27.0", "v2.28.0", "v2.29.0" ]
         TARGET: test
       - GO_VERSION: "1.14"
-        GIT_VERSION: "v2.27.0"
+        GIT_VERSION: "v2.29.0"
         TARGET: [ test-with-proxies, test-with-praefect, race-go ]
 
 test:master:
