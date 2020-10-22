@@ -32,6 +32,7 @@ message ConflictFileHeader {
   bytes their_path = 3;
   bytes our_path = 4;
   int32 our_mode = 5;
+  bytes ancestor_path = 6;
 }
 
 message ConflictFile {

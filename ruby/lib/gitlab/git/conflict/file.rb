@@ -4,7 +4,7 @@ module Gitlab
       class File
         UnsupportedEncoding = Class.new(StandardError)
 
-        attr_reader :their_path, :our_path, :our_mode, :repository, :commit_oid
+        attr_reader :their_path, :our_path, :our_mode, :ancestor_path, :repository, :commit_oid
 
         attr_accessor :raw_content
 
@@ -14,6 +14,7 @@ module Gitlab
           @their_path = conflict[:theirs][:path]
           @our_path = conflict[:ours][:path]
           @our_mode = conflict[:ours][:mode]
+          @ancestor_path = conflict.dig(:ancestor, :path)
           @raw_content = raw_content
         end
 
