@@ -304,20 +304,16 @@ func (s *server) addWorktree(ctx context.Context, repo *gitalypb.Repository, wor
 		return fmt.Errorf("on 'git config core.splitIndex false': %w", err)
 	}
 
-	args := []string{worktreePath, committish}
-	if args[1] == "" {
-		args = args[:1]
+	args := []string{worktreePath}
+	flags := []git.Option{git.SubSubCmd{Name: "add"}, git.Flag{Name: "--detach"}}
+	if committish != "" {
+		args = append(args, committish)
+	} else {
+		flags = append(flags, git.Flag{Name: "--no-checkout"})
 	}
 
 	var stderr bytes.Buffer
-	cmd, err := git.SafeCmd(ctx, repo, nil,
-		git.SubCmd{
-			Name:  "worktree",
-			Flags: []git.Option{git.SubSubCmd{Name: "add"}, git.Flag{Name: "--detach"}, git.Flag{Name: "--no-checkout"}},
-			Args:  args,
-		},
-		git.WithStderr(&stderr),
-	)
+	cmd, err := git.SafeCmd(ctx, repo, nil, git.SubCmd{Name: "worktree", Flags: flags, Args: args}, git.WithStderr(&stderr))
 	if err != nil {
 		return fmt.Errorf("creation of 'git worktree add': %w", gitError{ErrMsg: stderr.String(), Err: err})
 	}
