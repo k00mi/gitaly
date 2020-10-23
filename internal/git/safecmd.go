@@ -134,6 +134,12 @@ func (sc SubSubCmd) ValidateArgs() ([]string, error) {
 type ConfigPair struct {
 	Key   string
 	Value string
+	// Origin shows the origin type: file, standard input, blob, command line.
+	// https://git-scm.com/docs/git-config#Documentation/git-config.txt---show-origin
+	Origin string
+	// Scope shows the scope of this config value: local, global, system, command.
+	// https://git-scm.com/docs/git-config#Documentation/git-config.txt---show-scope
+	Scope string
 }
 
 // IsOption is a method present on all Flag interface implementations

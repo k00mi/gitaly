@@ -96,7 +96,7 @@ func configureCommitGraph(ctx context.Context, in *gitalypb.GarbageCollectReques
 	cmd, err := git.SafeCmd(ctx, in.GetRepository(), nil, git.SubCmd{
 		Name: "config",
 		Flags: []git.Option{
-			git.ConfigPair{"core.commitGraph", "true"},
+			git.ConfigPair{Key: "core.commitGraph", Value: "true"},
 		},
 	})
 	if err != nil {
