@@ -122,6 +122,8 @@ func (pgl *PostgresListener) initListener(handler glsql.ListenHandler) error {
 		pgl.reconnectTotal.WithLabelValues(listenerEventTypeToString(eventType)).Inc()
 
 		switch eventType {
+		case pq.ListenerEventConnected:
+			dontpanic.Try(handler.Connected)
 		case pq.ListenerEventDisconnected:
 			dontpanic.Try(handler.Disconnect)
 			if disconnectThreshold() {
