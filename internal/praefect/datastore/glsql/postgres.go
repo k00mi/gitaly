@@ -47,6 +47,8 @@ type ListenHandler interface {
 	Notification(payload string)
 	// Disconnect would be triggered once a connection to remote service is lost.
 	Disconnect()
+	// Connected would be triggered once a connection to remote service is established.
+	Connected()
 }
 
 // Listener listens for events that occur in the system.

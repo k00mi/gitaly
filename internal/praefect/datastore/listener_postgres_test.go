@@ -68,6 +68,7 @@ func TestNewPostgresListener(t *testing.T) {
 type mockListenHandler struct {
 	OnNotification func(string)
 	OnDisconnect   func()
+	OnConnect      func()
 }
 
 func (mlh mockListenHandler) Notification(v string) {
@@ -79,6 +80,12 @@ func (mlh mockListenHandler) Notification(v string) {
 func (mlh mockListenHandler) Disconnect() {
 	if mlh.OnDisconnect != nil {
 		mlh.OnDisconnect()
+	}
+}
+
+func (mlh mockListenHandler) Connected() {
+	if mlh.OnConnect != nil {
+		mlh.OnConnect()
 	}
 }
 
@@ -403,4 +410,170 @@ func TestThreshold(t *testing.T) {
 		time.Sleep(time.Millisecond)
 		require.True(t, thresholdReached())
 	})
+}
+
+func TestPostgresListener_Listen_repositories_delete(t *testing.T) {
+	db := getDB(t)
+
+	testListener(
+		t,
+		"repositories_updates",
+		func(t *testing.T) {
+			_, err := db.DB.Exec(`
+				INSERT INTO repositories
+				VALUES ('praefect-1', '/path/to/repo/1', 1),
+					('praefect-1', '/path/to/repo/2', 1),
+					('praefect-1', '/path/to/repo/3', 0)`)
+			require.NoError(t, err)
+		},
+		func(t *testing.T) {
+			_, err := db.DB.Exec(`DELETE FROM repositories WHERE generation > 0`)
+			require.NoError(t, err)
+		},
+		func(t *testing.T, payload string) {
+			require.JSONEq(t, `
+				{
+					"old": [
+						{"virtual_storage":"praefect-1","relative_path":"/path/to/repo/1","generation":1},
+						{"virtual_storage":"praefect-1","relative_path":"/path/to/repo/2","generation":1}
+					],
+					"new" : null
+				}`,
+				payload,
+			)
+		},
+	)
+}
+
+func TestPostgresListener_Listen_storage_repositories_insert(t *testing.T) {
+	db := getDB(t)
+
+	testListener(
+		t,
+		"storage_repositories_updates",
+		func(t *testing.T) {},
+		func(t *testing.T) {
+			_, err := db.DB.Exec(`
+				INSERT INTO storage_repositories
+				VALUES ('praefect-1', '/path/to/repo', 'gitaly-1', 0),
+					('praefect-1', '/path/to/repo', 'gitaly-2', 0)`,
+			)
+			require.NoError(t, err)
+		},
+		func(t *testing.T, payload string) {
+			require.JSONEq(t, `
+				{
+					"old":null,
+					"new":[
+						{"virtual_storage":"praefect-1","relative_path":"/path/to/repo","storage":"gitaly-1","generation":0},
+						{"virtual_storage":"praefect-1","relative_path":"/path/to/repo","storage":"gitaly-2","generation":0}
+					]
+				}`,
+				payload,
+			)
+		},
+	)
+}
+
+func TestPostgresListener_Listen_storage_repositories_update(t *testing.T) {
+	db := getDB(t)
+
+	testListener(
+		t,
+		"storage_repositories_updates",
+		func(t *testing.T) {
+			_, err := db.DB.Exec(`INSERT INTO storage_repositories VALUES ('praefect-1', '/path/to/repo', 'gitaly-1', 0)`)
+			require.NoError(t, err)
+		},
+		func(t *testing.T) {
+			_, err := db.DB.Exec(`UPDATE storage_repositories SET generation = generation + 1`)
+			require.NoError(t, err)
+		},
+		func(t *testing.T, payload string) {
+			require.JSONEq(t, `
+				{
+					"old" : [{"virtual_storage":"praefect-1","relative_path":"/path/to/repo","storage":"gitaly-1","generation":0}],
+					"new" : [{"virtual_storage":"praefect-1","relative_path":"/path/to/repo","storage":"gitaly-1","generation":1}]
+				}`,
+				payload,
+			)
+		},
+	)
+}
+
+func TestPostgresListener_Listen_storage_repositories_delete(t *testing.T) {
+	db := getDB(t)
+
+	testListener(
+		t,
+		"storage_repositories_updates",
+		func(t *testing.T) {
+			_, err := db.DB.Exec(`
+				INSERT INTO storage_repositories (virtual_storage, relative_path, storage, generation)
+				VALUES ('praefect-1', '/path/to/repo', 'gitaly-1', 0)`,
+			)
+			require.NoError(t, err)
+		},
+		func(t *testing.T) {
+			_, err := db.DB.Exec(`DELETE FROM storage_repositories`)
+			require.NoError(t, err)
+		},
+		func(t *testing.T, payload string) {
+			require.JSONEq(t, `
+				{
+					"old" : [{"virtual_storage":"praefect-1","relative_path":"/path/to/repo","storage":"gitaly-1","generation":0}],
+					"new" : null
+				}`,
+				payload,
+			)
+		},
+	)
+}
+
+func testListener(t *testing.T, channel string, setup func(t *testing.T), trigger func(t *testing.T), verifier func(t *testing.T, payload string)) {
+	setup(t)
+
+	opts := DefaultPostgresListenerOpts
+	opts.Addr = getDBConfig(t).ToPQString(true)
+	opts.Channel = channel
+
+	pgl, err := NewPostgresListener(opts)
+	require.NoError(t, err)
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	readyChan := make(chan struct{})
+	receivedChan := make(chan struct{})
+	var payload string
+
+	callback := func(pld string) {
+		select {
+		case <-receivedChan:
+			return
+		default:
+			payload = pld
+			close(receivedChan)
+		}
+	}
+
+	go func() {
+		require.NoError(t, pgl.Listen(ctx, mockListenHandler{OnNotification: callback, OnConnect: func() { close(readyChan) }}))
+	}()
+
+	select {
+	case <-time.After(time.Second):
+		require.FailNow(t, "no connection for too long period")
+	case <-readyChan:
+	}
+
+	trigger(t)
+
+	select {
+	case <-time.After(time.Second):
+		require.FailNow(t, "no notifications for too long period")
+	case <-receivedChan:
+	}
+
+	verifier(t, payload)
 }
