@@ -316,6 +316,9 @@ func TestPostgresListener_Listen(t *testing.T) {
 
 	t.Run("persisted connection interruption", func(t *testing.T) {
 		opts := newOpts()
+		opts.DisconnectThreshold = 2
+		opts.DisconnectTimeWindow = time.Hour
+
 		listener, err := NewPostgresListener(opts)
 		require.NoError(t, err)
 
@@ -337,6 +340,7 @@ func TestPostgresListener_Listen(t *testing.T) {
 
 		for i := 0; i < opts.DisconnectThreshold; i++ {
 			for atomic.LoadInt32(&connected) == 0 {
+				time.Sleep(100 * time.Millisecond)
 				notifyListener(t, opts.Channel, "")
 			}
 
@@ -356,7 +360,7 @@ func TestPostgresListener_Listen(t *testing.T) {
 			case "disconnected":
 				require.EqualValues(t, disconnected, *metric.Counter.Value)
 			case "reconnected":
-				require.GreaterOrEqual(t, *metric.Counter.Value, 2.0)
+				require.GreaterOrEqual(t, *metric.Counter.Value, 1.0)
 			}
 		}
 	})
