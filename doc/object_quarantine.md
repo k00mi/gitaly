@@ -86,7 +86,7 @@ GitLab uses Git hooks, among other things, to implement features that
 can reject Git pushes. For example, you can mark a branch as
 "protected" in the GitLab web UI, and then certain types of users can
 no longer push to that branch. That feature is implemented via the [Git
-`pre-receive` hook](https://gitlab.com/gitlab-org/gitaly/-/blob/969bac80e2f246867c1a976864bd1f5b34ee43dd/ruby/gitlab-shell/hooks/pre-receive).
+`pre-receive` hook](https://gitlab.com/gitlab-org/gitaly/-/blob/71d527f4f16c1f0e76793f055def0299b375cc7d/internal/gitaly/service/hook/pre_receive.go).
 
 As mentioned above, Git object quarantine normally works more or less
 automatically because `git` commands spawned by the `pre-receive` hook
@@ -110,9 +110,9 @@ commit cannot be found.
 
 To overcome this problem, the GitLab `pre-receive` hook [reads the
 object directory configuration from its
-environment](https://gitlab.com/gitlab-org/gitaly/-/blob/969bac80e2f246867c1a976864bd1f5b34ee43dd/ruby/gitlab-shell/lib/object_dirs_helper.rb#L3),
+environment](https://gitlab.com/gitlab-org/gitaly/-/blob/71d527f4f16c1f0e76793f055def0299b375cc7d/internal/gitlabshell/env.go#L9).
 and passes this information [along with the HTTP API
-call](https://gitlab.com/gitlab-org/gitaly/-/blob/969bac80e2f246867c1a976864bd1f5b34ee43dd/ruby/gitlab-shell/lib/gitlab_access.rb#L24).
+call](https://gitlab.com/gitlab-org/gitaly/-/blob/71d527f4f16c1f0e76793f055def0299b375cc7d/internal/gitaly/hook/manager.go#L30-46).
 On the Rails side, we then [put the object directory information in
 the "request
 store"](https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/api/internal/base.rb#L43)

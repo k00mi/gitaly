@@ -22,7 +22,6 @@ SOURCE_DIR       := $(abspath $(dir $(lastword ${MAKEFILE_LIST})))
 BUILD_DIR        := ${SOURCE_DIR}/_build
 COVERAGE_DIR     := ${BUILD_DIR}/cover
 GITALY_RUBY_DIR  := ${SOURCE_DIR}/ruby
-GITLAB_SHELL_DIR := ${GITALY_RUBY_DIR}/gitlab-shell
 
 # These variables may be overridden at runtime by top-level make
 PREFIX           ?= /usr/local
@@ -188,10 +187,10 @@ assemble-go: build
 .PHONY: assemble-ruby
 assemble-ruby:
 	${Q}mkdir -p ${ASSEMBLY_ROOT}
-	${Q}rm -rf ${GITALY_RUBY_DIR}/tmp ${GITLAB_SHELL_DIR}/tmp
+	${Q}rm -rf ${GITALY_RUBY_DIR}/tmp
 	${Q}mkdir -p ${ASSEMBLY_ROOT}/ruby/
 	rsync -a --delete  ${GITALY_RUBY_DIR}/ ${ASSEMBLY_ROOT}/ruby/
-	${Q}rm -rf ${ASSEMBLY_ROOT}/ruby/spec ${ASSEMBLY_ROOT}/ruby/gitlab-shell/spec ${ASSEMBLY_ROOT}/ruby/gitlab-shell/gitlab-shell.log
+	${Q}rm -rf ${ASSEMBLY_ROOT}/ruby/spec 
 
 .PHONY: binaries
 binaries: assemble
@@ -199,11 +198,11 @@ binaries: assemble
 	${Q}cd ${ASSEMBLY_ROOT} && sha256sum bin/* | tee checksums.sha256.txt
 
 .PHONY: prepare-tests
-prepare-tests: git ${GITLAB_SHELL_DIR}/config.yml ${TEST_REPO} ${TEST_REPO_GIT} ${SOURCE_DIR}/.ruby-bundle
+prepare-tests: git ${TEST_REPO} ${TEST_REPO_GIT} ${SOURCE_DIR}/.ruby-bundle
 
 .PHONY: test
 test: export PATH := ${SOURCE_DIR}/internal/testhelper/testdata/home/bin:${PATH}
-test: test-go rspec rspec-gitlab-shell
+test: test-go rspec
 
 .PHONY: test-go
 test-go: prepare-tests ${GO_JUNIT_REPORT} libgit2
@@ -228,10 +227,6 @@ race-go: test-go
 .PHONY: rspec
 rspec: assemble-go prepare-tests
 	${Q}cd ${GITALY_RUBY_DIR} && bundle exec rspec
-
-.PHONY: rspec-gitlab-shell
-rspec-gitlab-shell: ${GITLAB_SHELL_DIR}/config.yml assemble-go prepare-tests
-	${Q}cd ${GITALY_RUBY_DIR} && bundle exec bin/ruby-cd ${GITLAB_SHELL_DIR} rspec
 
 .PHONY: test-postgres
 test-postgres: prepare-tests
@@ -277,7 +272,7 @@ notice: ${SOURCE_DIR}/NOTICE
 
 .PHONY: clean
 clean:
-	rm -rf ${BUILD_DIR} ${SOURCE_DIR}/internal/testhelper/testdata/data/ ${SOURCE_DIR}/ruby/.bundle/ ${SOURCE_DIR}/ruby/gitlab-shell/config.yml ${SOURCE_DIR}/ruby/vendor/bundle/ $(addprefix ${SOURCE_DIR}/, $(notdir $(call find_commands)))
+	rm -rf ${BUILD_DIR} ${SOURCE_DIR}/internal/testhelper/testdata/data/ ${SOURCE_DIR}/ruby/.bundle/ ${SOURCE_DIR}/ruby/vendor/bundle/ $(addprefix ${SOURCE_DIR}/, $(notdir $(call find_commands)))
 
 .PHONY: clean-ruby-vendor-go
 clean-ruby-vendor-go:
@@ -461,6 +456,3 @@ ${TEST_REPO_GIT}:
 	mkdir -p $@/refs/heads $@/refs/tags
 	cp ${SOURCE_DIR}/_support/gitlab-git-test.git-packed-refs $@/packed-refs
 	${GIT} -C $@ fsck --no-progress
-
-${GITLAB_SHELL_DIR}/config.yml: ${GITLAB_SHELL_DIR}/config.yml.example
-	cp $< $@
