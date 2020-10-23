@@ -480,7 +480,7 @@ func (s *server) UserMergeToRef(ctx context.Context, in *gitalypb.UserMergeToRef
 		return nil, helper.ErrInvalidArgument(err)
 	}
 
-	if featureflag.IsEnabled(ctx, featureflag.GoUserMergeBranch) && !in.AllowConflicts {
+	if featureflag.IsEnabled(ctx, featureflag.GoUserMergeToRef) && !in.AllowConflicts {
 		return s.userMergeToRef(ctx, in)
 	}
 
