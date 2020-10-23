@@ -14,6 +14,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/version"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitlab-shell/client"
 )
@@ -98,6 +99,8 @@ func NewGitlabNetClient(gitlabCfg config.Gitlab) (*client.GitlabNetClient, error
 	if err != nil {
 		return nil, fmt.Errorf("instantiating gitlab net client: %w", err)
 	}
+
+	gitlabnetClient.SetUserAgent("gitaly/" + version.GetVersion())
 
 	return gitlabnetClient, nil
 }

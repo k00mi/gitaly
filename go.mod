@@ -17,21 +17,22 @@ require (
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/olekukonko/tablewriter v0.0.2
 	github.com/opentracing/opentracing-go v1.0.2
+	github.com/otiai10/curr v1.0.0 // indirect
 	github.com/pelletier/go-toml v1.8.1
 	github.com/prometheus/client_golang v1.0.0
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
 	github.com/prometheus/procfs v0.0.3 // indirect
 	github.com/rubenv/sql-migrate v0.0.0-20191213152630-06338513c237
-	github.com/sirupsen/logrus v1.6.0
+	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.5.1
 	github.com/uber/jaeger-client-go v2.15.0+incompatible
-	gitlab.com/gitlab-org/gitlab-shell v0.0.0-20200921044701-1a2bfecd2f0e
-	gitlab.com/gitlab-org/labkit v0.0.0-20200908084045-45895e129029
+	gitlab.com/gitlab-org/gitlab-shell v1.9.8-0.20201015160834-d2f888583c77
+	gitlab.com/gitlab-org/labkit v0.0.0-20201014124351-eb1fe6499318
 	go.uber.org/atomic v1.4.0 // indirect
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a // indirect
 	golang.org/x/net v0.0.0-20200904194848-62affa334b73 // indirect
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
-	golang.org/x/sys v0.0.0-20200918174421-af09f7315aff
+	golang.org/x/sys v0.0.0-20201015000850-e3ed0017c211
 	golang.org/x/text v0.3.3 // indirect
 	google.golang.org/grpc v1.24.0
 	gopkg.in/yaml.v2 v2.3.0
