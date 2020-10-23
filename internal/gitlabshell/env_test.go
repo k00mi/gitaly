@@ -1,12 +1,10 @@
 package gitlabshell_test
 
 import (
-	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"os"
-	"os/exec"
-	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -44,30 +42,35 @@ func TestGitHooksConfig(t *testing.T) {
 		SecretFile: "secret_file_path",
 	}
 
-	dumpConfigPath := filepath.Join(config.Config.Ruby.Dir, "gitlab-shell", "bin", "dump-config")
-
-	var stdout bytes.Buffer
-
-	cmd := exec.Command(dumpConfigPath)
-	gitlabshellEnv, err := gitlabshell.Env()
+	env, err := gitlabshell.Env()
 	require.NoError(t, err)
-	cmd.Env = append(os.Environ(), gitlabshellEnv...)
-	cmd.Stdout = &stdout
-	cmd.Stderr = os.Stderr
 
-	require.NoError(t, cmd.Run())
+	require.Contains(t, env, "GITALY_GITLAB_SHELL_DIR="+config.Config.GitlabShell.Dir)
+	require.Contains(t, env, "GITALY_LOG_DIR="+config.Config.Logging.Dir)
+	require.Contains(t, env, "GITALY_LOG_FORMAT="+config.Config.Logging.Format)
+	require.Contains(t, env, "GITALY_LOG_LEVEL="+config.Config.Logging.Level)
+	require.Contains(t, env, "GITALY_BIN_DIR="+config.Config.BinDir)
+	require.Contains(t, env, "GITALY_RUBY_DIR="+config.Config.Ruby.Dir)
 
-	rubyConfigMap := make(map[string]interface{})
+	jsonShellConfig := ""
+	for _, envVar := range env {
+		if strings.HasPrefix(envVar, "GITALY_GITLAB_SHELL_CONFIG") {
+			jsonShellConfig = strings.SplitN(envVar, "=", 2)[1]
+			break
+		}
+	}
 
-	require.NoError(t, json.NewDecoder(&stdout).Decode(&rubyConfigMap))
-	require.Equal(t, config.Config.Logging.Level, rubyConfigMap["log_level"])
-	require.Equal(t, config.Config.Logging.Format, rubyConfigMap["log_format"])
-	require.Equal(t, config.Config.Gitlab.SecretFile, rubyConfigMap["secret_file"])
-	require.Equal(t, config.Config.Hooks.CustomHooksDir, rubyConfigMap["custom_hooks_dir"])
-	require.Equal(t, config.Config.Gitlab.URL, rubyConfigMap["gitlab_url"])
+	configMap := make(map[string]interface{})
+
+	require.NoError(t, json.Unmarshal([]byte(jsonShellConfig), &configMap))
+	require.Equal(t, config.Config.Logging.Level, configMap["log_level"])
+	require.Equal(t, config.Config.Logging.Format, configMap["log_format"])
+	require.Equal(t, config.Config.Gitlab.SecretFile, configMap["secret_file"])
+	require.Equal(t, config.Config.Hooks.CustomHooksDir, configMap["custom_hooks_dir"])
+	require.Equal(t, config.Config.Gitlab.URL, configMap["gitlab_url"])
 
 	// HTTP Settings
-	httpSettings, ok := rubyConfigMap["http_settings"].(map[string]interface{})
+	httpSettings, ok := configMap["http_settings"].(map[string]interface{})
 	require.True(t, ok)
 	require.Equal(t, float64(config.Config.Gitlab.HTTPSettings.ReadTimeout), httpSettings["read_timeout"])
 	require.Equal(t, config.Config.Gitlab.HTTPSettings.User, httpSettings["user"])
@@ -75,7 +78,4 @@ func TestGitHooksConfig(t *testing.T) {
 	require.Equal(t, config.Config.Gitlab.HTTPSettings.CAFile, httpSettings["ca_file"])
 	require.Equal(t, config.Config.Gitlab.HTTPSettings.CAPath, httpSettings["ca_path"])
 	require.Equal(t, config.Config.Gitlab.HTTPSettings.SelfSigned, httpSettings["self_signed_cert"])
-
-	dir := filepath.Dir(rubyConfigMap["log_file"].(string))
-	require.Equal(t, config.Config.Logging.Dir, dir)
 }
