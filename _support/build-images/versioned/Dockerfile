@@ -8,4 +8,4 @@ COPY ./Gemfile.lock /bundle-cache
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get update -qq && \
     DEBIAN_FRONTEND=noninteractive apt-get install -qq -y rubygems bundler cmake build-essential libicu-dev && \
-    cd /bundle-cache && bundle install --path vendor/bundle
+    cd /bundle-cache && gem install bundler -v 1.17.3 && bundle install --path vendor/bundle

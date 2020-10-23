@@ -355,6 +355,7 @@ libgit2: ${LIBGIT2_INSTALL_DIR}/lib/libgit2.a
 # step. Both Omnibus and CNG assume it is in the Gitaly root, not in
 # _build. Hence the '../' in front.
 ${SOURCE_DIR}/.ruby-bundle: ${GITALY_RUBY_DIR}/Gemfile.lock ${GITALY_RUBY_DIR}/Gemfile
+	gem install bundler -v 1.17.3
 	${Q}cd ${GITALY_RUBY_DIR} && bundle config # for debugging
 	${Q}cd ${GITALY_RUBY_DIR} && bundle install ${BUNDLE_FLAGS}
 	${Q}touch $@

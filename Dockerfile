@@ -20,4 +20,3 @@ RUN apt-get update -qq && \
 COPY . /app
 
 CMD ["/app/bin/gitaly", "/app/config/config.toml"]
-
