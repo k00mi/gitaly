@@ -434,8 +434,8 @@ func TestPostgresListener_Listen_repositories_delete(t *testing.T) {
 			require.JSONEq(t, `
 				{
 					"old": [
-						{"virtual_storage":"praefect-1","relative_path":"/path/to/repo/1","generation":1},
-						{"virtual_storage":"praefect-1","relative_path":"/path/to/repo/2","generation":1}
+						{"virtual_storage":"praefect-1","relative_path":"/path/to/repo/1","generation":1,"primary":null},
+						{"virtual_storage":"praefect-1","relative_path":"/path/to/repo/2","generation":1,"primary":null}
 					],
 					"new" : null
 				}`,
