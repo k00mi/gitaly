@@ -70,6 +70,19 @@ func main() {
 		log.WithError(err).WithField("config_path", configPath).Fatal("load config")
 	}
 
+	gitVersion, err := git.Version()
+	if err != nil {
+		log.WithError(err).Fatal("Git version detection")
+	}
+
+	supported, err := git.SupportedVersion(gitVersion)
+	if err != nil {
+		log.WithError(err).Fatal("Git version comparison")
+	}
+	if !supported {
+		log.Fatalf("unsupported Git version: %q", gitVersion)
+	}
+
 	config.ConfigureLogging()
 
 	b, err := bootstrap.New()
