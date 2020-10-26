@@ -3,9 +3,11 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 
 	git "github.com/libgit2/git2go/v30"
@@ -22,7 +24,7 @@ func (cmd *revertSubcommand) Flags() *flag.FlagSet {
 	return flags
 }
 
-func (cmd *revertSubcommand) Run() error {
+func (cmd *revertSubcommand) Run(context.Context, io.Reader, io.Writer) error {
 	request, err := git2go.RevertCommandFromSerialized(cmd.request)
 	if err != nil {
 		return err
@@ -59,12 +61,7 @@ func (cmd *revertSubcommand) Run() error {
 		return fmt.Errorf("write tree: %w", err)
 	}
 
-	committer := git.Signature{
-		Name:  sanitizeSignatureInfo(request.AuthorName),
-		Email: sanitizeSignatureInfo(request.AuthorMail),
-		When:  request.AuthorDate,
-	}
-
+	committer := git.Signature(git2go.NewSignature(request.AuthorName, request.AuthorMail, request.AuthorDate))
 	commit, err := repo.CreateCommitFromIds("", &committer, &committer, request.Message, tree, ours.Id())
 	if err != nil {
 		return fmt.Errorf("create revert commit: %w", err)

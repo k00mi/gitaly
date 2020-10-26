@@ -3,11 +3,12 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
-	"strings"
 	"time"
 
 	git "github.com/libgit2/git2go/v30"
@@ -24,18 +25,7 @@ func (cmd *mergeSubcommand) Flags() *flag.FlagSet {
 	return flags
 }
 
-func sanitizeSignatureInfo(info string) string {
-	return strings.Map(func(r rune) rune {
-		switch r {
-		case '<', '>', '\n':
-			return -1
-		default:
-			return r
-		}
-	}, info)
-}
-
-func (cmd *mergeSubcommand) Run() error {
+func (cmd *mergeSubcommand) Run(context.Context, io.Reader, io.Writer) error {
 	request, err := git2go.MergeCommandFromSerialized(cmd.request)
 	if err != nil {
 		return err
@@ -76,12 +66,7 @@ func (cmd *mergeSubcommand) Run() error {
 		return fmt.Errorf("could not write tree: %w", err)
 	}
 
-	committer := git.Signature{
-		Name:  sanitizeSignatureInfo(request.AuthorName),
-		Email: sanitizeSignatureInfo(request.AuthorMail),
-		When:  request.AuthorDate,
-	}
-
+	committer := git.Signature(git2go.NewSignature(request.AuthorName, request.AuthorMail, request.AuthorDate))
 	commit, err := repo.CreateCommitFromIds("", &committer, &committer, request.Message, tree, ours.Id(), theirs.Id())
 	if err != nil {
 		return fmt.Errorf("could not create merge commit: %w", err)

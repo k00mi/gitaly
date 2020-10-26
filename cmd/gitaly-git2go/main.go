@@ -3,18 +3,21 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 )
 
 type subcmd interface {
 	Flags() *flag.FlagSet
-	Run() error
+	Run(ctx context.Context, stdin io.Reader, stdout io.Writer) error
 }
 
 var subcommands = map[string]subcmd{
 	"conflicts": &conflictsSubcommand{},
+	"commit":    commitSubcommand{},
 	"merge":     &mergeSubcommand{},
 	"revert":    &revertSubcommand{},
 }
@@ -46,7 +49,7 @@ func main() {
 		fatalf("%s: trailing arguments", subcmdFlags.Name())
 	}
 
-	if err := subcmd.Run(); err != nil {
+	if err := subcmd.Run(context.Background(), os.Stdin, os.Stdout); err != nil {
 		fatalf("%s: %s", subcmdFlags.Name(), err)
 	}
 }

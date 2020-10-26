@@ -8,30 +8,32 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 )
 
-func run(ctx context.Context, cfg config.Cfg, subcommand string, arg string) (string, error) {
-	binary := path.Join(cfg.BinDir, "gitaly-git2go")
+func binaryPathFromCfg(cfg config.Cfg) string {
+	return filepath.Join(cfg.BinDir, "gitaly-git2go")
+}
 
+func run(ctx context.Context, binaryPath string, stdin io.Reader, args ...string) (*bytes.Buffer, error) {
 	var stderr, stdout bytes.Buffer
-	cmd, err := command.New(ctx, exec.Command(binary, subcommand, "-request", arg), nil, &stdout, &stderr)
+	cmd, err := command.New(ctx, exec.Command(binaryPath, args...), stdin, &stdout, &stderr)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if err := cmd.Wait(); err != nil {
 		if _, ok := err.(*exec.ExitError); ok {
-			return "", fmt.Errorf("%s", stderr.String())
+			return nil, fmt.Errorf("%s", stderr.String())
 		}
-		return "", err
+		return nil, err
 	}
 
-	return stdout.String(), nil
+	return &stdout, nil
 }
 
 func serialize(v interface{}) (string, error) {

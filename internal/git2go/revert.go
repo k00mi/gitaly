@@ -50,13 +50,13 @@ func (r RevertCommand) Run(ctx context.Context, cfg config.Cfg) (RevertResult, e
 		return RevertResult{}, err
 	}
 
-	stdout, err := run(ctx, cfg, "revert", serialized)
+	stdout, err := run(ctx, binaryPathFromCfg(cfg), nil, "revert", "-request", serialized)
 	if err != nil {
 		return RevertResult{}, err
 	}
 
 	var response RevertResult
-	if err := deserialize(stdout, &response); err != nil {
+	if err := deserialize(stdout.String(), &response); err != nil {
 		return RevertResult{}, err
 	}
 
