@@ -20,7 +20,8 @@ import (
 )
 
 func TestFetchIntoObjectPool_Success(t *testing.T) {
-	server, serverSocketPath := runObjectPoolServer(t)
+	locator := gconfig.NewLocator(gconfig.Config)
+	server, serverSocketPath := runObjectPoolServer(t, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -34,7 +35,7 @@ func TestFetchIntoObjectPool_Success(t *testing.T) {
 
 	repoCommit := testhelper.CreateCommit(t, testRepoPath, t.Name(), &testhelper.CreateCommitOpts{Message: t.Name()})
 
-	pool, err := objectpool.NewObjectPool(gconfig.NewLocator(gconfig.Config), "default", testhelper.NewTestObjectPoolName(t))
+	pool, err := objectpool.NewObjectPool(locator, "default", testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
 	defer pool.Remove(ctx)
 
@@ -78,7 +79,8 @@ func TestFetchIntoObjectPool_CollectLogStatistics(t *testing.T) {
 	defer cancel()
 	ctx = ctxlogrus.ToContext(ctx, log.WithField("test", "logging"))
 
-	server, serverSocketPath := runObjectPoolServer(t)
+	locator := gconfig.NewLocator(gconfig.Config)
+	server, serverSocketPath := runObjectPoolServer(t, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -87,7 +89,7 @@ func TestFetchIntoObjectPool_CollectLogStatistics(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	pool, err := objectpool.NewObjectPool(gconfig.NewLocator(gconfig.Config), "default", testhelper.NewTestObjectPoolName(t))
+	pool, err := objectpool.NewObjectPool(locator, "default", testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
 	defer pool.Remove(ctx)
 

@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/stats"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -109,7 +108,7 @@ func (s *server) optimizeRepository(ctx context.Context, repository *gitalypb.Re
 	}
 
 	if !hasBitmap {
-		altFile, err := git.InfoAlternatesPath(repository)
+		altFile, err := s.locator.InfoAlternatesPath(repository)
 		if err != nil {
 			return helper.ErrInternal(err)
 		}

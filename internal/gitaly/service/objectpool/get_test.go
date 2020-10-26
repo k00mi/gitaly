@@ -14,7 +14,8 @@ import (
 )
 
 func TestGetObjectPoolSuccess(t *testing.T) {
-	server, serverSocketPath := runObjectPoolServer(t)
+	locator := gconfig.NewLocator(gconfig.Config)
+	server, serverSocketPath := runObjectPoolServer(t, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -25,7 +26,7 @@ func TestGetObjectPoolSuccess(t *testing.T) {
 
 	relativePoolPath := testhelper.NewTestObjectPoolName(t)
 
-	pool, err := objectpool.NewObjectPool(gconfig.NewLocator(gconfig.Config), testRepo.GetStorageName(), relativePoolPath)
+	pool, err := objectpool.NewObjectPool(locator, testRepo.GetStorageName(), relativePoolPath)
 	require.NoError(t, err)
 
 	poolCtx, cancel := testhelper.Context()
@@ -46,7 +47,7 @@ func TestGetObjectPoolSuccess(t *testing.T) {
 }
 
 func TestGetObjectPoolNoFile(t *testing.T) {
-	server, serverSocketPath := runObjectPoolServer(t)
+	server, serverSocketPath := runObjectPoolServer(t, gconfig.NewLocator(gconfig.Config))
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -67,7 +68,7 @@ func TestGetObjectPoolNoFile(t *testing.T) {
 }
 
 func TestGetObjectPoolBadFile(t *testing.T) {
-	server, serverSocketPath := runObjectPoolServer(t)
+	server, serverSocketPath := runObjectPoolServer(t, gconfig.NewLocator(gconfig.Config))
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)

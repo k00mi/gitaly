@@ -3,11 +3,7 @@ package git
 import (
 	"bytes"
 	"fmt"
-	"path/filepath"
 	"time"
-
-	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
 // FallbackTimeValue is the value returned by `SafeTimeParse` in case it
@@ -56,14 +52,4 @@ func BuildGitOptions(gitOpts []string, otherOpts ...string) []string {
 	}
 
 	return append(args, otherOpts...)
-}
-
-// InfoAlternatesPath finds the fully qualified path for the alternates file.
-func InfoAlternatesPath(repo repository.GitRepo) (string, error) {
-	repoPath, err := helper.GetRepoPath(repo)
-	if err != nil {
-		return "", err
-	}
-
-	return filepath.Join(repoPath, "objects", "info", "alternates"), nil
 }

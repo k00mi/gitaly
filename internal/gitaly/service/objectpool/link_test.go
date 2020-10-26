@@ -17,7 +17,8 @@ import (
 )
 
 func TestLink(t *testing.T) {
-	server, serverSocketPath := runObjectPoolServer(t)
+	locator := gconfig.NewLocator(gconfig.Config)
+	server, serverSocketPath := runObjectPoolServer(t, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -29,7 +30,7 @@ func TestLink(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	pool, err := objectpool.NewObjectPool(gconfig.NewLocator(gconfig.Config), testRepo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
+	pool, err := objectpool.NewObjectPool(locator, testRepo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
 
 	require.NoError(t, pool.Remove(ctx), "make sure pool does not exist at start of test")
@@ -90,7 +91,8 @@ func TestLink(t *testing.T) {
 }
 
 func TestLinkIdempotent(t *testing.T) {
-	server, serverSocketPath := runObjectPoolServer(t)
+	locator := gconfig.NewLocator(gconfig.Config)
+	server, serverSocketPath := runObjectPoolServer(t, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -102,7 +104,7 @@ func TestLinkIdempotent(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	pool, err := objectpool.NewObjectPool(gconfig.NewLocator(gconfig.Config), testRepo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
+	pool, err := objectpool.NewObjectPool(locator, testRepo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
 	defer pool.Remove(ctx)
 	require.NoError(t, pool.Create(ctx, testRepo))
@@ -120,7 +122,8 @@ func TestLinkIdempotent(t *testing.T) {
 }
 
 func TestLinkNoClobber(t *testing.T) {
-	server, serverSocketPath := runObjectPoolServer(t)
+	locator := gconfig.NewLocator(gconfig.Config)
+	server, serverSocketPath := runObjectPoolServer(t, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -132,7 +135,7 @@ func TestLinkNoClobber(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	pool, err := objectpool.NewObjectPool(gconfig.NewLocator(gconfig.Config), testRepo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
+	pool, err := objectpool.NewObjectPool(locator, testRepo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
 	defer pool.Remove(ctx)
 
@@ -159,7 +162,8 @@ func TestLinkNoClobber(t *testing.T) {
 }
 
 func TestLinkNoPool(t *testing.T) {
-	server, serverSocketPath := runObjectPoolServer(t)
+	locator := gconfig.NewLocator(gconfig.Config)
+	server, serverSocketPath := runObjectPoolServer(t, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -171,7 +175,6 @@ func TestLinkNoPool(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	locator := gconfig.NewLocator(gconfig.Config)
 	pool, err := objectpool.NewObjectPool(locator, testRepo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
 	// intentionally do not call pool.Create
@@ -192,7 +195,8 @@ func TestLinkNoPool(t *testing.T) {
 }
 
 func TestUnlink(t *testing.T) {
-	server, serverSocketPath := runObjectPoolServer(t)
+	locator := gconfig.NewLocator(gconfig.Config)
+	server, serverSocketPath := runObjectPoolServer(t, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -206,8 +210,6 @@ func TestUnlink(t *testing.T) {
 
 	deletedRepo, deletedRepoPath, removeDeletedRepo := testhelper.NewTestRepo(t)
 	defer removeDeletedRepo()
-
-	locator := gconfig.NewLocator(gconfig.Config)
 
 	pool, err := objectpool.NewObjectPool(locator, testRepo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
@@ -306,7 +308,8 @@ func TestUnlink(t *testing.T) {
 }
 
 func TestUnlinkIdempotent(t *testing.T) {
-	server, serverSocketPath := runObjectPoolServer(t)
+	locator := gconfig.NewLocator(gconfig.Config)
+	server, serverSocketPath := runObjectPoolServer(t, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -318,7 +321,7 @@ func TestUnlinkIdempotent(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	pool, err := objectpool.NewObjectPool(gconfig.NewLocator(gconfig.Config), testRepo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
+	pool, err := objectpool.NewObjectPool(locator, testRepo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
 	defer pool.Remove(ctx)
 	require.NoError(t, pool.Create(ctx, testRepo))

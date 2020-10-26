@@ -21,7 +21,7 @@ import (
 // is to join the pool. This does not trigger deduplication, which is the
 // responsibility of the caller.
 func (o *ObjectPool) Link(ctx context.Context, repo *gitalypb.Repository) error {
-	altPath, err := git.InfoAlternatesPath(repo)
+	altPath, err := o.locator.InfoAlternatesPath(repo)
 	if err != nil {
 		return err
 	}
@@ -38,10 +38,6 @@ func (o *ObjectPool) Link(ctx context.Context, repo *gitalypb.Repository) error 
 
 	if linked {
 		return nil
-	}
-
-	if err != nil && !os.IsNotExist(err) {
-		return err
 	}
 
 	tmp, err := ioutil.TempFile(filepath.Dir(altPath), "alternates")
@@ -124,7 +120,7 @@ func getBitmaps(repo repository.GitRepo) ([]string, error) {
 }
 
 func (o *ObjectPool) getRelativeObjectPath(repo *gitalypb.Repository) (string, error) {
-	repoPath, err := helper.GetRepoPath(repo)
+	repoPath, err := o.locator.GetRepoPath(repo)
 	if err != nil {
 		return "", err
 	}
@@ -139,7 +135,7 @@ func (o *ObjectPool) getRelativeObjectPath(repo *gitalypb.Repository) (string, e
 
 // LinkedToRepository tests if a repository is linked to an object pool
 func (o *ObjectPool) LinkedToRepository(repo *gitalypb.Repository) (bool, error) {
-	relPath, err := getAlternateObjectDir(repo)
+	relPath, err := getAlternateObjectDir(o.locator, repo)
 	if err != nil {
 		if err == ErrAlternateObjectDirNotExist {
 			return false, nil

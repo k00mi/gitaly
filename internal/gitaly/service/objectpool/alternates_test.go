@@ -15,7 +15,8 @@ import (
 )
 
 func TestDisconnectGitAlternates(t *testing.T) {
-	server, serverSocketPath := runObjectPoolServer(t)
+	locator := gconfig.NewLocator(gconfig.Config)
+	server, serverSocketPath := runObjectPoolServer(t, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -27,7 +28,7 @@ func TestDisconnectGitAlternates(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	pool, err := objectpool.NewObjectPool(gconfig.NewLocator(gconfig.Config), testRepo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
+	pool, err := objectpool.NewObjectPool(locator, testRepo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
 	defer pool.Remove(ctx)
 
@@ -38,7 +39,7 @@ func TestDisconnectGitAlternates(t *testing.T) {
 	existingObjectID := "55bc176024cfa3baaceb71db584c7e5df900ea65"
 
 	// Corrupt the repository to check that existingObjectID can no longer be found
-	altPath, err := git.InfoAlternatesPath(testRepo)
+	altPath, err := locator.InfoAlternatesPath(testRepo)
 	require.NoError(t, err, "find info/alternates")
 	require.NoError(t, os.RemoveAll(altPath))
 
@@ -64,7 +65,8 @@ func TestDisconnectGitAlternates(t *testing.T) {
 }
 
 func TestDisconnectGitAlternatesNoAlternates(t *testing.T) {
-	server, serverSocketPath := runObjectPoolServer(t)
+	locator := gconfig.NewLocator(gconfig.Config)
+	server, serverSocketPath := runObjectPoolServer(t, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -76,7 +78,7 @@ func TestDisconnectGitAlternatesNoAlternates(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	altPath, err := git.InfoAlternatesPath(testRepo)
+	altPath, err := locator.InfoAlternatesPath(testRepo)
 	require.NoError(t, err, "find info/alternates")
 	testhelper.AssertPathNotExists(t, altPath)
 
@@ -87,7 +89,8 @@ func TestDisconnectGitAlternatesNoAlternates(t *testing.T) {
 }
 
 func TestDisconnectGitAlternatesUnexpectedAlternates(t *testing.T) {
-	server, serverSocketPath := runObjectPoolServer(t)
+	locator := gconfig.NewLocator(gconfig.Config)
+	server, serverSocketPath := runObjectPoolServer(t, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -110,7 +113,7 @@ func TestDisconnectGitAlternatesUnexpectedAlternates(t *testing.T) {
 			testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 			defer cleanupFn()
 
-			altPath, err := git.InfoAlternatesPath(testRepo)
+			altPath, err := locator.InfoAlternatesPath(testRepo)
 			require.NoError(t, err, "find info/alternates")
 
 			require.NoError(t, ioutil.WriteFile(altPath, []byte(tc.altContent), 0644))
@@ -132,7 +135,8 @@ func TestRemoveAlternatesIfOk(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	altPath, err := git.InfoAlternatesPath(testRepo)
+	locator := gconfig.NewLocator(gconfig.Config)
+	altPath, err := locator.InfoAlternatesPath(testRepo)
 	require.NoError(t, err, "find info/alternates")
 	altContent := "/var/empty\n"
 	require.NoError(t, ioutil.WriteFile(altPath, []byte(altContent), 0644), "write alternates file")

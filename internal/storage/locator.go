@@ -28,6 +28,8 @@ type Locator interface {
 	// gRPC errors with relevant error codes and should be passed back to gRPC
 	// without further decoration.
 	GetObjectDirectoryPath(repo repository.GitRepo) (string, error)
+	// InfoAlternatesPath finds the fully qualified path for the alternates file.
+	InfoAlternatesPath(repo repository.GitRepo) (string, error)
 }
 
 var ErrRelativePathEscapesRoot = errors.New("relative path escapes root directory")

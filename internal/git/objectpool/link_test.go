@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
@@ -25,7 +24,7 @@ func TestLink(t *testing.T) {
 	require.NoError(t, pool.Remove(ctx), "make sure pool does not exist prior to creation")
 	require.NoError(t, pool.Create(ctx, testRepo), "create pool")
 
-	altPath, err := git.InfoAlternatesPath(testRepo)
+	altPath, err := pool.locator.InfoAlternatesPath(testRepo)
 	require.NoError(t, err)
 	_, err = os.Stat(altPath)
 	require.True(t, os.IsNotExist(err))
@@ -131,7 +130,7 @@ func TestLinkAbsoluteLinkExists(t *testing.T) {
 	require.NoError(t, pool.Remove(ctx), "make sure pool does not exist prior to creation")
 	require.NoError(t, pool.Create(ctx, testRepo), "create pool")
 
-	altPath, err := git.InfoAlternatesPath(testRepo)
+	altPath, err := pool.locator.InfoAlternatesPath(testRepo)
 	require.NoError(t, err)
 
 	fullPath := filepath.Join(pool.FullPath(), "objects")

@@ -105,3 +105,12 @@ func (l *configLocator) GetObjectDirectoryPath(repo repository.GitRepo) (string,
 
 	return fullPath, nil
 }
+
+func (l *configLocator) InfoAlternatesPath(repo repository.GitRepo) (string, error) {
+	repoPath, err := l.GetRepoPath(repo)
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(repoPath, "objects", "info", "alternates"), nil
+}
