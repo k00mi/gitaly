@@ -261,8 +261,7 @@ praefect_sql_test:
     - make test-postgres
 
 lint:
-  # Only Go 1.13 currently officially supported
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-${RUBY_VERSION}-golang-1.13-git-2.28
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-${RUBY_VERSION}-golang-1.14-git-2.28
   stage: test
   retry: 2
   script:
