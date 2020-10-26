@@ -35,29 +35,8 @@ func TestFindCommitsFields(t *testing.T) {
 		commit *gitalypb.GitCommit
 	}{
 		{
-			id: "b83d6e391c22777fca1ed3012fce84f633d7fed0",
-			commit: &gitalypb.GitCommit{
-				Id:      "b83d6e391c22777fca1ed3012fce84f633d7fed0",
-				Subject: []byte("Merge branch 'branch-merged' into 'master'"),
-				Body:    []byte("Merge branch 'branch-merged' into 'master'\r\n\r\nadds bar folder and branch-test text file to check Repository merged_to_root_ref method\r\n\r\n\r\n\r\nSee merge request !12"),
-				Author: &gitalypb.CommitAuthor{
-					Name:     []byte("Job van der Voort"),
-					Email:    []byte("job@gitlab.com"),
-					Date:     &timestamp.Timestamp{Seconds: 1474987066},
-					Timezone: []byte("+0000"),
-				},
-				Committer: &gitalypb.CommitAuthor{
-					Name:     []byte("Job van der Voort"),
-					Email:    []byte("job@gitlab.com"),
-					Date:     &timestamp.Timestamp{Seconds: 1474987066},
-					Timezone: []byte("+0000"),
-				},
-				ParentIds: []string{
-					"1b12f15a11fc6e62177bef08f47bc7b5ce50b141",
-					"498214de67004b1da3d820901307bed2a68a8ef6",
-				},
-				BodySize: 162,
-			},
+			id:     "b83d6e391c22777fca1ed3012fce84f633d7fed0",
+			commit: testhelper.GitLabTestCommit("b83d6e391c22777fca1ed3012fce84f633d7fed0"),
 		},
 		{
 			id: "c809470461118b7bcab850f6e9a7ca97ac42f8ea",
@@ -79,76 +58,20 @@ func TestFindCommitsFields(t *testing.T) {
 				},
 				ParentIds: []string{"e63f41fe459e62e1228fcef60d7189127aeba95a"},
 				BodySize:  49,
+				TreeId:    "86ec18bfe87ad42a782fdabd8310f9b7ac750f51",
 			},
 		},
 		{
-			id: "0999bb770f8dc92ab5581cc0b474b3e31a96bf5c",
-			commit: &gitalypb.GitCommit{
-				Id:      "0999bb770f8dc92ab5581cc0b474b3e31a96bf5c",
-				Subject: []byte("Hello\xf0world"),
-				Body:    []byte("Hello\xf0world\n"),
-				Author: &gitalypb.CommitAuthor{
-					Name:     []byte("Jacob Vosmaer"),
-					Email:    []byte("jacob@gitlab.com"),
-					Date:     &timestamp.Timestamp{Seconds: 1517328273},
-					Timezone: []byte("+0100"),
-				},
-				Committer: &gitalypb.CommitAuthor{
-					Name:     []byte("Jacob Vosmaer"),
-					Email:    []byte("jacob@gitlab.com"),
-					Date:     &timestamp.Timestamp{Seconds: 1517328273},
-					Timezone: []byte("+0100"),
-				},
-				ParentIds:     []string{"60ecb67744cb56576c30214ff52294f8ce2def98"},
-				BodySize:      12,
-				SignatureType: gitalypb.SignatureType_NONE,
-			},
+			id:     "0999bb770f8dc92ab5581cc0b474b3e31a96bf5c",
+			commit: testhelper.GitLabTestCommit("0999bb770f8dc92ab5581cc0b474b3e31a96bf5c"),
 		},
 		{
-			id: "77e835ef0856f33c4f0982f84d10bdb0567fe440",
-			commit: &gitalypb.GitCommit{
-				Id:      "77e835ef0856f33c4f0982f84d10bdb0567fe440",
-				Subject: []byte("Add file larger than 1 mb"),
-				Body:    []byte("Add file larger than 1 mb\n\nIn order to test Max File Size push rule we need a file larger than 1 MB\n"),
-				Author: &gitalypb.CommitAuthor{
-					Name:     []byte("Ruben Davila"),
-					Email:    []byte("rdavila84@gmail.com"),
-					Date:     &timestamp.Timestamp{Seconds: 1523247267},
-					Timezone: []byte("-0500"),
-				},
-				Committer: &gitalypb.CommitAuthor{
-					Name:     []byte("Jacob Vosmaer"),
-					Email:    []byte("jacob@gitlab.com"),
-					Date:     &timestamp.Timestamp{Seconds: 1527855450},
-					Timezone: []byte("+0200"),
-				},
-				ParentIds:     []string{"60ecb67744cb56576c30214ff52294f8ce2def98"},
-				BodySize:      100,
-				SignatureType: gitalypb.SignatureType_NONE,
-			},
+			id:     "77e835ef0856f33c4f0982f84d10bdb0567fe440",
+			commit: testhelper.GitLabTestCommit("77e835ef0856f33c4f0982f84d10bdb0567fe440"),
 		},
 		{
-			id: "189a6c924013fc3fe40d6f1ec1dc20214183bc97",
-			commit: &gitalypb.GitCommit{
-				Id:      "189a6c924013fc3fe40d6f1ec1dc20214183bc97",
-				Subject: []byte("style: use markdown header within README.md"),
-				Body:    []byte("style: use markdown header within README.md\n"),
-				Author: &gitalypb.CommitAuthor{
-					Name:     []byte("Roger Meier"),
-					Email:    []byte("r.meier@siemens.com"),
-					Date:     &timestamp.Timestamp{Seconds: 1570810009},
-					Timezone: []byte("+0200"),
-				},
-				Committer: &gitalypb.CommitAuthor{
-					Name:     []byte("Roger Meier"),
-					Email:    []byte("r.meier@siemens.com"),
-					Date:     &timestamp.Timestamp{Seconds: 1570810009},
-					Timezone: []byte("+0200"),
-				},
-				ParentIds:     []string{"0ad583fecb2fb1eaaadaf77d5a33bc69ec1061c1"},
-				BodySize:      44,
-				SignatureType: gitalypb.SignatureType_X509,
-			},
+			id:     "189a6c924013fc3fe40d6f1ec1dc20214183bc97",
+			commit: testhelper.GitLabTestCommit("189a6c924013fc3fe40d6f1ec1dc20214183bc97"),
 		},
 	}
 
@@ -171,7 +94,7 @@ func TestFindCommitsFields(t *testing.T) {
 			require.Equal(t, 1, len(resp.Commits), "expected exactly one commit in the first message")
 			firstCommit := resp.Commits[0]
 
-			require.Equal(t, tc.commit, firstCommit, "mismatched commits")
+			testhelper.ProtoEqual(t, tc.commit, firstCommit)
 
 			_, err = stream.Recv()
 			require.Equal(t, io.EOF, err, "there should be no further messages in the stream")

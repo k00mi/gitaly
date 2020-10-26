@@ -51,98 +51,23 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 		{
 			description: "With a branch name",
 			revision:    "branch-merged",
-			commit: &gitalypb.GitCommit{
-				Id:      "498214de67004b1da3d820901307bed2a68a8ef6",
-				Subject: []byte("adds bar folder and branch-test text file to check Repository merged_to_root_ref method"),
-				Body:    []byte("adds bar folder and branch-test text file to check Repository merged_to_root_ref method\n"),
-				Author: &gitalypb.CommitAuthor{
-					Name:     []byte("tiagonbotelho"),
-					Email:    []byte("tiagonbotelho@hotmail.com"),
-					Date:     &timestamp.Timestamp{Seconds: 1474470806},
-					Timezone: []byte("+0100"),
-				},
-				Committer: &gitalypb.CommitAuthor{
-					Name:     []byte("tiagonbotelho"),
-					Email:    []byte("tiagonbotelho@hotmail.com"),
-					Date:     &timestamp.Timestamp{Seconds: 1474470806},
-					Timezone: []byte("+0100"),
-				},
-				ParentIds: []string{"1b12f15a11fc6e62177bef08f47bc7b5ce50b141"},
-				BodySize:  88,
-			},
+			commit:      testhelper.GitLabTestCommit("498214de67004b1da3d820901307bed2a68a8ef6"),
 		},
+
 		{
 			description: "With a tag name",
 			revision:    "v1.0.0",
-			commit: &gitalypb.GitCommit{
-				Id:      "6f6d7e7ed97bb5f0054f2b1df789b39ca89b6ff9",
-				Subject: []byte("More submodules"),
-				Body:    []byte("More submodules\n\nSigned-off-by: Dmitriy Zaporozhets <dmitriy.zaporozhets@gmail.com>\n"),
-				Author: &gitalypb.CommitAuthor{
-					Name:     []byte("Dmitriy Zaporozhets"),
-					Email:    []byte("dmitriy.zaporozhets@gmail.com"),
-					Date:     &timestamp.Timestamp{Seconds: 1393491261},
-					Timezone: []byte("+0200"),
-				},
-				Committer: &gitalypb.CommitAuthor{
-					Name:     []byte("Dmitriy Zaporozhets"),
-					Email:    []byte("dmitriy.zaporozhets@gmail.com"),
-					Date:     &timestamp.Timestamp{Seconds: 1393491261},
-					Timezone: []byte("+0200"),
-				},
-				ParentIds:     []string{"d14d6c0abdd253381df51a723d58691b2ee1ab08"},
-				BodySize:      84,
-				SignatureType: gitalypb.SignatureType_PGP,
-			},
+			commit:      testhelper.GitLabTestCommit("6f6d7e7ed97bb5f0054f2b1df789b39ca89b6ff9"),
 		},
 		{
 			description: "With a hash",
 			revision:    "b83d6e391c22777fca1ed3012fce84f633d7fed0",
-			commit: &gitalypb.GitCommit{
-				Id:      "b83d6e391c22777fca1ed3012fce84f633d7fed0",
-				Subject: []byte("Merge branch 'branch-merged' into 'master'"),
-				Body:    []byte("Merge branch 'branch-merged' into 'master'\r\n\r\nadds bar folder and branch-test text file to check Repository merged_to_root_ref method\r\n\r\n\r\n\r\nSee merge request !12"),
-				Author: &gitalypb.CommitAuthor{
-					Name:     []byte("Job van der Voort"),
-					Email:    []byte("job@gitlab.com"),
-					Date:     &timestamp.Timestamp{Seconds: 1474987066},
-					Timezone: []byte("+0000"),
-				},
-				Committer: &gitalypb.CommitAuthor{
-					Name:     []byte("Job van der Voort"),
-					Email:    []byte("job@gitlab.com"),
-					Date:     &timestamp.Timestamp{Seconds: 1474987066},
-					Timezone: []byte("+0000"),
-				},
-				ParentIds: []string{
-					"1b12f15a11fc6e62177bef08f47bc7b5ce50b141",
-					"498214de67004b1da3d820901307bed2a68a8ef6",
-				},
-				BodySize: 162,
-			},
+			commit:      testhelper.GitLabTestCommit("b83d6e391c22777fca1ed3012fce84f633d7fed0"),
 		},
 		{
 			description: "With an initial commit",
 			revision:    "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
-			commit: &gitalypb.GitCommit{
-				Id:      "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
-				Subject: []byte("Initial commit"),
-				Body:    []byte("Initial commit\n"),
-				Author: &gitalypb.CommitAuthor{
-					Name:     []byte("Dmitriy Zaporozhets"),
-					Email:    []byte("dmitriy.zaporozhets@gmail.com"),
-					Date:     &timestamp.Timestamp{Seconds: 1393488198},
-					Timezone: []byte("-0800"),
-				},
-				Committer: &gitalypb.CommitAuthor{
-					Name:     []byte("Dmitriy Zaporozhets"),
-					Email:    []byte("dmitriy.zaporozhets@gmail.com"),
-					Date:     &timestamp.Timestamp{Seconds: 1393488198},
-					Timezone: []byte("-0800"),
-				},
-				ParentIds: nil,
-				BodySize:  15,
-			},
+			commit:      testhelper.GitLabTestCommit("1a0b36b3cdad1d2ee32457c102a8c0b7056fa863"),
 		},
 		{
 			description: "with non-utf8 message encoding, recognized by Git",
@@ -165,6 +90,7 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 				},
 				ParentIds: []string{"e63f41fe459e62e1228fcef60d7189127aeba95a"},
 				BodySize:  49,
+				TreeId:    "86ec18bfe87ad42a782fdabd8310f9b7ac750f51",
 			},
 		},
 		{
@@ -188,6 +114,7 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 				},
 				ParentIds: []string{"60ecb67744cb56576c30214ff52294f8ce2def98"},
 				BodySize:  12,
+				TreeId:    "7e2f26d033ee47cd0745649d1a28277c56197921",
 			},
 		},
 		{
@@ -211,30 +138,13 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 				ParentIds: []string{"60ecb67744cb56576c30214ff52294f8ce2def98"},
 				Body:      []byte(bigMessage[:helper.MaxCommitOrTagMessageSize]),
 				BodySize:  int64(len(bigMessage)),
+				TreeId:    "7e2f26d033ee47cd0745649d1a28277c56197921",
 			},
 		},
 		{
 			description: "with different author and committer",
 			revision:    "77e835ef0856f33c4f0982f84d10bdb0567fe440",
-			commit: &gitalypb.GitCommit{
-				Id:      "77e835ef0856f33c4f0982f84d10bdb0567fe440",
-				Subject: []byte("Add file larger than 1 mb"),
-				Body:    []byte("Add file larger than 1 mb\n\nIn order to test Max File Size push rule we need a file larger than 1 MB\n"),
-				Author: &gitalypb.CommitAuthor{
-					Name:     []byte("Ruben Davila"),
-					Email:    []byte("rdavila84@gmail.com"),
-					Date:     &timestamp.Timestamp{Seconds: 1523247267},
-					Timezone: []byte("-0500"),
-				},
-				Committer: &gitalypb.CommitAuthor{
-					Name:     []byte("Jacob Vosmaer"),
-					Email:    []byte("jacob@gitlab.com"),
-					Date:     &timestamp.Timestamp{Seconds: 1527855450},
-					Timezone: []byte("+0200"),
-				},
-				ParentIds: []string{"60ecb67744cb56576c30214ff52294f8ce2def98"},
-				BodySize:  100,
-			},
+			commit:      testhelper.GitLabTestCommit("77e835ef0856f33c4f0982f84d10bdb0567fe440"),
 		},
 		{
 			description: "With a non-existing ref name",
@@ -261,7 +171,7 @@ func TestSuccessfulFindCommitRequest(t *testing.T) {
 			response, err := client.FindCommit(ctx, request)
 			require.NoError(t, err)
 
-			require.Equal(t, testCase.commit, response.Commit, "mismatched commits")
+			testhelper.ProtoEqual(t, testCase.commit, response.Commit)
 			allCommits = append(allCommits, response.Commit)
 		})
 	}

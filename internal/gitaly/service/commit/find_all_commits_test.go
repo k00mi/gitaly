@@ -48,6 +48,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 				"48ca272b947f49eee601639d743784a176574a09",
 			},
 			BodySize: 48,
+			TreeId:   "91639b9835ff541f312fd2735f639a50bf35d472",
 		},
 		{
 			Id:        "48ca272b947f49eee601639d743784a176574a09",
@@ -57,6 +58,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 			Committer: dummyCommitAuthor(1500320271),
 			ParentIds: []string{"335bc94d5b7369b10251e612158da2e4a4aaa2a5"},
 			BodySize:  20,
+			TreeId:    "91639b9835ff541f312fd2735f639a50bf35d472",
 		},
 		{
 			Id:        "335bc94d5b7369b10251e612158da2e4a4aaa2a5",
@@ -66,6 +68,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 			Committer: dummyCommitAuthor(1500320269),
 			ParentIds: []string{"1039376155a0d507eba0ea95c29f8f5b983ea34b"},
 			BodySize:  20,
+			TreeId:    "91639b9835ff541f312fd2735f639a50bf35d472",
 		},
 	}
 
@@ -79,6 +82,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 			Committer: dummyCommitAuthor(1500320272),
 			ParentIds: []string{"9d526f87b82e2b2fd231ca44c95508e5e85624ca"},
 			BodySize:  11,
+			TreeId:    "91639b9835ff541f312fd2735f639a50bf35d472",
 		},
 		{
 			Id:        "9d526f87b82e2b2fd231ca44c95508e5e85624ca",
@@ -88,6 +92,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 			Committer: dummyCommitAuthor(1500320270),
 			ParentIds: []string{"1039376155a0d507eba0ea95c29f8f5b983ea34b"},
 			BodySize:  10,
+			TreeId:    "91639b9835ff541f312fd2735f639a50bf35d472",
 		},
 		{
 			Id:        "1039376155a0d507eba0ea95c29f8f5b983ea34b",
@@ -97,6 +102,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 			Committer: dummyCommitAuthor(1500320268),
 			ParentIds: []string{"54188278422b1fa877c2e71c4e37fc6640a58ad1"},
 			BodySize:  10,
+			TreeId:    "91639b9835ff541f312fd2735f639a50bf35d472",
 		}, {
 			Id:        "54188278422b1fa877c2e71c4e37fc6640a58ad1",
 			Subject:   []byte("Commit #7"),
@@ -105,6 +111,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 			Committer: dummyCommitAuthor(1500320266),
 			ParentIds: []string{"8b9270332688d58e25206601900ee5618fab2390"},
 			BodySize:  10,
+			TreeId:    "91639b9835ff541f312fd2735f639a50bf35d472",
 		}, {
 			Id:        "8b9270332688d58e25206601900ee5618fab2390",
 			Subject:   []byte("Commit #6"),
@@ -113,6 +120,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 			Committer: dummyCommitAuthor(1500320264),
 			ParentIds: []string{"f9220df47bce1530e90c189064d301bfc8ceb5ab"},
 			BodySize:  10,
+			TreeId:    "91639b9835ff541f312fd2735f639a50bf35d472",
 		}, {
 			Id:        "f9220df47bce1530e90c189064d301bfc8ceb5ab",
 			Subject:   []byte("Commit #5"),
@@ -121,6 +129,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 			Committer: dummyCommitAuthor(1500320262),
 			ParentIds: []string{"40d408f89c1fd26b7d02e891568f880afe06a9f8"},
 			BodySize:  10,
+			TreeId:    "91639b9835ff541f312fd2735f639a50bf35d472",
 		}, {
 			Id:        "40d408f89c1fd26b7d02e891568f880afe06a9f8",
 			Subject:   []byte("Commit #4"),
@@ -129,6 +138,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 			Committer: dummyCommitAuthor(1500320260),
 			ParentIds: []string{"df914c609a1e16d7d68e4a61777ff5d6f6b6fde3"},
 			BodySize:  10,
+			TreeId:    "91639b9835ff541f312fd2735f639a50bf35d472",
 		}, {
 			Id:        "df914c609a1e16d7d68e4a61777ff5d6f6b6fde3",
 			Subject:   []byte("Commit #3"),
@@ -137,6 +147,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 			Committer: dummyCommitAuthor(1500320258),
 			ParentIds: []string{"6762605237fc246ae146ac64ecb467f71d609120"},
 			BodySize:  10,
+			TreeId:    "91639b9835ff541f312fd2735f639a50bf35d472",
 		}, {
 			Id:        "6762605237fc246ae146ac64ecb467f71d609120",
 			Subject:   []byte("Commit #2"),
@@ -145,6 +156,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 			Committer: dummyCommitAuthor(1500320256),
 			ParentIds: []string{"79b06233d3dc769921576771a4e8bee4b439595d"},
 			BodySize:  10,
+			TreeId:    "91639b9835ff541f312fd2735f639a50bf35d472",
 		}, {
 			Id:        "79b06233d3dc769921576771a4e8bee4b439595d",
 			Subject:   []byte("Commit #1"),
@@ -153,6 +165,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 			Committer: dummyCommitAuthor(1500320254),
 			ParentIds: []string{"1a0b36b3cdad1d2ee32457c102a8c0b7056fa863"},
 			BodySize:  10,
+			TreeId:    "91639b9835ff541f312fd2735f639a50bf35d472",
 		},
 		{
 			Id:      "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
@@ -172,6 +185,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 			},
 			ParentIds: nil,
 			BodySize:  15,
+			TreeId:    "91639b9835ff541f312fd2735f639a50bf35d472",
 		},
 	}
 
@@ -185,6 +199,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 			Committer: dummyCommitAuthor(1500322381),
 			ParentIds: []string{"1a0b36b3cdad1d2ee32457c102a8c0b7056fa863"},
 			BodySize:  11,
+			TreeId:    "91639b9835ff541f312fd2735f639a50bf35d472",
 		},
 	}
 
@@ -278,7 +293,7 @@ func TestSuccessfulFindAllCommitsRequest(t *testing.T) {
 			require.Equal(t, len(testCase.expectedCommits), len(receivedCommits), "number of commits received")
 
 			for i, receivedCommit := range receivedCommits {
-				require.Equal(t, testCase.expectedCommits[i], receivedCommit, "mismatched commits")
+				testhelper.ProtoEqual(t, testCase.expectedCommits[i], receivedCommit)
 			}
 		})
 	}
