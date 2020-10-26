@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
+	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
@@ -81,6 +82,8 @@ type Command struct {
 
 	waitError error
 	waitOnce  sync.Once
+
+	span opentracing.Span
 }
 
 type stdinSentinel struct{}
@@ -176,6 +179,12 @@ func New(ctx context.Context, cmd *exec.Cmd, stdin io.Reader, stdout, stderr io.
 		return nil, err
 	}
 
+	span, ctx := opentracing.StartSpanFromContext(
+		ctx,
+		cmd.Path,
+		opentracing.Tag{"args", strings.Join(cmd.Args, " ")},
+	)
+
 	putToken, err := getSpawnToken(ctx)
 	if err != nil {
 		return nil, err
@@ -196,6 +205,7 @@ func New(ctx context.Context, cmd *exec.Cmd, stdin io.Reader, stdout, stderr io.
 		startTime:  time.Now(),
 		context:    ctx,
 		stderrDone: make(chan struct{}),
+		span:       span,
 	}
 
 	// Explicitly set the environment for the command
@@ -419,6 +429,8 @@ func (c *Command) logProcessComplete(ctx context.Context, exitCode int) {
 		})
 	}
 
+	entry.Debug("spawn complete")
+
 	if featureflag.IsEnabled(ctx, featureflag.LogCommandStats) {
 		stats := StatsFromContext(ctx)
 
@@ -436,7 +448,23 @@ func (c *Command) logProcessComplete(ctx context.Context, exitCode int) {
 		}
 	}
 
-	entry.Debug("spawn complete")
+	c.span.LogKV(
+		"pid", cmd.ProcessState.Pid(),
+		"exit_code", exitCode,
+		"system_time_ms", int(systemTime.Seconds()*1000),
+		"user_time_ms", int(userTime.Seconds()*1000),
+		"real_time_ms", int(realTime.Seconds()*1000),
+	)
+	if ok {
+		c.span.LogKV(
+			"maxrss", rusage.Maxrss,
+			"inblock", rusage.Inblock,
+			"oublock", rusage.Oublock,
+			"minflt", rusage.Minflt,
+			"majflt", rusage.Majflt,
+		)
+	}
+	c.span.Finish()
 }
 
 // Command arguments will be passed to the exec syscall as
