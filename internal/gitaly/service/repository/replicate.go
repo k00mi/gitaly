@@ -99,7 +99,7 @@ func (s *server) create(ctx context.Context, in *gitalypb.ReplicateRepositoryReq
 }
 
 func (s *server) createFromSnapshot(ctx context.Context, in *gitalypb.ReplicateRepositoryRequest) error {
-	tempRepo, tempPath, err := tempdir.NewAsRepository(ctx, in.GetRepository())
+	tempRepo, tempPath, err := tempdir.NewAsRepository(ctx, in.GetRepository(), s.locator)
 	if err != nil {
 		return err
 	}

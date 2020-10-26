@@ -20,7 +20,7 @@ func TestNewAsRepositorySuccess(t *testing.T) {
 	defer cancel()
 	repo := testhelper.TestRepository()
 
-	tempRepo, tempDir, err := NewAsRepository(ctx, repo)
+	tempRepo, tempDir, err := NewAsRepository(ctx, repo, config.NewLocator(config.Config))
 	require.NoError(t, err)
 	require.NotEqual(t, repo, tempRepo)
 	require.Equal(t, repo.StorageName, tempRepo.StorageName)

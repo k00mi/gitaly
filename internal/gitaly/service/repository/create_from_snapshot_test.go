@@ -55,9 +55,8 @@ func generateTarFile(t *testing.T, path string) ([]byte, []string) {
 	return data, entries
 }
 
-func createFromSnapshot(t *testing.T, req *gitalypb.CreateRepositoryFromSnapshotRequest) (*gitalypb.CreateRepositoryFromSnapshotResponse, error) {
-	locator := config.NewLocator(config.Config)
-	serverSocketPath, stop := runRepoServer(t, locator)
+func createFromSnapshot(t *testing.T, req *gitalypb.CreateRepositoryFromSnapshotRequest, cfg config.Cfg) (*gitalypb.CreateRepositoryFromSnapshotResponse, error) {
+	serverSocketPath, stop := runRepoServer(t, config.NewLocator(cfg))
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -70,44 +69,52 @@ func createFromSnapshot(t *testing.T, req *gitalypb.CreateRepositoryFromSnapshot
 }
 
 func TestCreateRepositoryFromSnapshotSuccess(t *testing.T) {
-	testRepo, repoPath, cleanupFn := testhelper.NewTestRepo(t)
-	defer cleanupFn()
+	_, sourceRepoPath, cleanTestRepo := testhelper.NewTestRepo(t)
+	defer cleanTestRepo()
 
 	// Ensure these won't be in the archive
-	require.NoError(t, os.Remove(filepath.Join(repoPath, "config")))
-	require.NoError(t, os.RemoveAll(filepath.Join(repoPath, "hooks")))
+	require.NoError(t, os.Remove(filepath.Join(sourceRepoPath, "config")))
+	require.NoError(t, os.RemoveAll(filepath.Join(sourceRepoPath, "hooks")))
 
-	data, entries := generateTarFile(t, repoPath)
+	data, entries := generateTarFile(t, sourceRepoPath)
 
 	// Create a HTTP server that serves a given tar file
 	srv := httptest.NewServer(&tarTesthandler{tarData: bytes.NewReader(data), secret: secret})
 	defer srv.Close()
 
-	// Delete the repository so we can re-use the path
-	require.NoError(t, os.RemoveAll(repoPath))
+	const storageName = "default"
+	storagePath, cleanTempDir := testhelper.TempDir(t)
+	defer cleanTempDir()
+	repoRelativePath := filepath.Join("non-existing-parent", "repository")
 
 	req := &gitalypb.CreateRepositoryFromSnapshotRequest{
-		Repository: testRepo,
-		HttpUrl:    srv.URL + tarPath,
-		HttpAuth:   secret,
+		Repository: &gitalypb.Repository{
+			StorageName:  storageName,
+			RelativePath: repoRelativePath,
+		},
+		HttpUrl:  srv.URL + tarPath,
+		HttpAuth: secret,
 	}
 
-	rsp, err := createFromSnapshot(t, req)
+	rsp, err := createFromSnapshot(t, req, config.Cfg{
+		Storages: []config.Storage{{Name: storageName, Path: storagePath}},
+	})
 
 	require.NoError(t, err)
 	testhelper.ProtoEqual(t, rsp, &gitalypb.CreateRepositoryFromSnapshotResponse{})
 
-	require.DirExists(t, repoPath)
+	repoAbsolutePath := filepath.Join(storagePath, repoRelativePath)
+	require.DirExists(t, repoAbsolutePath)
 	for _, entry := range entries {
 		if strings.HasSuffix(entry, "/") {
-			require.DirExists(t, filepath.Join(repoPath, entry), "directory %q not unpacked", entry)
+			require.DirExists(t, filepath.Join(repoAbsolutePath, entry), "directory %q not unpacked", entry)
 		} else {
-			require.FileExists(t, filepath.Join(repoPath, entry), "file %q not unpacked", entry)
+			require.FileExists(t, filepath.Join(repoAbsolutePath, entry), "file %q not unpacked", entry)
 		}
 	}
 
 	// hooks/ and config were excluded, but the RPC should create them
-	require.FileExists(t, filepath.Join(repoPath, "config"), "Config file not created")
+	require.FileExists(t, filepath.Join(repoAbsolutePath, "config"), "Config file not created")
 }
 
 func TestCreateRepositoryFromSnapshotFailsIfRepositoryExists(t *testing.T) {
@@ -115,7 +122,7 @@ func TestCreateRepositoryFromSnapshotFailsIfRepositoryExists(t *testing.T) {
 	defer cleanupFn()
 
 	req := &gitalypb.CreateRepositoryFromSnapshotRequest{Repository: testRepo}
-	rsp, err := createFromSnapshot(t, req)
+	rsp, err := createFromSnapshot(t, req, config.Config)
 	testhelper.RequireGrpcError(t, err, codes.InvalidArgument)
 	require.Contains(t, err.Error(), "destination directory exists")
 	require.Nil(t, rsp)
@@ -130,7 +137,7 @@ func TestCreateRepositoryFromSnapshotFailsIfBadURL(t *testing.T) {
 		HttpUrl:    "invalid!scheme://invalid.invalid",
 	}
 
-	rsp, err := createFromSnapshot(t, req)
+	rsp, err := createFromSnapshot(t, req, config.Config)
 	testhelper.RequireGrpcError(t, err, codes.InvalidArgument)
 	require.Contains(t, err.Error(), "Bad HTTP URL")
 	require.Nil(t, rsp)
@@ -181,7 +188,7 @@ func TestCreateRepositoryFromSnapshotBadRequests(t *testing.T) {
 				HttpAuth:   tc.auth,
 			}
 
-			rsp, err := createFromSnapshot(t, req)
+			rsp, err := createFromSnapshot(t, req, config.Config)
 			testhelper.RequireGrpcError(t, err, tc.code)
 			require.Nil(t, rsp)
 
@@ -213,7 +220,7 @@ func TestCreateRepositoryFromSnapshotHandlesMalformedResponse(t *testing.T) {
 		HttpAuth:   secret,
 	}
 
-	rsp, err := createFromSnapshot(t, req)
+	rsp, err := createFromSnapshot(t, req, config.Config)
 
 	require.Error(t, err)
 	require.Nil(t, rsp)
