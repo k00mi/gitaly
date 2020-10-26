@@ -14,8 +14,18 @@ to enable the feature flag "mep_mep", you run:
 
 For customers, who don't use chatops, an [HTTP API is available][ff-api].
 
+In order to roll out feature flags, you should always follow the documented
+[rollout process][rollout-process]. Most importantly, you should test the
+feature on preproduction environments first and monitor them. Only if no issues
+are observed for an extended amount of time (e.g. one whole day) should you
+incrementally enable the feature flag in production. To change feature flags in
+production, you need to create a change management issue as described in the
+[change management documentation][change-management].
+
 [enable-flags]: https://docs.gitlab.com/ee/development/feature_flags/controls.html
 [ff-api]: https://docs.gitlab.com/ee/api/features.html#features-flags-api
+[rollout-process]: https://docs.gitlab.com/ee/development/feature_flags/controls.html#rolling-out-changes
+[change-management]: https://about.gitlab.com/handbook/engineering/infrastructure/change-management
 
 ### Gitaly Releases
 
@@ -129,7 +139,7 @@ tagging a RC is a good way to make sure the gitlab feature branch has the proper
 - run `/chatops run gitaly tag 12.9.0-rc1`
 - The release will be published
 - The [pipeline of a tag](https://gitlab.com/gitlab-org/gitaly/pipelines?scope=tags&page=1)
-  has a **manual** job, `update-downstream-server-version`, that will create a merge request on the GitLab codebase to bump the Gitaly server version, and this will be assigned to you. 
+  has a **manual** job, `update-downstream-server-version`, that will create a merge request on the GitLab codebase to bump the Gitaly server version, and this will be assigned to you.
   Once the build has completed successfully, assign it to a maintainer for review.
 
 ### Publishing the ruby gem
