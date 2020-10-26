@@ -8,6 +8,11 @@ import (
 	"strings"
 )
 
+var (
+	// minimumVersion is the minimum required Git version.
+	minimumVersion = version{2, 24, 0, false}
+)
+
 type version struct {
 	major, minor, patch uint32
 	rc                  bool
@@ -120,6 +125,17 @@ func parseVersion(versionStr string) (version, error) {
 	}
 
 	return ver, nil
+}
+
+// SupportedVersion checks if a version string corresponds to a Git version
+// supported by Gitaly.
+func SupportedVersion(versionStr string) (bool, error) {
+	v, err := parseVersion(versionStr)
+	if err != nil {
+		return false, err
+	}
+
+	return !versionLessThan(v, minimumVersion), nil
 }
 
 // SupportsDeltaIslands checks if a version string (e.g. "2.20.0")
