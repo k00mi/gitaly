@@ -138,17 +138,6 @@ func SupportedVersion(versionStr string) (bool, error) {
 	return !versionLessThan(v, minimumVersion), nil
 }
 
-// SupportsDeltaIslands checks if a version string (e.g. "2.20.0")
-// corresponds to a Git version that supports delta islands.
-func SupportsDeltaIslands(versionStr string) (bool, error) {
-	v, err := parseVersion(versionStr)
-	if err != nil {
-		return false, err
-	}
-
-	return !versionLessThan(v, version{2, 20, 0, false}), nil
-}
-
 // SupportsReferenceTransactionHook checks if a version string corresponds to a
 // Git version that supports the reference-transaction hook.
 func SupportsReferenceTransactionHook(versionStr string) (bool, error) {
@@ -159,17 +148,3 @@ func SupportsReferenceTransactionHook(versionStr string) (bool, error) {
 
 	return !versionLessThan(v, version{2, 28, 0, true}), nil
 }
-
-// NoMissingWantErrMessage checks if the git version is before Git 2.22,
-// in which versions the missing objects in the wants didn't yield an explicit
-// error message, but no output at all.
-func NoMissingWantErrMessage() bool {
-	ver, err := Version()
-	if err != nil {
-		return false
-	}
-
-	lt, err := VersionLessThan(ver, "2.22.0")
-	return err == nil && lt
-}
-

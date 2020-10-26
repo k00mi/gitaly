@@ -17,18 +17,9 @@ import (
 // TestDeltaIslands is based on the tests in
 // https://github.com/git/git/blob/master/t/t5320-delta-islands.sh .
 func TestDeltaIslands(t *testing.T, repoPath string, repack func() error) {
-	gitVersion, err := git.Version()
-	require.NoError(t, err)
-
-	supported, err := git.SupportsDeltaIslands(gitVersion)
-	require.NoError(t, err, "git delta island support check")
-	if !supported {
-		t.Skipf("delta islands are not supported by this Git version (%s), skipping test", gitVersion)
-	}
-
 	// Create blobs that we expect Git to use delta compression on.
 	blob1 := make([]byte, 100000)
-	_, err = io.ReadFull(rand.Reader, blob1)
+	_, err := io.ReadFull(rand.Reader, blob1)
 	require.NoError(t, err)
 
 	blob2 := append(blob1, "\nblob 2"...)
