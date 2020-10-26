@@ -76,6 +76,18 @@ func Configure() {
 	configureOnce.Do(func() {
 		gitalylog.Configure("json", "info")
 
+		var err error
+		config.Config.Logging.Dir, err = filepath.Abs("testdata/log")
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := os.RemoveAll(config.Config.Logging.Dir); err != nil {
+			log.Fatal(err)
+		}
+		if err := os.MkdirAll(config.Config.Logging.Dir, 0755); err != nil {
+			log.Fatal(err)
+		}
+
 		config.Config.Storages = []config.Storage{
 			{Name: "default", Path: GitlabTestStoragePath()},
 		}
