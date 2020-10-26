@@ -22,6 +22,8 @@ include them in its main log, tagged with the request correlation ID.
 
 ## Gitaly-ruby application logs
 
+### Unstructured logs
+
 Gitaly-ruby writes logs to stdout. These logs are not structured. The
 main Gitaly process captures the gitaly-ruby process log messages and
 converts each line into a structured message that includes information
@@ -37,6 +39,12 @@ Because of these properties, gitaly-ruby logs are often hard to read,
 and it is often not possible to attribute log messages to individual
 RPC requests.
 
+### Structured logs
+
+Gitaly-ruby also writes a JSON structured log file with access log
+information (method, duration, response code). It can be found in
+`gitaly_ruby_json.log`.
+
 ## Log files
 
 In a few cases, Gitaly spawns process that cannot log to stderr
@@ -50,6 +58,7 @@ Examples are:
 
 - `gitlab-shell.log`
 - `gitaly_hooks.log`
+- `gitaly_ruby_json.log`
 
 There is another log file called `githost.log`. This log is generated
 by legacy code in gitaly-ruby. The way it is used, it might as well

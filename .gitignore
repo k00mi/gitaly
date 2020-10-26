@@ -25,6 +25,7 @@
 /internal/service/smarthttp/testdata
 /internal/testhelper/testdata/data
 /**/testdata/gitaly-libexec
+/**/testdata/log
 
 # Configuration and runtime data
 /*.toml
