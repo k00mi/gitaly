@@ -14,6 +14,7 @@ variables:
   SAST_DISABLE_DIND: "true"
   SAST_DEFAULT_ANALYZERS: "gosec"
   GIT_VERSION: "v2.29.0"
+  GO_VERSION: "1.14"
   RUBY_VERSION: "2.7"
 
 danger-review:
@@ -65,7 +66,7 @@ danger-review:
     expire_in: 1 week
 
 .postgres_template: &postgres_definition
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-${RUBY_VERSION}-golang-1.14-git-2.28-pgbouncer-1.14
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-${RUBY_VERSION}-golang-${GO_VERSION}-git-2.28-pgbouncer-1.14
   services:
     - postgres:11.8
   variables:
@@ -261,7 +262,7 @@ praefect_sql_test:
     - make test-postgres
 
 lint:
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-${RUBY_VERSION}-golang-1.14-git-2.28
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-${RUBY_VERSION}-golang-${GO_VERSION}-git-2.28
   stage: test
   retry: 2
   script:
@@ -269,7 +270,7 @@ lint:
     - make lint
 
 objectinfo_fuzz_test:
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-${RUBY_VERSION}-golang-1.14-git-2.28
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-${RUBY_VERSION}-golang-${GO_VERSION}-git-2.28
   extends: .fuzz_base
   stage: test
   script:
