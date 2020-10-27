@@ -79,7 +79,7 @@ the RPC instead.
 
 To experiment with changing an RPC you should use the Gitaly service
 tests. The RPC you want to work on will have tests somewhere in
-`internal/service/...`. Find the tests for your RPC. Next, before you
+`internal/gitaly/service/...`. Find the tests for your RPC. Next, before you
 edit any code, make sure the tests pass when you run them:
 `go test ./internal/gitaly/service/foobar -count 1 -run MyRPC`. In this
 command, `MyRPC` is a regex that will match functions like
