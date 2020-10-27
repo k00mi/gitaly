@@ -79,9 +79,9 @@ the RPC instead.
 
 To experiment with changing an RPC you should use the Gitaly service
 tests. The RPC you want to work on will have tests somewhere in
-`internal/service/...`. Find the tests for your RPC. Next, before you
+`internal/gitaly/service/...`. Find the tests for your RPC. Next, before you
 edit any code, make sure the tests pass when you run them:
-`go test ./internal/service/foobar -count 1 -run MyRPC`. In this
+`go test ./internal/gitaly/service/foobar -count 1 -run MyRPC`. In this
 command, `MyRPC` is a regex that will match functions like
 `TestMyRPCSuccess` and `TestMyRPCValidationFailure`. Once you have found
 your tests and your test command, you can start tweaking the
@@ -195,20 +195,20 @@ using t.Run), and sometimes a validation test. Our Go RPC tests use
 in-process test servers that only implement the service the current
 RPC belongs to. So if you are working on an RPC in the
 'RepositoryService', your tests would go in
-`internal/service/repository/your_rpc_test.go`.
+`internal/gitaly/service/repository/your_rpc_test.go`.
 
 ##### Running one specific Go test
 
 When you are trying to fix a specific test failure it is inefficient
 to run `make test` all the time. To run just one test you need to know
-the package it lives in (e.g. `internal/service/repository`) and the
+the package it lives in (e.g. `internal/gitaly/service/repository`) and the
 test name (e.g. `TestRepositoryExists`).
 
 To run the test you need a terminal window with working directory
 `/path/to/gdk/gitaly`. To run just the one test you're interested in:
 
 ```
-go test -count 1 -run TestRepositoryExists ./internal/service/repository
+go test ./internal/gitaly/service/repository -count 1 -run TestRepositoryExists
 ```
 
 When writing tests, prefer using [testify]'s [require], and [assert] as
