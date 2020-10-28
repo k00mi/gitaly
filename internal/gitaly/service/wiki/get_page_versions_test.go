@@ -2,6 +2,7 @@ package wiki
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"testing"
 
@@ -123,7 +124,7 @@ func TestWikiGetPageVersionsPaginationParams(t *testing.T) {
 	writeWikiPage(t, client, wikiRepo, createWikiPageOpts{title: pageTitle, content: content})
 
 	for i := 0; i < 25; i++ {
-		updateWikiPage(t, client, wikiRepo, pageTitle, []byte(string(i)))
+		updateWikiPage(t, client, wikiRepo, pageTitle, []byte(fmt.Sprintf("%d", i)))
 	}
 
 	testCases := []struct {
