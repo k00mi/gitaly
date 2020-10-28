@@ -141,7 +141,7 @@ func (o *ObjectPool) Init(ctx context.Context) (err error) {
 
 // FromRepo returns an instance of ObjectPool that the repository points to
 func FromRepo(locator storage.Locator, repo *gitalypb.Repository) (*ObjectPool, error) {
-	dir, err := getAlternateObjectDir(repo)
+	dir, err := getAlternateObjectDir(locator, repo)
 	if err != nil {
 		return nil, err
 	}
@@ -173,8 +173,8 @@ var (
 
 // getAlternateObjectDir returns the entry in the objects/info/attributes file if it exists
 // it will only return the first line of the file if there are multiple lines.
-func getAlternateObjectDir(repo *gitalypb.Repository) (string, error) {
-	altPath, err := git.InfoAlternatesPath(repo)
+func getAlternateObjectDir(locator storage.Locator, repo *gitalypb.Repository) (string, error) {
+	altPath, err := locator.InfoAlternatesPath(repo)
 	if err != nil {
 		return "", err
 	}

@@ -45,7 +45,7 @@ func (s *server) disconnectAlternates(ctx context.Context, repo *gitalypb.Reposi
 		return err
 	}
 
-	altFile, err := git.InfoAlternatesPath(repo)
+	altFile, err := s.locator.InfoAlternatesPath(repo)
 	if err != nil {
 		return err
 	}

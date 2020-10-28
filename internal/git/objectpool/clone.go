@@ -6,14 +6,13 @@ import (
 	"path/filepath"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
 // Clone a repository to a pool, without setting the alternates, is not the
 // resposibility of this function.
 func (o *ObjectPool) clone(ctx context.Context, repo *gitalypb.Repository) error {
-	repoPath, err := helper.GetRepoPath(repo)
+	repoPath, err := o.locator.GetRepoPath(repo)
 	if err != nil {
 		return err
 	}

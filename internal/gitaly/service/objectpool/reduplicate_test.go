@@ -13,7 +13,8 @@ import (
 )
 
 func TestReduplicate(t *testing.T) {
-	server, serverSocketPath := runObjectPoolServer(t)
+	locator := gconfig.NewLocator(gconfig.Config)
+	server, serverSocketPath := runObjectPoolServer(t, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -25,7 +26,7 @@ func TestReduplicate(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	pool, err := objectpool.NewObjectPool(gconfig.NewLocator(gconfig.Config), testRepo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
+	pool, err := objectpool.NewObjectPool(locator, testRepo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
 	defer pool.Remove(ctx)
 	require.NoError(t, pool.Create(ctx, testRepo))
@@ -35,7 +36,7 @@ func TestReduplicate(t *testing.T) {
 	existingObjectID := "55bc176024cfa3baaceb71db584c7e5df900ea65"
 
 	// Corrupt the repository to check if the object can't be found
-	altPath, err := git.InfoAlternatesPath(testRepo)
+	altPath, err := locator.InfoAlternatesPath(testRepo)
 	require.NoError(t, err, "find info/alternates")
 	require.NoError(t, os.RemoveAll(altPath))
 

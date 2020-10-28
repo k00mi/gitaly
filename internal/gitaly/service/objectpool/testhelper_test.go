@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
@@ -24,7 +24,7 @@ func testMain(m *testing.M) int {
 	return m.Run()
 }
 
-func runObjectPoolServer(t *testing.T) (*grpc.Server, string) {
+func runObjectPoolServer(t *testing.T, locator storage.Locator) (*grpc.Server, string) {
 	server := testhelper.NewTestGrpcServer(t, nil, nil)
 
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
@@ -33,7 +33,7 @@ func runObjectPoolServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	gitalypb.RegisterObjectPoolServiceServer(server, NewServer(config.NewLocator(config.Config)))
+	gitalypb.RegisterObjectPoolServiceServer(server, NewServer(locator))
 	reflection.Register(server)
 
 	go server.Serve(listener)

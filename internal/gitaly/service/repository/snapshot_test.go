@@ -15,18 +15,17 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
-	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/archive"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 	"google.golang.org/grpc/codes"
 )
 
-func getSnapshot(t *testing.T, req *gitalypb.GetSnapshotRequest) ([]byte, error) {
-	locator := config.NewLocator(config.Config)
+func getSnapshot(t *testing.T, locator storage.Locator, req *gitalypb.GetSnapshotRequest) ([]byte, error) {
 	serverSocketPath, stop := runRepoServer(t, locator)
 	defer stop()
 
@@ -73,7 +72,7 @@ func TestGetSnapshotSuccess(t *testing.T) {
 	touch(t, filepath.Join(repoPath, "objects/this-should-not-be-included"))
 
 	req := &gitalypb.GetSnapshotRequest{Repository: testRepo}
-	data, err := getSnapshot(t, req)
+	data, err := getSnapshot(t, config.NewLocator(config.Config), req)
 	require.NoError(t, err)
 
 	entries, err := archive.TarEntries(bytes.NewReader(data))
@@ -142,8 +141,10 @@ func TestGetSnapshotWithDedupe(t *testing.T) {
 			_, err = c.Info(originalAlternatesCommit)
 			require.True(t, catfile.IsNotFound(err))
 
+			locator := config.NewLocator(config.Config)
+
 			// write alternates file to point to alt objects folder
-			alternatesPath, err := git.InfoAlternatesPath(testRepo)
+			alternatesPath, err := locator.InfoAlternatesPath(testRepo)
 			require.NoError(t, err)
 			require.NoError(t, ioutil.WriteFile(alternatesPath, []byte(filepath.Join(repoPath, ".git", fmt.Sprintf("%s\n", alternateObjDir))), 0644))
 
@@ -159,7 +160,7 @@ func TestGetSnapshotWithDedupe(t *testing.T) {
 			_, err = c.Info(string(commitSha))
 			require.NoError(t, err)
 
-			_, repoCopyPath, cleanupCopy := copyRepoUsingSnapshot(t, testRepo)
+			_, repoCopyPath, cleanupCopy := copyRepoUsingSnapshot(t, locator, testRepo)
 			defer cleanupCopy()
 
 			// ensure the sha committed to the alternates directory can be accessed
@@ -178,12 +179,12 @@ func TestGetSnapshotWithDedupeSoftFailures(t *testing.T) {
 	// write alternates file to point to alternates objects folder that doesn't exist
 	alternateObjDir := "./alt-objects"
 	alternateObjPath := filepath.Join(repoPath, ".git", alternateObjDir)
-	alternatesPath, err := git.InfoAlternatesPath(testRepo)
+	alternatesPath, err := locator.InfoAlternatesPath(testRepo)
 	require.NoError(t, err)
 	require.NoError(t, ioutil.WriteFile(alternatesPath, []byte(fmt.Sprintf("%s\n", alternateObjPath)), 0644))
 
 	req := &gitalypb.GetSnapshotRequest{Repository: testRepo}
-	_, err = getSnapshot(t, req)
+	_, err = getSnapshot(t, locator, req)
 	assert.NoError(t, err)
 	require.NoError(t, os.Remove(alternatesPath))
 
@@ -192,13 +193,13 @@ func TestGetSnapshotWithDedupeSoftFailures(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, ioutil.WriteFile(alternatesPath, []byte(filepath.Join(storageRoot, "..")), 0600))
 
-	_, err = getSnapshot(t, &gitalypb.GetSnapshotRequest{Repository: testRepo})
+	_, err = getSnapshot(t, locator, &gitalypb.GetSnapshotRequest{Repository: testRepo})
 	assert.NoError(t, err)
 	require.NoError(t, os.Remove(alternatesPath))
 
 	// write alternates file with bad permissions
 	require.NoError(t, ioutil.WriteFile(alternatesPath, []byte(fmt.Sprintf("%s\n", alternateObjPath)), 0000))
-	_, err = getSnapshot(t, req)
+	_, err = getSnapshot(t, locator, req)
 	assert.NoError(t, err)
 	require.NoError(t, os.Remove(alternatesPath))
 
@@ -216,7 +217,7 @@ func TestGetSnapshotWithDedupeSoftFailures(t *testing.T) {
 
 	require.NoError(t, ioutil.WriteFile(alternatesPath, []byte(alternateObjPath), 0644))
 
-	_, repoCopyPath, cleanupCopy := copyRepoUsingSnapshot(t, testRepo)
+	_, repoCopyPath, cleanupCopy := copyRepoUsingSnapshot(t, locator, testRepo)
 	defer cleanupCopy()
 
 	// ensure the sha committed to the alternates directory can be accessed
@@ -225,10 +226,10 @@ func TestGetSnapshotWithDedupeSoftFailures(t *testing.T) {
 }
 
 // copyRepoUsingSnapshot creates a tarball snapshot, then creates a new repository from that snapshot
-func copyRepoUsingSnapshot(t *testing.T, source *gitalypb.Repository) (*gitalypb.Repository, string, func()) {
+func copyRepoUsingSnapshot(t *testing.T, locator storage.Locator, source *gitalypb.Repository) (*gitalypb.Repository, string, func()) {
 	// create the tar
 	req := &gitalypb.GetSnapshotRequest{Repository: source}
-	data, err := getSnapshot(t, req)
+	data, err := getSnapshot(t, locator, req)
 	require.NoError(t, err)
 
 	secret := "my secret"
@@ -257,7 +258,7 @@ func TestGetSnapshotFailsIfRepositoryMissing(t *testing.T) {
 	cleanupFn() // Remove the repo
 
 	req := &gitalypb.GetSnapshotRequest{Repository: testRepo}
-	data, err := getSnapshot(t, req)
+	data, err := getSnapshot(t, config.NewLocator(config.Config), req)
 	testhelper.RequireGrpcError(t, err, codes.NotFound)
 	require.Empty(t, data)
 }
@@ -272,7 +273,7 @@ func TestGetSnapshotFailsIfRepositoryContainsSymlink(t *testing.T) {
 	require.NoError(t, os.Symlink("HEAD", packedRefsFile))
 
 	req := &gitalypb.GetSnapshotRequest{Repository: testRepo}
-	data, err := getSnapshot(t, req)
+	data, err := getSnapshot(t, config.NewLocator(config.Config), req)
 	testhelper.RequireGrpcError(t, err, codes.Internal)
 	require.Contains(t, err.Error(), "building snapshot failed")
 
