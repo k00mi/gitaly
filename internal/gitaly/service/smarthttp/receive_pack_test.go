@@ -593,63 +593,52 @@ func TestPostReceiveWithReferenceTransactionHook(t *testing.T) {
 	}(hooks.Override)
 	hooks.Override = ""
 
-	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{
-		featureflag.ReferenceTransactionHook,
+	refTransactionServer.called = 0
+
+	client, conn := newSmartHTTPClient(t, "unix://"+gitalySocketPath)
+	defer conn.Close()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	ctx, err = metadata.InjectTransaction(ctx, 1234, "primary", true)
+	require.NoError(t, err)
+
+	// As we ain't got a Praefect server setup, we instead hooked up the
+	// RefTransaction server for Gitaly itself. As this is the only Praefect
+	// service required in this context, we can just pretend that
+	// Gitaly is the Praefect server and inject it.
+	praefectServer, err := metadata.PraefectFromConfig(pconfig.Config{
+		SocketPath: "unix://" + gitalySocketPath,
 	})
 	require.NoError(t, err)
 
-	for _, features := range featureSets {
-		t.Run("disabled "+features.String(), func(t *testing.T) {
-			refTransactionServer.called = 0
+	ctx, err = praefectServer.Inject(ctx)
+	require.NoError(t, err)
 
-			client, conn := newSmartHTTPClient(t, "unix://"+gitalySocketPath)
-			defer conn.Close()
+	ctx = helper.IncomingToOutgoing(ctx)
 
-			ctx, cancel := testhelper.Context()
-			defer cancel()
+	stream, err := client.PostReceivePack(ctx)
+	require.NoError(t, err)
 
-			ctx, err = metadata.InjectTransaction(ctx, 1234, "primary", true)
-			require.NoError(t, err)
+	repo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
 
-			// As we ain't got a Praefect server setup, we instead hooked up the
-			// RefTransaction server for Gitaly itself. As this is the only Praefect
-			// service required in this context, we can just pretend that
-			// Gitaly is the Praefect server and inject it.
-			praefectServer, err := metadata.PraefectFromConfig(pconfig.Config{
-				SocketPath: "unix://" + gitalySocketPath,
-			})
-			require.NoError(t, err)
+	request := &gitalypb.PostReceivePackRequest{Repository: repo, GlId: "key-1234", GlRepository: "some_repo"}
+	response := doPush(t, stream, request, newTestPush(t, nil).body)
 
-			ctx, err = praefectServer.Inject(ctx)
-			require.NoError(t, err)
+	expectedResponse := "0049\x01000eunpack ok\n0019ok refs/heads/master\n0019ok refs/heads/branch\n00000000"
+	require.Equal(t, expectedResponse, string(response), "Expected response to be %q, got %q", expectedResponse, response)
 
-			ctx = helper.IncomingToOutgoing(ctx)
-			ctx = features.Disable(ctx)
+	version, err := git.Version()
+	require.NoError(t, err)
+	supported, err := git.SupportsReferenceTransactionHook(version)
+	require.NoError(t, err)
 
-			stream, err := client.PostReceivePack(ctx)
-			require.NoError(t, err)
-
-			repo, _, cleanup := testhelper.NewTestRepo(t)
-			defer cleanup()
-
-			request := &gitalypb.PostReceivePackRequest{Repository: repo, GlId: "key-1234", GlRepository: "some_repo"}
-			response := doPush(t, stream, request, newTestPush(t, nil).body)
-
-			expectedResponse := "0049\x01000eunpack ok\n0019ok refs/heads/master\n0019ok refs/heads/branch\n00000000"
-			require.Equal(t, expectedResponse, string(response), "Expected response to be %q, got %q", expectedResponse, response)
-
-			version, err := git.Version()
-			require.NoError(t, err)
-			supported, err := git.SupportsReferenceTransactionHook(version)
-			require.NoError(t, err)
-
-			// If the reference-transaction hook is not supported or the feature flag is
-			// not enabled, voting only happens via the pre-receive hook.
-			if features.IsDisabled(featureflag.ReferenceTransactionHook) || !supported {
-				require.Equal(t, 0, refTransactionServer.called)
-			} else {
-				require.Equal(t, 2, refTransactionServer.called)
-			}
-		})
+	// If the reference-transaction hook is not supported, then there is no voting.
+	if !supported {
+		require.Equal(t, 0, refTransactionServer.called)
+	} else {
+		require.Equal(t, 2, refTransactionServer.called)
 	}
 }

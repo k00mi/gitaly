@@ -1,0 +1,5 @@
+---
+title: Remove primary-wins and reference-transaction-hook feature flags
+merge_request: 2681
+author:
+type: changed

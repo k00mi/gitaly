@@ -214,51 +214,32 @@ func (c *Coordinator) registerTransaction(ctx context.Context, primary Node, sec
 	var voters []transactions.Voter
 	var threshold uint
 
-	if featureflag.IsEnabled(ctx, featureflag.ReferenceTransactionsPrimaryWins) {
-		// This voting strategy ensures that transactions always go ahead as long as
-		// the primary doesn't fail because of unrelated reasons. Secondaries' votes do
-		// not matter.
+	// This voting-strategy is a majority-wins one: the primary always needs to agree
+	// with at least half of the secondaries.
 
+	secondaryLen := uint(len(secondaries))
+
+	// In order to ensure that no quorum can be reached without the primary, its number
+	// of votes needs to exceed the number of secondaries.
+	voters = append(voters, transactions.Voter{
+		Name:  primary.Storage,
+		Votes: secondaryLen + 1,
+	})
+	threshold = secondaryLen + 1
+
+	for _, secondary := range secondaries {
 		voters = append(voters, transactions.Voter{
-			Name:  primary.Storage,
+			Name:  secondary.Storage,
 			Votes: 1,
 		})
-		threshold = 1
+	}
 
-		for _, node := range secondaries {
-			voters = append(voters, transactions.Voter{
-				Name:  node.Storage,
-				Votes: 0,
-			})
-		}
-	} else {
-		// This voting-strategy is a majority-wins one: the primary always needs to agree
-		// with at least half of the secondaries.
-
-		secondaryLen := uint(len(secondaries))
-
-		// In order to ensure that no quorum can be reached without the primary, its number
-		// of votes needs to exceed the number of secondaries.
-		voters = append(voters, transactions.Voter{
-			Name:  primary.Storage,
-			Votes: secondaryLen + 1,
-		})
-		threshold = secondaryLen + 1
-
-		for _, secondary := range secondaries {
-			voters = append(voters, transactions.Voter{
-				Name:  secondary.Storage,
-				Votes: 1,
-			})
-		}
-
-		// If we only got a single secondary (or none), we don't increase the threshold so
-		// that it's allowed to disagree with the primary without blocking the transaction.
-		// Otherwise, we add `Math.ceil(len(secondaries) / 2.0)`, which means that at least
-		// half of the secondaries need to agree with the primary.
-		if len(secondaries) > 1 {
-			threshold += (secondaryLen + 1) / 2
-		}
+	// If we only got a single secondary (or none), we don't increase the threshold so
+	// that it's allowed to disagree with the primary without blocking the transaction.
+	// Otherwise, we add `Math.ceil(len(secondaries) / 2.0)`, which means that at least
+	// half of the secondaries need to agree with the primary.
+	if len(secondaries) > 1 {
+		threshold += (secondaryLen + 1) / 2
 	}
 
 	return c.txMgr.RegisterTransaction(ctx, voters, threshold)

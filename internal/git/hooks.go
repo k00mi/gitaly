@@ -35,6 +35,6 @@ func refHookEnv(ctx context.Context, repo *gitalypb.Repository, cfg config.Cfg) 
 		"GITALY_SOCKET=" + config.GitalyInternalSocketPath(),
 		fmt.Sprintf("GITALY_REPO=%s", repoJSON),
 		fmt.Sprintf("GITALY_TOKEN=%s", cfg.Auth.Token),
-		fmt.Sprintf("%s=%v", featureflag.ReferenceTransactionHookEnvVar, featureflag.IsEnabled(ctx, featureflag.ReferenceTransactionHook)),
+		fmt.Sprintf("%s=true", featureflag.ReferenceTransactionHookEnvVar),
 	}, nil
 }
