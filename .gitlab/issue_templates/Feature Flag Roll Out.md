@@ -43,4 +43,4 @@ If applicable, any groups/projects that are happy to have this feature turned on
 - [ ] Announce on the issue that the flag has been enabled
 - [ ] Remove feature flag and add changelog entry
 
-/label ~"devops::create" ~"group::gitaly" ~"feature flag" ~"backstage"
+/label ~"devops::create" ~"group::gitaly" ~"feature flag" ~"feature::maintainance" ~"Category:Gitaly" ~"section::dev"
