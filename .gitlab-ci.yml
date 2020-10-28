@@ -173,7 +173,7 @@ nightly:git:
   parallel:
     matrix:
       - GO_VERSION: "1.14"
-        GIT_VERSION: "master"
+        GIT_VERSION: ["master", "next"]
         TARGET: [ test, test-with-proxies, test-with-praefect ]
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
