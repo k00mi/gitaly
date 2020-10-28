@@ -260,7 +260,6 @@ func TestPostgresListener_Listen(t *testing.T) {
 		require.NoError(t, err)
 
 		ctx, cancel := testhelper.Context()
-		defer cancel()
 
 		var connected int32
 
@@ -279,6 +278,9 @@ func TestPostgresListener_Listen(t *testing.T) {
 		err = listener.Listen(ctx, mockListenHandler{})
 		require.Error(t, err)
 		require.Equal(t, fmt.Sprintf(`already listening channel %q of %q`, opts.Channel, opts.Addr), err.Error())
+
+		cancel()
+		require.NoError(t, <-errCh)
 	})
 
 	t.Run("invalid connection", func(t *testing.T) {
