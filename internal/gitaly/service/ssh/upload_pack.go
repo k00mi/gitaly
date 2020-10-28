@@ -55,7 +55,11 @@ func (s *server) sshUploadPack(stream gitalypb.SSHService_SSHUploadPackServer, r
 		return request.GetStdin(), err
 	})
 
-	stdoutWriter := streamio.NewWriter(func(p []byte) error {
+	// gRPC doesn't allow concurrent writes to a stream, so we need to
+	// synchronize writing stdout and stderrr.
+	var m sync.Mutex
+
+	stdoutWriter := streamio.NewSyncWriter(&m, func(p []byte) error {
 		return stream.Send(&gitalypb.SSHUploadPackResponse{Stdout: p})
 	})
 	// TODO: it is first step of the https://gitlab.com/gitlab-org/gitaly/issues/1519
@@ -63,7 +67,7 @@ func (s *server) sshUploadPack(stream gitalypb.SSHService_SSHUploadPackServer, r
 	stdout := inspect.NewWriter(stdoutWriter, inspect.LogPackInfoStatistic(ctx))
 	defer stdout.Close()
 
-	stderr := streamio.NewWriter(func(p []byte) error {
+	stderr := streamio.NewSyncWriter(&m, func(p []byte) error {
 		return stream.Send(&gitalypb.SSHUploadPackResponse{Stderr: p})
 	})
 

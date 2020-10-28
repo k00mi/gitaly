@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/git/pktline"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -232,6 +234,46 @@ func TestUploadPackCloneSuccess(t *testing.T) {
 			require.Equal(t, tc.deepen, promtest.ToFloat64(metric))
 		})
 	}
+}
+
+func TestUploadPackWithoutSideband(t *testing.T) {
+	serverSocketPath, stop := runSSHServer(t)
+	defer stop()
+
+	// While Git knows the side-band-64 capability, some other clients don't. There is no way
+	// though to have Git not use that capability, so we're instead manually crafting a packfile
+	// negotiation without that capability and send it along.
+	negotiation := bytes.NewBuffer([]byte{})
+	pktline.WriteString(negotiation, "want 1e292f8fedd741b75372e19097c76d327140c312 multi_ack_detailed thin-pack include-tag ofs-delta agent=git/2.29.1")
+	pktline.WriteString(negotiation, "want 1e292f8fedd741b75372e19097c76d327140c312")
+	pktline.WriteFlush(negotiation)
+	pktline.WriteString(negotiation, "done")
+
+	request := &gitalypb.SSHUploadPackRequest{
+		Repository: testRepo,
+	}
+	marshaler := &jsonpb.Marshaler{}
+	payload, err := marshaler.MarshalToString(request)
+	require.NoError(t, err)
+
+	// As we're not using the sideband, the remote process will write both to stdout and stderr.
+	// Those simultaneous writes to both stdout and stderr created a race as we could've invoked
+	// two concurrent `SendMsg`s on the gRPC stream. And given that `SendMsg` is not thread-safe
+	// a deadlock would result.
+	uploadPack := exec.Command(gitalySSHPath, "upload-pack", "dontcare", "dontcare")
+	uploadPack.Env = []string{
+		fmt.Sprintf("GITALY_ADDRESS=%s", serverSocketPath),
+		fmt.Sprintf("GITALY_PAYLOAD=%s", payload),
+		fmt.Sprintf("PATH=.:%s", os.Getenv("PATH")),
+	}
+	uploadPack.Stdin = negotiation
+
+	out, err := uploadPack.CombinedOutput()
+	require.NoError(t, err)
+	require.True(t, uploadPack.ProcessState.Success())
+	require.Contains(t, string(out), "refs/heads/master")
+	require.Contains(t, string(out), "Counting objects")
+	require.Contains(t, string(out), "PACK")
 }
 
 func TestUploadPackCloneWithPartialCloneFilter(t *testing.T) {

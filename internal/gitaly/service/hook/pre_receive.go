@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"sync"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
@@ -57,8 +58,14 @@ func (s *server) PreReceiveHook(stream gitalypb.HookService_PreReceiveHookServer
 		req, err := stream.Recv()
 		return req.GetStdin(), err
 	})
-	stdout := streamio.NewWriter(func(p []byte) error { return stream.Send(&gitalypb.PreReceiveHookResponse{Stdout: p}) })
-	stderr := streamio.NewWriter(func(p []byte) error { return stream.Send(&gitalypb.PreReceiveHookResponse{Stderr: p}) })
+
+	var m sync.Mutex
+	stdout := streamio.NewSyncWriter(&m, func(p []byte) error {
+		return stream.Send(&gitalypb.PreReceiveHookResponse{Stdout: p})
+	})
+	stderr := streamio.NewSyncWriter(&m, func(p []byte) error {
+		return stream.Send(&gitalypb.PreReceiveHookResponse{Stderr: p})
+	})
 
 	env, err := preReceiveEnv(firstRequest)
 	if err != nil {
