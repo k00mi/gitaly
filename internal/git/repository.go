@@ -26,6 +26,8 @@ func errorWithStderr(err error, stderr []byte) error {
 
 var (
 	ErrReferenceNotFound = errors.New("reference not found")
+	// ErrAlreadyExists represents an error when the resource is already exists.
+	ErrAlreadyExists = errors.New("already exists")
 	// ErrNotFound represents an error when the resource can't be found.
 	ErrNotFound = errors.New("not found")
 )
@@ -77,6 +79,9 @@ type Repository interface {
 
 	// Config returns executor of the 'config' sub-command.
 	Config() Config
+
+	// Remote returns executor of the 'remote' sub-command.
+	Remote() Remote
 }
 
 // ErrUnimplemented indicates the repository abstraction does not yet implement
@@ -121,6 +126,10 @@ func (UnimplementedRepo) WriteBlob(context.Context, string, io.Reader) (string, 
 
 func (UnimplementedRepo) ReadObject(context.Context, string) ([]byte, error) {
 	return nil, ErrUnimplemented
+}
+
+func (UnimplementedRepo) Remote() Remote {
+	return UnimplementedRemote{}
 }
 
 func (UnimplementedRepo) Config() Config {
@@ -334,6 +343,10 @@ func (repo *localRepository) UpdateRef(ctx context.Context, reference, newrev, o
 
 func (repo *localRepository) Config() Config {
 	return RepositoryConfig{repo: repo.repo}
+}
+
+func (repo *localRepository) Remote() Remote {
+	return RepositoryRemote{repo: repo.repo}
 }
 
 func isExitWithCode(err error, code int) bool {
