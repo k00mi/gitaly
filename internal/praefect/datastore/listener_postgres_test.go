@@ -115,29 +115,37 @@ func TestPostgresListener_Listen(t *testing.T) {
 
 		require.NoError(t, err)
 
+		var wg sync.WaitGroup
 		ctx, cancel := testhelper.Context()
-		defer cancel()
+		defer func() {
+			cancel()
+			wg.Wait()
+		}()
 
 		numResults := len(payloads) * numNotifiers
 		allReceivedChan := make(chan struct{})
 
+		wg.Add(1)
 		go func() {
-			defer cancel()
+			defer func() {
+				cancel()
+				wg.Done()
+			}()
 
 			time.Sleep(100 * time.Millisecond)
 
-			var wg sync.WaitGroup
-			wg.Add(numNotifiers)
+			var notifyWG sync.WaitGroup
+			notifyWG.Add(numNotifiers)
 			for i := 0; i < numNotifiers; i++ {
 				go func() {
-					defer wg.Done()
+					defer notifyWG.Done()
 
 					for _, payload := range payloads {
 						notifyListener(t, opts.Channel, payload)
 					}
 				}()
 			}
-			wg.Wait()
+			notifyWG.Wait()
 
 			select {
 			case <-time.After(time.Second):
