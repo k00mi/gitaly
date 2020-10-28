@@ -105,14 +105,25 @@ func parseVersion(versionStr string) (version, error) {
 	var ver version
 
 	for i, v := range []*uint32{&ver.major, &ver.minor, &ver.patch} {
-		rcSplit := strings.SplitN(versionSplit[i], "-", 2)
-		n64, err := strconv.ParseUint(rcSplit[0], 10, 32)
-		if err != nil {
-			return version{}, err
-		}
+		var n64 uint64
 
-		if len(rcSplit) == 2 && strings.HasPrefix(rcSplit[1], "rc") {
-			ver.rc = true
+		if versionSplit[i] == "GIT" {
+			// Git falls back to vx.x.GIT if it's unable to describe the current version
+			// or if there's a version file. We should just treat this as "0", even
+			// though it may have additional commits on top.
+			n64 = 0
+		} else {
+			rcSplit := strings.SplitN(versionSplit[i], "-", 2)
+
+			var err error
+			n64, err = strconv.ParseUint(rcSplit[0], 10, 32)
+			if err != nil {
+				return version{}, err
+			}
+
+			if len(rcSplit) == 2 && strings.HasPrefix(rcSplit[1], "rc") {
+				ver.rc = true
+			}
 		}
 
 		*v = uint32(n64)

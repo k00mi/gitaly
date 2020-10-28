@@ -91,6 +91,10 @@ func TestVersionComparator(t *testing.T) {
 		{"1.1.1-rc0", "1.1.1-rc0", false},
 		{"1.1.1-rc0", "1.1.1", true},
 		{"1.1.1", "1.1.1-rc0", false},
+
+		{"1.1.GIT", "1.1.1", true},
+		{"1.1.GIT", "1.1.0", false},
+		{"1.1.GIT", "1.0.0", false},
 	} {
 		actual, err := git.VersionLessThan(tc.v1, tc.v2)
 		require.NoError(t, err)
