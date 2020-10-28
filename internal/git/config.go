@@ -299,5 +299,5 @@ func (repo RepositoryConfig) Unset(ctx context.Context, name string, opts Config
 }
 
 func chompNul(b []byte) string {
-	return string(bytes.Trim(b, string(0)))
+	return string(bytes.Trim(b, "\x00"))
 }
