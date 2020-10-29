@@ -32,13 +32,7 @@ func (s *server) FetchInternalRemote(ctx context.Context, req *gitalypb.FetchInt
 		return nil, err
 	}
 
-	repoPath, err := s.locator.GetRepoPath(req.Repository)
-	if err != nil {
-		return nil, err
-	}
-
-	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{}, env,
-		[]git.Option{git.ValueFlag{"--git-dir", repoPath}},
+	cmd, err := git.SafeCmdWithEnv(ctx, env, req.Repository, nil,
 		git.SubCmd{
 			Name:  "fetch",
 			Flags: []git.Option{git.Flag{Name: "--prune"}},
