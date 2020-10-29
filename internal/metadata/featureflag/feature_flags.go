@@ -39,6 +39,8 @@ var (
 	// GoUserUpdateSubmodule enables the Go implementation of
 	// UserUpdateSubmodules
 	GoUserUpdateSubmodule = FeatureFlag{Name: "go_user_update_submodule", OnByDefault: false}
+	// GoFetchRemote enables the Go implementation of FetchRemote
+	GoFetchRemote = FeatureFlag{Name: "go_fetch_remote", OnByDefault: false}
 )
 
 // All includes all feature flags.
@@ -56,6 +58,7 @@ var All = []FeatureFlag{
 	GoUserCommitFiles,
 	GoResolveConflicts,
 	GoUserUpdateSubmodule,
+	GoFetchRemote,
 }
 
 const (
