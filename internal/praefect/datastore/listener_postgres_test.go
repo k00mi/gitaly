@@ -115,29 +115,37 @@ func TestPostgresListener_Listen(t *testing.T) {
 
 		require.NoError(t, err)
 
+		var wg sync.WaitGroup
 		ctx, cancel := testhelper.Context()
-		defer cancel()
+		defer func() {
+			cancel()
+			wg.Wait()
+		}()
 
 		numResults := len(payloads) * numNotifiers
 		allReceivedChan := make(chan struct{})
 
+		wg.Add(1)
 		go func() {
-			defer cancel()
+			defer func() {
+				cancel()
+				wg.Done()
+			}()
 
 			time.Sleep(100 * time.Millisecond)
 
-			var wg sync.WaitGroup
-			wg.Add(numNotifiers)
+			var notifyWG sync.WaitGroup
+			notifyWG.Add(numNotifiers)
 			for i := 0; i < numNotifiers; i++ {
 				go func() {
-					defer wg.Done()
+					defer notifyWG.Done()
 
 					for _, payload := range payloads {
 						notifyListener(t, opts.Channel, payload)
 					}
 				}()
 			}
-			wg.Wait()
+			notifyWG.Wait()
 
 			select {
 			case <-time.After(time.Second):
@@ -252,7 +260,6 @@ func TestPostgresListener_Listen(t *testing.T) {
 		require.NoError(t, err)
 
 		ctx, cancel := testhelper.Context()
-		defer cancel()
 
 		var connected int32
 
@@ -271,6 +278,9 @@ func TestPostgresListener_Listen(t *testing.T) {
 		err = listener.Listen(ctx, mockListenHandler{})
 		require.Error(t, err)
 		require.Equal(t, fmt.Sprintf(`already listening channel %q of %q`, opts.Channel, opts.Addr), err.Error())
+
+		cancel()
+		require.NoError(t, <-errCh)
 	})
 
 	t.Run("invalid connection", func(t *testing.T) {
