@@ -83,12 +83,18 @@ func (UserRevertResponse_CreateTreeError) EnumDescriptor() ([]byte, []int) {
 type UserCommitFilesActionHeader_ActionType int32
 
 const (
-	UserCommitFilesActionHeader_CREATE     UserCommitFilesActionHeader_ActionType = 0
+	// CREATE creates a new file.
+	UserCommitFilesActionHeader_CREATE UserCommitFilesActionHeader_ActionType = 0
+	// CREATE_DIR creates a new directory.
 	UserCommitFilesActionHeader_CREATE_DIR UserCommitFilesActionHeader_ActionType = 1
-	UserCommitFilesActionHeader_UPDATE     UserCommitFilesActionHeader_ActionType = 2
-	UserCommitFilesActionHeader_MOVE       UserCommitFilesActionHeader_ActionType = 3
-	UserCommitFilesActionHeader_DELETE     UserCommitFilesActionHeader_ActionType = 4
-	UserCommitFilesActionHeader_CHMOD      UserCommitFilesActionHeader_ActionType = 5
+	// UPDATE updates an existing file.
+	UserCommitFilesActionHeader_UPDATE UserCommitFilesActionHeader_ActionType = 2
+	// MOVE moves an existing file to a new path.
+	UserCommitFilesActionHeader_MOVE UserCommitFilesActionHeader_ActionType = 3
+	// DELETE deletes an existing file.
+	UserCommitFilesActionHeader_DELETE UserCommitFilesActionHeader_ActionType = 4
+	// CHMOD changes the permissions of an existing file.
+	UserCommitFilesActionHeader_CHMOD UserCommitFilesActionHeader_ActionType = 5
 )
 
 var UserCommitFilesActionHeader_ActionType_name = map[int32]string{
@@ -943,12 +949,15 @@ func (m *UserMergeToRefResponse) GetPreReceiveError() string {
 	return ""
 }
 
+// OperationBranchUpdate contains the details of a branch update.
 type OperationBranchUpdate struct {
-	// If this string is non-empty the branch has been updated.
+	// commit_id is set to the OID of the created commit if a branch was created or updated.
 	CommitId string `protobuf:"bytes,1,opt,name=commit_id,json=commitId,proto3" json:"commit_id,omitempty"`
-	// Used for cache invalidation in GitLab
+	// repo_created indicates whether the branch created was the first one in the repository.
+	// Used for cache invalidation in GitLab.
 	RepoCreated bool `protobuf:"varint,2,opt,name=repo_created,json=repoCreated,proto3" json:"repo_created,omitempty"`
-	// Used for cache invalidation in GitLab
+	// branch_created indicates whether the branch already existed in the repository
+	// and was updated or whether it was created. Used for cache invalidation in GitLab.
 	BranchCreated        bool     `protobuf:"varint,3,opt,name=branch_created,json=branchCreated,proto3" json:"branch_created,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -1443,12 +1452,29 @@ func (m *UserRevertResponse) GetCreateTreeErrorCode() UserRevertResponse_CreateT
 	return UserRevertResponse_NONE
 }
 
+// UserCommitFilesActionHeader contains the details of the action to be performed.
 type UserCommitFilesActionHeader struct {
-	Action          UserCommitFilesActionHeader_ActionType `protobuf:"varint,1,opt,name=action,proto3,enum=gitaly.UserCommitFilesActionHeader_ActionType" json:"action,omitempty"`
-	FilePath        []byte                                 `protobuf:"bytes,2,opt,name=file_path,json=filePath,proto3" json:"file_path,omitempty"`
-	PreviousPath    []byte                                 `protobuf:"bytes,3,opt,name=previous_path,json=previousPath,proto3" json:"previous_path,omitempty"`
-	Base64Content   bool                                   `protobuf:"varint,4,opt,name=base64_content,json=base64Content,proto3" json:"base64_content,omitempty"`
-	ExecuteFilemode bool                                   `protobuf:"varint,5,opt,name=execute_filemode,json=executeFilemode,proto3" json:"execute_filemode,omitempty"`
+	// action is the type of the action taken to build a commit. Not all fields are
+	// used for all of the actions.
+	Action UserCommitFilesActionHeader_ActionType `protobuf:"varint,1,opt,name=action,proto3,enum=gitaly.UserCommitFilesActionHeader_ActionType" json:"action,omitempty"`
+	// file_path refers to the file or directory being modified. The meaning differs for each
+	// action:
+	//   1. CREATE: path of the file to create
+	//   2. CREATE_DIR: path of the directory to create
+	//   3. UPDATE: path of the file to update
+	//   4. MOVE: the new path of the moved file
+	//   5. DELETE: path of the file to delete
+	//   6. CHMOD: path of the file to modify permissions for
+	FilePath []byte `protobuf:"bytes,2,opt,name=file_path,json=filePath,proto3" json:"file_path,omitempty"`
+	// previous_path is used in MOVE action to specify the path of the file to move.
+	PreviousPath []byte `protobuf:"bytes,3,opt,name=previous_path,json=previousPath,proto3" json:"previous_path,omitempty"`
+	// base64_content indicates the content of the file is base64 encoded. The encoding
+	// must be the standard base64 encoding defined in RFC 4648. Only used for CREATE and
+	// UPDATE actions.
+	Base64Content bool `protobuf:"varint,4,opt,name=base64_content,json=base64Content,proto3" json:"base64_content,omitempty"`
+	// execute_filemode determines whether the file is created with execute permissions.
+	// The field is only used in CREATE and CHMOD actions.
+	ExecuteFilemode bool `protobuf:"varint,5,opt,name=execute_filemode,json=executeFilemode,proto3" json:"execute_filemode,omitempty"`
 	// Move actions that change the file path, but not its content, should set
 	// infer_content to true instead of populating the content field. Ignored for
 	// other action types.
@@ -1525,6 +1551,7 @@ func (m *UserCommitFilesActionHeader) GetInferContent() bool {
 	return false
 }
 
+// UserCommitFilesAction is the request message used to stream in the actions to build a commit.
 type UserCommitFilesAction struct {
 	// Types that are valid to be assigned to UserCommitFilesActionPayload:
 	//	*UserCommitFilesAction_Header
@@ -1605,20 +1632,39 @@ func (*UserCommitFilesAction) XXX_OneofWrappers() []interface{} {
 	}
 }
 
+// UserCommitFilesRequestHeader is the header of the UserCommitFiles that defines the commit details,
+// parent and other information related to the call.
 type UserCommitFilesRequestHeader struct {
-	Repository           *Repository `protobuf:"bytes,1,opt,name=repository,proto3" json:"repository,omitempty"`
-	User                 *User       `protobuf:"bytes,2,opt,name=user,proto3" json:"user,omitempty"`
-	BranchName           []byte      `protobuf:"bytes,3,opt,name=branch_name,json=branchName,proto3" json:"branch_name,omitempty"`
-	CommitMessage        []byte      `protobuf:"bytes,4,opt,name=commit_message,json=commitMessage,proto3" json:"commit_message,omitempty"`
-	CommitAuthorName     []byte      `protobuf:"bytes,5,opt,name=commit_author_name,json=commitAuthorName,proto3" json:"commit_author_name,omitempty"`
-	CommitAuthorEmail    []byte      `protobuf:"bytes,6,opt,name=commit_author_email,json=commitAuthorEmail,proto3" json:"commit_author_email,omitempty"`
-	StartBranchName      []byte      `protobuf:"bytes,7,opt,name=start_branch_name,json=startBranchName,proto3" json:"start_branch_name,omitempty"`
-	StartRepository      *Repository `protobuf:"bytes,8,opt,name=start_repository,json=startRepository,proto3" json:"start_repository,omitempty"`
-	Force                bool        `protobuf:"varint,9,opt,name=force,proto3" json:"force,omitempty"`
-	StartSha             string      `protobuf:"bytes,10,opt,name=start_sha,json=startSha,proto3" json:"start_sha,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
-	XXX_unrecognized     []byte      `json:"-"`
-	XXX_sizecache        int32       `json:"-"`
+	// repository is the target repository where to apply the commit.
+	Repository *Repository `protobuf:"bytes,1,opt,name=repository,proto3" json:"repository,omitempty"`
+	// user is the user peforming the call.
+	User *User `protobuf:"bytes,2,opt,name=user,proto3" json:"user,omitempty"`
+	// branch_name is the name of the branch to point to the new commit. If start_sha and start_branch_name
+	// are not defined, the commit of branch_name is used as the parent commit.
+	BranchName []byte `protobuf:"bytes,3,opt,name=branch_name,json=branchName,proto3" json:"branch_name,omitempty"`
+	// commit_message is the message to use in the commit.
+	CommitMessage []byte `protobuf:"bytes,4,opt,name=commit_message,json=commitMessage,proto3" json:"commit_message,omitempty"`
+	// commit_author_name is the commit author's name. If not provided, the user's name is
+	// used instead.
+	CommitAuthorName []byte `protobuf:"bytes,5,opt,name=commit_author_name,json=commitAuthorName,proto3" json:"commit_author_name,omitempty"`
+	// commit_author_email is the commit author's email. If not provided, the user's email is
+	// used instead.
+	CommitAuthorEmail []byte `protobuf:"bytes,6,opt,name=commit_author_email,json=commitAuthorEmail,proto3" json:"commit_author_email,omitempty"`
+	// start_branch_name specifies the branch whose commit to use as the parent commit. Takes priority
+	// over branch_name. Optional.
+	StartBranchName []byte `protobuf:"bytes,7,opt,name=start_branch_name,json=startBranchName,proto3" json:"start_branch_name,omitempty"`
+	// start_repository specifies which contains the parent commit. If not specified, repository itself
+	// is used to look up the parent commit. Optional.
+	StartRepository *Repository `protobuf:"bytes,8,opt,name=start_repository,json=startRepository,proto3" json:"start_repository,omitempty"`
+	// force determines whether to force update the target branch specified by branch_name to
+	// point to the new commit.
+	Force bool `protobuf:"varint,9,opt,name=force,proto3" json:"force,omitempty"`
+	// start_sha specifies the SHA of the commit to use as the parent of new commit. Takes priority
+	// over start_branch_name and branc_name. Optional.
+	StartSha             string   `protobuf:"bytes,10,opt,name=start_sha,json=startSha,proto3" json:"start_sha,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *UserCommitFilesRequestHeader) Reset()         { *m = UserCommitFilesRequestHeader{} }
@@ -1716,6 +1762,7 @@ func (m *UserCommitFilesRequestHeader) GetStartSha() string {
 	return ""
 }
 
+// UserCommitFiles is the request of UserCommitFiles.
 type UserCommitFilesRequest struct {
 	// Types that are valid to be assigned to UserCommitFilesRequestPayload:
 	//	*UserCommitFilesRequest_Header
@@ -1796,13 +1843,18 @@ func (*UserCommitFilesRequest) XXX_OneofWrappers() []interface{} {
 	}
 }
 
+// UserCommitFilesResponse is the response object of UserCommitFiles.
 type UserCommitFilesResponse struct {
-	BranchUpdate         *OperationBranchUpdate `protobuf:"bytes,1,opt,name=branch_update,json=branchUpdate,proto3" json:"branch_update,omitempty"`
-	IndexError           string                 `protobuf:"bytes,2,opt,name=index_error,json=indexError,proto3" json:"index_error,omitempty"`
-	PreReceiveError      string                 `protobuf:"bytes,3,opt,name=pre_receive_error,json=preReceiveError,proto3" json:"pre_receive_error,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}               `json:"-"`
-	XXX_unrecognized     []byte                 `json:"-"`
-	XXX_sizecache        int32                  `json:"-"`
+	// branch_update contains the details of the commit and the branch update.
+	BranchUpdate *OperationBranchUpdate `protobuf:"bytes,1,opt,name=branch_update,json=branchUpdate,proto3" json:"branch_update,omitempty"`
+	// index_error is set to the error message when an invalid action was attempted, such as
+	// trying to create a file that already existed.
+	IndexError string `protobuf:"bytes,2,opt,name=index_error,json=indexError,proto3" json:"index_error,omitempty"`
+	// pre_receive_error is set when the pre-receive hook errored.
+	PreReceiveError      string   `protobuf:"bytes,3,opt,name=pre_receive_error,json=preReceiveError,proto3" json:"pre_receive_error,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *UserCommitFilesResponse) Reset()         { *m = UserCommitFilesResponse{} }
@@ -2772,6 +2824,10 @@ type OperationServiceClient interface {
 	UserMergeBranch(ctx context.Context, opts ...grpc.CallOption) (OperationService_UserMergeBranchClient, error)
 	UserFFBranch(ctx context.Context, in *UserFFBranchRequest, opts ...grpc.CallOption) (*UserFFBranchResponse, error)
 	UserCherryPick(ctx context.Context, in *UserCherryPickRequest, opts ...grpc.CallOption) (*UserCherryPickResponse, error)
+	// UserCommitFiles builds a commit from a stream of actions and updates the target branch to point to it.
+	// UserCommitFilesRequest with a UserCommitFilesRequestHeader must be sent as the first message of the stream.
+	// Following that, a variable number of actions can be sent to build a new commit. Each action consists of
+	// a header followed by content if used by the action.
 	UserCommitFiles(ctx context.Context, opts ...grpc.CallOption) (OperationService_UserCommitFilesClient, error)
 	UserRebaseConfirmable(ctx context.Context, opts ...grpc.CallOption) (OperationService_UserRebaseConfirmableClient, error)
 	UserRevert(ctx context.Context, in *UserRevertRequest, opts ...grpc.CallOption) (*UserRevertResponse, error)
@@ -3028,6 +3084,10 @@ type OperationServiceServer interface {
 	UserMergeBranch(OperationService_UserMergeBranchServer) error
 	UserFFBranch(context.Context, *UserFFBranchRequest) (*UserFFBranchResponse, error)
 	UserCherryPick(context.Context, *UserCherryPickRequest) (*UserCherryPickResponse, error)
+	// UserCommitFiles builds a commit from a stream of actions and updates the target branch to point to it.
+	// UserCommitFilesRequest with a UserCommitFilesRequestHeader must be sent as the first message of the stream.
+	// Following that, a variable number of actions can be sent to build a new commit. Each action consists of
+	// a header followed by content if used by the action.
 	UserCommitFiles(OperationService_UserCommitFilesServer) error
 	UserRebaseConfirmable(OperationService_UserRebaseConfirmableServer) error
 	UserRevert(context.Context, *UserRevertRequest) (*UserRevertResponse, error)

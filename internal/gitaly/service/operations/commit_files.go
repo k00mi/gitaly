@@ -1,6 +1,7 @@
 package operations
 
 import (
+	"bytes"
 	"fmt"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git"
@@ -10,6 +11,16 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type indexError string
+
+func (err indexError) Error() string { return string(err) }
+
+func errorWithStderr(err error, stderr *bytes.Buffer) error {
+	return fmt.Errorf("%w, stderr: %q", err, stderr)
+}
+
+// UserCommitFiles allows for committing from a set of actions. See the protobuf documentation
+// for details.
 func (s *server) UserCommitFiles(stream gitalypb.OperationService_UserCommitFilesServer) error {
 	firstRequest, err := stream.Recv()
 	if err != nil {
