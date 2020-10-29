@@ -118,7 +118,7 @@ func (s *server) UserDeleteBranch(ctx context.Context, req *gitalypb.UserDeleteB
 
 	// Implement UserDeleteBranch in Go
 
-	revision, err := parseRevision(ctx, req.Repository, string(req.BranchName))
+	revision, err := git.NewRepository(req.Repository).ResolveRefish(ctx, string(req.BranchName))
 	if err != nil {
 		return nil, helper.ErrPreconditionFailed(err)
 	}

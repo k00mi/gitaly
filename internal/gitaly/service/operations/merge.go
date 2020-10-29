@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
@@ -191,29 +190,6 @@ func (s *server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 	return nil
 }
 
-// parseRevision parses a Git revision and returns its OID.
-func parseRevision(ctx context.Context, repo *gitalypb.Repository, revision string) (string, error) {
-	revParse, err := git.SafeCmd(ctx, repo, nil, git.SubCmd{
-		Name:  "rev-parse",
-		Flags: []git.Option{git.Flag{"--verify"}},
-		Args:  []string{revision},
-	})
-	if err != nil {
-		return "", err
-	}
-
-	var stdout bytes.Buffer
-	if _, err := io.Copy(&stdout, revParse); err != nil {
-		return "", err
-	}
-
-	if err := revParse.Wait(); err != nil {
-		return "", err
-	}
-
-	return text.ChompBytes(stdout.Bytes()), nil
-}
-
 func (s *server) userMergeBranch(stream gitalypb.OperationService_UserMergeBranchServer) error {
 	ctx := stream.Context()
 
@@ -226,12 +202,13 @@ func (s *server) userMergeBranch(stream gitalypb.OperationService_UserMergeBranc
 		return helper.ErrInvalidArgument(err)
 	}
 
-	revision, err := parseRevision(ctx, firstRequest.Repository, string(firstRequest.Branch))
+	repo := firstRequest.Repository
+	repoPath, err := s.locator.GetPath(repo)
 	if err != nil {
 		return err
 	}
 
-	repoPath, err := s.locator.GetPath(firstRequest.Repository)
+	revision, err := git.NewRepository(repo).ResolveRefish(ctx, string(firstRequest.Branch))
 	if err != nil {
 		return err
 	}
@@ -322,7 +299,7 @@ func (s *server) UserFFBranch(ctx context.Context, in *gitalypb.UserFFBranchRequ
 		return s.userFFBranchRuby(ctx, in)
 	}
 
-	revision, err := parseRevision(ctx, in.Repository, string(in.Branch))
+	revision, err := git.NewRepository(in.Repository).ResolveRefish(ctx, string(in.Branch))
 	if err != nil {
 		return nil, helper.ErrInvalidArgument(err)
 	}
