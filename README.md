@@ -232,5 +232,5 @@ For more information on how to set it up, see the [LabKit monitoring docs](https
 - [Gitaly Basics, 2017-05-01](https://docs.google.com/presentation/d/1cLslUbXVkniOaeJ-r3s5AYF0kQep8VeNfvs0XSGrpA0/edit#slide=id.g1c73db867d_0_0)
 - [Git Paris meetup, 2017-02-22](https://docs.google.com/presentation/d/19OZUalFMIDM8WujXrrIyCuVb_oVeaUzpb-UdGThOvAo/edit?usp=sharing) a high-level overview of what our plans are and where we are.
 
-[roadmap]: https://gitlab.com/groups/gitlab-org/-/roadmap?label_name%5B%5D=Gitaly&scope=all&sort=start_date_asc&state=opened
+[roadmap]: https://gitlab.com/groups/gitlab-org/-/roadmap?scope=all&utf8=%E2%9C%93&label_name[]=group%3A%3Agitaly
 [LabKit]: https://gitlab.com/gitlab-org/labkit/
