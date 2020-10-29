@@ -1,0 +1,5 @@
+---
+title: 'featureflag: Enable Ruby reference transaction hooks by default'
+merge_request: 2717
+author:
+type: changed
