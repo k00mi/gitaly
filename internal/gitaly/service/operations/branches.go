@@ -118,14 +118,14 @@ func (s *server) UserDeleteBranch(ctx context.Context, req *gitalypb.UserDeleteB
 
 	// Implement UserDeleteBranch in Go
 
-	revision, err := git.NewRepository(req.Repository).ResolveRefish(ctx, string(req.BranchName))
+	revision, err := git.NewRepository(req.Repository).GetBranch(ctx, string(req.BranchName))
 	if err != nil {
 		return nil, helper.ErrPreconditionFailed(err)
 	}
 
 	branch := fmt.Sprintf("refs/heads/%s", req.BranchName)
 
-	if err := s.updateReferenceWithHooks(ctx, req.Repository, req.User, branch, git.NullSHA, revision); err != nil {
+	if err := s.updateReferenceWithHooks(ctx, req.Repository, req.User, branch, git.NullSHA, revision.Name); err != nil {
 		var preReceiveError preReceiveError
 		if errors.As(err, &preReceiveError) {
 			return &gitalypb.UserDeleteBranchResponse{
