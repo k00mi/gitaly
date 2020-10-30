@@ -629,16 +629,5 @@ func TestPostReceiveWithReferenceTransactionHook(t *testing.T) {
 
 	expectedResponse := "0049\x01000eunpack ok\n0019ok refs/heads/master\n0019ok refs/heads/branch\n00000000"
 	require.Equal(t, expectedResponse, string(response), "Expected response to be %q, got %q", expectedResponse, response)
-
-	version, err := git.Version(ctx)
-	require.NoError(t, err)
-	supported, err := git.SupportsReferenceTransactionHook(version)
-	require.NoError(t, err)
-
-	// If the reference-transaction hook is not supported, then there is no voting.
-	if !supported {
-		require.Equal(t, 0, refTransactionServer.called)
-	} else {
-		require.Equal(t, 2, refTransactionServer.called)
-	}
+	require.Equal(t, 2, refTransactionServer.called)
 }
