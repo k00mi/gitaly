@@ -12,9 +12,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/metadatahandler"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore/glsql"
-	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
@@ -351,37 +351,6 @@ func TestReconciler(t *testing.T) {
 				}
 			}
 
-			nm := &nodes.MockManager{
-				GetShardFunc: func(virtualStorage string) (nodes.Shard, error) {
-					storages, ok := configuredStorages[virtualStorage]
-					if !ok {
-						t.Fatalf("unconfigured virtual storage: %s", virtualStorage)
-					}
-
-					shard := nodes.Shard{}
-					for i, storage := range storages {
-						isHealthy := false
-						for _, healthy := range tc.healthyStorages[virtualStorage] {
-							if healthy == storage {
-								isHealthy = true
-								break
-							}
-						}
-
-						node := &nodes.MockNode{GetStorageMethod: getStorageMethod(storage), Healthy: isHealthy}
-						if i == 0 {
-							// First node is picked to be the primary just to fill the shard object.
-							// Reconciliation logic does not differentiate between primaries and secondaries.
-							shard.Primary = node
-						} else {
-							shard.Secondaries = append(shard.Secondaries, node)
-						}
-					}
-
-					return shard, nil
-				},
-			}
-
 			runCtx, cancelRun := context.WithCancel(ctx)
 			var stopped, resetted bool
 			ticker := helper.NewManualTicker()
@@ -396,7 +365,13 @@ func TestReconciler(t *testing.T) {
 				ticker.Tick()
 			}
 
-			reconciler := NewReconciler(testhelper.DiscardTestLogger(t), db, nm, configuredStorages, prometheus.DefBuckets)
+			reconciler := NewReconciler(
+				testhelper.DiscardTestLogger(t),
+				db,
+				praefect.StaticHealthChecker(tc.healthyStorages),
+				configuredStorages,
+				prometheus.DefBuckets,
+			)
 			reconciler.handleError = func(err error) error { return err }
 
 			err := reconciler.Run(runCtx, ticker)
