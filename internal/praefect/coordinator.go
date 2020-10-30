@@ -206,7 +206,7 @@ func shouldUseTransaction(ctx context.Context, method string) bool {
 	return ok
 }
 
-func (c *Coordinator) registerTransaction(ctx context.Context, primary Node, secondaries []Node) (*transactions.Transaction, transactions.CancelFunc, error) {
+func (c *Coordinator) registerTransaction(ctx context.Context, primary RouterNode, secondaries []RouterNode) (*transactions.Transaction, transactions.CancelFunc, error) {
 	var voters []transactions.Voter
 	var threshold uint
 
@@ -316,7 +316,7 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 				call.targetRepo,
 				route.Primary.Storage,
 				nil,
-				append(nodesToStorages(route.Secondaries), route.ReplicationTargets...),
+				append(routerNodesToStorages(route.Secondaries), route.ReplicationTargets...),
 				change,
 				params,
 			))
@@ -586,7 +586,7 @@ func (c *Coordinator) createTransactionFinalizer(
 	}
 }
 
-func nodesToStorages(nodes []Node) []string {
+func routerNodesToStorages(nodes []RouterNode) []string {
 	storages := make([]string, len(nodes))
 	for i, n := range nodes {
 		storages[i] = n.Storage
