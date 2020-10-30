@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
-	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -234,24 +233,8 @@ func TestCleanupDisconnectedWorktrees(t *testing.T) {
 		"disconnecting worktree by removing work tree at %s should succeed", worktreePath,
 	)
 
-	// TODO: remove the following version checks when the lowest supported git
-	// version is 2.20.0 or higher. Refer to relevant gitlab-ce issue:
-	// https://gitlab.com/gitlab-org/gitlab-ce/issues/54255
-	version, err := git.Version()
-	require.NoError(t, err)
-
-	pre2_20_0, err := git.VersionLessThan(version, "2.20.0")
-	require.NoError(t, err)
-
-	if !pre2_20_0 {
-		err := exec.Command(
-			command.GitPath(),
-			testhelper.AddWorktreeArgs(testRepoPath, worktreePath)...,
-		).Run()
-		require.Error(t, err,
-			"creating a new work tree at the same path as a disconnected work tree should fail",
-		)
-	}
+	err = exec.Command(command.GitPath(), testhelper.AddWorktreeArgs(testRepoPath, worktreePath)...).Run()
+	require.Error(t, err, "creating a new work tree at the same path as a disconnected work tree should fail")
 
 	// cleanup should prune the disconnected worktree administrative files
 	_, err = client.Cleanup(ctx, req)

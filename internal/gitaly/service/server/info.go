@@ -16,7 +16,7 @@ import (
 )
 
 func (s *server) ServerInfo(ctx context.Context, in *gitalypb.ServerInfoRequest) (*gitalypb.ServerInfoResponse, error) {
-	gitVersion, err := git.Version()
+	gitVersion, err := git.Version(ctx)
 	if err != nil {
 		return nil, helper.ErrInternal(err)
 	}

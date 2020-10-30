@@ -55,7 +55,7 @@ func TestGitalyServerInfo(t *testing.T) {
 
 	require.Equal(t, version.GetVersion(), c.GetServerVersion())
 
-	gitVersion, err := git.Version()
+	gitVersion, err := git.Version(ctx)
 	require.NoError(t, err)
 	require.Equal(t, gitVersion, c.GetGitVersion())
 
