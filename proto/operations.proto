@@ -53,6 +53,11 @@ service OperationService {
       op: MUTATOR
     };
   }
+
+  // UserCommitFiles builds a commit from a stream of actions and updates the target branch to point to it.
+  // UserCommitFilesRequest with a UserCommitFilesRequestHeader must be sent as the first message of the stream.
+  // Following that, a variable number of actions can be sent to build a new commit. Each action consists of 
+  // a header followed by content if used by the action. 
   rpc UserCommitFiles(stream UserCommitFilesRequest) returns (UserCommitFilesResponse) {
     option (op_type) = {
       op: MUTATOR
@@ -193,12 +198,15 @@ message UserMergeToRefResponse {
   string pre_receive_error = 2;
 }
 
+// OperationBranchUpdate contains the details of a branch update.
 message OperationBranchUpdate {
-  // If this string is non-empty the branch has been updated.
+  // commit_id is set to the OID of the created commit if a branch was created or updated.
   string commit_id = 1;
-  // Used for cache invalidation in GitLab
+  // repo_created indicates whether the branch created was the first one in the repository.
+  // Used for cache invalidation in GitLab. 
   bool repo_created = 2;
-  // Used for cache invalidation in GitLab
+  // branch_created indicates whether the branch already existed in the repository
+  // and was updated or whether it was created. Used for cache invalidation in GitLab. 
   bool branch_created = 3;
 }
 
@@ -264,19 +272,42 @@ message UserRevertResponse {
   CreateTreeError create_tree_error_code = 5;
 }
 
+// UserCommitFilesActionHeader contains the details of the action to be performed.
 message UserCommitFilesActionHeader {
   enum ActionType {
+    // CREATE creates a new file.
     CREATE = 0;
+    // CREATE_DIR creates a new directory.
     CREATE_DIR = 1;
+    // UPDATE updates an existing file.
     UPDATE = 2;
+    // MOVE moves an existing file to a new path.
     MOVE = 3;
+    // DELETE deletes an existing file.
     DELETE = 4;
+    // CHMOD changes the permissions of an existing file.
     CHMOD = 5;
   }
+  // action is the type of the action taken to build a commit. Not all fields are
+  // used for all of the actions.
   ActionType action = 1;
+  // file_path refers to the file or directory being modified. The meaning differs for each
+  // action:
+  //   1. CREATE: path of the file to create
+  //   2. CREATE_DIR: path of the directory to create
+  //   3. UPDATE: path of the file to update
+  //   4. MOVE: the new path of the moved file
+  //   5. DELETE: path of the file to delete
+  //   6. CHMOD: path of the file to modify permissions for
   bytes file_path = 2;
+  // previous_path is used in MOVE action to specify the path of the file to move.
   bytes previous_path = 3;
+  // base64_content indicates the content of the file is base64 encoded. The encoding
+  // must be the standard base64 encoding defined in RFC 4648. Only used for CREATE and
+  // UPDATE actions.
   bool base64_content = 4;
+  // execute_filemode determines whether the file is created with execute permissions.
+  // The field is only used in CREATE and CHMOD actions.
   bool execute_filemode = 5;
   // Move actions that change the file path, but not its content, should set
   // infer_content to true instead of populating the content field. Ignored for
@@ -284,38 +315,69 @@ message UserCommitFilesActionHeader {
   bool infer_content = 6;
 }
 
+// UserCommitFilesAction is the request message used to stream in the actions to build a commit.
 message UserCommitFilesAction {
   oneof user_commit_files_action_payload {
+    // header contains the details of action being performed. Header must be sent before the
+    // content if content is used by the action.
     UserCommitFilesActionHeader header = 1;
+    // content is the content of the file streamed in one or more messages. Only used with CREATE
+    // and UPDATE actions.
     bytes content = 2;
   }
 }
 
+// UserCommitFilesRequestHeader is the header of the UserCommitFiles that defines the commit details,
+// parent and other information related to the call. 
 message UserCommitFilesRequestHeader {
+  // repository is the target repository where to apply the commit.
   Repository repository = 1 [(target_repository)=true];
+  // user is the user peforming the call.
   User user = 2;
+  // branch_name is the name of the branch to point to the new commit. If start_sha and start_branch_name
+  // are not defined, the commit of branch_name is used as the parent commit.
   bytes branch_name = 3;
+  // commit_message is the message to use in the commit.
   bytes commit_message = 4;
+  // commit_author_name is the commit author's name. If not provided, the user's name is
+  // used instead.
   bytes commit_author_name = 5;
+  // commit_author_email is the commit author's email. If not provided, the user's email is
+  // used instead.
   bytes commit_author_email = 6;
+  // start_branch_name specifies the branch whose commit to use as the parent commit. Takes priority
+  // over branch_name. Optional. 
   bytes start_branch_name = 7;
+  // start_repository specifies which contains the parent commit. If not specified, repository itself
+  // is used to look up the parent commit. Optional.
   Repository start_repository = 8;
+  // force determines whether to force update the target branch specified by branch_name to
+  // point to the new commit.
   bool force = 9;
+  // start_sha specifies the SHA of the commit to use as the parent of new commit. Takes priority
+  // over start_branch_name and branc_name. Optional. 
   string start_sha = 10;
 }
 
+// UserCommitFiles is the request of UserCommitFiles.
 message UserCommitFilesRequest {
   oneof user_commit_files_request_payload {
-    // For each request stream there should be first a request with a header and
-    // then n requests with actions
+    // header defines the details of where to comnit, the details and which commit to use as the parent.
+    // header must always be sent as the first request of the stream.
     UserCommitFilesRequestHeader header = 1;
+    // action contains an action to build a commit. There can be multiple actions per stream.
     UserCommitFilesAction action = 2;
   }
 }
 
+// UserCommitFilesResponse is the response object of UserCommitFiles.
 message UserCommitFilesResponse {
+  // branch_update contains the details of the commit and the branch update.
   OperationBranchUpdate branch_update = 1;
+  // index_error is set to the error message when an invalid action was attempted, such as 
+  // trying to create a file that already existed.
   string index_error = 2;
+  // pre_receive_error is set when the pre-receive hook errored.
   string pre_receive_error = 3;
 }
 

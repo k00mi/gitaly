@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
@@ -22,14 +23,17 @@ var (
 )
 
 func testImplementations(t *testing.T, test func(t *testing.T, ctx context.Context)) {
-	ctx, cancel := testhelper.Context()
+	goCtx, cancel := testhelper.Context()
 	defer cancel()
+
+	rubyCtx := featureflag.OutgoingCtxWithDisabledFeatureFlags(goCtx, featureflag.GoUserCommitFiles)
 
 	for _, tc := range []struct {
 		desc    string
 		context context.Context
 	}{
-		{desc: "ruby", context: ctx},
+		{desc: "go", context: goCtx},
+		{desc: "ruby", context: rubyCtx},
 	} {
 		t.Run(tc.desc, func(t *testing.T) { test(t, tc.context) })
 	}
@@ -1018,52 +1022,64 @@ func testSuccessfulUserCommitFilesRequestStartSha(t *testing.T, ctx context.Cont
 }
 
 func TestSuccessfulUserCommitFilesRequestStartShaRemoteRepository(t *testing.T) {
-	testImplementations(t, testSuccessfulUserCommitFilesRequestStartShaRemoteRepository)
+	testImplementations(t, testSuccessfulUserCommitFilesRemoteRepositoryRequest(func(header *gitalypb.UserCommitFilesRequest) {
+		setStartSha(header, "1e292f8fedd741b75372e19097c76d327140c312")
+	}))
 }
 
-func testSuccessfulUserCommitFilesRequestStartShaRemoteRepository(t *testing.T, ctx context.Context) {
-	serverSocketPath, stop := runOperationServiceServer(t)
-	defer stop()
+func TestSuccessfulUserCommitFilesRequestStartBranchRemoteRepository(t *testing.T) {
+	testImplementations(t, testSuccessfulUserCommitFilesRemoteRepositoryRequest(func(header *gitalypb.UserCommitFilesRequest) {
+		setStartBranchName(header, []byte("master"))
+	}))
+}
 
-	client, conn := newOperationClient(t, serverSocketPath)
-	defer conn.Close()
+func testSuccessfulUserCommitFilesRemoteRepositoryRequest(setHeader func(header *gitalypb.UserCommitFilesRequest)) func(*testing.T, context.Context) {
+	// Regular table driven test did not work here as there is some state shared in the helpers between the subtests.
+	// Running them in different top level tests works, so we use a parameterized function instead to share the code.
+	return func(t *testing.T, ctx context.Context) {
+		serverSocketPath, stop := runOperationServiceServer(t)
+		defer stop()
 
-	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
-	defer cleanupFn()
+		client, conn := newOperationClient(t, serverSocketPath)
+		defer conn.Close()
 
-	newRepo, _, newRepoCleanupFn := testhelper.InitBareRepo(t)
-	defer newRepoCleanupFn()
+		testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+		defer cleanupFn()
 
-	for key, values := range testhelper.GitalyServersMetadata(t, serverSocketPath) {
-		for _, value := range values {
-			ctx = metadata.AppendToOutgoingContext(ctx, key, value)
+		newRepo, _, newRepoCleanupFn := testhelper.InitBareRepo(t)
+		defer newRepoCleanupFn()
+
+		for key, values := range testhelper.GitalyServersMetadata(t, serverSocketPath) {
+			for _, value := range values {
+				ctx = metadata.AppendToOutgoingContext(ctx, key, value)
+			}
 		}
+
+		targetBranchName := "new"
+
+		startCommit, err := log.GetCommit(ctx, testRepo, "master")
+		require.NoError(t, err)
+
+		headerRequest := headerRequest(newRepo, testhelper.TestUser, targetBranchName, commitFilesMessage)
+		setHeader(headerRequest)
+		setStartRepository(headerRequest, testRepo)
+
+		stream, err := client.UserCommitFiles(ctx)
+		require.NoError(t, err)
+		require.NoError(t, stream.Send(headerRequest))
+		require.NoError(t, stream.Send(createFileHeaderRequest("TEST.md")))
+		require.NoError(t, stream.Send(actionContentRequest("Test")))
+
+		resp, err := stream.CloseAndRecv()
+		require.NoError(t, err)
+
+		update := resp.GetBranchUpdate()
+		newTargetBranchCommit, err := log.GetCommit(ctx, newRepo, targetBranchName)
+		require.NoError(t, err)
+
+		require.Equal(t, newTargetBranchCommit.Id, update.CommitId)
+		require.Equal(t, newTargetBranchCommit.ParentIds, []string{startCommit.Id})
 	}
-
-	targetBranchName := "new"
-
-	startCommit, err := log.GetCommit(ctx, testRepo, "master")
-	require.NoError(t, err)
-
-	headerRequest := headerRequest(newRepo, testhelper.TestUser, targetBranchName, commitFilesMessage)
-	setStartSha(headerRequest, startCommit.Id)
-	setStartRepository(headerRequest, testRepo)
-
-	stream, err := client.UserCommitFiles(ctx)
-	require.NoError(t, err)
-	require.NoError(t, stream.Send(headerRequest))
-	require.NoError(t, stream.Send(createFileHeaderRequest("TEST.md")))
-	require.NoError(t, stream.Send(actionContentRequest("Test")))
-
-	resp, err := stream.CloseAndRecv()
-	require.NoError(t, err)
-
-	update := resp.GetBranchUpdate()
-	newTargetBranchCommit, err := log.GetCommit(ctx, newRepo, targetBranchName)
-	require.NoError(t, err)
-
-	require.Equal(t, newTargetBranchCommit.Id, update.CommitId)
-	require.Equal(t, newTargetBranchCommit.ParentIds, []string{startCommit.Id})
 }
 
 func TestSuccessfulUserCommitFilesRequestWithSpecialCharactersInSignature(t *testing.T) {
