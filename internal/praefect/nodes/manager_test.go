@@ -181,64 +181,6 @@ func TestDialWithUnhealthyNode(t *testing.T) {
 	}, shard)
 }
 
-func TestGetPrimaries(t *testing.T) {
-	primarySocket := testhelper.GetTemporaryGitalySocketFileName()
-
-	conf := config.Config{
-		VirtualStorages: []*config.VirtualStorage{
-			{
-				Name: "healthy-primary",
-				Nodes: []*config.Node{
-					{
-						Storage: "primary",
-						Address: "unix://" + primarySocket,
-					},
-				},
-			},
-			{
-				Name: "unhealthy-primary",
-				Nodes: []*config.Node{
-					{
-						Storage: "primary",
-						Address: "unix://does-not-exist",
-					},
-				},
-			},
-		},
-		Failover: config.Failover{Enabled: true},
-	}
-
-	primaryListener, err := net.Listen("unix", primarySocket)
-	require.NoError(t, err)
-
-	primarySrv, _ := testhelper.NewHealthServerWithListener(t, primaryListener)
-	defer primarySrv.Stop()
-
-	mgr, err := NewManager(testhelper.DiscardTestEntry(t), conf, nil, nil, promtest.NewMockHistogramVec(), protoregistry.GitalyProtoPreregistered, nil)
-	require.NoError(t, err)
-
-	for i := 0; i < healthcheckThreshold; i++ {
-		mgr.checkShards()
-	}
-
-	shard, err := mgr.GetShard("healthy-primary")
-	require.NoError(t, err)
-	assertShard(t, shardAssertion{
-		Primary:     &nodeAssertion{Storage: "primary", Address: "unix://" + primaryListener.Addr().String()},
-		Secondaries: []nodeAssertion{},
-	}, shard)
-
-	_, err = mgr.GetShard("unhealthy-primary")
-	require.Equal(t, ErrPrimaryNotHealthy, err)
-
-	primaries, err := mgr.GetPrimaries(context.Background())
-	require.NoError(t, err)
-	require.Equal(t, map[string]string{
-		"healthy-primary":   "primary",
-		"unhealthy-primary": "",
-	}, primaries)
-}
-
 func TestNodeManager(t *testing.T) {
 	internalSocket0, internalSocket1 := testhelper.GetTemporaryGitalySocketFileName(), testhelper.GetTemporaryGitalySocketFileName()
 	srv0, healthSrv0 := testhelper.NewServerWithHealth(t, internalSocket0)

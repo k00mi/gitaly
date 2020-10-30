@@ -254,26 +254,6 @@ func (m *MemoryRepositoryStore) GetOutdatedRepositories(ctx context.Context, vir
 	return outdatedRepos, nil
 }
 
-func (m *MemoryRepositoryStore) CountReadOnlyRepositories(ctx context.Context, vsPrimaries map[string]string) (map[string]int, error) {
-	m.m.Lock()
-	defer m.m.Unlock()
-
-	vsReadOnly := make(map[string]int, len(vsPrimaries))
-	for vs, primary := range vsPrimaries {
-		vsReadOnly[vs] = 0
-		relativePaths := m.virtualStorageState[vs]
-		for relativePath := range relativePaths {
-			expectedGeneration := m.getRepositoryGeneration(vs, relativePath)
-			actualGeneration := m.getStorageGeneration(vs, relativePath, primary)
-			if actualGeneration < expectedGeneration {
-				vsReadOnly[vs]++
-			}
-		}
-	}
-
-	return vsReadOnly, nil
-}
-
 func (m *MemoryRepositoryStore) getRepositoryGeneration(virtualStorage, relativePath string) int {
 	generations, ok := m.storageState[virtualStorage][relativePath]
 	if !ok {
