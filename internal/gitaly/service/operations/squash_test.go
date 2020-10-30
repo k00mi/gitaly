@@ -62,7 +62,7 @@ func testSuccessfulUserSquashRequest(t *testing.T, ctx context.Context, start, e
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
 
-	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
 	request := &gitalypb.UserSquashRequest{
@@ -87,6 +87,10 @@ func testSuccessfulUserSquashRequest(t *testing.T, ctx context.Context, start, e
 	require.Equal(t, testhelper.TestUser.Name, commit.Committer.Name)
 	require.Equal(t, testhelper.TestUser.Email, commit.Committer.Email)
 	require.Equal(t, commitMessage, commit.Subject)
+
+	treeData := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "ls-tree", "--name-only", response.SquashSha)
+	files := strings.Fields(text.ChompBytes(treeData))
+	require.Subset(t, files, []string{"VERSION", "README", "files", ".gitattributes"}, "ensure the files remain on their places")
 }
 
 func ensureSplitIndexExists(t *testing.T, repoDir string) bool {
