@@ -70,7 +70,10 @@ func main() {
 		log.WithError(err).WithField("config_path", configPath).Fatal("load config")
 	}
 
-	gitVersion, err := git.Version()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	gitVersion, err := git.Version(ctx)
 	if err != nil {
 		log.WithError(err).Fatal("Git version detection")
 	}
@@ -143,7 +146,10 @@ func run(b *bootstrap.Bootstrap) error {
 				return err
 			}
 
-			gitVersion, err := git.Version()
+			ctx, cancel := context.WithCancel(context.TODO())
+			defer cancel()
+
+			gitVersion, err := git.Version(ctx)
 			if err != nil {
 				return err
 			}

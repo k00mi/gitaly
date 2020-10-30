@@ -47,7 +47,10 @@ import (
 )
 
 func TestGitalyServerInfo(t *testing.T) {
-	gitVersion, err := git.Version()
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	gitVersion, err := git.Version(ctx)
 	require.NoError(t, err)
 
 	conf := config.Config{
@@ -67,9 +70,6 @@ func TestGitalyServerInfo(t *testing.T) {
 			},
 		},
 	}
-
-	ctx, cancel := testhelper.Context()
-	defer cancel()
 
 	t.Run("gitaly responds with ok", func(t *testing.T) {
 		cc, _, cleanup := runPraefectServerWithGitaly(t, conf)

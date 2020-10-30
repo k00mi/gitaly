@@ -630,7 +630,7 @@ func TestPostReceiveWithReferenceTransactionHook(t *testing.T) {
 	expectedResponse := "0049\x01000eunpack ok\n0019ok refs/heads/master\n0019ok refs/heads/branch\n00000000"
 	require.Equal(t, expectedResponse, string(response), "Expected response to be %q, got %q", expectedResponse, response)
 
-	version, err := git.Version()
+	version, err := git.Version(ctx)
 	require.NoError(t, err)
 	supported, err := git.SupportsReferenceTransactionHook(version)
 	require.NoError(t, err)

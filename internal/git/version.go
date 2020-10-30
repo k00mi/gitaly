@@ -19,10 +19,7 @@ type version struct {
 }
 
 // Version returns the used git version.
-func Version() (string, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
+func Version(ctx context.Context) (string, error) {
 	var buf bytes.Buffer
 	cmd, err := unsafeBareCmd(ctx, CmdStream{Out: &buf}, nil, "version")
 	if err != nil {
