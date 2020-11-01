@@ -29,8 +29,14 @@ func requireStdin(msg string) {
 
 func main() {
 	requireStdin("This command should be run by the Git 'smudge' filter")
-	err := smudge(os.Stdout, os.Stdin, &envConfig{})
 
+	closer, err := initLogging(&envConfig{})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error initializing log file for gitaly-lfs-smudge: %v", err)
+	}
+	defer closer.Close()
+
+	err = smudge(os.Stdout, os.Stdin, &envConfig{})
 	if err != nil {
 		os.Exit(1)
 	}

@@ -21,6 +21,19 @@ import (
 	"gitlab.com/gitlab-org/labkit/correlation"
 )
 
+type archiveParams struct {
+	ctx         context.Context
+	writer      io.Writer
+	in          *gitalypb.GetArchiveRequest
+	compressCmd *exec.Cmd
+	format      string
+	archivePath string
+	exclude     []string
+	internalCfg []byte
+	binDir      string
+	loggingDir  string
+}
+
 func (s *server) GetArchive(in *gitalypb.GetArchiveRequest, stream gitalypb.RepositoryService_GetArchiveServer) error {
 	ctx := stream.Context()
 	compressCmd, format := parseArchiveFormat(in.GetFormat())
@@ -72,7 +85,18 @@ func (s *server) GetArchive(in *gitalypb.GetArchiveRequest, stream gitalypb.Repo
 		return err
 	}
 
-	return handleArchive(ctx, writer, in, compressCmd, format, path, exclude, gitlabConfig, s.binDir)
+	return handleArchive(archiveParams{
+		ctx:         ctx,
+		writer:      writer,
+		in:          in,
+		compressCmd: compressCmd,
+		format:      format,
+		archivePath: path,
+		exclude:     exclude,
+		internalCfg: gitlabConfig,
+		binDir:      s.binDir,
+		loggingDir:  s.loggingCfg.Dir,
+	})
 }
 
 func parseArchiveFormat(format gitalypb.GetArchiveRequest_Format) (*exec.Cmd, string) {
@@ -140,42 +164,43 @@ func findGetArchivePath(f *commit.TreeEntryFinder, commitID, path string) (ok bo
 	return true, nil
 }
 
-func handleArchive(ctx context.Context, writer io.Writer, in *gitalypb.GetArchiveRequest, compressCmd *exec.Cmd, format string, archivePath string, exclude []string, internalCfg []byte, binDir string) error {
+func handleArchive(p archiveParams) error {
 	var args []string
-	pathspecs := make([]string, 0, len(exclude)+1)
-	if !in.GetElidePath() {
+	pathspecs := make([]string, 0, len(p.exclude)+1)
+	if !p.in.GetElidePath() {
 		// git archive [options] <commit ID> -- <path> [exclude*]
-		args = []string{in.GetCommitId()}
-		pathspecs = append(pathspecs, archivePath)
-	} else if archivePath != "." {
+		args = []string{p.in.GetCommitId()}
+		pathspecs = append(pathspecs, p.archivePath)
+	} else if p.archivePath != "." {
 		// git archive [options] <commit ID>:<path> -- [exclude*]
-		args = []string{in.GetCommitId() + ":" + archivePath}
+		args = []string{p.in.GetCommitId() + ":" + p.archivePath}
 	} else {
 		// git archive [options] <commit ID> -- [exclude*]
-		args = []string{in.GetCommitId()}
+		args = []string{p.in.GetCommitId()}
 	}
 
-	for _, exclude := range exclude {
+	for _, exclude := range p.exclude {
 		pathspecs = append(pathspecs, ":(exclude)"+exclude)
 	}
 
 	env := []string{
-		fmt.Sprintf("GL_REPOSITORY=%s", in.GetRepository().GetGlRepository()),
-		fmt.Sprintf("GL_PROJECT_PATH=%s", in.GetRepository().GetGlProjectPath()),
-		fmt.Sprintf("GL_INTERNAL_CONFIG=%s", internalCfg),
-		fmt.Sprintf("CORRELATION_ID=%s", correlation.ExtractFromContext(ctx)),
+		fmt.Sprintf("GL_REPOSITORY=%s", p.in.GetRepository().GetGlRepository()),
+		fmt.Sprintf("GL_PROJECT_PATH=%s", p.in.GetRepository().GetGlProjectPath()),
+		fmt.Sprintf("GL_INTERNAL_CONFIG=%s", p.internalCfg),
+		fmt.Sprintf("CORRELATION_ID=%s", correlation.ExtractFromContext(p.ctx)),
+		fmt.Sprintf("GITALY_LOG_DIR=%s", p.loggingDir),
 	}
 
 	var globals []git.Option
 
-	if in.GetIncludeLfsBlobs() {
-		binary := filepath.Join(binDir, "gitaly-lfs-smudge")
+	if p.in.GetIncludeLfsBlobs() {
+		binary := filepath.Join(p.binDir, "gitaly-lfs-smudge")
 		globals = append(globals, git.ValueFlag{"-c", fmt.Sprintf("filter.lfs.smudge=%s", binary)})
 	}
 
-	archiveCommand, err := git.SafeCmdWithEnv(ctx, env, in.GetRepository(), globals, git.SubCmd{
+	archiveCommand, err := git.SafeCmdWithEnv(p.ctx, env, p.in.GetRepository(), globals, git.SubCmd{
 		Name:        "archive",
-		Flags:       []git.Option{git.ValueFlag{"--format", format}, git.ValueFlag{"--prefix", in.GetPrefix() + "/"}},
+		Flags:       []git.Option{git.ValueFlag{"--format", p.format}, git.ValueFlag{"--prefix", p.in.GetPrefix() + "/"}},
 		Args:        args,
 		PostSepArgs: pathspecs,
 	})
@@ -183,8 +208,8 @@ func handleArchive(ctx context.Context, writer io.Writer, in *gitalypb.GetArchiv
 		return err
 	}
 
-	if compressCmd != nil {
-		command, err := command.New(ctx, compressCmd, archiveCommand, writer, nil)
+	if p.compressCmd != nil {
+		command, err := command.New(p.ctx, p.compressCmd, archiveCommand, p.writer, nil)
 		if err != nil {
 			return err
 		}
@@ -192,7 +217,7 @@ func handleArchive(ctx context.Context, writer io.Writer, in *gitalypb.GetArchiv
 		if err := command.Wait(); err != nil {
 			return err
 		}
-	} else if _, err = io.Copy(writer, archiveCommand); err != nil {
+	} else if _, err = io.Copy(p.writer, archiveCommand); err != nil {
 		return err
 	}
 

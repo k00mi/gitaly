@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"path/filepath"
 
 	"github.com/git-lfs/git-lfs/lfs"
 	"github.com/sirupsen/logrus"
@@ -16,6 +17,21 @@ import (
 
 type configProvider interface {
 	Get(key string) string
+}
+
+func initLogging(p configProvider) (io.Closer, error) {
+	path := p.Get("GITALY_LOG_DIR")
+	if path == "" {
+		return nil, nil
+	}
+
+	filepath := filepath.Join(path, "gitaly_lfs_smudge.log")
+
+	return log.Initialize(
+		log.WithFormatter("json"),
+		log.WithLogLevel("info"),
+		log.WithOutputName(filepath),
+	)
 }
 
 func smudge(to io.Writer, from io.Reader, cfgProvider configProvider) error {
@@ -35,42 +51,47 @@ func smudge(to io.Writer, from io.Reader, cfgProvider configProvider) error {
 }
 
 func handleSmudge(to io.Writer, from io.Reader, config configProvider) (io.Reader, error) {
-	ptr, contents, err := lfs.DecodeFrom(from)
-	if err != nil {
-		// This isn't a valid LFS pointer. Just copy the existing pointer data.
-		return contents, nil
-	}
-
-	log.WithField("oid", ptr.Oid).Debug("decoded LFS OID")
-
-	cfg, glRepository, err := loadConfig(config)
-	if err != nil {
-		return contents, err
-	}
-
-	log.WithField("gitlab_config", cfg).Debug("loaded GitLab API config")
-
-	client, err := hook.NewGitlabNetClient(cfg)
-	if err != nil {
-		return contents, err
-	}
-
 	// Since the environment is sanitized at the moment, we're only
 	// using this to extract the correlation ID. The finished() call
 	// to clean up the tracing will be a NOP here.
 	ctx, finished := tracing.ExtractFromEnv(context.Background())
 	defer finished()
 
-	url := fmt.Sprintf("/lfs?oid=%s&gl_repository=%s", ptr.Oid, glRepository)
-	response, err := client.Get(ctx, url)
+	logger := log.ContextLogger(ctx)
+
+	ptr, contents, err := lfs.DecodeFrom(from)
+	if err != nil {
+		// This isn't a valid LFS pointer. Just copy the existing pointer data.
+		return contents, nil
+	}
+
+	logger.WithField("oid", ptr.Oid).Debug("decoded LFS OID")
+
+	cfg, glRepository, err := loadConfig(config)
+	if err != nil {
+		return contents, err
+	}
+
+	logger.WithField("gitlab_config", cfg).Debug("loaded GitLab API config")
+
+	client, err := hook.NewGitlabNetClient(cfg)
+	if err != nil {
+		return contents, err
+	}
+
+	path := fmt.Sprintf("/lfs?oid=%s&gl_repository=%s", ptr.Oid, glRepository)
+	response, err := client.Get(ctx, path)
 	if err != nil {
 		return contents, fmt.Errorf("error loading LFS object: %v", err)
 	}
 
 	// This cannot go to STDOUT or it will corrupt the stream
-	log.WithFields(logrus.Fields{
-		"status_code": response.StatusCode,
-		"url":         url,
+	logger.WithFields(logrus.Fields{
+		"status":               response.StatusCode,
+		"gl_repository":        glRepository,
+		"oid":                  ptr.Oid,
+		"content_length_bytes": response.ContentLength,
+		"path":                 path,
 	}).Info("completed HTTP request")
 
 	if response.StatusCode == 200 {

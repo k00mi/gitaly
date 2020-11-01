@@ -521,7 +521,7 @@ func TestGetArchiveEnv(t *testing.T) {
 	require.NoError(t, err)
 
 	tmpFile.Write([]byte(`#!/bin/sh
-env | grep -E "^GL_|CORRELATION"`))
+env | grep -E "^GL_|CORRELATION|GITALY_"`))
 	tmpFile.Close()
 
 	oldBinPath := config.Config.Git.BinPath
@@ -540,6 +540,7 @@ env | grep -E "^GL_|CORRELATION"`))
 	require.Contains(t, string(data), "GL_PROJECT_PATH="+testhelper.GlProjectPath)
 	require.Contains(t, string(data), "GL_INTERNAL_CONFIG="+string(cfgData))
 	require.Contains(t, string(data), "CORRELATION_ID="+correlationID)
+	require.Contains(t, string(data), "GITALY_LOG_DIR="+config.Config.Logging.Dir)
 }
 
 func compressedFileContents(t *testing.T, format gitalypb.GetArchiveRequest_Format, name string) []byte {
