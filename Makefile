@@ -190,7 +190,7 @@ assemble-ruby:
 	${Q}rm -rf ${GITALY_RUBY_DIR}/tmp
 	${Q}mkdir -p ${ASSEMBLY_ROOT}/ruby/
 	rsync -a --delete  ${GITALY_RUBY_DIR}/ ${ASSEMBLY_ROOT}/ruby/
-	${Q}rm -rf ${ASSEMBLY_ROOT}/ruby/spec 
+	${Q}rm -rf ${ASSEMBLY_ROOT}/ruby/spec
 
 .PHONY: binaries
 binaries: assemble
@@ -429,7 +429,7 @@ ${GITALYFMT}: | ${BUILD_DIR}/bin
 	${Q}go build -o $@ ${SOURCE_DIR}/internal/cmd/gitalyfmt
 
 ${GO_LICENSES}: ${BUILD_DIR}/Makefile.sha256 ${BUILD_DIR}/go.mod
-	${Q}cd ${BUILD_DIR} && go get github.com/google/go-licenses@0fa8c766a59182ce9fd94169ddb52abe568b7f4e
+	${Q}cd ${BUILD_DIR} && go get github.com/google/go-licenses@73411c8fa237ccc6a75af79d0a5bc021c9487aad
 
 ${PROTOC_GEN_GO}: ${BUILD_DIR}/Makefile.sha256 ${BUILD_DIR}/go.mod
 	${Q}cd ${BUILD_DIR} && go get github.com/golang/protobuf/protoc-gen-go@v${PROTOC_GEN_GO_VERSION}
