@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"strings"
+	"sync"
 	"testing"
 	"testing/iotest"
 
@@ -101,6 +102,27 @@ func TestWriterChunking(t *testing.T) {
 	for _, send := range ts.sends {
 		require.True(t, len(send) <= WriteBufferSize, "send calls may not exceed WriteBufferSize")
 	}
+}
+
+func TestNewSyncWriter(t *testing.T) {
+	var m sync.Mutex
+	testData := "Hello this is some test data"
+	ts := &testSender{}
+
+	w := NewSyncWriter(&m, func(p []byte) error {
+		// As there is no way to check whether a mutex is locked already, we can just try to
+		// unlock it here. If the mutex wasn't locked, it would cause a runtime error. As
+		// there's no concurrent writers in this test, this is safe to do.
+		m.Unlock()
+		m.Lock()
+
+		return ts.send(p)
+	})
+
+	_, err := io.CopyBuffer(&opaqueWriter{w}, strings.NewReader(testData), make([]byte, 10))
+	require.NoError(t, err)
+
+	require.Equal(t, testData, string(bytes.Join(ts.sends, nil)))
 }
 
 type testSender struct {
