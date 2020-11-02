@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -100,6 +101,20 @@ func (rr *receiveReader) WriteTo(w io.Writer) (int64, error) {
 // receive []byte arguments of length at most WriteBufferSize.
 func NewWriter(sender func(p []byte) error) io.Writer {
 	return &sendWriter{sender: sender}
+}
+
+// NewSyncWriter turns sender into an io.Writer. The sender callback will
+// receive []byte arguments of length at most WriteBufferSize. All calls to the
+// sender will be synchronized via the mutex.
+func NewSyncWriter(m *sync.Mutex, sender func(p []byte) error) io.Writer {
+	return &sendWriter{
+		sender: func(p []byte) error {
+			m.Lock()
+			defer m.Unlock()
+
+			return sender(p)
+		},
+	}
 }
 
 // WriteBufferSize is the largest []byte that Write() will pass to its

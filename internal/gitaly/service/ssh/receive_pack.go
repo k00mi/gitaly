@@ -3,6 +3,7 @@ package ssh
 import (
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	log "github.com/sirupsen/logrus"
@@ -45,10 +46,12 @@ func (s *server) sshReceivePack(stream gitalypb.SSHService_SSHReceivePackServer,
 		request, err := stream.Recv()
 		return request.GetStdin(), err
 	})
-	stdout := streamio.NewWriter(func(p []byte) error {
+
+	var m sync.Mutex
+	stdout := streamio.NewSyncWriter(&m, func(p []byte) error {
 		return stream.Send(&gitalypb.SSHReceivePackResponse{Stdout: p})
 	})
-	stderr := streamio.NewWriter(func(p []byte) error {
+	stderr := streamio.NewSyncWriter(&m, func(p []byte) error {
 		return stream.Send(&gitalypb.SSHReceivePackResponse{Stderr: p})
 	})
 

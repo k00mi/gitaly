@@ -3,6 +3,7 @@ package ssh
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
@@ -41,10 +42,12 @@ func (s *server) sshUploadArchive(stream gitalypb.SSHService_SSHUploadArchiveSer
 		request, err := stream.Recv()
 		return request.GetStdin(), err
 	})
-	stdout := streamio.NewWriter(func(p []byte) error {
+
+	var m sync.Mutex
+	stdout := streamio.NewSyncWriter(&m, func(p []byte) error {
 		return stream.Send(&gitalypb.SSHUploadArchiveResponse{Stdout: p})
 	})
-	stderr := streamio.NewWriter(func(p []byte) error {
+	stderr := streamio.NewSyncWriter(&m, func(p []byte) error {
 		return stream.Send(&gitalypb.SSHUploadArchiveResponse{Stderr: p})
 	})
 

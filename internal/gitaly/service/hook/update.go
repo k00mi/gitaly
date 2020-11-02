@@ -3,6 +3,7 @@ package hook
 import (
 	"errors"
 	"os/exec"
+	"sync"
 
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -22,8 +23,13 @@ func (s *server) UpdateHook(in *gitalypb.UpdateHookRequest, stream gitalypb.Hook
 		return helper.ErrInvalidArgument(err)
 	}
 
-	stdout := streamio.NewWriter(func(p []byte) error { return stream.Send(&gitalypb.UpdateHookResponse{Stdout: p}) })
-	stderr := streamio.NewWriter(func(p []byte) error { return stream.Send(&gitalypb.UpdateHookResponse{Stderr: p}) })
+	var m sync.Mutex
+	stdout := streamio.NewSyncWriter(&m, func(p []byte) error {
+		return stream.Send(&gitalypb.UpdateHookResponse{Stdout: p})
+	})
+	stderr := streamio.NewSyncWriter(&m, func(p []byte) error {
+		return stream.Send(&gitalypb.UpdateHookResponse{Stderr: p})
+	})
 
 	if err := s.manager.UpdateHook(
 		stream.Context(),

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"sync"
 
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -35,8 +36,14 @@ func (s *server) PostReceiveHook(stream gitalypb.HookService_PostReceiveHookServ
 		req, err := stream.Recv()
 		return req.GetStdin(), err
 	})
-	stdout := streamio.NewWriter(func(p []byte) error { return stream.Send(&gitalypb.PostReceiveHookResponse{Stdout: p}) })
-	stderr := streamio.NewWriter(func(p []byte) error { return stream.Send(&gitalypb.PostReceiveHookResponse{Stderr: p}) })
+
+	var m sync.Mutex
+	stdout := streamio.NewSyncWriter(&m, func(p []byte) error {
+		return stream.Send(&gitalypb.PostReceiveHookResponse{Stdout: p})
+	})
+	stderr := streamio.NewSyncWriter(&m, func(p []byte) error {
+		return stream.Send(&gitalypb.PostReceiveHookResponse{Stderr: p})
+	})
 
 	env, err := hookRequestEnv(firstRequest)
 	if err != nil {

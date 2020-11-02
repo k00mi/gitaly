@@ -1,0 +1,5 @@
+---
+title: 'gitaly: Fix deadlock when writing to gRPC streams concurrently'
+merge_request: 2723
+author:
+type: fixed
