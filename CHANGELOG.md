@@ -147,6 +147,13 @@
 - Update Nokogiri gem to v1.10.10. !2567
 
 
+## 13.3.9 (2020-11-02)
+
+### Security (1 change)
+
+- Removal of all http.*.extraHeader config values.
+
+
 ## 13.3.8 (2020-10-21)
 
 - No changes.
