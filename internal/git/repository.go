@@ -32,6 +32,61 @@ var (
 	ErrNotFound = errors.New("not found")
 )
 
+// FetchOptsTags controls what tags needs to be imported on fetch.
+type FetchOptsTags string
+
+func (t FetchOptsTags) String() string {
+	return string(t)
+}
+
+var (
+	// FetchOptsTagsDefault enables importing of tags only on fetched branches.
+	FetchOptsTagsDefault = FetchOptsTags("")
+	// FetchOptsTagsAll enables importing of every tag from the remote repository.
+	FetchOptsTagsAll = FetchOptsTags("--tags")
+	// FetchOptsTagsNone disables importing of tags from the remote repository.
+	FetchOptsTagsNone = FetchOptsTags("--no-tags")
+)
+
+// FetchOpts is used to configure invocation of the 'FetchRemote' command.
+type FetchOpts struct {
+	// Env is a list of env vars to pass to the cmd.
+	Env []string
+	// Global is a list of global flags to use with 'git' command.
+	Global []Option
+	// Prune if set fetch removes any remote-tracking references that no longer exist on the remote.
+	// https://git-scm.com/docs/git-fetch#Documentation/git-fetch.txt---prune
+	Prune bool
+	// Force if set fetch overrides local references with values from remote that's
+	// doesn't have the previous commit as an ancestor.
+	// https://git-scm.com/docs/git-fetch#Documentation/git-fetch.txt---force
+	Force bool
+	// Tags controls whether tags will be fetched as part of the remote or not.
+	// https://git-scm.com/docs/git-fetch#Documentation/git-fetch.txt---tags
+	// https://git-scm.com/docs/git-fetch#Documentation/git-fetch.txt---no-tags
+	Tags FetchOptsTags
+	// Stderr if set it would be used to redirect stderr stream into it.
+	Stderr io.Writer
+}
+
+func (opts FetchOpts) buildFlags() []Option {
+	flags := []Option{Flag{Name: "--quiet"}}
+
+	if opts.Prune {
+		flags = append(flags, Flag{Name: "--prune"})
+	}
+
+	if opts.Force {
+		flags = append(flags, Flag{Name: "--force"})
+	}
+
+	if opts.Tags != FetchOptsTagsDefault {
+		flags = append(flags, Flag{Name: opts.Tags.String()})
+	}
+
+	return flags
+}
+
 // Repository represents a Git repository.
 type Repository interface {
 	// ResolveRef resolves the given refish to its object ID. This uses the
@@ -76,6 +131,9 @@ type Repository interface {
 	// ReadObject reads an object from the repository's object database. InvalidObjectError
 	// is returned if the oid does not refer to a valid object.
 	ReadObject(ctx context.Context, oid string) ([]byte, error)
+
+	// FetchRemote fetches changes from the specified remote.
+	FetchRemote(ctx context.Context, remoteName string, opts FetchOpts) error
 
 	// Config returns executor of the 'config' sub-command.
 	Config() Config
@@ -126,6 +184,10 @@ func (UnimplementedRepo) WriteBlob(context.Context, string, io.Reader) (string, 
 
 func (UnimplementedRepo) ReadObject(context.Context, string) ([]byte, error) {
 	return nil, ErrUnimplemented
+}
+
+func (UnimplementedRepo) FetchRemote(context.Context, string, FetchOpts) error {
+	return ErrUnimplemented
 }
 
 func (UnimplementedRepo) Remote() Remote {
@@ -339,6 +401,26 @@ func (repo *localRepository) UpdateRef(ctx context.Context, reference, newrev, o
 	}
 
 	return nil
+}
+
+func (repo *localRepository) FetchRemote(ctx context.Context, remoteName string, opts FetchOpts) error {
+	if err := validateNotBlank(remoteName, "remoteName"); err != nil {
+		return err
+	}
+
+	cmd, err := SafeCmdWithEnv(ctx, opts.Env, repo.repo, opts.Global,
+		SubCmd{
+			Name:  "fetch",
+			Flags: opts.buildFlags(),
+			Args:  []string{remoteName},
+		},
+		WithStderr(opts.Stderr),
+	)
+	if err != nil {
+		return err
+	}
+
+	return cmd.Wait()
 }
 
 func (repo *localRepository) Config() Config {
