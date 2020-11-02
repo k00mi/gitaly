@@ -21,7 +21,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
-	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	pconfig "gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -472,79 +471,71 @@ func TestPostReceiveWithTransactionsViaPraefect(t *testing.T) {
 	gitlabUser := "gitlab_user-1234"
 	gitlabPassword := "gitlabsecret9887"
 
-	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.ReferenceTransactions})
+	repo, repoPath, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	opts := testhelper.GitlabTestServerOptions{
+		User:         gitlabUser,
+		Password:     gitlabPassword,
+		SecretToken:  secretToken,
+		GLID:         glID,
+		GLRepository: glRepository,
+		RepoPath:     repoPath,
+	}
+
+	serverURL, cleanup := testhelper.NewGitlabTestServer(t, opts)
+	defer cleanup()
+
+	gitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
+	defer cleanup()
+	config.Config.GitlabShell.Dir = gitlabShellDir
+	testhelper.WriteTemporaryGitlabShellConfigFile(t,
+		gitlabShellDir,
+		testhelper.GitlabShellConfig{
+			GitlabURL: serverURL,
+			HTTPSettings: testhelper.HTTPSettings{
+				User:     gitlabUser,
+				Password: gitlabPassword,
+			},
+		})
+
+	config.Config.Gitlab.URL = serverURL
+	config.Config.Gitlab.HTTPSettings.User = gitlabUser
+	config.Config.Gitlab.HTTPSettings.Password = gitlabPassword
+	config.Config.Gitlab.SecretFile = filepath.Join(gitlabShellDir, ".gitlab_shell_secret")
+
+	testhelper.WriteShellSecretFile(t, gitlabShellDir, secretToken)
+
+	gitalyServer := testhelper.NewServerWithAuth(t, nil, nil, config.Config.Auth.Token)
+	gitalypb.RegisterSmartHTTPServiceServer(gitalyServer.GrpcServer(), NewServer(config.NewLocator(config.Config)))
+	gitalypb.RegisterHookServiceServer(gitalyServer.GrpcServer(), hook.NewServer(gitalyhook.NewManager(gitalyhook.GitlabAPIStub, config.Config)))
+	reflection.Register(gitalyServer.GrpcServer())
+	require.NoError(t, gitalyServer.Start())
+	defer gitalyServer.Stop()
+
+	internalSocket := config.GitalyInternalSocketPath()
+	internalListener, err := net.Listen("unix", internalSocket)
 	require.NoError(t, err)
 
-	for _, features := range featureSets {
-		t.Run("disabled "+features.String(), func(t *testing.T) {
-			repo, repoPath, cleanup := testhelper.NewTestRepo(t)
-			defer cleanup()
+	go func() {
+		gitalyServer.GrpcServer().Serve(internalListener)
+	}()
 
-			opts := testhelper.GitlabTestServerOptions{
-				User:         gitlabUser,
-				Password:     gitlabPassword,
-				SecretToken:  secretToken,
-				GLID:         glID,
-				GLRepository: glRepository,
-				RepoPath:     repoPath,
-			}
+	client, conn := newSmartHTTPClient(t, "unix://"+gitalyServer.Socket())
+	defer conn.Close()
 
-			serverURL, cleanup := testhelper.NewGitlabTestServer(t, opts)
-			defer cleanup()
+	ctx, cancel := testhelper.Context()
+	defer cancel()
 
-			gitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
-			defer cleanup()
-			config.Config.GitlabShell.Dir = gitlabShellDir
-			testhelper.WriteTemporaryGitlabShellConfigFile(t,
-				gitlabShellDir,
-				testhelper.GitlabShellConfig{
-					GitlabURL: serverURL,
-					HTTPSettings: testhelper.HTTPSettings{
-						User:     gitlabUser,
-						Password: gitlabPassword,
-					},
-				})
+	stream, err := client.PostReceivePack(ctx)
+	require.NoError(t, err)
 
-			config.Config.Gitlab.URL = serverURL
-			config.Config.Gitlab.HTTPSettings.User = gitlabUser
-			config.Config.Gitlab.HTTPSettings.Password = gitlabPassword
-			config.Config.Gitlab.SecretFile = filepath.Join(gitlabShellDir, ".gitlab_shell_secret")
+	push := newTestPush(t, nil)
+	request := &gitalypb.PostReceivePackRequest{Repository: repo, GlId: glID, GlRepository: glRepository}
+	response := doPush(t, stream, request, push.body)
 
-			testhelper.WriteShellSecretFile(t, gitlabShellDir, secretToken)
-
-			gitalyServer := testhelper.NewServerWithAuth(t, nil, nil, config.Config.Auth.Token)
-			gitalypb.RegisterSmartHTTPServiceServer(gitalyServer.GrpcServer(), NewServer(config.NewLocator(config.Config)))
-			gitalypb.RegisterHookServiceServer(gitalyServer.GrpcServer(), hook.NewServer(gitalyhook.NewManager(gitalyhook.GitlabAPIStub, config.Config)))
-			reflection.Register(gitalyServer.GrpcServer())
-			require.NoError(t, gitalyServer.Start())
-			defer gitalyServer.Stop()
-
-			internalSocket := config.GitalyInternalSocketPath()
-			internalListener, err := net.Listen("unix", internalSocket)
-			require.NoError(t, err)
-
-			go func() {
-				gitalyServer.GrpcServer().Serve(internalListener)
-			}()
-
-			client, conn := newSmartHTTPClient(t, "unix://"+gitalyServer.Socket())
-			defer conn.Close()
-
-			ctx, cancel := testhelper.Context()
-			defer cancel()
-			ctx = features.Disable(ctx)
-
-			stream, err := client.PostReceivePack(ctx)
-			require.NoError(t, err)
-
-			push := newTestPush(t, nil)
-			request := &gitalypb.PostReceivePackRequest{Repository: repo, GlId: glID, GlRepository: glRepository}
-			response := doPush(t, stream, request, push.body)
-
-			expectedResponse := "0049\x01000eunpack ok\n0019ok refs/heads/master\n0019ok refs/heads/branch\n00000000"
-			require.Equal(t, expectedResponse, string(response), "Expected response to be %q, got %q", expectedResponse, response)
-		})
-	}
+	expectedResponse := "0049\x01000eunpack ok\n0019ok refs/heads/master\n0019ok refs/heads/branch\n00000000"
+	require.Equal(t, expectedResponse, string(response), "Expected response to be %q, got %q", expectedResponse, response)
 }
 
 type testTransactionServer struct {

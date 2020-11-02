@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
-	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
@@ -21,44 +20,35 @@ var (
 )
 
 func TestSuccessfulUserUpdateBranchRequest(t *testing.T) {
-	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.ReferenceTransactions})
-	require.NoError(t, err)
+	ctx, cancel := testhelper.Context()
+	defer cancel()
 
-	for _, featureSet := range featureSets {
-		t.Run("disabled "+featureSet.String(), func(t *testing.T) {
-			ctx, cancel := testhelper.Context()
-			defer cancel()
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
-			ctx = featureSet.Disable(ctx)
+	serverSocketPath, stop := runOperationServiceServer(t)
+	defer stop()
 
-			testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
-			defer cleanupFn()
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
 
-			serverSocketPath, stop := runOperationServiceServer(t)
-			defer stop()
-
-			client, conn := newOperationClient(t, serverSocketPath)
-			defer conn.Close()
-
-			request := &gitalypb.UserUpdateBranchRequest{
-				Repository: testRepo,
-				BranchName: []byte(updateBranchName),
-				Newrev:     newrev,
-				Oldrev:     oldrev,
-				User:       testhelper.TestUser,
-			}
-
-			response, err := client.UserUpdateBranch(ctx, request)
-
-			require.NoError(t, err)
-			require.Empty(t, response.PreReceiveError)
-
-			branchCommit, err := log.GetCommit(ctx, testRepo, updateBranchName)
-
-			require.NoError(t, err)
-			require.Equal(t, string(newrev), branchCommit.Id)
-		})
+	request := &gitalypb.UserUpdateBranchRequest{
+		Repository: testRepo,
+		BranchName: []byte(updateBranchName),
+		Newrev:     newrev,
+		Oldrev:     oldrev,
+		User:       testhelper.TestUser,
 	}
+
+	response, err := client.UserUpdateBranch(ctx, request)
+
+	require.NoError(t, err)
+	require.Empty(t, response.PreReceiveError)
+
+	branchCommit, err := log.GetCommit(ctx, testRepo, updateBranchName)
+
+	require.NoError(t, err)
+	require.Equal(t, string(newrev), branchCommit.Id)
 }
 
 func TestSuccessfulGitHooksForUserUpdateBranchRequest(t *testing.T) {
