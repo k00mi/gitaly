@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/golang/protobuf/jsonpb"
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
@@ -22,8 +21,6 @@ type ReceivePackRequest interface {
 	GetGlRepository() string
 	GetRepository() *gitalypb.Repository
 }
-
-var jsonpbMarshaller = &jsonpb.Marshaler{}
 
 // ReceivePackHookEnv is information we pass down to the Git hooks during
 // git-receive-pack.

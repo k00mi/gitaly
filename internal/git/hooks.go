@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/golang/protobuf/jsonpb"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
+
+var jsonpbMarshaller = &jsonpb.Marshaler{}
 
 // WithRefTxHook returns an option that populates the safe command with the
 // environment variables necessary to properly execute a reference hook for
