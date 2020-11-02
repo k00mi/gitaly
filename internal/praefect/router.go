@@ -6,7 +6,8 @@ import (
 	"google.golang.org/grpc"
 )
 
-// RouterNode represents a Node the router in a routing decision.
+// RouterNode is a subset of a node's configuration needed to perform
+// request routing.
 type RouterNode struct {
 	// Storage is storage of the node.
 	Storage string
