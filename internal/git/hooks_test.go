@@ -24,7 +24,7 @@ func TestWithRefHook(t *testing.T) {
 	config.Config.Auth.Token = token
 
 	opt := git.WithRefTxHook(ctx, testRepo, config.Config)
-	subCmd := git.SubCmd{Name: "log", Flags: []git.Option{git.Flag{"-0"}}}
+	subCmd := git.SubCmd{Name: "update-ref", Args: []string{"master", "0000"}}
 
 	for _, tt := range []struct {
 		name string
