@@ -76,7 +76,7 @@ type ReceivePackRequest interface {
 
 // ReceivePackHookEnv is information we pass down to the Git hooks during
 // git-receive-pack.
-func ReceivePackHookEnv(ctx context.Context, req ReceivePackRequest) ([]string, error) {
+func ReceivePackHookEnv(ctx context.Context, req ReceivePackRequest, protocol string) ([]string, error) {
 	gitlabshellEnv, err := gitlabshell.Env()
 	if err != nil {
 		return nil, err
@@ -92,6 +92,7 @@ func ReceivePackHookEnv(ctx context.Context, req ReceivePackRequest) ([]string, 
 		fmt.Sprintf("GL_USERNAME=%s", req.GetGlUsername()),
 		fmt.Sprintf("GL_REPOSITORY=%s", req.GetGlRepository()),
 		fmt.Sprintf("GL_PROJECT_PATH=%s", req.GetRepository().GetGlProjectPath()),
+		fmt.Sprintf("GL_PROTOCOL=%s", protocol),
 		fmt.Sprintf("%s=true", featureflag.ReferenceTransactionHookEnvVar),
 	)
 	env = append(env, gitlabshellEnv...)
