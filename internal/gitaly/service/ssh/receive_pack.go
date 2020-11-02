@@ -60,18 +60,15 @@ func (s *server) sshReceivePack(stream gitalypb.SSHService_SSHReceivePackServer,
 		return err
 	}
 
-	env := git.AddGitProtocolEnv(ctx, req, []string{})
-	env = append(env, command.GitEnv...)
-
 	globalOpts := git.ReceivePackConfig()
 	for _, o := range req.GitConfigOptions {
 		globalOpts = append(globalOpts, git.ValueFlag{"-c", o})
 	}
 
-	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{In: stdin, Out: stdout, Err: stderr}, env, globalOpts, git.SubCmd{
+	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{In: stdin, Out: stdout, Err: stderr}, nil, globalOpts, git.SubCmd{
 		Name: "receive-pack",
 		Args: []string{repoPath},
-	}, git.WithReceivePackHooks(ctx, req, "ssh"))
+	}, git.WithReceivePackHooks(ctx, req, "ssh"), git.WithGitProtocol(ctx, req))
 
 	if err != nil {
 		return fmt.Errorf("start cmd: %v", err)

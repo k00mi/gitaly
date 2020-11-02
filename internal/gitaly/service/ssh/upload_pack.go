@@ -71,8 +71,6 @@ func (s *server) sshUploadPack(stream gitalypb.SSHService_SSHUploadPackServer, r
 		return stream.Send(&gitalypb.SSHUploadPackResponse{Stderr: p})
 	})
 
-	env := git.AddGitProtocolEnv(ctx, req, command.GitEnv)
-
 	repoPath, err := s.locator.GetRepoPath(req.Repository)
 	if err != nil {
 		return err
@@ -105,10 +103,11 @@ func (s *server) sshUploadPack(stream gitalypb.SSHService_SSHUploadPackServer, r
 		stats.UpdateMetrics(s.packfileNegotiationMetrics)
 	}()
 
-	cmd, monitor, err := monitorStdinCommand(ctx, stdin, stdout, stderr, env, globalOpts, git.SubCmd{
+	cmd, monitor, err := monitorStdinCommand(ctx, stdin, stdout, stderr, nil, globalOpts, git.SubCmd{
 		Name: "upload-pack",
 		Args: []string{repoPath},
-	})
+	}, git.WithGitProtocol(ctx, req))
+
 	if err != nil {
 		return err
 	}

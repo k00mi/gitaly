@@ -42,8 +42,6 @@ func (s *server) handleInfoRefs(ctx context.Context, service string, req *gitaly
 		"service": service,
 	}).Debug("handleInfoRefs")
 
-	env := git.AddGitProtocolEnv(ctx, req, []string{})
-
 	repoPath, err := s.locator.GetRepoPath(req.Repository)
 	if err != nil {
 		return err
@@ -62,11 +60,11 @@ func (s *server) handleInfoRefs(ctx context.Context, service string, req *gitaly
 		globalOpts = append(globalOpts, git.ValueFlag{"-c", o})
 	}
 
-	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{}, env, globalOpts, git.SubCmd{
+	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{}, nil, globalOpts, git.SubCmd{
 		Name:  service,
 		Flags: []git.Option{git.Flag{Name: "--stateless-rpc"}, git.Flag{Name: "--advertise-refs"}},
 		Args:  []string{repoPath},
-	})
+	}, git.WithGitProtocol(ctx, req))
 
 	if err != nil {
 		if _, ok := status.FromError(err); ok {

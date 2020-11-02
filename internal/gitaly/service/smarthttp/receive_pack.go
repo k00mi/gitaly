@@ -3,7 +3,6 @@ package smarthttp
 import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	log "github.com/sirupsen/logrus"
-	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -43,19 +42,16 @@ func (s *server) PostReceivePack(stream gitalypb.SmartHTTPService_PostReceivePac
 		return err
 	}
 
-	env := git.AddGitProtocolEnv(ctx, req, []string{})
-	env = append(env, command.GitEnv...)
-
 	globalOpts := git.ReceivePackConfig()
 	for _, o := range req.GitConfigOptions {
 		globalOpts = append(globalOpts, git.ValueFlag{"-c", o})
 	}
 
-	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{In: stdin, Out: stdout}, env, globalOpts, git.SubCmd{
+	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{In: stdin, Out: stdout}, nil, globalOpts, git.SubCmd{
 		Name:  "receive-pack",
 		Flags: []git.Option{git.Flag{Name: "--stateless-rpc"}},
 		Args:  []string{repoPath},
-	}, git.WithReceivePackHooks(ctx, req, "http"))
+	}, git.WithReceivePackHooks(ctx, req, "http"), git.WithGitProtocol(ctx, req))
 
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "PostReceivePack: %v", err)
