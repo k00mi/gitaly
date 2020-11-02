@@ -74,9 +74,22 @@ type ReceivePackRequest interface {
 	GetRepository() *gitalypb.Repository
 }
 
-// ReceivePackHookEnv is information we pass down to the Git hooks during
-// git-receive-pack.
-func ReceivePackHookEnv(ctx context.Context, req ReceivePackRequest, protocol string) ([]string, error) {
+// WithReceivePackHooks returns an option that populates the safe command with the environment
+// variables necessary to properly execute the pre-receive, update and post-receive hooks for
+// git-receive-pack(1).
+func WithReceivePackHooks(ctx context.Context, req ReceivePackRequest, protocol string) CmdOpt {
+	return func(cc *cmdCfg) error {
+		env, err := receivePackHookEnv(ctx, req, protocol)
+		if err != nil {
+			return fmt.Errorf("receive-pack hook envvars: %w", err)
+		}
+
+		cc.env = append(cc.env, env...)
+		return nil
+	}
+}
+
+func receivePackHookEnv(ctx context.Context, req ReceivePackRequest, protocol string) ([]string, error) {
 	gitlabshellEnv, err := gitlabshell.Env()
 	if err != nil {
 		return nil, err

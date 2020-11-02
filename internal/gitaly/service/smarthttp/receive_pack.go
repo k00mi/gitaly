@@ -38,17 +38,12 @@ func (s *server) PostReceivePack(stream gitalypb.SmartHTTPService_PostReceivePac
 		return stream.Send(&gitalypb.PostReceivePackResponse{Data: p})
 	})
 
-	hookEnv, err := git.ReceivePackHookEnv(ctx, req, "http")
-	if err != nil {
-		return err
-	}
-
 	repoPath, err := s.locator.GetRepoPath(req.Repository)
 	if err != nil {
 		return err
 	}
 
-	env := git.AddGitProtocolEnv(ctx, req, hookEnv)
+	env := git.AddGitProtocolEnv(ctx, req, []string{})
 	env = append(env, command.GitEnv...)
 
 	globalOpts := git.ReceivePackConfig()
@@ -60,7 +55,7 @@ func (s *server) PostReceivePack(stream gitalypb.SmartHTTPService_PostReceivePac
 		Name:  "receive-pack",
 		Flags: []git.Option{git.Flag{Name: "--stateless-rpc"}},
 		Args:  []string{repoPath},
-	})
+	}, git.WithReceivePackHooks(ctx, req, "http"))
 
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "PostReceivePack: %v", err)

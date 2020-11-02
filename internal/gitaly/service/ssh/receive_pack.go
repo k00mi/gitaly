@@ -55,17 +55,12 @@ func (s *server) sshReceivePack(stream gitalypb.SSHService_SSHReceivePackServer,
 		return stream.Send(&gitalypb.SSHReceivePackResponse{Stderr: p})
 	})
 
-	hookEnv, err := git.ReceivePackHookEnv(ctx, req, "ssh")
-	if err != nil {
-		return err
-	}
-
 	repoPath, err := s.locator.GetRepoPath(req.Repository)
 	if err != nil {
 		return err
 	}
 
-	env := git.AddGitProtocolEnv(ctx, req, hookEnv)
+	env := git.AddGitProtocolEnv(ctx, req, []string{})
 	env = append(env, command.GitEnv...)
 
 	globalOpts := git.ReceivePackConfig()
@@ -76,7 +71,7 @@ func (s *server) sshReceivePack(stream gitalypb.SSHService_SSHReceivePackServer,
 	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{In: stdin, Out: stdout, Err: stderr}, env, globalOpts, git.SubCmd{
 		Name: "receive-pack",
 		Args: []string{repoPath},
-	})
+	}, git.WithReceivePackHooks(ctx, req, "ssh"))
 
 	if err != nil {
 		return fmt.Errorf("start cmd: %v", err)
