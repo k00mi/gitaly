@@ -10,7 +10,7 @@ import (
 
 var (
 	// minimumVersion is the minimum required Git version.
-	minimumVersion = version{2, 24, 0, false}
+	minimumVersion = version{2, 29, 0, false}
 )
 
 type version struct {
@@ -144,15 +144,4 @@ func SupportedVersion(versionStr string) (bool, error) {
 	}
 
 	return !versionLessThan(v, minimumVersion), nil
-}
-
-// SupportsReferenceTransactionHook checks if a version string corresponds to a
-// Git version that supports the reference-transaction hook.
-func SupportsReferenceTransactionHook(versionStr string) (bool, error) {
-	v, err := parseVersion(versionStr)
-	if err != nil {
-		return false, err
-	}
-
-	return !versionLessThan(v, version{2, 28, 0, true}), nil
 }
