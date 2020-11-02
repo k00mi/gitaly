@@ -39,6 +39,7 @@ func incrInvalidArg(subcmdName string) {
 type Cmd interface {
 	ValidateArgs() ([]string, error)
 	IsCmd()
+	Subcommand() string
 }
 
 // SubCmd represents a specific git command
@@ -59,6 +60,9 @@ var subCmdNameRegex = regexp.MustCompile(`^[[:alnum:]]+(-[[:alnum:]]+)*$`)
 
 // IsCmd allows SubCmd to satisfy the Cmd interface
 func (sc SubCmd) IsCmd() {}
+
+// Subcommand returns the subcommand name
+func (sc SubCmd) Subcommand() string { return sc.Name }
 
 func (sc SubCmd) supportsEndOfOptions() bool {
 	switch sc.Name {
@@ -220,10 +224,11 @@ func ConvertGlobalOptions(options *gitalypb.GlobalOptions) []Option {
 }
 
 type cmdCfg struct {
-	env    []string
-	stdin  io.Reader
-	stdout io.Writer
-	stderr io.Writer
+	env               []string
+	stdin             io.Reader
+	stdout            io.Writer
+	stderr            io.Writer
+	refHookConfigured bool
 }
 
 // CmdOpt is an option for running a command
@@ -253,12 +258,29 @@ func WithStderr(w io.Writer) CmdOpt {
 	}
 }
 
-func handleOpts(cc *cmdCfg, opts []CmdOpt) error {
+var (
+	// ErrRefHookRequired indicates a ref hook configuration is needed but
+	// absent from the command
+	ErrRefHookRequired = errors.New("ref hook is required but not configured")
+	// ErrRefHookNotRequired indicates an extraneous ref hook option was
+	// provided
+	ErrRefHookNotRequired = errors.New("ref hook is configured but not required")
+)
+
+func handleOpts(ctx context.Context, sc Cmd, cc *cmdCfg, opts []CmdOpt) error {
 	for _, opt := range opts {
 		if err := opt(cc); err != nil {
 			return err
 		}
 	}
+
+	if IsRefHookRequired(ctx) && !cc.refHookConfigured && mayUpdateRef(sc.Subcommand()) {
+		return fmt.Errorf("subcommand %q: %w", sc.Subcommand(), ErrRefHookRequired)
+	}
+	if cc.refHookConfigured && !mayUpdateRef(sc.Subcommand()) {
+		return fmt.Errorf("subcommand %q: %w", sc.Subcommand(), ErrRefHookNotRequired)
+	}
+
 	return nil
 }
 
@@ -273,7 +295,7 @@ func SafeCmd(ctx context.Context, repo repository.GitRepo, globals []Option, sc 
 func SafeCmdWithEnv(ctx context.Context, env []string, repo repository.GitRepo, globals []Option, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
 	cc := &cmdCfg{}
 
-	if err := handleOpts(cc, opts); err != nil {
+	if err := handleOpts(ctx, sc, cc, opts); err != nil {
 		return nil, err
 	}
 
@@ -294,7 +316,7 @@ func SafeCmdWithEnv(ctx context.Context, env []string, repo repository.GitRepo, 
 func SafeBareCmd(ctx context.Context, stream CmdStream, env []string, globals []Option, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
 	cc := &cmdCfg{}
 
-	if err := handleOpts(cc, opts); err != nil {
+	if err := handleOpts(ctx, sc, cc, opts); err != nil {
 		return nil, err
 	}
 
@@ -326,7 +348,7 @@ func SafeBareCmdInDir(ctx context.Context, dir string, stream CmdStream, env []s
 func SafeStdinCmd(ctx context.Context, repo repository.GitRepo, globals []Option, sc SubCmd, opts ...CmdOpt) (*command.Command, error) {
 	cc := &cmdCfg{}
 
-	if err := handleOpts(cc, opts); err != nil {
+	if err := handleOpts(ctx, sc, cc, opts); err != nil {
 		return nil, err
 	}
 
