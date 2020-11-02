@@ -1,5 +1,12 @@
 # Gitaly changelog
 
+## 13.5.2 (2020-11-02)
+
+### Security (1 change)
+
+- Removal of all http.*.extraHeader config values.
+
+
 ## 13.5.1 (2020-10-22)
 
 - No changes.
@@ -52,6 +59,13 @@
 - Refactor server metadata to be more type safe. !2624
 - Remote repository abstraction for resolving refish. !2629
 - Upgrade Rubocop to 0.86.0. !2634
+
+
+## 13.4.5 (2020-11-02)
+
+### Security (1 change)
+
+- Removal of all http.*.extraHeader config values.
 
 
 ## 13.4.4 (2020-10-15)
@@ -131,6 +145,13 @@
 - Include grpc_service in gitaly_service_client_requests_total metric. !2536
 - Bump labkit dependency to get mutex profiling. !2562
 - Update Nokogiri gem to v1.10.10. !2567
+
+
+## 13.3.9 (2020-11-02)
+
+### Security (1 change)
+
+- Removal of all http.*.extraHeader config values.
 
 
 ## 13.3.8 (2020-10-21)
