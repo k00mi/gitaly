@@ -87,7 +87,7 @@ func (s *server) UserCommitFiles(stream gitalypb.OperationService_UserCommitFile
 		return err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, header.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, header.GetRepository())
 	if err != nil {
 		return err
 	}

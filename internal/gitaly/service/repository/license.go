@@ -13,7 +13,7 @@ func (s *server) FindLicense(ctx context.Context, in *gitalypb.FindLicenseReques
 		return nil, err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, in.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, in.GetRepository())
 	if err != nil {
 		return nil, err
 	}

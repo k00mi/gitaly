@@ -40,7 +40,7 @@ func (s *server) userRebaseConfirmable(stream gitalypb.OperationService_UserReba
 		return err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, repository)
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, repository)
 	if err != nil {
 		return err
 	}

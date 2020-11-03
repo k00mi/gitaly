@@ -75,7 +75,7 @@ func (s *server) rubyFetchSourceBranch(ctx context.Context, req *gitalypb.FetchS
 		return nil, err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, req.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, req.GetRepository())
 	if err != nil {
 		return nil, err
 	}

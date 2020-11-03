@@ -13,7 +13,7 @@ import (
 )
 
 func TestSuccessfulGetBlobsRequest(t *testing.T) {
-	stop, serverSocketPath := runBlobServer(t)
+	stop, serverSocketPath := runBlobServer(t, testhelper.DefaultLocator())
 	defer stop()
 
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
@@ -133,7 +133,7 @@ func TestSuccessfulGetBlobsRequest(t *testing.T) {
 }
 
 func TestFailedGetBlobsRequestDueToValidation(t *testing.T) {
-	stop, serverSocketPath := runBlobServer(t)
+	stop, serverSocketPath := runBlobServer(t, testhelper.DefaultLocator())
 	defer stop()
 
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)

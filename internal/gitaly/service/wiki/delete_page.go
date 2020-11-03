@@ -20,7 +20,7 @@ func (s *server) WikiDeletePage(ctx context.Context, request *gitalypb.WikiDelet
 		return nil, err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, request.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, request.GetRepository())
 	if err != nil {
 		return nil, err
 	}

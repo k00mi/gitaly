@@ -13,7 +13,7 @@ func (s *server) UserDeleteTag(ctx context.Context, req *gitalypb.UserDeleteTagR
 		return nil, err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, req.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, req.GetRepository())
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +27,7 @@ func (s *server) UserCreateTag(ctx context.Context, req *gitalypb.UserCreateTagR
 		return nil, err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, req.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, req.GetRepository())
 	if err != nil {
 		return nil, err
 	}

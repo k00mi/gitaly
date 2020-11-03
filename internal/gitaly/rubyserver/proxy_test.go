@@ -16,7 +16,7 @@ func TestSetHeadersBlocksUnknownMetadata(t *testing.T) {
 	otherValue := "test-value"
 	inCtx := metadata.NewIncomingContext(ctx, metadata.Pairs(otherKey, otherValue))
 
-	outCtx, err := SetHeaders(inCtx, testRepo)
+	outCtx, err := SetHeaders(inCtx, testhelper.DefaultLocator(), testRepo)
 	require.NoError(t, err)
 
 	outMd, ok := metadata.FromOutgoingContext(outCtx)
@@ -34,7 +34,7 @@ func TestSetHeadersPreservesAllowlistedMetadata(t *testing.T) {
 	value := "test-value"
 	inCtx := metadata.NewIncomingContext(ctx, metadata.Pairs(key, value))
 
-	outCtx, err := SetHeaders(inCtx, testRepo)
+	outCtx, err := SetHeaders(inCtx, testhelper.DefaultLocator(), testRepo)
 	require.NoError(t, err)
 
 	outMd, ok := metadata.FromOutgoingContext(outCtx)
@@ -51,7 +51,7 @@ func TestRubyFeatureHeaders(t *testing.T) {
 	value := "true"
 	inCtx := metadata.NewIncomingContext(ctx, metadata.Pairs(key, value))
 
-	outCtx, err := SetHeaders(inCtx, testRepo)
+	outCtx, err := SetHeaders(inCtx, testhelper.DefaultLocator(), testRepo)
 	require.NoError(t, err)
 
 	outMd, ok := metadata.FromOutgoingContext(outCtx)
