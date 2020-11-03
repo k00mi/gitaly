@@ -681,6 +681,7 @@ func testConflictsOnUserMergeToRefRequest(t *testing.T, ctx context.Context) {
 
 		_, err := client.UserMergeToRef(ctx, request)
 		require.Error(t, err)
+		testhelper.RequireGrpcError(t, err, codes.FailedPrecondition)
 	})
 }
 
