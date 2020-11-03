@@ -195,7 +195,6 @@ PLATFORMS
 
 DEPENDENCIES
   activesupport (~> 6.0.3.3)
-  bundler (>= 1.17.3)
   factory_bot
   faraday (~> 1.0)
   github-linguist (~> 7.11)
@@ -218,4 +217,4 @@ DEPENDENCIES
   timecop
 
 BUNDLED WITH
-   1.17.3
+   2.1.4

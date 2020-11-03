@@ -60,7 +60,7 @@ service RepositoryService {
   }
   rpc GetArchive(GetArchiveRequest) returns (stream GetArchiveResponse) {
     option (op_type) = {
-      op: MUTATOR
+      op: ACCESSOR
     };
   }
   rpc HasLocalBranches(HasLocalBranchesRequest) returns (HasLocalBranchesResponse) {

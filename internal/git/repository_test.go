@@ -1,11 +1,13 @@
 package git_test
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -13,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/client"
+	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -513,4 +516,151 @@ func TestLocalRepository_UpdateRef(t *testing.T) {
 			tc.verify(t, repo, err)
 		})
 	}
+}
+
+func TestLocalRepository_FetchRemote(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	initBareWithRemote := func(t *testing.T, remote string) (git.Repository, string, testhelper.Cleanup) {
+		t.Helper()
+
+		testRepo, testRepoPath, cleanup := testhelper.InitBareRepo(t)
+
+		cmd := exec.Command(command.GitPath(), "-C", testRepoPath, "remote", "add", remote, testhelper.GitlabTestStoragePath()+"/gitlab-test.git")
+		err := cmd.Run()
+		if err != nil {
+			cleanup()
+			t.Log(err)
+			t.FailNow()
+		}
+
+		return git.NewRepository(testRepo), testRepoPath, cleanup
+	}
+
+	t.Run("invalid name", func(t *testing.T) {
+		repo := git.NewRepository(nil)
+
+		err := repo.FetchRemote(ctx, " ", git.FetchOpts{})
+		require.True(t, errors.Is(err, git.ErrInvalidArg))
+		require.Contains(t, err.Error(), `"remoteName" is blank or empty`)
+	})
+
+	t.Run("unknown remote", func(t *testing.T) {
+		testRepo, _, cleanup := testhelper.InitBareRepo(t)
+		defer cleanup()
+
+		repo := git.NewRepository(testRepo)
+		var stderr bytes.Buffer
+		err := repo.FetchRemote(ctx, "stub", git.FetchOpts{Stderr: &stderr})
+		require.Error(t, err)
+		require.Contains(t, stderr.String(), "'stub' does not appear to be a git repository")
+	})
+
+	t.Run("ok", func(t *testing.T) {
+		repo, testRepoPath, cleanup := initBareWithRemote(t, "origin")
+		defer cleanup()
+
+		var stderr bytes.Buffer
+		require.NoError(t, repo.FetchRemote(ctx, "origin", git.FetchOpts{Stderr: &stderr}))
+
+		require.Empty(t, stderr.String(), "it should not produce output as it is called with --quite flag by default")
+
+		fetchHeadData, err := ioutil.ReadFile(filepath.Join(testRepoPath, "FETCH_HEAD"))
+		require.NoError(t, err, "it should create FETCH_HEAD with info about fetch")
+
+		fetchHead := string(fetchHeadData)
+		require.Contains(t, fetchHead, "e56497bb5f03a90a51293fc6d516788730953899	not-for-merge	branch ''test''")
+		require.Contains(t, fetchHead, "8a2a6eb295bb170b34c24c76c49ed0e9b2eaf34b	not-for-merge	tag 'v1.1.0'")
+
+		sha, err := repo.ResolveRefish(ctx, "refs/remotes/origin/master^{commit}")
+		require.NoError(t, err, "the object from remote should exists in local after fetch done")
+		require.Equal(t, "1e292f8fedd741b75372e19097c76d327140c312", sha)
+	})
+
+	t.Run("with env", func(t *testing.T) {
+		_, sourceRepoPath, sourceCleanup := testhelper.NewTestRepo(t)
+		defer sourceCleanup()
+
+		testRepo, testRepoPath, testCleanup := testhelper.NewTestRepo(t)
+		defer testCleanup()
+
+		repo := git.NewRepository(testRepo)
+		testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "remote", "add", "source", sourceRepoPath)
+
+		var stderr bytes.Buffer
+		require.NoError(t, repo.FetchRemote(ctx, "source", git.FetchOpts{Stderr: &stderr, Env: []string{"GIT_TRACE=1"}}))
+		require.Contains(t, stderr.String(), "trace: built-in: git fetch --quiet source --end-of-options")
+	})
+
+	t.Run("with globals", func(t *testing.T) {
+		_, sourceRepoPath, sourceCleanup := testhelper.NewTestRepo(t)
+		defer sourceCleanup()
+
+		testRepo, testRepoPath, testCleanup := testhelper.NewTestRepo(t)
+		defer testCleanup()
+
+		repo := git.NewRepository(testRepo)
+		testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "remote", "add", "source", sourceRepoPath)
+
+		require.NoError(t, repo.FetchRemote(ctx, "source", git.FetchOpts{}))
+
+		testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", "--track", "testing-fetch-prune", "refs/remotes/source/markdown")
+		testhelper.MustRunCommand(t, nil, "git", "-C", sourceRepoPath, "branch", "-D", "markdown")
+
+		require.NoError(t, repo.FetchRemote(
+			ctx,
+			"source",
+			git.FetchOpts{
+				Global: []git.Option{git.ValueFlag{Name: "-c", Value: "fetch.prune=true"}},
+			}),
+		)
+
+		contains, err := repo.ContainsRef(ctx, "refs/remotes/source/markdown")
+		require.NoError(t, err)
+		require.False(t, contains, "remote tracking branch should be pruned as it no longer exists on the remote")
+	})
+
+	t.Run("with prune", func(t *testing.T) {
+		_, sourceRepoPath, sourceCleanup := testhelper.NewTestRepo(t)
+		defer sourceCleanup()
+
+		testRepo, testRepoPath, testCleanup := testhelper.NewTestRepo(t)
+		defer testCleanup()
+
+		repo := git.NewRepository(testRepo)
+
+		testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "remote", "add", "source", sourceRepoPath)
+		require.NoError(t, repo.FetchRemote(ctx, "source", git.FetchOpts{}))
+
+		testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", "--track", "testing-fetch-prune", "refs/remotes/source/markdown")
+		testhelper.MustRunCommand(t, nil, "git", "-C", sourceRepoPath, "branch", "-D", "markdown")
+
+		require.NoError(t, repo.FetchRemote(ctx, "source", git.FetchOpts{Prune: true}))
+
+		contains, err := repo.ContainsRef(ctx, "refs/remotes/source/markdown")
+		require.NoError(t, err)
+		require.False(t, contains, "remote tracking branch should be pruned as it no longer exists on the remote")
+	})
+
+	t.Run("with no tags", func(t *testing.T) {
+		repo, testRepoPath, cleanup := initBareWithRemote(t, "origin")
+		defer cleanup()
+
+		tagsBefore := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", "--list")
+		require.Empty(t, tagsBefore)
+
+		require.NoError(t, repo.FetchRemote(ctx, "origin", git.FetchOpts{Tags: git.FetchOptsTagsNone, Force: true}))
+
+		tagsAfter := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", "--list")
+		require.Empty(t, tagsAfter)
+
+		containsBranches, err := repo.ContainsRef(ctx, "'test'")
+		require.NoError(t, err)
+		require.False(t, containsBranches)
+
+		containsTags, err := repo.ContainsRef(ctx, "v1.1.0")
+		require.NoError(t, err)
+		require.False(t, containsTags)
+	})
 }

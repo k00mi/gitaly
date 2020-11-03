@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
@@ -99,7 +100,6 @@ func testSuccessfulCreateBranchRequest(t *testing.T, ctx context.Context) {
 
 func TestSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T) {
 	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{
-		featureflag.ReferenceTransactions,
 		featureflag.GoUserCreateBranch,
 	})
 	require.NoError(t, err)
@@ -138,7 +138,11 @@ func testUserCreateBranchWithTransaction(t *testing.T, withRefTxHook bool) {
 	srv := testhelper.NewServerWithAuth(t, nil, nil, config.Config.Auth.Token)
 	hookManager := gitalyhook.NewManager(gitalyhook.GitlabAPIStub, config.Config)
 	locator := config.NewLocator(config.Config)
-	server := NewServer(config.Config, RubyServer, hookManager, locator)
+
+	conns := client.NewPool()
+	defer conns.Close()
+
+	server := NewServer(config.Config, RubyServer, hookManager, locator, conns)
 
 	gitalypb.RegisterOperationServiceServer(srv.GrpcServer(), server)
 	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hook.NewServer(hookManager))
@@ -362,7 +366,6 @@ func testFailedUserCreateBranchRequest(t *testing.T, ctx context.Context) {
 
 func TestSuccessfulUserDeleteBranchRequest(t *testing.T) {
 	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{
-		featureflag.ReferenceTransactions,
 		featureflag.GoUserDeleteBranch,
 	})
 	require.NoError(t, err)
