@@ -32,7 +32,7 @@ func TestSuccessfulResolveConflictsRequest(t *testing.T) {
 	featureSets := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoResolveConflicts})
 
 	for _, featureSet := range featureSets {
-		t.Run("disabled "+featureSet.String(), func(t *testing.T) {
+		t.Run(featureSet.Desc(), func(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
@@ -131,7 +131,7 @@ func TestFailedResolveConflictsRequestDueToResolutionError(t *testing.T) {
 	featureSets := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoResolveConflicts})
 
 	for _, featureSet := range featureSets {
-		t.Run("disabled "+featureSet.String(), func(t *testing.T) {
+		t.Run(featureSet.Desc(), func(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
@@ -208,7 +208,7 @@ func TestFailedResolveConflictsRequestDueToValidation(t *testing.T) {
 	featureSets := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoResolveConflicts})
 
 	for _, featureSet := range featureSets {
-		t.Run("disabled "+featureSet.String(), func(t *testing.T) {
+		t.Run(featureSet.Desc(), func(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
