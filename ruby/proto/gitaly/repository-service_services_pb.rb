@@ -49,7 +49,6 @@ module Gitaly
       rpc :SearchFilesByName, Gitaly::SearchFilesByNameRequest, stream(Gitaly::SearchFilesByNameResponse)
       rpc :RestoreCustomHooks, stream(Gitaly::RestoreCustomHooksRequest), Gitaly::RestoreCustomHooksResponse
       rpc :BackupCustomHooks, Gitaly::BackupCustomHooksRequest, stream(Gitaly::BackupCustomHooksResponse)
-      rpc :FetchHTTPRemote, Gitaly::FetchHTTPRemoteRequest, Gitaly::FetchHTTPRemoteResponse
       rpc :GetObjectDirectorySize, Gitaly::GetObjectDirectorySizeRequest, Gitaly::GetObjectDirectorySizeResponse
       rpc :CloneFromPool, Gitaly::CloneFromPoolRequest, Gitaly::CloneFromPoolResponse
       rpc :CloneFromPoolInternal, Gitaly::CloneFromPoolInternalRequest, Gitaly::CloneFromPoolInternalResponse
