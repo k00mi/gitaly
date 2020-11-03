@@ -1,12 +1,9 @@
 package repository
 
 import (
-	"context"
-
 	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -30,8 +27,4 @@ func NewServer(cfg config.Cfg, rs *rubyserver.Server, locator storage.Locator, i
 		cfg:                  cfg.Gitlab,
 		binDir:               cfg.BinDir,
 	}
-}
-
-func (*server) FetchHTTPRemote(context.Context, *gitalypb.FetchHTTPRemoteRequest) (*gitalypb.FetchHTTPRemoteResponse, error) {
-	return nil, helper.Unimplemented
 }
