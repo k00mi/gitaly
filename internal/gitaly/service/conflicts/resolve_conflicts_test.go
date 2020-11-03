@@ -29,8 +29,8 @@ var (
 )
 
 func TestSuccessfulResolveConflictsRequest(t *testing.T) {
-	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoResolveConflicts})
-	require.NoError(t, err)
+	featureSets := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoResolveConflicts})
+
 	for _, featureSet := range featureSets {
 		t.Run("disabled "+featureSet.String(), func(t *testing.T) {
 			ctx, cancel := testhelper.Context()
@@ -128,8 +128,8 @@ func testSuccessfulResolveConflictsRequest(t *testing.T, ctx context.Context) {
 }
 
 func TestFailedResolveConflictsRequestDueToResolutionError(t *testing.T) {
-	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoResolveConflicts})
-	require.NoError(t, err)
+	featureSets := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoResolveConflicts})
+
 	for _, featureSet := range featureSets {
 		t.Run("disabled "+featureSet.String(), func(t *testing.T) {
 			ctx, cancel := testhelper.Context()
@@ -205,8 +205,8 @@ func testFailedResolveConflictsRequestDueToResolutionError(t *testing.T, ctx con
 }
 
 func TestFailedResolveConflictsRequestDueToValidation(t *testing.T) {
-	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoResolveConflicts})
-	require.NoError(t, err)
+	featureSets := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoResolveConflicts})
+
 	for _, featureSet := range featureSets {
 		t.Run("disabled "+featureSet.String(), func(t *testing.T) {
 			ctx, cancel := testhelper.Context()
