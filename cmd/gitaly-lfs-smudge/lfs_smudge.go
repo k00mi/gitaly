@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 
 	"github.com/git-lfs/git-lfs/lfs"
-	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/labkit/log"
@@ -84,15 +83,6 @@ func handleSmudge(to io.Writer, from io.Reader, config configProvider) (io.Reade
 	if err != nil {
 		return contents, fmt.Errorf("error loading LFS object: %v", err)
 	}
-
-	// This cannot go to STDOUT or it will corrupt the stream
-	logger.WithFields(logrus.Fields{
-		"status":               response.StatusCode,
-		"gl_repository":        glRepository,
-		"oid":                  ptr.Oid,
-		"content_length_bytes": response.ContentLength,
-		"path":                 path,
-	}).Info("completed HTTP request")
 
 	if response.StatusCode == 200 {
 		return response.Body, nil

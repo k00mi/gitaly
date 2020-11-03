@@ -94,8 +94,7 @@ func TestSuccessfulLfsSmudge(t *testing.T) {
 
 	require.Contains(t, d, `"msg":"Finished HTTP request"`)
 	require.Contains(t, d, `"status":200`)
-	require.Contains(t, d, `"gl_repository":"project-1"`)
-	require.Contains(t, d, `"oid":"`+lfsOid)
+	require.Contains(t, d, `"content_length_bytes":`)
 }
 
 func TestUnsuccessfulLfsSmudge(t *testing.T) {

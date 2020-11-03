@@ -26,7 +26,7 @@ require (
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.5.1
 	github.com/uber/jaeger-client-go v2.15.0+incompatible
-	gitlab.com/gitlab-org/gitlab-shell v1.9.8-0.20201015160834-d2f888583c77
+	gitlab.com/gitlab-org/gitlab-shell v0.0.0-20201103045505-ac9fee4d247c
 	gitlab.com/gitlab-org/labkit v0.0.0-20201014124351-eb1fe6499318
 	go.uber.org/atomic v1.4.0 // indirect
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a // indirect
