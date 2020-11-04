@@ -6,16 +6,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
-	"google.golang.org/grpc"
 )
-
-// Node is a storage node in a virtual storage.
-type Node struct {
-	// Storage is the name of the storage node.
-	Storage string
-	// Connection is a gRPC connection to the storage node.
-	Connection *grpc.ClientConn
-}
 
 // StorageMutatorRoute describes how to route a storage scoped mutator call.
 type StorageMutatorRoute struct {
@@ -53,13 +44,6 @@ type Router interface {
 type nodeManagerRouter struct {
 	mgr nodes.Manager
 	rs  datastore.RepositoryStore
-}
-
-func toNode(node nodes.Node) Node {
-	return Node{
-		Storage:    node.GetStorage(),
-		Connection: node.GetConnection(),
-	}
 }
 
 func toNodes(nodes []nodes.Node) []Node {

@@ -1,0 +1,5 @@
+---
+title: Remove the RepositoryService.FetchHTTPRemote RPC
+merge_request: 2744
+author:
+type: other

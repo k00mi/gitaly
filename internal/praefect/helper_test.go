@@ -88,6 +88,14 @@ func (nullNodeMgr) GetSyncedNode(ctx context.Context, virtualStorageName, repoPa
 	return nil, nil
 }
 
+func (nullNodeMgr) HealthyNodes() map[string][]string {
+	return nil
+}
+
+func (nullNodeMgr) Nodes() map[string][]nodes.Node {
+	return nil
+}
+
 type buildOptions struct {
 	withQueue       datastore.ReplicationEventQueue
 	withTxMgr       *transactions.Manager
@@ -230,6 +238,7 @@ func runPraefectServer(t testing.TB, conf config.Config, opt buildOptions) (*grp
 		opt.withQueue,
 		rs,
 		opt.withNodeMgr,
+		NodeSetFromNodeManager(opt.withNodeMgr),
 	)
 
 	prf := NewGRPCServer(conf, opt.withLogger, protoregistry.GitalyProtoPreregistered, coordinator.StreamDirector, opt.withNodeMgr, opt.withTxMgr, opt.withQueue, rs)

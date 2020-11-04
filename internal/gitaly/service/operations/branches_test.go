@@ -100,7 +100,6 @@ func testSuccessfulCreateBranchRequest(t *testing.T, ctx context.Context) {
 
 func TestSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T) {
 	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{
-		featureflag.ReferenceTransactions,
 		featureflag.GoUserCreateBranch,
 	})
 	require.NoError(t, err)
@@ -367,7 +366,6 @@ func testFailedUserCreateBranchRequest(t *testing.T, ctx context.Context) {
 
 func TestSuccessfulUserDeleteBranchRequest(t *testing.T) {
 	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{
-		featureflag.ReferenceTransactions,
 		featureflag.GoUserDeleteBranch,
 	})
 	require.NoError(t, err)

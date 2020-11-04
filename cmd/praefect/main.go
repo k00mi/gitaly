@@ -284,6 +284,7 @@ func run(cfgs []starter.Config, conf config.Config) error {
 			queue,
 			rs,
 			nodeManager,
+			praefect.NodeSetFromNodeManager(nodeManager),
 			praefect.WithDelayMetric(delayMetric),
 			praefect.WithLatencyMetric(latencyMetric),
 			praefect.WithDequeueBatchSize(conf.Replication.BatchSize),

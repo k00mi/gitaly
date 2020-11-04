@@ -288,13 +288,6 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
       optional :http_authorization_header, :string, 3
       repeated :mirror_refmaps, :string, 4
     end
-    add_message "gitaly.FetchHTTPRemoteRequest" do
-      optional :repository, :message, 1, "gitaly.Repository"
-      optional :remote, :message, 2, "gitaly.Remote"
-      optional :timeout, :int32, 3
-    end
-    add_message "gitaly.FetchHTTPRemoteResponse" do
-    end
     add_message "gitaly.GetObjectDirectorySizeRequest" do
       optional :repository, :message, 1, "gitaly.Repository"
     end
@@ -416,8 +409,6 @@ module Gitaly
   SearchFilesByContentRequest = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.SearchFilesByContentRequest").msgclass
   SearchFilesByContentResponse = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.SearchFilesByContentResponse").msgclass
   Remote = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.Remote").msgclass
-  FetchHTTPRemoteRequest = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.FetchHTTPRemoteRequest").msgclass
-  FetchHTTPRemoteResponse = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.FetchHTTPRemoteResponse").msgclass
   GetObjectDirectorySizeRequest = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.GetObjectDirectorySizeRequest").msgclass
   GetObjectDirectorySizeResponse = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.GetObjectDirectorySizeResponse").msgclass
   CloneFromPoolRequest = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.CloneFromPoolRequest").msgclass

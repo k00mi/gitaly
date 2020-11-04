@@ -8,7 +8,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
@@ -59,23 +59,14 @@ CROSS JOIN (SELECT unnest('{gitaly-1, gitaly-2, gitaly-3}'::text[]) AS storage) 
 `, numRepositories, behind)
 	require.NoError(b, err)
 
+	storages := map[string][]string{"virtual-storage-1": {"gitaly-1", "gitaly-2", "gitaly-3"}}
 	for n := 0; n < b.N; n++ {
 		db.Truncate(b, "replication_queue", "replication_queue_lock", "replication_queue_job_lock")
 		r := NewReconciler(
 			testhelper.DiscardTestLogger(b),
 			db,
-			&nodes.MockManager{
-				GetShardFunc: func(virtualStorage string) (nodes.Shard, error) {
-					return nodes.Shard{
-						Primary: &nodes.MockNode{GetStorageMethod: getStorageMethod("gitaly-1"), Healthy: true},
-						Secondaries: []nodes.Node{
-							&nodes.MockNode{GetStorageMethod: getStorageMethod("gitaly-2"), Healthy: true},
-							&nodes.MockNode{GetStorageMethod: getStorageMethod("gitaly-3"), Healthy: true},
-						},
-					}, nil
-				},
-			},
-			map[string][]string{"virtual-storage-1": []string{"gitaly-1", "gitaly-2", "gitaly-3"}},
+			praefect.StaticHealthChecker(storages),
+			storages,
 			prometheus.DefBuckets,
 		)
 

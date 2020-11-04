@@ -10,7 +10,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
-	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/metadatahandler"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
@@ -203,9 +202,6 @@ var transactionRPCs = map[string]interface{}{
 }
 
 func shouldUseTransaction(ctx context.Context, method string) bool {
-	if !featureflag.IsEnabled(ctx, featureflag.ReferenceTransactions) {
-		return false
-	}
 	_, ok := transactionRPCs[method]
 	return ok
 }

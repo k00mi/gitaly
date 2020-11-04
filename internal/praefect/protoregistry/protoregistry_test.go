@@ -149,7 +149,6 @@ func TestNewProtoRegistry(t *testing.T) {
 			"SearchFilesByName":            protoregistry.OpAccessor,
 			"RestoreCustomHooks":           protoregistry.OpMutator,
 			"BackupCustomHooks":            protoregistry.OpAccessor,
-			"FetchHTTPRemote":              protoregistry.OpMutator,
 		},
 		"SmartHTTPService": map[string]protoregistry.OpType{
 			"InfoRefsUploadPack":  protoregistry.OpAccessor,

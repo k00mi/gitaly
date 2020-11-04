@@ -66,6 +66,10 @@ type Manager interface {
 	// GetSyncedNode returns a random storage node based on the state of the replication.
 	// It returns primary in case there are no up to date secondaries or error occurs.
 	GetSyncedNode(ctx context.Context, virtualStorageName, repoPath string) (Node, error)
+	// HealthyNodes returns healthy storages by virtual storage.
+	HealthyNodes() map[string][]string
+	// Nodes returns nodes by their virtual storages.
+	Nodes() map[string][]Node
 }
 
 const (
@@ -96,6 +100,8 @@ type Mgr struct {
 	strategies map[string]leaderElectionStrategy
 	db         *sql.DB
 	rs         datastore.RepositoryStore
+	// nodes contains nodes by their virtual storages
+	nodes map[string][]Node
 }
 
 // leaderElectionStrategy defines the interface by which primary and
@@ -127,6 +133,7 @@ func NewManager(
 	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
 	defer cancel()
 
+	nodes := make(map[string][]Node, len(c.VirtualStorages))
 	for _, virtualStorage := range c.VirtualStorages {
 		log = log.WithField("virtual_storage", virtualStorage.Name)
 
@@ -156,6 +163,10 @@ func NewManager(
 			ns = append(ns, cs)
 		}
 
+		for _, node := range ns {
+			nodes[virtualStorage.Name] = append(nodes[virtualStorage.Name], node)
+		}
+
 		if c.Failover.Enabled {
 			if c.Failover.ElectionStrategy == "sql" {
 				strategies[virtualStorage.Name] = newSQLElector(virtualStorage.Name, c, db, log, ns)
@@ -171,6 +182,7 @@ func NewManager(
 		db:         db,
 		strategies: strategies,
 		rs:         rs,
+		nodes:      nodes,
 	}, nil
 }
 
@@ -269,6 +281,24 @@ func (n *Mgr) GetSyncedNode(ctx context.Context, virtualStorageName, repoPath st
 
 	return healthyStorages[rand.Intn(len(healthyStorages))], nil
 }
+
+func (n *Mgr) HealthyNodes() map[string][]string {
+	healthy := make(map[string][]string, len(n.nodes))
+	for vs, nodes := range n.nodes {
+		storages := make([]string, 0, len(nodes))
+		for _, node := range nodes {
+			if node.IsHealthy() {
+				storages = append(storages, node.GetStorage())
+			}
+		}
+
+		healthy[vs] = storages
+	}
+
+	return healthy
+}
+
+func (n *Mgr) Nodes() map[string][]Node { return n.nodes }
 
 func newConnectionStatus(node config.Node, cc *grpc.ClientConn, l logrus.FieldLogger, latencyHist prommetrics.HistogramVec, errorTracker tracker.ErrorTracker) *nodeStatus {
 	return &nodeStatus{
