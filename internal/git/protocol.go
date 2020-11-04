@@ -34,10 +34,18 @@ type RequestWithGitProtocol interface {
 	GetGitProtocol() string
 }
 
-// AddGitProtocolEnv checks whether the request has Git protocol v2
+// WithGitProtocol checks whether the request has Git protocol v2
 // and sets this in the environment.
-func AddGitProtocolEnv(ctx context.Context, req RequestWithGitProtocol, env []string) []string {
+func WithGitProtocol(ctx context.Context, req RequestWithGitProtocol) CmdOpt {
+	return func(cc *cmdCfg) error {
+		cc.env = append(cc.env, gitProtocolEnv(ctx, req)...)
+		return nil
+	}
+}
+
+func gitProtocolEnv(ctx context.Context, req RequestWithGitProtocol) []string {
 	var protocol string
+	var env []string
 
 	switch gp := req.GetGitProtocol(); gp {
 	case ProtocolV2:
