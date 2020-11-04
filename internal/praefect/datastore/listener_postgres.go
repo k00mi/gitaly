@@ -1,60 +1,58 @@
 package datastore
 
 import (
-	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/lib/pq"
 	promclient "github.com/prometheus/client_golang/prometheus"
-	"gitlab.com/gitlab-org/gitaly/internal/dontpanic"
+	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore/glsql"
 )
 
 // PostgresListenerOpts is a set of configuration options for the PostgreSQL listener.
 type PostgresListenerOpts struct {
-	Addr                     string
-	Channel                  string
-	PingPeriod               time.Duration
-	MinReconnectInterval     time.Duration
-	MaxReconnectInterval     time.Duration
-	DisconnectThreshold      int
-	DisconnectTimeWindow     time.Duration
-	ConnectAttemptThreshold  int
-	ConnectAttemptTimeWindow time.Duration
+	// Addr is an address to database instance.
+	Addr string
+	// Channels is a list of channel to listen for notifications.
+	Channels []string
+	// PingPeriod is a period to wait before executing a pin call on the connection to verify if it is still healthy.
+	PingPeriod time.Duration
+	// MinReconnectInterval controls the duration to wait before trying to
+	// re-establish the database connection after connection loss.
+	MinReconnectInterval time.Duration
+	// MaxReconnectInterval is a max interval to wait until successful connection establishment.
+	MaxReconnectInterval time.Duration
 }
 
 // DefaultPostgresListenerOpts pre-defined options for PostgreSQL listener.
 var DefaultPostgresListenerOpts = PostgresListenerOpts{
-	PingPeriod:               10 * time.Second,
-	MinReconnectInterval:     5 * time.Second,
-	MaxReconnectInterval:     40 * time.Second,
-	DisconnectThreshold:      3,
-	DisconnectTimeWindow:     time.Minute,
-	ConnectAttemptThreshold:  3,
-	ConnectAttemptTimeWindow: time.Minute,
+	PingPeriod:           10 * time.Second,
+	MinReconnectInterval: 5 * time.Second,
+	MaxReconnectInterval: 40 * time.Second,
 }
 
 // PostgresListener is an implementation based on the PostgreSQL LISTEN/NOTIFY functions.
 type PostgresListener struct {
-	mtx            sync.Mutex
+	logger         logrus.FieldLogger
 	listener       *pq.Listener
+	handler        glsql.ListenHandler
 	opts           PostgresListenerOpts
 	closed         chan struct{}
-	err            error
 	reconnectTotal *promclient.CounterVec
+	wg             sync.WaitGroup
 }
 
 // NewPostgresListener returns a new instance of the listener.
-func NewPostgresListener(opts PostgresListenerOpts) (*PostgresListener, error) {
+func NewPostgresListener(logger logrus.FieldLogger, opts PostgresListenerOpts, handler glsql.ListenHandler) (*PostgresListener, error) {
 	switch {
 	case strings.TrimSpace(opts.Addr) == "":
 		return nil, fmt.Errorf("address is invalid: %q", opts.Addr)
-	case strings.TrimSpace(opts.Channel) == "":
-		return nil, fmt.Errorf("channel is invalid: %q", opts.Channel)
+	case len(opts.Channels) == 0:
+		return nil, errors.New("no channels to listen")
 	case opts.PingPeriod < 0:
 		return nil, fmt.Errorf("invalid ping period: %s", opts.PingPeriod)
 	case opts.MinReconnectInterval <= 0:
@@ -63,9 +61,11 @@ func NewPostgresListener(opts PostgresListenerOpts) (*PostgresListener, error) {
 		return nil, fmt.Errorf("invalid max reconnect period: %s", opts.MaxReconnectInterval)
 	}
 
-	return &PostgresListener{
-		opts:   opts,
-		closed: make(chan struct{}),
+	pgl := &PostgresListener{
+		logger:  logger.WithField("component", "postgres_listener"),
+		opts:    opts,
+		handler: handler,
+		closed:  make(chan struct{}),
 		reconnectTotal: promclient.NewCounterVec(
 			promclient.CounterOpts{
 				Name: "gitaly_praefect_notifications_reconnects_total",
@@ -73,20 +73,79 @@ func NewPostgresListener(opts PostgresListenerOpts) (*PostgresListener, error) {
 			},
 			[]string{"state"},
 		),
-	}, nil
+	}
+
+	if err := pgl.connect(); err != nil {
+		if err := pgl.Close(); err != nil {
+			pgl.logger.WithError(err).Error("releasing listener resources after failed to listen on it")
+		}
+		return nil, fmt.Errorf("connect: %w", err)
+	}
+
+	return pgl, nil
 }
 
-func (pgl *PostgresListener) Listen(ctx context.Context, handler glsql.ListenHandler) error {
-	if err := pgl.initListener(handler); err != nil {
+func (pgl *PostgresListener) connect() error {
+	firstConnectionAttempt := true
+	connectErrChan := make(chan error, 1)
+
+	connectionLifecycle := func(eventType pq.ListenerEventType, err error) {
+		pgl.reconnectTotal.WithLabelValues(listenerEventTypeToString(eventType)).Inc()
+
+		switch eventType {
+		case pq.ListenerEventConnectionAttemptFailed:
+			if firstConnectionAttempt {
+				firstConnectionAttempt = false
+				// if a first attempt to establish a connection to a remote is failed
+				// we should not proceed as it won't be possible to distinguish between
+				// temporary errors and initialization errors like invalid
+				// connection address.
+				connectErrChan <- err
+			}
+			pgl.logger.WithError(err).Error(listenerEventTypeToString(eventType))
+		case pq.ListenerEventConnected:
+			// once the connection is established we can be sure that the connection
+			// address is correct and all other errors could be considered as
+			// a temporary, so listener will try to re-connect and proceed.
+			pgl.async(pgl.ping)
+			pgl.async(pgl.handleNotifications)
+
+			close(connectErrChan) // to signal the connection was established without troubles
+			firstConnectionAttempt = false
+
+			pgl.handler.Connected()
+		case pq.ListenerEventReconnected:
+			pgl.handler.Connected()
+		case pq.ListenerEventDisconnected:
+			pgl.logger.WithError(err).Error(listenerEventTypeToString(eventType))
+			pgl.handler.Disconnect(err)
+		}
+	}
+
+	pgl.listener = pq.NewListener(pgl.opts.Addr, pgl.opts.MinReconnectInterval, pgl.opts.MaxReconnectInterval, connectionLifecycle)
+
+	listenErrChan := make(chan error, 1)
+	pgl.async(func() {
+		// we need to start channel listeners in a parallel, otherwise if a bad connection string provided
+		// the connectionLifecycle callback will always receive pq.ListenerEventConnectionAttemptFailed event.
+		// When a listener is added it will produce an error on attempt to use a connection and re-connection
+		// loop will be interrupted.
+		listenErrChan <- pgl.listen()
+	})
+
+	if err := <-connectErrChan; err != nil {
 		return err
 	}
 
-	pgl.handleNotifications(ctx, handler)
+	return <-listenErrChan
+}
 
-	pgl.mtx.Lock()
-	defer pgl.mtx.Unlock()
-
-	return pgl.err
+func (pgl *PostgresListener) Close() error {
+	defer func() {
+		close(pgl.closed)
+		pgl.wg.Wait()
+	}()
+	return pgl.listener.Close()
 }
 
 func listenerEventTypeToString(et pq.ListenerEventType) string {
@@ -103,106 +162,59 @@ func listenerEventTypeToString(et pq.ListenerEventType) string {
 	return fmt.Sprintf("unknown: %d", et)
 }
 
-func (pgl *PostgresListener) initListener(handler glsql.ListenHandler) error {
-	pgl.mtx.Lock()
-	defer pgl.mtx.Unlock()
-
-	if pgl.listener != nil {
-		return fmt.Errorf("already listening channel %q of %q", pgl.opts.Channel, pgl.opts.Addr)
-	}
-	pgl.err = nil
-
-	initialization := int32(1)
-	defer atomic.StoreInt32(&initialization, 0)
-
-	disconnectThreshold := threshold(pgl.opts.DisconnectThreshold, pgl.opts.DisconnectTimeWindow)
-	connectionAttemptFailedThreshold := threshold(pgl.opts.ConnectAttemptThreshold, pgl.opts.ConnectAttemptTimeWindow)
-
-	connectionLifecycle := func(eventType pq.ListenerEventType, err error) {
-		pgl.reconnectTotal.WithLabelValues(listenerEventTypeToString(eventType)).Inc()
-
-		switch eventType {
-		case pq.ListenerEventConnected:
-			dontpanic.Try(handler.Connected)
-		case pq.ListenerEventDisconnected:
-			dontpanic.Try(handler.Disconnect)
-			if disconnectThreshold() {
-				pgl.close(atomic.LoadInt32(&initialization) == 0, err)
-			}
-		case pq.ListenerEventConnectionAttemptFailed:
-			if connectionAttemptFailedThreshold() {
-				pgl.close(atomic.LoadInt32(&initialization) == 0, err)
-			}
+func (pgl *PostgresListener) listen() error {
+	for _, channel := range pgl.opts.Channels {
+		if err := pgl.listener.Listen(channel); err != nil {
+			return err
 		}
 	}
-
-	pgl.listener = pq.NewListener(pgl.opts.Addr, pgl.opts.MinReconnectInterval, pgl.opts.MaxReconnectInterval, connectionLifecycle)
-
-	if err := pgl.listener.Listen(pgl.opts.Channel); err != nil {
-		return fmt.Errorf("listening for %q: %w", pgl.opts.Channel, err)
-	}
-
-	return pgl.err
+	return nil
 }
 
-func (pgl *PostgresListener) handleNotifications(ctx context.Context, handler glsql.ListenHandler) {
-	closed := pgl.closed
-	notify := pgl.listener.Notify
-
+func (pgl *PostgresListener) handleNotifications() {
 	for {
 		select {
-		case <-closed:
+		case <-pgl.closed:
 			return
-		case <-ctx.Done():
-			pgl.close(true, nil)
+		case notification, ok := <-pgl.listener.Notify:
+			if !ok {
+				// this happens when the Close is called on the listener
+				return
+			}
+
+			if notification == nil {
+				// this happens when pq.ListenerEventReconnected is emitted after a database
+				// connection has been re-established after connection loss
+				continue
+			}
+
+			pgl.handler.Notification(glsql.Notification{
+				Channel: notification.Channel,
+				Payload: notification.Extra,
+			})
+		}
+	}
+}
+
+func (pgl *PostgresListener) ping() {
+	for {
+		select {
+		case <-pgl.closed:
 			return
 		case <-time.After(pgl.opts.PingPeriod):
 			if err := pgl.listener.Ping(); err != nil {
-				pgl.close(true, err)
-				return
+				pgl.logger.WithError(err).Error("health check ping failed")
 			}
-		case notification := <-notify:
-			if notification == nil {
-				select {
-				case <-closed:
-					return
-				default:
-					continue
-				}
-			}
-
-			dontpanic.Try(func() { handler.Notification(notification.Extra) })
 		}
 	}
 }
 
-func (pgl *PostgresListener) close(lock bool, err error) {
-	if lock {
-		// we should not lock if close was called during initialisation step as lock is acquired by initListener already
-		pgl.mtx.Lock()
-		defer pgl.mtx.Unlock()
-	}
-
-	if pgl.listener == nil {
-		return
-	}
-
-	pgl.err = err
-
-	uerr := pgl.listener.UnlistenAll()
-	cerr := pgl.listener.Close()
-
-	if pgl.err == nil {
-		if uerr != nil {
-			pgl.err = uerr
-		} else {
-			pgl.err = cerr
-		}
-	}
-
-	close(pgl.closed)
-	pgl.closed = make(chan struct{})
-	pgl.listener = nil
+func (pgl *PostgresListener) async(f func()) {
+	pgl.wg.Add(1)
+	go func() {
+		defer pgl.wg.Done()
+		f()
+	}()
 }
 
 func (pgl *PostgresListener) Describe(descs chan<- *promclient.Desc) {
@@ -211,40 +223,4 @@ func (pgl *PostgresListener) Describe(descs chan<- *promclient.Desc) {
 
 func (pgl *PostgresListener) Collect(metrics chan<- promclient.Metric) {
 	pgl.reconnectTotal.Collect(metrics)
-}
-
-// threshold returns a function each call of which returns a flag if
-// passed in threshold is reached in window time duration.
-// If threshold=3 and window=1s and function called 3 times within 1s
-// time interval then the last call will return true. This is a signal
-// that the threshold of invocation was reached in a configured time window.
-func threshold(threshold int, window time.Duration) func() bool {
-	// contains timestamps of the function invocation in [oldest->newest] order
-	var triggeredAt []time.Time
-	var mtx sync.Mutex
-
-	return func() bool {
-		if threshold == 0 {
-			return true
-		}
-
-		mtx.Lock()
-		defer mtx.Unlock()
-
-		now := time.Now()
-		triggeredAt = append(triggeredAt, now)
-
-		if len(triggeredAt) < threshold {
-			return false
-		}
-
-		triggeredAt = triggeredAt[len(triggeredAt)-threshold:] // this might be suboptimal when len(triggeredAt) = threshold
-
-		for _, t := range triggeredAt {
-			if now.Sub(t) > window {
-				return false
-			}
-		}
-		return true
-	}
 }

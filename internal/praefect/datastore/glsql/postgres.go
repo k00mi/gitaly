@@ -41,20 +41,23 @@ type Querier interface {
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 }
 
+// Notification represent a notification from the database.
+type Notification struct {
+	// Channel is a name of the receiving channel.
+	Channel string
+	// Payload is a payload of the notification.
+	Payload string
+}
+
 // ListenHandler contains a set of methods that would be called on corresponding notifications received.
 type ListenHandler interface {
 	// Notification would be triggered once a new notification received.
-	Notification(payload string)
+	Notification(Notification)
 	// Disconnect would be triggered once a connection to remote service is lost.
-	Disconnect()
+	// Passed in error will never be nil and will contain cause of the disconnection.
+	Disconnect(error)
 	// Connected would be triggered once a connection to remote service is established.
 	Connected()
-}
-
-// Listener listens for events that occur in the system.
-type Listener interface {
-	// Listen is a blocking call that triggers a passed in handler for the events that appear in the system.
-	Listen(ctx context.Context, handler ListenHandler) error
 }
 
 // TxQuery runs operations inside transaction and commits|rollbacks on Done.
