@@ -184,11 +184,6 @@ service RepositoryService {
       op: ACCESSOR
     };
   }
-  rpc FetchHTTPRemote(FetchHTTPRemoteRequest) returns (FetchHTTPRemoteResponse) {
-    option (op_type) = {
-      op: MUTATOR
-    };
-  }
   rpc GetObjectDirectorySize(GetObjectDirectorySizeRequest) returns (GetObjectDirectorySizeResponse) {
     option (op_type) = {
       op: ACCESSOR
@@ -597,14 +592,6 @@ message Remote {
   string http_authorization_header = 3;
   repeated string mirror_refmaps = 4;
 }
-
-message FetchHTTPRemoteRequest {
-  Repository repository = 1 [(target_repository)=true];
-  Remote remote = 2;
-  int32 timeout = 3;
-}
-
-message FetchHTTPRemoteResponse {}
 
 message GetObjectDirectorySizeRequest {
   Repository repository = 1 [(target_repository)=true];

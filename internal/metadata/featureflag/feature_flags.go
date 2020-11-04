@@ -34,6 +34,8 @@ var (
 	GoListConflictFiles = FeatureFlag{Name: "go_list_conflict_files", OnByDefault: false}
 	// GoUserCommitFiles enables the Go implementation of UserCommitFiles
 	GoUserCommitFiles = FeatureFlag{Name: "go_user_commit_files", OnByDefault: false}
+	// GoResolveConflicts enables the Go implementation of ResolveConflicts
+	GoResolveConflicts = FeatureFlag{Name: "go_resolve_conflicts", OnByDefault: false}
 )
 
 // All includes all feature flags.
@@ -49,6 +51,7 @@ var All = []FeatureFlag{
 	GoUserSquash,
 	GoListConflictFiles,
 	GoUserCommitFiles,
+	GoResolveConflicts,
 }
 
 const (

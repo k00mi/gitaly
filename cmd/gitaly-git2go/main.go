@@ -20,6 +20,7 @@ var subcommands = map[string]subcmd{
 	"commit":    commitSubcommand{},
 	"merge":     &mergeSubcommand{},
 	"revert":    &revertSubcommand{},
+	"resolve":   &resolveSubcommand{},
 }
 
 const programName = "gitaly-git2go"

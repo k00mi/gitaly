@@ -1,5 +1,9 @@
 # Gitaly changelog
 
+## 13.5.3 (2020-11-03)
+
+- No changes.
+
 ## 13.5.2 (2020-11-02)
 
 ### Security (1 change)
@@ -60,6 +64,10 @@
 - Remote repository abstraction for resolving refish. !2629
 - Upgrade Rubocop to 0.86.0. !2634
 
+
+## 13.4.6 (2020-11-03)
+
+- No changes.
 
 ## 13.4.5 (2020-11-02)
 

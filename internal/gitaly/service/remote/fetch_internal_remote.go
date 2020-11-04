@@ -17,8 +17,7 @@ import (
 )
 
 const (
-	gitalyInternalURL = "ssh://gitaly/internal.git"
-	mirrorRefSpec     = "+refs/*:refs/*"
+	mirrorRefSpec = "+refs/*:refs/*"
 )
 
 // FetchInternalRemote fetches another Gitaly repository set as a remote
@@ -36,7 +35,7 @@ func (s *server) FetchInternalRemote(ctx context.Context, req *gitalypb.FetchInt
 		git.SubCmd{
 			Name:  "fetch",
 			Flags: []git.Option{git.Flag{Name: "--prune"}},
-			Args:  []string{gitalyInternalURL, mirrorRefSpec},
+			Args:  []string{gitalyssh.GitalyInternalURL, mirrorRefSpec},
 		},
 	)
 	if err != nil {

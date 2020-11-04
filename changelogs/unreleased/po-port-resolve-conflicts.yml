@@ -1,0 +1,5 @@
+---
+title: Port ResolveConflicts from Ruby to Go
+merge_request: 2693
+author:
+type: performance
