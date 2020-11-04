@@ -9,6 +9,7 @@ import (
 	git "github.com/libgit2/git2go/v30"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	cmdtesthelper "gitlab.com/gitlab-org/gitaly/cmd/gitaly-git2go/testhelper"
 	"gitlab.com/gitlab-org/gitaly/internal/git2go"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -80,43 +81,6 @@ func TestMergeFailsWithInvalidRepositoryPath(t *testing.T) {
 	}.Run(ctx, config.Config)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "merge: could not open repository")
-}
-
-func buildCommit(t testing.TB, repoPath string, parent *git.Oid, fileContents map[string]string) *git.Oid {
-	repo, err := git.OpenRepository(repoPath)
-	require.NoError(t, err)
-	defer repo.Free()
-
-	odb, err := repo.Odb()
-	require.NoError(t, err)
-
-	treeBuilder, err := repo.TreeBuilder()
-	require.NoError(t, err)
-
-	for file, contents := range fileContents {
-		oid, err := odb.Write([]byte(contents), git.ObjectBlob)
-		require.NoError(t, err)
-		treeBuilder.Insert(file, oid, git.FilemodeBlob)
-	}
-
-	tree, err := treeBuilder.Write()
-	require.NoError(t, err)
-
-	committer := git.Signature{
-		Name:  "Foo",
-		Email: "foo@example.com",
-		When:  time.Date(2020, 1, 1, 1, 1, 1, 1, time.FixedZone("UTC+2", 2*60*60)),
-	}
-
-	var commit *git.Oid
-	if parent != nil {
-		commit, err = repo.CreateCommitFromIds("", &committer, &committer, "Message", tree, parent)
-	} else {
-		commit, err = repo.CreateCommitFromIds("", &committer, &committer, "Message", tree)
-	}
-	require.NoError(t, err)
-
-	return commit
 }
 
 func TestMergeTrees(t *testing.T) {
@@ -210,9 +174,9 @@ func TestMergeTrees(t *testing.T) {
 		_, repoPath, cleanup := testhelper.NewTestRepo(t)
 		defer cleanup()
 
-		base := buildCommit(t, repoPath, nil, tc.base)
-		ours := buildCommit(t, repoPath, base, tc.ours)
-		theirs := buildCommit(t, repoPath, base, tc.theirs)
+		base := cmdtesthelper.BuildCommit(t, repoPath, nil, tc.base)
+		ours := cmdtesthelper.BuildCommit(t, repoPath, base, tc.ours)
+		theirs := cmdtesthelper.BuildCommit(t, repoPath, base, tc.theirs)
 
 		authorDate := time.Date(2020, 7, 30, 7, 45, 50, 0, time.FixedZone("UTC+2", +2*60*60))
 

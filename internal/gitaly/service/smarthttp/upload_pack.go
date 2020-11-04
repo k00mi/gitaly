@@ -65,8 +65,6 @@ func (s *server) PostUploadPack(stream gitalypb.SmartHTTPService_PostUploadPackS
 	stdout := inspect.NewWriter(stdoutWriter, inspect.LogPackInfoStatistic(ctx))
 	defer stdout.Close()
 
-	env := git.AddGitProtocolEnv(ctx, req, command.GitEnv)
-
 	repoPath, err := s.locator.GetRepoPath(req.Repository)
 	if err != nil {
 		return err
@@ -79,11 +77,11 @@ func (s *server) PostUploadPack(stream gitalypb.SmartHTTPService_PostUploadPackS
 		globalOpts = append(globalOpts, git.ValueFlag{"-c", o})
 	}
 
-	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{In: stdin, Out: stdout}, env, globalOpts, git.SubCmd{
+	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{In: stdin, Out: stdout}, nil, globalOpts, git.SubCmd{
 		Name:  "upload-pack",
 		Flags: []git.Option{git.Flag{Name: "--stateless-rpc"}},
 		Args:  []string{repoPath},
-	})
+	}, git.WithGitProtocol(ctx, req))
 
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "PostUploadPack: cmd: %v", err)

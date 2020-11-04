@@ -1,15 +1,24 @@
 // +build static,system_libgit2
 
-package main
+package conflicts
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	cmdtesthelper "gitlab.com/gitlab-org/gitaly/cmd/gitaly-git2go/testhelper"
 	"gitlab.com/gitlab-org/gitaly/internal/git2go"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
+
+func TestMain(m *testing.M) {
+	defer testhelper.MustHaveNoChildProcess()
+	testhelper.Configure()
+	testhelper.ConfigureGitalyGit2Go()
+	os.Exit(m.Run())
+}
 
 func TestConflicts(t *testing.T) {
 	testcases := []struct {
@@ -165,9 +174,9 @@ func TestConflicts(t *testing.T) {
 		_, repoPath, cleanup := testhelper.NewTestRepo(t)
 		defer cleanup()
 
-		base := buildCommit(t, repoPath, nil, tc.base)
-		ours := buildCommit(t, repoPath, base, tc.ours)
-		theirs := buildCommit(t, repoPath, base, tc.theirs)
+		base := cmdtesthelper.BuildCommit(t, repoPath, nil, tc.base)
+		ours := cmdtesthelper.BuildCommit(t, repoPath, base, tc.ours)
+		theirs := cmdtesthelper.BuildCommit(t, repoPath, base, tc.theirs)
 
 		t.Run(tc.desc, func(t *testing.T) {
 			ctx, cancel := testhelper.Context()

@@ -1,6 +1,6 @@
 // +build static,system_libgit2
 
-package main
+package conflicts
 
 import (
 	"context"
@@ -17,11 +17,12 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type conflictsSubcommand struct {
+// Subcommand contains params to performs conflicts calculation from main
+type Subcommand struct {
 	request string
 }
 
-func (cmd *conflictsSubcommand) Flags() *flag.FlagSet {
+func (cmd *Subcommand) Flags() *flag.FlagSet {
 	flags := flag.NewFlagSet("conflicts", flag.ExitOnError)
 	flags.StringVar(&cmd.request, "request", "", "git2go.ConflictsCommand")
 	return flags
@@ -83,7 +84,7 @@ func conflictError(code codes.Code, message string) error {
 }
 
 // Run performs a merge and prints resulting conflicts to stdout.
-func (cmd *conflictsSubcommand) Run(context.Context, io.Reader, io.Writer) error {
+func (cmd *Subcommand) Run(context.Context, io.Reader, io.Writer) error {
 	request, err := git2go.ConflictsCommandFromSerialized(cmd.request)
 	if err != nil {
 		return err
