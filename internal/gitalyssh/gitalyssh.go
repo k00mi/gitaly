@@ -22,6 +22,18 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const (
+	// GitalyInternalURL is a special URL that indicates Gitaly wants to
+	// push or fetch to another Gitaly instance
+	GitalyInternalURL = "ssh://gitaly/internal.git"
+)
+
+const (
+	// EnvVarUploadPackAllowAnySHA1InWant enables the capability to request
+	// individual SHA1's from the remote repo
+	EnvVarUploadPackAllowAnySHA1InWant = "uploadpack.allowAnySHA1InWant=true"
+)
+
 var (
 	envInjector       = tracing.NewEnvInjector()
 	correlationIDRand = rand.New(rand.NewSource(time.Now().UnixNano()))

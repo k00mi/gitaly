@@ -12,8 +12,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const gitalyInternalURL = "ssh://gitaly/internal.git"
-
 func (s *server) CreateFork(ctx context.Context, req *gitalypb.CreateForkRequest) (*gitalypb.CreateForkResponse, error) {
 	targetRepository := req.Repository
 	sourceRepository := req.SourceRepository
@@ -47,7 +45,7 @@ func (s *server) CreateFork(ctx context.Context, req *gitalypb.CreateForkRequest
 		Name:  "clone",
 		Flags: []git.Option{git.Flag{Name: "--bare"}, git.Flag{Name: "--no-local"}},
 		PostSepArgs: []string{
-			fmt.Sprintf("%s:%s", gitalyInternalURL, sourceRepository.RelativePath),
+			fmt.Sprintf("%s:%s", gitalyssh.GitalyInternalURL, sourceRepository.RelativePath),
 			targetRepositoryFullPath,
 		},
 	})

@@ -38,7 +38,7 @@ func (s *server) FetchSourceBranch(ctx context.Context, req *gitalypb.FetchSourc
 	if helper.RepoPathEqual(req.GetRepository(), req.GetSourceRepository()) {
 		remote = "file://" + repoPath
 	} else {
-		remote = gitalyInternalURL
+		remote = gitalyssh.GitalyInternalURL
 		env, err = gitalyssh.UploadPackEnv(ctx, &gitalypb.SSHUploadPackRequest{Repository: req.SourceRepository})
 		if err != nil {
 			return nil, err
