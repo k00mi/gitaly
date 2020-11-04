@@ -273,6 +273,16 @@ you forget to add a `go_package` option, you may receive an error similar to:
 
 `blob.proto is missing the go_package option`
 
+### Documentation
+
+New or updated RPCs and message types should be accompanied by comment strings.
+Good comment strings will explain why the RPC exists and how it behaves. Good
+message type comments will explain what the message is communicating. Each updated
+message field should have a comment.
+
+Refer to official protobuf documentation for
+[how to add comments](https://developers.google.com/protocol-buffers/docs/proto#adding_comments).
+
 ## Contributing
 
 The CI at https://gitlab.com/gitlab-org/gitaly-proto regenerates the
