@@ -4,6 +4,7 @@ package reconciler
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -148,6 +149,36 @@ func TestReconciler(t *testing.T) {
 					TargetNodeStorage: "storage-3",
 				},
 			},
+		},
+		{
+			// generate number of jobs that exceeds the logBatchSize
+			desc:            "reconciliation works with log batch size exceeded",
+			healthyStorages: configuredStoragesWithout("storage-3"),
+			repositories: func() repositories {
+				repos := repositories{"virtual-storage-1": make(map[string]map[string]int, 2*logBatchSize+1)}
+				for i := 0; i < 2*logBatchSize+1; i++ {
+					repos["virtual-storage-1"][fmt.Sprintf("relative-path-%d", i)] = map[string]int{
+						"storage-1": 1,
+						"storage-2": 0,
+					}
+				}
+
+				return repos
+			}(),
+			reconciliationJobs: func() jobs {
+				var generated jobs
+				for i := 0; i < 2*logBatchSize+1; i++ {
+					generated = append(generated, datastore.ReplicationJob{
+						Change:            datastore.UpdateRepo,
+						VirtualStorage:    "virtual-storage-1",
+						RelativePath:      fmt.Sprintf("relative-path-%d", i),
+						SourceNodeStorage: "storage-1",
+						TargetNodeStorage: "storage-2",
+					})
+				}
+
+				return generated
+			}(),
 		},
 		{
 			desc:            "no healthy source to reconcile from",
@@ -397,7 +428,7 @@ func TestReconciler(t *testing.T) {
 				}
 			}
 
-			require.Equal(t, tc.reconciliationJobs, actualJobs)
+			require.ElementsMatch(t, tc.reconciliationJobs, actualJobs)
 		})
 	}
 }

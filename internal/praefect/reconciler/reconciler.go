@@ -12,6 +12,8 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore/glsql"
 )
 
+const logBatchSize = 25
+
 // Reconciler implements reconciliation logic for repairing outdated repository replicas.
 type Reconciler struct {
 	log                              logrus.FieldLogger
@@ -97,6 +99,15 @@ func (r *Reconciler) Run(ctx context.Context, ticker helper.Ticker) error {
 			}
 		}
 	}
+}
+
+// job is an internal type for formatting log messages
+type job struct {
+	CorrelationID  string `json:"correlation_id"`
+	VirtualStorage string `json:"virtual_storage"`
+	RelativePath   string `json:"relative_path"`
+	SourceStorage  string `json:"source_storage"`
+	TargetStorage  string `json:"target_storage"`
 }
 
 // reconcile schedules replication jobs to outdated repositories using random up to date
@@ -198,15 +209,8 @@ FROM reconciliation_jobs
 		}
 	}()
 
-	type job struct {
-		CorrelationID  string `json:"correlation_id"`
-		VirtualStorage string `json:"virtual_storage"`
-		RelativePath   string `json:"relative_path"`
-		SourceStorage  string `json:"source_storage"`
-		TargetStorage  string `json:"target_storage"`
-	}
+	jobs := make([]job, 0, logBatchSize)
 
-	var jobs []job
 	for rows.Next() {
 		var j job
 		if err := rows.Scan(
@@ -222,6 +226,10 @@ FROM reconciliation_jobs
 		r.reconciliationJobsTotal.WithLabelValues(j.VirtualStorage, j.SourceStorage, j.TargetStorage).Inc()
 
 		jobs = append(jobs, j)
+		if len(jobs) == logBatchSize {
+			r.logJobs(jobs)
+			jobs = jobs[:0]
+		}
 	}
 
 	if err = rows.Err(); err != nil {
@@ -229,10 +237,14 @@ FROM reconciliation_jobs
 	}
 
 	if len(jobs) > 0 {
-		r.log.WithField("scheduled_jobs", jobs).Info("reconciliation jobs scheduled")
+		r.logJobs(jobs)
 	} else {
 		r.log.Debug("reconciliation did not result in any scheduled jobs")
 	}
 
 	return nil
+}
+
+func (r *Reconciler) logJobs(jobs []job) {
+	r.log.WithField("scheduled_jobs", jobs).Info("reconciliation jobs scheduled")
 }
