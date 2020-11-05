@@ -475,8 +475,8 @@ func TestPostgresListener_Listen_storage_repositories_insert(t *testing.T) {
 				{
 					"old":null,
 					"new":[
-						{"virtual_storage":"praefect-1","relative_path":"/path/to/repo","storage":"gitaly-1","generation":0},
-						{"virtual_storage":"praefect-1","relative_path":"/path/to/repo","storage":"gitaly-2","generation":0}
+						{"virtual_storage":"praefect-1","relative_path":"/path/to/repo","storage":"gitaly-1","generation":0,"assigned":true},
+						{"virtual_storage":"praefect-1","relative_path":"/path/to/repo","storage":"gitaly-2","generation":0,"assigned":true}
 					]
 				}`,
 				payload,
@@ -502,8 +502,8 @@ func TestPostgresListener_Listen_storage_repositories_update(t *testing.T) {
 		func(t *testing.T, payload string) {
 			require.JSONEq(t, `
 				{
-					"old" : [{"virtual_storage":"praefect-1","relative_path":"/path/to/repo","storage":"gitaly-1","generation":0}],
-					"new" : [{"virtual_storage":"praefect-1","relative_path":"/path/to/repo","storage":"gitaly-1","generation":1}]
+					"old" : [{"virtual_storage":"praefect-1","relative_path":"/path/to/repo","storage":"gitaly-1","generation":0,"assigned":true}],
+					"new" : [{"virtual_storage":"praefect-1","relative_path":"/path/to/repo","storage":"gitaly-1","generation":1,"assigned":true}]
 				}`,
 				payload,
 			)
@@ -531,7 +531,7 @@ func TestPostgresListener_Listen_storage_repositories_delete(t *testing.T) {
 		func(t *testing.T, payload string) {
 			require.JSONEq(t, `
 				{
-					"old" : [{"virtual_storage":"praefect-1","relative_path":"/path/to/repo","storage":"gitaly-1","generation":0}],
+					"old" : [{"virtual_storage":"praefect-1","relative_path":"/path/to/repo","storage":"gitaly-1","generation":0,"assigned":true}],
 					"new" : null
 				}`,
 				payload,
