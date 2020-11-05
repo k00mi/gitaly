@@ -31,28 +31,18 @@ var (
 )
 
 func TestSuccessfulUserSquashRequest(t *testing.T) {
-	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoUserSquash})
-	require.NoError(t, err)
-	for _, featureSet := range featureSets {
-		t.Run("with sparse checkout: disabled "+featureSet.String(), func(t *testing.T) {
-			ctx, cancel := testhelper.Context()
-			defer cancel()
-
-			ctx = featureSet.Disable(ctx)
-
+	testhelper.NewFeatureSets(
+		[]featureflag.FeatureFlag{featureflag.GoUserSquash},
+	).Run(t, func(t *testing.T, ctx context.Context) {
+		t.Run("with sparse checkout", func(t *testing.T) {
 			testSuccessfulUserSquashRequest(t, ctx, startSha, endSha)
 		})
 
-		t.Run("without sparse checkout: disabled "+featureSet.String(), func(t *testing.T) {
-			ctx, cancel := testhelper.Context()
-			defer cancel()
-
-			ctx = featureSet.Disable(ctx)
-
+		t.Run("without sparse checkout", func(t *testing.T) {
 			// there are no files that could be used for sparse checkout for those two commits
 			testSuccessfulUserSquashRequest(t, ctx, "60ecb67744cb56576c30214ff52294f8ce2def98", "c84ff944ff4529a70788a5e9003c2b7feae29047")
 		})
-	}
+	})
 }
 
 func testSuccessfulUserSquashRequest(t *testing.T, ctx context.Context, start, end string) {

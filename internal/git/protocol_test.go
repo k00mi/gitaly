@@ -15,9 +15,7 @@ func (f fakeProtocolMessage) GetGitProtocol() string {
 	return f.protocol
 }
 
-func TestAddGitProtocolEnv(t *testing.T) {
-	env := []string{"fake=value"}
-
+func TestGitProtocolEnv(t *testing.T) {
 	for _, tt := range []struct {
 		desc string
 		msg  fakeProtocolMessage
@@ -25,19 +23,19 @@ func TestAddGitProtocolEnv(t *testing.T) {
 	}{
 		{
 			desc: "no V2 request",
-			env:  env,
+			env:  nil,
 		},
 		{
 			desc: "V2 request",
 			msg:  fakeProtocolMessage{protocol: "version=2"},
-			env:  append(env, "GIT_PROTOCOL=version=2"),
+			env:  []string{"GIT_PROTOCOL=version=2"},
 		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			actual := AddGitProtocolEnv(ctx, tt.msg, env)
+			actual := gitProtocolEnv(ctx, tt.msg)
 			require.Equal(t, tt.env, actual)
 		})
 	}

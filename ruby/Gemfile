@@ -1,8 +1,5 @@
 source 'https://rubygems.org'
 
-# Require bundler >= 1.16.5 to avoid this bug: https://github.com/bundler/bundler/issues/6537
-gem 'bundler', '>= 1.17.3'
-
 gem 'rugged', '~> 0.28'
 gem 'github-linguist', '~> 7.11', require: 'linguist'
 gem 'gitlab-markup', '~> 1.7.1'
@@ -16,7 +13,7 @@ gem 'faraday', '~> 1.0'
 gem 'rbtrace', require: false
 
 # Labkit provides observability functionality
-gem 'gitlab-labkit', '~> 0.13.0'
+gem 'gitlab-labkit', '~> 0.13.2'
 
 # Detects the open source license the repository includes
 # This version needs to be in sync with GitLab CE/EE

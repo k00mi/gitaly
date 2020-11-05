@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
+	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/git/objectpool"
 	gitaly_config "gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
@@ -67,8 +68,8 @@ func TestReplMgr_ProcessBacklog(t *testing.T) {
 		},
 	)
 
-	srv, srvSocketPath := runFullGitalyServer(t)
-	defer srv.Stop()
+	srvSocketPath, clean := runFullGitalyServer(t)
+	defer clean()
 
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
@@ -177,6 +178,7 @@ func TestReplMgr_ProcessBacklog(t *testing.T) {
 		queue,
 		store,
 		nodeMgr,
+		NodeSetFromNodeManager(nodeMgr),
 		WithLatencyMetric(&mockReplicationLatencyHistogramVec),
 		WithDelayMetric(&mockReplicationDelayHistogramVec),
 	)
@@ -330,7 +332,7 @@ func TestPropagateReplicationJob(t *testing.T) {
 		protoregistry.GitalyProtoPreregistered,
 	)
 
-	replmgr := NewReplMgr(logEntry, conf.VirtualStorageNames(), queue, rs, nodeMgr)
+	replmgr := NewReplMgr(logEntry, conf.VirtualStorageNames(), queue, rs, nodeMgr, NodeSetFromNodeManager(nodeMgr))
 
 	prf := NewGRPCServer(conf, logEntry, protoregistry.GitalyProtoPreregistered, coordinator.StreamDirector, nodeMgr, txMgr, queue, rs)
 
@@ -470,8 +472,8 @@ func TestConfirmReplication(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	srv, srvSocketPath := runFullGitalyServer(t)
-	defer srv.Stop()
+	srvSocketPath, clean := runFullGitalyServer(t)
+	defer clean()
 
 	testRepoA, testRepoAPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
@@ -615,6 +617,7 @@ func TestProcessBacklog_FailedJobs(t *testing.T) {
 		queueInterceptor,
 		datastore.NewMemoryRepositoryStore(conf.StorageNames()),
 		nodeMgr,
+		NodeSetFromNodeManager(nodeMgr),
 	)
 	replMgr.ProcessBacklog(ctx, noopBackoffFunc)
 
@@ -761,6 +764,7 @@ func TestProcessBacklog_Success(t *testing.T) {
 		queueInterceptor,
 		datastore.NewMemoryRepositoryStore(conf.StorageNames()),
 		nodeMgr,
+		NodeSetFromNodeManager(nodeMgr),
 	)
 	replMgr.ProcessBacklog(ctx, noopBackoffFunc)
 
@@ -793,12 +797,20 @@ func TestReplMgrProcessBacklog_OnlyHealthyNodes(t *testing.T) {
 
 	ctx, cancel := testhelper.Context()
 
+	first := true
 	queueInterceptor := datastore.NewReplicationEventQueueInterceptor(datastore.NewMemoryReplicationEventQueue(conf))
 	queueInterceptor.OnDequeue(func(_ context.Context, virtualStorageName string, storageName string, _ int, _ datastore.ReplicationEventQueue) ([]datastore.ReplicationEvent, error) {
 		select {
 		case <-ctx.Done():
 			return nil, nil
 		default:
+			if first {
+				first = false
+				require.Equal(t, conf.VirtualStorages[0].Name, virtualStorageName)
+				require.Equal(t, conf.VirtualStorages[0].Nodes[0].Storage, storageName)
+				return nil, nil
+			}
+
 			assert.Equal(t, conf.VirtualStorages[0].Name, virtualStorageName)
 			assert.Equal(t, conf.VirtualStorages[0].Nodes[2].Storage, storageName)
 			cancel()
@@ -806,31 +818,25 @@ func TestReplMgrProcessBacklog_OnlyHealthyNodes(t *testing.T) {
 		}
 	})
 
-	nodeMgr := &nodes.MockManager{
-		GetShardFunc: func(string) (shard nodes.Shard, err error) {
-			return nodes.Shard{
-				Primary: &nodes.MockNode{
-					Healthy:          true,
-					GetStorageMethod: func() string { return conf.VirtualStorages[0].Nodes[0].Storage },
-				},
-				Secondaries: []nodes.Node{
-					&nodes.MockNode{
-						GetStorageMethod: func() string {
-							assert.FailNow(t, "as this node is not healthy this method should not be called")
-							return conf.VirtualStorages[0].Nodes[1].Storage
-						},
-						Healthy: false,
-					},
-					&nodes.MockNode{
-						Healthy:          true,
-						GetStorageMethod: func() string { return conf.VirtualStorages[0].Nodes[2].Storage },
-					},
-				},
-			}, nil
-		},
-	}
+	virtualStorage := conf.VirtualStorages[0].Name
+	node1 := Node{Storage: conf.VirtualStorages[0].Nodes[0].Storage}
+	node2 := Node{Storage: conf.VirtualStorages[0].Nodes[1].Storage}
+	node3 := Node{Storage: conf.VirtualStorages[0].Nodes[2].Storage}
 
-	replMgr := NewReplMgr(testhelper.DiscardTestEntry(t), conf.VirtualStorageNames(), queueInterceptor, nil, nodeMgr)
+	replMgr := NewReplMgr(
+		testhelper.DiscardTestEntry(t),
+		conf.VirtualStorageNames(),
+		queueInterceptor,
+		nil,
+		StaticHealthChecker{virtualStorage: {node1.Storage, node3.Storage}},
+		NodeSet{
+			virtualStorage: {
+				node1.Storage: node1,
+				node2.Storage: node2,
+				node3.Storage: node3,
+			},
+		},
+	)
 	replMgr.ProcessBacklog(ctx, noopBackoffFunc)
 
 	select {
@@ -891,23 +897,11 @@ func TestProcessBacklog_ReplicatesToReadOnlyPrimary(t *testing.T) {
 		conf.VirtualStorageNames(),
 		queue,
 		datastore.NewMemoryRepositoryStore(conf.StorageNames()),
-		&nodes.MockManager{
-			GetShardFunc: func(vs string) (nodes.Shard, error) {
-				require.Equal(t, virtualStorage, vs)
-				return nodes.Shard{
-					Primary: &nodes.MockNode{
-						Healthy:          true,
-						GetStorageMethod: func() string { return primaryStorage },
-						Conn:             primaryConn,
-					},
-					Secondaries: []nodes.Node{&nodes.MockNode{
-						Healthy:          true,
-						GetStorageMethod: func() string { return secondaryStorage },
-						Conn:             secondaryConn,
-					}},
-				}, nil
-			},
-		},
+		StaticHealthChecker{virtualStorage: {primaryStorage, secondaryStorage}},
+		NodeSet{virtualStorage: {
+			primaryStorage:   {Storage: primaryStorage, Connection: primaryConn},
+			secondaryStorage: {Storage: secondaryStorage, Connection: secondaryConn},
+		}},
 	)
 
 	processed := make(chan struct{})
@@ -947,8 +941,9 @@ func TestBackoff(t *testing.T) {
 	require.Equal(t, start, b())
 }
 
-func runFullGitalyServer(t *testing.T) (*grpc.Server, string) {
-	server := serverPkg.NewInsecure(RubyServer, hook.NewManager(hook.GitlabAPIStub, gitaly_config.Config), gitaly_config.Config)
+func runFullGitalyServer(t *testing.T) (string, func()) {
+	conns := client.NewPool()
+	server := serverPkg.NewInsecure(RubyServer, hook.NewManager(hook.GitlabAPIStub, gitaly_config.Config), gitaly_config.Config, conns)
 
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 
@@ -963,7 +958,10 @@ func runFullGitalyServer(t *testing.T) (*grpc.Server, string) {
 	go server.Serve(listener)
 	go server.Serve(internalListener)
 
-	return server, "unix://" + serverSocketPath
+	return "unix://" + serverSocketPath, func() {
+		conns.Close()
+		server.Stop()
+	}
 }
 
 // newReplicationService is a grpc service that has the SSH, Repository, Remote and ObjectPool services, which
@@ -1063,7 +1061,7 @@ func TestReplMgr_ProcessStale(t *testing.T) {
 	hook := test.NewLocal(logger)
 
 	queue := datastore.NewReplicationEventQueueInterceptor(nil)
-	mgr := NewReplMgr(logger.WithField("test", t.Name()), nil, queue, datastore.NewMemoryRepositoryStore(nil), nil)
+	mgr := NewReplMgr(logger.WithField("test", t.Name()), nil, queue, datastore.NewMemoryRepositoryStore(nil), nil, nil)
 
 	var counter int32
 	queue.OnAcknowledgeStale(func(ctx context.Context, duration time.Duration) error {

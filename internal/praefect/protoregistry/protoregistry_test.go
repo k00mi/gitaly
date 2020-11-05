@@ -124,7 +124,7 @@ func TestNewProtoRegistry(t *testing.T) {
 			"ApplyGitattributes":           protoregistry.OpMutator,
 			"FetchRemote":                  protoregistry.OpMutator,
 			"CreateRepository":             protoregistry.OpMutator,
-			"GetArchive":                   protoregistry.OpMutator,
+			"GetArchive":                   protoregistry.OpAccessor,
 			"HasLocalBranches":             protoregistry.OpAccessor,
 			"FetchSourceBranch":            protoregistry.OpMutator,
 			"Fsck":                         protoregistry.OpMutator,
@@ -149,7 +149,6 @@ func TestNewProtoRegistry(t *testing.T) {
 			"SearchFilesByName":            protoregistry.OpAccessor,
 			"RestoreCustomHooks":           protoregistry.OpMutator,
 			"BackupCustomHooks":            protoregistry.OpAccessor,
-			"FetchHTTPRemote":              protoregistry.OpMutator,
 		},
 		"SmartHTTPService": map[string]protoregistry.OpType{
 			"InfoRefsUploadPack":  protoregistry.OpAccessor,

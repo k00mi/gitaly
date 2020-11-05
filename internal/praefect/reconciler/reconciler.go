@@ -8,15 +8,15 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore/glsql"
-	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
 )
 
 // Reconciler implements reconciliation logic for repairing outdated repository replicas.
 type Reconciler struct {
 	log                              logrus.FieldLogger
 	db                               glsql.Querier
-	nm                               nodes.Manager
+	hc                               praefect.HealthChecker
 	storages                         map[string][]string
 	reconciliationSchedulingDuration prometheus.Histogram
 	reconciliationJobsTotal          *prometheus.CounterVec
@@ -26,13 +26,13 @@ type Reconciler struct {
 }
 
 // NewReconciler returns a new Reconciler for repairing outdated repositories.
-func NewReconciler(log logrus.FieldLogger, db glsql.Querier, nm nodes.Manager, storages map[string][]string, buckets []float64) *Reconciler {
+func NewReconciler(log logrus.FieldLogger, db glsql.Querier, hc praefect.HealthChecker, storages map[string][]string, buckets []float64) *Reconciler {
 	log = log.WithField("component", "reconciler")
 
 	r := &Reconciler{
 		log:      log,
 		db:       db,
-		nm:       nm,
+		hc:       hc,
 		storages: storages,
 		reconciliationSchedulingDuration: prometheus.NewHistogram(prometheus.HistogramOpts{
 			Name:    "gitaly_praefect_reconciliation_scheduling_seconds",
@@ -110,35 +110,18 @@ func (r *Reconciler) reconcile(ctx context.Context) error {
 
 	var virtualStorages []string
 	var storages []string
-	for virtualStorage := range r.storages {
-		if len(r.storages[virtualStorage]) < 2 {
-			continue
-		}
 
-		shard, err := r.nm.GetShard(virtualStorage)
-		if err != nil {
-			r.log.WithFields(logrus.Fields{
-				"virtual_storage": virtualStorage,
-				"error":           err,
-			}).Error("unable to include virtual storage for reconciliation")
-			continue
-		}
-
-		healthyNodes := shard.GetHealthySecondaries()
-		if shard.Primary.IsHealthy() {
-			healthyNodes = append(healthyNodes, shard.Primary)
-		}
-
-		if len(healthyNodes) < 2 {
+	for virtualStorage, healthyStorages := range r.hc.HealthyNodes() {
+		if len(healthyStorages) < 2 {
 			// minimum two healthy storages within a virtual stoage needed for valid
 			// replication source and target
 			r.log.WithField("virtual_storage", virtualStorage).Info("reconciliation skipped for virtual storage due to not having enough healthy storages")
 			continue
 		}
 
-		for _, node := range healthyNodes {
+		for _, storage := range healthyStorages {
 			virtualStorages = append(virtualStorages, virtualStorage)
-			storages = append(storages, node.GetStorage())
+			storages = append(storages, storage)
 		}
 	}
 

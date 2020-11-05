@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"gitlab.com/gitlab-org/gitaly/cmd/gitaly-git2go/conflicts"
 )
 
 type subcmd interface {
@@ -16,10 +18,11 @@ type subcmd interface {
 }
 
 var subcommands = map[string]subcmd{
-	"conflicts": &conflictsSubcommand{},
 	"commit":    commitSubcommand{},
+	"conflicts": &conflicts.Subcommand{},
 	"merge":     &mergeSubcommand{},
 	"revert":    &revertSubcommand{},
+	"resolve":   &resolveSubcommand{},
 }
 
 const programName = "gitaly-git2go"

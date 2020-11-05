@@ -10,7 +10,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
-	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/metadatahandler"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
@@ -203,14 +202,11 @@ var transactionRPCs = map[string]interface{}{
 }
 
 func shouldUseTransaction(ctx context.Context, method string) bool {
-	if !featureflag.IsEnabled(ctx, featureflag.ReferenceTransactions) {
-		return false
-	}
 	_, ok := transactionRPCs[method]
 	return ok
 }
 
-func (c *Coordinator) registerTransaction(ctx context.Context, primary Node, secondaries []Node) (*transactions.Transaction, transactions.CancelFunc, error) {
+func (c *Coordinator) registerTransaction(ctx context.Context, primary RouterNode, secondaries []RouterNode) (*transactions.Transaction, transactions.CancelFunc, error) {
 	var voters []transactions.Voter
 	var threshold uint
 
@@ -320,7 +316,7 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 				call.targetRepo,
 				route.Primary.Storage,
 				nil,
-				append(nodesToStorages(route.Secondaries), route.ReplicationTargets...),
+				append(routerNodesToStorages(route.Secondaries), route.ReplicationTargets...),
 				change,
 				params,
 			))
@@ -590,7 +586,7 @@ func (c *Coordinator) createTransactionFinalizer(
 	}
 }
 
-func nodesToStorages(nodes []Node) []string {
+func routerNodesToStorages(nodes []RouterNode) []string {
 	storages := make([]string, len(nodes))
 	for i, n := range nodes {
 		storages[i] = n.Storage

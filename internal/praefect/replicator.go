@@ -13,7 +13,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metrics"
-	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
 	prommetrics "gitlab.com/gitlab-org/gitaly/internal/prometheus/metrics"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/labkit/correlation"
@@ -310,7 +309,8 @@ func (dr defaultReplicator) confirmChecksums(ctx context.Context, logger logrus.
 type ReplMgr struct {
 	log                *logrus.Entry
 	queue              datastore.ReplicationEventQueue
-	nodeManager        nodes.Manager
+	hc                 HealthChecker
+	nodes              NodeSet
 	virtualStorages    []string   // replicas this replicator is responsible for
 	replicator         Replicator // does the actual replication logic
 	replInFlightMetric *prometheus.GaugeVec
@@ -348,14 +348,15 @@ func WithDequeueBatchSize(size uint) func(*ReplMgr) {
 
 // NewReplMgr initializes a replication manager with the provided dependencies
 // and options
-func NewReplMgr(log *logrus.Entry, virtualStorages []string, queue datastore.ReplicationEventQueue, rs datastore.RepositoryStore, nodeMgr nodes.Manager, opts ...ReplMgrOpt) ReplMgr {
+func NewReplMgr(log *logrus.Entry, virtualStorages []string, queue datastore.ReplicationEventQueue, rs datastore.RepositoryStore, hc HealthChecker, nodes NodeSet, opts ...ReplMgrOpt) ReplMgr {
 	r := ReplMgr{
 		log:             log.WithField("component", "replication_manager"),
 		queue:           queue,
 		allowlist:       map[string]struct{}{},
 		replicator:      defaultReplicator{rs: rs, log: log.WithField("component", "replicator")},
 		virtualStorages: virtualStorages,
-		nodeManager:     nodeMgr,
+		hc:              hc,
+		nodes:           nodes,
 		replInFlightMetric: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Name: "gitaly_praefect_replication_jobs",
@@ -487,16 +488,14 @@ func (r ReplMgr) processBacklog(ctx context.Context, b BackoffFunc, virtualStora
 		}
 
 		var totalEvents int
-		shard, err := r.nodeManager.GetShard(virtualStorage)
-		if err != nil {
-			logger.WithError(err).Error("error when getting primary and secondaries")
-		} else {
-			for _, target := range append(shard.Secondaries, shard.Primary) {
-				if !target.IsHealthy() {
-					continue
-				}
-				totalEvents += r.handleNode(ctx, shard, virtualStorage, target)
+		for _, storage := range r.hc.HealthyNodes()[virtualStorage] {
+			target, ok := r.nodes[virtualStorage][storage]
+			if !ok {
+				logger.WithField("storage", storage).Error("no connection to target storage")
+				continue
 			}
+
+			totalEvents += r.handleNode(ctx, virtualStorage, target)
 		}
 
 		if totalEvents == 0 {
@@ -513,10 +512,10 @@ func (r ReplMgr) processBacklog(ctx context.Context, b BackoffFunc, virtualStora
 	}
 }
 
-func (r ReplMgr) handleNode(ctx context.Context, shard nodes.Shard, virtualStorage string, target nodes.Node) int {
-	logger := r.log.WithFields(logrus.Fields{logWithVirtualStorage: virtualStorage, logWithReplTarget: target.GetStorage()})
+func (r ReplMgr) handleNode(ctx context.Context, virtualStorage string, target Node) int {
+	logger := r.log.WithFields(logrus.Fields{logWithVirtualStorage: virtualStorage, logWithReplTarget: target.Storage})
 
-	events, err := r.queue.Dequeue(ctx, virtualStorage, target.GetStorage(), int(r.dequeueBatchSize))
+	events, err := r.queue.Dequeue(ctx, virtualStorage, target.Storage, int(r.dequeueBatchSize))
 	if err != nil {
 		logger.WithError(err).Error("failed to dequeue replication events")
 		return 0
@@ -531,7 +530,7 @@ func (r ReplMgr) handleNode(ctx context.Context, shard nodes.Shard, virtualStora
 
 	eventIDsByState := map[datastore.JobState][]uint64{}
 	for _, event := range events {
-		state := r.handleNodeEvent(ctx, logger, shard, target, event)
+		state := r.handleNodeEvent(ctx, logger, target.Connection, event)
 		eventIDsByState[state] = append(eventIDsByState[state], event.ID)
 	}
 
@@ -574,7 +573,7 @@ func (r ReplMgr) startHealthUpdate(ctx context.Context, logger logrus.FieldLogge
 	return healthUpdateCancel
 }
 
-func (r ReplMgr) handleNodeEvent(ctx context.Context, logger logrus.FieldLogger, shard nodes.Shard, target nodes.Node, event datastore.ReplicationEvent) datastore.JobState {
+func (r ReplMgr) handleNodeEvent(ctx context.Context, logger logrus.FieldLogger, targetConnection *grpc.ClientConn, event datastore.ReplicationEvent) datastore.JobState {
 	cid := getCorrelationID(event.Meta)
 	ctx = correlation.ContextWithCorrelation(ctx, cid)
 
@@ -583,7 +582,7 @@ func (r ReplMgr) handleNodeEvent(ctx context.Context, logger logrus.FieldLogger,
 	// we log all details about the event only once before start of the processing
 	logger.WithField("event", event).Info("replication job processing started")
 
-	if err := r.processReplicationEvent(ctx, event, shard, target.GetConnection()); err != nil {
+	if err := r.processReplicationEvent(ctx, event, targetConnection); err != nil {
 		newState := datastore.JobStateFailed
 		if event.Attempt <= 0 {
 			newState = datastore.JobStateDead
@@ -598,10 +597,10 @@ func (r ReplMgr) handleNodeEvent(ctx context.Context, logger logrus.FieldLogger,
 	return newState
 }
 
-func (r ReplMgr) processReplicationEvent(ctx context.Context, event datastore.ReplicationEvent, shard nodes.Shard, targetCC *grpc.ClientConn) error {
-	source, err := shard.GetNode(event.Job.SourceNodeStorage)
-	if err != nil {
-		return fmt.Errorf("get source node: %w", err)
+func (r ReplMgr) processReplicationEvent(ctx context.Context, event datastore.ReplicationEvent, targetCC *grpc.ClientConn) error {
+	source, ok := r.nodes[event.Job.VirtualStorage][event.Job.SourceNodeStorage]
+	if !ok {
+		return fmt.Errorf("no connection to source node %q/%q", event.Job.VirtualStorage, event.Job.SourceNodeStorage)
 	}
 
 	var cancel func()
@@ -613,7 +612,7 @@ func (r ReplMgr) processReplicationEvent(ctx context.Context, event datastore.Re
 	}
 	defer cancel()
 
-	ctx, err = helper.InjectGitalyServers(ctx, event.Job.SourceNodeStorage, source.GetAddress(), source.GetToken())
+	ctx, err := helper.InjectGitalyServers(ctx, event.Job.SourceNodeStorage, source.Address, source.Token)
 	if err != nil {
 		return fmt.Errorf("inject Gitaly servers into context: %w", err)
 	}
@@ -628,7 +627,7 @@ func (r ReplMgr) processReplicationEvent(ctx context.Context, event datastore.Re
 
 	switch event.Job.Change {
 	case datastore.UpdateRepo:
-		err = r.replicator.Replicate(ctx, event, source.GetConnection(), targetCC)
+		err = r.replicator.Replicate(ctx, event, source.Connection, targetCC)
 	case datastore.DeleteRepo:
 		err = r.replicator.Destroy(ctx, event, targetCC)
 	case datastore.RenameRepo:

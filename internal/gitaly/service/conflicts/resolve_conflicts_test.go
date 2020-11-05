@@ -1,18 +1,20 @@
 package conflicts_test
 
 import (
+	"context"
 	"encoding/json"
 	"net"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	serverPkg "gitlab.com/gitlab-org/gitaly/internal/gitaly/server"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/conflicts"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 )
@@ -27,8 +29,16 @@ var (
 )
 
 func TestSuccessfulResolveConflictsRequest(t *testing.T) {
-	server, serverSocketPath := runFullServer(t)
-	defer server.Stop()
+	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.GoResolveConflicts,
+	}).Run(t, func(t *testing.T, ctx context.Context) {
+		testSuccessfulResolveConflictsRequest(t, ctx)
+	})
+}
+
+func testSuccessfulResolveConflictsRequest(t *testing.T, ctx context.Context) {
+	serverSocketPath, clean := runFullServer(t)
+	defer clean()
 
 	client, conn := conflicts.NewConflictsClient(t, serverSocketPath)
 	defer conn.Close()
@@ -39,8 +49,9 @@ func TestSuccessfulResolveConflictsRequest(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
-	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
-	ctx := metadata.NewOutgoingContext(ctxOuter, md)
+	mdGS := testhelper.GitalyServersMetadata(t, serverSocketPath)
+	mdFF, _ := metadata.FromOutgoingContext(ctx)
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Join(mdGS, mdFF))
 
 	files := []map[string]interface{}{
 		{
@@ -109,8 +120,16 @@ func TestSuccessfulResolveConflictsRequest(t *testing.T) {
 }
 
 func TestFailedResolveConflictsRequestDueToResolutionError(t *testing.T) {
-	server, serverSocketPath := runFullServer(t)
-	defer server.Stop()
+	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.GoResolveConflicts,
+	}).Run(t, func(t *testing.T, ctx context.Context) {
+		testFailedResolveConflictsRequestDueToResolutionError(t, ctx)
+	})
+}
+
+func testFailedResolveConflictsRequestDueToResolutionError(t *testing.T, ctx context.Context) {
+	serverSocketPath, clean := runFullServer(t)
+	defer clean()
 
 	client, conn := conflicts.NewConflictsClient(t, serverSocketPath)
 	defer conn.Close()
@@ -118,11 +137,9 @@ func TestFailedResolveConflictsRequestDueToResolutionError(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	ctxOuter, cancel := testhelper.Context()
-	defer cancel()
-
-	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
-	ctx := metadata.NewOutgoingContext(ctxOuter, md)
+	mdGS := testhelper.GitalyServersMetadata(t, serverSocketPath)
+	mdFF, _ := metadata.FromOutgoingContext(ctx)
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Join(mdGS, mdFF))
 
 	files := []map[string]interface{}{
 		{
@@ -172,8 +189,16 @@ func TestFailedResolveConflictsRequestDueToResolutionError(t *testing.T) {
 }
 
 func TestFailedResolveConflictsRequestDueToValidation(t *testing.T) {
-	server, serverSocketPath := runFullServer(t)
-	defer server.Stop()
+	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.GoResolveConflicts,
+	}).Run(t, func(t *testing.T, ctx context.Context) {
+		testFailedResolveConflictsRequestDueToValidation(t, ctx)
+	})
+}
+
+func testFailedResolveConflictsRequestDueToValidation(t *testing.T, ctx context.Context) {
+	serverSocketPath, clean := runFullServer(t)
+	defer clean()
 
 	client, conn := conflicts.NewConflictsClient(t, serverSocketPath)
 	defer conn.Close()
@@ -181,7 +206,7 @@ func TestFailedResolveConflictsRequestDueToValidation(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
+	mdGS := testhelper.GitalyServersMetadata(t, serverSocketPath)
 	ourCommitOid := "1450cd639e0bc6721eb02800169e464f212cde06"
 	theirCommitOid := "824be604a34828eb682305f0d963056cfac87b2d"
 	commitMsg := []byte(conflictResolutionCommitMessage)
@@ -288,10 +313,9 @@ func TestFailedResolveConflictsRequestDueToValidation(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			ctxOuter, cancel := testhelper.Context()
-			defer cancel()
+			mdFF, _ := metadata.FromOutgoingContext(ctx)
+			ctx = metadata.NewOutgoingContext(ctx, metadata.Join(mdGS, mdFF))
 
-			ctx := metadata.NewOutgoingContext(ctxOuter, md)
 			stream, err := client.ResolveConflicts(ctx)
 			require.NoError(t, err)
 
@@ -308,8 +332,10 @@ func TestFailedResolveConflictsRequestDueToValidation(t *testing.T) {
 	}
 }
 
-func runFullServer(t *testing.T) (*grpc.Server, string) {
-	server := serverPkg.NewInsecure(conflicts.RubyServer, nil, config.Config)
+func runFullServer(t *testing.T) (string, func()) {
+	conns := client.NewPool()
+
+	server := serverPkg.NewInsecure(conflicts.RubyServer, nil, config.Config, conns)
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 
 	listener, err := net.Listen("unix", serverSocketPath)
@@ -319,5 +345,8 @@ func runFullServer(t *testing.T) (*grpc.Server, string) {
 
 	go server.Serve(listener)
 
-	return server, "unix://" + serverSocketPath
+	return "unix://" + serverSocketPath, func() {
+		conns.Close()
+		server.Stop()
+	}
 }

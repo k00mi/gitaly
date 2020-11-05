@@ -24,20 +24,20 @@ outage, because causing an outage is not the right thing to do.
 
 ### Tips for the Contributor
 
-As the contributor you have a dual role. You are driving the change in the MR, but you 
+As the contributor you have a dual role. You are driving the change in the MR, but you
 are also the **first reviewer** of the MR. Below you will find some tips for reviewing
 your own MR. Doing this costs time, but it should also save time for the other
 reviewers and thereby speed up the acceptance of your MR.
 
 #### Use the GitLab MR page to put on your "reviewer hat"
 
-It is sometimes hard to switch from being the contributor, to being a reviewer 
+It is sometimes hard to switch from being the contributor, to being a reviewer
 of your own work. Looking at your work in the GitLab UI (the merge request page)
 helps to get in the reviewer mindset.
 
 #### Reconsider the title of your MR after you reviewed it
 
-When you are in the contributor mindset, you don't always know 
+When you are in the contributor mindset, you don't always know
 what you are doing, or why. You discover this as you go along. The title you wrote for
 your MR when you first pushed it is often not the best title for what is really
 going on.
@@ -64,7 +64,7 @@ It may feel funny to literally talk to yourself but it works. If
 thoughts occur to you as you read your MR, use the comment function
 and just write them down.
 
-You probably want to address some or most of your comments before you send your 
+You probably want to address some or most of your comments before you send your
 MR to another reviewer.
 
 #### Your MR should pass your own review before it goes to a "real" reviewer
@@ -83,7 +83,7 @@ MR to another reviewer.
 
 #### Use the "Start/Submit Review" feature of GitLab
 
-The "Start/Submit Review" lets you write comments on a MR that are initially 
+The "Start/Submit Review" lets you write comments on a MR that are initially
 only visible to you. Until you submit the review as a whole, you can still add,
 change and remove comments.
 
@@ -105,7 +105,7 @@ You finished a review round and you are about to submit your review with the
 "Submit Review" feature. Look at your comments. Do some of them point at a major
 problem in the MR?
 
-For example: 
+For example:
 - the MR is solving the wrong problem
 - the MR is making a backwards incompatible change
 - the MR has a test that does not test the right thing
@@ -153,6 +153,10 @@ In the context of a review, that feeling that says "I don't understand
 this" is a very important signal. Put it into words, write a comment.
 Think out loud about why you don't understand the thing that gives you
 this feeling.
+
+For example, if you do not understand what an RPC is supposed to do or
+why it exists, ask the reviewer to
+[add comments to the interface](proto/README.md#documentation).
 
 Maybe now is the time to spend 15-30 minutes brushing up your
 knowledge on this subject. Or to ask a colleague if they know more

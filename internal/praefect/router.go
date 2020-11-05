@@ -9,28 +9,28 @@ import (
 	"google.golang.org/grpc"
 )
 
-// Node is a storage node in a virtual storage.
-type Node struct {
-	// Storage is the name of the storage node.
+// RouterNode represents a Node the router in a routing decision.
+type RouterNode struct {
+	// Storage is storage of the node.
 	Storage string
-	// Connection is a gRPC connection to the storage node.
+	// Connection is the connection to the node.
 	Connection *grpc.ClientConn
 }
 
 // StorageMutatorRoute describes how to route a storage scoped mutator call.
 type StorageMutatorRoute struct {
 	// Primary is the primary node of the routing decision.
-	Primary Node
+	Primary RouterNode
 	// Secondaries are the secondary nodes of the routing decision.
-	Secondaries []Node
+	Secondaries []RouterNode
 }
 
 // StorageMutatorRoute describes how to route a repository scoped mutator call.
 type RepositoryMutatorRoute struct {
 	// Primary is the primary node of the transaction.
-	Primary Node
+	Primary RouterNode
 	// Secondaries are the secondary participating in a transaction.
-	Secondaries []Node
+	Secondaries []RouterNode
 	// ReplicationTargets are additional nodes that do not participate in a transaction
 	// but need the changes replicated.
 	ReplicationTargets []string
@@ -39,12 +39,12 @@ type RepositoryMutatorRoute struct {
 // Router decides which nodes to direct accessor and mutator RPCs to.
 type Router interface {
 	// RouteStorageAccessor returns the node which should serve the storage accessor request.
-	RouteStorageAccessor(ctx context.Context, virtualStorage string) (Node, error)
+	RouteStorageAccessor(ctx context.Context, virtualStorage string) (RouterNode, error)
 	// RouteStorageAccessor returns the primary and secondaries that should handle the storage
 	// mutator request.
 	RouteStorageMutator(ctx context.Context, virtualStorage string) (StorageMutatorRoute, error)
 	// RouteRepositoryAccessor returns the node that should serve the repository accessor request.
-	RouteRepositoryAccessor(ctx context.Context, virtualStorage, relativePath string) (Node, error)
+	RouteRepositoryAccessor(ctx context.Context, virtualStorage, relativePath string) (RouterNode, error)
 	// RouteRepositoryMutatorTransaction returns the primary and secondaries that should handle the repository mutator request.
 	// Additionally, it returns nodes which should have the change replicated to.
 	RouteRepositoryMutator(ctx context.Context, virtualStorage, relativePath string) (RepositoryMutatorRoute, error)
@@ -55,17 +55,17 @@ type nodeManagerRouter struct {
 	rs  datastore.RepositoryStore
 }
 
-func toNode(node nodes.Node) Node {
-	return Node{
+func toRouterNode(node nodes.Node) RouterNode {
+	return RouterNode{
 		Storage:    node.GetStorage(),
 		Connection: node.GetConnection(),
 	}
 }
 
-func toNodes(nodes []nodes.Node) []Node {
-	out := make([]Node, len(nodes))
+func toRouterNodes(nodes []nodes.Node) []RouterNode {
+	out := make([]RouterNode, len(nodes))
 	for i := range nodes {
-		out[i] = toNode(nodes[i])
+		out[i] = toRouterNode(nodes[i])
 	}
 	return out
 }
@@ -75,22 +75,22 @@ func NewNodeManagerRouter(mgr nodes.Manager, rs datastore.RepositoryStore) Route
 	return &nodeManagerRouter{mgr: mgr, rs: rs}
 }
 
-func (r *nodeManagerRouter) RouteRepositoryAccessor(ctx context.Context, virtualStorage, relativePath string) (Node, error) {
+func (r *nodeManagerRouter) RouteRepositoryAccessor(ctx context.Context, virtualStorage, relativePath string) (RouterNode, error) {
 	node, err := r.mgr.GetSyncedNode(ctx, virtualStorage, relativePath)
 	if err != nil {
-		return Node{}, fmt.Errorf("get synced node: %w", err)
+		return RouterNode{}, fmt.Errorf("get synced node: %w", err)
 	}
 
-	return toNode(node), nil
+	return toRouterNode(node), nil
 }
 
-func (r *nodeManagerRouter) RouteStorageAccessor(ctx context.Context, virtualStorage string) (Node, error) {
+func (r *nodeManagerRouter) RouteStorageAccessor(ctx context.Context, virtualStorage string) (RouterNode, error) {
 	shard, err := r.mgr.GetShard(virtualStorage)
 	if err != nil {
-		return Node{}, err
+		return RouterNode{}, err
 	}
 
-	return toNode(shard.Primary), nil
+	return toRouterNode(shard.Primary), nil
 }
 
 func (r *nodeManagerRouter) RouteStorageMutator(ctx context.Context, virtualStorage string) (StorageMutatorRoute, error) {
@@ -100,8 +100,8 @@ func (r *nodeManagerRouter) RouteStorageMutator(ctx context.Context, virtualStor
 	}
 
 	return StorageMutatorRoute{
-		Primary:     toNode(shard.Primary),
-		Secondaries: toNodes(shard.GetHealthySecondaries()),
+		Primary:     toRouterNode(shard.Primary),
+		Secondaries: toRouterNodes(shard.GetHealthySecondaries()),
 	}, nil
 }
 
@@ -138,8 +138,8 @@ func (r *nodeManagerRouter) RouteRepositoryMutator(ctx context.Context, virtualS
 	}
 
 	return RepositoryMutatorRoute{
-		Primary:            toNode(shard.Primary),
-		Secondaries:        toNodes(participatingSecondaries),
+		Primary:            toRouterNode(shard.Primary),
+		Secondaries:        toRouterNodes(participatingSecondaries),
 		ReplicationTargets: replicationTargets,
 	}, nil
 }

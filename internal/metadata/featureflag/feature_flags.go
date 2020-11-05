@@ -13,8 +13,6 @@ var (
 	GoFetchSourceBranch = FeatureFlag{Name: "go_fetch_source_branch", OnByDefault: false}
 	// DistributedReads allows praefect to redirect accessor operations to up-to-date secondaries
 	DistributedReads = FeatureFlag{Name: "distributed_reads", OnByDefault: false}
-	// ReferenceTransactions will handle Git reference updates via the transaction service for strong consistency
-	ReferenceTransactions = FeatureFlag{Name: "reference_transactions", OnByDefault: true}
 	// RubyReferenceTransactionHook will enable the reference-transaction hook
 	// introduced with Git v2.28.0 for voting on transactions in the Ruby sidecar.
 	RubyReferenceTransactionHook = FeatureFlag{Name: "ruby_reference_transaction_hook", OnByDefault: true}
@@ -36,13 +34,14 @@ var (
 	GoListConflictFiles = FeatureFlag{Name: "go_list_conflict_files", OnByDefault: false}
 	// GoUserCommitFiles enables the Go implementation of UserCommitFiles
 	GoUserCommitFiles = FeatureFlag{Name: "go_user_commit_files", OnByDefault: false}
+	// GoResolveConflicts enables the Go implementation of ResolveConflicts
+	GoResolveConflicts = FeatureFlag{Name: "go_resolve_conflicts", OnByDefault: false}
 )
 
 // All includes all feature flags.
 var All = []FeatureFlag{
 	GoFetchSourceBranch,
 	DistributedReads,
-	ReferenceTransactions,
 	RubyReferenceTransactionHook,
 	GoUserMergeBranch,
 	GoUserMergeToRef,
@@ -52,6 +51,7 @@ var All = []FeatureFlag{
 	GoUserSquash,
 	GoListConflictFiles,
 	GoUserCommitFiles,
+	GoResolveConflicts,
 }
 
 const (

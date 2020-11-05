@@ -10,6 +10,11 @@ import (
 )
 
 func (m *GitLabHookManager) ReferenceTransactionHook(ctx context.Context, state ReferenceTransactionState, env []string, stdin io.Reader) error {
+	changes, err := ioutil.ReadAll(stdin)
+	if err != nil {
+		return helper.ErrInternalf("reading stdin from request: %w", err)
+	}
+
 	// We're only voting in prepared state as this is the only stage in
 	// Git's reference transaction which allows us to abort the
 	// transaction.
@@ -17,10 +22,6 @@ func (m *GitLabHookManager) ReferenceTransactionHook(ctx context.Context, state 
 		return nil
 	}
 
-	changes, err := ioutil.ReadAll(stdin)
-	if err != nil {
-		return helper.ErrInternalf("reading stdin from request: %w", err)
-	}
 	hash := sha1.Sum(changes)
 
 	if err := m.voteOnTransaction(ctx, hash[:], env); err != nil {
