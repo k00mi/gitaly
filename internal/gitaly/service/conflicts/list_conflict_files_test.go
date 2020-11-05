@@ -22,21 +22,11 @@ type conflictFile struct {
 }
 
 func testListConflictFiles(t *testing.T, testcase func(t *testing.T, ctx context.Context)) {
-	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
 		featureflag.GoListConflictFiles,
+	}).Run(t, func(t *testing.T, ctx context.Context) {
+		testcase(t, ctx)
 	})
-	require.NoError(t, err)
-
-	for _, featureSet := range featureSets {
-		t.Run("disabled "+featureSet.String(), func(t *testing.T) {
-			ctx, cancel := testhelper.Context()
-			defer cancel()
-
-			ctx = featureSet.Disable(ctx)
-
-			testcase(t, ctx)
-		})
-	}
 }
 
 func TestSuccessfulListConflictFilesRequest(t *testing.T) {

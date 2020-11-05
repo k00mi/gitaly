@@ -29,19 +29,11 @@ var (
 )
 
 func TestSuccessfulResolveConflictsRequest(t *testing.T) {
-	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoResolveConflicts})
-	require.NoError(t, err)
-	for _, featureSet := range featureSets {
-		t.Run("disabled "+featureSet.String(), func(t *testing.T) {
-			ctx, cancel := testhelper.Context()
-			defer cancel()
-
-			ctx = featureSet.Disable(ctx)
-			require.True(t, featureflag.IsEnabled(ctx, featureflag.GoResolveConflicts))
-
-			testSuccessfulResolveConflictsRequest(t, ctx)
-		})
-	}
+	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.GoResolveConflicts,
+	}).Run(t, func(t *testing.T, ctx context.Context) {
+		testSuccessfulResolveConflictsRequest(t, ctx)
+	})
 }
 
 func testSuccessfulResolveConflictsRequest(t *testing.T, ctx context.Context) {
@@ -128,19 +120,11 @@ func testSuccessfulResolveConflictsRequest(t *testing.T, ctx context.Context) {
 }
 
 func TestFailedResolveConflictsRequestDueToResolutionError(t *testing.T) {
-	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoResolveConflicts})
-	require.NoError(t, err)
-	for _, featureSet := range featureSets {
-		t.Run("disabled "+featureSet.String(), func(t *testing.T) {
-			ctx, cancel := testhelper.Context()
-			defer cancel()
-
-			ctx = featureSet.Disable(ctx)
-			require.True(t, featureflag.IsEnabled(ctx, featureflag.GoResolveConflicts))
-
-			testFailedResolveConflictsRequestDueToResolutionError(t, ctx)
-		})
-	}
+	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.GoResolveConflicts,
+	}).Run(t, func(t *testing.T, ctx context.Context) {
+		testFailedResolveConflictsRequestDueToResolutionError(t, ctx)
+	})
 }
 
 func testFailedResolveConflictsRequestDueToResolutionError(t *testing.T, ctx context.Context) {
@@ -205,19 +189,11 @@ func testFailedResolveConflictsRequestDueToResolutionError(t *testing.T, ctx con
 }
 
 func TestFailedResolveConflictsRequestDueToValidation(t *testing.T) {
-	featureSets, err := testhelper.NewFeatureSets([]featureflag.FeatureFlag{featureflag.GoResolveConflicts})
-	require.NoError(t, err)
-	for _, featureSet := range featureSets {
-		t.Run("disabled "+featureSet.String(), func(t *testing.T) {
-			ctx, cancel := testhelper.Context()
-			defer cancel()
-
-			ctx = featureSet.Disable(ctx)
-			require.True(t, featureflag.IsEnabled(ctx, featureflag.GoResolveConflicts))
-
-			testFailedResolveConflictsRequestDueToValidation(t, ctx)
-		})
-	}
+	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.GoResolveConflicts,
+	}).Run(t, func(t *testing.T, ctx context.Context) {
+		testFailedResolveConflictsRequestDueToValidation(t, ctx)
+	})
 }
 
 func testFailedResolveConflictsRequestDueToValidation(t *testing.T, ctx context.Context) {
