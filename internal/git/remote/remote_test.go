@@ -2,10 +2,10 @@ package remote
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
@@ -24,8 +24,7 @@ func TestRemoveRemote(t *testing.T) {
 
 	require.NoError(t, Remove(ctx, testRepo, "origin"))
 
-	repoPath, err := helper.GetRepoPath(testRepo)
-	require.NoError(t, err)
+	repoPath := filepath.Join(testhelper.GitlabTestStoragePath(), testRepo.RelativePath)
 
 	out := testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "remote")
 	require.Len(t, out, 0)
@@ -38,8 +37,7 @@ func TestRemoveRemoteDontRemoveLocalBranches(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	repoPath, err := helper.GetRepoPath(testRepo)
-	require.NoError(t, err)
+	repoPath := filepath.Join(testhelper.GitlabTestStoragePath(), testRepo.RelativePath)
 
 	//configure remote as fetch mirror
 	testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "config", "remote.origin.fetch", "+refs/*:refs/*")

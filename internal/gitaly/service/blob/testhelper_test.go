@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
+	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
@@ -33,10 +34,10 @@ func testMain(m *testing.M) int {
 	return m.Run()
 }
 
-func runBlobServer(t *testing.T) (func(), string) {
+func runBlobServer(t *testing.T, locator storage.Locator) (func(), string) {
 	srv := testhelper.NewServer(t, nil, nil)
 
-	gitalypb.RegisterBlobServiceServer(srv.GrpcServer(), &server{ruby: rubyServer})
+	gitalypb.RegisterBlobServiceServer(srv.GrpcServer(), NewServer(rubyServer, locator))
 	reflection.Register(srv.GrpcServer())
 
 	require.NoError(t, srv.Start())

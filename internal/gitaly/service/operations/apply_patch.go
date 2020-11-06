@@ -30,7 +30,7 @@ func (s *server) UserApplyPatch(stream gitalypb.OperationService_UserApplyPatchS
 		return err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(requestCtx, header.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(requestCtx, s.locator, header.GetRepository())
 	if err != nil {
 		return err
 	}

@@ -13,7 +13,7 @@ import (
 )
 
 func TestSuccessfulGetBlob(t *testing.T) {
-	stop, serverSocketPath := runBlobServer(t)
+	stop, serverSocketPath := runBlobServer(t, testhelper.DefaultLocator())
 	defer stop()
 
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
@@ -90,7 +90,7 @@ func TestSuccessfulGetBlob(t *testing.T) {
 }
 
 func TestGetBlobNotFound(t *testing.T) {
-	stop, serverSocketPath := runBlobServer(t)
+	stop, serverSocketPath := runBlobServer(t, testhelper.DefaultLocator())
 	defer stop()
 
 	client, conn := newBlobClient(t, serverSocketPath)
@@ -146,7 +146,7 @@ func getBlob(stream gitalypb.BlobService_GetBlobClient) (int64, string, []byte, 
 }
 
 func TestFailedGetBlobRequestDueToValidationError(t *testing.T) {
-	stop, serverSocketPath := runBlobServer(t)
+	stop, serverSocketPath := runBlobServer(t, testhelper.DefaultLocator())
 	defer stop()
 
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)

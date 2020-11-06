@@ -145,7 +145,7 @@ func (s *server) ListConflictFiles(in *gitalypb.ListConflictFilesRequest, stream
 		return err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, in.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, in.GetRepository())
 	if err != nil {
 		return err
 	}

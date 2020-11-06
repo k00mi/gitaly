@@ -13,7 +13,7 @@ func (s *server) WikiGetAllPages(request *gitalypb.WikiGetAllPagesRequest, strea
 		return err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, request.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, request.GetRepository())
 	if err != nil {
 		return err
 	}

@@ -19,7 +19,7 @@ func (s *server) WikiGetPageVersions(request *gitalypb.WikiGetPageVersionsReques
 		return err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, request.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, request.GetRepository())
 	if err != nil {
 		return err
 	}

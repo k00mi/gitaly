@@ -81,7 +81,7 @@ func (s *server) UserCreateBranchRuby(ctx context.Context, req *gitalypb.UserCre
 		return nil, err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, req.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, req.GetRepository())
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (s *server) UserUpdateBranch(ctx context.Context, req *gitalypb.UserUpdateB
 		return nil, err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, req.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, req.GetRepository())
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +153,7 @@ func (s *server) UserDeleteBranchRuby(ctx context.Context, req *gitalypb.UserDel
 		return nil, err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, req.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, req.GetRepository())
 	if err != nil {
 		return nil, err
 	}

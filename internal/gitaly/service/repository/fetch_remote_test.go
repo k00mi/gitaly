@@ -81,7 +81,7 @@ func TestFetchRemoteFailure(t *testing.T) {
 			desc: "invalid storage",
 			req:  &gitalypb.FetchRemoteRequest{Repository: &gitalypb.Repository{StorageName: "invalid", RelativePath: "foobar.git"}},
 			code: codes.InvalidArgument,
-			err:  "Storage can not be found by name 'invalid'",
+			err:  `GetStorageByName: no such storage: "invalid"`,
 		},
 	}
 

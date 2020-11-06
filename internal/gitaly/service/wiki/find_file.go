@@ -24,7 +24,7 @@ func (s *server) WikiFindFile(request *gitalypb.WikiFindFileRequest, stream gita
 		return err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, request.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, request.GetRepository())
 	if err != nil {
 		return err
 	}

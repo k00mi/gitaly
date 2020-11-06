@@ -74,30 +74,3 @@ func GetStorageByName(storageName string) (string, error) {
 
 	return storagePath, nil
 }
-
-// GetObjectDirectoryPath returns the full path of the object directory in a
-// repository referenced by an RPC Repository message. The errors returned are
-// gRPC errors with relevant error codes and should be passed back to gRPC
-// without further decoration.
-func GetObjectDirectoryPath(repo repository.GitRepo) (string, error) {
-	repoPath, err := GetRepoPath(repo)
-	if err != nil {
-		return "", err
-	}
-
-	objectDirectoryPath := repo.GetGitObjectDirectory()
-	if objectDirectoryPath == "" {
-		return "", status.Errorf(codes.InvalidArgument, "GetObjectDirectoryPath: empty directory")
-	}
-
-	if _, err = storage.ValidateRelativePath(repoPath, objectDirectoryPath); err != nil {
-		return "", status.Errorf(codes.InvalidArgument, "GetObjectDirectoryPath: %s", err)
-	}
-
-	fullPath := filepath.Join(repoPath, objectDirectoryPath)
-	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
-		return "", status.Errorf(codes.NotFound, "GetObjectDirectoryPath: does not exist '%s'", fullPath)
-	}
-
-	return fullPath, nil
-}

@@ -34,7 +34,7 @@ func (s *server) updateRemoteMirror(stream gitalypb.RemoteService_UpdateRemoteMi
 		return fmt.Errorf("get stub: %v", err)
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, firstRequest.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, firstRequest.GetRepository())
 	if err != nil {
 		return fmt.Errorf("set headers: %v", err)
 	}

@@ -55,7 +55,7 @@ func (s *server) UserMergeBranch(bidi gitalypb.OperationService_UserMergeBranchS
 		return err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, firstRequest.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, firstRequest.GetRepository())
 	if err != nil {
 		return err
 	}
@@ -358,7 +358,7 @@ func (s *server) userFFBranchRuby(ctx context.Context, in *gitalypb.UserFFBranch
 		return nil, err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, in.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, in.GetRepository())
 	if err != nil {
 		return nil, err
 	}
@@ -466,7 +466,7 @@ func (s *server) UserMergeToRef(ctx context.Context, in *gitalypb.UserMergeToRef
 		return nil, helper.ErrInternal(err)
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, in.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, in.GetRepository())
 	if err != nil {
 		return nil, err
 	}

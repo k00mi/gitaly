@@ -26,7 +26,7 @@ func (s *server) WikiWritePage(stream gitalypb.WikiService_WikiWritePageServer) 
 		return err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, firstRequest.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, firstRequest.GetRepository())
 	if err != nil {
 		return err
 	}

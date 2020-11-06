@@ -40,7 +40,7 @@ func (s *server) GetLFSPointers(req *gitalypb.GetLFSPointersRequest, stream gita
 		return err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, req.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, req.GetRepository())
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,7 @@ func (s *server) GetNewLFSPointers(in *gitalypb.GetNewLFSPointersRequest, stream
 		return err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, in.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, in.GetRepository())
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func (s *server) GetAllLFSPointers(in *gitalypb.GetAllLFSPointersRequest, stream
 		return err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, in.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, in.GetRepository())
 	if err != nil {
 		return err
 	}

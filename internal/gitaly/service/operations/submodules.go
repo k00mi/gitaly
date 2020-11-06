@@ -21,7 +21,7 @@ func (s *server) UserUpdateSubmodule(ctx context.Context, req *gitalypb.UserUpda
 		return nil, err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, req.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, req.GetRepository())
 	if err != nil {
 		return nil, err
 	}

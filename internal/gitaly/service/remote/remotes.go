@@ -29,7 +29,7 @@ func (s *server) AddRemote(ctx context.Context, req *gitalypb.AddRemoteRequest) 
 		return nil, err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, req.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, req.GetRepository())
 	if err != nil {
 		return nil, err
 	}

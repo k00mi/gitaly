@@ -49,7 +49,7 @@ func (s *server) ResolveConflicts(stream gitalypb.ConflictsService_ResolveConfli
 		return err
 	}
 
-	clientCtx, err := rubyserver.SetHeaders(ctx, header.GetRepository())
+	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, header.GetRepository())
 	if err != nil {
 		return err
 	}
