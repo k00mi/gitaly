@@ -1,0 +1,5 @@
+---
+title: 'operations: Always set GL_PROTOCOL in hooks'
+merge_request: 2753
+author:
+type: fixed

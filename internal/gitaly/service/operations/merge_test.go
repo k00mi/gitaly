@@ -119,6 +119,7 @@ func testSuccessfulMerge(t *testing.T, ctx context.Context) {
 
 		lines := strings.Split(string(hookEnv), "\n")
 		require.Contains(t, lines, expectedGlID, "expected env of hook %q to contain %q", h, expectedGlID)
+		require.Contains(t, lines, "GL_PROTOCOL=web", "expected env of hook %q to contain GL_PROTOCOL")
 
 		if h == "pre-receive" || h == "post-receive" {
 			require.Regexp(t, mergeBranchHeadBefore+" .* refs/heads/"+mergeBranchName, lines[0], "expected env of hook %q to contain reference change", h)

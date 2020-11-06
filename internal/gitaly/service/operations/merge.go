@@ -117,6 +117,7 @@ func (s *server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 	}
 
 	env := append([]string{
+		"GL_PROTOCOL=web",
 		fmt.Sprintf("GL_ID=%s", user.GetGlId()),
 		fmt.Sprintf("GL_USERNAME=%s", user.GetGlUsername()),
 		fmt.Sprintf("GL_REPOSITORY=%s", repo.GetGlRepository()),
