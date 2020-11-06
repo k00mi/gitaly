@@ -33,13 +33,16 @@ If applicable, any groups/projects that are happy to have this feature turned on
 ## Roll Out Steps
 
 - [ ] [Read the documentation of feature flags](https://docs.gitlab.com/ee/development/rolling_out_changes_using_feature_flags.html)
+- [ ] Add ~"featureflag::staging" to this issue
 - [ ] Enable on staging
 - [ ] Test on staging
 - [ ] Ensure that documentation has been updated
 - [ ] Announce on the issue an estimated time this will be enabled on GitLab.com
+- [ ] Add ~"featureflag::production" to this issue
 - [ ] Enable on GitLab.com by running chatops command in `#production`
 - [ ] Cross post chatops slack command to `#support_gitlab-com` and in your team channel
 - [ ] Announce on the issue that the flag has been enabled
 - [ ] Remove feature flag and add changelog entry
+- [ ] Close this issue
 
-/label ~"devops::create" ~"group::gitaly" ~"feature flag" ~"feature::maintainance" ~"Category:Gitaly" ~"section::dev"
+/label ~"devops::create" ~"group::gitaly" ~"feature flag" ~"feature::maintainance" ~"Category:Gitaly" ~"section::dev" ~"featureflag::disabled"
