@@ -32,7 +32,7 @@ var cache *batchCache
 func init() {
 	prometheus.MustRegister(catfileCacheMembers)
 
-	config.RegisterHook(func(cfg config.Cfg) error {
+	config.RegisterHook(func(cfg *config.Cfg) error {
 		cache = newCache(DefaultBatchfileTTL, cfg.Git.CatfileCacheSize)
 		return nil
 	})

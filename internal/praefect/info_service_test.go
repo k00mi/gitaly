@@ -50,7 +50,7 @@ func TestInfoService_RepositoryReplicas(t *testing.T) {
 	testRepo, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	cc, _, cleanup := runPraefectServerWithGitaly(t, conf)
+	cc, _, cleanup := runPraefectServerWithGitaly(t, gconfig.Config, conf)
 	defer cleanup()
 
 	testRepoPrimary, _, cleanup := cloneRepoAtStorage(t, testRepo, conf.VirtualStorages[0].Nodes[0].Storage)

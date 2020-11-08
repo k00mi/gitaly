@@ -63,7 +63,7 @@ func Color(language string) string {
 }
 
 // LoadColors loads the name->color map from the Linguist gem.
-func LoadColors(cfg config.Cfg) error {
+func LoadColors(cfg *config.Cfg) error {
 	jsonReader, err := openLanguagesJSON(cfg)
 	if err != nil {
 		return err
@@ -115,7 +115,7 @@ func startGitLinguist(ctx context.Context, repoPath string, commitID string, lin
 	return internalCmd, nil
 }
 
-func openLanguagesJSON(cfg config.Cfg) (io.ReadCloser, error) {
+func openLanguagesJSON(cfg *config.Cfg) (io.ReadCloser, error) {
 	if jsonPath := cfg.Ruby.LinguistLanguagesPath; jsonPath != "" {
 		// This is a fallback for environments where dynamic discovery of the
 		// linguist path via Bundler is not working for some reason, for example
@@ -137,7 +137,7 @@ func openLanguagesJSON(cfg config.Cfg) (io.ReadCloser, error) {
 	// on its stdout.
 	rubyScript := `FileUtils.ln_sf(Bundler.rubygems.find_name('github-linguist').first.full_gem_path, ARGV.first)`
 	cmd := exec.Command("bundle", "exec", "ruby", "-rfileutils", "-e", rubyScript, linguistPathSymlink.Name())
-	cmd.Dir = config.Config.Ruby.Dir
+	cmd.Dir = cfg.Ruby.Dir
 
 	// We have learned that in practice the command we are about to run is a
 	// canary for Ruby/Bundler configuration problems. Including stderr and

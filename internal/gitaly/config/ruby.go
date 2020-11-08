@@ -40,40 +40,40 @@ func (d Duration) MarshalText() ([]byte, error) {
 }
 
 // ConfigureRuby validates the gitaly-ruby configuration and sets default values.
-func ConfigureRuby() error {
-	if Config.Ruby.GracefulRestartTimeout.Duration() == 0 {
-		Config.Ruby.GracefulRestartTimeout = Duration(10 * time.Minute)
+func (cfg *Cfg) ConfigureRuby() error {
+	if cfg.Ruby.GracefulRestartTimeout.Duration() == 0 {
+		cfg.Ruby.GracefulRestartTimeout = Duration(10 * time.Minute)
 	}
 
-	if Config.Ruby.MaxRSS == 0 {
-		Config.Ruby.MaxRSS = 200 * 1024 * 1024
+	if cfg.Ruby.MaxRSS == 0 {
+		cfg.Ruby.MaxRSS = 200 * 1024 * 1024
 	}
 
-	if Config.Ruby.RestartDelay.Duration() == 0 {
-		Config.Ruby.RestartDelay = Duration(5 * time.Minute)
+	if cfg.Ruby.RestartDelay.Duration() == 0 {
+		cfg.Ruby.RestartDelay = Duration(5 * time.Minute)
 	}
 
-	if len(Config.Ruby.Dir) == 0 {
+	if len(cfg.Ruby.Dir) == 0 {
 		return fmt.Errorf("gitaly-ruby.dir is not set")
 	}
 
 	minWorkers := 2
-	if Config.Ruby.NumWorkers < minWorkers {
-		Config.Ruby.NumWorkers = minWorkers
+	if cfg.Ruby.NumWorkers < minWorkers {
+		cfg.Ruby.NumWorkers = minWorkers
 	}
 
 	var err error
-	Config.Ruby.Dir, err = filepath.Abs(Config.Ruby.Dir)
+	cfg.Ruby.Dir, err = filepath.Abs(cfg.Ruby.Dir)
 	if err != nil {
 		return err
 	}
 
-	if len(Config.Ruby.RuggedGitConfigSearchPath) != 0 {
-		Config.Ruby.RuggedGitConfigSearchPath, err = filepath.Abs(Config.Ruby.RuggedGitConfigSearchPath)
+	if len(cfg.Ruby.RuggedGitConfigSearchPath) != 0 {
+		cfg.Ruby.RuggedGitConfigSearchPath, err = filepath.Abs(cfg.Ruby.RuggedGitConfigSearchPath)
 		if err != nil {
 			return err
 		}
 	}
 
-	return validateIsDirectory(Config.Ruby.Dir, "gitaly-ruby.dir")
+	return validateIsDirectory(cfg.Ruby.Dir, "gitaly-ruby.dir")
 }

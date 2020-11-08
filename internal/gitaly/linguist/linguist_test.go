@@ -36,20 +36,24 @@ func TestStatsUnmarshalJSONError(t *testing.T) {
 }
 
 func TestLoadLanguages(t *testing.T) {
+	defer func(old config.Cfg) { config.Config = old }(config.Config)
+
 	colorMap = make(map[string]Language)
-	require.NoError(t, LoadColors(config.Config), "load colors")
+	require.NoError(t, LoadColors(&config.Config), "load colors")
 
 	require.Equal(t, "#701516", Color("Ruby"), "color value for 'Ruby'")
 }
 
 func TestLoadLanguagesCustomPath(t *testing.T) {
+	defer func(old config.Cfg) { config.Config = old }(config.Config)
+
 	jsonPath, err := filepath.Abs("testdata/fake-languages.json")
 	require.NoError(t, err)
 
 	config.Config.Ruby.LinguistLanguagesPath = jsonPath
 
 	colorMap = make(map[string]Language)
-	require.NoError(t, LoadColors(config.Config), "load colors")
+	require.NoError(t, LoadColors(&config.Config), "load colors")
 
 	require.Equal(t, "foo color", Color("FooBar"))
 }

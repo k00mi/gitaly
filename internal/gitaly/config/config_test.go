@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -18,94 +17,92 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config/sentry"
 )
 
-func configFileReader(content string) io.Reader {
-	return bytes.NewReader([]byte(content))
-}
+func TestLoad_doesntClearPreviousGlobalConfig(t *testing.T) {
+	defer func(old Cfg) { Config = old }(Config)
 
-func TestLoadClearPrevConfig(t *testing.T) {
 	Config = Cfg{SocketPath: "/tmp"}
-	err := Load(&bytes.Buffer{})
-	assert.NoError(t, err)
+	cfg, err := Load(&bytes.Buffer{})
+	require.NoError(t, err)
 
-	assert.Empty(t, Config.SocketPath)
+	require.Equal(t, "", cfg.SocketPath)
+	require.Equal(t, "/tmp", Config.SocketPath)
 }
 
 func TestLoadBrokenConfig(t *testing.T) {
-	tmpFile := configFileReader(`path = "/tmp"\nname="foo"`)
-	err := Load(tmpFile)
+	tmpFile := strings.NewReader(`path = "/tmp"\nname="foo"`)
+	_, err := Load(tmpFile)
 	assert.Error(t, err)
-
-	assert.Equal(t, Cfg{}, Config)
 }
 
 func TestLoadEmptyConfig(t *testing.T) {
-	tmpFile := configFileReader(``)
+	cfg, err := Load(strings.NewReader(``))
+	require.NoError(t, err)
 
-	err := Load(tmpFile)
-	assert.NoError(t, err)
+	defaultConf := Cfg{InternalSocketDir: cfg.InternalSocketDir}
+	require.NoError(t, defaultConf.setDefaults())
 
-	defaultConf := Cfg{}
-	defaultConf.setDefaults()
-
-	assert.Equal(t, defaultConf, Config)
+	assert.Equal(t, defaultConf, cfg)
 }
 
 func TestLoadURLs(t *testing.T) {
-	tmpFile := configFileReader(`
+	tmpFile := strings.NewReader(`
 [gitlab]
 url = "unix:///tmp/test.socket"
 relative_url_root = "/gitlab"`)
 
-	err := Load(tmpFile)
-	assert.NoError(t, err)
+	cfg, err := Load(tmpFile)
+	require.NoError(t, err)
 
-	defaultConf := Cfg{Gitlab: Gitlab{
-		URL:             "unix:///tmp/test.socket",
-		RelativeURLRoot: "/gitlab",
-	}}
-	defaultConf.setDefaults()
+	defaultConf := Cfg{
+		Gitlab: Gitlab{
+			URL:             "unix:///tmp/test.socket",
+			RelativeURLRoot: "/gitlab",
+		},
+	}
+	require.NoError(t, defaultConf.setDefaults())
 
-	assert.Equal(t, defaultConf, Config)
+	assert.Equal(t, defaultConf.Gitlab, cfg.Gitlab)
 }
 
 func TestLoadStorage(t *testing.T) {
-	tmpFile := configFileReader(`[[storage]]
+	tmpFile := strings.NewReader(`[[storage]]
 name = "default"
 path = "/tmp/"`)
 
-	err := Load(tmpFile)
-	assert.NoError(t, err)
+	cfg, err := Load(tmpFile)
+	require.NoError(t, err)
 
-	if assert.Equal(t, 1, len(Config.Storages), "Expected one (1) storage") {
+	if assert.Equal(t, 1, len(cfg.Storages), "Expected one (1) storage") {
 		expectedConf := Cfg{
 			Storages: []Storage{
 				{Name: "default", Path: "/tmp"},
 			},
 		}
-		expectedConf.setDefaults()
+		require.NoError(t, expectedConf.setDefaults())
 
-		assert.Equal(t, expectedConf, Config)
+		assert.Equal(t, expectedConf.Storages, cfg.Storages)
 	}
 }
 
 func TestUncleanStoragePaths(t *testing.T) {
-	require.NoError(t, Load(strings.NewReader(`[[storage]]
+	cfg, err := Load(strings.NewReader(`[[storage]]
 name="unclean-path-1"
 path="/tmp/repos1//"
 
 [[storage]]
 name="unclean-path-2"
 path="/tmp/repos2/subfolder/.."
-`)))
+`))
+	require.NoError(t, err)
 
 	require.Equal(t, []Storage{
 		{Name: "unclean-path-1", Path: "/tmp/repos1"},
 		{Name: "unclean-path-2", Path: "/tmp/repos2"},
-	}, Config.Storages)
+	}, cfg.Storages)
 }
 
 func TestLoadMultiStorage(t *testing.T) {
-	tmpFile := configFileReader(`[[storage]]
+	tmpFile := strings.NewReader(`[[storage]]
 name="default"
 path="/tmp/repos1"
 
@@ -113,30 +110,30 @@ path="/tmp/repos1"
 name="other"
 path="/tmp/repos2/"`)
 
-	err := Load(tmpFile)
-	assert.NoError(t, err)
+	cfg, err := Load(tmpFile)
+	require.NoError(t, err)
 
-	if assert.Equal(t, 2, len(Config.Storages), "Expected one (1) storage") {
+	if assert.Equal(t, 2, len(cfg.Storages), "Expected one (1) storage") {
 		expectedConf := Cfg{
 			Storages: []Storage{
 				{Name: "default", Path: "/tmp/repos1"},
 				{Name: "other", Path: "/tmp/repos2"},
 			},
 		}
-		expectedConf.setDefaults()
+		require.NoError(t, expectedConf.setDefaults())
 
-		assert.Equal(t, expectedConf, Config)
+		assert.Equal(t, expectedConf.Storages, cfg.Storages)
 	}
 }
 
 func TestLoadSentry(t *testing.T) {
-	tmpFile := configFileReader(`[logging]
+	tmpFile := strings.NewReader(`[logging]
 sentry_environment = "production"
 sentry_dsn = "abc123"
 ruby_sentry_dsn = "xyz456"`)
 
-	err := Load(tmpFile)
-	assert.NoError(t, err)
+	cfg, err := Load(tmpFile)
+	require.NoError(t, err)
 
 	expectedConf := Cfg{
 		Logging: Logging{
@@ -147,36 +144,36 @@ ruby_sentry_dsn = "xyz456"`)
 			RubySentryDSN: "xyz456",
 		},
 	}
-	expectedConf.setDefaults()
+	require.NoError(t, expectedConf.setDefaults())
 
-	assert.Equal(t, expectedConf, Config)
+	assert.Equal(t, expectedConf.Logging, cfg.Logging)
 }
 
 func TestLoadPrometheus(t *testing.T) {
-	tmpFile := configFileReader(`prometheus_listen_addr=":9236"`)
+	tmpFile := strings.NewReader(`prometheus_listen_addr=":9236"`)
 
-	err := Load(tmpFile)
-	assert.NoError(t, err)
+	cfg, err := Load(tmpFile)
+	require.NoError(t, err)
 
-	assert.Equal(t, ":9236", Config.PrometheusListenAddr)
+	assert.Equal(t, ":9236", cfg.PrometheusListenAddr)
 }
 
 func TestLoadSocketPath(t *testing.T) {
-	tmpFile := configFileReader(`socket_path="/tmp/gitaly.sock"`)
+	tmpFile := strings.NewReader(`socket_path="/tmp/gitaly.sock"`)
 
-	err := Load(tmpFile)
-	assert.NoError(t, err)
+	cfg, err := Load(tmpFile)
+	require.NoError(t, err)
 
-	assert.Equal(t, "/tmp/gitaly.sock", Config.SocketPath)
+	assert.Equal(t, "/tmp/gitaly.sock", cfg.SocketPath)
 }
 
 func TestLoadListenAddr(t *testing.T) {
-	tmpFile := configFileReader(`listen_addr=":8080"`)
+	tmpFile := strings.NewReader(`listen_addr=":8080"`)
 
-	err := Load(tmpFile)
-	assert.NoError(t, err)
+	cfg, err := Load(tmpFile)
+	require.NoError(t, err)
 
-	assert.Equal(t, ":8080", Config.ListenAddr)
+	assert.Equal(t, ":8080", cfg.ListenAddr)
 }
 
 func tempEnv(key, value string) func() {
@@ -197,37 +194,33 @@ func TestLoadOverrideEnvironment(t *testing.T) {
 	tempEnv3 := tempEnv("GITALY_PROMETHEUS_LISTEN_ADDR", ":9237")
 	defer tempEnv3()
 
-	tmpFile := configFileReader(`socket_path = "/tmp/gitaly.sock"
+	tmpFile := strings.NewReader(`socket_path = "/tmp/gitaly.sock"
 listen_addr = ":8080"
 prometheus_listen_addr = ":9236"`)
 
-	err := Load(tmpFile)
-	assert.NoError(t, err)
+	cfg, err := Load(tmpFile)
+	require.NoError(t, err)
 
-	assert.Equal(t, ":9237", Config.PrometheusListenAddr)
-	assert.Equal(t, "/tmp/gitaly2.sock", Config.SocketPath)
-	assert.Equal(t, ":8081", Config.ListenAddr)
+	assert.Equal(t, ":9237", cfg.PrometheusListenAddr)
+	assert.Equal(t, "/tmp/gitaly2.sock", cfg.SocketPath)
+	assert.Equal(t, ":8081", cfg.ListenAddr)
 }
 
 func TestLoadOnlyEnvironment(t *testing.T) {
 	// Test that this works since we still want this to work
-	os.Setenv("GITALY_SOCKET_PATH", "/tmp/gitaly2.sock")
-	os.Setenv("GITALY_LISTEN_ADDR", ":8081")
-	os.Setenv("GITALY_PROMETHEUS_LISTEN_ADDR", ":9237")
+	defer tempEnv("GITALY_SOCKET_PATH", "/tmp/gitaly2.sock")()
+	defer tempEnv("GITALY_LISTEN_ADDR", ":8081")()
+	defer tempEnv("GITALY_PROMETHEUS_LISTEN_ADDR", ":9237")()
 
-	err := Load(&bytes.Buffer{})
-	assert.NoError(t, err)
+	cfg, err := Load(&bytes.Buffer{})
+	require.NoError(t, err)
 
-	assert.Equal(t, ":9237", Config.PrometheusListenAddr)
-	assert.Equal(t, "/tmp/gitaly2.sock", Config.SocketPath)
-	assert.Equal(t, ":8081", Config.ListenAddr)
+	assert.Equal(t, ":9237", cfg.PrometheusListenAddr)
+	assert.Equal(t, "/tmp/gitaly2.sock", cfg.SocketPath)
+	assert.Equal(t, ":8081", cfg.ListenAddr)
 }
 
 func TestValidateStorages(t *testing.T) {
-	defer func(oldStorages []Storage) {
-		Config.Storages = oldStorages
-	}(Config.Storages)
-
 	repositories, err := filepath.Abs("testdata/repositories")
 	require.NoError(t, err)
 
@@ -322,8 +315,9 @@ func TestValidateStorages(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			Config.Storages = tc.storages
-			err := validateStorages()
+			cfg := Cfg{Storages: tc.storages}
+
+			err := cfg.validateStorages()
 			if tc.invalid {
 				assert.Error(t, err, "%+v", tc.storages)
 				return
@@ -437,7 +431,7 @@ func TestValidateHooks(t *testing.T) {
 			tempHookDir, cleanup := setupTempHookDirs(t, tc.hookFiles)
 			defer cleanup()
 
-			Config = Cfg{
+			cfg := Cfg{
 				Ruby: Ruby{
 					Dir: filepath.Join(tempHookDir, "ruby"),
 				},
@@ -447,8 +441,9 @@ func TestValidateHooks(t *testing.T) {
 				BinDir: filepath.Join(tempHookDir, "/bin"),
 			}
 
-			err := validateHooks()
+			err := cfg.validateHooks()
 			if tc.expectedErrRegex != "" {
+				require.Error(t, err)
 				require.Regexp(t, tc.expectedErrRegex, err.Error(), "error should match regexp")
 			}
 		})
@@ -456,27 +451,19 @@ func TestValidateHooks(t *testing.T) {
 }
 
 func TestLoadGit(t *testing.T) {
-	defer func(oldGitSettings Git) {
-		Config.Git = oldGitSettings
-	}(Config.Git)
-
-	tmpFile := configFileReader(`[git]
+	tmpFile := strings.NewReader(`[git]
 bin_path = "/my/git/path"
 catfile_cache_size = 50
 `)
 
-	err := Load(tmpFile)
+	cfg, err := Load(tmpFile)
 	require.NoError(t, err)
 
-	require.Equal(t, "/my/git/path", Config.Git.BinPath)
-	require.Equal(t, 50, Config.Git.CatfileCacheSize)
+	require.Equal(t, "/my/git/path", cfg.Git.BinPath)
+	require.Equal(t, 50, cfg.Git.CatfileCacheSize)
 }
 
 func TestSetGitPath(t *testing.T) {
-	defer func(oldGitSettings Git) {
-		Config.Git = oldGitSettings
-	}(Config.Git)
-
 	var resolvedGitPath string
 	if path, ok := os.LookupEnv("GITALY_TESTING_GIT_BINARY"); ok {
 		resolvedGitPath = path
@@ -505,18 +492,14 @@ func TestSetGitPath(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			Config.Git.BinPath = tc.gitBinPath
-			SetGitPath()
-			assert.Equal(t, tc.expected, Config.Git.BinPath, tc.desc)
+			cfg := Cfg{Git: Git{BinPath: tc.gitBinPath}}
+			require.NoError(t, cfg.SetGitPath())
+			assert.Equal(t, tc.expected, cfg.Git.BinPath, tc.desc)
 		})
 	}
 }
 
 func TestValidateShellPath(t *testing.T) {
-	defer func(oldShellSettings GitlabShell) {
-		Config.GitlabShell = oldShellSettings
-	}(Config.GitlabShell)
-
 	tmpDir, err := ioutil.TempDir("", "gitaly-tests-")
 	require.NoError(t, err)
 	require.NoError(t, os.MkdirAll(filepath.Join(tmpDir, "bin"), 0755))
@@ -554,22 +537,19 @@ func TestValidateShellPath(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Log(tc.desc)
-		Config.GitlabShell.Dir = tc.path
-		err = validateShell()
-		if tc.shouldErr {
-			assert.Error(t, err)
-		} else {
-			assert.NoError(t, err)
-		}
+		t.Run(tc.desc, func(t *testing.T) {
+			cfg := Cfg{GitlabShell: GitlabShell{Dir: tc.path}}
+			err := cfg.validateShell()
+			if tc.shouldErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
 	}
 }
 
 func TestConfigureRuby(t *testing.T) {
-	defer func(oldRuby Ruby) {
-		Config.Ruby = oldRuby
-	}(Config.Ruby)
-
 	tmpDir, err := ioutil.TempDir("", "gitaly-test")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
@@ -591,9 +571,9 @@ func TestConfigureRuby(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			Config.Ruby = Ruby{Dir: tc.dir}
+			cfg := Cfg{Ruby: Ruby{Dir: tc.dir}}
 
-			err := ConfigureRuby()
+			err := cfg.ConfigureRuby()
 			if !tc.ok {
 				require.Error(t, err)
 				return
@@ -601,17 +581,13 @@ func TestConfigureRuby(t *testing.T) {
 
 			require.NoError(t, err)
 
-			dir := Config.Ruby.Dir
+			dir := cfg.Ruby.Dir
 			require.True(t, filepath.IsAbs(dir), "expected %q to be absolute path", dir)
 		})
 	}
 }
 
 func TestConfigureRubyNumWorkers(t *testing.T) {
-	defer func(oldRuby Ruby) {
-		Config.Ruby = oldRuby
-	}(Config.Ruby)
-
 	testCases := []struct {
 		in, out int
 	}{
@@ -624,18 +600,14 @@ func TestConfigureRubyNumWorkers(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%+v", tc), func(t *testing.T) {
-			Config.Ruby = Ruby{Dir: "/", NumWorkers: tc.in}
-			require.NoError(t, ConfigureRuby())
-			require.Equal(t, tc.out, Config.Ruby.NumWorkers)
+			cfg := Cfg{Ruby: Ruby{Dir: "/", NumWorkers: tc.in}}
+			require.NoError(t, cfg.ConfigureRuby())
+			require.Equal(t, tc.out, cfg.Ruby.NumWorkers)
 		})
 	}
 }
 
 func TestValidateListeners(t *testing.T) {
-	defer func(cfg Cfg) {
-		Config = cfg
-	}(Config)
-
 	testCases := []struct {
 		desc string
 		Cfg
@@ -649,8 +621,7 @@ func TestValidateListeners(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			Config = tc.Cfg
-			err := validateListeners()
+			err := tc.Cfg.validateListeners()
 			if tc.ok {
 				require.NoError(t, err)
 			} else {
@@ -678,12 +649,12 @@ func TestLoadGracefulRestartTimeout(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			tmpFile := configFileReader(test.config)
+			tmpFile := strings.NewReader(test.config)
 
-			err := Load(tmpFile)
+			cfg, err := Load(tmpFile)
 			assert.NoError(t, err)
 
-			assert.Equal(t, test.expected, Config.GracefulRestartTimeout.Duration())
+			assert.Equal(t, test.expected, cfg.GracefulRestartTimeout.Duration())
 		})
 	}
 }
@@ -698,19 +669,16 @@ func TestGitlabShellDefaults(t *testing.T) {
 		CustomHooksDir: filepath.Join(gitlabShellDir, "hooks"),
 	}
 
-	tmpFile := configFileReader(fmt.Sprintf(`[gitlab-shell]
+	tmpFile := strings.NewReader(fmt.Sprintf(`[gitlab-shell]
 dir = '%s'`, gitlabShellDir))
-	require.NoError(t, Load(tmpFile))
+	cfg, err := Load(tmpFile)
+	require.NoError(t, err)
 
-	require.Equal(t, expectedGitlab, Config.Gitlab)
-	require.Equal(t, expectedHooks, Config.Hooks)
+	require.Equal(t, expectedGitlab, cfg.Gitlab)
+	require.Equal(t, expectedHooks, cfg.Hooks)
 }
 
 func TestValidateInternalSocketDir(t *testing.T) {
-	defer func(internalSocketDir string) {
-		Config.InternalSocketDir = internalSocketDir
-	}(Config.InternalSocketDir)
-
 	// create a valid socket directory
 	tempDir, err := ioutil.TempDir("testdata", t.Name())
 	require.NoError(t, err)
@@ -764,23 +732,20 @@ func TestValidateInternalSocketDir(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			Config.InternalSocketDir = tc.internalSocketDir
+			cfg := Cfg{InternalSocketDir: tc.internalSocketDir}
 			if tc.shouldError {
-				assert.Error(t, validateInternalSocketDir())
+				assert.Error(t, cfg.validateInternalSocketDir())
 				return
 			}
-			assert.NoError(t, validateInternalSocketDir())
+			assert.NoError(t, cfg.validateInternalSocketDir())
 		})
 	}
 }
 
 func TestInternalSocketDir(t *testing.T) {
-	defer func(internalSocketDir string) {
-		Config.InternalSocketDir = internalSocketDir
-	}(Config.InternalSocketDir)
-
-	Config.InternalSocketDir = ""
-	socketDir := InternalSocketDir()
+	cfg, err := Load(bytes.NewReader(nil))
+	require.NoError(t, err)
+	socketDir := cfg.InternalSocketDir
 
 	require.NoError(t, trySocketCreation(socketDir))
 	require.NoError(t, os.RemoveAll(socketDir))
@@ -843,10 +808,11 @@ storages = ["default"]
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpFile := configFileReader(tt.rawCfg)
-			require.Equal(t, tt.loadErr, Load(tmpFile))
-			require.Equal(t, tt.expect, Config.DailyMaintenance)
-			require.Equal(t, tt.validateErr, validateMaintenance())
+			tmpFile := strings.NewReader(tt.rawCfg)
+			cfg, err := Load(tmpFile)
+			require.Equal(t, tt.loadErr, err)
+			require.Equal(t, tt.expect, cfg.DailyMaintenance)
+			require.Equal(t, tt.validateErr, cfg.validateMaintenance())
 		})
 	}
 }

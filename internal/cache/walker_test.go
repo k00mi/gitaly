@@ -56,7 +56,7 @@ func TestDiskCacheObjectWalker(t *testing.T) {
 	*cache.ExportDisableMoveAndClear = true
 	defer func() { *cache.ExportDisableMoveAndClear = false }()
 
-	require.NoError(t, config.Validate()) // triggers walker
+	require.NoError(t, config.Config.Validate()) // triggers walker
 
 	pollCountersUntil(t, expectRemovals)
 
@@ -87,7 +87,7 @@ func TestDiskCacheInitialClear(t *testing.T) {
 
 	// validation will run cache walker hook which synchronously
 	// runs the move-and-clear function
-	require.NoError(t, config.Validate())
+	require.NoError(t, config.Config.Validate())
 
 	testhelper.AssertPathNotExists(t, canary)
 }

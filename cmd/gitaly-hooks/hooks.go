@@ -327,9 +327,11 @@ func check(configPath string) (*hook.CheckInfo, error) {
 	}
 	defer cfgFile.Close()
 
-	if err := config.Load(cfgFile); err != nil {
+	cfg, err := config.Load(cfgFile)
+	if err != nil {
 		return nil, err
 	}
+	config.Config = cfg
 
 	gitlabAPI, err := hook.NewGitlabAPI(config.Config.Gitlab, config.Config.TLS)
 	if err != nil {

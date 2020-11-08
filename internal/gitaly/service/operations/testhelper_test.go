@@ -90,7 +90,7 @@ func runOperationServiceServer(t *testing.T) (string, func()) {
 func runOperationServiceServerWithRubyServer(t *testing.T, ruby *rubyserver.Server) (string, func()) {
 	srv := testhelper.NewServerWithAuth(t, nil, nil, config.Config.Auth.Token)
 
-	internalSocket := config.GitalyInternalSocketPath()
+	internalSocket := config.Config.GitalyInternalSocketPath()
 	internalListener, err := net.Listen("unix", internalSocket)
 	require.NoError(t, err)
 

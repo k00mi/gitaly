@@ -146,10 +146,10 @@ func flattenVirtualStoragesToStoragePath(virtualStorages []*config.VirtualStorag
 // withRealGitalyShared will configure a real Gitaly server backend for a
 // Praefect server. The same Gitaly server instance is used for all backend
 // storages.
-func withRealGitalyShared(t testing.TB) func([]*config.VirtualStorage) []testhelper.Cleanup {
+func withRealGitalyShared(t testing.TB, cfg gconfig.Cfg) func([]*config.VirtualStorage) []testhelper.Cleanup {
 	return func(virtualStorages []*config.VirtualStorage) []testhelper.Cleanup {
 		gStorages := flattenVirtualStoragesToStoragePath(virtualStorages, testhelper.GitlabTestStoragePath())
-		_, backendAddr, cleanupGitaly := testserver.RunInternalGitalyServer(t, gStorages, virtualStorages[0].Nodes[0].Token)
+		_, backendAddr, cleanupGitaly := testserver.RunInternalGitalyServer(t, cfg.GitalyInternalSocketPath(), gStorages, virtualStorages[0].Nodes[0].Token)
 
 		for _, vs := range virtualStorages {
 			for i, node := range vs.Nodes {
@@ -162,17 +162,17 @@ func withRealGitalyShared(t testing.TB) func([]*config.VirtualStorage) []testhel
 	}
 }
 
-func runPraefectServerWithGitaly(t *testing.T, conf config.Config) (*grpc.ClientConn, *grpc.Server, testhelper.Cleanup) {
-	return runPraefectServerWithGitalyWithDatastore(t, conf, defaultQueue(conf))
+func runPraefectServerWithGitaly(t *testing.T, cfg gconfig.Cfg, conf config.Config) (*grpc.ClientConn, *grpc.Server, testhelper.Cleanup) {
+	return runPraefectServerWithGitalyWithDatastore(t, cfg, conf, defaultQueue(conf))
 }
 
 // runPraefectServerWithGitaly runs a praefect server with actual Gitaly nodes
 // requires exactly 1 virtual storage
-func runPraefectServerWithGitalyWithDatastore(t *testing.T, conf config.Config, queue datastore.ReplicationEventQueue) (*grpc.ClientConn, *grpc.Server, testhelper.Cleanup) {
+func runPraefectServerWithGitalyWithDatastore(t *testing.T, cfg gconfig.Cfg, conf config.Config, queue datastore.ReplicationEventQueue) (*grpc.ClientConn, *grpc.Server, testhelper.Cleanup) {
 	return runPraefectServer(t, conf, buildOptions{
 		withQueue:    queue,
 		withTxMgr:    transactions.NewManager(conf),
-		withBackends: withRealGitalyShared(t),
+		withBackends: withRealGitalyShared(t, cfg),
 	})
 }
 

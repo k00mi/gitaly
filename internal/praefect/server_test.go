@@ -72,7 +72,7 @@ func TestGitalyServerInfo(t *testing.T) {
 	}
 
 	t.Run("gitaly responds with ok", func(t *testing.T) {
-		cc, _, cleanup := runPraefectServerWithGitaly(t, conf)
+		cc, _, cleanup := runPraefectServerWithGitaly(t, gconfig.Config, conf)
 		defer cleanup()
 
 		expected := &gitalypb.ServerInfoResponse{
@@ -158,7 +158,7 @@ func TestGitalyDiskStatistics(t *testing.T) {
 		},
 	}
 
-	cc, _, cleanup := runPraefectServerWithGitaly(t, conf)
+	cc, _, cleanup := runPraefectServerWithGitaly(t, gconfig.Config, conf)
 	defer cleanup()
 
 	client := gitalypb.NewServerServiceClient(cc)
@@ -176,7 +176,7 @@ func TestGitalyDiskStatistics(t *testing.T) {
 }
 
 func TestHealthCheck(t *testing.T) {
-	cc, _, cleanup := runPraefectServerWithGitaly(t, testConfig(1))
+	cc, _, cleanup := runPraefectServerWithGitaly(t, gconfig.Config, testConfig(1))
 	defer cleanup()
 
 	ctx, cancel := testhelper.Context(testhelper.ContextWithTimeout(time.Second))
@@ -202,7 +202,7 @@ func TestRejectBadStorage(t *testing.T) {
 		},
 	}
 
-	cc, _, cleanup := runPraefectServerWithGitaly(t, conf)
+	cc, _, cleanup := runPraefectServerWithGitaly(t, gconfig.Config, conf)
 	defer cleanup()
 
 	badTargetRepo := gitalypb.Repository{
@@ -414,7 +414,7 @@ func TestRepoRemoval(t *testing.T) {
 		return queue.Acknowledge(ctx, state, ids)
 	})
 
-	cc, _, cleanup := runPraefectServerWithGitalyWithDatastore(t, conf, queueInterceptor)
+	cc, _, cleanup := runPraefectServerWithGitalyWithDatastore(t, gconfig.Config, conf, queueInterceptor)
 	defer cleanup()
 
 	ctx, cancel := testhelper.Context()
@@ -530,7 +530,7 @@ func TestRepoRename(t *testing.T) {
 		return queue.Acknowledge(ctx, state, ids)
 	})
 
-	cc, _, cleanup := runPraefectServerWithGitalyWithDatastore(t, conf, evq)
+	cc, _, cleanup := runPraefectServerWithGitalyWithDatastore(t, gconfig.Config, conf, evq)
 	defer cleanup()
 
 	ctx, cancel := testhelper.Context()

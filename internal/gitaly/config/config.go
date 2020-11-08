@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -28,7 +27,7 @@ var (
 	// Config stores the global configuration
 	Config Cfg
 
-	hooks []func(Cfg) error
+	hooks []func(*Cfg) error
 )
 
 // DailyJob enables a daily task to be scheduled for specific storages
@@ -127,56 +126,58 @@ type Concurrency struct {
 
 // Load initializes the Config variable from file and the environment.
 //  Environment variables take precedence over the file.
-func Load(file io.Reader) error {
-	Config = Cfg{}
+func Load(file io.Reader) (Cfg, error) {
+	var cfg Cfg
 
-	if err := toml.NewDecoder(file).Decode(&Config); err != nil {
-		return fmt.Errorf("load toml: %v", err)
+	if err := toml.NewDecoder(file).Decode(&cfg); err != nil {
+		return Cfg{}, fmt.Errorf("load toml: %v", err)
 	}
 
-	if err := envconfig.Process("gitaly", &Config); err != nil {
-		return fmt.Errorf("envconfig: %v", err)
+	if err := envconfig.Process("gitaly", &cfg); err != nil {
+		return Cfg{}, fmt.Errorf("envconfig: %v", err)
 	}
 
-	Config.setDefaults()
-
-	for i := range Config.Storages {
-		Config.Storages[i].Path = filepath.Clean(Config.Storages[i].Path)
+	if err := cfg.setDefaults(); err != nil {
+		return Cfg{}, err
 	}
 
-	return nil
+	for i := range cfg.Storages {
+		cfg.Storages[i].Path = filepath.Clean(cfg.Storages[i].Path)
+	}
+
+	return cfg, nil
 }
 
 // RegisterHook adds a post-validation callback. Your hook should only
 // access config via the Cfg instance it gets passed. This avoids race
 // conditions during testing, when the global config.Config instance gets
 // updated after these hooks have run.
-func RegisterHook(f func(c Cfg) error) {
+func RegisterHook(f func(c *Cfg) error) {
 	hooks = append(hooks, f)
 }
 
 // Validate checks the current Config for sanity. It also runs all hooks
 // registered with RegisterHook.
-func Validate() error {
-	for _, err := range []error{
-		validateListeners(),
-		validateStorages(),
-		validateToken(),
-		SetGitPath(),
-		validateShell(),
-		ConfigureRuby(),
-		validateBinDir(),
-		validateInternalSocketDir(),
-		validateHooks(),
-		validateMaintenance(),
+func (cfg *Cfg) Validate() error {
+	for _, run := range []func() error{
+		cfg.validateListeners,
+		cfg.validateStorages,
+		cfg.validateToken,
+		cfg.SetGitPath,
+		cfg.validateShell,
+		cfg.ConfigureRuby,
+		cfg.validateBinDir,
+		cfg.validateInternalSocketDir,
+		cfg.validateHooks,
+		cfg.validateMaintenance,
 	} {
-		if err != nil {
+		if err := run(); err != nil {
 			return err
 		}
 	}
 
 	for _, f := range hooks {
-		if err := f(Config); err != nil {
+		if err := f(cfg); err != nil {
 			return err
 		}
 	}
@@ -184,33 +185,48 @@ func Validate() error {
 	return nil
 }
 
-func (c *Cfg) setDefaults() {
-	if c.GracefulRestartTimeout.Duration() == 0 {
-		c.GracefulRestartTimeout = Duration(time.Minute)
+func (cfg *Cfg) setDefaults() error {
+	if cfg.GracefulRestartTimeout.Duration() == 0 {
+		cfg.GracefulRestartTimeout = Duration(time.Minute)
 	}
 
-	if c.Gitlab.SecretFile == "" {
-		c.Gitlab.SecretFile = filepath.Join(c.GitlabShell.Dir, ".gitlab_shell_secret")
+	if cfg.Gitlab.SecretFile == "" {
+		cfg.Gitlab.SecretFile = filepath.Join(cfg.GitlabShell.Dir, ".gitlab_shell_secret")
 	}
 
-	if c.Hooks.CustomHooksDir == "" {
-		c.Hooks.CustomHooksDir = filepath.Join(c.GitlabShell.Dir, "hooks")
+	if cfg.Hooks.CustomHooksDir == "" {
+		cfg.Hooks.CustomHooksDir = filepath.Join(cfg.GitlabShell.Dir, "hooks")
 	}
+
+	if cfg.InternalSocketDir == "" {
+		// The socket path must be short-ish because listen(2) fails on long
+		// socket paths. We hope/expect that ioutil.TempDir creates a directory
+		// that is not too deep. We need a directory, not a tempfile, because we
+		// will later want to set its permissions to 0700
+
+		tmpDir, err := ioutil.TempDir("", "gitaly-internal")
+		if err != nil {
+			return fmt.Errorf("create internal socket directory: %w", err)
+		}
+		cfg.InternalSocketDir = tmpDir
+	}
+
+	return nil
 }
 
-func validateListeners() error {
-	if len(Config.SocketPath) == 0 && len(Config.ListenAddr) == 0 {
+func (cfg *Cfg) validateListeners() error {
+	if len(cfg.SocketPath) == 0 && len(cfg.ListenAddr) == 0 {
 		return fmt.Errorf("invalid listener config: at least one of socket_path and listen_addr must be set")
 	}
 	return nil
 }
 
-func validateShell() error {
-	if len(Config.GitlabShell.Dir) == 0 {
+func (cfg *Cfg) validateShell() error {
+	if len(cfg.GitlabShell.Dir) == 0 {
 		return fmt.Errorf("gitlab-shell.dir is not set")
 	}
 
-	return validateIsDirectory(Config.GitlabShell.Dir, "gitlab-shell.dir")
+	return validateIsDirectory(cfg.GitlabShell.Dir, "gitlab-shell.dir")
 }
 
 func checkExecutable(path string) error {
@@ -241,7 +257,7 @@ func (h *hookErrs) Add(err error) {
 	h.errors = append(h.errors, err)
 }
 
-func validateHooks() error {
+func (cfg *Cfg) validateHooks() error {
 	if SkipHooks() {
 		return nil
 	}
@@ -249,7 +265,7 @@ func validateHooks() error {
 	errs := &hookErrs{}
 
 	for _, hookName := range []string{"pre-receive", "post-receive", "update"} {
-		if err := checkExecutable(filepath.Join(Config.Ruby.Dir, "git-hooks", hookName)); err != nil {
+		if err := checkExecutable(filepath.Join(cfg.Ruby.Dir, "git-hooks", hookName)); err != nil {
 			errs.Add(err)
 			continue
 		}
@@ -277,12 +293,12 @@ func validateIsDirectory(path, name string) error {
 	return nil
 }
 
-func validateStorages() error {
-	if len(Config.Storages) == 0 {
+func (cfg *Cfg) validateStorages() error {
+	if len(cfg.Storages) == 0 {
 		return fmt.Errorf("no storage configurations found. Are you using the right format? https://gitlab.com/gitlab-org/gitaly/issues/397")
 	}
 
-	for i, storage := range Config.Storages {
+	for i, storage := range cfg.Storages {
 		if storage.Name == "" {
 			return fmt.Errorf("empty storage name in %+v", storage)
 		}
@@ -300,7 +316,7 @@ func validateStorages() error {
 			return fmt.Errorf("storage %+v path must be a dir", storage)
 		}
 
-		for _, other := range Config.Storages[:i] {
+		for _, other := range cfg.Storages[:i] {
 			if other.Name == storage.Name {
 				return fmt.Errorf("storage %q is defined more than once", storage.Name)
 			}
@@ -329,13 +345,13 @@ func SkipHooks() bool {
 
 // SetGitPath populates the variable GitPath with the path to the `git`
 // executable. It warns if no path was specified in the configuration.
-func SetGitPath() error {
-	if Config.Git.BinPath != "" {
+func (cfg *Cfg) SetGitPath() error {
+	if cfg.Git.BinPath != "" {
 		return nil
 	}
 
 	if path, ok := os.LookupEnv("GITALY_TESTING_GIT_BINARY"); ok {
-		Config.Git.BinPath = path
+		cfg.Git.BinPath = path
 		return nil
 	}
 
@@ -348,21 +364,21 @@ func SetGitPath() error {
 		"resolvedPath": resolvedPath,
 	}).Warn("git path not configured. Using default path resolution")
 
-	Config.Git.BinPath = resolvedPath
+	cfg.Git.BinPath = resolvedPath
 
 	return nil
 }
 
 // StoragePath looks up the base path for storageName. The second boolean
 // return value indicates if anything was found.
-func (c Cfg) StoragePath(storageName string) (string, bool) {
-	storage, ok := c.Storage(storageName)
+func (cfg *Cfg) StoragePath(storageName string) (string, bool) {
+	storage, ok := cfg.Storage(storageName)
 	return storage.Path, ok
 }
 
 // Storage looks up storageName.
-func (c Cfg) Storage(storageName string) (Storage, bool) {
-	for _, storage := range c.Storages {
+func (cfg *Cfg) Storage(storageName string) (Storage, bool) {
+	for _, storage := range cfg.Storages {
 		if storage.Name == storageName {
 			return storage, true
 		}
@@ -370,19 +386,24 @@ func (c Cfg) Storage(storageName string) (Storage, bool) {
 	return Storage{}, false
 }
 
-func validateBinDir() error {
-	if err := validateIsDirectory(Config.BinDir, "bin_dir"); err != nil {
+// GitalyInternalSocketPath is the path to the internal gitaly socket
+func (cfg *Cfg) GitalyInternalSocketPath() string {
+	return filepath.Join(cfg.InternalSocketDir, "internal.sock")
+}
+
+func (cfg *Cfg) validateBinDir() error {
+	if err := validateIsDirectory(cfg.BinDir, "bin_dir"); err != nil {
 		log.WithError(err).Warn("Gitaly bin directory is not configured")
 		return err
 	}
 
 	var err error
-	Config.BinDir, err = filepath.Abs(Config.BinDir)
+	cfg.BinDir, err = filepath.Abs(cfg.BinDir)
 	return err
 }
 
-func validateToken() error {
-	if !Config.Auth.Transitioning || len(Config.Auth.Token) == 0 {
+func (cfg *Cfg) validateToken() error {
+	if !cfg.Auth.Transitioning || len(cfg.Auth.Token) == 0 {
 		return nil
 	}
 
@@ -390,58 +411,12 @@ func validateToken() error {
 	return nil
 }
 
-var (
-	lazyInit                   sync.Once
-	generatedInternalSocketDir string
-)
-
-func generateSocketPath() {
-	// The socket path must be short-ish because listen(2) fails on long
-	// socket paths. We hope/expect that ioutil.TempDir creates a directory
-	// that is not too deep. We need a directory, not a tempfile, because we
-	// will later want to set its permissions to 0700
-
-	var err error
-	generatedInternalSocketDir, err = ioutil.TempDir("", "gitaly-internal")
-	if err != nil {
-		log.Fatalf("create ruby server socket directory: %v", err)
-	}
-}
-
-// InternalSocketDir will generate a temp dir for internal sockets if one is not provided in the config
-func InternalSocketDir() string {
-	if Config.InternalSocketDir != "" {
-		return Config.InternalSocketDir
-	}
-
-	if generatedInternalSocketDir == "" {
-		lazyInit.Do(generateSocketPath)
-	}
-
-	return generatedInternalSocketDir
-}
-
-// GitalyInternalSocketPath is the path to the internal gitaly socket
-func GitalyInternalSocketPath() string {
-	socketDir := InternalSocketDir()
-	if socketDir == "" {
-		panic("internal socket directory is missing")
-	}
-
-	return filepath.Join(socketDir, "internal.sock")
-}
-
-// GeneratedInternalSocketDir returns the path to the generated internal socket directory
-func GeneratedInternalSocketDir() string {
-	return generatedInternalSocketDir
-}
-
-func validateInternalSocketDir() error {
-	if Config.InternalSocketDir == "" {
+func (cfg *Cfg) validateInternalSocketDir() error {
+	if cfg.InternalSocketDir == "" {
 		return nil
 	}
 
-	dir := Config.InternalSocketDir
+	dir := cfg.InternalSocketDir
 
 	f, err := os.Stat(dir)
 	switch {
@@ -475,11 +450,11 @@ func trySocketCreation(dir string) error {
 	return l.Close()
 }
 
-func validateMaintenance() error {
-	dm := Config.DailyMaintenance
+func (cfg *Cfg) validateMaintenance() error {
+	dm := cfg.DailyMaintenance
 
 	sNames := map[string]struct{}{}
-	for _, s := range Config.Storages {
+	for _, s := range cfg.Storages {
 		sNames[s.Name] = struct{}{}
 	}
 	for _, sName := range dm.Storages {

@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -25,7 +26,10 @@ func testMain(m *testing.M) int {
 
 	cleanup := testhelper.Configure()
 	defer cleanup()
-	testhelper.ConfigureRuby()
+
+	if err := testhelper.ConfigureRuby(&config.Config); err != nil {
+		log.Fatal(err)
+	}
 
 	if err := rubyServer.Start(); err != nil {
 		log.Error(err)
