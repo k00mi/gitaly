@@ -6,6 +6,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const GitalyLogDirEnvKey = "GITALY_LOG_DIR"
+
 var (
 	defaultLogger = logrus.StandardLogger()
 	grpcGo        = logrus.New()

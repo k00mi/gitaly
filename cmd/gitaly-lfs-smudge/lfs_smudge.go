@@ -10,6 +10,7 @@ import (
 	"github.com/git-lfs/git-lfs/lfs"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
+	gitalylog "gitlab.com/gitlab-org/gitaly/internal/log"
 	"gitlab.com/gitlab-org/labkit/log"
 	"gitlab.com/gitlab-org/labkit/tracing"
 )
@@ -19,7 +20,7 @@ type configProvider interface {
 }
 
 func initLogging(p configProvider) (io.Closer, error) {
-	path := p.Get("GITALY_LOG_DIR")
+	path := p.Get(gitalylog.GitalyLogDirEnvKey)
 	if path == "" {
 		return nil, nil
 	}

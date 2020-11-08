@@ -15,6 +15,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/commit"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/log"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
@@ -188,7 +189,7 @@ func handleArchive(p archiveParams) error {
 		fmt.Sprintf("GL_PROJECT_PATH=%s", p.in.GetRepository().GetGlProjectPath()),
 		fmt.Sprintf("GL_INTERNAL_CONFIG=%s", p.internalCfg),
 		fmt.Sprintf("CORRELATION_ID=%s", correlation.ExtractFromContext(p.ctx)),
-		fmt.Sprintf("GITALY_LOG_DIR=%s", p.loggingDir),
+		fmt.Sprintf("%s=%s", log.GitalyLogDirEnvKey, p.loggingDir),
 	}
 
 	var globals []git.Option

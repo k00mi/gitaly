@@ -2,8 +2,10 @@ package gitlabshell
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"gitlab.com/gitlab-org/gitaly/internal/log"
 )
 
 // Env is a helper that returns a slice with environment variables used by gitlab shell
@@ -45,7 +47,7 @@ func EnvFromConfig(cfg config.Cfg) ([]string, error) {
 	return []string{
 		//TODO: remove GITALY_GITLAB_SHELL_DIR: https://gitlab.com/gitlab-org/gitaly/-/issues/2679
 		"GITALY_GITLAB_SHELL_DIR=" + cfg.GitlabShell.Dir,
-		"GITALY_LOG_DIR=" + cfg.Logging.Dir,
+		fmt.Sprintf("%s=%s", log.GitalyLogDirEnvKey, cfg.Logging.Dir),
 		"GITALY_LOG_FORMAT=" + cfg.Logging.Format,
 		"GITALY_LOG_LEVEL=" + cfg.Logging.Level,
 		"GITALY_BIN_DIR=" + cfg.BinDir,

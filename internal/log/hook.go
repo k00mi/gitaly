@@ -18,7 +18,7 @@ type HookLogger struct {
 func NewHookLogger() *HookLogger {
 	logger := logrus.New()
 
-	filepath := filepath.Join(os.Getenv("GITALY_LOG_DIR"), "gitaly_hooks.log")
+	filepath := filepath.Join(os.Getenv(GitalyLogDirEnvKey), "gitaly_hooks.log")
 
 	logFile, err := os.OpenFile(filepath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
