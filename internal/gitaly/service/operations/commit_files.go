@@ -135,10 +135,6 @@ func validatePath(rootPath, relPath string) (string, error) {
 		return "", err
 	}
 
-	if relPath != path {
-		return "", indexError("Path cannot include directory traversal")
-	}
-
 	return path, nil
 }
 

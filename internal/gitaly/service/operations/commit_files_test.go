@@ -213,6 +213,22 @@ func testUserCommitFiles(t *testing.T, ctx context.Context) {
 			},
 		},
 		{
+			desc: "create file with unclean path",
+			steps: []step{
+				{
+					actions: []*gitalypb.UserCommitFilesRequest{
+						createFileHeaderRequest("/file-1"),
+						actionContentRequest("content-1"),
+					},
+					repoCreated:   true,
+					branchCreated: true,
+					treeEntries: []testhelper.TreeEntry{
+						{Mode: DefaultMode, Path: "file-1", Content: "content-1"},
+					},
+				},
+			},
+		},
+		{
 			desc: "create file with base64 content",
 			steps: []step{
 				{
