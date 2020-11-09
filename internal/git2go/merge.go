@@ -10,6 +10,12 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 )
 
+const (
+	// MergeRecursionLimit limits how many virtual merge bases are computed
+	// in a recursive merge.
+	MergeRecursionLimit = 20
+)
+
 var (
 	// ErrInvalidArgument is returned in case the merge arguments are invalid.
 	ErrInvalidArgument = errors.New("invalid parameters")
