@@ -31,7 +31,7 @@ module Gitlab
       def trigger(gl_id, gl_username, oldrev, newrev, ref, push_options: nil, transaction: nil)
         return [true, nil] unless exists?
 
-        Bundler.with_clean_env do
+        Bundler.with_unbundled_env do
           case name
           when "pre-receive", "post-receive"
             call_receive_hook(gl_id, gl_username, oldrev, newrev, ref, push_options, transaction)
