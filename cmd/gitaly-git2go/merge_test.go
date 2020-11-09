@@ -174,9 +174,9 @@ func TestMergeTrees(t *testing.T) {
 		_, repoPath, cleanup := testhelper.NewTestRepo(t)
 		defer cleanup()
 
-		base := cmdtesthelper.BuildCommit(t, repoPath, nil, tc.base)
-		ours := cmdtesthelper.BuildCommit(t, repoPath, base, tc.ours)
-		theirs := cmdtesthelper.BuildCommit(t, repoPath, base, tc.theirs)
+		base := cmdtesthelper.BuildCommit(t, repoPath, []*git.Oid{nil}, tc.base)
+		ours := cmdtesthelper.BuildCommit(t, repoPath, []*git.Oid{base}, tc.ours)
+		theirs := cmdtesthelper.BuildCommit(t, repoPath, []*git.Oid{base}, tc.theirs)
 
 		authorDate := time.Date(2020, 7, 30, 7, 45, 50, 0, time.FixedZone("UTC+2", +2*60*60))
 

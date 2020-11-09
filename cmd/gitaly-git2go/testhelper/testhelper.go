@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func BuildCommit(t testing.TB, repoPath string, parent *git.Oid, fileContents map[string]string) *git.Oid {
+func BuildCommit(t testing.TB, repoPath string, parents []*git.Oid, fileContents map[string]string) *git.Oid {
 	repo, err := git.OpenRepository(repoPath)
 	require.NoError(t, err)
 	defer repo.Free()
@@ -37,11 +37,7 @@ func BuildCommit(t testing.TB, repoPath string, parent *git.Oid, fileContents ma
 	}
 
 	var commit *git.Oid
-	if parent != nil {
-		commit, err = repo.CreateCommitFromIds("", &committer, &committer, "Message", tree, parent)
-	} else {
-		commit, err = repo.CreateCommitFromIds("", &committer, &committer, "Message", tree)
-	}
+	commit, err = repo.CreateCommitFromIds("", &committer, &committer, "Message", tree, parents...)
 	require.NoError(t, err)
 
 	return commit
