@@ -1,0 +1,5 @@
+---
+title: 'operations: Fix error message when UserMergeToRef conflicts'
+merge_request: 2756
+author:
+type: fixed

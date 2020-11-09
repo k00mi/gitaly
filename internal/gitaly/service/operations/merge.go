@@ -438,7 +438,7 @@ func (s *server) userMergeToRef(ctx context.Context, request *gitalypb.UserMerge
 			return nil, helper.ErrInvalidArgument(err)
 		}
 		//nolint:stylecheck
-		return nil, helper.ErrPreconditionFailed(fmt.Errorf("Failed to create merge commit for source_sha %s and target_sha %s at %s", sourceRef, string(request.TargetRef), refName))
+		return nil, helper.ErrPreconditionFailedf("Failed to create merge commit for source_sha %s and target_sha %s at %s", sourceRef, ref, string(request.TargetRef))
 	}
 
 	// ... and move branch from target ref to the merge commit. The Ruby
