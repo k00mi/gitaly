@@ -18,7 +18,11 @@ variables:
   RUBY_VERSION: "2.7"
 
 include:
-  - template: 'Workflows/MergeRequest-Pipelines.gitlab-ci.yml'
+  - template: Workflows/MergeRequest-Pipelines.gitlab-ci.yml
+  - template: Security/License-Scanning.gitlab-ci.yml
+  - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Dependency-Scanning.gitlab-ci.yml
+  - template: Security/Coverage-Fuzzing.gitlab-ci.yml
 
 danger-review:
   image: registry.gitlab.com/gitlab-org/gitlab-build-images:danger
@@ -222,12 +226,6 @@ docker-tag:
       - tags@gitlab-org/gitaly
     variables:
       - $CI_PIPELINE_SOURCE != "schedule"
-
-include:
-  - template: Security/License-Scanning.gitlab-ci.yml
-  - template: Security/SAST.gitlab-ci.yml
-  - template: Security/Dependency-Scanning.gitlab-ci.yml
-  - template: Security/Coverage-Fuzzing.gitlab-ci.yml
 
 gosec-sast:
   before_script:
