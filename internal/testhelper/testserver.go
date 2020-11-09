@@ -33,6 +33,7 @@ import (
 	serverauth "gitlab.com/gitlab-org/gitaly/internal/gitaly/server/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/fieldextractors"
+	gitalylog "gitlab.com/gitlab-org/gitaly/internal/log"
 	praefectconfig "gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	grpccorrelation "gitlab.com/gitlab-org/labkit/correlation/grpc"
@@ -924,7 +925,7 @@ func EnvForHooks(t testing.TB, gitlabShellDir, gitalySocket, gitalyToken string,
 		fmt.Sprintf("GITALY_TOKEN=%s", gitalyToken),
 		fmt.Sprintf("GITALY_REPO=%v", repoString),
 		fmt.Sprintf("GITALY_GITLAB_SHELL_DIR=%s", gitlabShellDir),
-		fmt.Sprintf("GITALY_LOG_DIR=%s", gitlabShellDir),
+		fmt.Sprintf("%s=%s", gitalylog.GitalyLogDirEnvKey, gitlabShellDir),
 	}...)
 	env = append(env, hooks.GitPushOptions(gitPushOptions)...)
 
