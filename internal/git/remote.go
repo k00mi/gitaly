@@ -197,7 +197,7 @@ func (repo RepositoryRemote) Add(ctx context.Context, name, url string, opts Rem
 	}
 
 	if err := cmd.Wait(); err != nil {
-		if bytes.Contains(stderr.Bytes(), []byte("remote "+name+" already exists")) {
+		if bytes.HasPrefix(stderr.Bytes(), []byte("fatal: remote "+name+" already exists")) {
 			return ErrAlreadyExists
 		}
 
