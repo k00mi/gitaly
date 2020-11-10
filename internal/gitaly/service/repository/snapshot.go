@@ -67,7 +67,7 @@ func (s *server) GetSnapshot(in *gitalypb.GetSnapshotRequest, stream gitalypb.Re
 	builder.FileIfExist("shallow")
 
 	if err := s.addAlternateFiles(stream.Context(), in.GetRepository(), builder); err != nil {
-		return helper.ErrInternal(err)
+		return helper.ErrInternalf("add alternates: %w", err)
 	}
 
 	if err := builder.Close(); err != nil {
@@ -80,12 +80,12 @@ func (s *server) GetSnapshot(in *gitalypb.GetSnapshotRequest, stream gitalypb.Re
 func (s *server) addAlternateFiles(ctx context.Context, repository *gitalypb.Repository, builder *archive.TarBuilder) error {
 	storageRoot, err := s.locator.GetStorageByName(repository.GetStorageName())
 	if err != nil {
-		return err
+		return fmt.Errorf("get storage path: %w", err)
 	}
 
 	repoPath, err := s.locator.GetRepoPath(repository)
 	if err != nil {
-		return err
+		return fmt.Errorf("get repo path: %w", err)
 	}
 
 	altObjDirs, err := git.AlternateObjectDirectories(ctx, storageRoot, repoPath)
@@ -105,14 +105,13 @@ func (s *server) addAlternateFiles(ctx context.Context, repository *gitalypb.Rep
 
 func walkAndAddToBuilder(alternateObjDir string, builder *archive.TarBuilder) error {
 	matchWalker := archive.NewMatchWalker(objectFiles, func(path string, info os.FileInfo, err error) error {
-		fmt.Printf("walking down %v\n", path)
 		if err != nil {
 			return fmt.Errorf("error walking %v: %v", path, err)
 		}
 
 		relPath, err := filepath.Rel(alternateObjDir, path)
 		if err != nil {
-			return err
+			return fmt.Errorf("alternative object directory path: %w", err)
 		}
 
 		file, err := os.Open(path)
