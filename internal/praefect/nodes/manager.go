@@ -127,7 +127,7 @@ func NewManager(
 	latencyHistogram prommetrics.HistogramVec,
 	registry *protoregistry.Registry,
 	errorTracker tracker.ErrorTracker,
-	dialOpts ...grpc.DialOption) (*Mgr, error) {
+) (*Mgr, error) {
 	strategies := make(map[string]leaderElectionStrategy, len(c.VirtualStorages))
 
 	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
@@ -147,15 +147,12 @@ func NewManager(
 				streamInterceptors = append(streamInterceptors, middleware.StreamErrorHandler(registry, errorTracker, node.Storage))
 			}
 
-			conn, err := client.DialContext(ctx, node.Address,
-				append(
-					[]grpc.DialOption{
-						grpc.WithDefaultCallOptions(grpc.ForceCodec(proxy.NewCodec())),
-						grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(node.Token)),
-						grpc.WithChainStreamInterceptor(streamInterceptors...),
-						grpc.WithChainUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
-					}, dialOpts...),
-			)
+			conn, err := client.DialContext(ctx, node.Address, []grpc.DialOption{
+				grpc.WithDefaultCallOptions(grpc.ForceCodec(proxy.NewCodec())),
+				grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(node.Token)),
+				grpc.WithChainStreamInterceptor(streamInterceptors...),
+				grpc.WithChainUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
+			})
 			if err != nil {
 				return nil, err
 			}
