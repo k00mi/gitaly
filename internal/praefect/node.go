@@ -9,6 +9,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes/tracker"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
 // Node is a storage node in a virtual storage.
@@ -33,6 +34,32 @@ func (set NodeSet) Close() {
 			node.Connection.Close()
 		}
 	}
+}
+
+// HealthClients is a convenience method to return the HealthClients from the NodeSet.
+func (set NodeSet) HealthClients() nodes.HealthClients {
+	clients := make(nodes.HealthClients, len(set))
+	for virtualStorage, nodes := range set {
+		clients[virtualStorage] = make(map[string]grpc_health_v1.HealthClient, len(nodes))
+		for _, node := range nodes {
+			clients[virtualStorage][node.Storage] = grpc_health_v1.NewHealthClient(node.Connection)
+		}
+	}
+
+	return clients
+}
+
+// Connections is a convenience method to return the connections from the NodeSet.
+func (set NodeSet) Connections() Connections {
+	conns := make(Connections, len(set))
+	for virtualStorage, nodes := range set {
+		conns[virtualStorage] = make(map[string]*grpc.ClientConn, len(nodes))
+		for _, node := range nodes {
+			conns[virtualStorage][node.Storage] = node.Connection
+		}
+	}
+
+	return conns
 }
 
 // NodeSetFromNodeManager converts connections set up by the node manager
