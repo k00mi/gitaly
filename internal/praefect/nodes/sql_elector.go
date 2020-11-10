@@ -85,7 +85,7 @@ type sqlElector struct {
 
 func newSQLElector(name string, c config.Config, db *sql.DB, log logrus.FieldLogger, ns []*nodeStatus) *sqlElector {
 	log = log.WithField("virtual_storage", name)
-	praefectName := getPraefectName(c, log)
+	praefectName := GeneratePraefectName(c, log)
 
 	log = log.WithField("praefectName", praefectName)
 	log.Info("Using SQL election strategy")
@@ -105,13 +105,13 @@ func newSQLElector(name string, c config.Config, db *sql.DB, log logrus.FieldLog
 	}
 }
 
-// Generate a Praefect name so that each Praefect process can report
-// node statuses independently.  This will enable us to do a SQL
-// election to determine which nodes are active. Ideally this name
+// GeneratePraefectName generates a name so that each Praefect process
+// can report node statuses independently. This will enable us to do a
+// SQL election to determine which nodes are active. Ideally this name
 // doesn't change across restarts since that may temporarily make it
 // look like there are more Praefect processes active for
 // determining a quorum.
-func getPraefectName(c config.Config, log logrus.FieldLogger) string {
+func GeneratePraefectName(c config.Config, log logrus.FieldLogger) string {
 	name, err := os.Hostname()
 
 	if err != nil {
