@@ -30,7 +30,7 @@ type GitalyServerFactory struct {
 // NewGitalyServerFactory allows to create and start secure/insecure 'grpc.Server'-s with gitaly-ruby
 // server shared in between.
 func NewGitalyServerFactory(hookManager hook.Manager, conns *client.Pool) *GitalyServerFactory {
-	return &GitalyServerFactory{ruby: &rubyserver.Server{}, hookManager: hookManager}
+	return &GitalyServerFactory{ruby: &rubyserver.Server{}, hookManager: hookManager, conns: conns}
 }
 
 // StartRuby starts the ruby process
