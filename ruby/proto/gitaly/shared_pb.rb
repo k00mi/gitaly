@@ -24,6 +24,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
       repeated :parent_ids, :string, 6
       optional :body_size, :int64, 7
       optional :signature_type, :enum, 8, "gitaly.SignatureType"
+      optional :tree_id, :string, 9
     end
     add_message "gitaly.CommitAuthor" do
       optional :name, :bytes, 1

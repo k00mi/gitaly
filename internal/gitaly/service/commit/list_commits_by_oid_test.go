@@ -28,6 +28,7 @@ func TestSuccessfulListCommitsByOidRequest(t *testing.T) {
 			Committer: dummyCommitAuthor(1500320272),
 			ParentIds: []string{"9d526f87b82e2b2fd231ca44c95508e5e85624ca"},
 			BodySize:  11,
+			TreeId:    "91639b9835ff541f312fd2735f639a50bf35d472",
 		},
 		{
 			Id:        "79b06233d3dc769921576771a4e8bee4b439595d",
@@ -37,6 +38,7 @@ func TestSuccessfulListCommitsByOidRequest(t *testing.T) {
 			Committer: dummyCommitAuthor(1500320254),
 			ParentIds: []string{"1a0b36b3cdad1d2ee32457c102a8c0b7056fa863"},
 			BodySize:  10,
+			TreeId:    "91639b9835ff541f312fd2735f639a50bf35d472",
 		},
 	}
 

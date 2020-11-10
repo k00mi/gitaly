@@ -12,7 +12,8 @@ module GitalyServer
         parent_ids: rugged_commit.parent_ids,
         author: gitaly_commit_author_from_rugged(rugged_commit.author),
         committer: gitaly_commit_author_from_rugged(rugged_commit.committer),
-        body_size: rugged_commit.message.bytesize
+        body_size: rugged_commit.message.bytesize,
+        tree_id: rugged_commit.tree.oid
       )
       truncate_gitaly_commit_body!(gitaly_commit) if gitaly_commit.body.bytesize > Gitlab.config.git.max_commit_or_tag_message_size
 

@@ -109,6 +109,8 @@ func buildCommit(header, body []byte, info *catfile.ObjectInfo) (*gitalypb.GitCo
 			commit.Committer = parseCommitAuthor(headerSplit[1])
 		case "gpgsig":
 			commit.SignatureType = detectSignatureType(headerSplit[1])
+		case "tree":
+			commit.TreeId = headerSplit[1]
 		}
 	}
 	if err := scanner.Err(); err != nil {
