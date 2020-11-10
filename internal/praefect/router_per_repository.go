@@ -51,17 +51,6 @@ type PrimaryGetter interface {
 	GetPrimary(ctx context.Context, virtualStorage string, relativePath string) (string, error)
 }
 
-// Random is the interface of the Go random number generator.
-type Random interface {
-	// Intn returns a random integer in the range [0,n).
-	Intn(n int) int
-}
-
-// RandomFunc is an adapter to turn conforming functions in to a Random.
-type RandomFunc func(n int) int
-
-func (fn RandomFunc) Intn(n int) int { return fn(n) }
-
 // PerRepositoryRouter implements a router that routes requests respecting per repository primary nodes.
 type PerRepositoryRouter struct {
 	conns Connections
