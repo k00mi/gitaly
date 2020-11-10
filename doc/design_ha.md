@@ -204,14 +204,19 @@ data loss. If there is no eligible candidate for a promotion, the virtual storag
 
 #### Read-only Mode
 
-A virtual storage is marked as read-only after failing over to a new primary. The main reason
-for this is to avoid conflicts between the new and the old primary. If there were outstanding replication jobs
-towards the new primary at the time of the failover, it would be missing some data as it wasn't able to replicate
-it from the old primary before the failover. Read-only mode prevents the new primary from accepting writes that
-would potentially conflict with the unreplicated writes on the old primary. This allows an administrator to
-solve data loss cases by synchronizing the missing data from the old primary to the new one if they so choose.
-Alternatively, an administrator can choose to enable writes on the new primary immediately if they do not wish
-to solve the data loss cases.
+A repository is switched in to read-only mode if its primary storage is outdated. This happen after failing
+over to an outdated storage node. A storage's copy of the repository is outdated if it hasn't replicated all of the
+writes to the repository.
+
+Switching a repository in to read-only mode prevents the outdated primary from accepting writes that may conflict
+with some of the unreplicated writes from the previous primary. This ensures recovery is simply a matter of
+replicating the missing data from another storage node.
+
+Praefect's automatic reconciler schedules replication jobs to bring outdated repositories back to speed as long
+as there is a healthy storage with a fully up to date copy of the repository available.
+
+When it is not possible to bring a storage node containing the latest copy of the repository back online,
+administrator may accept data loss by manually selecting which copy of the repository to use going forward.
 
 ## Compared to Geo
 
