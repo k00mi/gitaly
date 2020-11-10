@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"gitlab.com/gitlab-org/gitaly/client"
+	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
@@ -197,11 +198,19 @@ func (repo RepositoryRemote) Add(ctx context.Context, name, url string, opts Rem
 	}
 
 	if err := cmd.Wait(); err != nil {
-		if bytes.HasPrefix(stderr.Bytes(), []byte("fatal: remote "+name+" already exists")) {
-			return ErrAlreadyExists
+		status, ok := command.ExitStatus(err)
+		if !ok {
+			return err
 		}
 
-		return err
+		if status == 3 {
+			// In Git v2.30.0 and newer (https://gitlab.com/git-vcs/git/commit/9144ba4cf52)
+			return ErrAlreadyExists
+		}
+		if status == 128 && bytes.HasPrefix(stderr.Bytes(), []byte("fatal: remote "+name+" already exists")) {
+			// ..in older versions we parse stderr
+			return ErrAlreadyExists
+		}
 	}
 
 	return nil
@@ -225,9 +234,20 @@ func (repo RepositoryRemote) Remove(ctx context.Context, name string) error {
 		return err
 	}
 
-	err = cmd.Wait()
-	if err != nil && strings.HasPrefix(stderr.String(), "fatal: No such remote") {
-		return ErrNotFound
+	if err := cmd.Wait(); err != nil {
+		status, ok := command.ExitStatus(err)
+		if !ok {
+			return err
+		}
+
+		if status == 2 {
+			// In Git v2.30.0 and newer (https://gitlab.com/git-vcs/git/commit/9144ba4cf52)
+			return ErrNotFound
+		}
+		if status == 128 && strings.HasPrefix(stderr.String(), "fatal: No such remote") {
+			// ..in older versions we parse stderr
+			return ErrNotFound
+		}
 	}
 
 	return err
@@ -269,9 +289,20 @@ func (repo RepositoryRemote) SetURL(ctx context.Context, name, url string, opts 
 		return err
 	}
 
-	err = cmd.Wait()
-	if err != nil && strings.HasPrefix(stderr.String(), "fatal: No such remote") {
-		return ErrNotFound
+	if err := cmd.Wait(); err != nil {
+		status, ok := command.ExitStatus(err)
+		if !ok {
+			return err
+		}
+
+		if status == 2 {
+			// In Git v2.30.0 and newer (https://gitlab.com/git-vcs/git/commit/9144ba4cf52)
+			return ErrNotFound
+		}
+		if status == 128 && strings.HasPrefix(stderr.String(), "fatal: No such remote") {
+			// ..in older versions we parse stderr
+			return ErrNotFound
+		}
 	}
 
 	return err
