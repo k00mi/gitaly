@@ -15,7 +15,7 @@ func detectFileSystem(path string) string {
 		if c == 0 {
 			break
 		}
-		buf = append(buf, byte(c))
+		buf = append(buf, c)
 	}
 
 	if len(buf) == 0 {
