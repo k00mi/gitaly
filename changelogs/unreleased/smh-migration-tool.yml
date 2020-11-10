@@ -1,0 +1,5 @@
+---
+title: Create database records for repositories missing them
+merge_request: 2749
+author:
+type: added
