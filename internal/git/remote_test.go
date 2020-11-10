@@ -163,7 +163,7 @@ func TestRepositoryRemote_Remove(t *testing.T) {
 	})
 }
 
-func TestSetURLOpts_buildFlags(t *testing.T) {
+func TestRemoteSetURLOpts_buildFlags(t *testing.T) {
 	for _, tc := range []struct {
 		desc string
 		opts SetURLOpts
