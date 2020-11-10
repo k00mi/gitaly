@@ -20,7 +20,6 @@ require (
 	github.com/otiai10/curr v1.0.0 // indirect
 	github.com/pelletier/go-toml v1.8.1
 	github.com/prometheus/client_golang v1.0.0
-	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
 	github.com/prometheus/procfs v0.0.3 // indirect
 	github.com/rubenv/sql-migrate v0.0.0-20191213152630-06338513c237
 	github.com/sirupsen/logrus v1.7.0
