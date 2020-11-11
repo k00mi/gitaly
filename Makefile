@@ -92,7 +92,6 @@ ifeq (${GIT_BUILD_OPTIONS},)
     GIT_BUILD_OPTIONS += NO_GETTEXT=YesPlease
     GIT_BUILD_OPTIONS += NO_PYTHON=YesPlease
     GIT_BUILD_OPTIONS += NO_INSTALL_HARDLINKS=YesPlease
-    GIT_BUILD_OPTIONS += NO_R_TO_GCC_LINKER=YesPlease
 endif
 
 # libgit2 target
