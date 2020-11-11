@@ -29,7 +29,7 @@ danger-review:
   allow_failure: true
   stage: build
   only:
-    - branches@gitlab-org/gitaly
+    - merge_requests
   except:
     - tags
     - master
