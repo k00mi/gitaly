@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func sendTreeEntry(stream gitalypb.CommitService_TreeEntryServer, c *catfile.Batch, revision, path string, limit int64) error {
+func sendTreeEntry(stream gitalypb.CommitService_TreeEntryServer, c *catfile.Batch, revision, path string, limit, maxSize int64) error {
 	treeEntry, err := NewTreeEntryFinder(c).FindByRevisionAndPath(revision, path)
 	if err != nil {
 		return err
@@ -66,6 +66,15 @@ func sendTreeEntry(stream gitalypb.CommitService_TreeEntryServer, c *catfile.Bat
 	}
 
 	dataLength := objectInfo.Size
+
+	if maxSize > 0 && dataLength > maxSize {
+		return status.Errorf(
+			codes.FailedPrecondition,
+			"TreeEntry: object size (%d) is bigger than the maximum allowed size (%d)",
+			dataLength, maxSize,
+		)
+	}
+
 	if limit > 0 && dataLength > limit {
 		dataLength = limit
 	}
@@ -120,7 +129,7 @@ func (s *server) TreeEntry(in *gitalypb.TreeEntryRequest, stream gitalypb.Commit
 		return err
 	}
 
-	return sendTreeEntry(stream, c, string(in.GetRevision()), requestPath, in.GetLimit())
+	return sendTreeEntry(stream, c, string(in.GetRevision()), requestPath, in.GetLimit(), in.GetMaxSize())
 }
 
 func validateRequest(in *gitalypb.TreeEntryRequest) error {
@@ -130,6 +139,13 @@ func validateRequest(in *gitalypb.TreeEntryRequest) error {
 
 	if len(in.GetPath()) == 0 {
 		return fmt.Errorf("empty Path")
+	}
+
+	if in.GetLimit() < 0 {
+		return fmt.Errorf("negative Limit")
+	}
+	if in.GetMaxSize() < 0 {
+		return fmt.Errorf("negative MaxSize")
 	}
 
 	return nil

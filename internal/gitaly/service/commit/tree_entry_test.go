@@ -33,6 +33,7 @@ func TestSuccessfulTreeEntry(t *testing.T) {
 		revision          []byte
 		path              []byte
 		limit             int64
+		maxSize           int64
 		expectedTreeEntry treeEntry
 	}{
 		{
@@ -50,6 +51,18 @@ func TestSuccessfulTreeEntry(t *testing.T) {
 			revision: []byte("913c66a37b4a45b9769037c55c2d238bd0942d2e"),
 			path:     []byte("MAINTENANCE.md"),
 			limit:    40 * 1024,
+			expectedTreeEntry: treeEntry{
+				objectType: gitalypb.TreeEntryResponse_BLOB,
+				oid:        "95d9f0a5e7bb054e9dd3975589b8dfc689e20e88",
+				size:       1367,
+				mode:       0100644,
+				data:       testhelper.MustReadFile(t, "testdata/maintenance-md-blob.txt"),
+			},
+		},
+		{
+			revision: []byte("913c66a37b4a45b9769037c55c2d238bd0942d2e"),
+			path:     []byte("MAINTENANCE.md"),
+			maxSize:  40 * 1024,
 			expectedTreeEntry: treeEntry{
 				objectType: gitalypb.TreeEntryResponse_BLOB,
 				oid:        "95d9f0a5e7bb054e9dd3975589b8dfc689e20e88",
@@ -144,6 +157,7 @@ func TestSuccessfulTreeEntry(t *testing.T) {
 				Revision:   testCase.revision,
 				Path:       testCase.path,
 				Limit:      testCase.limit,
+				MaxSize:    testCase.maxSize,
 			}
 
 			ctx, cancel := testhelper.Context()
@@ -158,7 +172,7 @@ func TestSuccessfulTreeEntry(t *testing.T) {
 	}
 }
 
-func TestFailedTreeEntryRequestDueToValidationError(t *testing.T) {
+func TestFailedTreeEntry(t *testing.T) {
 	server, serverSocketPath := startTestServices(t)
 	defer server.Stop()
 
@@ -171,25 +185,64 @@ func TestFailedTreeEntryRequestDueToValidationError(t *testing.T) {
 	revision := []byte("d42783470dc29fde2cf459eb3199ee1d7e3f3a72")
 	path := []byte("a/b/c")
 
-	rpcRequests := []gitalypb.TreeEntryRequest{
-		{Repository: &gitalypb.Repository{StorageName: "fake", RelativePath: "path"}, Revision: revision, Path: path}, // Repository doesn't exist
-		{Repository: nil, Revision: revision, Path: path},                                                             // Repository is nil
-		{Repository: testRepo, Revision: nil, Path: path},                                                             // Revision is empty
-		{Repository: testRepo, Revision: revision},                                                                    // Path is empty
-		{Repository: testRepo, Revision: []byte("--output=/meow"), Path: path},                                        // Revision is invalid
+	testCases := []struct {
+		name         string
+		req          gitalypb.TreeEntryRequest
+		expectedCode codes.Code
+	}{
+		{
+			name:         "Repository doesn't exist",
+			req:          gitalypb.TreeEntryRequest{Repository: &gitalypb.Repository{StorageName: "fake", RelativePath: "path"}, Revision: revision, Path: path},
+			expectedCode: codes.InvalidArgument,
+		},
+		{
+			name:         "Repository is nil",
+			req:          gitalypb.TreeEntryRequest{Repository: nil, Revision: revision, Path: path},
+			expectedCode: codes.InvalidArgument,
+		},
+		{
+			name:         "Revision is empty",
+			req:          gitalypb.TreeEntryRequest{Repository: testRepo, Revision: nil, Path: path},
+			expectedCode: codes.InvalidArgument,
+		},
+		{
+			name:         "Path is empty",
+			req:          gitalypb.TreeEntryRequest{Repository: testRepo, Revision: revision},
+			expectedCode: codes.InvalidArgument,
+		},
+		{
+			name:         "Revision is invalid",
+			req:          gitalypb.TreeEntryRequest{Repository: testRepo, Revision: []byte("--output=/meow"), Path: path},
+			expectedCode: codes.InvalidArgument,
+		},
+		{
+			name:         "Limit is negative",
+			req:          gitalypb.TreeEntryRequest{Repository: testRepo, Revision: revision, Path: path, Limit: -1},
+			expectedCode: codes.InvalidArgument,
+		},
+		{
+			name:         "MaximumSize is negative",
+			req:          gitalypb.TreeEntryRequest{Repository: testRepo, Revision: revision, Path: path, MaxSize: -1},
+			expectedCode: codes.InvalidArgument,
+		},
+		{
+			name:         "Object bigger than MaxSize",
+			req:          gitalypb.TreeEntryRequest{Repository: testRepo, Revision: []byte("913c66a37b4a45b9769037c55c2d238bd0942d2e"), Path: []byte("MAINTENANCE.md"), MaxSize: 10},
+			expectedCode: codes.FailedPrecondition,
+		},
 	}
 
-	for _, rpcRequest := range rpcRequests {
-		t.Run(fmt.Sprintf("%+v", rpcRequest), func(t *testing.T) {
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
-			c, err := client.TreeEntry(ctx, &rpcRequest)
+			c, err := client.TreeEntry(ctx, &testCase.req)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			err = drainTreeEntryResponse(c)
-			testhelper.RequireGrpcError(t, err, codes.InvalidArgument)
+			testhelper.RequireGrpcError(t, err, testCase.expectedCode)
 		})
 	}
 }
