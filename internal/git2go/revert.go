@@ -1,24 +1,19 @@
 package git2go
 
 import (
+	"bytes"
 	"context"
-	"errors"
+	"encoding/gob"
 	"fmt"
-	"io"
 	"time"
 
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 )
 
-// RevertResult contains results from a revert.
-type RevertResult struct {
-	// CommitID is the object ID of the generated revert commit.
-	CommitID string `json:"commit_id"`
-}
+type RevertConflictError struct{}
 
-// SerializeTo serializes the revert result and writes it into the writer.
-func (r RevertResult) SerializeTo(w io.Writer) error {
-	return serializeTo(w, r)
+func (err RevertConflictError) Error() string {
+	return "could not revert due to conflicts"
 }
 
 type RevertCommand struct {
@@ -40,61 +35,25 @@ type RevertCommand struct {
 	Mainline uint `json:"mainline"`
 }
 
-func (r RevertCommand) Run(ctx context.Context, cfg config.Cfg) (RevertResult, error) {
-	if err := r.verify(); err != nil {
-		return RevertResult{}, fmt.Errorf("revert: %w: %s", ErrInvalidArgument, err.Error())
+func (r RevertCommand) Run(ctx context.Context, cfg config.Cfg) (string, error) {
+	input := &bytes.Buffer{}
+	if err := gob.NewEncoder(input).Encode(r); err != nil {
+		return "", fmt.Errorf("revert: %w", err)
 	}
 
-	serialized, err := serialize(r)
+	output, err := run(ctx, binaryPathFromCfg(cfg), input, "revert")
 	if err != nil {
-		return RevertResult{}, err
+		return "", fmt.Errorf("revert: %w", err)
 	}
 
-	stdout, err := run(ctx, binaryPathFromCfg(cfg), nil, "revert", "-request", serialized)
-	if err != nil {
-		return RevertResult{}, err
+	var result Result
+	if err := gob.NewDecoder(output).Decode(&result); err != nil {
+		return "", fmt.Errorf("revert: %w", err)
 	}
 
-	var response RevertResult
-	if err := deserialize(stdout.String(), &response); err != nil {
-		return RevertResult{}, err
+	if result.Error != nil {
+		return "", fmt.Errorf("revert: %w", result.Error)
 	}
 
-	return response, nil
-}
-
-func (r RevertCommand) verify() error {
-	if r.Repository == "" {
-		return errors.New("missing repository")
-	}
-	if r.AuthorName == "" {
-		return errors.New("missing author name")
-	}
-	if r.AuthorMail == "" {
-		return errors.New("missing author mail")
-	}
-	if r.Message == "" {
-		return errors.New("missing message")
-	}
-	if r.Ours == "" {
-		return errors.New("missing ours")
-	}
-	if r.Revert == "" {
-		return errors.New("missing revert")
-	}
-	return nil
-}
-
-// RevertCommandFromSerialized deserializes the revert request from its JSON representation encoded with base64.
-func RevertCommandFromSerialized(serialized string) (RevertCommand, error) {
-	var request RevertCommand
-	if err := deserialize(serialized, &request); err != nil {
-		return RevertCommand{}, err
-	}
-
-	if err := request.verify(); err != nil {
-		return RevertCommand{}, fmt.Errorf("revert: %w: %s", ErrInvalidArgument, err.Error())
-	}
-
-	return request, nil
+	return result.CommitID, nil
 }
