@@ -3,6 +3,7 @@
 package main
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -26,37 +27,37 @@ func TestRevert_validation(t *testing.T) {
 	}{
 		{
 			desc:        "no arguments",
-			expectedErr: "revert: invalid parameters: missing repository",
+			expectedErr: "revert: missing repository",
 		},
 		{
 			desc:        "missing repository",
 			request:     git2go.RevertCommand{AuthorName: "Foo", AuthorMail: "foo@example.com", Message: "Foo", Ours: "HEAD", Revert: "HEAD"},
-			expectedErr: "revert: invalid parameters: missing repository",
+			expectedErr: "revert: missing repository",
 		},
 		{
 			desc:        "missing author name",
 			request:     git2go.RevertCommand{Repository: repoPath, AuthorMail: "foo@example.com", Message: "Foo", Ours: "HEAD", Revert: "HEAD"},
-			expectedErr: "revert: invalid parameters: missing author name",
+			expectedErr: "revert: missing author name",
 		},
 		{
 			desc:        "missing author mail",
 			request:     git2go.RevertCommand{Repository: repoPath, AuthorName: "Foo", Message: "Foo", Ours: "HEAD", Revert: "HEAD"},
-			expectedErr: "revert: invalid parameters: missing author mail",
+			expectedErr: "revert: missing author mail",
 		},
 		{
 			desc:        "missing message",
 			request:     git2go.RevertCommand{Repository: repoPath, AuthorName: "Foo", AuthorMail: "foo@example.com", Ours: "HEAD", Revert: "HEAD"},
-			expectedErr: "revert: invalid parameters: missing message",
+			expectedErr: "revert: missing message",
 		},
 		{
 			desc:        "missing ours",
 			request:     git2go.RevertCommand{Repository: repoPath, AuthorName: "Foo", AuthorMail: "foo@example.com", Message: "Foo", Revert: "HEAD"},
-			expectedErr: "revert: invalid parameters: missing ours",
+			expectedErr: "revert: missing ours",
 		},
 		{
 			desc:        "missing revert",
 			request:     git2go.RevertCommand{Repository: repoPath, AuthorName: "Foo", AuthorMail: "foo@example.com", Message: "Foo", Ours: "HEAD"},
-			expectedErr: "revert: invalid parameters: missing revert",
+			expectedErr: "revert: missing revert",
 		},
 	}
 	for _, tc := range testcases {
@@ -66,7 +67,7 @@ func TestRevert_validation(t *testing.T) {
 
 			_, err := tc.request.Run(ctx, config.Config)
 			require.Error(t, err)
-			require.Equal(t, tc.expectedErr, err.Error())
+			require.EqualError(t, err, tc.expectedErr)
 		})
 	}
 }
@@ -76,8 +77,9 @@ func TestRevert_trees(t *testing.T) {
 		desc             string
 		setupRepo        func(t testing.TB, repoPath string) (ours, revert string)
 		expected         map[string]string
-		expectedResponse git2go.RevertResult
-		expectedStderr   string
+		expectedCommitID string
+		expectedErr      string
+		expectedErrAs    interface{}
 	}{
 		{
 			desc: "trivial revert succeeds",
@@ -103,9 +105,7 @@ func TestRevert_trees(t *testing.T) {
 				"b": "banana",
 				"c": "carrot",
 			},
-			expectedResponse: git2go.RevertResult{
-				CommitID: "0be709b57f18ad3f592a8cb7c57f920861392573",
-			},
+			expectedCommitID: "0be709b57f18ad3f592a8cb7c57f920861392573",
 		},
 		{
 			desc: "conflicting revert fails",
@@ -122,7 +122,8 @@ func TestRevert_trees(t *testing.T) {
 
 				return oursOid.String(), revertOid.String()
 			},
-			expectedStderr: "revert: could not revert due to conflicts\n",
+			expectedErr:   "revert: could not revert due to conflicts",
+			expectedErrAs: &git2go.RevertConflictError{},
 		},
 		{
 			desc: "nonexistent ours fails",
@@ -133,7 +134,7 @@ func TestRevert_trees(t *testing.T) {
 
 				return "nonexistent", revertOid.String()
 			},
-			expectedStderr: "revert: ours commit lookup: could not lookup reference \"nonexistent\": revspec 'nonexistent' not found\n",
+			expectedErr: "revert: ours commit lookup: could not lookup reference \"nonexistent\": revspec 'nonexistent' not found",
 		},
 		{
 			desc: "nonexistent revert fails",
@@ -144,7 +145,7 @@ func TestRevert_trees(t *testing.T) {
 
 				return oursOid.String(), "nonexistent"
 			},
-			expectedStderr: "revert: revert commit lookup: could not lookup reference \"nonexistent\": revspec 'nonexistent' not found\n",
+			expectedErr: "revert: revert commit lookup: could not lookup reference \"nonexistent\": revspec 'nonexistent' not found",
 		},
 	}
 	for _, tc := range testcases {
@@ -171,20 +172,23 @@ func TestRevert_trees(t *testing.T) {
 
 			response, err := request.Run(ctx, config.Config)
 
-			if tc.expectedStderr != "" {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tc.expectedStderr)
+			if tc.expectedErr != "" {
+				require.EqualError(t, err, tc.expectedErr)
+
+				if tc.expectedErrAs != nil {
+					require.True(t, errors.As(err, tc.expectedErrAs))
+				}
 				return
 			}
 
 			require.NoError(t, err)
-			assert.Equal(t, tc.expectedResponse, response)
+			assert.Equal(t, tc.expectedCommitID, response)
 
 			repo, err := git.OpenRepository(repoPath)
 			require.NoError(t, err)
 			defer repo.Free()
 
-			commitOid, err := git.NewOid(response.CommitID)
+			commitOid, err := git.NewOid(response)
 			require.NoError(t, err)
 
 			commit, err := repo.LookupCommit(commitOid)

@@ -24,6 +24,7 @@ var registeredTypes = map[interface{}]struct{}{
 	FileExistsError(""):      {},
 	FileNotFoundError(""):    {},
 	InvalidArgumentError(""): {},
+	RevertConflictError{}:    {},
 }
 
 // Result is the serialized result.
