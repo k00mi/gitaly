@@ -306,8 +306,13 @@ func run(cfgs []starter.Config, conf config.Config) error {
 		transactionManager,
 		coordinator,
 		repl,
-		datastore.NewRepositoryStoreCollector(logger, rs, nodeManager),
 	)
+
+	if db != nil {
+		prometheus.MustRegister(
+			datastore.NewRepositoryStoreCollector(logger, conf.VirtualStorageNames(), db, false),
+		)
+	}
 
 	b, err := bootstrap.New()
 	if err != nil {
