@@ -7,6 +7,6 @@
 # quickly and with a hopefully helpful message making the actual error quick to
 # spot.
 
-echo 'Git executable from $PATH was picked up. Please fix code to use `command.GitPath()` instead.' >&2
+echo "$0 executable from \$PATH was picked up. Please fix code to use \`command.GitPath()\` instead." >&2
 
 exit 63
