@@ -28,22 +28,24 @@ func (s *server) FetchInternalRemote(ctx context.Context, req *gitalypb.FetchInt
 
 	env, err := gitalyssh.UploadPackEnv(ctx, &gitalypb.SSHUploadPackRequest{Repository: req.RemoteRepository})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("upload pack environment: %w", err)
 	}
 
+	stderr := &bytes.Buffer{}
 	cmd, err := git.SafeCmdWithEnv(ctx, env, req.Repository, nil,
 		git.SubCmd{
 			Name:  "fetch",
 			Flags: []git.Option{git.Flag{Name: "--prune"}},
 			Args:  []string{gitalyssh.GitalyInternalURL, mirrorRefSpec},
 		},
+		git.WithStderr(stderr),
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create git fetch: %w", err)
 	}
 	if err := cmd.Wait(); err != nil {
 		// Design quirk: if the fetch fails, this RPC returns Result: false, but no error.
-		ctxlogrus.Extract(ctx).WithError(err).Warn("git fetch failed")
+		ctxlogrus.Extract(ctx).WithError(err).WithField("stderr", stderr.String()).Warn("git fetch failed")
 		return &gitalypb.FetchInternalRemoteResponse{Result: false}, nil
 	}
 

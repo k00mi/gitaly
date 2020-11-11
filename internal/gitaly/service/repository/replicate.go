@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -101,23 +102,23 @@ func (s *server) create(ctx context.Context, in *gitalypb.ReplicateRepositoryReq
 func (s *server) createFromSnapshot(ctx context.Context, in *gitalypb.ReplicateRepositoryRequest) error {
 	tempRepo, tempPath, err := tempdir.NewAsRepository(ctx, in.GetRepository(), s.locator)
 	if err != nil {
-		return err
+		return fmt.Errorf("create temporary directory: %w", err)
 	}
 
 	if _, err := s.CreateRepository(ctx, &gitalypb.CreateRepositoryRequest{
 		Repository: tempRepo,
 	}); err != nil {
-		return err
+		return fmt.Errorf("create repository: %w", err)
 	}
 
 	repoClient, err := s.newRepoClient(ctx, in.GetSource().GetStorageName())
 	if err != nil {
-		return err
+		return fmt.Errorf("new client: %w", err)
 	}
 
 	stream, err := repoClient.GetSnapshot(ctx, &gitalypb.GetSnapshotRequest{Repository: in.GetSource()})
 	if err != nil {
-		return err
+		return fmt.Errorf("get snapshot: %w", err)
 	}
 
 	snapshotReader := streamio.NewReader(func() ([]byte, error) {
@@ -125,26 +126,27 @@ func (s *server) createFromSnapshot(ctx context.Context, in *gitalypb.ReplicateR
 		return resp.GetData(), err
 	})
 
-	cmd, err := command.New(ctx, exec.Command("tar", "-C", tempPath, "-xvf", "-"), snapshotReader, nil, nil)
+	stderr := &bytes.Buffer{}
+	cmd, err := command.New(ctx, exec.Command("tar", "-C", tempPath, "-xvf", "-"), snapshotReader, nil, stderr)
 	if err != nil {
-		return err
+		return fmt.Errorf("create tar command: %w", err)
 	}
 
 	if err = cmd.Wait(); err != nil {
-		return err
+		return fmt.Errorf("wait for tar, stderr: %q, err: %w", stderr, err)
 	}
 
 	targetPath, err := s.locator.GetPath(in.GetRepository())
 	if err != nil {
-		return err
+		return fmt.Errorf("locate repository: %w", err)
 	}
 
 	if err = os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
-		return err
+		return fmt.Errorf("create parent directories: %w", err)
 	}
 
 	if err := os.Rename(tempPath, targetPath); err != nil {
-		return err
+		return fmt.Errorf("move temporary directory to target path: %w", err)
 	}
 
 	return nil
@@ -153,7 +155,7 @@ func (s *server) createFromSnapshot(ctx context.Context, in *gitalypb.ReplicateR
 func (s *server) syncRepository(ctx context.Context, in *gitalypb.ReplicateRepositoryRequest) error {
 	remoteClient, err := s.newRemoteClient(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("new client: %w", err)
 	}
 
 	resp, err := remoteClient.FetchInternalRemote(ctx, &gitalypb.FetchInternalRemoteRequest{
@@ -161,7 +163,7 @@ func (s *server) syncRepository(ctx context.Context, in *gitalypb.ReplicateRepos
 		RemoteRepository: in.GetSource(),
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("fetch internal remote: %w", err)
 	}
 
 	if !resp.Result {

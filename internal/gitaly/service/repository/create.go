@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"bytes"
 	"context"
 	"os"
 
@@ -12,14 +13,15 @@ import (
 func (s *server) CreateRepository(ctx context.Context, req *gitalypb.CreateRepositoryRequest) (*gitalypb.CreateRepositoryResponse, error) {
 	diskPath, err := s.locator.GetPath(req.GetRepository())
 	if err != nil {
-		return nil, helper.ErrInvalidArgument(err)
+		return nil, helper.ErrInvalidArgumentf("locate repository: %w", err)
 	}
 
 	if err := os.MkdirAll(diskPath, 0770); err != nil {
-		return nil, helper.ErrInternal(err)
+		return nil, helper.ErrInternalf("create directories: %w", err)
 	}
 
-	cmd, err := git.SafeCmdWithoutRepo(ctx, git.CmdStream{}, nil,
+	stderr := &bytes.Buffer{}
+	cmd, err := git.SafeCmdWithoutRepo(ctx, git.CmdStream{Err: stderr}, nil,
 		git.SubCmd{
 			Name: "init",
 			Flags: []git.Option{
@@ -30,11 +32,11 @@ func (s *server) CreateRepository(ctx context.Context, req *gitalypb.CreateRepos
 		},
 	)
 	if err != nil {
-		return nil, helper.ErrInternal(err)
+		return nil, helper.ErrInternalf("create git init: %w", err)
 	}
 
 	if err := cmd.Wait(); err != nil {
-		return nil, helper.ErrInternal(err)
+		return nil, helper.ErrInternalf("git init stderr: %q, err: %w", stderr, err)
 	}
 
 	return &gitalypb.CreateRepositoryResponse{}, nil
