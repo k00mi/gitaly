@@ -81,8 +81,6 @@ GIT_SOURCE_DIR    := ${BUILD_DIR}/src/git
 ifeq (${GIT_BUILD_OPTIONS},)
     # activate developer checks
     GIT_BUILD_OPTIONS += DEVELOPER=1
-    # make it easy to debug in case of crashes
-    GIT_BUILD_OPTIONS += CFLAGS='-O0 -g3'
     GIT_BUILD_OPTIONS += USE_LIBPCRE2=YesPlease
     GIT_BUILD_OPTIONS += NO_PERL=YesPlease
     GIT_BUILD_OPTIONS += NO_EXPAT=YesPlease
