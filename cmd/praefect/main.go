@@ -300,7 +300,7 @@ func run(cfgs []starter.Config, conf config.Config) error {
 			hm,
 			praefect.NewLockedRandom(rand.New(rand.NewSource(time.Now().UnixNano()))),
 			rs,
-			praefect.StaticStorageAssignments(conf.StorageNames()),
+			datastore.NewAssignmentStore(db, conf.StorageNames()),
 		)
 	} else {
 		healthChecker = praefect.HealthChecker(nodeManager)
