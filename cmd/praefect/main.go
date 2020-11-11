@@ -266,14 +266,11 @@ func run(cfgs []starter.Config, conf config.Config) error {
 	}
 
 	var (
-		repositorySpecificPrimariesEnabled = false
-		healthChecker                      praefect.HealthChecker
-		nodeSet                            praefect.NodeSet
-		router                             praefect.Router
+		healthChecker praefect.HealthChecker
+		nodeSet       praefect.NodeSet
+		router        praefect.Router
 	)
-	if conf.Failover.ElectionStrategy == "per_repository" {
-		repositorySpecificPrimariesEnabled = true
-
+	if conf.Failover.ElectionStrategy == config.ElectionStrategyPerRepository {
 		nodeSet, err = praefect.DialNodes(ctx, conf.VirtualStorages, protoregistry.GitalyProtoPreregistered, errTracker)
 		if err != nil {
 			return fmt.Errorf("dial nodes: %w", err)
@@ -358,7 +355,12 @@ func run(cfgs []starter.Config, conf config.Config) error {
 
 	if db != nil {
 		prometheus.MustRegister(
-			datastore.NewRepositoryStoreCollector(logger, conf.VirtualStorageNames(), db, repositorySpecificPrimariesEnabled),
+			datastore.NewRepositoryStoreCollector(
+				logger,
+				conf.VirtualStorageNames(),
+				db,
+				conf.Failover.ElectionStrategy == config.ElectionStrategyPerRepository,
+			),
 		)
 	}
 
@@ -434,7 +436,14 @@ func run(cfgs []starter.Config, conf config.Config) error {
 		if conf.MemoryQueueEnabled {
 			logger.Warn("Disabled automatic reconciliation as it is only implemented using SQL queue and in-memory queue is configured.")
 		} else {
-			r := reconciler.NewReconciler(logger, db, healthChecker, conf.StorageNames(), conf.Reconciliation.HistogramBuckets, repositorySpecificPrimariesEnabled)
+			r := reconciler.NewReconciler(
+				logger,
+				db,
+				healthChecker,
+				conf.StorageNames(),
+				conf.Reconciliation.HistogramBuckets,
+				conf.Failover.ElectionStrategy == config.ElectionStrategyPerRepository,
+			)
 			prometheus.MustRegister(r)
 			go r.Run(ctx, helper.NewTimerTicker(interval))
 		}

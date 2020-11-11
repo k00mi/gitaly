@@ -27,21 +27,49 @@ func TestConfigValidation(t *testing.T) {
 		{Storage: "internal-3.1", Address: "localhost:33458", Token: "secret-token-2"},
 	}
 
+	fromValidConfig := func(changeFunc func(*Config)) Config {
+		cfg := Config{
+			ListenAddr:  "localhost:1234",
+			Replication: DefaultReplicationConfig(),
+			VirtualStorages: []*VirtualStorage{
+				{Name: "default", Nodes: vs1Nodes},
+				{Name: "secondary", Nodes: vs2Nodes},
+			},
+			Failover: Failover{ElectionStrategy: ElectionStrategySQL},
+		}
+
+		changeFunc(&cfg)
+
+		return cfg
+	}
+
 	testCases := []struct {
 		desc   string
 		config Config
 		errMsg string
 	}{
 		{
-			desc: "Valid config with ListenAddr",
-			config: Config{
-				ListenAddr:  "localhost:1234",
-				Replication: DefaultReplicationConfig(),
-				VirtualStorages: []*VirtualStorage{
-					{Name: "default", Nodes: vs1Nodes},
-					{Name: "secondary", Nodes: vs2Nodes},
-				},
-			},
+			desc:   "Valid config with ListenAddr",
+			config: fromValidConfig(func(*Config) {}),
+		},
+		{
+			desc: "Valid config with local elector",
+			config: fromValidConfig(func(cfg *Config) {
+				cfg.Failover.ElectionStrategy = ElectionStrategyLocal
+			}),
+		},
+		{
+			desc: "Valid config with per repository elector",
+			config: fromValidConfig(func(cfg *Config) {
+				cfg.Failover.ElectionStrategy = ElectionStrategyPerRepository
+			}),
+		},
+		{
+			desc: "Invalid election strategy",
+			config: fromValidConfig(func(cfg *Config) {
+				cfg.Failover.ElectionStrategy = "invalid-strategy"
+			}),
+			errMsg: `invalid election strategy: "invalid-strategy"`,
 		},
 		{
 			desc: "Valid config with TLSListenAddr",
@@ -51,6 +79,7 @@ func TestConfigValidation(t *testing.T) {
 				VirtualStorages: []*VirtualStorage{
 					{Name: "default", Nodes: vs1Nodes},
 				},
+				Failover: Failover{ElectionStrategy: ElectionStrategySQL},
 			},
 		},
 		{
@@ -61,6 +90,7 @@ func TestConfigValidation(t *testing.T) {
 				VirtualStorages: []*VirtualStorage{
 					{Name: "default", Nodes: vs1Nodes},
 				},
+				Failover: Failover{ElectionStrategy: ElectionStrategySQL},
 			},
 		},
 		{
@@ -71,6 +101,7 @@ func TestConfigValidation(t *testing.T) {
 				VirtualStorages: []*VirtualStorage{
 					{Name: "default", Nodes: vs1Nodes},
 				},
+				Failover: Failover{ElectionStrategy: ElectionStrategySQL},
 			},
 			errMsg: "replication batch size was 0 but must be >=1",
 		},
@@ -84,6 +115,7 @@ func TestConfigValidation(t *testing.T) {
 					{Name: "default", Nodes: vs1Nodes},
 				},
 				Replication: DefaultReplicationConfig(),
+				Failover:    Failover{ElectionStrategy: ElectionStrategySQL},
 			},
 			errMsg: "no listen address or socket path configured",
 		},
@@ -92,6 +124,7 @@ func TestConfigValidation(t *testing.T) {
 			config: Config{
 				ListenAddr:  "localhost:1234",
 				Replication: DefaultReplicationConfig(),
+				Failover:    Failover{ElectionStrategy: ElectionStrategySQL},
 			},
 			errMsg: "no virtual storages configured",
 		},
@@ -109,6 +142,7 @@ func TestConfigValidation(t *testing.T) {
 						}),
 					},
 				},
+				Failover: Failover{ElectionStrategy: ElectionStrategySQL},
 			},
 			errMsg: `virtual storage "default": internal gitaly storages are not unique`,
 		},
@@ -129,6 +163,7 @@ func TestConfigValidation(t *testing.T) {
 						},
 					},
 				},
+				Failover: Failover{ElectionStrategy: ElectionStrategySQL},
 			},
 			errMsg: `virtual storage "default": all gitaly nodes must have a storage`,
 		},
@@ -149,6 +184,7 @@ func TestConfigValidation(t *testing.T) {
 						},
 					},
 				},
+				Failover: Failover{ElectionStrategy: ElectionStrategySQL},
 			},
 			errMsg: `virtual storage "default": all gitaly nodes must have an address`,
 		},
@@ -160,6 +196,7 @@ func TestConfigValidation(t *testing.T) {
 				VirtualStorages: []*VirtualStorage{
 					{Name: "", Nodes: vs1Nodes},
 				},
+				Failover: Failover{ElectionStrategy: ElectionStrategySQL},
 			},
 			errMsg: `virtual storages must have a name`,
 		},
@@ -172,6 +209,7 @@ func TestConfigValidation(t *testing.T) {
 					{Name: "default", Nodes: vs1Nodes},
 					{Name: "default", Nodes: vs2Nodes},
 				},
+				Failover: Failover{ElectionStrategy: ElectionStrategySQL},
 			},
 			errMsg: `virtual storage "default": virtual storages must have unique names`,
 		},
@@ -184,6 +222,7 @@ func TestConfigValidation(t *testing.T) {
 					{Name: "default", Nodes: vs1Nodes},
 					{Name: "secondary", Nodes: nil},
 				},
+				Failover: Failover{ElectionStrategy: ElectionStrategySQL},
 			},
 			errMsg: `virtual storage "secondary": no primary gitaly backends configured`,
 		},
@@ -196,6 +235,7 @@ func TestConfigValidation(t *testing.T) {
 					{Name: "default", Nodes: vs1Nodes},
 					{Name: "secondary", Nodes: append(vs2Nodes, vs1Nodes[1])},
 				},
+				Failover: Failover{ElectionStrategy: ElectionStrategySQL},
 			},
 			errMsg: `multiple storages have the same address`,
 		},
@@ -283,7 +323,7 @@ func TestConfigParsing(t *testing.T) {
 				Replication: Replication{BatchSize: 1},
 				Failover: Failover{
 					Enabled:                  true,
-					ElectionStrategy:         sqlFailoverValue,
+					ElectionStrategy:         ElectionStrategySQL,
 					ErrorThresholdWindow:     config.Duration(20 * time.Second),
 					WriteErrorThresholdCount: 1500,
 					ReadErrorThresholdCount:  100,
@@ -319,7 +359,7 @@ func TestConfigParsing(t *testing.T) {
 				Replication:         DefaultReplicationConfig(),
 				Failover: Failover{
 					Enabled:           true,
-					ElectionStrategy:  sqlFailoverValue,
+					ElectionStrategy:  ElectionStrategySQL,
 					BootstrapInterval: config.Duration(time.Second),
 					MonitorInterval:   config.Duration(3 * time.Second),
 				},
@@ -437,17 +477,22 @@ func TestNeedsSQL(t *testing.T) {
 		},
 		{
 			desc:     "Failover enabled with SQL election strategy",
-			config:   Config{Failover: Failover{Enabled: true, ElectionStrategy: "sql"}},
+			config:   Config{Failover: Failover{Enabled: true, ElectionStrategy: ElectionStrategyPerRepository}},
 			expected: true,
 		},
 		{
 			desc:     "Both PostgresQL and SQL election strategy enabled",
-			config:   Config{Failover: Failover{Enabled: true, ElectionStrategy: "sql"}},
+			config:   Config{Failover: Failover{Enabled: true, ElectionStrategy: ElectionStrategyPerRepository}},
 			expected: true,
 		},
 		{
 			desc:     "Both PostgresQL and SQL election strategy enabled but failover disabled",
-			config:   Config{Failover: Failover{Enabled: false, ElectionStrategy: "sql"}},
+			config:   Config{Failover: Failover{Enabled: false, ElectionStrategy: ElectionStrategyPerRepository}},
+			expected: true,
+		},
+		{
+			desc:     "Both PostgresQL and per_repository election strategy enabled but failover disabled",
+			config:   Config{Failover: Failover{Enabled: false, ElectionStrategy: ElectionStrategyPerRepository}},
 			expected: true,
 		},
 	}

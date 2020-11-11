@@ -162,6 +162,7 @@ func (p *TestServer) Start() error {
 		MemoryQueueEnabled: true,
 		Failover: praefectconfig.Failover{
 			Enabled:           true,
+			ElectionStrategy:  praefectconfig.ElectionStrategyLocal,
 			BootstrapInterval: config.Duration(time.Microsecond),
 			MonitorInterval:   config.Duration(time.Second),
 		},

@@ -173,7 +173,7 @@ func NewManager(
 		}
 
 		if c.Failover.Enabled {
-			if c.Failover.ElectionStrategy == "sql" {
+			if c.Failover.ElectionStrategy == config.ElectionStrategySQL {
 				strategies[virtualStorage.Name] = newSQLElector(virtualStorage.Name, c, db, log, ns)
 			} else {
 				strategies[virtualStorage.Name] = newLocalElector(virtualStorage.Name, log, ns)
