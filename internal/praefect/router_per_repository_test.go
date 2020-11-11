@@ -11,6 +11,23 @@ import (
 	"google.golang.org/grpc"
 )
 
+// StaticRepositoryAssignments is a static assignment of storages for each individual repository.
+type StaticRepositoryAssignments map[string]map[string][]string
+
+func (st StaticRepositoryAssignments) GetHostAssignments(ctx context.Context, virtualStorage, relativePath string) ([]string, error) {
+	vs, ok := st[virtualStorage]
+	if !ok {
+		return nil, nodes.ErrVirtualStorageNotExist
+	}
+
+	storages, ok := vs[relativePath]
+	if !ok {
+		return nil, errRepositoryNotFound
+	}
+
+	return storages, nil
+}
+
 // PrimaryGetter is an adapter to turn conforming functions in to a PrimaryGetter.
 type PrimaryGetterFunc func(ctx context.Context, virtualStorage, relativePath string) (string, error)
 
@@ -86,6 +103,7 @@ func TestPerRepositoryRouter_RouteStorageAccessor(t *testing.T) {
 					require.Equal(t, tc.numCandidates, n)
 					return tc.pickCandidate
 				}),
+				nil,
 				nil,
 			)
 
@@ -194,6 +212,7 @@ func TestPerRepositoryRouter_RouteRepositoryAccessor(t *testing.T) {
 						return map[string]struct{}{"consistent-secondary": struct{}{}}, nil
 					},
 				},
+				nil,
 			)
 
 			node, err := router.RouteRepositoryAccessor(ctx, tc.virtualStorage, "repository")
@@ -211,6 +230,10 @@ func TestPerRepositoryRouter_RouteRepositoryAccessor(t *testing.T) {
 }
 
 func TestPerRepositoryRouter_RouteRepositoryMutator(t *testing.T) {
+	configuredNodes := map[string][]string{
+		"virtual-storage-1": {"primary", "secondary-1", "secondary-2"},
+	}
+
 	for _, tc := range []struct {
 		desc                  string
 		virtualStorage        string
@@ -220,6 +243,7 @@ func TestPerRepositoryRouter_RouteRepositoryMutator(t *testing.T) {
 		secondaries           []string
 		replicationTargets    []string
 		error                 error
+		assignedNodes         AssignmentGetter
 	}{
 		{
 			desc:           "unknown virtual storage",
@@ -230,7 +254,8 @@ func TestPerRepositoryRouter_RouteRepositoryMutator(t *testing.T) {
 			desc:                  "primary outdated",
 			virtualStorage:        "virtual-storage-1",
 			isLatestGeneration:    false,
-			healthyNodes:          map[string][]string{"virtual-storage-1": {"primary", "secondary-1", "secondary-2"}},
+			healthyNodes:          StaticHealthChecker(configuredNodes),
+			assignedNodes:         StaticStorageAssignments(configuredNodes),
 			consistentSecondaries: []string{"secondary-1", "secondary-2"},
 			error:                 ErrRepositoryReadOnly,
 		},
@@ -238,7 +263,8 @@ func TestPerRepositoryRouter_RouteRepositoryMutator(t *testing.T) {
 			desc:                  "primary unhealthy",
 			virtualStorage:        "virtual-storage-1",
 			isLatestGeneration:    true,
-			healthyNodes:          map[string][]string{"virtual-storage-1": {"secondary-1", "secondary-2"}},
+			healthyNodes:          StaticHealthChecker{"virtual-storage-1": {"secondary-1", "secondary-2"}},
+			assignedNodes:         StaticStorageAssignments(configuredNodes),
 			consistentSecondaries: []string{"secondary-1", "secondary-2"},
 			error:                 nodes.ErrPrimaryNotHealthy,
 		},
@@ -246,7 +272,8 @@ func TestPerRepositoryRouter_RouteRepositoryMutator(t *testing.T) {
 			desc:                  "all secondaries consistent",
 			virtualStorage:        "virtual-storage-1",
 			isLatestGeneration:    true,
-			healthyNodes:          map[string][]string{"virtual-storage-1": {"primary", "secondary-1", "secondary-2"}},
+			healthyNodes:          StaticHealthChecker(configuredNodes),
+			assignedNodes:         StaticStorageAssignments(configuredNodes),
 			consistentSecondaries: []string{"secondary-1", "secondary-2"},
 			secondaries:           []string{"secondary-1", "secondary-2"},
 		},
@@ -254,7 +281,8 @@ func TestPerRepositoryRouter_RouteRepositoryMutator(t *testing.T) {
 			desc:                  "inconsistent secondary",
 			virtualStorage:        "virtual-storage-1",
 			isLatestGeneration:    true,
-			healthyNodes:          map[string][]string{"virtual-storage-1": {"primary", "secondary-1", "secondary-2"}},
+			healthyNodes:          StaticHealthChecker(configuredNodes),
+			assignedNodes:         StaticStorageAssignments(configuredNodes),
 			consistentSecondaries: []string{"secondary-2"},
 			secondaries:           []string{"secondary-2"},
 			replicationTargets:    []string{"secondary-1"},
@@ -263,8 +291,39 @@ func TestPerRepositoryRouter_RouteRepositoryMutator(t *testing.T) {
 			desc:                  "unhealthy secondaries",
 			virtualStorage:        "virtual-storage-1",
 			isLatestGeneration:    true,
-			healthyNodes:          map[string][]string{"virtual-storage-1": {"primary"}},
+			healthyNodes:          StaticHealthChecker{"virtual-storage-1": {"primary"}},
+			assignedNodes:         StaticStorageAssignments(configuredNodes),
 			consistentSecondaries: []string{"secondary-1"},
+			replicationTargets:    []string{"secondary-1", "secondary-2"},
+		},
+		{
+			desc:                  "up to date unassigned nodes are ignored",
+			virtualStorage:        "virtual-storage-1",
+			isLatestGeneration:    true,
+			healthyNodes:          StaticHealthChecker(configuredNodes),
+			assignedNodes:         StaticRepositoryAssignments{"virtual-storage-1": {"repository": {"primary", "secondary-1"}}},
+			consistentSecondaries: []string{"secondary-1", "secondary-2"},
+			secondaries:           []string{"secondary-1"},
+		},
+		{
+			desc:                  "outdated unassigned nodes are ignored",
+			virtualStorage:        "virtual-storage-1",
+			isLatestGeneration:    true,
+			healthyNodes:          StaticHealthChecker(configuredNodes),
+			assignedNodes:         StaticRepositoryAssignments{"virtual-storage-1": {"repository": {"primary", "secondary-1"}}},
+			consistentSecondaries: []string{"secondary-1"},
+			secondaries:           []string{"secondary-1"},
+		},
+		{
+			desc:                  "primary is unassigned",
+			virtualStorage:        "virtual-storage-1",
+			isLatestGeneration:    true,
+			healthyNodes:          StaticHealthChecker(configuredNodes),
+			assignedNodes:         StaticRepositoryAssignments{"virtual-storage-1": {"repository": {"secondary-1", "secondary-2"}}},
+			consistentSecondaries: []string{"secondary-1", "secondary-2"},
+			secondaries:           []string{"secondary-1"},
+			replicationTargets:    []string{"secondary-2"},
+			error:                 errPrimaryUnassigned,
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -311,6 +370,7 @@ func TestPerRepositoryRouter_RouteRepositoryMutator(t *testing.T) {
 						return consistentSecondaries, nil
 					},
 				},
+				tc.assignedNodes,
 			)
 
 			route, err := router.RouteRepositoryMutator(ctx, tc.virtualStorage, "repository")
