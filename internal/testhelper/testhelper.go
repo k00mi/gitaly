@@ -908,8 +908,6 @@ STDIN.each_line do |line|
 end
 `, command.GitPath())
 
-	ioutil.WriteFile("/tmp/file", []byte(hook), 0644)
-
 	cleanup, err := WriteCustomHook(repoPath, "pre-receive", []byte(hook))
 	require.NoError(t, err)
 
