@@ -58,9 +58,10 @@ const (
 	GlProjectPath       = "gitlab-org/gitlab-test"
 )
 
-var configureOnce sync.Once
-
 var (
+	configureOnce sync.Once
+	testDirectory string
+
 	TestUser = &gitalypb.User{
 		Name:       []byte("Jane Doe"),
 		Email:      []byte("janedoe@gitlab.com"),
@@ -76,6 +77,11 @@ func Configure() func() {
 		gitalylog.Configure("json", "info")
 
 		var err error
+		testDirectory, err = ioutil.TempDir("", "gitaly-test-*")
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		config.Config.Logging.Dir, err = filepath.Abs("testdata/log")
 		if err != nil {
 			log.Fatal(err)
@@ -120,7 +126,11 @@ func Configure() func() {
 		}
 	})
 
-	return func() {}
+	return func() {
+		if err := os.RemoveAll(testDirectory); err != nil {
+			log.Fatalf("error removing test directory: %v", err)
+		}
+	}
 }
 
 // MustReadFile returns the content of a file or fails at once.
