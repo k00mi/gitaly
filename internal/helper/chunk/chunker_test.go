@@ -3,6 +3,7 @@ package chunk
 import (
 	"io"
 	"net"
+	"os"
 	"testing"
 
 	"github.com/golang/protobuf/proto"
@@ -12,6 +13,17 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"google.golang.org/grpc"
 )
+
+func TestMain(m *testing.M) {
+	os.Exit(testMain(m))
+}
+
+func testMain(m *testing.M) int {
+	defer testhelper.MustHaveNoChildProcess()
+	cleanup := testhelper.Configure()
+	defer cleanup()
+	return m.Run()
+}
 
 type testSender struct {
 	stream test.Test_StreamOutputServer

@@ -326,7 +326,11 @@ func FindLocalBranchResponsesEqual(a *gitalypb.FindLocalBranchResponse, b *gital
 
 // GetTemporaryGitalySocketFileName will return a unique, useable socket file name
 func GetTemporaryGitalySocketFileName() string {
-	tmpfile, err := ioutil.TempFile("", "gitaly.socket.")
+	if testDirectory == "" {
+		log.Fatal("you must call testhelper.Configure() before GetTemporaryGitalySocketFileName()")
+	}
+
+	tmpfile, err := ioutil.TempFile(testDirectory, "gitaly.socket.")
 	if err != nil {
 		// No point in handling this error, panic
 		panic(err)

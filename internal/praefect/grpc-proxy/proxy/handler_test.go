@@ -61,12 +61,19 @@ func (l *testLogger) Write(p []byte) (int, error) {
 }
 
 func TestMain(m *testing.M) {
+	os.Exit(testMain(m))
+}
+
+func testMain(m *testing.M) int {
+	defer testhelper.MustHaveNoChildProcess()
+	cleanup := testhelper.Configure()
+	defer cleanup()
+
 	logger := &testLogger{
 		log.New(os.Stderr, "grpc: ", log.LstdFlags),
 	}
 	grpclog.SetLoggerV2(grpclog.NewLoggerV2(logger, nil, nil))
-	m.Run()
-	os.Exit(0)
+	return m.Run()
 }
 
 // asserting service is implemented on the server side and serves as a handler for stuff
