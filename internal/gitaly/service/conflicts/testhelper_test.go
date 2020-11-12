@@ -16,16 +16,16 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+var RubyServer = &rubyserver.Server{}
+
 func TestMain(m *testing.M) {
-	testhelper.Configure()
 	os.Exit(testMain(m))
 }
-
-var RubyServer = &rubyserver.Server{}
 
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
+	testhelper.Configure()
 	testhelper.ConfigureGitalyGit2Go()
 
 	tempDir, err := ioutil.TempDir("", "gitaly")

@@ -27,6 +27,17 @@ import (
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
+func TestMain(m *testing.M) {
+	os.Exit(testMain(m))
+}
+
+func testMain(m *testing.M) int {
+	defer testhelper.MustHaveNoChildProcess()
+	testhelper.Configure()
+	testhelper.ConfigureGitalyHooksBinary()
+	return m.Run()
+}
+
 func TestSanity(t *testing.T) {
 	serverSocketPath, clean := runServer(t)
 	defer clean()
@@ -286,17 +297,6 @@ func TestStreamingNoAuth(t *testing.T) {
 	}))
 
 	testhelper.RequireGrpcError(t, err, codes.Unauthenticated)
-}
-
-func TestMain(m *testing.M) {
-	testhelper.Configure()
-	os.Exit(testMain(m))
-}
-
-func testMain(m *testing.M) int {
-	testhelper.ConfigureGitalyHooksBinary()
-
-	return m.Run()
 }
 
 func TestAuthBeforeLimit(t *testing.T) {

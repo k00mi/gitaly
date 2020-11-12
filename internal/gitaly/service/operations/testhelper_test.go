@@ -38,12 +38,13 @@ func init() {
 }
 
 func TestMain(m *testing.M) {
-	testhelper.Configure()
 	os.Exit(testMain(m))
 }
 
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
+
+	testhelper.Configure()
 
 	cwd, err := os.Getwd()
 	if err != nil {

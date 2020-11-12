@@ -34,6 +34,33 @@ var (
 	RubyServer = &rubyserver.Server{}
 )
 
+func TestMain(m *testing.M) {
+	os.Exit(testMain(m))
+}
+
+func testMain(m *testing.M) int {
+	defer testhelper.MustHaveNoChildProcess()
+
+	testhelper.Configure()
+
+	config.Config.Auth.Token = testhelper.RepositoryAuthToken
+
+	var err error
+	config.Config.GitlabShell.Dir, err = filepath.Abs("testdata/gitlab-shell")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	testhelper.ConfigureGitalySSH()
+
+	if err := RubyServer.Start(); err != nil {
+		log.Fatal(err)
+	}
+	defer RubyServer.Stop()
+
+	return m.Run()
+}
+
 func newRepositoryClient(t *testing.T, serverSocketPath string) (gitalypb.RepositoryServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
@@ -124,30 +151,4 @@ func assertModTimeAfter(t *testing.T, afterTime time.Time, paths ...string) bool
 		}
 	}
 	return t.Failed()
-}
-
-func TestMain(m *testing.M) {
-	testhelper.Configure()
-	os.Exit(testMain(m))
-}
-
-func testMain(m *testing.M) int {
-	defer testhelper.MustHaveNoChildProcess()
-
-	config.Config.Auth.Token = testhelper.RepositoryAuthToken
-
-	var err error
-	config.Config.GitlabShell.Dir, err = filepath.Abs("testdata/gitlab-shell")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	testhelper.ConfigureGitalySSH()
-
-	if err := RubyServer.Start(); err != nil {
-		log.Fatal(err)
-	}
-	defer RubyServer.Stop()
-
-	return m.Run()
 }

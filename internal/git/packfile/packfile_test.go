@@ -10,8 +10,13 @@ import (
 )
 
 func TestMain(m *testing.M) {
+	os.Exit(testMain(m))
+}
+
+func testMain(m *testing.M) int {
+	defer testhelper.MustHaveNoChildProcess()
 	testhelper.Configure()
-	os.Exit(m.Run())
+	return m.Run()
 }
 
 func TestList(t *testing.T) {

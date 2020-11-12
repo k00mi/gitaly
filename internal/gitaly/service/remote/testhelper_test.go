@@ -17,13 +17,13 @@ import (
 var RubyServer = &rubyserver.Server{}
 
 func TestMain(m *testing.M) {
-	testhelper.Configure()
 	os.Exit(testMain(m))
 }
 
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
+	testhelper.Configure()
 	testhelper.ConfigureGitalySSH()
 
 	if err := RubyServer.Start(); err != nil {

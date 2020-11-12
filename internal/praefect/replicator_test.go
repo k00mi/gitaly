@@ -48,6 +48,35 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+var RubyServer = &rubyserver.Server{}
+
+func TestMain(m *testing.M) {
+	os.Exit(testMain(m))
+}
+
+func testMain(m *testing.M) int {
+	defer testhelper.MustHaveNoChildProcess()
+
+	testhelper.Configure()
+
+	gitaly_config.Config.Auth.Token = testhelper.RepositoryAuthToken
+
+	var err error
+	gitaly_config.Config.GitlabShell.Dir, err = filepath.Abs("testdata/gitlab-shell")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	testhelper.ConfigureGitalySSH()
+
+	if err := RubyServer.Start(); err != nil {
+		log.Fatal(err)
+	}
+	defer RubyServer.Stop()
+
+	return m.Run()
+}
+
 func TestReplMgr_ProcessBacklog(t *testing.T) {
 	backupStorageName := "backup"
 
@@ -1005,34 +1034,6 @@ func newRepositoryClient(t *testing.T, serverSocketPath string) (gitalypb.Reposi
 	}
 
 	return gitalypb.NewRepositoryServiceClient(conn), conn
-}
-
-var RubyServer = &rubyserver.Server{}
-
-func TestMain(m *testing.M) {
-	testhelper.Configure()
-	os.Exit(testMain(m))
-}
-
-func testMain(m *testing.M) int {
-	defer testhelper.MustHaveNoChildProcess()
-
-	gitaly_config.Config.Auth.Token = testhelper.RepositoryAuthToken
-
-	var err error
-	gitaly_config.Config.GitlabShell.Dir, err = filepath.Abs("testdata/gitlab-shell")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	testhelper.ConfigureGitalySSH()
-
-	if err := RubyServer.Start(); err != nil {
-		log.Fatal(err)
-	}
-	defer RubyServer.Stop()
-
-	return m.Run()
 }
 
 func TestSubtractUint64(t *testing.T) {
