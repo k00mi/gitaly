@@ -24,7 +24,7 @@ func TestWithRefHook(t *testing.T) {
 	config.Config.Auth.Token = token
 
 	opt := git.WithRefTxHook(ctx, testRepo, config.Config)
-	subCmd := git.SubCmd{Name: "update-ref", Args: []string{"master", "0000"}}
+	subCmd := git.SubCmd{Name: "update-ref", Args: []string{"refs/heads/master", git.NullSHA}}
 
 	for _, tt := range []struct {
 		name string
@@ -40,12 +40,6 @@ func TestWithRefHook(t *testing.T) {
 			name: "SafeCmdWithEnv",
 			fn: func() (*command.Command, error) {
 				return git.SafeCmdWithEnv(ctx, nil, testRepo, nil, subCmd, opt)
-			},
-		},
-		{
-			name: "SafeBareCmd",
-			fn: func() (*command.Command, error) {
-				return git.SafeBareCmd(ctx, git.CmdStream{}, nil, nil, subCmd, opt)
 			},
 		},
 		{
@@ -65,6 +59,7 @@ func TestWithRefHook(t *testing.T) {
 
 			cmd, err := tt.fn()
 			require.NoError(t, err)
+			require.NoError(t, cmd.Wait())
 
 			var actualEnvVars []string
 			for _, env := range cmd.Env() {
