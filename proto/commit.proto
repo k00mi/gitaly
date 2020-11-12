@@ -146,7 +146,12 @@ message TreeEntryRequest {
   bytes revision = 2;
   // entry path relative to repository root
   bytes path = 3;
+  // Limit is the maximum number of bytes to fetch. If object is bigger, remaining bytes are not sent
+  // 0 means there is no limit.
   int64 limit = 4;
+  // MaxSize is the maximum allowed object size. If bigger, a FailedPrecondition error is returned
+  // 0 means there is no maximum size.
+  int64 max_size = 5;
 }
 
 message TreeEntryResponse {

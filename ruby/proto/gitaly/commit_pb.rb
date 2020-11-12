@@ -30,6 +30,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
       optional :revision, :bytes, 2
       optional :path, :bytes, 3
       optional :limit, :int64, 4
+      optional :max_size, :int64, 5
     end
     add_message "gitaly.TreeEntryResponse" do
       optional :type, :enum, 1, "gitaly.TreeEntryResponse.ObjectType"
