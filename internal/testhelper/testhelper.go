@@ -71,7 +71,7 @@ var (
 
 // Configure sets up the global test configuration. On failure,
 // terminates the program.
-func Configure() {
+func Configure() func() {
 	configureOnce.Do(func() {
 		gitalylog.Configure("json", "info")
 
@@ -119,6 +119,8 @@ func Configure() {
 			}
 		}
 	})
+
+	return func() {}
 }
 
 // MustReadFile returns the content of a file or fails at once.

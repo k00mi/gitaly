@@ -19,7 +19,8 @@ func TestMain(m *testing.M) {
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
-	testhelper.Configure()
+	cleanup := testhelper.Configure()
+	defer cleanup()
 	testRepo = testhelper.TestRepository()
 
 	return m.Run()

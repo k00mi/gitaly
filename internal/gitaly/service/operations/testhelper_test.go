@@ -44,7 +44,8 @@ func TestMain(m *testing.M) {
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
-	testhelper.Configure()
+	cleanup := testhelper.Configure()
+	defer cleanup()
 
 	cwd, err := os.Getwd()
 	if err != nil {

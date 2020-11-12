@@ -49,7 +49,8 @@ func getBufDialer(listener *bufconn.Listener) func(context.Context, string) (net
 }
 
 func TestInterceptor(t *testing.T) {
-	testhelper.Configure()
+	cleanup := testhelper.Configure()
+	defer cleanup()
 
 	logBuffer := &bytes.Buffer{}
 	testhelper.NewTestLogger = func(tb testing.TB) *logrus.Logger {

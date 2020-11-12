@@ -57,7 +57,8 @@ func TestMain(m *testing.M) {
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
-	testhelper.Configure()
+	cleanup := testhelper.Configure()
+	defer cleanup()
 
 	gitaly_config.Config.Auth.Token = testhelper.RepositoryAuthToken
 

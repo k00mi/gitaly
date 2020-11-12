@@ -35,7 +35,8 @@ func testMain(m *testing.M) int {
 		config.Config.Ruby.Dir = rubyDir
 	}(config.Config.Ruby.Dir)
 
-	testhelper.Configure()
+	cleanup := testhelper.Configure()
+	defer cleanup()
 
 	config.Config.Ruby.Dir = filepath.Join("../../../ruby", "git-hooks")
 

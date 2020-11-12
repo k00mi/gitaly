@@ -25,7 +25,8 @@ func TestMain(m *testing.M) {
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
-	testhelper.Configure()
+	cleanup := testhelper.Configure()
+	defer cleanup()
 	testhelper.ConfigureGitalyGit2Go()
 
 	tempDir, err := ioutil.TempDir("", "gitaly")
