@@ -72,7 +72,8 @@ func TestCloneRepositoryFromUrlCommand(t *testing.T) {
 	repositoryFullPath := "full/path/to/repository"
 	url := fmt.Sprintf("https://%s@www.example.com/secretrepo.git", userInfo)
 
-	cmd, err := cloneFromURLCommand(ctx, url, repositoryFullPath, nil)
+	s := &server{cfg: config.Config}
+	cmd, err := s.cloneFromURLCommand(ctx, &gitalypb.Repository{}, url, repositoryFullPath, nil)
 	require.NoError(t, err)
 
 	expectedScrubbedURL := "https://www.example.com/secretrepo.git"

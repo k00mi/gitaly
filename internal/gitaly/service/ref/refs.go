@@ -13,6 +13,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/chunk"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
@@ -213,11 +214,11 @@ func _headReference(ctx context.Context, repo *gitalypb.Repository) ([]byte, err
 }
 
 // SetDefaultBranchRef overwrites the default branch ref for the repository
-func SetDefaultBranchRef(ctx context.Context, repo *gitalypb.Repository, ref string) error {
+func SetDefaultBranchRef(ctx context.Context, repo *gitalypb.Repository, ref string, cfg config.Cfg) error {
 	cmd, err := git.SafeCmd(ctx, repo, nil, git.SubCmd{
 		Name: "symbolic-ref",
 		Args: []string{"HEAD", ref},
-	})
+	}, git.WithRefTxHook(ctx, repo, cfg))
 	if err != nil {
 		return err
 	}
@@ -412,13 +413,16 @@ func parseTagLine(c *catfile.Batch, tagLine string) (*gitalypb.Tag, error) {
 }
 
 func findTag(ctx context.Context, repository *gitalypb.Repository, tagName []byte) (*gitalypb.Tag, error) {
-	tagCmd, err := git.SafeCmd(ctx, repository, nil, git.SubCmd{
-		Name: "tag",
-		Flags: []git.Option{
-			git.Flag{Name: "-l"}, git.ValueFlag{"--format", tagFormat},
+	tagCmd, err := git.SafeCmd(ctx, repository, nil,
+		git.SubCmd{
+			Name: "tag",
+			Flags: []git.Option{
+				git.Flag{Name: "-l"}, git.ValueFlag{"--format", tagFormat},
+			},
+			Args: []string{string(tagName)},
 		},
-		Args: []string{string(tagName)},
-	})
+		git.WithRefTxHook(ctx, repository, config.Config),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("for-each-ref error: %v", err)
 	}

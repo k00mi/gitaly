@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git/objectpool"
-	gconfig "gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/labkit/log"
@@ -20,7 +20,7 @@ import (
 )
 
 func TestFetchIntoObjectPool_Success(t *testing.T) {
-	locator := gconfig.NewLocator(gconfig.Config)
+	locator := config.NewLocator(config.Config)
 	server, serverSocketPath := runObjectPoolServer(t, locator)
 	defer server.Stop()
 
@@ -35,7 +35,7 @@ func TestFetchIntoObjectPool_Success(t *testing.T) {
 
 	repoCommit := testhelper.CreateCommit(t, testRepoPath, t.Name(), &testhelper.CreateCommitOpts{Message: t.Name()})
 
-	pool, err := objectpool.NewObjectPool(locator, "default", testhelper.NewTestObjectPoolName(t))
+	pool, err := objectpool.NewObjectPool(config.Config, config.NewLocator(config.Config), "default", testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
 	defer pool.Remove(ctx)
 
@@ -79,7 +79,7 @@ func TestFetchIntoObjectPool_CollectLogStatistics(t *testing.T) {
 	defer cancel()
 	ctx = ctxlogrus.ToContext(ctx, log.WithField("test", "logging"))
 
-	locator := gconfig.NewLocator(gconfig.Config)
+	locator := config.NewLocator(config.Config)
 	server, serverSocketPath := runObjectPoolServer(t, locator)
 	defer server.Stop()
 
@@ -89,7 +89,7 @@ func TestFetchIntoObjectPool_CollectLogStatistics(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	pool, err := objectpool.NewObjectPool(locator, "default", testhelper.NewTestObjectPoolName(t))
+	pool, err := objectpool.NewObjectPool(config.Config, config.NewLocator(config.Config), "default", testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
 	defer pool.Remove(ctx)
 
@@ -118,7 +118,7 @@ func TestFetchIntoObjectPool_CollectLogStatistics(t *testing.T) {
 }
 
 func TestFetchIntoObjectPool_Failure(t *testing.T) {
-	locator := gconfig.NewLocator(gconfig.Config)
+	locator := config.NewLocator(config.Config)
 	server := NewServer(locator)
 
 	ctx, cancel := testhelper.Context()
@@ -127,7 +127,7 @@ func TestFetchIntoObjectPool_Failure(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	pool, err := objectpool.NewObjectPool(locator, "default", testhelper.NewTestObjectPoolName(t))
+	pool, err := objectpool.NewObjectPool(config.Config, config.NewLocator(config.Config), "default", testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
 	defer pool.Remove(ctx)
 

@@ -9,13 +9,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/objectpool"
-	gconfig "gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
 func TestDisconnectGitAlternates(t *testing.T) {
-	locator := gconfig.NewLocator(gconfig.Config)
+	locator := config.NewLocator(config.Config)
 	server, serverSocketPath := runObjectPoolServer(t, locator)
 	defer server.Stop()
 
@@ -28,7 +28,7 @@ func TestDisconnectGitAlternates(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	pool, err := objectpool.NewObjectPool(locator, testRepo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
+	pool, err := objectpool.NewObjectPool(config.Config, config.NewLocator(config.Config), testRepo.GetStorageName(), testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
 	defer pool.Remove(ctx)
 
@@ -65,7 +65,7 @@ func TestDisconnectGitAlternates(t *testing.T) {
 }
 
 func TestDisconnectGitAlternatesNoAlternates(t *testing.T) {
-	locator := gconfig.NewLocator(gconfig.Config)
+	locator := config.NewLocator(config.Config)
 	server, serverSocketPath := runObjectPoolServer(t, locator)
 	defer server.Stop()
 
@@ -89,7 +89,7 @@ func TestDisconnectGitAlternatesNoAlternates(t *testing.T) {
 }
 
 func TestDisconnectGitAlternatesUnexpectedAlternates(t *testing.T) {
-	locator := gconfig.NewLocator(gconfig.Config)
+	locator := config.NewLocator(config.Config)
 	server, serverSocketPath := runObjectPoolServer(t, locator)
 	defer server.Stop()
 
@@ -135,7 +135,7 @@ func TestRemoveAlternatesIfOk(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	locator := gconfig.NewLocator(gconfig.Config)
+	locator := config.NewLocator(config.Config)
 	altPath, err := locator.InfoAlternatesPath(testRepo)
 	require.NoError(t, err, "find info/alternates")
 	altContent := "/var/empty\n"

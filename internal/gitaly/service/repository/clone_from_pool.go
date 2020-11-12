@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git/objectpool"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -32,7 +33,7 @@ func (s *server) CloneFromPool(ctx context.Context, req *gitalypb.CloneFromPoolR
 		return nil, helper.ErrInternalf("fetch http remote: %v", err)
 	}
 
-	objectPool, err := objectpool.FromProto(s.locator, req.GetPool())
+	objectPool, err := objectpool.FromProto(s.cfg, config.NewLocator(s.cfg), req.GetPool())
 	if err != nil {
 		return nil, helper.ErrInternalf("get object pool from request: %v", err)
 	}
@@ -54,7 +55,7 @@ func (s *server) validateCloneFromPoolRequestRepositoryState(req *gitalypb.Clone
 		return errors.New("target reopsitory already exists")
 	}
 
-	objectPool, err := objectpool.FromProto(s.locator, req.GetPool())
+	objectPool, err := objectpool.FromProto(s.cfg, config.NewLocator(s.cfg), req.GetPool())
 	if err != nil {
 		return fmt.Errorf("getting object pool from repository: %v", err)
 	}

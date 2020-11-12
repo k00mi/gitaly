@@ -13,16 +13,41 @@ const (
 	scDiff           = "diff"
 	scPackRefs       = "pack-refs"
 	scMergeBase      = "merge-base"
+	scHashObject     = "hash-object"
+	scShowRef        = "show-ref"
+	scUploadPack     = "upload-pack"
+	scUploadArchive  = "upload-archive"
+	scBlame          = "blame"
+	scLsTree         = "ls-tree"
+	scRevList        = "rev-list"
+	scLsRemote       = "ls-remote"
+	scFsck           = "fsck"
+	scGrep           = "grep"
+	scBundle         = "bundle"
+	scArchive        = "archive"
+	scFormatPatch    = "format-patch"
 )
 
 var knownReadOnlyCmds = map[string]struct{}{
-	scCatFile:      struct{}{},
-	scLog:          struct{}{},
-	scForEachRef:   struct{}{},
-	scRevParse:     struct{}{},
-	scCountObjects: struct{}{},
-	scDiff:         struct{}{},
-	scMergeBase:    struct{}{},
+	scCatFile:       struct{}{},
+	scLog:           struct{}{},
+	scForEachRef:    struct{}{},
+	scRevParse:      struct{}{},
+	scCountObjects:  struct{}{},
+	scDiff:          struct{}{},
+	scMergeBase:     struct{}{},
+	scShowRef:       struct{}{},
+	scUploadPack:    struct{}{},
+	scUploadArchive: struct{}{},
+	scBlame:         struct{}{},
+	scLsTree:        struct{}{},
+	scRevList:       struct{}{},
+	scLsRemote:      struct{}{},
+	scFsck:          struct{}{},
+	scGrep:          struct{}{},
+	scBundle:        struct{}{},
+	scArchive:       struct{}{},
+	scFormatPatch:   struct{}{},
 }
 
 // knownNoRefUpdates indicates all repo mutating commands where it is known
@@ -32,6 +57,7 @@ var knownNoRefUpdates = map[string]struct{}{
 	scMultiPackIndex: struct{}{},
 	scRepack:         struct{}{},
 	scPackRefs:       struct{}{},
+	scHashObject:     struct{}{},
 }
 
 // mayUpdateRef indicates if a subcommand is known to update references.

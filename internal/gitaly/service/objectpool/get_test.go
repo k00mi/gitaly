@@ -8,13 +8,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git/objectpool"
-	gconfig "gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
 func TestGetObjectPoolSuccess(t *testing.T) {
-	locator := gconfig.NewLocator(gconfig.Config)
+	locator := config.NewLocator(config.Config)
 	server, serverSocketPath := runObjectPoolServer(t, locator)
 	defer server.Stop()
 
@@ -26,7 +26,7 @@ func TestGetObjectPoolSuccess(t *testing.T) {
 
 	relativePoolPath := testhelper.NewTestObjectPoolName(t)
 
-	pool, err := objectpool.NewObjectPool(locator, testRepo.GetStorageName(), relativePoolPath)
+	pool, err := objectpool.NewObjectPool(config.Config, config.NewLocator(config.Config), testRepo.GetStorageName(), relativePoolPath)
 	require.NoError(t, err)
 
 	poolCtx, cancel := testhelper.Context()
@@ -47,7 +47,7 @@ func TestGetObjectPoolSuccess(t *testing.T) {
 }
 
 func TestGetObjectPoolNoFile(t *testing.T) {
-	server, serverSocketPath := runObjectPoolServer(t, gconfig.NewLocator(gconfig.Config))
+	server, serverSocketPath := runObjectPoolServer(t, config.NewLocator(config.Config))
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -68,7 +68,7 @@ func TestGetObjectPoolNoFile(t *testing.T) {
 }
 
 func TestGetObjectPoolBadFile(t *testing.T) {
-	server, serverSocketPath := runObjectPoolServer(t, gconfig.NewLocator(gconfig.Config))
+	server, serverSocketPath := runObjectPoolServer(t, config.NewLocator(config.Config))
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
