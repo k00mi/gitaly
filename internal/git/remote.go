@@ -9,6 +9,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -192,6 +193,7 @@ func (repo RepositoryRemote) Add(ctx context.Context, name, url string, opts Rem
 			Args:  []string{name, url},
 		},
 		WithStderr(&stderr),
+		WithRefTxHook(ctx, helper.ProtoRepoFromRepo(repo.repo), config.Config),
 	)
 	if err != nil {
 		return err
@@ -229,6 +231,7 @@ func (repo RepositoryRemote) Remove(ctx context.Context, name string) error {
 			Args:  []string{name},
 		},
 		WithStderr(&stderr),
+		WithRefTxHook(ctx, helper.ProtoRepoFromRepo(repo.repo), config.Config),
 	)
 	if err != nil {
 		return err
@@ -284,6 +287,7 @@ func (repo RepositoryRemote) SetURL(ctx context.Context, name, url string, opts 
 			Args:  []string{name, url},
 		},
 		WithStderr(&stderr),
+		WithRefTxHook(ctx, helper.ProtoRepoFromRepo(repo.repo), config.Config),
 	)
 	if err != nil {
 		return err

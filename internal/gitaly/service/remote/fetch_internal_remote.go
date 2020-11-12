@@ -8,6 +8,7 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/ref"
 	"gitlab.com/gitlab-org/gitaly/internal/gitalyssh"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -39,6 +40,7 @@ func (s *server) FetchInternalRemote(ctx context.Context, req *gitalypb.FetchInt
 			Args:  []string{gitalyssh.GitalyInternalURL, mirrorRefSpec},
 		},
 		git.WithStderr(stderr),
+		git.WithRefTxHook(ctx, req.Repository, config.Config),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create git fetch: %w", err)
@@ -60,7 +62,7 @@ func (s *server) FetchInternalRemote(ctx context.Context, req *gitalypb.FetchInt
 	}
 
 	if !bytes.Equal(defaultBranch, remoteDefaultBranch) {
-		if err := ref.SetDefaultBranchRef(ctx, req.Repository, string(remoteDefaultBranch)); err != nil {
+		if err := ref.SetDefaultBranchRef(ctx, req.Repository, string(remoteDefaultBranch), config.Config); err != nil {
 			return nil, status.Errorf(codes.Internal, "FetchInternalRemote: set default branch: %v", err)
 		}
 	}

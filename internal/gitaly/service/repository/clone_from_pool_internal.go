@@ -9,6 +9,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/objectpool"
 	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -46,7 +47,7 @@ func (s *server) CloneFromPoolInternal(ctx context.Context, req *gitalypb.CloneF
 		return nil, helper.ErrInternalf("fetch internal remote failed")
 	}
 
-	objectPool, err := objectpool.FromProto(s.locator, req.GetPool())
+	objectPool, err := objectpool.FromProto(s.cfg, config.NewLocator(s.cfg), req.GetPool())
 	if err != nil {
 		return nil, helper.ErrInternalf("get object pool from request: %v", err)
 	}
@@ -68,7 +69,7 @@ func (s *server) validateCloneFromPoolInternalRequestRepositoryState(req *gitaly
 		return errors.New("target reopsitory already exists")
 	}
 
-	objectPool, err := objectpool.FromProto(s.locator, req.GetPool())
+	objectPool, err := objectpool.FromProto(s.cfg, config.NewLocator(s.cfg), req.GetPool())
 	if err != nil {
 		return fmt.Errorf("getting object pool from repository: %v", err)
 	}
@@ -119,11 +120,19 @@ func (s *server) cloneFromPool(ctx context.Context, objectPoolRepo *gitalypb.Obj
 		return fmt.Errorf("could not get object pool path: %v", err)
 	}
 
-	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{}, nil, nil, git.SubCmd{
-		Name:        "clone",
-		Flags:       []git.Option{git.Flag{Name: "--bare"}, git.Flag{Name: "--shared"}},
-		PostSepArgs: []string{objectPoolPath, repositoryPath},
-	})
+	pbRepo, ok := repo.(*gitalypb.Repository)
+	if !ok {
+		return fmt.Errorf("expected *gitlaypb.Repository but got %T", repo)
+	}
+
+	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{}, nil, nil,
+		git.SubCmd{
+			Name:        "clone",
+			Flags:       []git.Option{git.Flag{Name: "--bare"}, git.Flag{Name: "--shared"}},
+			PostSepArgs: []string{objectPoolPath, repositoryPath},
+		},
+		git.WithRefTxHook(ctx, pbRepo, s.cfg),
+	)
 	if err != nil {
 		return fmt.Errorf("clone with object pool start: %v", err)
 	}

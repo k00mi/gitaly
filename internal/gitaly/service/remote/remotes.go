@@ -11,6 +11,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/remote"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/chunk"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -54,7 +55,7 @@ func (s *server) RemoveRemote(ctx context.Context, req *gitalypb.RemoveRemoteReq
 		return nil, status.Errorf(codes.InvalidArgument, "RemoveRemote: %v", err)
 	}
 
-	hasRemote, err := remote.Exists(ctx, req.GetRepository(), req.Name)
+	hasRemote, err := remote.Exists(ctx, config.Config, req.GetRepository(), req.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +63,7 @@ func (s *server) RemoveRemote(ctx context.Context, req *gitalypb.RemoveRemoteReq
 		return &gitalypb.RemoveRemoteResponse{Result: false}, nil
 	}
 
-	if err := remote.Remove(ctx, req.GetRepository(), req.Name); err != nil {
+	if err := remote.Remove(ctx, config.Config, req.GetRepository(), req.Name); err != nil {
 		return nil, err
 	}
 
@@ -117,7 +118,9 @@ func (s *server) ListRemotes(req *gitalypb.ListRemotesRequest, stream gitalypb.R
 	repo := req.GetRepository()
 
 	ctx := stream.Context()
-	cmd, err := git.SafeCmd(ctx, repo, nil, git.SubCmd{Name: "remote", Flags: []git.Option{git.Flag{Name: "-v"}}})
+	cmd, err := git.SafeCmd(ctx, repo, nil, git.SubCmd{Name: "remote", Flags: []git.Option{git.Flag{Name: "-v"}}},
+		git.WithRefTxHook(ctx, repo, config.Config),
+	)
 	if err != nil {
 		return err
 	}

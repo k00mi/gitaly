@@ -6,15 +6,17 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
 //Remove removes the remote from repository
-func Remove(ctx context.Context, repo repository.GitRepo, name string) error {
+func Remove(ctx context.Context, cfg config.Cfg, repo repository.GitRepo, name string) error {
 	cmd, err := git.SafeCmd(ctx, repo, nil, git.SubCmd{
 		Name:  "remote",
 		Flags: []git.Option{git.SubSubCmd{Name: "remove"}},
 		Args:  []string{name},
-	})
+	}, git.WithRefTxHook(ctx, helper.ProtoRepoFromRepo(repo), cfg))
 	if err != nil {
 		return err
 	}
@@ -24,8 +26,11 @@ func Remove(ctx context.Context, repo repository.GitRepo, name string) error {
 
 // Exists will always return a boolean value, but should only be depended on
 // when the error value is nil
-func Exists(ctx context.Context, repo repository.GitRepo, name string) (bool, error) {
-	cmd, err := git.SafeCmd(ctx, repo, nil, git.SubCmd{Name: "remote"})
+func Exists(ctx context.Context, cfg config.Cfg, repo repository.GitRepo, name string) (bool, error) {
+	cmd, err := git.SafeCmd(ctx, repo, nil,
+		git.SubCmd{Name: "remote"},
+		git.WithRefTxHook(ctx, helper.ProtoRepoFromRepo(repo), cfg),
+	)
 	if err != nil {
 		return false, err
 	}
