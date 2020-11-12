@@ -1,7 +1,6 @@
 package server
 
 import (
-	"io/ioutil"
 	"net"
 	"testing"
 
@@ -40,11 +39,6 @@ func TestGitalyServerInfo(t *testing.T) {
 		config.Config.Storages = oldStorages
 	}(config.Config.Storages)
 	config.Config.Storages = testStorages
-
-	tempDir, err := ioutil.TempDir("", "gitaly-bin")
-	require.NoError(t, err)
-
-	config.Config.BinDir = tempDir
 
 	require.NoError(t, storage.WriteMetadataFile(testStorages[0].Path))
 	metadata, err := storage.ReadMetadataFile(testStorages[0].Path)
