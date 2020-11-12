@@ -195,6 +195,9 @@ func (s *server) userSquashWithDiffInFiles(ctx context.Context, req *gitalypb.Us
 	}
 
 	defer func(worktreeName string) {
+		ctx, cancel := context.WithCancel(command.SuppressCancellation(ctx))
+		defer cancel()
+
 		if err := s.removeWorktree(ctx, repo, worktreeName); err != nil {
 			ctxlogrus.Extract(ctx).WithField("worktree_name", worktreeName).WithError(err).Error("failed to remove worktree")
 		}
@@ -286,6 +289,9 @@ func (s *server) userSquashWithNoDiff(ctx context.Context, req *gitalypb.UserSqu
 	}
 
 	defer func(worktreeName string) {
+		ctx, cancel := context.WithCancel(command.SuppressCancellation(ctx))
+		defer cancel()
+
 		if err := s.removeWorktree(ctx, repo, worktreeName); err != nil {
 			ctxlogrus.Extract(ctx).WithField("worktree_name", worktreeName).WithError(err).Error("failed to remove worktree")
 		}
