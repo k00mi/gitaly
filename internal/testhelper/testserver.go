@@ -863,6 +863,10 @@ func WriteTemporaryGitlabShellConfigFile(t FatalLogger, dir string, config Gitla
 		t.Fatalf("error marshalling config", err)
 	}
 
+	if err := os.MkdirAll(dir, os.ModeDir); err != nil {
+		t.Fatalf("error creating gitlab shell config directory", err)
+	}
+
 	path := filepath.Join(dir, "config.yml")
 	if err = ioutil.WriteFile(path, out, 0644); err != nil {
 		t.Fatalf("error writing gitlab shell config", err)
