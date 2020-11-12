@@ -1,3 +1,5 @@
+// +build static,system_libgit2
+
 package main
 
 import (
