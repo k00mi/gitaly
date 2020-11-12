@@ -94,12 +94,10 @@ func Configure() func() {
 		config.Config.SocketPath = "/bogus"
 		config.Config.GitlabShell.Dir = "/"
 
-		dir, err := ioutil.TempDir("", "internal_socket")
-		if err != nil {
-			log.Fatalf("error configuring tests: %v", err)
+		config.Config.InternalSocketDir = filepath.Join(testDirectory, "internal-socket")
+		if err := os.Mkdir(config.Config.InternalSocketDir, 0755); err != nil {
+			log.Fatal(err)
 		}
-
-		config.Config.InternalSocketDir = dir
 
 		if err := os.MkdirAll("testdata/gitaly-libexec", 0755); err != nil {
 			log.Fatal(err)
