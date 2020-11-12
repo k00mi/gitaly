@@ -789,14 +789,13 @@ func CreateLooseRef(t testing.TB, repoPath, refName string) {
 
 // TempDir is a wrapper around ioutil.TempDir that provides a cleanup function.
 func TempDir(t testing.TB) (string, func()) {
-	_, currentFile, _, ok := runtime.Caller(0)
-	if !ok {
-		log.Fatal("Could not get caller info")
+	if testDirectory == "" {
+		log.Fatal("you must call testhelper.Configure() before TempDir()")
 	}
 
-	rootTmpDir := filepath.Join(filepath.Dir(currentFile), "testdata", "tmp")
-	tmpDir, err := ioutil.TempDir(rootTmpDir, "")
+	tmpDir, err := ioutil.TempDir(testDirectory, "")
 	require.NoError(t, err)
+
 	return tmpDir, func() { require.NoError(t, os.RemoveAll(tmpDir)) }
 }
 
