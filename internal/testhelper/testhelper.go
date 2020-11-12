@@ -82,14 +82,8 @@ func Configure() func() {
 			log.Fatal(err)
 		}
 
-		config.Config.Logging.Dir, err = filepath.Abs("testdata/log")
-		if err != nil {
-			log.Fatal(err)
-		}
-		if err := os.RemoveAll(config.Config.Logging.Dir); err != nil {
-			log.Fatal(err)
-		}
-		if err := os.MkdirAll(config.Config.Logging.Dir, 0755); err != nil {
+		config.Config.Logging.Dir = filepath.Join(testDirectory, "log")
+		if err := os.Mkdir(config.Config.Logging.Dir, 0755); err != nil {
 			log.Fatal(err)
 		}
 
