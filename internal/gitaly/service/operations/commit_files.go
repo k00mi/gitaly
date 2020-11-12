@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
+	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git2go"
@@ -52,6 +53,22 @@ func (s *server) UserCommitFiles(stream gitalypb.OperationService_UserCommitFile
 
 	if featureflag.IsEnabled(ctx, featureflag.GoUserCommitFiles) {
 		if err := s.userCommitFiles(ctx, header, stream); err != nil {
+			ctxlogrus.AddFields(ctx, logrus.Fields{
+				"repository_storage":       header.Repository.StorageName,
+				"repository_relative_path": header.Repository.RelativePath,
+				"branch_name":              header.BranchName,
+				"start_branch_name":        header.StartBranchName,
+				"start_sha":                header.StartSha,
+				"force":                    header.Force,
+			})
+
+			if startRepo := header.GetStartRepository(); startRepo != nil {
+				ctxlogrus.AddFields(ctx, logrus.Fields{
+					"start_repository_storage":       startRepo.StorageName,
+					"start_repository_relative_path": startRepo.RelativePath,
+				})
+			}
+
 			var (
 				response        gitalypb.UserCommitFilesResponse
 				indexError      indexError
@@ -347,7 +364,13 @@ func (s *server) resolveParentCommit(ctx context.Context, local git.Repository, 
 		branch = "refs/heads/" + startBranch
 	}
 
-	return repo.ResolveRefish(ctx, branch+"^{commit}")
+	refish := branch + "^{commit}"
+	commit, err := repo.ResolveRefish(ctx, refish)
+	if err != nil {
+		return "", fmt.Errorf("resolving refish %q in %T: %w", refish, repo, err)
+	}
+
+	return commit, nil
 }
 
 func (s *server) fetchMissingCommit(ctx context.Context, local, remote *gitalypb.Repository, commitID string) error {
