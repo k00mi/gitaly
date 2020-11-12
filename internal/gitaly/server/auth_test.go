@@ -197,6 +197,7 @@ func runServerWithRuby(t *testing.T, ruby *rubyserver.Server) (string, func()) {
 	return "unix://" + serverSocketPath, func() {
 		conns.Close()
 		srv.Stop()
+		ruby.Stop()
 	}
 }
 
