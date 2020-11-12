@@ -99,11 +99,8 @@ func Configure() func() {
 			log.Fatal(err)
 		}
 
-		if err := os.MkdirAll("testdata/gitaly-libexec", 0755); err != nil {
-			log.Fatal(err)
-		}
-		config.Config.BinDir, err = filepath.Abs("testdata/gitaly-libexec")
-		if err != nil {
+		config.Config.BinDir = filepath.Join(testDirectory, "bin")
+		if err := os.Mkdir(config.Config.BinDir, 0755); err != nil {
 			log.Fatal(err)
 		}
 
