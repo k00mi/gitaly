@@ -1,11 +1,11 @@
 package smarthttp
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	diskcache "gitlab.com/gitlab-org/gitaly/internal/cache"
@@ -37,7 +37,8 @@ func testMain(m *testing.M) int {
 
 	cwd, err := os.Getwd()
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return 1
 	}
 
 	config.Config.Ruby.Dir = filepath.Join(cwd, "../../../../ruby")

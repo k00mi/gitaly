@@ -2,12 +2,12 @@ package repository
 
 import (
 	"crypto/x509"
-	"log"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
@@ -49,13 +49,15 @@ func testMain(m *testing.M) int {
 	var err error
 	config.Config.GitlabShell.Dir, err = filepath.Abs("testdata/gitlab-shell")
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return 1
 	}
 
 	testhelper.ConfigureGitalySSH()
 
 	if err := RubyServer.Start(); err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return 1
 	}
 	defer RubyServer.Stop()
 

@@ -1,10 +1,10 @@
 package remote
 
 import (
-	"log"
 	"os"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
@@ -28,7 +28,8 @@ func testMain(m *testing.M) int {
 	testhelper.ConfigureGitalySSH()
 
 	if err := RubyServer.Start(); err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return 1
 	}
 	defer RubyServer.Stop()
 

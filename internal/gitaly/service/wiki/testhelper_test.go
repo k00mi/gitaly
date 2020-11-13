@@ -45,7 +45,8 @@ func testMain(m *testing.M) int {
 
 	tempDir, err := ioutil.TempDir("", "gitaly")
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return 1
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -53,7 +54,8 @@ func testMain(m *testing.M) int {
 	config.Config.InternalSocketDir = tempDir + "/sock"
 
 	if err := rubyServer.Start(); err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return 1
 	}
 	defer rubyServer.Stop()
 

@@ -3,7 +3,6 @@ package supervisor
 import (
 	"context"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -13,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
@@ -33,13 +33,15 @@ func testMain(m *testing.M) int {
 	var err error
 	testDir, err = ioutil.TempDir("", "gitaly-supervisor-test")
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return 1
 	}
 	defer os.RemoveAll(testDir)
 
 	scriptPath, err := filepath.Abs("test-scripts/pid-server.go")
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return 1
 	}
 
 	testExe = filepath.Join(testDir, "pid-server")
@@ -48,7 +50,8 @@ func testMain(m *testing.M) int {
 	buildCmd.Stderr = os.Stderr
 	buildCmd.Stdout = os.Stdout
 	if err := buildCmd.Run(); err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return 1
 	}
 
 	socketPath = filepath.Join(testDir, "socket")

@@ -42,7 +42,8 @@ func testMain(m *testing.M) int {
 
 	err := os.RemoveAll(testPath)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return 1
 	}
 
 	testRepo = testhelper.TestRepository()

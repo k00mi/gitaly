@@ -3,7 +3,6 @@ package praefect
 import (
 	"context"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -65,13 +64,15 @@ func testMain(m *testing.M) int {
 	var err error
 	gitaly_config.Config.GitlabShell.Dir, err = filepath.Abs("testdata/gitlab-shell")
 	if err != nil {
-		log.Fatal(err)
+		logrus.Error(err)
+		return 1
 	}
 
 	testhelper.ConfigureGitalySSH()
 
 	if err := RubyServer.Start(); err != nil {
-		log.Fatal(err)
+		logrus.Error(err)
+		return 1
 	}
 	defer RubyServer.Stop()
 

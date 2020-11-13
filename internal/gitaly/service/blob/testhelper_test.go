@@ -1,10 +1,10 @@
 package blob
 
 import (
-	"log"
 	"os"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
@@ -28,7 +28,8 @@ func testMain(m *testing.M) int {
 	testhelper.ConfigureRuby()
 
 	if err := rubyServer.Start(); err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return 1
 	}
 	defer rubyServer.Stop()
 

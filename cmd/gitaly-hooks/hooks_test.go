@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -14,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
@@ -41,7 +41,8 @@ func testMain(m *testing.M) int {
 
 	rubyDir, err := filepath.Abs("../../ruby")
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return 1
 	}
 
 	config.Config.Ruby.Dir = rubyDir
