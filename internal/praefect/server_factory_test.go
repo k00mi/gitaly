@@ -80,12 +80,14 @@ func TestServerFactory(t *testing.T) {
 	logger := testhelper.DiscardTestEntry(t)
 	queue := datastore.NewMemoryReplicationEventQueue(conf)
 
-	nodeMgr, err := nodes.NewManager(logger, conf, nil, datastore.NewMemoryRepositoryStore(conf.StorageNames()), &promtest.MockHistogramVec{}, protoregistry.GitalyProtoPreregistered, nil)
+	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
+	sp := datastore.NewDirectStorageProvider(rs)
+	nodeMgr, err := nodes.NewManager(logger, conf, nil, rs, sp, &promtest.MockHistogramVec{}, protoregistry.GitalyProtoPreregistered, nil)
 	require.NoError(t, err)
 	nodeMgr.Start(0, time.Second)
 	txMgr := transactions.NewManager(conf)
 	registry := protoregistry.GitalyProtoPreregistered
-	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
+
 	coordinator := NewCoordinator(
 		queue,
 		rs,
