@@ -152,9 +152,8 @@ func initGitalyTestDB(t testing.TB, database string) *sql.DB {
 	require.NoError(t, oErr, "failed to connect to 'postgres' database")
 	defer func() { require.NoError(t, postgresDB.Close()) }()
 
-	rows, tErr := postgresDB.Query("SELECT PG_TERMINATE_BACKEND(pid) FROM PG_STAT_ACTIVITY WHERE datname = '" + database + "'")
+	_, tErr := postgresDB.Exec("SELECT PG_TERMINATE_BACKEND(pid) FROM PG_STAT_ACTIVITY WHERE datname = '" + database + "'")
 	require.NoError(t, tErr)
-	require.NoError(t, rows.Close())
 
 	_, dErr := postgresDB.Exec("DROP DATABASE IF EXISTS " + database)
 	require.NoErrorf(t, dErr, "failed to drop %q database", database)
