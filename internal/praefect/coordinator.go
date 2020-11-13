@@ -637,7 +637,7 @@ func (c *Coordinator) newRequestFinalizer(
 			}
 		}
 
-		correlationID := c.ensureCorrelationID(ctx, targetRepo)
+		correlationID := correlation.ExtractFromContextOrGenerate(ctx)
 
 		g, ctx := errgroup.WithContext(ctx)
 		for _, secondary := range outdatedSecondaries {
@@ -662,16 +662,4 @@ func (c *Coordinator) newRequestFinalizer(
 		}
 		return g.Wait()
 	}
-}
-
-func (c *Coordinator) ensureCorrelationID(ctx context.Context, targetRepo *gitalypb.Repository) string {
-	corrID := correlation.ExtractFromContext(ctx)
-	if corrID == "" {
-		var err error
-		corrID, err = correlation.RandomID()
-		if err != nil {
-			corrID = generatePseudorandomCorrelationID(targetRepo)
-		}
-	}
-	return corrID
 }
