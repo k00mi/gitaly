@@ -31,7 +31,7 @@ var (
 	// GoUserSquash enable the Go implementation of UserSquash
 	GoUserSquash = FeatureFlag{Name: "go_user_squash", OnByDefault: false}
 	// GoListConflictFiles enables the Go implementation of ListConflictFiles
-	GoListConflictFiles = FeatureFlag{Name: "go_list_conflict_files", OnByDefault: false}
+	GoListConflictFiles = FeatureFlag{Name: "go_list_conflict_files", OnByDefault: true}
 	// GoUserCommitFiles enables the Go implementation of UserCommitFiles
 	GoUserCommitFiles = FeatureFlag{Name: "go_user_commit_files", OnByDefault: false}
 	// GoResolveConflicts enables the Go implementation of ResolveConflicts
