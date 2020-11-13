@@ -76,28 +76,27 @@ succeed.
 
 ## Features
 
-### Automatic repository repair #2717
+### Repository Importer #3033
+
+Repository importer's goal is to create any missing database records for repositories present on the disk of the primary Gitaly.
+
 1. Prep:
-   - [ ] Have a repository in the demo cluster
-   - [ ] SSH to any Praefect node:
-      - [ ] Enable the auto reconciliation scheduler in the toml of at least one Praefect node: `sudo echo '[reconciliation]\n scheduling_interval = "5s"' >> ${PRAEFECT_CONFIG_PATH}`
-      - [ ] Reboot the Praefect node with `sudo gitlab-ctl restart`
-      - [ ] `sudo gitlab-ctl tail` should include `automatic reconciler started`
+   - [ ] Create a repository in the demo cluster. This ensures we have a repository on the disk we can import.
+   - [ ] Stop the Praefect nodes. The import job runs when Praefect starts.
+   - [ ] Truncate `virtual_storages` table. This removes the information whether the migration has been completed.
+   - [ ] Truncate `repositories` table.  This removes any information about the repositories on the virtual storage.
+   - [ ] Truncate `storage_repositories` table. This removes any information about repositories hosted on the Gitaly nodes.
 1. [ ] Demo:
-   - [ ] Stop one of the Gitaly nodes
-   - [ ] Verify the Gitaly node is down on the Grafana dashboards 'Virtual storage primary flapping'
-   - [ ] Write new data to the repository
-   - [ ] Turn off the remaining Gitaly nodes
-   - [ ] Bring back first Gitaly node, which is missing the new Git data
+   - [ ] Start the Praefect nodes.
+   - [ ] Tail Praefects' logs.
 1. [ ] Verify:
-   - [ ] Check the `Read only repositories` [dashboard exists](https://gitlab.com/gitlab-org/gitaly/-/issues/3126) and is at least 1
-   - [ ] Check that the web interface is missing the new data
-   - [ ] Try to write to the repository, it should fail as it's in read only
-   - [ ] Run the dataloss command on any Praefect node, `sudo /opt/gitlab/embedded/bin/praefect -config /var/opt/gitlab/praefect/config.toml dataloss`
-   - [ ] Bring a second Gitaly node back online
-   - [ ] Check the logs for `"msg":"reconciliation jobs scheduled"`
-   - [ ] Check there's no dataloss anymore with `sudo /opt/gitlab/embedded/bin/praefect -config /var/opt/gitlab/praefect/config.toml dataloss`
-   - [ ] Check the `Read only repositories` [dashboard exists](https://gitlab.com/gitlab-org/gitaly/-/issues/3126) and is 0
+   - [ ] Logs do not contain `importing repositories to database failed` indicating any import failures.
+   - [ ] Logs contain `imported repositories to database` message. It should list the repository created earlier as imported.
+   - [ ] Logs contain `repository importer finished` message. It should list the configured virtual storages as successfully imported.
+   - [ ] Verify `repositories` table contains records for the imported repositories with generation `0`.
+   - [ ] Verify `storage_repositories` records the primary containing the imported repositories on generation `0`. Secondaries might have records as well if the automatic reconciler scheduled jobs to replicate the
+   repositories to them.
+   - [ ] Verify `virtual_storages` table contains records with `repositories_imported` set for the successfully imported virtual storages. 
 
 ## After Demo
 
