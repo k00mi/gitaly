@@ -40,7 +40,13 @@ func getStorageMethod(storage string) func() string {
 func TestReconciler(t *testing.T) {
 	// repositories describes storage state as
 	// virtual storage -> relative path -> physical storage -> generation
-	type repositories map[string]map[string]map[string]int
+
+	type storageRecord struct {
+		generation int
+		assigned   bool
+	}
+
+	type repositories map[string]map[string]map[string]storageRecord
 	type existingJobs []datastore.ReplicationEvent
 	type jobs []datastore.ReplicationJob
 	type storages map[string][]string
@@ -93,6 +99,7 @@ func TestReconciler(t *testing.T) {
 
 	for _, tc := range []struct {
 		desc               string
+		assignmentsEnabled bool
 		healthyStorages    storages
 		repositories       repositories
 		existingJobs       existingJobs
@@ -109,9 +116,9 @@ func TestReconciler(t *testing.T) {
 			repositories: repositories{
 				"virtual-storage-1": {
 					"relative-path-1": {
-						"storage-1": 0,
-						"storage-2": 0,
-						"storage-3": 0,
+						"storage-1": {generation: 0},
+						"storage-2": {generation: 0},
+						"storage-3": {generation: 0},
 					},
 				},
 			},
@@ -123,13 +130,13 @@ func TestReconciler(t *testing.T) {
 			repositories: repositories{
 				"virtual-storage-1": {
 					"relative-path-1": {
-						"storage-1": 1,
-						"storage-2": 0,
+						"storage-1": {generation: 1},
+						"storage-2": {generation: 0},
 					},
 					"relative-path-2": {
-						"storage-1": 0,
-						"storage-2": 0,
-						"storage-3": 0,
+						"storage-1": {generation: 0},
+						"storage-2": {generation: 0},
+						"storage-3": {generation: 0},
 					},
 				},
 			},
@@ -155,11 +162,11 @@ func TestReconciler(t *testing.T) {
 			desc:            "reconciliation works with log batch size exceeded",
 			healthyStorages: configuredStoragesWithout("storage-3"),
 			repositories: func() repositories {
-				repos := repositories{"virtual-storage-1": make(map[string]map[string]int, 2*logBatchSize+1)}
+				repos := repositories{"virtual-storage-1": make(map[string]map[string]storageRecord, 2*logBatchSize+1)}
 				for i := 0; i < 2*logBatchSize+1; i++ {
-					repos["virtual-storage-1"][fmt.Sprintf("relative-path-%d", i)] = map[string]int{
-						"storage-1": 1,
-						"storage-2": 0,
+					repos["virtual-storage-1"][fmt.Sprintf("relative-path-%d", i)] = map[string]storageRecord{
+						"storage-1": {generation: 1},
+						"storage-2": {generation: 0},
 					}
 				}
 
@@ -186,13 +193,13 @@ func TestReconciler(t *testing.T) {
 			repositories: repositories{
 				"virtual-storage-1": {
 					"relative-path-1": {
-						"storage-1": 1,
-						"storage-2": 0,
+						"storage-1": {generation: 1},
+						"storage-2": {generation: 0},
 					},
 					"relative-path-2": {
-						"storage-1": 1,
-						"storage-2": 1,
-						"storage-3": 1,
+						"storage-1": {generation: 1},
+						"storage-2": {generation: 1},
+						"storage-3": {generation: 1},
 					},
 				},
 			},
@@ -204,8 +211,8 @@ func TestReconciler(t *testing.T) {
 			repositories: repositories{
 				"virtual-storage-1": {
 					"relative-path-1": {
-						"storage-1": 1,
-						"storage-2": 0,
+						"storage-1": {generation: 1},
+						"storage-2": {generation: 0},
 					},
 				},
 			},
@@ -225,8 +232,8 @@ func TestReconciler(t *testing.T) {
 			repositories: repositories{
 				"virtual-storage-1": {
 					"relative-path-1": {
-						"storage-1": 1,
-						"storage-2": 0,
+						"storage-1": {generation: 1},
+						"storage-2": {generation: 0},
 					},
 				},
 			},
@@ -246,8 +253,8 @@ func TestReconciler(t *testing.T) {
 			repositories: repositories{
 				"virtual-storage-1": {
 					"relative-path-1": {
-						"storage-1": 1,
-						"storage-2": 0,
+						"storage-1": {generation: 1},
+						"storage-2": {generation: 0},
 					},
 				},
 			},
@@ -275,8 +282,8 @@ func TestReconciler(t *testing.T) {
 			repositories: repositories{
 				"virtual-storage-1": {
 					"relative-path-1": {
-						"storage-1": 1,
-						"storage-2": 0,
+						"storage-1": {generation: 1},
+						"storage-2": {generation: 0},
 					},
 				},
 			},
@@ -308,8 +315,8 @@ func TestReconciler(t *testing.T) {
 			repositories: repositories{
 				"virtual-storage-1": {
 					"relative-path-1": {
-						"storage-1": 1,
-						"storage-2": 1,
+						"storage-1": {generation: 1},
+						"storage-2": {generation: 1},
 					},
 				},
 			},
@@ -343,6 +350,52 @@ func TestReconciler(t *testing.T) {
 				TargetNodeStorage: "storage-3",
 			}},
 		},
+		{
+			desc:               "unassigned node allowed to target an assigned node",
+			assignmentsEnabled: true,
+			healthyStorages:    configuredStorages,
+			repositories: repositories{
+				"virtual-storage-1": {
+					"relative-path-1": {
+						"storage-1": {generation: 1},
+						"storage-2": {generation: 0},
+						"storage-3": {generation: 0, assigned: true},
+					},
+				},
+			},
+			reconciliationJobs: jobs{
+				{
+					Change:            datastore.UpdateRepo,
+					VirtualStorage:    "virtual-storage-1",
+					RelativePath:      "relative-path-1",
+					SourceNodeStorage: "storage-1",
+					TargetNodeStorage: "storage-3",
+				},
+			},
+		},
+		{
+			desc:               "assigned node allowed to target an assigned node",
+			assignmentsEnabled: true,
+			healthyStorages:    configuredStorages,
+			repositories: repositories{
+				"virtual-storage-1": {
+					"relative-path-1": {
+						"storage-1": {generation: 1, assigned: true},
+						"storage-2": {generation: 0},
+						"storage-3": {generation: 0, assigned: true},
+					},
+				},
+			},
+			reconciliationJobs: jobs{
+				{
+					Change:            datastore.UpdateRepo,
+					VirtualStorage:    "virtual-storage-1",
+					RelativePath:      "relative-path-1",
+					SourceNodeStorage: "storage-1",
+					TargetNodeStorage: "storage-3",
+				},
+			},
+		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
 			ctx, cancel := testhelper.Context()
@@ -354,8 +407,16 @@ func TestReconciler(t *testing.T) {
 			rs := datastore.NewPostgresRepositoryStore(db, configuredStorages)
 			for virtualStorage, relativePaths := range tc.repositories {
 				for relativePath, storages := range relativePaths {
-					for storage, generation := range storages {
-						require.NoError(t, rs.SetGeneration(ctx, virtualStorage, relativePath, storage, generation))
+					for storage, repo := range storages {
+						require.NoError(t, rs.SetGeneration(ctx, virtualStorage, relativePath, storage, repo.generation))
+
+						_, err := db.ExecContext(ctx, `
+							UPDATE storage_repositories SET assigned = $4
+							WHERE virtual_storage = $1
+							AND   relative_path = $2
+							AND   storage = $3
+						`, virtualStorage, relativePath, storage, repo.assigned)
+						require.NoError(t, err)
 					}
 				}
 			}
@@ -402,6 +463,7 @@ func TestReconciler(t *testing.T) {
 				praefect.StaticHealthChecker(tc.healthyStorages),
 				configuredStorages,
 				prometheus.DefBuckets,
+				tc.assignmentsEnabled,
 			)
 			reconciler.handleError = func(err error) error { return err }
 
