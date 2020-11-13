@@ -136,21 +136,14 @@ type DestProvider interface {
 }
 
 // ScanAll reads all data from 'rows' into holders provided by 'in'.
-// It will also 'Close' source after completion.
 func ScanAll(rows *sql.Rows, in DestProvider) (err error) {
-	defer func() {
-		if cErr := rows.Close(); cErr != nil && err == nil {
-			err = cErr
-		}
-	}()
-
 	for rows.Next() {
 		if err = rows.Scan(in.To()...); err != nil {
 			return err
 		}
 	}
-	err = rows.Err()
-	return err
+
+	return nil
 }
 
 // Uint64Provider allows to use it with ScanAll function to read all rows into it and return result as a slice.

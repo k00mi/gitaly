@@ -402,13 +402,14 @@ func (rq PostgresReplicationEventQueue) Acknowledge(ctx context.Context, state J
 	if err != nil {
 		return nil, fmt.Errorf("query: %w", err)
 	}
+	defer rows.Close()
 
 	var acknowledged glsql.Uint64Provider
 	if err := glsql.ScanAll(rows, &acknowledged); err != nil {
 		return nil, fmt.Errorf("scan: %w", err)
 	}
 
-	return acknowledged.Values(), nil
+	return acknowledged.Values(), rows.Err()
 }
 
 // StartHealthUpdate starts periodical update of the event's health identifier.
