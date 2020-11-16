@@ -189,6 +189,7 @@ FROM primary_records`, virtualStorage, pq.StringArray(relativePaths), primary)
 	if err != nil {
 		return fmt.Errorf("query: %w", err)
 	}
+	defer rows.Close()
 
 	imported := make([]string, 0, len(relativePaths))
 	for rows.Next() {
