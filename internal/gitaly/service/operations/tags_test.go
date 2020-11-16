@@ -16,6 +16,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestSuccessfulUserDeleteTagRequest(t *testing.T) {
@@ -237,6 +238,62 @@ func TestSuccessfulUserCreateTagRequest(t *testing.T) {
 	}
 }
 
+// TODO: Rename to TestUserDeleteTag_successfulDeletionOfPrefixedTag,
+// see
+// https://gitlab.com/gitlab-org/gitaly/-/merge_requests/2839#note_458751929
+func TestUserDeleteTagsuccessfulDeletionOfPrefixedTag(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserDeleteTag, testUserDeleteTagsuccessfulDeletionOfPrefixedTag)
+}
+
+func testUserDeleteTagsuccessfulDeletionOfPrefixedTag(t *testing.T, ctx context.Context) {
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	serverSocketPath, stop := runOperationServiceServer(t)
+	defer stop()
+
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testCases := []struct {
+		desc         string
+		tagNameInput string
+		tagCommit    string
+		user         *gitalypb.User
+		response     *gitalypb.UserDeleteTagResponse
+		err          error
+	}{
+		{
+			desc:         "possible to delete a tag called refs/tags/something",
+			tagNameInput: "refs/tags/can-find-this",
+			tagCommit:    "c642fe9b8b9f28f9225d7ea953fe14e74748d53b",
+			user:         testhelper.TestUser,
+			response:     &gitalypb.UserDeleteTagResponse{},
+			err:          nil,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", testCase.tagNameInput, testCase.tagCommit)
+			defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "tag", "-d", testCase.tagNameInput).Run()
+
+			request := &gitalypb.UserDeleteTagRequest{
+				Repository: testRepo,
+				TagName:    []byte(testCase.tagNameInput),
+				User:       testCase.user,
+			}
+
+			response, err := client.UserDeleteTag(ctx, request)
+			require.Equal(t, testCase.err, err)
+			testhelper.ProtoEqual(t, testCase.response, response)
+
+			refs := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "for-each-ref", "--", "refs/tags/"+testCase.tagNameInput)
+			require.NotContains(t, string(refs), testCase.tagCommit, "tag kept because we stripped off refs/tags/*")
+		})
+	}
+}
+
 func TestSuccessfulGitHooksForUserCreateTagRequest(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
@@ -299,9 +356,10 @@ func testFailedUserDeleteTagRequestDueToValidation(t *testing.T, ctx context.Con
 	defer cleanupFn()
 
 	testCases := []struct {
-		desc    string
-		request *gitalypb.UserDeleteTagRequest
-		code    codes.Code
+		desc     string
+		request  *gitalypb.UserDeleteTagRequest
+		response *gitalypb.UserDeleteTagResponse
+		err      error
 	}{
 		{
 			desc: "empty user",
@@ -309,7 +367,8 @@ func testFailedUserDeleteTagRequestDueToValidation(t *testing.T, ctx context.Con
 				Repository: testRepo,
 				TagName:    []byte("does-matter-the-name-if-user-is-empty"),
 			},
-			code: codes.InvalidArgument,
+			response: nil,
+			err:      status.Error(codes.InvalidArgument, "empty user"),
 		},
 		{
 			desc: "empty tag name",
@@ -317,7 +376,8 @@ func testFailedUserDeleteTagRequestDueToValidation(t *testing.T, ctx context.Con
 				Repository: testRepo,
 				User:       testhelper.TestUser,
 			},
-			code: codes.InvalidArgument,
+			response: nil,
+			err:      status.Error(codes.InvalidArgument, "empty tag name"),
 		},
 		{
 			desc: "non-existent tag name",
@@ -326,14 +386,16 @@ func testFailedUserDeleteTagRequestDueToValidation(t *testing.T, ctx context.Con
 				User:       testhelper.TestUser,
 				TagName:    []byte("i-do-not-exist"),
 			},
-			code: codes.FailedPrecondition,
+			response: nil,
+			err:      status.Errorf(codes.FailedPrecondition, "tag not found: %s", "i-do-not-exist"),
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			_, err := client.UserDeleteTag(ctx, testCase.request)
-			testhelper.RequireGrpcError(t, err, testCase.code)
+			response, err := client.UserDeleteTag(ctx, testCase.request)
+			require.Equal(t, testCase.err, err)
+			testhelper.ProtoEqual(t, testCase.response, response)
 		})
 	}
 }
