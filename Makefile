@@ -426,8 +426,8 @@ endif
 ${GITALYFMT}: | ${BUILD_DIR}/bin
 	${Q}go build -o $@ ${SOURCE_DIR}/internal/cmd/gitalyfmt
 
-${PROTOC_GEN_GITALY}: ${BUILD_DIR}/go.mod
-	${Q}go build -o $@ gitlab.com/gitlab-org/gitaly/proto/go/internal/cmd/protoc-gen-gitaly
+${PROTOC_GEN_GITALY}: | ${BUILD_DIR}/bin
+	${Q}go build -o $@ ${SOURCE_DIR}/proto/go/internal/cmd/protoc-gen-gitaly
 
 ${GOCOVER_COBERTURA}: ${BUILD_DIR}/Makefile.sha256
 	${Q}cd ${BUILD_DIR} && go get github.com/t-yuki/gocover-cobertura@${GOCOVER_COBERTURA_VERSION}
