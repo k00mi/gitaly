@@ -12,15 +12,17 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
 )
 
 func TestSuccessfulUserDeleteTagRequest(t *testing.T) {
-	ctx, cancel := testhelper.Context()
-	defer cancel()
+	testWithFeature(t, featureflag.GoUserDeleteTag, testSuccessfulUserDeleteTagRequest)
+}
 
+func testSuccessfulUserDeleteTagRequest(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -50,6 +52,10 @@ func TestSuccessfulUserDeleteTagRequest(t *testing.T) {
 }
 
 func TestSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserDeleteTag, testSuccessfulGitHooksForUserDeleteTagRequest)
+}
+
+func testSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -61,9 +67,6 @@ func TestSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T) {
 
 	tagNameInput := "to-be-déleted-soon-tag"
 	defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "tag", "-d", tagNameInput).Run()
-
-	ctx, cancel := testhelper.Context()
-	defer cancel()
 
 	request := &gitalypb.UserDeleteTagRequest{
 		Repository: testRepo,
@@ -282,6 +285,10 @@ func testSuccessfulGitHooksForUserCreateTagRequest(t *testing.T, ctx context.Con
 }
 
 func TestFailedUserDeleteTagRequestDueToValidation(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserDeleteTag, testFailedUserDeleteTagRequestDueToValidation)
+}
+
+func testFailedUserDeleteTagRequestDueToValidation(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -325,9 +332,6 @@ func TestFailedUserDeleteTagRequestDueToValidation(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			ctx, cancel := testhelper.Context()
-			defer cancel()
-
 			_, err := client.UserDeleteTag(ctx, testCase.request)
 			testhelper.RequireGrpcError(t, err, testCase.code)
 		})
@@ -335,10 +339,7 @@ func TestFailedUserDeleteTagRequestDueToValidation(t *testing.T) {
 }
 
 func TestFailedUserDeleteTagDueToHooks(t *testing.T) {
-	ctx, cancel := testhelper.Context()
-	defer cancel()
-
-	testFailedUserDeleteTagDueToHooks(t, ctx)
+	testWithFeature(t, featureflag.GoUserDeleteTag, testFailedUserDeleteTagDueToHooks)
 }
 
 func testFailedUserDeleteTagDueToHooks(t *testing.T, ctx context.Context) {
@@ -506,6 +507,10 @@ func TestFailedUserCreateTagRequestDueToValidation(t *testing.T) {
 }
 
 func TestTagHookOutput(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserDeleteTag, testTagHookOutput)
+}
+
+func testTagHookOutput(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -567,9 +572,6 @@ func TestTagHookOutput(t *testing.T) {
 					TagName:    []byte(tagNameInput),
 					User:       testhelper.TestUser,
 				}
-
-				ctx, cancel := testhelper.Context()
-				defer cancel()
 
 				remove, err := testhelper.WriteCustomHook(testRepoPath, hookName, []byte(testCase.hookContent))
 				require.NoError(t, err)
