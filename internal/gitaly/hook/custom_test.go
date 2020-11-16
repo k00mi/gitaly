@@ -223,6 +223,76 @@ func TestCustomHooksMultipleHooks(t *testing.T) {
 	}
 }
 
+func TestCustomHooksWithSymlinks(t *testing.T) {
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	globalCustomHooksDir, cleanup := testhelper.TempDir(t)
+	defer cleanup()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	globalHooksPath := filepath.Join(globalCustomHooksDir, "update.d")
+
+	// Test directory structure:
+	//
+	// first_dir/update
+	// first_dir/update~
+	// second_dir -> first_dir
+	// update -> second_dir/update         GOOD
+	// update_tilde -> first_dir/update~   GOOD
+	// update~ -> first_dir/update         BAD
+	// something -> not-executable         BAD
+	// bad -> /path/to/nowhere             BAD
+	firstDir := filepath.Join(globalHooksPath, "first_dir")
+	secondDir := filepath.Join(globalHooksPath, "second_dir")
+	require.NoError(t, os.MkdirAll(firstDir, 0755))
+	require.NoError(t, os.Symlink(firstDir, secondDir))
+	filename := filepath.Join(firstDir, "update")
+
+	updateTildePath := filepath.Join(globalHooksPath, "update_tilde")
+	require.NoError(t, os.Symlink(filename, updateTildePath))
+
+	updateHookPath := filepath.Join(globalHooksPath, "update")
+	require.NoError(t, os.Symlink(filename, updateHookPath))
+
+	badUpdatePath := filepath.Join(globalHooksPath, "update~")
+	badUpdateHook := filepath.Join(firstDir, "update~")
+	require.NoError(t, os.Symlink(badUpdateHook, badUpdatePath))
+
+	notExecPath := filepath.Join(globalHooksPath, "not-executable")
+	badExecHook := filepath.Join(firstDir, "something")
+	os.Create(notExecPath)
+	require.NoError(t, os.Symlink(notExecPath, badExecHook))
+
+	badPath := filepath.Join(globalHooksPath, "bad")
+	require.NoError(t, os.Symlink("/path/to/nowhere", badPath))
+
+	writeCustomHook(t, "update", firstDir, successScript)
+	writeCustomHook(t, "update~", firstDir, successScript)
+
+	expectedExecutedScripts := []string{updateHookPath, updateTildePath}
+
+	mgr := GitLabHookManager{
+		hooksConfig: config.Hooks{
+			CustomHooksDir: globalCustomHooksDir,
+		},
+	}
+	hooksExecutor, err := mgr.newCustomHooksExecutor(testRepo, "update")
+	require.NoError(t, err)
+
+	var stdout, stderr bytes.Buffer
+	require.NoError(t, hooksExecutor(ctx, nil, nil, &bytes.Buffer{}, &stdout, &stderr))
+	require.Empty(t, stderr.Bytes())
+
+	outputScanner := bufio.NewScanner(&stdout)
+	for _, expectedScript := range expectedExecutedScripts {
+		require.True(t, outputScanner.Scan())
+		require.Equal(t, expectedScript, outputScanner.Text())
+	}
+}
+
 func TestMultilineStdin(t *testing.T) {
 	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()

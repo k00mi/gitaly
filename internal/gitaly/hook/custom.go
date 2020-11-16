@@ -14,6 +14,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
+	"golang.org/x/sys/unix"
 )
 
 // customHooksExecutor executes all custom hooks for a given repository and hook name
@@ -95,17 +96,41 @@ func matchFiles(dir string) ([]string, error) {
 	var hookFiles []string
 
 	for _, fi := range fis {
-		if fi.IsDir() {
+		if fi.IsDir() || strings.HasSuffix(fi.Name(), "~") {
 			continue
 		}
-		if fi.Mode()&0100 == 0 {
+
+		filename := filepath.Join(dir, fi.Name())
+
+		if fi.Mode()&os.ModeSymlink != 0 {
+			path, err := filepath.EvalSymlinks(filename)
+			if err != nil {
+				continue
+			}
+
+			fi, err = os.Lstat(path)
+			if err != nil {
+				continue
+			}
+		}
+
+		if !validHook(fi, filename) {
 			continue
 		}
-		if strings.HasSuffix(fi.Name(), "~") {
-			continue
-		}
-		hookFiles = append(hookFiles, filepath.Join(dir, fi.Name()))
+
+		hookFiles = append(hookFiles, filename)
 	}
 
 	return hookFiles, nil
+}
+
+func validHook(fi os.FileInfo, filename string) bool {
+	if fi.IsDir() {
+		return false
+	}
+	if unix.Access(filename, unix.X_OK) != nil {
+		return false
+	}
+
+	return true
 }
