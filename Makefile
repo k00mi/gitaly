@@ -312,7 +312,7 @@ docker:
 	docker build -t gitlab/gitaly:v${GITALY_VERSION} -t gitlab/gitaly:latest ${BUILD_DIR}/docker/
 
 .PHONY: proto
-proto: ${PROTOC_GEN_GITALY} ${SOURCE_DIR}/.ruby-bundle
+proto: ${PROTOC_GEN_GITALY} ${SOURCE_DIR}/.ruby-bundle proto-lint
 	${PROTOC} --gitaly_out=proto_dir=./proto,gitalypb_dir=./proto/go/gitalypb:. --go_out=paths=source_relative,plugins=grpc:./proto/go/gitalypb -I./proto ./proto/*.proto
 	${SOURCE_DIR}/_support/generate-proto-ruby
 	${Q}# this part is related to the generation of sources from testing proto files
@@ -426,7 +426,7 @@ endif
 ${GITALYFMT}: | ${BUILD_DIR}/bin
 	${Q}go build -o $@ ${SOURCE_DIR}/internal/cmd/gitalyfmt
 
-${PROTOC_GEN_GITALY}: ${BUILD_DIR}/go.mod proto-lint
+${PROTOC_GEN_GITALY}: ${BUILD_DIR}/go.mod
 	${Q}go build -o $@ gitlab.com/gitlab-org/gitaly/proto/go/internal/cmd/protoc-gen-gitaly
 
 ${GOCOVER_COBERTURA}: ${BUILD_DIR}/Makefile.sha256
