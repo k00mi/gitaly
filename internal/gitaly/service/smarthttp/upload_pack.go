@@ -101,6 +101,9 @@ func (s *server) PostUploadPack(stream gitalypb.SmartHTTPService_PostUploadPackS
 		return status.Errorf(codes.Unavailable, "PostUploadPack: %v", err)
 	}
 
+	pw.Close() // Ensure PackfileNegotiation parser returns
+	<-statsCh  // Wait for the packfile negotiation parser to finish.
+
 	ctxlogrus.Extract(ctx).WithField("request_sha", fmt.Sprintf("%x", h.Sum(nil))).WithField("response_bytes", respBytes).Info("request details")
 
 	return nil
