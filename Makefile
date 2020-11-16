@@ -375,11 +375,6 @@ ${BUILD_DIR}/bin: | ${BUILD_DIR}
 ${BUILD_DIR}/go.mod: | ${BUILD_DIR}
 	${Q}cd ${BUILD_DIR} && go mod init _build
 
-${PROTOC}: ${BUILD_DIR}/protoc.zip | ${BUILD_DIR}
-	${Q}rm -rf ${BUILD_DIR}/protoc
-	${Q}mkdir -p ${BUILD_DIR}/protoc
-	cd ${BUILD_DIR}/protoc && unzip ${BUILD_DIR}/protoc.zip
-
 # This is a build hack to avoid excessive rebuilding of targets. Instead of
 # depending on the timestamp of the Makefile, which will change e.g. between
 # jobs of a CI pipeline, we start depending on its hash. Like this, we only
@@ -422,6 +417,11 @@ ${GIT_INSTALL_DIR}/bin/git: ${BUILD_DIR}/git_full_bins.tgz
 	${Q}mkdir -p ${GIT_INSTALL_DIR}
 	tar -C ${GIT_INSTALL_DIR} -xvzf ${BUILD_DIR}/git_full_bins.tgz
 endif
+
+${PROTOC}: ${BUILD_DIR}/protoc.zip | ${BUILD_DIR}
+	${Q}rm -rf ${BUILD_DIR}/protoc
+	${Q}mkdir -p ${BUILD_DIR}/protoc
+	cd ${BUILD_DIR}/protoc && unzip ${BUILD_DIR}/protoc.zip
 
 ${GITALYFMT}: | ${BUILD_DIR}/bin
 	${Q}go build -o $@ ${SOURCE_DIR}/internal/cmd/gitalyfmt
