@@ -431,9 +431,7 @@ func (c *Command) logProcessComplete(ctx context.Context, exitCode int) {
 
 	entry.Debug("spawn complete")
 
-	if featureflag.IsEnabled(ctx, featureflag.LogCommandStats) {
-		stats := StatsFromContext(ctx)
-
+	if stats := StatsFromContext(ctx); stats != nil && featureflag.IsEnabled(ctx, featureflag.LogCommandStats) {
 		stats.RecordSum("command.count", 1)
 		stats.RecordSum("command.system_time_ms", int(systemTime.Seconds()*1000))
 		stats.RecordSum("command.user_time_ms", int(userTime.Seconds()*1000))
