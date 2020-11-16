@@ -103,7 +103,12 @@ func walkRepos(ctx context.Context, walkerQ chan<- string, reference nodes.Node)
 		if err != nil {
 			return err
 		}
-		walkerQ <- resp.GetRelativePath()
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case walkerQ <- resp.GetRelativePath():
+		}
 	}
 }
 
@@ -134,7 +139,18 @@ type checksumResult struct {
 func checksumRepos(ctx context.Context, relpathQ <-chan string, checksumResultQ chan<- checksumResult, target, reference nodes.Node, virtualStorage string) error {
 	defer close(checksumResultQ)
 
-	for repoRelPath := range relpathQ {
+	for {
+		var repoRelPath string
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case repoPath, ok := <-relpathQ:
+			if !ok {
+				return nil
+			}
+			repoRelPath = repoPath
+		}
+
 		cs := checksumResult{
 			virtualStorage:   virtualStorage,
 			relativePath:     repoRelPath,
@@ -142,10 +158,10 @@ func checksumRepos(ctx context.Context, relpathQ <-chan string, checksumResultQ 
 			referenceStorage: reference.GetStorage(),
 		}
 
-		g, ctx := errgroup.WithContext(ctx)
+		g, gctx := errgroup.WithContext(ctx)
 
 		g.Go(func() (err error) {
-			cs.target, err = checksumRepo(ctx, repoRelPath, target)
+			cs.target, err = checksumRepo(gctx, repoRelPath, target)
 			if status.Code(err) == codes.NotFound {
 				// missing repo on target is okay, we need to
 				// replicate from reference
@@ -155,7 +171,7 @@ func checksumRepos(ctx context.Context, relpathQ <-chan string, checksumResultQ 
 		})
 
 		g.Go(func() (err error) {
-			cs.reference, err = checksumRepo(ctx, repoRelPath, reference)
+			cs.reference, err = checksumRepo(gctx, repoRelPath, reference)
 			return err
 		})
 
@@ -163,10 +179,12 @@ func checksumRepos(ctx context.Context, relpathQ <-chan string, checksumResultQ 
 			return err
 		}
 
-		checksumResultQ <- cs
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case checksumResultQ <- cs:
+		}
 	}
-
-	return nil
 }
 
 func scheduleReplication(ctx context.Context, csr checksumResult, q datastore.ReplicationEventQueue, resp *gitalypb.ConsistencyCheckResponse) error {
