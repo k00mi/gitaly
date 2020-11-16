@@ -423,23 +423,23 @@ ${GIT_INSTALL_DIR}/bin/git: ${BUILD_DIR}/git_full_bins.tgz
 	tar -C ${GIT_INSTALL_DIR} -xvzf ${BUILD_DIR}/git_full_bins.tgz
 endif
 
+${GITALYFMT}: | ${BUILD_DIR}/bin
+	${Q}go build -o $@ ${SOURCE_DIR}/internal/cmd/gitalyfmt
+
+${PROTOC_GEN_GITALY}: ${BUILD_DIR}/go.mod proto-lint
+	${Q}go build -o $@ gitlab.com/gitlab-org/gitaly/proto/go/internal/cmd/protoc-gen-gitaly
+
 ${GOCOVER_COBERTURA}: ${BUILD_DIR}/Makefile.sha256
 	${Q}cd ${BUILD_DIR} && go get github.com/t-yuki/gocover-cobertura@${GOCOVER_COBERTURA_VERSION}
 
 ${GO_JUNIT_REPORT}: ${BUILD_DIR}/Makefile.sha256 ${BUILD_DIR}/go.mod
 	${Q}cd ${BUILD_DIR} && go get github.com/jstemmer/go-junit-report@984a47ca6b0a7d704c4b589852051b4d7865aa17
 
-${GITALYFMT}: | ${BUILD_DIR}/bin
-	${Q}go build -o $@ ${SOURCE_DIR}/internal/cmd/gitalyfmt
-
 ${GO_LICENSES}: ${BUILD_DIR}/Makefile.sha256 ${BUILD_DIR}/go.mod
 	${Q}cd ${BUILD_DIR} && go get github.com/google/go-licenses@73411c8fa237ccc6a75af79d0a5bc021c9487aad
 
 ${PROTOC_GEN_GO}: ${BUILD_DIR}/Makefile.sha256 ${BUILD_DIR}/go.mod
 	${Q}cd ${BUILD_DIR} && go get github.com/golang/protobuf/protoc-gen-go@v${PROTOC_GEN_GO_VERSION}
-
-${PROTOC_GEN_GITALY}: ${BUILD_DIR}/go.mod proto-lint
-	${Q}go build -o $@ gitlab.com/gitlab-org/gitaly/proto/go/internal/cmd/protoc-gen-gitaly
 
 ${GOLANGCI_LINT}: ${BUILD_DIR}/Makefile.sha256 ${BUILD_DIR}/go.mod
 	${Q}cd ${BUILD_DIR} && go get github.com/golangci/golangci-lint/cmd/golangci-lint@v${GOLANGCI_LINT_VERSION}
