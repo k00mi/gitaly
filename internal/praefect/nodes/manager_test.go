@@ -119,7 +119,7 @@ func TestManagerFailoverDisabledElectionStrategySQL(t *testing.T) {
 	defer srv1.Stop()
 
 	conf := config.Config{
-		Failover:        config.Failover{Enabled: false, ElectionStrategy: "sql"},
+		Failover:        config.Failover{Enabled: false, ElectionStrategy: config.ElectionStrategySQL},
 		VirtualStorages: []*config.VirtualStorage{virtualStorage},
 	}
 	nm, err := NewManager(testhelper.DiscardTestEntry(t), conf, nil, nil, promtest.NewMockHistogramVec(), protoregistry.GitalyProtoPreregistered, nil)

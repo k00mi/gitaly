@@ -1,8 +1,15 @@
 package praefect
 
 import (
+	"context"
+	"fmt"
+
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes/tracker"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
 // Node is a storage node in a virtual storage.
@@ -19,6 +26,41 @@ type Node struct {
 
 // NodeSet contains nodes by their virtual storage and storage names.
 type NodeSet map[string]map[string]Node
+
+// Close closes the connections in the NodeSet. Errors on closing are ignored.
+func (set NodeSet) Close() {
+	for _, nodes := range set {
+		for _, node := range nodes {
+			node.Connection.Close()
+		}
+	}
+}
+
+// HealthClients is a convenience method to return the HealthClients from the NodeSet.
+func (set NodeSet) HealthClients() nodes.HealthClients {
+	clients := make(nodes.HealthClients, len(set))
+	for virtualStorage, nodes := range set {
+		clients[virtualStorage] = make(map[string]grpc_health_v1.HealthClient, len(nodes))
+		for _, node := range nodes {
+			clients[virtualStorage][node.Storage] = grpc_health_v1.NewHealthClient(node.Connection)
+		}
+	}
+
+	return clients
+}
+
+// Connections is a convenience method to return the connections from the NodeSet.
+func (set NodeSet) Connections() Connections {
+	conns := make(Connections, len(set))
+	for virtualStorage, nodes := range set {
+		conns[virtualStorage] = make(map[string]*grpc.ClientConn, len(nodes))
+		for _, node := range nodes {
+			conns[virtualStorage][node.Storage] = node.Connection
+		}
+	}
+
+	return conns
+}
 
 // NodeSetFromNodeManager converts connections set up by the node manager
 // in to a NodeSet. This is a temporary adapter required due to cyclic
@@ -44,4 +86,32 @@ func toNode(node nodes.Node) Node {
 		Token:      node.GetToken(),
 		Connection: node.GetConnection(),
 	}
+}
+
+// DialNodes dials the configured storage nodes.
+func DialNodes(
+	ctx context.Context,
+	virtualStorages []*config.VirtualStorage,
+	registry *protoregistry.Registry,
+	errorTracker tracker.ErrorTracker,
+) (NodeSet, error) {
+	set := make(NodeSet, len(virtualStorages))
+	for _, virtualStorage := range virtualStorages {
+		set[virtualStorage.Name] = make(map[string]Node, len(virtualStorage.Nodes))
+		for _, node := range virtualStorage.Nodes {
+			conn, err := nodes.Dial(ctx, node, registry, errorTracker)
+			if err != nil {
+				return nil, fmt.Errorf("dial %q/%q: %w", virtualStorage.Name, node.Storage, err)
+			}
+
+			set[virtualStorage.Name][node.Storage] = Node{
+				Storage:    node.Storage,
+				Address:    node.Address,
+				Token:      node.Token,
+				Connection: conn,
+			}
+		}
+	}
+
+	return set, nil
 }

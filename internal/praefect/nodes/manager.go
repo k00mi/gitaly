@@ -118,6 +118,24 @@ var ErrPrimaryNotHealthy = errors.New("primary is not healthy")
 
 const dialTimeout = 10 * time.Second
 
+// Dial dials a node with the necessary interceptors configured.
+func Dial(ctx context.Context, node *config.Node, registry *protoregistry.Registry, errorTracker tracker.ErrorTracker) (*grpc.ClientConn, error) {
+	streamInterceptors := []grpc.StreamClientInterceptor{
+		grpc_prometheus.StreamClientInterceptor,
+	}
+
+	if errorTracker != nil {
+		streamInterceptors = append(streamInterceptors, middleware.StreamErrorHandler(registry, errorTracker, node.Storage))
+	}
+
+	return client.DialContext(ctx, node.Address, []grpc.DialOption{
+		grpc.WithDefaultCallOptions(grpc.ForceCodec(proxy.NewCodec())),
+		grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(node.Token)),
+		grpc.WithChainStreamInterceptor(streamInterceptors...),
+		grpc.WithChainUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
+	})
+}
+
 // NewManager creates a new NodeMgr based on virtual storage configs
 func NewManager(
 	log *logrus.Entry,
@@ -127,35 +145,22 @@ func NewManager(
 	latencyHistogram prommetrics.HistogramVec,
 	registry *protoregistry.Registry,
 	errorTracker tracker.ErrorTracker,
-	dialOpts ...grpc.DialOption) (*Mgr, error) {
-	strategies := make(map[string]leaderElectionStrategy, len(c.VirtualStorages))
+) (*Mgr, error) {
+	if !c.Failover.Enabled {
+		errorTracker = nil
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
 	defer cancel()
 
 	nodes := make(map[string][]Node, len(c.VirtualStorages))
+	strategies := make(map[string]leaderElectionStrategy, len(c.VirtualStorages))
 	for _, virtualStorage := range c.VirtualStorages {
 		log = log.WithField("virtual_storage", virtualStorage.Name)
 
 		ns := make([]*nodeStatus, 0, len(virtualStorage.Nodes))
 		for _, node := range virtualStorage.Nodes {
-			streamInterceptors := []grpc.StreamClientInterceptor{
-				grpc_prometheus.StreamClientInterceptor,
-			}
-
-			if c.Failover.Enabled && errorTracker != nil {
-				streamInterceptors = append(streamInterceptors, middleware.StreamErrorHandler(registry, errorTracker, node.Storage))
-			}
-
-			conn, err := client.DialContext(ctx, node.Address,
-				append(
-					[]grpc.DialOption{
-						grpc.WithDefaultCallOptions(grpc.ForceCodec(proxy.NewCodec())),
-						grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(node.Token)),
-						grpc.WithChainStreamInterceptor(streamInterceptors...),
-						grpc.WithChainUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
-					}, dialOpts...),
-			)
+			conn, err := Dial(ctx, node, registry, errorTracker)
 			if err != nil {
 				return nil, err
 			}
@@ -168,7 +173,7 @@ func NewManager(
 		}
 
 		if c.Failover.Enabled {
-			if c.Failover.ElectionStrategy == "sql" {
+			if c.Failover.ElectionStrategy == config.ElectionStrategySQL {
 				strategies[virtualStorage.Name] = newSQLElector(virtualStorage.Name, c, db, log, ns)
 			} else {
 				strategies[virtualStorage.Name] = newLocalElector(virtualStorage.Name, log, ns)

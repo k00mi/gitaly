@@ -86,6 +86,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 	"time"
@@ -263,7 +264,51 @@ func run(cfgs []starter.Config, conf config.Config) error {
 	if err != nil {
 		return err
 	}
-	nodeManager.Start(conf.Failover.BootstrapInterval.Duration(), conf.Failover.MonitorInterval.Duration())
+
+	var (
+		healthChecker praefect.HealthChecker
+		nodeSet       praefect.NodeSet
+		router        praefect.Router
+	)
+	if conf.Failover.ElectionStrategy == config.ElectionStrategyPerRepository {
+		nodeSet, err = praefect.DialNodes(ctx, conf.VirtualStorages, protoregistry.GitalyProtoPreregistered, errTracker)
+		if err != nil {
+			return fmt.Errorf("dial nodes: %w", err)
+		}
+		defer nodeSet.Close()
+
+		hm := nodes.NewHealthManager(logger, db, nodes.GeneratePraefectName(conf, logger), nodeSet.HealthClients())
+		go func() {
+			if err := hm.Run(ctx, helper.NewTimerTicker(time.Second)); err != nil {
+				logger.WithError(err).Error("health manager exited")
+			}
+		}()
+		healthChecker = hm
+
+		elector := nodes.NewPerRepositoryElector(logger, db, hm)
+		go func() {
+			if err := elector.Run(ctx, hm.Updated()); err != nil {
+				logger.WithError(err).Error("primary elector exited")
+			}
+		}()
+
+		router = praefect.NewPerRepositoryRouter(
+			nodeSet.Connections(),
+			elector,
+			hm,
+			praefect.NewLockedRandom(rand.New(rand.NewSource(time.Now().UnixNano()))),
+			rs,
+			praefect.StaticStorageAssignments(conf.StorageNames()),
+		)
+	} else {
+		healthChecker = praefect.HealthChecker(nodeManager)
+		nodeSet = praefect.NodeSetFromNodeManager(nodeManager)
+		router = praefect.NewNodeManagerRouter(nodeManager, rs)
+
+		nodeManager.Start(conf.Failover.BootstrapInterval.Duration(), conf.Failover.MonitorInterval.Duration())
+	}
+
+	logger.Infof("election strategy: %q", conf.Failover.ElectionStrategy)
 	logger.Info("background started: gitaly nodes health monitoring")
 
 	var (
@@ -273,7 +318,7 @@ func run(cfgs []starter.Config, conf config.Config) error {
 		coordinator = praefect.NewCoordinator(
 			queue,
 			rs,
-			praefect.NewNodeManagerRouter(nodeManager, rs),
+			router,
 			transactionManager,
 			conf,
 			protoregistry.GitalyProtoPreregistered,
@@ -284,8 +329,8 @@ func run(cfgs []starter.Config, conf config.Config) error {
 			conf.VirtualStorageNames(),
 			queue,
 			rs,
-			nodeManager,
-			praefect.NodeSetFromNodeManager(nodeManager),
+			healthChecker,
+			nodeSet,
 			praefect.WithDelayMetric(delayMetric),
 			praefect.WithLatencyMetric(latencyMetric),
 			praefect.WithDequeueBatchSize(conf.Replication.BatchSize),
@@ -310,7 +355,12 @@ func run(cfgs []starter.Config, conf config.Config) error {
 
 	if db != nil {
 		prometheus.MustRegister(
-			datastore.NewRepositoryStoreCollector(logger, conf.VirtualStorageNames(), db, false),
+			datastore.NewRepositoryStoreCollector(
+				logger,
+				conf.VirtualStorageNames(),
+				db,
+				conf.Failover.ElectionStrategy == config.ElectionStrategyPerRepository,
+			),
 		)
 	}
 
@@ -386,7 +436,14 @@ func run(cfgs []starter.Config, conf config.Config) error {
 		if conf.MemoryQueueEnabled {
 			logger.Warn("Disabled automatic reconciliation as it is only implemented using SQL queue and in-memory queue is configured.")
 		} else {
-			r := reconciler.NewReconciler(logger, db, nodeManager, conf.StorageNames(), conf.Reconciliation.HistogramBuckets, false)
+			r := reconciler.NewReconciler(
+				logger,
+				db,
+				healthChecker,
+				conf.StorageNames(),
+				conf.Reconciliation.HistogramBuckets,
+				conf.Failover.ElectionStrategy == config.ElectionStrategyPerRepository,
+			)
 			prometheus.MustRegister(r)
 			go r.Run(ctx, helper.NewTimerTicker(interval))
 		}

@@ -16,12 +16,35 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config/sentry"
 )
 
+// ElectionStrategy is a Praefect primary election strategy.
+type ElectionStrategy string
+
+// validate validates the election strategy is a valid one.
+func (es ElectionStrategy) validate() error {
+	switch es {
+	case ElectionStrategyLocal, ElectionStrategySQL, ElectionStrategyPerRepository:
+		return nil
+	default:
+		return fmt.Errorf("invalid election strategy: %q", es)
+	}
+}
+
+const (
+	// ElectionStrategyLocal configures a single node, in-memory election strategy.
+	ElectionStrategyLocal = "local"
+	// ElectionStrategySQL configures an SQL based strategy that elects a primary for a virtual storage.
+	ElectionStrategySQL = "sql"
+	// ElectionStrategyPerRepository configures an SQL based strategy that elects different primaries per repository.
+	ElectionStrategyPerRepository = "per_repository"
+)
+
 type Failover struct {
-	Enabled                  bool            `toml:"enabled"`
-	ElectionStrategy         string          `toml:"election_strategy"`
-	ErrorThresholdWindow     config.Duration `toml:"error_threshold_window"`
-	WriteErrorThresholdCount uint32          `toml:"write_error_threshold_count"`
-	ReadErrorThresholdCount  uint32          `toml:"read_error_threshold_count"`
+	Enabled bool `toml:"enabled"`
+	// ElectionStrategy is the strategy to use for electing primaries nodes.
+	ElectionStrategy         ElectionStrategy `toml:"election_strategy"`
+	ErrorThresholdWindow     config.Duration  `toml:"error_threshold_window"`
+	WriteErrorThresholdCount uint32           `toml:"write_error_threshold_count"`
+	ReadErrorThresholdCount  uint32           `toml:"read_error_threshold_count"`
 	// BootstrapInterval allows set a time duration that would be used on startup to make initial health check.
 	// The default value is 1s.
 	BootstrapInterval config.Duration `toml:"bootstrap_interval"`
@@ -51,8 +74,6 @@ func (f Failover) ErrorThresholdsConfigured() (bool, error) {
 
 	return true, nil
 }
-
-const sqlFailoverValue = "sql"
 
 // Reconciliation contains reconciliation specific configuration options.
 type Reconciliation struct {
@@ -122,7 +143,7 @@ func FromFile(filePath string) (Config, error) {
 		Reconciliation: DefaultReconciliationConfig(),
 		Replication:    DefaultReplicationConfig(),
 		// Sets the default Failover, to be overwritten when deserializing the TOML
-		Failover: Failover{Enabled: true, ElectionStrategy: sqlFailoverValue},
+		Failover: Failover{Enabled: true, ElectionStrategy: ElectionStrategySQL},
 	}
 	if err := toml.Unmarshal(b, conf); err != nil {
 		return Config{}, err
@@ -153,6 +174,10 @@ var (
 
 // Validate establishes if the config is valid
 func (c *Config) Validate() error {
+	if err := c.Failover.ElectionStrategy.validate(); err != nil {
+		return err
+	}
+
 	if c.ListenAddr == "" && c.SocketPath == "" && c.TLSListenAddr == "" {
 		return errNoListener
 	}
@@ -209,8 +234,7 @@ func (c *Config) Validate() error {
 
 // NeedsSQL returns true if the driver for SQL needs to be initialized
 func (c *Config) NeedsSQL() bool {
-	return !c.MemoryQueueEnabled ||
-		(c.Failover.Enabled && c.Failover.ElectionStrategy == sqlFailoverValue)
+	return !c.MemoryQueueEnabled || (c.Failover.Enabled && c.Failover.ElectionStrategy != ElectionStrategyLocal)
 }
 
 func (c *Config) setDefaults() {
