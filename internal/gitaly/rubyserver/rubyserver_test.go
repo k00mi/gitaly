@@ -28,6 +28,9 @@ func TestSetHeaders(t *testing.T) {
 
 	locator := testhelper.DefaultLocator()
 
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
 	testCases := []struct {
 		desc    string
 		repo    *gitalypb.Repository

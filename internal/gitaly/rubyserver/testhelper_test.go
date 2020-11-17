@@ -5,11 +5,6 @@ import (
 	"testing"
 
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
-)
-
-var (
-	testRepo *gitalypb.Repository
 )
 
 func TestMain(m *testing.M) {
@@ -21,7 +16,6 @@ func testMain(m *testing.M) int {
 
 	cleanup := testhelper.Configure()
 	defer cleanup()
-	testRepo = testhelper.TestRepository()
 
 	return m.Run()
 }
