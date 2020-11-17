@@ -23,6 +23,9 @@ type postReceiveRequest struct {
 	PushOptions  []string `json:"push_options,omitempty"`
 }
 
+// TestAllowedVerifyParams uses client cert fixtures to test TLS connections. To
+// regenerate these certs, run `go generate access_test.go`.
+//go:generate openssl req -newkey rsa:4096 -new -nodes -x509 -days 3650 -out testdata/certs/server.crt -keyout testdata/certs/server.key -subj "/C=US/ST=California/L=San Francisco/O=GitLab/OU=GitLab-Shell/CN=localhost" -addext "subjectAltName = IP:127.0.0.1"
 func TestAllowedVerifyParams(t *testing.T) {
 	user, password := "user", "password"
 	secretToken := "topsecret"
@@ -62,6 +65,9 @@ func TestAllowedVerifyParams(t *testing.T) {
 		GitObjectDir:                gitObjectDirFull,
 		GitAlternateObjectDirs:      gitAlternateObjectDirsFull,
 		RepoPath:                    testRepoPath,
+		ClientCACertPath:            "testdata/certs/server.crt",
+		ServerCertPath:              "testdata/certs/server.crt",
+		ServerKeyPath:               "testdata/certs/server.key",
 	})
 	defer cleanup()
 
@@ -71,7 +77,11 @@ func TestAllowedVerifyParams(t *testing.T) {
 		HTTPSettings: config.HTTPSettings{
 			User:     user,
 			Password: password,
+			CAFile:   "testdata/certs/server.crt",
 		},
+	}, config.TLS{
+		CertPath: "testdata/certs/server.crt",
+		KeyPath:  "testdata/certs/server.key",
 	})
 	require.NoError(t, err)
 
@@ -198,7 +208,7 @@ func TestEscapedAndRelativeURLs(t *testing.T) {
 					User:     user,
 					Password: password,
 				},
-			})
+			}, config.TLS{})
 			require.NoError(t, err)
 			allowed, _, err := c.Allowed(context.Background(), testRepo, glRepository, glID, protocol, changes)
 			require.NoError(t, err)
@@ -330,7 +340,7 @@ func TestAllowedResponseHandling(t *testing.T) {
 			c, err := hook.NewGitlabAPI(config.Gitlab{
 				URL:        server.URL,
 				SecretFile: secretFilePath,
-			})
+			}, config.TLS{})
 			require.NoError(t, err)
 
 			allowed, message, err := c.Allowed(context.Background(), testRepo, "repo-1", "key-123", "http", "a\nb\nc\nd")
@@ -418,7 +428,7 @@ func TestPrereceive(t *testing.T) {
 			c, err := hook.NewGitlabAPI(config.Gitlab{
 				URL:        server.URL,
 				SecretFile: secretFilePath,
-			})
+			}, config.TLS{})
 			require.NoError(t, err)
 
 			success, err := c.PreReceive(context.Background(), "key-123")
@@ -494,7 +504,7 @@ func TestPostReceive(t *testing.T) {
 			c, err := hook.NewGitlabAPI(config.Gitlab{
 				URL:        server.URL,
 				SecretFile: secretFilePath,
-			})
+			}, config.TLS{})
 			require.NoError(t, err)
 
 			repositoryID := "project-123"

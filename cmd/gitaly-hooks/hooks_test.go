@@ -156,7 +156,7 @@ func testHooksPrePostReceive(t *testing.T) {
 			config.Config.Gitlab.HTTPSettings.User = gitlabUser
 			config.Config.Gitlab.HTTPSettings.Password = gitlabPassword
 
-			gitlabAPI, err := gitalyhook.NewGitlabAPI(config.Config.Gitlab)
+			gitlabAPI, err := gitalyhook.NewGitlabAPI(config.Config.Gitlab, config.Config.TLS)
 			require.NoError(t, err)
 
 			socket, stop := runHookServiceServerWithAPI(t, token, gitlabAPI)
@@ -362,7 +362,7 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 
 	token := "abc123"
 
-	gitlabAPI, err := gitalyhook.NewGitlabAPI(config.Config.Gitlab)
+	gitlabAPI, err := gitalyhook.NewGitlabAPI(config.Config.Gitlab, config.Config.TLS)
 	require.NoError(t, err)
 
 	socket, stop := runHookServiceServerWithAPI(t, token, gitlabAPI)
@@ -488,7 +488,7 @@ func TestHooksNotAllowed(t *testing.T) {
 
 	token := "abc123"
 
-	gitlabAPI, err := gitalyhook.NewGitlabAPI(config.Config.Gitlab)
+	gitlabAPI, err := gitalyhook.NewGitlabAPI(config.Config.Gitlab, config.Config.TLS)
 	require.NoError(t, err)
 
 	socket, stop := runHookServiceServerWithAPI(t, token, gitlabAPI)

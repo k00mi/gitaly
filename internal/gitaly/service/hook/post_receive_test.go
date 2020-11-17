@@ -90,7 +90,7 @@ func TestHooksMissingStdin(t *testing.T) {
 
 	config.Config.Gitlab = gitlabConfig
 
-	api, err := gitalyhook.NewGitlabAPI(gitlabConfig)
+	api, err := gitalyhook.NewGitlabAPI(gitlabConfig, config.Config.TLS)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -230,7 +230,7 @@ To create a merge request for okay, visit:
 
 			config.Config.Gitlab = gitlabConfig
 
-			api, err := gitalyhook.NewGitlabAPI(gitlabConfig)
+			api, err := gitalyhook.NewGitlabAPI(gitlabConfig, config.Config.TLS)
 			require.NoError(t, err)
 
 			serverSocketPath, stop := runHooksServerWithAPI(t, api, config.Config)

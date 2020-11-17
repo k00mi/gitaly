@@ -24,14 +24,19 @@ size 177735
 	glRepository = "project-1"
 	secretToken  = "topsecret"
 	testData     = "hello world"
+	certPath     = "../../internal/gitaly/hook/testdata/certs/server.crt"
+	keyPath      = "../../internal/gitaly/hook/testdata/certs/server.key"
 )
 
 var (
 	defaultOptions = testhelper.GitlabTestServerOptions{
-		SecretToken:  secretToken,
-		LfsBody:      testData,
-		LfsOid:       lfsOid,
-		GlRepository: glRepository,
+		SecretToken:      secretToken,
+		LfsBody:          testData,
+		LfsOid:           lfsOid,
+		GlRepository:     glRepository,
+		ClientCACertPath: certPath,
+		ServerCertPath:   certPath,
+		ServerKeyPath:    keyPath,
 	}
 )
 
@@ -62,7 +67,7 @@ func runTestServer(t *testing.T, options testhelper.GitlabTestServerOptions) (co
 
 	serverURL, serverCleanup := testhelper.NewGitlabTestServer(t, options)
 
-	c := config.Gitlab{URL: serverURL, SecretFile: secretFilePath}
+	c := config.Gitlab{URL: serverURL, SecretFile: secretFilePath, HTTPSettings: config.HTTPSettings{CAFile: certPath}}
 
 	return c, func() {
 		cleanup()
@@ -80,6 +85,12 @@ func TestSuccessfulLfsSmudge(t *testing.T) {
 	cfg, err := json.Marshal(c)
 	require.NoError(t, err)
 
+	tlsCfg, err := json.Marshal(config.TLS{
+		CertPath: certPath,
+		KeyPath:  keyPath,
+	})
+	require.NoError(t, err)
+
 	tmpDir, err := ioutil.TempDir("", "")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
@@ -88,6 +99,7 @@ func TestSuccessfulLfsSmudge(t *testing.T) {
 		"GL_REPOSITORY":      "project-1",
 		"GL_INTERNAL_CONFIG": string(cfg),
 		"GITALY_LOG_DIR":     tmpDir,
+		"GITALY_TLS":         string(tlsCfg),
 	}
 	cfgProvider := &mapConfig{env: env}
 	initLogging(cfgProvider)
@@ -113,9 +125,11 @@ func TestUnsuccessfulLfsSmudge(t *testing.T) {
 		desc               string
 		data               string
 		missingEnv         string
+		tlsCfg             config.TLS
 		expectedError      bool
 		options            testhelper.GitlabTestServerOptions
 		expectedLogMessage string
+		expectedGitalyTLS  string
 	}{
 		{
 			desc:          "bad LFS pointer",
@@ -152,6 +166,13 @@ func TestUnsuccessfulLfsSmudge(t *testing.T) {
 			expectedError:      true,
 			expectedLogMessage: "error loading LFS object",
 		},
+		{
+			desc:          "invalid TLS paths",
+			data:          lfsPointer,
+			options:       defaultOptions,
+			tlsCfg:        config.TLS{CertPath: "fake-path", KeyPath: "not-real"},
+			expectedError: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -162,6 +183,9 @@ func TestUnsuccessfulLfsSmudge(t *testing.T) {
 			cfg, err := json.Marshal(c)
 			require.NoError(t, err)
 
+			tlsCfg, err := json.Marshal(tc.tlsCfg)
+			require.NoError(t, err)
+
 			tmpDir, err := ioutil.TempDir("", "")
 			require.NoError(t, err)
 			defer os.RemoveAll(tmpDir)
@@ -170,6 +194,7 @@ func TestUnsuccessfulLfsSmudge(t *testing.T) {
 				"GL_REPOSITORY":      "project-1",
 				"GL_INTERNAL_CONFIG": string(cfg),
 				"GITALY_LOG_DIR":     tmpDir,
+				"GITALY_TLS":         string(tlsCfg),
 			}
 
 			if tc.missingEnv != "" {

@@ -31,6 +31,7 @@ type archiveParams struct {
 	archivePath string
 	exclude     []string
 	internalCfg []byte
+	tlsCfg      []byte
 	binDir      string
 	loggingDir  string
 }
@@ -86,6 +87,11 @@ func (s *server) GetArchive(in *gitalypb.GetArchiveRequest, stream gitalypb.Repo
 		return err
 	}
 
+	tlsCfg, err := json.Marshal(s.cfg.TLS)
+	if err != nil {
+		return err
+	}
+
 	return handleArchive(archiveParams{
 		ctx:         ctx,
 		writer:      writer,
@@ -95,6 +101,7 @@ func (s *server) GetArchive(in *gitalypb.GetArchiveRequest, stream gitalypb.Repo
 		archivePath: path,
 		exclude:     exclude,
 		internalCfg: gitlabConfig,
+		tlsCfg:      tlsCfg,
 		binDir:      s.binDir,
 		loggingDir:  s.loggingCfg.Dir,
 	})
@@ -188,6 +195,7 @@ func handleArchive(p archiveParams) error {
 		fmt.Sprintf("GL_REPOSITORY=%s", p.in.GetRepository().GetGlRepository()),
 		fmt.Sprintf("GL_PROJECT_PATH=%s", p.in.GetRepository().GetGlProjectPath()),
 		fmt.Sprintf("GL_INTERNAL_CONFIG=%s", p.internalCfg),
+		fmt.Sprintf("GITALY_TLS=%s", p.tlsCfg),
 		fmt.Sprintf("CORRELATION_ID=%s", correlation.ExtractFromContext(p.ctx)),
 		fmt.Sprintf("%s=%s", log.GitalyLogDirEnvKey, p.loggingDir),
 	}

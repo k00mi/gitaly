@@ -531,6 +531,9 @@ env | grep -E "^GL_|CORRELATION|GITALY_"`))
 	cfgData, err := json.Marshal(config.Config.Gitlab)
 	require.NoError(t, err)
 
+	tlsCfgData, err := json.Marshal(config.Config.TLS)
+	require.NoError(t, err)
+
 	stream, err := client.GetArchive(ctx, req)
 	require.NoError(t, err)
 
@@ -539,6 +542,7 @@ env | grep -E "^GL_|CORRELATION|GITALY_"`))
 	require.Contains(t, string(data), "GL_REPOSITORY="+testhelper.GlRepository)
 	require.Contains(t, string(data), "GL_PROJECT_PATH="+testhelper.GlProjectPath)
 	require.Contains(t, string(data), "GL_INTERNAL_CONFIG="+string(cfgData))
+	require.Contains(t, string(data), "GITALY_TLS="+string(tlsCfgData))
 	require.Contains(t, string(data), "CORRELATION_ID="+correlationID)
 	require.Contains(t, string(data), "GITALY_LOG_DIR="+config.Config.Logging.Dir)
 }

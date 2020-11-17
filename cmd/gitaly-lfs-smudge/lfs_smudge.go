@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -67,14 +68,16 @@ func handleSmudge(to io.Writer, from io.Reader, config configProvider) (io.Reade
 
 	logger.WithField("oid", ptr.Oid).Debug("decoded LFS OID")
 
-	cfg, glRepository, err := loadConfig(config)
+	glCfg, tlsCfg, glRepository, err := loadConfig(config)
 	if err != nil {
 		return contents, err
 	}
 
-	logger.WithField("gitlab_config", cfg).Debug("loaded GitLab API config")
+	logger.WithField("gitlab_config", glCfg).
+		WithField("gitaly_tls_config", tlsCfg).
+		Debug("loaded GitLab API config")
 
-	client, err := hook.NewGitlabNetClient(cfg)
+	client, err := hook.NewGitlabNetClient(glCfg, tlsCfg)
 	if err != nil {
 		return contents, err
 	}
@@ -92,22 +95,32 @@ func handleSmudge(to io.Writer, from io.Reader, config configProvider) (io.Reade
 	return contents, nil
 }
 
-func loadConfig(cfgProvider configProvider) (config.Gitlab, string, error) {
+func loadConfig(cfgProvider configProvider) (config.Gitlab, config.TLS, string, error) {
 	var cfg config.Gitlab
+	var tlsCfg config.TLS
 
 	glRepository := cfgProvider.Get("GL_REPOSITORY")
 	if glRepository == "" {
-		return cfg, "", fmt.Errorf("error loading project: GL_REPOSITORY is not defined")
+		return cfg, tlsCfg, "", fmt.Errorf("error loading project: GL_REPOSITORY is not defined")
 	}
 
 	u := cfgProvider.Get("GL_INTERNAL_CONFIG")
 	if u == "" {
-		return cfg, glRepository, fmt.Errorf("unable to retrieve GL_INTERNAL_CONFIG")
+		return cfg, tlsCfg, glRepository, fmt.Errorf("unable to retrieve GL_INTERNAL_CONFIG")
 	}
 
 	if err := json.Unmarshal([]byte(u), &cfg); err != nil {
-		return cfg, glRepository, fmt.Errorf("unable to unmarshal GL_INTERNAL_CONFIG: %v", err)
+		return cfg, tlsCfg, glRepository, fmt.Errorf("unable to unmarshal GL_INTERNAL_CONFIG: %v", err)
 	}
 
-	return cfg, glRepository, nil
+	u = cfgProvider.Get("GITALY_TLS")
+	if u == "" {
+		return cfg, tlsCfg, glRepository, errors.New("unable to retrieve GITALY_TLS")
+	}
+
+	if err := json.Unmarshal([]byte(u), &tlsCfg); err != nil {
+		return cfg, tlsCfg, glRepository, fmt.Errorf("unable to unmarshal GITALY_TLS: %w", err)
+	}
+
+	return cfg, tlsCfg, glRepository, nil
 }
