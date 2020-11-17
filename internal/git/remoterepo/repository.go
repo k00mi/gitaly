@@ -7,15 +7,14 @@ import (
 	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
-	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
+	"google.golang.org/grpc"
 )
 
 // Repository represents a Git repository on a different Gitaly storage
 type Repository struct {
-	repo   *gitalypb.Repository
-	server storage.ServerInfo
-	pool   *client.Pool
+	repo *gitalypb.Repository
+	conn *grpc.ClientConn
 }
 
 // New creates a new remote Repository from its protobuf representation.
@@ -25,22 +24,18 @@ func New(ctx context.Context, repo *gitalypb.Repository, pool *client.Pool) (Rep
 		return Repository{}, fmt.Errorf("remote repository: %w", err)
 	}
 
-	return Repository{
-		repo:   repo,
-		server: server,
-		pool:   pool,
-	}, nil
+	cc, err := pool.Dial(ctx, server.Address, server.Token)
+	if err != nil {
+		return Repository{}, fmt.Errorf("dial: %w", err)
+	}
+
+	return Repository{repo: repo, conn: cc}, nil
 }
 
 // ResolveRefish will dial to the remote repository and attempt to resolve the
 // refish string via the gRPC interface
 func (rr Repository) ResolveRefish(ctx context.Context, ref string) (string, error) {
-	cc, err := rr.pool.Dial(ctx, rr.server.Address, rr.server.Token)
-	if err != nil {
-		return "", err
-	}
-
-	cli := gitalypb.NewCommitServiceClient(cc)
+	cli := gitalypb.NewCommitServiceClient(rr.conn)
 	resp, err := cli.FindCommit(ctx, &gitalypb.FindCommitRequest{
 		Repository: rr.repo,
 		Revision:   []byte(ref),
@@ -58,12 +53,7 @@ func (rr Repository) ResolveRefish(ctx context.Context, ref string) (string, err
 }
 
 func (rr Repository) HasBranches(ctx context.Context) (bool, error) {
-	cc, err := rr.pool.Dial(ctx, rr.server.Address, rr.server.Token)
-	if err != nil {
-		return false, err
-	}
-
-	resp, err := gitalypb.NewRepositoryServiceClient(cc).HasLocalBranches(
+	resp, err := gitalypb.NewRepositoryServiceClient(rr.conn).HasLocalBranches(
 		ctx, &gitalypb.HasLocalBranchesRequest{Repository: rr.repo})
 	if err != nil {
 		return false, fmt.Errorf("has local branches: %w", err)
