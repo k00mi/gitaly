@@ -132,7 +132,7 @@ func TestPreReceiveHook_GitlabAPIAccess(t *testing.T) {
 		SecretFile: secretFilePath,
 	}
 
-	gitlabAPI, err := gitalyhook.NewGitlabAPI(gitlabConfig)
+	gitlabAPI, err := gitalyhook.NewGitlabAPI(gitlabConfig, config.Config.TLS)
 	require.NoError(t, err)
 
 	serverSocketPath, stop := runHooksServerWithAPI(t, gitlabAPI, config.Cfg{})
@@ -235,7 +235,7 @@ func TestPreReceive_APIErrors(t *testing.T) {
 				SecretFile: secretFilePath,
 			}
 
-			gitlabAPI, err := gitalyhook.NewGitlabAPI(gitlabConfig)
+			gitlabAPI, err := gitalyhook.NewGitlabAPI(gitlabConfig, config.Config.TLS)
 			require.NoError(t, err)
 
 			serverSocketPath, stop := runHooksServerWithAPI(t, gitlabAPI, config.Cfg{})
@@ -295,7 +295,7 @@ exit %d
 		SecretFile: secretFilePath,
 	}
 
-	gitlabAPI, err := gitalyhook.NewGitlabAPI(gitlabConfig)
+	gitlabAPI, err := gitalyhook.NewGitlabAPI(gitlabConfig, config.Config.TLS)
 	require.NoError(t, err)
 
 	serverSocketPath, stop := runHooksServerWithAPI(t, gitlabAPI, config.Cfg{})
@@ -413,7 +413,7 @@ func TestPreReceiveHook_Primary(t *testing.T) {
 			gitlabAPI, err := gitalyhook.NewGitlabAPI(config.Gitlab{
 				URL:        srv.URL,
 				SecretFile: secretFilePath,
-			})
+			}, config.Config.TLS)
 			require.NoError(t, err)
 
 			serverSocketPath, stop := runHooksServerWithAPI(t, gitlabAPI, config.Cfg{})

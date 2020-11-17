@@ -2,6 +2,8 @@ package testhelper
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -798,6 +800,9 @@ type GitlabTestServerOptions struct {
 	RepoPath                    string
 	RelativeURLRoot             string
 	GlRepository                string
+	ClientCACertPath            string // used to verify client certs are valid
+	ServerCertPath              string
+	ServerKeyPath               string
 }
 
 // NewGitlabTestServer returns a mock gitlab server that responds to the hook api endpoints
@@ -810,15 +815,45 @@ func NewGitlabTestServer(t FatalLogger, options GitlabTestServerOptions) (url st
 	mux.Handle(prefix+"/check", http.HandlerFunc(handleCheck(options)))
 	mux.Handle(prefix+"/lfs", http.HandlerFunc(handleLfs(options)))
 
+	var tlsCfg *tls.Config
+	if options.ClientCACertPath != "" {
+		caCertPEM, err := ioutil.ReadFile(options.ClientCACertPath)
+		if err != nil {
+			t.Fatalf("reading client CA file: %v", err)
+		}
+
+		certPool := x509.NewCertPool()
+		if !certPool.AppendCertsFromPEM(caCertPEM) {
+			t.Fatalf("unable to add client CA cert to pool")
+		}
+
+		serverCert, err := tls.LoadX509KeyPair(options.ServerCertPath, options.ServerKeyPath)
+		if err != nil {
+			t.Fatalf("unable to load x509 key pair: %v", err)
+		}
+		tlsCfg = &tls.Config{
+			ClientCAs:    certPool,
+			ClientAuth:   tls.RequireAndVerifyClientCert,
+			Certificates: []tls.Certificate{serverCert},
+		}
+	}
+
 	if options.UnixSocket {
-		return startSocketHTTPServer(t, mux)
+		return startSocketHTTPServer(t, mux, tlsCfg)
 	} else {
-		server := httptest.NewServer(mux)
+		var server *httptest.Server
+		if tlsCfg == nil {
+			server = httptest.NewServer(mux)
+		} else {
+			server = httptest.NewUnstartedServer(mux)
+			server.TLS = tlsCfg
+			server.StartTLS()
+		}
 		return server.URL, server.Close
 	}
 }
 
-func startSocketHTTPServer(t FatalLogger, mux *http.ServeMux) (string, func()) {
+func startSocketHTTPServer(t FatalLogger, mux *http.ServeMux, tlsCfg *tls.Config) (string, func()) {
 	tmpFile, err := ioutil.TempFile(os.TempDir(), "http-test-server")
 	if err != nil {
 		t.Fatalf("Cannot create temporary file", err)
@@ -833,7 +868,8 @@ func startSocketHTTPServer(t FatalLogger, mux *http.ServeMux) (string, func()) {
 	}
 
 	server := http.Server{
-		Handler: mux,
+		Handler:   mux,
+		TLSConfig: tlsCfg,
 	}
 
 	go server.Serve(socketListener)

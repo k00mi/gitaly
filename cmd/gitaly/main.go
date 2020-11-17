@@ -113,7 +113,7 @@ func run(b *bootstrap.Bootstrap) error {
 	if config.SkipHooks() {
 		log.Warn("skipping GitLab API client creation since hooks are bypassed via GITALY_TESTING_NO_GIT_HOOKS")
 	} else {
-		gitlabAPI, err = hook.NewGitlabAPI(config.Config.Gitlab)
+		gitlabAPI, err = hook.NewGitlabAPI(config.Config.Gitlab, config.Config.TLS)
 		if err != nil {
 			log.Fatalf("could not create GitLab API client: %v", err)
 		}

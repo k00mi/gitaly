@@ -71,20 +71,29 @@ type gitlabAPI struct {
 }
 
 // NewGitlabNetClient creates an HTTP client to talk to the Rails internal API
-func NewGitlabNetClient(gitlabCfg config.Gitlab) (*client.GitlabNetClient, error) {
+func NewGitlabNetClient(gitlabCfg config.Gitlab, tlsCfg config.TLS) (*client.GitlabNetClient, error) {
 	url, err := url.PathUnescape(gitlabCfg.URL)
 	if err != nil {
 		return nil, err
 	}
 
-	httpClient := client.NewHTTPClient(
+	var opts []client.HTTPClientOpt
+	if tlsCfg.CertPath != "" && tlsCfg.KeyPath != "" {
+		opts = append(opts, client.WithClientCert(tlsCfg.CertPath, tlsCfg.KeyPath))
+	}
+
+	httpClient, err := client.NewHTTPClientWithOpts(
 		url,
 		gitlabCfg.RelativeURLRoot,
 		gitlabCfg.HTTPSettings.CAFile,
 		gitlabCfg.HTTPSettings.CAPath,
 		gitlabCfg.HTTPSettings.SelfSigned,
 		uint64(gitlabCfg.HTTPSettings.ReadTimeout),
+		opts,
 	)
+	if err != nil {
+		return nil, fmt.Errorf("building new HTTP client for GitLab API: %w", err)
+	}
 
 	if httpClient == nil {
 		return nil, fmt.Errorf("%s is not a valid url", gitlabCfg.URL)
@@ -106,8 +115,8 @@ func NewGitlabNetClient(gitlabCfg config.Gitlab) (*client.GitlabNetClient, error
 }
 
 // NewGitlabAPI creates a GitLabAPI to talk to the Rails internal API
-func NewGitlabAPI(gitlabCfg config.Gitlab) (GitlabAPI, error) {
-	client, err := NewGitlabNetClient(gitlabCfg)
+func NewGitlabAPI(gitlabCfg config.Gitlab, tlsCfg config.TLS) (GitlabAPI, error) {
+	client, err := NewGitlabNetClient(gitlabCfg, tlsCfg)
 	if err != nil {
 		return nil, err
 	}

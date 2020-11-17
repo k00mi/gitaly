@@ -331,7 +331,7 @@ func check(configPath string) (*hook.CheckInfo, error) {
 		return nil, err
 	}
 
-	gitlabAPI, err := hook.NewGitlabAPI(config.Config.Gitlab)
+	gitlabAPI, err := hook.NewGitlabAPI(config.Config.Gitlab, config.Config.TLS)
 	if err != nil {
 		return nil, err
 	}
