@@ -79,7 +79,9 @@ func TestGetRepoPath(t *testing.T) {
 		config.Config.Storages = oldStorages
 	}(config.Config.Storages)
 
-	testRepo := testhelper.TestRepository()
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
 	repoPath, err := GetRepoPath(testRepo)
 	if err != nil {
 		t.Fatal(err)
@@ -101,12 +103,12 @@ func TestGetRepoPath(t *testing.T) {
 		{
 			desc:     "storages configured",
 			storages: exampleStorages,
-			repo:     &gitalypb.Repository{StorageName: "default", RelativePath: testhelper.TestRelativePath},
+			repo:     &gitalypb.Repository{StorageName: testRepo.GetStorageName(), RelativePath: testRepo.GetRelativePath()},
 			path:     repoPath,
 		},
 		{
 			desc: "no storage config, storage name provided",
-			repo: &gitalypb.Repository{StorageName: "does not exist", RelativePath: testhelper.TestRelativePath},
+			repo: &gitalypb.Repository{StorageName: "does not exist", RelativePath: testRepo.GetRelativePath()},
 			err:  codes.InvalidArgument,
 		},
 		{
@@ -127,55 +129,55 @@ func TestGetRepoPath(t *testing.T) {
 		{
 			desc:     "non existing repo",
 			storages: exampleStorages,
-			repo:     &gitalypb.Repository{StorageName: "default", RelativePath: "made/up/path.git"},
+			repo:     &gitalypb.Repository{StorageName: testRepo.GetStorageName(), RelativePath: "made/up/path.git"},
 			err:      codes.NotFound,
 		},
 		{
 			desc:     "non existing storage",
 			storages: exampleStorages,
-			repo:     &gitalypb.Repository{StorageName: "does not exists", RelativePath: testhelper.TestRelativePath},
+			repo:     &gitalypb.Repository{StorageName: "does not exists", RelativePath: testRepo.GetRelativePath()},
 			err:      codes.InvalidArgument,
 		},
 		{
 			desc:     "storage defined but storage dir does not exist",
-			storages: []config.Storage{{Name: "default", Path: "/does/not/exist"}},
-			repo:     &gitalypb.Repository{StorageName: "default", RelativePath: "foobar.git"},
+			storages: []config.Storage{{Name: testRepo.GetStorageName(), Path: "/does/not/exist"}},
+			repo:     &gitalypb.Repository{StorageName: testRepo.GetStorageName(), RelativePath: "foobar.git"},
 			err:      codes.Internal,
 		},
 		{
 			desc:     "relative path with directory traversal",
 			storages: exampleStorages,
-			repo:     &gitalypb.Repository{StorageName: "default", RelativePath: "../bazqux.git"},
+			repo:     &gitalypb.Repository{StorageName: testRepo.GetStorageName(), RelativePath: "../bazqux.git"},
 			err:      codes.InvalidArgument,
 		},
 		{
 			desc:     "valid path with ..",
 			storages: exampleStorages,
-			repo:     &gitalypb.Repository{StorageName: "default", RelativePath: "foo../bazqux.git"},
+			repo:     &gitalypb.Repository{StorageName: testRepo.GetStorageName(), RelativePath: "foo../bazqux.git"},
 			err:      codes.NotFound, // Because the directory doesn't exist
 		},
 		{
 			desc:     "relative path with sneaky directory traversal",
 			storages: exampleStorages,
-			repo:     &gitalypb.Repository{StorageName: "default", RelativePath: "/../bazqux.git"},
+			repo:     &gitalypb.Repository{StorageName: testRepo.GetStorageName(), RelativePath: "/../bazqux.git"},
 			err:      codes.InvalidArgument,
 		},
 		{
 			desc:     "relative path with traversal outside storage",
 			storages: exampleStorages,
-			repo:     &gitalypb.Repository{StorageName: "default", RelativePath: testhelper.TestRelativePath + "/../.."},
+			repo:     &gitalypb.Repository{StorageName: testRepo.GetStorageName(), RelativePath: testRepo.GetRelativePath() + "/../../../../.."},
 			err:      codes.InvalidArgument,
 		},
 		{
 			desc:     "relative path with traversal outside storage with trailing slash",
 			storages: exampleStorages,
-			repo:     &gitalypb.Repository{StorageName: "default", RelativePath: testhelper.TestRelativePath + "/../../"},
+			repo:     &gitalypb.Repository{StorageName: testRepo.GetStorageName(), RelativePath: testRepo.GetRelativePath() + "/../../../../../"},
 			err:      codes.InvalidArgument,
 		},
 		{
 			desc:     "relative path with deep traversal at the end",
 			storages: exampleStorages,
-			repo:     &gitalypb.Repository{StorageName: "default", RelativePath: "bazqux.git/../.."},
+			repo:     &gitalypb.Repository{StorageName: testRepo.GetStorageName(), RelativePath: "bazqux.git/../.."},
 			err:      codes.InvalidArgument,
 		},
 	}
@@ -214,7 +216,9 @@ func assertInvalidRepoWithoutFile(t *testing.T, repo *gitalypb.Repository, repoP
 }
 
 func TestGetRepoPathWithCorruptedRepo(t *testing.T) {
-	testRepo := testhelper.TestRepository()
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
 	testRepoStoragePath := testhelper.GitlabTestStoragePath()
 	testRepoPath := filepath.Join(testRepoStoragePath, testRepo.RelativePath)
 
