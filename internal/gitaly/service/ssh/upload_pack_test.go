@@ -76,6 +76,9 @@ func (cmd cloneCommand) test(t *testing.T, localRepoPath string) (string, string
 	err := cmd.execute(t)
 	require.NoError(t, err)
 
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
 	storagePath := testhelper.GitlabTestStoragePath()
 	testRepoPath := filepath.Join(storagePath, testRepo.GetRelativePath())
 
@@ -100,6 +103,9 @@ func TestFailedUploadPackRequestDueToTimeout(t *testing.T) {
 
 	stream, err := client.SSHUploadPack(ctx)
 	require.NoError(t, err)
+
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
 
 	// The first request is not limited by timeout, but also not under attacker control
 	require.NoError(t, stream.Send(&gitalypb.SSHUploadPackRequest{Repository: testRepo}))
@@ -200,7 +206,8 @@ func TestUploadPackCloneSuccess(t *testing.T) {
 	)
 	defer stop()
 
-	localRepoPath := filepath.Join(testRepoRoot, "gitlab-test-upload-pack-local")
+	localRepoPath, cleanup := testhelper.TempDir(t)
+	defer cleanup()
 
 	tests := []struct {
 		cmd    *exec.Cmd
@@ -218,6 +225,9 @@ func TestUploadPackCloneSuccess(t *testing.T) {
 			deepen: 1,
 		},
 	}
+
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
 
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -248,6 +258,9 @@ func TestUploadPackWithoutSideband(t *testing.T) {
 	pktline.WriteString(negotiation, "want 1e292f8fedd741b75372e19097c76d327140c312")
 	pktline.WriteFlush(negotiation)
 	pktline.WriteString(negotiation, "done")
+
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
 
 	request := &gitalypb.SSHUploadPackRequest{
 		Repository: testRepo,
@@ -306,12 +319,17 @@ func TestUploadPackCloneWithPartialCloneFilter(t *testing.T) {
 		},
 	}
 
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
 			// Run the clone with filtering enabled in both runs. The only
 			// difference is that in the first run, we have the
 			// UploadPackFilter flag disabled.
-			localPath := filepath.Join(testRepoRoot, fmt.Sprintf("gitlab-test-upload-pack-local-%s", tc.desc))
+			localPath, cleanup := testhelper.TempDir(t)
+			defer cleanup()
+
 			cmd := cloneCommand{
 				repository: testRepo,
 				command:    exec.Command(command.GitPath(), append(tc.cloneArgs, localPath)...),
@@ -328,7 +346,8 @@ func TestUploadPackCloneWithPartialCloneFilter(t *testing.T) {
 }
 
 func TestUploadPackCloneSuccessWithGitProtocol(t *testing.T) {
-	localRepoPath := filepath.Join(testRepoRoot, "gitlab-test-upload-pack-local")
+	localRepoPath, cleanup := testhelper.TempDir(t)
+	defer cleanup()
 
 	tests := []struct {
 		cmd  *exec.Cmd
@@ -343,6 +362,9 @@ func TestUploadPackCloneSuccessWithGitProtocol(t *testing.T) {
 			desc: "shallow clone",
 		},
 	}
+
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
 
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -374,7 +396,11 @@ func TestUploadPackCloneHideTags(t *testing.T) {
 	serverSocketPath, stop := runSSHServer(t)
 	defer stop()
 
-	localRepoPath := filepath.Join(testRepoRoot, "gitlab-test-upload-pack-local-hide-tags")
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	localRepoPath, cleanup := testhelper.TempDir(t)
+	defer cleanup()
 
 	cmd := cloneCommand{
 		repository: testRepo,
@@ -396,7 +422,11 @@ func TestUploadPackCloneFailure(t *testing.T) {
 	serverSocketPath, stop := runSSHServer(t)
 	defer stop()
 
-	localRepoPath := filepath.Join(testRepoRoot, "gitlab-test-upload-pack-local-failure")
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	localRepoPath, cleanup := testhelper.TempDir(t)
+	defer cleanup()
 
 	cmd := cloneCommand{
 		repository: &gitalypb.Repository{
