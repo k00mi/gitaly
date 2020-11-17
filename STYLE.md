@@ -223,6 +223,32 @@ func TestTime(t *testing.T) {
   [Cheney blog post]: https://dave.cheney.net/2013/06/09/writing-table-driven-tests-in-go
   [Golang wiki]: https://github.com/golang/go/wiki/TableDrivenTests
 
+### Fatal exit
+
+Aborting test execution with any function which directly or indirectly calls
+`os.Exit()` should be avoided as this will cause any deferred function calls to
+not be executed. As a result, tests may leave behind testing state. Most
+importantly, this includes any calls to `log.Fatal()` and related functions.
+
+### Common setup
+
+When all tests require a common setup, we use the `TestMain()` function for
+this. `TestMain()` must call `os.Exit()` to indicate whether any tests failed.
+As this will cause deferred function calls to not be processed, we use the
+following pattern:
+
+```
+func TestMain(m *testing.M) {
+	os.Exit(testMain(m))
+}
+
+func testMain(m *testing.M) int {
+	cleanup := testhelper.Configure()
+	defer cleanup()
+	return m.Run()
+}
+```
+
 ## Black box and white box testing
 
 The dominant style of testing in Gitaly is "white box" testing, meaning

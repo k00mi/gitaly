@@ -162,7 +162,7 @@ func setupWikiRepo(t *testing.T) (*gitalypb.Repository, string, func()) {
 	storagePath := testhelper.GitlabTestStoragePath()
 	wikiRepoPath := filepath.Join(storagePath, relPath)
 
-	testhelper.MustRunCommand(nil, nil, "git", "init", "--bare", wikiRepoPath)
+	testhelper.MustRunCommand(t, nil, "git", "init", "--bare", wikiRepoPath)
 
 	wikiRepo := &gitalypb.Repository{
 		StorageName:  "default",
