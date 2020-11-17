@@ -260,7 +260,9 @@ func run(cfgs []starter.Config, conf config.Config) error {
 		}
 	}
 
-	nodeManager, err := nodes.NewManager(logger, conf, db, rs, nodeLatencyHistogram, protoregistry.GitalyProtoPreregistered, errTracker)
+	sp := datastore.NewDirectStorageProvider(rs)
+
+	nodeManager, err := nodes.NewManager(logger, conf, db, rs, sp, nodeLatencyHistogram, protoregistry.GitalyProtoPreregistered, errTracker)
 	if err != nil {
 		return err
 	}

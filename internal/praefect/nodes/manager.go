@@ -60,6 +60,12 @@ func (s Shard) GetHealthySecondaries() []Node {
 	return healthySecondaries
 }
 
+// StorageProvider abstracts the way we get storages (gitaly nodes).
+type StorageProvider interface {
+	// GetSyncedNodes returns list of gitaly storages that are in up to date state based on the generation tracking.
+	GetSyncedNodes(ctx context.Context, virtualStorageName, repoPath, primaryStorage string) []string
+}
+
 // Manager is responsible for returning shards for virtual storages
 type Manager interface {
 	GetShard(virtualStorageName string) (Shard, error)
@@ -102,6 +108,7 @@ type Mgr struct {
 	rs         datastore.RepositoryStore
 	// nodes contains nodes by their virtual storages
 	nodes map[string][]Node
+	sp    StorageProvider
 }
 
 // leaderElectionStrategy defines the interface by which primary and
@@ -142,6 +149,7 @@ func NewManager(
 	c config.Config,
 	db *sql.DB,
 	rs datastore.RepositoryStore,
+	sp StorageProvider,
 	latencyHistogram prommetrics.HistogramVec,
 	registry *protoregistry.Registry,
 	errorTracker tracker.ErrorTracker,
@@ -188,6 +196,7 @@ func NewManager(
 		strategies: strategies,
 		rs:         rs,
 		nodes:      nodes,
+		sp:         sp,
 	}, nil
 }
 
@@ -232,26 +241,17 @@ func (n *Mgr) GetSyncedNode(ctx context.Context, virtualStorageName, repoPath st
 		return shard.Primary, nil
 	}
 
-	logger := ctxlogrus.Extract(ctx).WithFields(logrus.Fields{"virtual_storage_name": virtualStorageName, "repo_path": repoPath})
-	upToDateStorages, err := n.rs.GetConsistentSecondaries(ctx, virtualStorageName, repoPath, shard.Primary.GetStorage())
-	if err != nil {
-		// this is recoverable error - proceed with primary node
-		logger.WithError(err).Warn("get up to date secondaries")
-	}
-
-	if len(upToDateStorages) == 0 {
-		upToDateStorages = make(map[string]struct{}, 1)
-	}
-
-	// Primary should be considered as all other storages for serving read operations
-	upToDateStorages[shard.Primary.GetStorage()] = struct{}{}
+	upToDateStorages := n.sp.GetSyncedNodes(ctx, virtualStorageName, repoPath, shard.Primary.GetStorage())
 	healthyStorages := make([]Node, 0, len(upToDateStorages))
 
-	for upToDateStorage := range upToDateStorages {
+	for _, upToDateStorage := range upToDateStorages {
 		node, err := shard.GetNode(upToDateStorage)
 		if err != nil {
 			// this is recoverable error - proceed with with other nodes
-			logger.WithError(err).Warn("storage returned as up-to-date")
+			ctxlogrus.Extract(ctx).
+				WithFields(logrus.Fields{"virtual_storage": virtualStorageName, "relative_path": repoPath}).
+				WithError(err).
+				Warn("storage was returned as up-to-date")
 		}
 
 		if !node.IsHealthy() {
