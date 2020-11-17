@@ -247,7 +247,7 @@ last_contact_attempt_at = NOW()`
 
 // GetShard gets the current status of the shard. ErrPrimaryNotHealthy
 // is returned if a primary does not exist.
-func (s *sqlElector) GetShard() (Shard, error) {
+func (s *sqlElector) GetShard(context.Context) (Shard, error) {
 	primary, err := s.lookupPrimary()
 	if err != nil {
 		return Shard{}, err

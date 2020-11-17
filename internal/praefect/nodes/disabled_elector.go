@@ -57,7 +57,7 @@ func (de *disabledElector) checkNodes(ctx context.Context) error {
 	return nil
 }
 
-func (de *disabledElector) GetShard() (Shard, error) {
+func (de *disabledElector) GetShard(context.Context) (Shard, error) {
 	if !de.shard.Primary.IsHealthy() {
 		return Shard{}, ErrPrimaryNotHealthy
 	}

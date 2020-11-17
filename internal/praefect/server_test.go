@@ -780,7 +780,7 @@ func TestProxyWrites(t *testing.T) {
 
 	client, _ := newSmartHTTPClient(t, "unix://"+socket)
 
-	shard, err := nodeMgr.GetShard(conf.VirtualStorages[0].Name)
+	shard, err := nodeMgr.GetShard(ctx, conf.VirtualStorages[0].Name)
 	require.NoError(t, err)
 
 	for _, storage := range conf.VirtualStorages[0].Nodes {
@@ -954,7 +954,7 @@ func TestErrorThreshold(t *testing.T) {
 			repo, _, cleanup := testhelper.NewTestRepo(t)
 			defer cleanup()
 
-			shard, err := nodeMgr.GetShard("default")
+			shard, err := nodeMgr.GetShard(ctx, "default")
 			require.NoError(t, err)
 			require.Equal(t, "praefect-internal-0", shard.Primary.GetStorage())
 
@@ -973,7 +973,7 @@ func TestErrorThreshold(t *testing.T) {
 			}
 
 			for i := 0; i < 50; i++ {
-				if _, err = nodeMgr.GetShard("default"); err != nil {
+				if _, err = nodeMgr.GetShard(ctx, "default"); err != nil {
 					break
 				}
 				time.Sleep(1 * time.Millisecond)

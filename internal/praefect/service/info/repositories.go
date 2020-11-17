@@ -12,7 +12,7 @@ import (
 
 // RepositoryReplicas returns a list of repositories that includes the checksum of the primary as well as the replicas
 func (s *Server) RepositoryReplicas(ctx context.Context, in *gitalypb.RepositoryReplicasRequest) (*gitalypb.RepositoryReplicasResponse, error) {
-	shard, err := s.nodeMgr.GetShard(in.GetRepository().GetStorageName())
+	shard, err := s.nodeMgr.GetShard(ctx, in.GetRepository().GetStorageName())
 	if err != nil {
 		return nil, helper.ErrInternal(err)
 	}

@@ -336,7 +336,7 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 			require.NoError(t, err)
 			nodeMgr.Start(0, time.Hour)
 
-			shard, err := nodeMgr.GetShard(conf.VirtualStorages[0].Name)
+			shard, err := nodeMgr.GetShard(ctx, conf.VirtualStorages[0].Name)
 			require.NoError(t, err)
 
 			for i := range tc.nodes {
@@ -477,11 +477,11 @@ func TestStreamDirectorMutator_StopTransaction(t *testing.T) {
 	require.NoError(t, err)
 	nodeMgr.Start(0, time.Hour)
 
-	shard, err := nodeMgr.GetShard(conf.VirtualStorages[0].Name)
-	require.NoError(t, err)
-
 	ctx, cancel := testhelper.Context()
 	defer cancel()
+
+	shard, err := nodeMgr.GetShard(ctx, conf.VirtualStorages[0].Name)
+	require.NoError(t, err)
 
 	for _, name := range []string{"primary", "secondary"} {
 		node, err := shard.GetNode(name)
@@ -750,7 +750,7 @@ func TestCoordinatorStreamDirector_distributesReads(t *testing.T) {
 	t.Run("forwards accessor operations only to healthy nodes", func(t *testing.T) {
 		healthSrv.SetServingStatus("", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
 
-		shard, err := nodeMgr.GetShard(conf.VirtualStorages[0].Name)
+		shard, err := nodeMgr.GetShard(ctx, conf.VirtualStorages[0].Name)
 		require.NoError(t, err)
 
 		gitaly1, err := shard.GetNode(secondaryNodeConf.Storage)

@@ -41,7 +41,10 @@ func TestGetShard(t *testing.T) {
 	strategy, ns, _, svr := setupElector(t)
 	defer svr.Stop()
 
-	shard, err := strategy.GetShard()
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	shard, err := strategy.GetShard(ctx)
 	require.NoError(t, err)
 	require.Equal(t, ns[0], shard.Primary)
 	require.Len(t, shard.Secondaries, 1)
@@ -57,11 +60,11 @@ func TestConcurrentCheckWithPrimary(t *testing.T) {
 	start := make(chan bool)
 	wg.Add(2)
 
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
 	go func() {
 		defer wg.Done()
-
-		ctx, cancel := testhelper.Context()
-		defer cancel()
 
 		<-start
 
@@ -75,7 +78,7 @@ func TestConcurrentCheckWithPrimary(t *testing.T) {
 		start <- true
 
 		for i := 0; i < iterations; i++ {
-			shard, err := strategy.GetShard()
+			shard, err := strategy.GetShard(ctx)
 			require.NoError(t, err)
 			require.Equal(t, ns[0], shard.Primary)
 			require.Equal(t, 1, len(shard.Secondaries))

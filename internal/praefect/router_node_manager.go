@@ -43,7 +43,7 @@ func (r *nodeManagerRouter) RouteRepositoryAccessor(ctx context.Context, virtual
 }
 
 func (r *nodeManagerRouter) RouteStorageAccessor(ctx context.Context, virtualStorage string) (RouterNode, error) {
-	shard, err := r.mgr.GetShard(virtualStorage)
+	shard, err := r.mgr.GetShard(ctx, virtualStorage)
 	if err != nil {
 		return RouterNode{}, err
 	}
@@ -52,7 +52,7 @@ func (r *nodeManagerRouter) RouteStorageAccessor(ctx context.Context, virtualSto
 }
 
 func (r *nodeManagerRouter) RouteStorageMutator(ctx context.Context, virtualStorage string) (StorageMutatorRoute, error) {
-	shard, err := r.mgr.GetShard(virtualStorage)
+	shard, err := r.mgr.GetShard(ctx, virtualStorage)
 	if err != nil {
 		return StorageMutatorRoute{}, err
 	}
@@ -64,7 +64,7 @@ func (r *nodeManagerRouter) RouteStorageMutator(ctx context.Context, virtualStor
 }
 
 func (r *nodeManagerRouter) RouteRepositoryMutator(ctx context.Context, virtualStorage, relativePath string) (RepositoryMutatorRoute, error) {
-	shard, err := r.mgr.GetShard(virtualStorage)
+	shard, err := r.mgr.GetShard(ctx, virtualStorage)
 	if err != nil {
 		return RepositoryMutatorRoute{}, fmt.Errorf("get shard: %w", err)
 	}

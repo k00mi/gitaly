@@ -114,7 +114,7 @@ func (s *localElector) checkNodes(ctx context.Context) error {
 // GetShard gets the current status of the shard. If primary is not elected
 // or it is unhealthy and failover is enabled, ErrPrimaryNotHealthy is
 // returned.
-func (s *localElector) GetShard() (Shard, error) {
+func (s *localElector) GetShard(context.Context) (Shard, error) {
 	s.m.RLock()
 	primary := s.primaryNode
 	s.m.RUnlock()

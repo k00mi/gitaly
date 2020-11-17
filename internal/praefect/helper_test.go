@@ -80,7 +80,7 @@ func noopBackoffFunc() (backoff, backoffReset) {
 
 type nullNodeMgr struct{}
 
-func (nullNodeMgr) GetShard(virtualStorageName string) (nodes.Shard, error) {
+func (nullNodeMgr) GetShard(ctx context.Context, virtualStorageName string) (nodes.Shard, error) {
 	return nodes.Shard{Primary: &nodes.MockNode{}}, nil
 }
 

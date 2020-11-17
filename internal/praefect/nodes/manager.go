@@ -68,7 +68,7 @@ type StorageProvider interface {
 
 // Manager is responsible for returning shards for virtual storages
 type Manager interface {
-	GetShard(virtualStorageName string) (Shard, error)
+	GetShard(ctx context.Context, virtualStorageName string) (Shard, error)
 	// GetSyncedNode returns a random storage node based on the state of the replication.
 	// It returns primary in case there are no up to date secondaries or error occurs.
 	GetSyncedNode(ctx context.Context, virtualStorageName, repoPath string) (Node, error)
@@ -116,7 +116,7 @@ type Mgr struct {
 type leaderElectionStrategy interface {
 	start(bootstrapInterval, monitorInterval time.Duration)
 	checkNodes(context.Context) error
-	GetShard() (Shard, error)
+	GetShard(ctx context.Context) (Shard, error)
 }
 
 // ErrPrimaryNotHealthy indicates the primary of a shard is not in a healthy state and hence
@@ -222,17 +222,17 @@ func (n *Mgr) checkShards() {
 var ErrVirtualStorageNotExist = errors.New("virtual storage does not exist")
 
 // GetShard retrieves a shard for a virtual storage name
-func (n *Mgr) GetShard(virtualStorageName string) (Shard, error) {
+func (n *Mgr) GetShard(ctx context.Context, virtualStorageName string) (Shard, error) {
 	strategy, ok := n.strategies[virtualStorageName]
 	if !ok {
 		return Shard{}, fmt.Errorf("virtual storage %q: %w", virtualStorageName, ErrVirtualStorageNotExist)
 	}
 
-	return strategy.GetShard()
+	return strategy.GetShard(ctx)
 }
 
 func (n *Mgr) GetSyncedNode(ctx context.Context, virtualStorageName, repoPath string) (Node, error) {
-	shard, err := n.GetShard(virtualStorageName)
+	shard, err := n.GetShard(ctx, virtualStorageName)
 	if err != nil {
 		return nil, fmt.Errorf("get shard for %q: %w", virtualStorageName, err)
 	}

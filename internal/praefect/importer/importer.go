@@ -84,7 +84,7 @@ func (imp *Importer) importVirtualStorage(ctx context.Context, virtualStorage st
 		return nil
 	}
 
-	shard, err := imp.nm.GetShard(virtualStorage)
+	shard, err := imp.nm.GetShard(ctx, virtualStorage)
 	if err != nil {
 		return fmt.Errorf("get shard: %w", err)
 	}
@@ -159,9 +159,9 @@ WHERE virtual_storage = $1
 // again after successful completion.
 func (imp *Importer) markCompleted(ctx context.Context, virtualStorage string) error {
 	_, err := imp.db.ExecContext(ctx, `
-INSERT INTO virtual_storages (virtual_storage, repositories_imported) 
+INSERT INTO virtual_storages (virtual_storage, repositories_imported)
 VALUES ($1, true)
-ON CONFLICT (virtual_storage) 
+ON CONFLICT (virtual_storage)
 	DO UPDATE SET repositories_imported = true
 	`, virtualStorage)
 	return err
@@ -173,7 +173,7 @@ func (imp *Importer) storeBatch(ctx context.Context, virtualStorage, primary str
 	rows, err := imp.db.QueryContext(ctx, `
 WITH imported_repositories AS (
 	INSERT INTO repositories (virtual_storage, relative_path, generation)
-	SELECT $1 AS virtual_storage, unnest($2::text[]) AS relative_path, 0 AS generation 
+	SELECT $1 AS virtual_storage, unnest($2::text[]) AS relative_path, 0 AS generation
 	ON CONFLICT DO NOTHING
 	RETURNING virtual_storage, relative_path, generation
 ), primary_records AS (

@@ -127,14 +127,17 @@ func TestManagerFailoverDisabledElectionStrategySQL(t *testing.T) {
 
 	nm.Start(time.Millisecond, time.Millisecond)
 
-	shard, err := nm.GetShard(virtualStorageName)
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	shard, err := nm.GetShard(ctx, virtualStorageName)
 	require.NoError(t, err)
 	require.Equal(t, primaryStorage, shard.Primary.GetStorage())
 
 	healthSrv.SetServingStatus("", grpc_health_v1.HealthCheckResponse_UNKNOWN)
 	nm.checkShards()
 
-	shard, err = nm.GetShard(virtualStorageName)
+	shard, err = nm.GetShard(ctx, virtualStorageName)
 	require.Error(t, err)
 	require.Equal(t, ErrPrimaryNotHealthy, err)
 }
@@ -173,7 +176,10 @@ func TestDialWithUnhealthyNode(t *testing.T) {
 
 	mgr.Start(1*time.Millisecond, 1*time.Millisecond)
 
-	shard, err := mgr.GetShard(storageName)
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	shard, err := mgr.GetShard(ctx, storageName)
 	require.NoError(t, err)
 	assertShard(t, shardAssertion{
 		Primary:     &nodeAssertion{Storage: "starts", Address: primaryAddress},
@@ -226,10 +232,13 @@ func TestNodeManager(t *testing.T) {
 	nm.Start(0, time.Hour)
 	nmWithoutFailover.Start(0, time.Hour)
 
-	shardWithoutFailover, err := nmWithoutFailover.GetShard("virtual-storage-0")
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	shardWithoutFailover, err := nmWithoutFailover.GetShard(ctx, "virtual-storage-0")
 	require.NoError(t, err)
 
-	shard, err := nm.GetShard("virtual-storage-0")
+	shard, err := nm.GetShard(ctx, "virtual-storage-0")
 	require.NoError(t, err)
 
 	// shard without failover and shard with failover should be the same
@@ -258,13 +267,13 @@ func TestNodeManager(t *testing.T) {
 	}
 
 	// since the failover is disabled the attempt to get a shard with unhealthy primary fails
-	_, err = nmWithoutFailover.GetShard("virtual-storage-0")
+	_, err = nmWithoutFailover.GetShard(ctx, "virtual-storage-0")
 	require.Error(t, err)
 	require.Equal(t, ErrPrimaryNotHealthy, err)
 
 	// since the primary is unhealthy, we expect checkShards to demote primary to secondary, and promote the healthy
 	// secondary to primary
-	shard, err = nm.GetShard("virtual-storage-0")
+	shard, err = nm.GetShard(ctx, "virtual-storage-0")
 	require.NoError(t, err)
 	// shard with failover should have promoted a secondary to primary and demoted the primary to a secondary
 	assertShard(t, shardAssertion{
@@ -277,7 +286,7 @@ func TestNodeManager(t *testing.T) {
 	healthSrv1.SetServingStatus("", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
 	checkShards(healthyCheckCount)
 
-	shard, err = nm.GetShard("virtual-storage-0")
+	shard, err = nm.GetShard(ctx, "virtual-storage-0")
 	require.NoError(t, err)
 
 	assertShard(t, shardAssertion{
@@ -289,7 +298,7 @@ func TestNodeManager(t *testing.T) {
 	healthSrv1.SetServingStatus("", grpc_health_v1.HealthCheckResponse_UNKNOWN)
 	checkShards(unhealthyCheckCount)
 
-	_, err = nm.GetShard("virtual-storage-0")
+	_, err = nm.GetShard(ctx, "virtual-storage-0")
 	require.Error(t, err, "should return error since no nodes are healthy")
 }
 
@@ -369,7 +378,7 @@ func TestMgr_GetSyncedNode(t *testing.T) {
 
 		healthSrvs[1].SetServingStatus("", grpc_health_v1.HealthCheckResponse_UNKNOWN)
 
-		shard, err := nm.GetShard(virtualStorage)
+		shard, err := nm.GetShard(ctx, virtualStorage)
 		require.NoError(t, err)
 
 		gitaly1, err := shard.GetNode("gitaly-1")
@@ -393,7 +402,7 @@ func TestMgr_GetSyncedNode(t *testing.T) {
 		healthSrvs[0].SetServingStatus("", grpc_health_v1.HealthCheckResponse_UNKNOWN)
 		healthSrvs[1].SetServingStatus("", grpc_health_v1.HealthCheckResponse_UNKNOWN)
 
-		shard, err := nm.GetShard(virtualStorage)
+		shard, err := nm.GetShard(ctx, virtualStorage)
 		require.NoError(t, err)
 
 		gitaly0, err := shard.GetNode("gitaly-0")
@@ -420,7 +429,7 @@ func TestMgr_GetSyncedNode(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, rs.SetGeneration(ctx, virtualStorage, repoPath, "gitaly-1", generation))
 
-		shard, err := nm.GetShard(virtualStorage)
+		shard, err := nm.GetShard(ctx, virtualStorage)
 		require.NoError(t, err)
 
 		gitaly0, err := shard.GetNode("gitaly-0")

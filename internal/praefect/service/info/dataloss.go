@@ -8,7 +8,7 @@ import (
 )
 
 func (s *Server) DatalossCheck(ctx context.Context, req *gitalypb.DatalossCheckRequest) (*gitalypb.DatalossCheckResponse, error) {
-	shard, err := s.nodeMgr.GetShard(req.GetVirtualStorage())
+	shard, err := s.nodeMgr.GetShard(ctx, req.GetVirtualStorage())
 	if err != nil {
 		return nil, err
 	}
