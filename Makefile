@@ -278,7 +278,7 @@ clean-ruby-vendor-go:
 	mkdir -p ${SOURCE_DIR}/ruby/vendor && find ${SOURCE_DIR}/ruby/vendor -type f -name '*.go' -delete
 
 .PHONY: check-proto
-check-proto: proto no-proto-changes
+check-proto: proto no-proto-changes lint-proto
 
 .PHONY: rubocop
 rubocop: ${SOURCE_DIR}/.ruby-bundle
@@ -312,19 +312,19 @@ docker:
 	docker build -t gitlab/gitaly:v${GITALY_VERSION} -t gitlab/gitaly:latest ${BUILD_DIR}/docker/
 
 .PHONY: proto
-proto: ${PROTOC_GEN_GITALY} ${SOURCE_DIR}/.ruby-bundle
-	${PROTOC} --gitaly_out=proto_dir=./proto,gitalypb_dir=./proto/go/gitalypb:. --go_out=paths=source_relative,plugins=grpc:./proto/go/gitalypb -I./proto ./proto/*.proto
+proto: ${PROTOC} ${PROTOC_GEN_GO} ${SOURCE_DIR}/.ruby-bundle
+	${Q}mkdir -p ${SOURCE_DIR}/proto/go/gitalypb
+	${Q}rm -f ${SOURCE_DIR}/proto/go/gitalypb/*.pb.go
+	${PROTOC} --go_out=paths=source_relative,plugins=grpc:./proto/go/gitalypb -I./proto ./proto/*.proto
 	${SOURCE_DIR}/_support/generate-proto-ruby
 	${Q}# this part is related to the generation of sources from testing proto files
 	${PROTOC} --plugin=${PROTOC_GEN_GO} --go_out=plugins=grpc:. internal/praefect/grpc-proxy/testdata/test.proto
 	${PROTOC} -I proto -I internal --plugin=${PROTOC_GEN_GO} --go_out=paths=source_relative,plugins=grpc:internal internal/middleware/cache/testdata/stream.proto
 	${PROTOC} -I proto --plugin=${PROTOC_GEN_GO} --go_out=paths=source_relative,plugins=grpc:proto proto/go/internal/linter/testdata/*.proto
 
-.PHONY: proto-lint
-proto-lint: ${PROTOC} ${PROTOC_GEN_GO}
-	${Q}mkdir -p ${SOURCE_DIR}/proto/go/gitalypb
-	${Q}rm -rf ${SOURCE_DIR}/proto/go/gitalypb/*.pb.go
-	${PROTOC} --go_out=paths=source_relative:./proto/go/gitalypb -I./proto ./proto/lint.proto
+.PHONY: lint-proto
+lint-proto: ${PROTOC} ${PROTOC_GEN_GITALY}
+	${Q}${PROTOC} --gitaly_out=proto_dir=./proto,gitalypb_dir=./proto/go/gitalypb:. -I./proto ./proto/*.proto
 
 .PHONY: no-changes
 no-changes:
@@ -426,7 +426,7 @@ ${PROTOC}: ${BUILD_DIR}/protoc.zip | ${BUILD_DIR}
 ${GITALYFMT}: | ${BUILD_DIR}/bin
 	${Q}go build -o $@ ${SOURCE_DIR}/internal/cmd/gitalyfmt
 
-${PROTOC_GEN_GITALY}: proto-lint | ${BUILD_DIR}/bin
+${PROTOC_GEN_GITALY}: proto | ${BUILD_DIR}/bin
 	${Q}go build -o $@ ${SOURCE_DIR}/proto/go/internal/cmd/protoc-gen-gitaly
 
 ${GOCOVER_COBERTURA}: ${BUILD_DIR}/Makefile.sha256
