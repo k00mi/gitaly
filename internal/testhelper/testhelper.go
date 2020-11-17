@@ -77,7 +77,7 @@ func Configure() func() {
 		gitalylog.Configure("json", "info")
 
 		var err error
-		testDirectory, err = ioutil.TempDir("", "gitaly-test-*")
+		testDirectory, err = ioutil.TempDir("", "gitaly-")
 		if err != nil {
 			log.Fatal(err)
 		}
