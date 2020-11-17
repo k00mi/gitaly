@@ -14,13 +14,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
-	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-	"gitlab.com/gitlab-org/gitaly/internal/testhelper/testserver"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
@@ -33,29 +29,6 @@ func TestLocalRepository(t *testing.T) {
 	git.TestRepository(t, func(t testing.TB, pbRepo *gitalypb.Repository) git.Repository {
 		t.Helper()
 		return git.NewRepository(pbRepo)
-	})
-}
-
-func TestRemoteRepository(t *testing.T) {
-	_, serverSocketPath, cleanup := testserver.RunInternalGitalyServer(t, config.Config.Storages, config.Config.Auth.Token)
-	defer cleanup()
-
-	ctx, cancel := testhelper.Context()
-	defer cancel()
-
-	ctx, err := helper.InjectGitalyServers(ctx, "default", serverSocketPath, config.Config.Auth.Token)
-	require.NoError(t, err)
-
-	git.TestRepository(t, func(t testing.TB, pbRepo *gitalypb.Repository) git.Repository {
-		t.Helper()
-
-		r, err := git.NewRemoteRepository(
-			helper.OutgoingToIncoming(ctx),
-			testhelper.TestRepository(),
-			client.NewPool(),
-		)
-		require.NoError(t, err)
-		return r
 	})
 }
 
