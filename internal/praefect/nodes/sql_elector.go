@@ -36,7 +36,9 @@ type sqlCandidate struct {
 // 1. Monitoring and updating the status of all nodes within the shard.
 // 2. Electing a new primary of the shard based on the health.
 //
-// Every Praefect node periodically (every second) performs a health check RPC with a Gitaly node.
+// Every Praefect node periodically performs a health check RPC with a Gitaly node. The health check
+// interval is configured via `internal/praefect/config.Failover.MonitorInterval`.
+//
 // 1. For each node, Praefect updates a row in a new table
 // (`node_status`) with the following information:
 //
