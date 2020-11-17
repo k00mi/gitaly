@@ -1,4 +1,4 @@
-package git_test
+package git
 
 import (
 	"bytes"
@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
-	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -26,9 +25,9 @@ const (
 )
 
 func TestLocalRepository(t *testing.T) {
-	git.TestRepository(t, func(t testing.TB, pbRepo *gitalypb.Repository) git.Repository {
+	TestRepository(t, func(t testing.TB, pbRepo *gitalypb.Repository) Repository {
 		t.Helper()
-		return git.NewRepository(pbRepo)
+		return NewRepository(pbRepo)
 	})
 }
 
@@ -36,7 +35,7 @@ func TestLocalRepository_ContainsRef(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	repo := git.NewRepository(testhelper.TestRepository())
+	repo := NewRepository(testhelper.TestRepository())
 
 	testcases := []struct {
 		desc      string
@@ -73,32 +72,32 @@ func TestLocalRepository_GetReference(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	repo := git.NewRepository(testhelper.TestRepository())
+	repo := NewRepository(testhelper.TestRepository())
 
 	testcases := []struct {
 		desc     string
 		ref      string
-		expected git.Reference
+		expected Reference
 	}{
 		{
 			desc:     "fully qualified master branch",
 			ref:      "refs/heads/master",
-			expected: git.NewReference("refs/heads/master", MasterID),
+			expected: NewReference("refs/heads/master", MasterID),
 		},
 		{
 			desc:     "unqualified master branch fails",
 			ref:      "master",
-			expected: git.Reference{},
+			expected: Reference{},
 		},
 		{
 			desc:     "nonexistent branch",
 			ref:      "refs/heads/nonexistent",
-			expected: git.Reference{},
+			expected: Reference{},
 		},
 		{
 			desc:     "nonexistent branch",
 			ref:      "nonexistent",
-			expected: git.Reference{},
+			expected: Reference{},
 		},
 	}
 
@@ -106,7 +105,7 @@ func TestLocalRepository_GetReference(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			ref, err := repo.GetReference(ctx, tc.ref)
 			if tc.expected.Name == "" {
-				require.True(t, errors.Is(err, git.ErrReferenceNotFound))
+				require.True(t, errors.Is(err, ErrReferenceNotFound))
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.expected, ref)
@@ -119,32 +118,32 @@ func TestLocalRepository_GetBranch(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	repo := git.NewRepository(testhelper.TestRepository())
+	repo := NewRepository(testhelper.TestRepository())
 
 	testcases := []struct {
 		desc     string
 		ref      string
-		expected git.Reference
+		expected Reference
 	}{
 		{
 			desc:     "fully qualified master branch",
 			ref:      "refs/heads/master",
-			expected: git.NewReference("refs/heads/master", MasterID),
+			expected: NewReference("refs/heads/master", MasterID),
 		},
 		{
 			desc:     "half-qualified master branch",
 			ref:      "heads/master",
-			expected: git.NewReference("refs/heads/master", MasterID),
+			expected: NewReference("refs/heads/master", MasterID),
 		},
 		{
 			desc:     "fully qualified master branch",
 			ref:      "master",
-			expected: git.NewReference("refs/heads/master", MasterID),
+			expected: NewReference("refs/heads/master", MasterID),
 		},
 		{
 			desc:     "nonexistent branch",
 			ref:      "nonexistent",
-			expected: git.Reference{},
+			expected: Reference{},
 		},
 	}
 
@@ -152,7 +151,7 @@ func TestLocalRepository_GetBranch(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			ref, err := repo.GetBranch(ctx, tc.ref)
 			if tc.expected.Name == "" {
-				require.True(t, errors.Is(err, git.ErrReferenceNotFound))
+				require.True(t, errors.Is(err, ErrReferenceNotFound))
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.expected, ref)
@@ -165,40 +164,40 @@ func TestLocalRepository_GetReferences(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	repo := git.NewRepository(testhelper.TestRepository())
+	repo := NewRepository(testhelper.TestRepository())
 
 	testcases := []struct {
 		desc    string
 		pattern string
-		match   func(t *testing.T, refs []git.Reference)
+		match   func(t *testing.T, refs []Reference)
 	}{
 		{
 			desc:    "master branch",
 			pattern: "refs/heads/master",
-			match: func(t *testing.T, refs []git.Reference) {
-				require.Equal(t, []git.Reference{
-					git.NewReference("refs/heads/master", MasterID),
+			match: func(t *testing.T, refs []Reference) {
+				require.Equal(t, []Reference{
+					NewReference("refs/heads/master", MasterID),
 				}, refs)
 			},
 		},
 		{
 			desc:    "all references",
 			pattern: "",
-			match: func(t *testing.T, refs []git.Reference) {
+			match: func(t *testing.T, refs []Reference) {
 				require.Len(t, refs, 94)
 			},
 		},
 		{
 			desc:    "branches",
 			pattern: "refs/heads/",
-			match: func(t *testing.T, refs []git.Reference) {
+			match: func(t *testing.T, refs []Reference) {
 				require.Len(t, refs, 91)
 			},
 		},
 		{
 			desc:    "branches",
 			pattern: "refs/heads/nonexistent",
-			match: func(t *testing.T, refs []git.Reference) {
+			match: func(t *testing.T, refs []Reference) {
 				require.Empty(t, refs)
 			},
 		},
@@ -231,7 +230,7 @@ crlf binary
 lf   text
 	`), os.ModePerm))
 
-	repo := git.NewRepository(pbRepo)
+	repo := NewRepository(pbRepo)
 
 	for _, tc := range []struct {
 		desc    string
@@ -292,7 +291,7 @@ func TestLocalRepository_ReadObject(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	repo := git.NewRepository(testhelper.TestRepository())
+	repo := NewRepository(testhelper.TestRepository())
 
 	for _, tc := range []struct {
 		desc    string
@@ -302,8 +301,8 @@ func TestLocalRepository_ReadObject(t *testing.T) {
 	}{
 		{
 			desc:  "invalid object",
-			oid:   git.NullSHA,
-			error: git.InvalidObjectError(git.NullSHA),
+			oid:   NullSHA,
+			error: InvalidObjectError(NullSHA),
 		},
 		{
 			desc: "valid object",
@@ -324,7 +323,7 @@ func TestLocalRepository_GetBranches(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	repo := git.NewRepository(testhelper.TestRepository())
+	repo := NewRepository(testhelper.TestRepository())
 
 	refs, err := repo.GetBranches(ctx)
 	require.NoError(t, err)
@@ -338,7 +337,7 @@ func TestLocalRepository_UpdateRef(t *testing.T) {
 	testRepo, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	otherRef, err := git.NewRepository(testRepo).GetReference(ctx, "refs/heads/gitaly-test-ref")
+	otherRef, err := NewRepository(testRepo).GetReference(ctx, "refs/heads/gitaly-test-ref")
 	require.NoError(t, err)
 
 	testcases := []struct {
@@ -346,14 +345,14 @@ func TestLocalRepository_UpdateRef(t *testing.T) {
 		ref    string
 		newrev string
 		oldrev string
-		verify func(t *testing.T, repo *git.LocalRepository, err error)
+		verify func(t *testing.T, repo *LocalRepository, err error)
 	}{
 		{
 			desc:   "successfully update master",
 			ref:    "refs/heads/master",
 			newrev: otherRef.Target,
 			oldrev: MasterID,
-			verify: func(t *testing.T, repo *git.LocalRepository, err error) {
+			verify: func(t *testing.T, repo *LocalRepository, err error) {
 				require.NoError(t, err)
 				ref, err := repo.GetReference(ctx, "refs/heads/master")
 				require.NoError(t, err)
@@ -365,7 +364,7 @@ func TestLocalRepository_UpdateRef(t *testing.T) {
 			ref:    "refs/heads/master",
 			newrev: otherRef.Target,
 			oldrev: NonexistentID,
-			verify: func(t *testing.T, repo *git.LocalRepository, err error) {
+			verify: func(t *testing.T, repo *LocalRepository, err error) {
 				require.Error(t, err)
 				ref, err := repo.GetReference(ctx, "refs/heads/master")
 				require.NoError(t, err)
@@ -377,7 +376,7 @@ func TestLocalRepository_UpdateRef(t *testing.T) {
 			ref:    "refs/heads/master",
 			newrev: NonexistentID,
 			oldrev: MasterID,
-			verify: func(t *testing.T, repo *git.LocalRepository, err error) {
+			verify: func(t *testing.T, repo *LocalRepository, err error) {
 				require.Error(t, err)
 				ref, err := repo.GetReference(ctx, "refs/heads/master")
 				require.NoError(t, err)
@@ -389,7 +388,7 @@ func TestLocalRepository_UpdateRef(t *testing.T) {
 			ref:    "refs/heads/master",
 			newrev: otherRef.Target,
 			oldrev: "",
-			verify: func(t *testing.T, repo *git.LocalRepository, err error) {
+			verify: func(t *testing.T, repo *LocalRepository, err error) {
 				require.NoError(t, err)
 				ref, err := repo.GetReference(ctx, "refs/heads/master")
 				require.NoError(t, err)
@@ -401,7 +400,7 @@ func TestLocalRepository_UpdateRef(t *testing.T) {
 			ref:    "master",
 			newrev: otherRef.Target,
 			oldrev: MasterID,
-			verify: func(t *testing.T, repo *git.LocalRepository, err error) {
+			verify: func(t *testing.T, repo *LocalRepository, err error) {
 				require.Error(t, err)
 				ref, err := repo.GetReference(ctx, "refs/heads/master")
 				require.NoError(t, err)
@@ -413,7 +412,7 @@ func TestLocalRepository_UpdateRef(t *testing.T) {
 			ref:    "refs/heads/master",
 			newrev: strings.Repeat("0", 40),
 			oldrev: MasterID,
-			verify: func(t *testing.T, repo *git.LocalRepository, err error) {
+			verify: func(t *testing.T, repo *LocalRepository, err error) {
 				require.NoError(t, err)
 				_, err = repo.GetReference(ctx, "refs/heads/master")
 				require.Error(t, err)
@@ -424,7 +423,7 @@ func TestLocalRepository_UpdateRef(t *testing.T) {
 			ref:    "refs/heads/new",
 			newrev: MasterID,
 			oldrev: strings.Repeat("0", 40),
-			verify: func(t *testing.T, repo *git.LocalRepository, err error) {
+			verify: func(t *testing.T, repo *LocalRepository, err error) {
 				require.NoError(t, err)
 				ref, err := repo.GetReference(ctx, "refs/heads/new")
 				require.NoError(t, err)
@@ -439,7 +438,7 @@ func TestLocalRepository_UpdateRef(t *testing.T) {
 			testRepo, _, cleanup := testhelper.NewTestRepo(t)
 			defer cleanup()
 
-			repo := git.NewRepository(testRepo)
+			repo := NewRepository(testRepo)
 			err := repo.UpdateRef(ctx, tc.ref, tc.newrev, tc.oldrev)
 
 			tc.verify(t, repo, err)
@@ -451,7 +450,7 @@ func TestLocalRepository_FetchRemote(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	initBareWithRemote := func(t *testing.T, remote string) (*git.LocalRepository, string, testhelper.Cleanup) {
+	initBareWithRemote := func(t *testing.T, remote string) (*LocalRepository, string, testhelper.Cleanup) {
 		t.Helper()
 
 		testRepo, testRepoPath, cleanup := testhelper.InitBareRepo(t)
@@ -464,14 +463,14 @@ func TestLocalRepository_FetchRemote(t *testing.T) {
 			t.FailNow()
 		}
 
-		return git.NewRepository(testRepo), testRepoPath, cleanup
+		return NewRepository(testRepo), testRepoPath, cleanup
 	}
 
 	t.Run("invalid name", func(t *testing.T) {
-		repo := git.NewRepository(nil)
+		repo := NewRepository(nil)
 
-		err := repo.FetchRemote(ctx, " ", git.FetchOpts{})
-		require.True(t, errors.Is(err, git.ErrInvalidArg))
+		err := repo.FetchRemote(ctx, " ", FetchOpts{})
+		require.True(t, errors.Is(err, ErrInvalidArg))
 		require.Contains(t, err.Error(), `"remoteName" is blank or empty`)
 	})
 
@@ -479,9 +478,9 @@ func TestLocalRepository_FetchRemote(t *testing.T) {
 		testRepo, _, cleanup := testhelper.InitBareRepo(t)
 		defer cleanup()
 
-		repo := git.NewRepository(testRepo)
+		repo := NewRepository(testRepo)
 		var stderr bytes.Buffer
-		err := repo.FetchRemote(ctx, "stub", git.FetchOpts{Stderr: &stderr})
+		err := repo.FetchRemote(ctx, "stub", FetchOpts{Stderr: &stderr})
 		require.Error(t, err)
 		require.Contains(t, stderr.String(), "'stub' does not appear to be a git repository")
 	})
@@ -491,7 +490,7 @@ func TestLocalRepository_FetchRemote(t *testing.T) {
 		defer cleanup()
 
 		var stderr bytes.Buffer
-		require.NoError(t, repo.FetchRemote(ctx, "origin", git.FetchOpts{Stderr: &stderr}))
+		require.NoError(t, repo.FetchRemote(ctx, "origin", FetchOpts{Stderr: &stderr}))
 
 		require.Empty(t, stderr.String(), "it should not produce output as it is called with --quite flag by default")
 
@@ -514,11 +513,11 @@ func TestLocalRepository_FetchRemote(t *testing.T) {
 		testRepo, testRepoPath, testCleanup := testhelper.NewTestRepo(t)
 		defer testCleanup()
 
-		repo := git.NewRepository(testRepo)
+		repo := NewRepository(testRepo)
 		testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "remote", "add", "source", sourceRepoPath)
 
 		var stderr bytes.Buffer
-		require.NoError(t, repo.FetchRemote(ctx, "source", git.FetchOpts{Stderr: &stderr, Env: []string{"GIT_TRACE=1"}}))
+		require.NoError(t, repo.FetchRemote(ctx, "source", FetchOpts{Stderr: &stderr, Env: []string{"GIT_TRACE=1"}}))
 		require.Contains(t, stderr.String(), "trace: built-in: git fetch --quiet source --end-of-options")
 	})
 
@@ -529,10 +528,10 @@ func TestLocalRepository_FetchRemote(t *testing.T) {
 		testRepo, testRepoPath, testCleanup := testhelper.NewTestRepo(t)
 		defer testCleanup()
 
-		repo := git.NewRepository(testRepo)
+		repo := NewRepository(testRepo)
 		testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "remote", "add", "source", sourceRepoPath)
 
-		require.NoError(t, repo.FetchRemote(ctx, "source", git.FetchOpts{}))
+		require.NoError(t, repo.FetchRemote(ctx, "source", FetchOpts{}))
 
 		testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", "--track", "testing-fetch-prune", "refs/remotes/source/markdown")
 		testhelper.MustRunCommand(t, nil, "git", "-C", sourceRepoPath, "branch", "-D", "markdown")
@@ -540,8 +539,8 @@ func TestLocalRepository_FetchRemote(t *testing.T) {
 		require.NoError(t, repo.FetchRemote(
 			ctx,
 			"source",
-			git.FetchOpts{
-				Global: []git.Option{git.ValueFlag{Name: "-c", Value: "fetch.prune=true"}},
+			FetchOpts{
+				Global: []Option{ValueFlag{Name: "-c", Value: "fetch.prune=true"}},
 			}),
 		)
 
@@ -557,15 +556,15 @@ func TestLocalRepository_FetchRemote(t *testing.T) {
 		testRepo, testRepoPath, testCleanup := testhelper.NewTestRepo(t)
 		defer testCleanup()
 
-		repo := git.NewRepository(testRepo)
+		repo := NewRepository(testRepo)
 
 		testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "remote", "add", "source", sourceRepoPath)
-		require.NoError(t, repo.FetchRemote(ctx, "source", git.FetchOpts{}))
+		require.NoError(t, repo.FetchRemote(ctx, "source", FetchOpts{}))
 
 		testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", "--track", "testing-fetch-prune", "refs/remotes/source/markdown")
 		testhelper.MustRunCommand(t, nil, "git", "-C", sourceRepoPath, "branch", "-D", "markdown")
 
-		require.NoError(t, repo.FetchRemote(ctx, "source", git.FetchOpts{Prune: true}))
+		require.NoError(t, repo.FetchRemote(ctx, "source", FetchOpts{Prune: true}))
 
 		contains, err := repo.ContainsRef(ctx, "refs/remotes/source/markdown")
 		require.NoError(t, err)
@@ -579,7 +578,7 @@ func TestLocalRepository_FetchRemote(t *testing.T) {
 		tagsBefore := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", "--list")
 		require.Empty(t, tagsBefore)
 
-		require.NoError(t, repo.FetchRemote(ctx, "origin", git.FetchOpts{Tags: git.FetchOptsTagsNone, Force: true}))
+		require.NoError(t, repo.FetchRemote(ctx, "origin", FetchOpts{Tags: FetchOptsTagsNone, Force: true}))
 
 		tagsAfter := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", "--list")
 		require.Empty(t, tagsAfter)
