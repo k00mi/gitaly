@@ -20,6 +20,7 @@ linters:
     - maligned
     - noctx
     - sqlclosecheck
+    - rowserrcheck
 
 issues:
   # Excluding configuration per-path, per-linter, per-text and per-source
