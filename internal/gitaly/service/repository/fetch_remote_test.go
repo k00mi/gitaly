@@ -72,7 +72,8 @@ func TestFetchRemoteSuccess(t *testing.T) {
 }
 
 func TestFetchRemoteFailure(t *testing.T) {
-	repo := testhelper.TestRepository()
+	repo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
 
 	serverSocketPath, stop := runRepoServer(t, config.NewLocator(config.Config))
 	defer stop()

@@ -136,7 +136,7 @@ func TestRepackIncrementalFailure(t *testing.T) {
 		{desc: "nil repo", repo: nil, code: codes.InvalidArgument},
 		{desc: "invalid storage name", repo: &gitalypb.Repository{StorageName: "foo"}, code: codes.InvalidArgument},
 		{desc: "no storage name", repo: &gitalypb.Repository{RelativePath: "bar"}, code: codes.InvalidArgument},
-		{desc: "non-existing repo", repo: &gitalypb.Repository{StorageName: testhelper.TestRepository().GetStorageName(), RelativePath: "bar"}, code: codes.NotFound},
+		{desc: "non-existing repo", repo: &gitalypb.Repository{StorageName: testhelper.DefaultStorageName, RelativePath: "bar"}, code: codes.NotFound},
 	}
 
 	for _, test := range tests {
@@ -275,7 +275,7 @@ func TestRepackFullFailure(t *testing.T) {
 		{desc: "nil repo", repo: nil, code: codes.InvalidArgument},
 		{desc: "invalid storage name", repo: &gitalypb.Repository{StorageName: "foo"}, code: codes.InvalidArgument},
 		{desc: "no storage name", repo: &gitalypb.Repository{RelativePath: "bar"}, code: codes.InvalidArgument},
-		{desc: "non-existing repo", repo: &gitalypb.Repository{StorageName: testhelper.TestRepository().GetStorageName(), RelativePath: "bar"}, code: codes.NotFound},
+		{desc: "non-existing repo", repo: &gitalypb.Repository{StorageName: testhelper.DefaultStorageName, RelativePath: "bar"}, code: codes.NotFound},
 	}
 
 	for _, test := range tests {

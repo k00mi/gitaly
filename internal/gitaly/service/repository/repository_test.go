@@ -33,6 +33,9 @@ func TestRepositoryExists(t *testing.T) {
 	serverSocketPath, stop := runRepoServer(t, locator, testhelper.WithStorages([]string{"default", "other", "broken"}))
 	defer stop()
 
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
 	client, conn := newRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
 
@@ -54,7 +57,7 @@ func TestRepositoryExists(t *testing.T) {
 			request: &gitalypb.RepositoryExistsRequest{
 				Repository: &gitalypb.Repository{
 					StorageName:  "",
-					RelativePath: testhelper.TestRelativePath,
+					RelativePath: testRepo.GetRelativePath(),
 				},
 			},
 			errorCode: codes.InvalidArgument,
@@ -63,7 +66,7 @@ func TestRepositoryExists(t *testing.T) {
 			desc: "relative path empty",
 			request: &gitalypb.RepositoryExistsRequest{
 				Repository: &gitalypb.Repository{
-					StorageName:  "default",
+					StorageName:  testRepo.GetStorageName(),
 					RelativePath: "",
 				},
 			},
@@ -73,8 +76,8 @@ func TestRepositoryExists(t *testing.T) {
 			desc: "exists true",
 			request: &gitalypb.RepositoryExistsRequest{
 				Repository: &gitalypb.Repository{
-					StorageName:  "default",
-					RelativePath: testhelper.TestRelativePath,
+					StorageName:  testRepo.GetStorageName(),
+					RelativePath: testRepo.GetRelativePath(),
 				},
 			},
 			exists: true,
@@ -84,7 +87,7 @@ func TestRepositoryExists(t *testing.T) {
 			request: &gitalypb.RepositoryExistsRequest{
 				Repository: &gitalypb.Repository{
 					StorageName:  "other",
-					RelativePath: testhelper.TestRelativePath,
+					RelativePath: testRepo.GetRelativePath(),
 				},
 			},
 			exists: false,
