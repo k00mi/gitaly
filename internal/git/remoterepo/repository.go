@@ -56,3 +56,18 @@ func (rr Repository) ResolveRefish(ctx context.Context, ref string) (string, err
 
 	return oid, nil
 }
+
+func (rr Repository) HasBranches(ctx context.Context) (bool, error) {
+	cc, err := rr.pool.Dial(ctx, rr.server.Address, rr.server.Token)
+	if err != nil {
+		return false, err
+	}
+
+	resp, err := gitalypb.NewRepositoryServiceClient(cc).HasLocalBranches(
+		ctx, &gitalypb.HasLocalBranchesRequest{Repository: rr.repo})
+	if err != nil {
+		return false, fmt.Errorf("has local branches: %w", err)
+	}
+
+	return resp.Value, nil
+}

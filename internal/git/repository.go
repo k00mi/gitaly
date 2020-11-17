@@ -98,6 +98,8 @@ type Repository interface {
 	// object ID exists. To do so, you can peel the reference to a given
 	// object type, e.g. by passing `refs/heads/master^{commit}`.
 	ResolveRefish(ctx context.Context, ref string) (string, error)
+	// HasBranches returns whether the repository has branches.
+	HasBranches(ctx context.Context) (bool, error)
 }
 
 // LocalRepository represents a local Git repository.
@@ -242,8 +244,22 @@ func (repo *LocalRepository) GetReference(ctx context.Context, ref string) (Refe
 	return refs[0], nil
 }
 
+func (repo *LocalRepository) HasBranches(ctx context.Context) (bool, error) {
+	refs, err := repo.getReferences(ctx, "refs/heads/", 1)
+	return len(refs) > 0, err
+}
+
 // GetReferences returns references matching the given pattern.
 func (repo *LocalRepository) GetReferences(ctx context.Context, pattern string) ([]Reference, error) {
+	return repo.getReferences(ctx, pattern, 0)
+}
+
+func (repo *LocalRepository) getReferences(ctx context.Context, pattern string, limit uint) ([]Reference, error) {
+	flags := []Option{Flag{Name: "--format=%(refname)%00%(objectname)%00%(symref)"}}
+	if limit > 0 {
+		flags = append(flags, Flag{Name: fmt.Sprintf("--count=%d", limit)})
+	}
+
 	var args []string
 	if pattern != "" {
 		args = []string{pattern}
@@ -251,7 +267,7 @@ func (repo *LocalRepository) GetReferences(ctx context.Context, pattern string) 
 
 	cmd, err := repo.command(ctx, nil, SubCmd{
 		Name:  "for-each-ref",
-		Flags: []Option{Flag{Name: "--format=%(refname)%00%(objectname)%00%(symref)"}},
+		Flags: flags,
 		Args:  args,
 	})
 	if err != nil {
