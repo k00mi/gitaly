@@ -13,13 +13,14 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	testhelper.Configure()
 	os.Exit(testMain(m))
 }
 
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
+	cleanup := testhelper.Configure()
+	defer cleanup()
 	testRepo = testhelper.TestRepository()
 
 	return m.Run()

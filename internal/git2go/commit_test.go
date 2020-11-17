@@ -19,9 +19,15 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	testhelper.Configure()
+	os.Exit(testMain(m))
+}
+
+func testMain(m *testing.M) int {
+	defer testhelper.MustHaveNoChildProcess()
+	cleanup := testhelper.Configure()
+	defer cleanup()
 	testhelper.ConfigureGitalyGit2Go()
-	os.Exit(m.Run())
+	return m.Run()
 }
 
 type commit struct {

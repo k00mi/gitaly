@@ -15,8 +15,14 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	testhelper.Configure()
-	os.Exit(m.Run())
+	os.Exit(testMain(m))
+}
+
+func testMain(m *testing.M) int {
+	defer testhelper.MustHaveNoChildProcess()
+	cleanup := testhelper.Configure()
+	defer cleanup()
+	return m.Run()
 }
 
 func newHooksClient(t *testing.T, serverSocketPath string) (gitalypb.HookServiceClient, *grpc.ClientConn) {

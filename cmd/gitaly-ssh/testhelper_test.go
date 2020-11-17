@@ -12,12 +12,14 @@ import (
 var gitalySSHPath string
 
 func TestMain(m *testing.M) {
-	testhelper.Configure()
 	os.Exit(testMain(m))
 }
 
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
+
+	cleanup := testhelper.Configure()
+	defer cleanup()
 
 	testhelper.ConfigureGitalySSH()
 	gitalySSHPath = filepath.Join(config.Config.BinDir, "gitaly-ssh")

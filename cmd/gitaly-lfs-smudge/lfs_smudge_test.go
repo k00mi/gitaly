@@ -39,6 +39,17 @@ type mapConfig struct {
 	env map[string]string
 }
 
+func TestMain(m *testing.M) {
+	os.Exit(testMain(m))
+}
+
+func testMain(m *testing.M) int {
+	defer testhelper.MustHaveNoChildProcess()
+	cleanup := testhelper.Configure()
+	defer cleanup()
+	return m.Run()
+}
+
 func (m *mapConfig) Get(key string) string {
 	return m.env[key]
 }

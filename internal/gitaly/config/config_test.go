@@ -783,6 +783,7 @@ func TestInternalSocketDir(t *testing.T) {
 	socketDir := InternalSocketDir()
 
 	require.NoError(t, trySocketCreation(socketDir))
+	require.NoError(t, os.RemoveAll(socketDir))
 }
 
 func TestLoadDailyMaintenance(t *testing.T) {

@@ -34,16 +34,19 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	testhelper.Configure()
 	os.Exit(testMain(m))
 }
 
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
+	cleanup := testhelper.Configure()
+	defer cleanup()
+
 	tempDir, err := ioutil.TempDir("", "gitaly")
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return 1
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -51,7 +54,8 @@ func testMain(m *testing.M) int {
 	config.Config.InternalSocketDir = tempDir + "/sock"
 
 	if err := rubyServer.Start(); err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return 1
 	}
 	defer rubyServer.Stop()
 

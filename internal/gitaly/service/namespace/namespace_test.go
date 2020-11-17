@@ -1,11 +1,11 @@
 package namespace
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -16,21 +16,27 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	testhelper.Configure()
 	os.Exit(testMain(m))
 }
 
 func testMain(m *testing.M) int {
+	defer testhelper.MustHaveNoChildProcess()
+
+	cleanup := testhelper.Configure()
+	defer cleanup()
+
 	config.Config.Storages = nil
 
 	for _, st := range []string{"default", "other"} {
 		dir, err := filepath.Abs(filepath.Join("testdata", st))
 		if err != nil {
-			log.Fatal(err)
+			log.Error(err)
+			return 1
 		}
 
 		if err := os.RemoveAll(dir); err != nil {
-			log.Fatal(err)
+			log.Error(err)
+			return 1
 		}
 
 		config.Config.Storages = append(config.Config.Storages,

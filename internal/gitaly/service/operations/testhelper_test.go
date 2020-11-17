@@ -38,22 +38,26 @@ func init() {
 }
 
 func TestMain(m *testing.M) {
-	testhelper.Configure()
 	os.Exit(testMain(m))
 }
 
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
+	cleanup := testhelper.Configure()
+	defer cleanup()
+
 	cwd, err := os.Getwd()
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return 1
 	}
 	gitlabShellDir := filepath.Join(cwd, "testdata", "gitlab-shell")
 	os.RemoveAll(gitlabShellDir)
 
 	if err := os.MkdirAll(gitlabShellDir, 0755); err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return 1
 	}
 
 	config.Config.GitlabShell.Dir = filepath.Join(cwd, "testdata", "gitlab-shell")
@@ -71,7 +75,8 @@ func testMain(m *testing.M) int {
 	defer cleanupSrv()
 
 	if err := RubyServer.Start(); err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return 1
 	}
 	defer RubyServer.Stop()
 

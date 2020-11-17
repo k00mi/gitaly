@@ -1,6 +1,4 @@
-// +build static,system_libgit2
-
-package main
+package server
 
 import (
 	"os"
@@ -17,6 +15,5 @@ func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 	cleanup := testhelper.Configure()
 	defer cleanup()
-	testhelper.ConfigureGitalyGit2Go()
 	return m.Run()
 }

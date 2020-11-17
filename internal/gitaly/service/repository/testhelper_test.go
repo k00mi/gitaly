@@ -2,12 +2,12 @@ package repository
 
 import (
 	"crypto/x509"
-	"log"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
@@ -33,6 +33,36 @@ var (
 	testTime   = time.Date(2006, 1, 2, 15, 4, 5, 0, time.UTC)
 	RubyServer = &rubyserver.Server{}
 )
+
+func TestMain(m *testing.M) {
+	os.Exit(testMain(m))
+}
+
+func testMain(m *testing.M) int {
+	defer testhelper.MustHaveNoChildProcess()
+
+	cleanup := testhelper.Configure()
+	defer cleanup()
+
+	config.Config.Auth.Token = testhelper.RepositoryAuthToken
+
+	var err error
+	config.Config.GitlabShell.Dir, err = filepath.Abs("testdata/gitlab-shell")
+	if err != nil {
+		log.Error(err)
+		return 1
+	}
+
+	testhelper.ConfigureGitalySSH()
+
+	if err := RubyServer.Start(); err != nil {
+		log.Error(err)
+		return 1
+	}
+	defer RubyServer.Stop()
+
+	return m.Run()
+}
 
 func newRepositoryClient(t *testing.T, serverSocketPath string) (gitalypb.RepositoryServiceClient, *grpc.ClientConn) {
 	connOpts := []grpc.DialOption{
@@ -124,30 +154,4 @@ func assertModTimeAfter(t *testing.T, afterTime time.Time, paths ...string) bool
 		}
 	}
 	return t.Failed()
-}
-
-func TestMain(m *testing.M) {
-	testhelper.Configure()
-	os.Exit(testMain(m))
-}
-
-func testMain(m *testing.M) int {
-	defer testhelper.MustHaveNoChildProcess()
-
-	config.Config.Auth.Token = testhelper.RepositoryAuthToken
-
-	var err error
-	config.Config.GitlabShell.Dir, err = filepath.Abs("testdata/gitlab-shell")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	testhelper.ConfigureGitalySSH()
-
-	if err := RubyServer.Start(); err != nil {
-		log.Fatal(err)
-	}
-	defer RubyServer.Stop()
-
-	return m.Run()
 }

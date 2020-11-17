@@ -11,8 +11,14 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	testhelper.Configure()
-	os.Exit(m.Run())
+	os.Exit(testMain(m))
+}
+
+func testMain(m *testing.M) int {
+	defer testhelper.MustHaveNoChildProcess()
+	cleanup := testhelper.Configure()
+	defer cleanup()
+	return m.Run()
 }
 
 func NewTestObjectPool(ctx context.Context, t *testing.T, storageName string) (*ObjectPool, func()) {

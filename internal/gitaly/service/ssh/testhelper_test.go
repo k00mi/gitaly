@@ -25,7 +25,6 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	testhelper.Configure()
 	os.Exit(testMain(m))
 }
 
@@ -36,11 +35,15 @@ func testMain(m *testing.M) int {
 		config.Config.Ruby.Dir = rubyDir
 	}(config.Config.Ruby.Dir)
 
+	cleanup := testhelper.Configure()
+	defer cleanup()
+
 	config.Config.Ruby.Dir = filepath.Join("../../../ruby", "git-hooks")
 
 	err := os.RemoveAll(testPath)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return 1
 	}
 
 	testRepo = testhelper.TestRepository()

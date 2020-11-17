@@ -58,9 +58,10 @@ const (
 	GlProjectPath       = "gitlab-org/gitlab-test"
 )
 
-var configureOnce sync.Once
-
 var (
+	configureOnce sync.Once
+	testDirectory string
+
 	TestUser = &gitalypb.User{
 		Name:       []byte("Jane Doe"),
 		Email:      []byte("janedoe@gitlab.com"),
@@ -71,19 +72,19 @@ var (
 
 // Configure sets up the global test configuration. On failure,
 // terminates the program.
-func Configure() {
+func Configure() func() {
 	configureOnce.Do(func() {
 		gitalylog.Configure("json", "info")
 
 		var err error
-		config.Config.Logging.Dir, err = filepath.Abs("testdata/log")
+		testDirectory, err = ioutil.TempDir("", "gitaly-test-*")
 		if err != nil {
 			log.Fatal(err)
 		}
-		if err := os.RemoveAll(config.Config.Logging.Dir); err != nil {
-			log.Fatal(err)
-		}
-		if err := os.MkdirAll(config.Config.Logging.Dir, 0755); err != nil {
+
+		config.Config.Logging.Dir = filepath.Join(testDirectory, "log")
+		if err := os.Mkdir(config.Config.Logging.Dir, 0755); err != nil {
+			os.RemoveAll(testDirectory)
 			log.Fatal(err)
 		}
 
@@ -94,18 +95,15 @@ func Configure() {
 		config.Config.SocketPath = "/bogus"
 		config.Config.GitlabShell.Dir = "/"
 
-		dir, err := ioutil.TempDir("", "internal_socket")
-		if err != nil {
-			log.Fatalf("error configuring tests: %v", err)
-		}
-
-		config.Config.InternalSocketDir = dir
-
-		if err := os.MkdirAll("testdata/gitaly-libexec", 0755); err != nil {
+		config.Config.InternalSocketDir = filepath.Join(testDirectory, "internal-socket")
+		if err := os.Mkdir(config.Config.InternalSocketDir, 0755); err != nil {
+			os.RemoveAll(testDirectory)
 			log.Fatal(err)
 		}
-		config.Config.BinDir, err = filepath.Abs("testdata/gitaly-libexec")
-		if err != nil {
+
+		config.Config.BinDir = filepath.Join(testDirectory, "bin")
+		if err := os.Mkdir(config.Config.BinDir, 0755); err != nil {
+			os.RemoveAll(testDirectory)
 			log.Fatal(err)
 		}
 
@@ -115,10 +113,17 @@ func Configure() {
 			config.Validate,
 		} {
 			if err := f(); err != nil {
+				os.RemoveAll(testDirectory)
 				log.Fatalf("error configuring tests: %v", err)
 			}
 		}
 	})
+
+	return func() {
+		if err := os.RemoveAll(testDirectory); err != nil {
+			log.Fatalf("error removing test directory: %v", err)
+		}
+	}
 }
 
 // MustReadFile returns the content of a file or fails at once.
@@ -325,7 +330,11 @@ func FindLocalBranchResponsesEqual(a *gitalypb.FindLocalBranchResponse, b *gital
 
 // GetTemporaryGitalySocketFileName will return a unique, useable socket file name
 func GetTemporaryGitalySocketFileName() string {
-	tmpfile, err := ioutil.TempFile("", "gitaly.socket.")
+	if testDirectory == "" {
+		log.Fatal("you must call testhelper.Configure() before GetTemporaryGitalySocketFileName()")
+	}
+
+	tmpfile, err := ioutil.TempFile(testDirectory, "gitaly.socket.")
 	if err != nil {
 		// No point in handling this error, panic
 		panic(err)
@@ -784,14 +793,13 @@ func CreateLooseRef(t testing.TB, repoPath, refName string) {
 
 // TempDir is a wrapper around ioutil.TempDir that provides a cleanup function.
 func TempDir(t testing.TB) (string, func()) {
-	_, currentFile, _, ok := runtime.Caller(0)
-	if !ok {
-		log.Fatal("Could not get caller info")
+	if testDirectory == "" {
+		log.Fatal("you must call testhelper.Configure() before TempDir()")
 	}
 
-	rootTmpDir := filepath.Join(filepath.Dir(currentFile), "testdata", "tmp")
-	tmpDir, err := ioutil.TempDir(rootTmpDir, "")
+	tmpDir, err := ioutil.TempDir(testDirectory, "")
 	require.NoError(t, err)
+
 	return tmpDir, func() { require.NoError(t, os.RemoveAll(tmpDir)) }
 }
 
@@ -902,8 +910,6 @@ STDIN.each_line do |line|
   exit 1 unless	system(*%%W[%s cat-file -e #{new_object}])
 end
 `, command.GitPath())
-
-	ioutil.WriteFile("/tmp/file", []byte(hook), 0644)
 
 	cleanup, err := WriteCustomHook(repoPath, "pre-receive", []byte(hook))
 	require.NoError(t, err)

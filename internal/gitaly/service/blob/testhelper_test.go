@@ -1,10 +1,10 @@
 package blob
 
 import (
-	"log"
 	"os"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
@@ -17,17 +17,19 @@ import (
 var rubyServer = &rubyserver.Server{}
 
 func TestMain(m *testing.M) {
-	testhelper.Configure()
 	os.Exit(testMain(m))
 }
 
 func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 
+	cleanup := testhelper.Configure()
+	defer cleanup()
 	testhelper.ConfigureRuby()
 
 	if err := rubyServer.Start(); err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return 1
 	}
 	defer rubyServer.Stop()
 
