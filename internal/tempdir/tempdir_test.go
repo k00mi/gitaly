@@ -18,7 +18,9 @@ import (
 func TestNewAsRepositorySuccess(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
-	repo := testhelper.TestRepository()
+
+	repo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
 
 	tempRepo, tempDir, err := NewAsRepository(ctx, repo, config.NewLocator(config.Config))
 	require.NoError(t, err)
