@@ -34,7 +34,8 @@ func TestConnectivity(t *testing.T) {
 
 	certPoolPath := filepath.Join(cwd, "testdata", "certs")
 
-	testRepo := testhelper.TestRepository()
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
 
 	socketPath := testhelper.GetTemporaryGitalySocketFileName()
 
