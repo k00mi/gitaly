@@ -1,7 +1,6 @@
 package gitalyssh
 
 import (
-	"context"
 	"encoding/base64"
 	"fmt"
 	"path/filepath"
@@ -43,24 +42,5 @@ func TestUploadPackEnv(t *testing.T) {
 		fmt.Sprintf("GITALY_PAYLOAD=%s", expectedPayload),
 		"CORRELATION_ID=correlation-id-1",
 		"GIT_SSH_VARIANT=simple",
-	})
-}
-
-func TestGetCorrelationID(t *testing.T) {
-	t.Run("not provided in context", func(t *testing.T) {
-		ctx := context.Background()
-		cid1 := getCorrelationID(ctx)
-		require.NotEmpty(t, cid1)
-
-		cid2 := getCorrelationID(ctx)
-		require.NotEqual(t, cid1, cid2, "it should return a new correlation_id each time as it is not injected into the context")
-	})
-
-	t.Run("provided in context", func(t *testing.T) {
-		const cid = "1-2-3-4"
-		ctx := correlation.ContextWithCorrelation(context.Background(), cid)
-
-		require.Equal(t, cid, getCorrelationID(ctx))
-		require.Equal(t, cid, getCorrelationID(ctx))
 	})
 }
