@@ -109,6 +109,13 @@ func validateMergeBranchRequest(request *gitalypb.UserMergeBranchRequest) error 
 	return nil
 }
 
+func hookErrorFromStdoutAndStderr(sout string, serr string) string {
+	if len(strings.TrimSpace(serr)) > 0 {
+		return serr
+	}
+	return sout
+}
+
 func (s *server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Repository, user *gitalypb.User, reference, newrev, oldrev string) error {
 	gitlabshellEnv, err := gitlabshell.Env()
 	if err != nil {
@@ -156,17 +163,20 @@ func (s *server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 	var stdout, stderr bytes.Buffer
 
 	if err := s.hookManager.PreReceiveHook(ctx, repo, env, strings.NewReader(changes), &stdout, &stderr); err != nil {
-		return preReceiveError{message: stdout.String()}
+		msg := hookErrorFromStdoutAndStderr(stdout.String(), stderr.String())
+		return preReceiveError{message: msg}
 	}
 	if err := s.hookManager.UpdateHook(ctx, repo, reference, oldrev, newrev, env, &stdout, &stderr); err != nil {
-		return preReceiveError{message: stdout.String()}
+		msg := hookErrorFromStdoutAndStderr(stdout.String(), stderr.String())
+		return preReceiveError{message: msg}
 	}
 
 	// For backwards compatibility with Ruby, we need to only call the reference-transaction
 	// hook if the corresponding Ruby feature flag is set.
 	if featureflag.IsEnabled(ctx, featureflag.RubyReferenceTransactionHook) {
 		if err := s.hookManager.ReferenceTransactionHook(ctx, hook.ReferenceTransactionPrepared, env, strings.NewReader(changes)); err != nil {
-			return preReceiveError{message: stdout.String()}
+			msg := hookErrorFromStdoutAndStderr(stdout.String(), stderr.String())
+			return preReceiveError{message: msg}
 		}
 	}
 
