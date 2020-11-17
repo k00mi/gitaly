@@ -15,9 +15,8 @@ import (
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
-// remoteRepository represents a Git repository on a different Gitaly storage
-type remoteRepository struct {
-	UnimplementedRepo
+// RemoteRepository represents a Git repository on a different Gitaly storage
+type RemoteRepository struct {
 	repo   *gitalypb.Repository
 	server storage.ServerInfo
 	pool   *client.Pool
@@ -30,7 +29,7 @@ func NewRemoteRepository(ctx context.Context, repo *gitalypb.Repository, pool *c
 		return nil, fmt.Errorf("remote repository: %w", err)
 	}
 
-	return remoteRepository{
+	return RemoteRepository{
 		repo:   repo,
 		server: server,
 		pool:   pool,
@@ -39,7 +38,7 @@ func NewRemoteRepository(ctx context.Context, repo *gitalypb.Repository, pool *c
 
 // ResolveRefish will dial to the remote repository and attempt to resolve the
 // refish string via the gRPC interface
-func (rr remoteRepository) ResolveRefish(ctx context.Context, ref string) (string, error) {
+func (rr RemoteRepository) ResolveRefish(ctx context.Context, ref string) (string, error) {
 	cc, err := rr.pool.Dial(ctx, rr.server.Address, rr.server.Token)
 	if err != nil {
 		return "", err
@@ -76,22 +75,6 @@ type Remote interface {
 	// If remote doesn't exist it returns an ErrNotFound error.
 	// https://git-scm.com/docs/git-remote#Documentation/git-remote.txt-emset-urlem
 	SetURL(ctx context.Context, name, url string, opts SetURLOpts) error
-}
-
-// UnimplementedRemote satisfies the Remote interface and used by UnimplementedRepo to reduce friction in
-// writing new Repository implementations
-type UnimplementedRemote struct{}
-
-func (UnimplementedRemote) Add(context.Context, string, string, RemoteAddOpts) error {
-	return ErrUnimplemented
-}
-
-func (UnimplementedRemote) Remove(context.Context, string) error {
-	return ErrUnimplemented
-}
-
-func (UnimplementedRemote) SetURL(context.Context, string, string, SetURLOpts) error {
-	return ErrUnimplemented
 }
 
 // RepositoryRemote provides functionality of the 'remote' git sub-command.

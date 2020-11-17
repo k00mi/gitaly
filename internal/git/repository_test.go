@@ -417,14 +417,14 @@ func TestLocalRepository_UpdateRef(t *testing.T) {
 		ref    string
 		newrev string
 		oldrev string
-		verify func(t *testing.T, repo git.Repository, err error)
+		verify func(t *testing.T, repo *git.LocalRepository, err error)
 	}{
 		{
 			desc:   "successfully update master",
 			ref:    "refs/heads/master",
 			newrev: otherRef.Target,
 			oldrev: MasterID,
-			verify: func(t *testing.T, repo git.Repository, err error) {
+			verify: func(t *testing.T, repo *git.LocalRepository, err error) {
 				require.NoError(t, err)
 				ref, err := repo.GetReference(ctx, "refs/heads/master")
 				require.NoError(t, err)
@@ -436,7 +436,7 @@ func TestLocalRepository_UpdateRef(t *testing.T) {
 			ref:    "refs/heads/master",
 			newrev: otherRef.Target,
 			oldrev: NonexistentID,
-			verify: func(t *testing.T, repo git.Repository, err error) {
+			verify: func(t *testing.T, repo *git.LocalRepository, err error) {
 				require.Error(t, err)
 				ref, err := repo.GetReference(ctx, "refs/heads/master")
 				require.NoError(t, err)
@@ -448,7 +448,7 @@ func TestLocalRepository_UpdateRef(t *testing.T) {
 			ref:    "refs/heads/master",
 			newrev: NonexistentID,
 			oldrev: MasterID,
-			verify: func(t *testing.T, repo git.Repository, err error) {
+			verify: func(t *testing.T, repo *git.LocalRepository, err error) {
 				require.Error(t, err)
 				ref, err := repo.GetReference(ctx, "refs/heads/master")
 				require.NoError(t, err)
@@ -460,7 +460,7 @@ func TestLocalRepository_UpdateRef(t *testing.T) {
 			ref:    "refs/heads/master",
 			newrev: otherRef.Target,
 			oldrev: "",
-			verify: func(t *testing.T, repo git.Repository, err error) {
+			verify: func(t *testing.T, repo *git.LocalRepository, err error) {
 				require.NoError(t, err)
 				ref, err := repo.GetReference(ctx, "refs/heads/master")
 				require.NoError(t, err)
@@ -472,7 +472,7 @@ func TestLocalRepository_UpdateRef(t *testing.T) {
 			ref:    "master",
 			newrev: otherRef.Target,
 			oldrev: MasterID,
-			verify: func(t *testing.T, repo git.Repository, err error) {
+			verify: func(t *testing.T, repo *git.LocalRepository, err error) {
 				require.Error(t, err)
 				ref, err := repo.GetReference(ctx, "refs/heads/master")
 				require.NoError(t, err)
@@ -484,7 +484,7 @@ func TestLocalRepository_UpdateRef(t *testing.T) {
 			ref:    "refs/heads/master",
 			newrev: strings.Repeat("0", 40),
 			oldrev: MasterID,
-			verify: func(t *testing.T, repo git.Repository, err error) {
+			verify: func(t *testing.T, repo *git.LocalRepository, err error) {
 				require.NoError(t, err)
 				_, err = repo.GetReference(ctx, "refs/heads/master")
 				require.Error(t, err)
@@ -495,7 +495,7 @@ func TestLocalRepository_UpdateRef(t *testing.T) {
 			ref:    "refs/heads/new",
 			newrev: MasterID,
 			oldrev: strings.Repeat("0", 40),
-			verify: func(t *testing.T, repo git.Repository, err error) {
+			verify: func(t *testing.T, repo *git.LocalRepository, err error) {
 				require.NoError(t, err)
 				ref, err := repo.GetReference(ctx, "refs/heads/new")
 				require.NoError(t, err)
@@ -522,7 +522,7 @@ func TestLocalRepository_FetchRemote(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	initBareWithRemote := func(t *testing.T, remote string) (git.Repository, string, testhelper.Cleanup) {
+	initBareWithRemote := func(t *testing.T, remote string) (*git.LocalRepository, string, testhelper.Cleanup) {
 		t.Helper()
 
 		testRepo, testRepoPath, cleanup := testhelper.InitBareRepo(t)

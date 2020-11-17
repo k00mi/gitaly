@@ -493,7 +493,7 @@ func TestExecutor_Commit(t *testing.T) {
 	}
 }
 
-func getCommit(t testing.TB, ctx context.Context, repo git.Repository, oid string) commit {
+func getCommit(t testing.TB, ctx context.Context, repo *git.LocalRepository, oid string) commit {
 	t.Helper()
 
 	data, err := repo.ReadObject(ctx, oid)
