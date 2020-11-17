@@ -21,6 +21,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper/testserver"
+	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
 const (
@@ -28,79 +29,34 @@ const (
 	NonexistentID = "ba4f184e126b751d1bffad5897f263108befc780"
 )
 
-func TestRepository_ResolveRefish(t *testing.T) {
-	ctx, cancel := testhelper.Context()
-	defer cancel()
+func TestLocalRepository(t *testing.T) {
+	git.TestRepository(t, func(t testing.TB, pbRepo *gitalypb.Repository) git.Repository {
+		t.Helper()
+		return git.NewRepository(pbRepo)
+	})
+}
 
-	testcases := []struct {
-		desc     string
-		refish   string
-		expected string
-	}{
-		{
-			desc:     "unqualified master branch",
-			refish:   "master",
-			expected: MasterID,
-		},
-		{
-			desc:     "fully qualified master branch",
-			refish:   "refs/heads/master",
-			expected: MasterID,
-		},
-		{
-			desc:     "typed commit",
-			refish:   "refs/heads/master^{commit}",
-			expected: MasterID,
-		},
-		{
-			desc:     "extended SHA notation",
-			refish:   "refs/heads/master^2",
-			expected: "c1c67abbaf91f624347bb3ae96eabe3a1b742478",
-		},
-		{
-			desc:   "nonexistent branch",
-			refish: "refs/heads/foobar",
-		},
-		{
-			desc:   "SHA notation gone wrong",
-			refish: "refs/heads/master^3",
-		},
-	}
-
+func TestRemoteRepository(t *testing.T) {
 	_, serverSocketPath, cleanup := testserver.RunInternalGitalyServer(t, config.Config.Storages, config.Config.Auth.Token)
 	defer cleanup()
 
-	for _, repo := range []git.Repository{
-		git.NewRepository(testhelper.TestRepository()),
-		func() git.Repository {
-			ctx, err := helper.InjectGitalyServers(ctx, "default", serverSocketPath, config.Config.Auth.Token)
-			require.NoError(t, err)
+	ctx, cancel := testhelper.Context()
+	defer cancel()
 
-			r, err := git.NewRemoteRepository(
-				helper.OutgoingToIncoming(ctx),
-				testhelper.TestRepository(),
-				client.NewPool(),
-			)
-			require.NoError(t, err)
-			return r
-		}(),
-	} {
-		t.Run(fmt.Sprintf("%T", repo), func(t *testing.T) {
-			for _, tc := range testcases {
-				t.Run(tc.desc, func(t *testing.T) {
-					oid, err := repo.ResolveRefish(ctx, tc.refish)
+	ctx, err := helper.InjectGitalyServers(ctx, "default", serverSocketPath, config.Config.Auth.Token)
+	require.NoError(t, err)
 
-					if tc.expected == "" {
-						require.Equal(t, err, git.ErrReferenceNotFound)
-						return
-					}
+	git.TestRepository(t, func(t testing.TB, pbRepo *gitalypb.Repository) git.Repository {
+		t.Helper()
 
-					require.NoError(t, err)
-					require.Equal(t, tc.expected, oid)
-				})
-			}
-		})
-	}
+		r, err := git.NewRemoteRepository(
+			helper.OutgoingToIncoming(ctx),
+			testhelper.TestRepository(),
+			client.NewPool(),
+		)
+		require.NoError(t, err)
+		return r
+	})
 }
 
 func TestLocalRepository_ContainsRef(t *testing.T) {
