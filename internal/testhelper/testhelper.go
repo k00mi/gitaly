@@ -84,6 +84,7 @@ func Configure() func() {
 
 		config.Config.Logging.Dir = filepath.Join(testDirectory, "log")
 		if err := os.Mkdir(config.Config.Logging.Dir, 0755); err != nil {
+			os.RemoveAll(testDirectory)
 			log.Fatal(err)
 		}
 
@@ -96,11 +97,13 @@ func Configure() func() {
 
 		config.Config.InternalSocketDir = filepath.Join(testDirectory, "internal-socket")
 		if err := os.Mkdir(config.Config.InternalSocketDir, 0755); err != nil {
+			os.RemoveAll(testDirectory)
 			log.Fatal(err)
 		}
 
 		config.Config.BinDir = filepath.Join(testDirectory, "bin")
 		if err := os.Mkdir(config.Config.BinDir, 0755); err != nil {
+			os.RemoveAll(testDirectory)
 			log.Fatal(err)
 		}
 
@@ -110,6 +113,7 @@ func Configure() func() {
 			config.Validate,
 		} {
 			if err := f(); err != nil {
+				os.RemoveAll(testDirectory)
 				log.Fatalf("error configuring tests: %v", err)
 			}
 		}
