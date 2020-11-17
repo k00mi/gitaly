@@ -27,113 +27,73 @@ func TestConfigValidation(t *testing.T) {
 		{Storage: "internal-3.1", Address: "localhost:33458", Token: "secret-token-2"},
 	}
 
-	fromValidConfig := func(changeFunc func(*Config)) Config {
-		cfg := Config{
-			ListenAddr:  "localhost:1234",
-			Replication: DefaultReplicationConfig(),
-			VirtualStorages: []*VirtualStorage{
-				{Name: "default", Nodes: vs1Nodes},
-				{Name: "secondary", Nodes: vs2Nodes},
-			},
-			Failover: Failover{ElectionStrategy: ElectionStrategySQL},
-		}
-
-		changeFunc(&cfg)
-
-		return cfg
-	}
-
 	testCases := []struct {
-		desc   string
-		config Config
-		errMsg string
+		desc         string
+		changeConfig func(*Config)
+		errMsg       string
 	}{
 		{
-			desc:   "Valid config with ListenAddr",
-			config: fromValidConfig(func(*Config) {}),
+			desc:         "Valid config with ListenAddr",
+			changeConfig: func(*Config) {},
 		},
 		{
 			desc: "Valid config with local elector",
-			config: fromValidConfig(func(cfg *Config) {
+			changeConfig: func(cfg *Config) {
 				cfg.Failover.ElectionStrategy = ElectionStrategyLocal
-			}),
+			},
 		},
 		{
 			desc: "Valid config with per repository elector",
-			config: fromValidConfig(func(cfg *Config) {
+			changeConfig: func(cfg *Config) {
 				cfg.Failover.ElectionStrategy = ElectionStrategyPerRepository
-			}),
+			},
 		},
 		{
 			desc: "Invalid election strategy",
-			config: fromValidConfig(func(cfg *Config) {
+			changeConfig: func(cfg *Config) {
 				cfg.Failover.ElectionStrategy = "invalid-strategy"
-			}),
+			},
 			errMsg: `invalid election strategy: "invalid-strategy"`,
 		},
 		{
 			desc: "Valid config with TLSListenAddr",
-			config: Config{
-				TLSListenAddr: "tls://localhost:4321",
-				Replication:   DefaultReplicationConfig(),
-				VirtualStorages: []*VirtualStorage{
-					{Name: "default", Nodes: vs1Nodes},
-				},
-				Failover: Failover{ElectionStrategy: ElectionStrategySQL},
+			changeConfig: func(cfg *Config) {
+				cfg.ListenAddr = ""
+				cfg.TLSListenAddr = "tls://localhost:4321"
 			},
 		},
 		{
 			desc: "Valid config with SocketPath",
-			config: Config{
-				SocketPath:  "/tmp/praefect.socket",
-				Replication: DefaultReplicationConfig(),
-				VirtualStorages: []*VirtualStorage{
-					{Name: "default", Nodes: vs1Nodes},
-				},
-				Failover: Failover{ElectionStrategy: ElectionStrategySQL},
+			changeConfig: func(cfg *Config) {
+				cfg.ListenAddr = ""
+				cfg.SocketPath = "/tmp/praefect.socket"
 			},
 		},
 		{
 			desc: "Invalid replication batch size",
-			config: Config{
-				SocketPath:  "/tmp/praefect.socket",
-				Replication: Replication{BatchSize: 0},
-				VirtualStorages: []*VirtualStorage{
-					{Name: "default", Nodes: vs1Nodes},
-				},
-				Failover: Failover{ElectionStrategy: ElectionStrategySQL},
+			changeConfig: func(cfg *Config) {
+				cfg.Replication = Replication{BatchSize: 0}
 			},
 			errMsg: "replication batch size was 0 but must be >=1",
 		},
 		{
 			desc: "No ListenAddr or SocketPath or TLSListenAddr",
-			config: Config{
-				ListenAddr:    "",
-				TLSListenAddr: "",
-				SocketPath:    "",
-				VirtualStorages: []*VirtualStorage{
-					{Name: "default", Nodes: vs1Nodes},
-				},
-				Replication: DefaultReplicationConfig(),
-				Failover:    Failover{ElectionStrategy: ElectionStrategySQL},
+			changeConfig: func(cfg *Config) {
+				cfg.ListenAddr = ""
 			},
 			errMsg: "no listen address or socket path configured",
 		},
 		{
 			desc: "No virtual storages",
-			config: Config{
-				ListenAddr:  "localhost:1234",
-				Replication: DefaultReplicationConfig(),
-				Failover:    Failover{ElectionStrategy: ElectionStrategySQL},
+			changeConfig: func(cfg *Config) {
+				cfg.VirtualStorages = nil
 			},
 			errMsg: "no virtual storages configured",
 		},
 		{
 			desc: "duplicate storage",
-			config: Config{
-				ListenAddr:  "localhost:1234",
-				Replication: DefaultReplicationConfig(),
-				VirtualStorages: []*VirtualStorage{
+			changeConfig: func(cfg *Config) {
+				cfg.VirtualStorages = []*VirtualStorage{
 					{
 						Name: "default",
 						Nodes: append(vs1Nodes, &Node{
@@ -141,17 +101,14 @@ func TestConfigValidation(t *testing.T) {
 							Address: vs1Nodes[1].Address,
 						}),
 					},
-				},
-				Failover: Failover{ElectionStrategy: ElectionStrategySQL},
+				}
 			},
 			errMsg: `virtual storage "default": internal gitaly storages are not unique`,
 		},
 		{
 			desc: "Node storage has no name",
-			config: Config{
-				ListenAddr:  "localhost:1234",
-				Replication: DefaultReplicationConfig(),
-				VirtualStorages: []*VirtualStorage{
+			changeConfig: func(cfg *Config) {
+				cfg.VirtualStorages = []*VirtualStorage{
 					{
 						Name: "default",
 						Nodes: []*Node{
@@ -162,17 +119,14 @@ func TestConfigValidation(t *testing.T) {
 							},
 						},
 					},
-				},
-				Failover: Failover{ElectionStrategy: ElectionStrategySQL},
+				}
 			},
 			errMsg: `virtual storage "default": all gitaly nodes must have a storage`,
 		},
 		{
 			desc: "Node storage has no address",
-			config: Config{
-				ListenAddr:  "localhost:1234",
-				Replication: DefaultReplicationConfig(),
-				VirtualStorages: []*VirtualStorage{
+			changeConfig: func(cfg *Config) {
+				cfg.VirtualStorages = []*VirtualStorage{
 					{
 						Name: "default",
 						Nodes: []*Node{
@@ -183,59 +137,46 @@ func TestConfigValidation(t *testing.T) {
 							},
 						},
 					},
-				},
-				Failover: Failover{ElectionStrategy: ElectionStrategySQL},
+				}
 			},
 			errMsg: `virtual storage "default": all gitaly nodes must have an address`,
 		},
 		{
 			desc: "Virtual storage has no name",
-			config: Config{
-				ListenAddr:  "localhost:1234",
-				Replication: DefaultReplicationConfig(),
-				VirtualStorages: []*VirtualStorage{
+			changeConfig: func(cfg *Config) {
+				cfg.VirtualStorages = []*VirtualStorage{
 					{Name: "", Nodes: vs1Nodes},
-				},
-				Failover: Failover{ElectionStrategy: ElectionStrategySQL},
+				}
 			},
 			errMsg: `virtual storages must have a name`,
 		},
 		{
 			desc: "Virtual storage not unique",
-			config: Config{
-				ListenAddr:  "localhost:1234",
-				Replication: DefaultReplicationConfig(),
-				VirtualStorages: []*VirtualStorage{
+			changeConfig: func(cfg *Config) {
+				cfg.VirtualStorages = []*VirtualStorage{
 					{Name: "default", Nodes: vs1Nodes},
 					{Name: "default", Nodes: vs2Nodes},
-				},
-				Failover: Failover{ElectionStrategy: ElectionStrategySQL},
+				}
 			},
 			errMsg: `virtual storage "default": virtual storages must have unique names`,
 		},
 		{
 			desc: "Virtual storage has no nodes",
-			config: Config{
-				ListenAddr:  "localhost:1234",
-				Replication: DefaultReplicationConfig(),
-				VirtualStorages: []*VirtualStorage{
+			changeConfig: func(cfg *Config) {
+				cfg.VirtualStorages = []*VirtualStorage{
 					{Name: "default", Nodes: vs1Nodes},
 					{Name: "secondary", Nodes: nil},
-				},
-				Failover: Failover{ElectionStrategy: ElectionStrategySQL},
+				}
 			},
 			errMsg: `virtual storage "secondary": no primary gitaly backends configured`,
 		},
 		{
 			desc: "Node storage has address duplicate",
-			config: Config{
-				ListenAddr:  "localhost:1234",
-				Replication: DefaultReplicationConfig(),
-				VirtualStorages: []*VirtualStorage{
+			changeConfig: func(cfg *Config) {
+				cfg.VirtualStorages = []*VirtualStorage{
 					{Name: "default", Nodes: vs1Nodes},
 					{Name: "secondary", Nodes: append(vs2Nodes, vs1Nodes[1])},
-				},
-				Failover: Failover{ElectionStrategy: ElectionStrategySQL},
+				}
 			},
 			errMsg: `multiple storages have the same address`,
 		},
@@ -243,7 +184,19 @@ func TestConfigValidation(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			err := tc.config.Validate()
+			config := Config{
+				ListenAddr:  "localhost:1234",
+				Replication: DefaultReplicationConfig(),
+				VirtualStorages: []*VirtualStorage{
+					{Name: "default", Nodes: vs1Nodes},
+					{Name: "secondary", Nodes: vs2Nodes},
+				},
+				Failover: Failover{ElectionStrategy: ElectionStrategySQL},
+			}
+
+			tc.changeConfig(&config)
+
+			err := config.Validate()
 			if tc.errMsg == "" {
 				require.NoError(t, err)
 				return
