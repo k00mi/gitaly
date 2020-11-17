@@ -67,6 +67,9 @@ func TestInterceptor(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
 	tests := []struct {
 		name        string
 		performRPC  func(ctx context.Context, client gitalypb.RefServiceClient)
@@ -75,8 +78,7 @@ func TestInterceptor(t *testing.T) {
 		{
 			name: "Unary",
 			performRPC: func(ctx context.Context, client gitalypb.RefServiceClient) {
-				repo := testhelper.TestRepository()
-				req := &gitalypb.RefExistsRequest{Repository: repo, Ref: []byte("refs/foo")}
+				req := &gitalypb.RefExistsRequest{Repository: testRepo, Ref: []byte("refs/foo")}
 
 				_, err := client.RefExists(ctx, req)
 				require.NoError(t, err)
@@ -86,8 +88,7 @@ func TestInterceptor(t *testing.T) {
 		{
 			name: "Stream",
 			performRPC: func(ctx context.Context, client gitalypb.RefServiceClient) {
-				repo := testhelper.TestRepository()
-				req := &gitalypb.FindAllBranchNamesRequest{Repository: repo}
+				req := &gitalypb.FindAllBranchNamesRequest{Repository: testRepo}
 
 				stream, err := client.FindAllBranchNames(ctx, req)
 				require.NoError(t, err)
