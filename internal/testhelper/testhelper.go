@@ -47,9 +47,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// TestRelativePath is the path inside its storage of the gitlab-test repo
 const (
-	TestRelativePath    = "gitlab-test.git"
 	RepositoryAuthToken = "the-secret-token"
 	DefaultStorageName  = "default"
 	testGitEnv          = "testdata/git-env"
@@ -90,6 +88,10 @@ func Configure() func() {
 
 		config.Config.Storages = []config.Storage{
 			{Name: "default", Path: GitlabTestStoragePath()},
+		}
+		if err := os.Mkdir(config.Config.Storages[0].Path, 0755); err != nil {
+			os.RemoveAll(testDirectory)
+			log.Fatal(err)
 		}
 
 		config.Config.SocketPath = "/bogus"
@@ -138,11 +140,10 @@ func MustReadFile(t testing.TB, filename string) []byte {
 
 // GitlabTestStoragePath returns the storage path to the gitlab-test repo.
 func GitlabTestStoragePath() string {
-	_, currentFile, _, ok := runtime.Caller(0)
-	if !ok {
-		log.Fatal("Could not get caller info")
+	if testDirectory == "" {
+		log.Fatal("you must call testhelper.Configure() before GitlabTestStoragePath()")
 	}
-	return filepath.Join(filepath.Dir(currentFile), "testdata", "data")
+	return filepath.Join(testDirectory, "storage")
 }
 
 // GitalyServersMetadata returns a metadata pair for gitaly-servers to be used in
@@ -190,25 +191,6 @@ func isValidRepoPath(absolutePath string) bool {
 	}
 
 	return true
-}
-
-// TestRepository returns the `Repository` object for the gitlab-test repo.
-// Tests should be calling this function instead of cloning the repo themselves.
-// Tests that involve modifications to the repo should copy/clone the repo
-// via the `Repository` returned from this function.
-func TestRepository() *gitalypb.Repository {
-	repo := &gitalypb.Repository{
-		StorageName:  "default",
-		RelativePath: TestRelativePath,
-		GlRepository: GlRepository,
-	}
-
-	storagePath, _ := config.Config.StoragePath(repo.GetStorageName())
-	if !isValidRepoPath(filepath.Join(storagePath, repo.RelativePath)) {
-		panic("Test repo not found, did you run `make prepare-tests`?")
-	}
-
-	return repo
 }
 
 // RequireGrpcError asserts the passed err is of the same code as expectedCode.
@@ -519,7 +501,8 @@ func Context(opts ...ContextOpt) (context.Context, func()) {
 
 // CreateRepo creates a temporary directory for a repo, without initializing it
 func CreateRepo(t testing.TB, storagePath, relativePath string) *gitalypb.Repository {
-	require.NoError(t, os.MkdirAll(filepath.Dir(storagePath), 0755), "making repo parent dir")
+	repoPath := filepath.Join(storagePath, relativePath, "..")
+	require.NoError(t, os.MkdirAll(repoPath, 0755), "making repo parent dir")
 	return &gitalypb.Repository{
 		StorageName:   "default",
 		RelativePath:  relativePath,
@@ -578,7 +561,12 @@ func NewTestRepoWithWorktree(t testing.TB) (repo *gitalypb.Repository, repoPath 
 // testRepositoryPath returns the absolute path of local 'gitlab-org/gitlab-test.git' clone.
 // It is cloned under the path by the test preparing step of make.
 func testRepositoryPath(t testing.TB) string {
-	path := filepath.Join(GitlabTestStoragePath(), TestRelativePath)
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		log.Fatal("could not get caller info")
+	}
+
+	path := filepath.Join(filepath.Dir(currentFile), "testdata", "data", "gitlab-test.git")
 	if !isValidRepoPath(path) {
 		t.Fatalf("local clone of 'gitlab-org/gitlab-test.git' not found in %q, did you run `make prepare-tests`?", path)
 	}
