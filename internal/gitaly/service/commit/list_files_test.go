@@ -1,9 +1,7 @@
 package commit
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"testing"
 
@@ -41,7 +39,7 @@ var (
 	}
 )
 
-func TestListFilesSuccess(t *testing.T) {
+func TestListFiles_success(t *testing.T) {
 	defaultBranchName = func(ctx context.Context, _ *gitalypb.Repository) ([]byte, error) {
 		return []byte("test-do-not-touch"), nil
 	}
@@ -59,10 +57,12 @@ func TestListFilesSuccess(t *testing.T) {
 	defer cleanupFn()
 
 	tests := []struct {
+		desc     string
 		revision string
 		files    [][]byte
 	}{
-		{ // Valid SHA
+		{
+			desc:     "valid object ID",
 			revision: "54fcc214b94e78d7a41a9a8fe6d87a5e59500e51",
 			files: [][]byte{
 				[]byte(".gitignore"), []byte(".gitmodules"), []byte("CHANGELOG"),
@@ -79,63 +79,146 @@ func TestListFilesSuccess(t *testing.T) {
 				[]byte("foo/bar/.gitkeep"),
 			},
 		},
-		{ // valid branch
+		{
+			desc:     "valid branch",
 			revision: "test-do-not-touch",
 			files:    defaultFiles,
 		},
-		{ // no SHA => master
+		{
+			desc:     "valid fully qualified branch",
+			revision: "refs/heads/test-do-not-touch",
+			files:    defaultFiles,
+		},
+		{
+			desc:     "missing object ID uses default branch",
 			revision: "",
 			files:    defaultFiles,
 		},
-		{ // Invalid SHA
+		{
+			desc:     "invalid object ID",
 			revision: "1234123412341234",
 			files:    [][]byte{},
 		},
-		{ // Invalid Branch
+		{
+			desc:     "invalid branch",
 			revision: "non/existing",
+			files:    [][]byte{},
+		},
+		{
+			desc:     "nonexisting fully qualified branch",
+			revision: "refs/heads/foobar",
 			files:    [][]byte{},
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(fmt.Sprintf("test case: %q", test.revision), func(t *testing.T) {
-			var files [][]byte
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
 			rpcRequest := gitalypb.ListFilesRequest{
-				Repository: testRepo, Revision: []byte(test.revision),
+				Repository: testRepo, Revision: []byte(tc.revision),
 			}
 
 			ctx, cancel := testhelper.Context()
 			defer cancel()
-			c, err := client.ListFiles(ctx, &rpcRequest)
-			if err != nil {
-				t.Fatal(err)
-			}
 
+			c, err := client.ListFiles(ctx, &rpcRequest)
+			require.NoError(t, err)
+
+			var files [][]byte
 			for {
 				resp, err := c.Recv()
 				if err == io.EOF {
 					break
-				} else if err != nil {
-					t.Fatal(err)
 				}
+				require.NoError(t, err)
 				files = append(files, resp.GetPaths()...)
 			}
 
-			if len(files) != len(test.files) {
-				t.Errorf("incorrect number of files: %d != %d", len(files), len(test.files))
-				return
-			}
-
-			for i := range files {
-				if !bytes.Equal(files[i], test.files[i]) {
-					t.Errorf("%q != %q", files[i], test.files[i])
-				}
-			}
+			require.ElementsMatch(t, files, tc.files)
 		})
 	}
 }
 
-func TestListFilesFailure(t *testing.T) {
+func TestListFiles_unbornBranch(t *testing.T) {
+	server, serverSocketPath := startTestServices(t)
+	defer server.Stop()
+
+	client, conn := newCommitServiceClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.InitBareRepo(t)
+	defer cleanupFn()
+
+	tests := []struct {
+		desc     string
+		revision string
+		code     codes.Code
+	}{
+		{
+			desc:     "HEAD",
+			revision: "HEAD",
+		},
+		{
+			desc:     "unborn branch",
+			revision: "refs/heads/master",
+		},
+		{
+			desc:     "nonexisting branch",
+			revision: "i-dont-exist",
+		},
+		{
+			desc:     "nonexisting fully qualified branch",
+			revision: "refs/heads/i-dont-exist",
+		},
+		{
+			desc:     "missing revision without default branch",
+			revision: "",
+			code:     codes.FailedPrecondition,
+		},
+		{
+			desc:     "valid object ID",
+			revision: "54fcc214b94e78d7a41a9a8fe6d87a5e59500e51",
+		},
+		{
+			desc:     "invalid object ID",
+			revision: "1234123412341234",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			rpcRequest := gitalypb.ListFilesRequest{
+				Repository: testRepo, Revision: []byte(tc.revision),
+			}
+
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			c, err := client.ListFiles(ctx, &rpcRequest)
+			require.NoError(t, err)
+
+			var files [][]byte
+			for {
+				var resp *gitalypb.ListFilesResponse
+				resp, err = c.Recv()
+				if err != nil {
+					break
+				}
+
+				require.NoError(t, err)
+				files = append(files, resp.GetPaths()...)
+			}
+
+			if tc.code != codes.OK {
+				testhelper.RequireGrpcError(t, err, tc.code)
+			} else {
+				require.Equal(t, err, io.EOF)
+			}
+			require.Empty(t, files)
+		})
+	}
+}
+
+func TestListFiles_failure(t *testing.T) {
 	server, serverSocketPath := startTestServices(t)
 	defer server.Stop()
 
@@ -143,33 +226,41 @@ func TestListFilesFailure(t *testing.T) {
 	defer conn.Close()
 
 	tests := []struct {
+		desc string
 		repo *gitalypb.Repository
 		code codes.Code
-		desc string
 	}{
-		// Nil Repo
-		{repo: nil, code: codes.InvalidArgument, desc: "nil repo"},
-		// Empty Repo Object
-		{repo: &gitalypb.Repository{}, code: codes.InvalidArgument, desc: "empty repo object"},
-		// Non-existing Repo
-		{repo: &gitalypb.Repository{StorageName: "foo", RelativePath: "bar"}, code: codes.InvalidArgument, desc: "non-existing repo"},
+		{
+			desc: "nil repo",
+			repo: nil,
+			code: codes.InvalidArgument,
+		},
+		{
+			desc: "empty repo object",
+			repo: &gitalypb.Repository{},
+			code: codes.InvalidArgument,
+		},
+		{
+			desc: "non-existing repo",
+			repo: &gitalypb.Repository{StorageName: "foo", RelativePath: "bar"},
+			code: codes.InvalidArgument,
+		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.desc, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
 			rpcRequest := gitalypb.ListFilesRequest{
-				Repository: test.repo, Revision: []byte("master"),
+				Repository: tc.repo, Revision: []byte("master"),
 			}
 
 			ctx, cancel := testhelper.Context()
 			defer cancel()
+
 			c, err := client.ListFiles(ctx, &rpcRequest)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
 			err = drainListFilesResponse(c)
-			testhelper.RequireGrpcError(t, err, test.code)
+			testhelper.RequireGrpcError(t, err, tc.code)
 		})
 	}
 }
@@ -185,7 +276,7 @@ func drainListFilesResponse(c gitalypb.CommitService_ListFilesClient) error {
 	return err
 }
 
-func TestInvalidListFilesRequestRevision(t *testing.T) {
+func TestListFiles_invalidRevision(t *testing.T) {
 	server, serverSocketPath := startTestServices(t)
 	defer server.Stop()
 
