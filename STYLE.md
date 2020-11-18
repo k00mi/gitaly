@@ -273,6 +273,11 @@ practices](https://prometheus.io/docs/practices/naming/) and be aware of
 the
 [gotchas](https://prometheus.io/docs/practices/instrumentation/#things-to-watch-out-for).
 
+### Main function
+
+If tests require a `TestMain()` function for common setup, this function should
+be implemented in a file called `testhelper_test.go`
+
 ## Git Commands
 
 Gitaly relies heavily on spawning git subprocesses to perform work. Any git
