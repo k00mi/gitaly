@@ -49,6 +49,15 @@ const AuthVersionKey = "grpc.meta.auth_version"
 // DeadlineTypeKey is the key used in ctx_tags to store the deadline type
 const DeadlineTypeKey = "grpc.meta.deadline_type"
 
+// RemoteIPKey is the key used in ctx_tags to store the remote_ip
+const RemoteIPKey = "remote_ip"
+
+// UserIDKey is the key used in ctx_tags to store the user_id
+const UserIDKey = "user_id"
+
+// UsernameKey is the key used in ctx_tags to store the username
+const UsernameKey = "username"
+
 // CorrelationIDKey is the key used in ctx_tags to store the correlation ID
 const CorrelationIDKey = "correlation_id"
 
@@ -115,6 +124,21 @@ func addMetadataTags(ctx context.Context) metadataTags {
 	if authInfo != nil {
 		metaTags.authVersion = authInfo.Version
 		tags.Set(AuthVersionKey, authInfo.Version)
+	}
+
+	metadata = getFromMD(md, "remote_ip")
+	if metadata != "" {
+		tags.Set(RemoteIPKey, metadata)
+	}
+
+	metadata = getFromMD(md, "user_id")
+	if metadata != "" {
+		tags.Set(UserIDKey, metadata)
+	}
+
+	metadata = getFromMD(md, "username")
+	if metadata != "" {
+		tags.Set(UsernameKey, metadata)
 	}
 
 	// This is a stop-gap approach to logging correlation_ids

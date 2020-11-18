@@ -1,0 +1,5 @@
+---
+title: Support for logging propagated client identity
+merge_request: 2802
+author:
+type: added
