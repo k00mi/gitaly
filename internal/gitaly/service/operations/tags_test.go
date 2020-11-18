@@ -361,7 +361,7 @@ func testFailedUserDeleteTagDueToHooks(t *testing.T, ctx context.Context) {
 		User:       testhelper.TestUser,
 	}
 
-	hookContent := []byte("#!/bin/sh\necho GL_ID=$GL_ID >&2\nexit 1")
+	hookContent := []byte("#!/bin/sh\necho GL_ID=$GL_ID\nexit 1")
 
 	for _, hookName := range gitlabPreHooks {
 		t.Run(hookName, func(t *testing.T) {
