@@ -565,7 +565,7 @@ func testRepositoryPath(t testing.TB) string {
 		log.Fatal("could not get caller info")
 	}
 
-	path := filepath.Join(filepath.Dir(currentFile), "testdata", "data", "gitlab-test.git")
+	path := filepath.Join(filepath.Dir(currentFile), "..", "..", "_build", "testrepos", "gitlab-test.git")
 	if !isValidRepoPath(path) {
 		t.Fatalf("local clone of 'gitlab-org/gitlab-test.git' not found in %q, did you run `make prepare-tests`?", path)
 	}

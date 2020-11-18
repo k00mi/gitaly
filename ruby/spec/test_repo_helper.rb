@@ -12,9 +12,9 @@ Gitlab.config.gitaly.test_global_ivar_override(:bin_dir, __dir__)
 DEFAULT_STORAGE_DIR = File.expand_path('../tmp/repositories', __dir__)
 DEFAULT_STORAGE_NAME = 'default'.freeze
 TEST_REPO_PATH = File.join(DEFAULT_STORAGE_DIR, 'gitlab-test.git')
-TEST_REPO_ORIGIN = '../internal/testhelper/testdata/data/gitlab-test.git'.freeze
+TEST_REPO_ORIGIN = '../_build/testrepos/gitlab-test.git'.freeze
 GIT_TEST_REPO_PATH = File.join(DEFAULT_STORAGE_DIR, 'gitlab-git-test.git')
-GIT_TEST_REPO_ORIGIN = '../internal/testhelper/testdata/data/gitlab-git-test.git'.freeze
+GIT_TEST_REPO_ORIGIN = '../_build/testrepos/gitlab-git-test.git'.freeze
 
 module TestRepo
   def self.prepare_test_repository
