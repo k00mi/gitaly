@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -176,9 +175,12 @@ func TestNewProtoRegistry(t *testing.T) {
 	for serviceName, methods := range expectedResults {
 		for methodName, opType := range methods {
 			method := fmt.Sprintf("/gitaly.%s/%s", serviceName, methodName)
+
 			methodInfo, err := r.LookupMethod(method)
 			require.NoError(t, err)
-			assert.Equalf(t, opType, methodInfo.Operation, "expect %s:%s to have the correct op type", serviceName, methodName)
+
+			require.Equalf(t, opType, methodInfo.Operation, "expect %s:%s to have the correct op type", serviceName, methodName)
+			require.Equal(t, method, methodInfo.FullMethodName())
 			require.False(t, r.IsInterceptedMethod(method), method)
 		}
 	}
