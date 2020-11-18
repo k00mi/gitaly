@@ -39,7 +39,12 @@ func TestConnectivity(t *testing.T) {
 
 	socketPath := testhelper.GetTemporaryGitalySocketFileName()
 
-	relativeSocketPath := "testdata/gitaly.socket"
+	tempDir, cleanup := testhelper.TempDir(t)
+	defer cleanup()
+
+	relativeSocketPath, err := filepath.Rel(cwd, filepath.Join(tempDir, "gitaly.socket"))
+	require.NoError(t, err)
+
 	require.NoError(t, os.RemoveAll(relativeSocketPath))
 	require.NoError(t, os.Symlink(socketPath, relativeSocketPath))
 
