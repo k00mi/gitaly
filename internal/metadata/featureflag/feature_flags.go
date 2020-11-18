@@ -28,8 +28,8 @@ var (
 	GoUserCreateBranch = FeatureFlag{Name: "go_user_create_branch", OnByDefault: false}
 	// GoUserDeleteBranch enables the Go implementation of UserDeleteBranch
 	GoUserDeleteBranch = FeatureFlag{Name: "go_user_delete_branch", OnByDefault: false}
-	// GoUserSquash enables the Go implementation of UserSquash
-	GoUserSquash = FeatureFlag{Name: "go_user_squash", OnByDefault: true}
+	// GoUserSquash enable the Go implementation of UserSquash
+	GoUserSquash = FeatureFlag{Name: "go_user_squash", OnByDefault: false}
 	// GoListConflictFiles enables the Go implementation of ListConflictFiles
 	GoListConflictFiles = FeatureFlag{Name: "go_list_conflict_files", OnByDefault: true}
 	// GoUserCommitFiles enables the Go implementation of UserCommitFiles
