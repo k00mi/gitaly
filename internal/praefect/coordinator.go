@@ -28,19 +28,31 @@ import (
 // if the primary does not have the latest changes.
 var ErrRepositoryReadOnly = helper.ErrPreconditionFailedf("repository is in read-only mode")
 
-var transactionRPCs = map[string]interface{}{
-	"/gitaly.OperationService/UserCreateBranch": nil,
-	"/gitaly.OperationService/UserCreateTag":    nil,
-	"/gitaly.OperationService/UserDeleteBranch": nil,
-	"/gitaly.OperationService/UserDeleteTag":    nil,
-	"/gitaly.OperationService/UserUpdateBranch": nil,
-	"/gitaly.SSHService/SSHReceivePack":         nil,
-	"/gitaly.SmartHTTPService/PostReceivePack":  nil,
+type transactionsCondition func(context.Context) bool
+
+func transactionsEnabled(context.Context) bool  { return true }
+func transactionsDisabled(context.Context) bool { return false }
+
+// transactionRPCs contains the list of repository-scoped mutating calls which may take part in
+// transactions. An optional feature flag can be added to conditionally enable transactional
+// behaviour. If none is given, it's always enabled.
+var transactionRPCs = map[string]transactionsCondition{
+	"/gitaly.OperationService/UserCreateBranch": transactionsEnabled,
+	"/gitaly.OperationService/UserCreateTag":    transactionsEnabled,
+	"/gitaly.OperationService/UserDeleteBranch": transactionsEnabled,
+	"/gitaly.OperationService/UserDeleteTag":    transactionsEnabled,
+	"/gitaly.OperationService/UserUpdateBranch": transactionsEnabled,
+	"/gitaly.SSHService/SSHReceivePack":         transactionsEnabled,
+	"/gitaly.SmartHTTPService/PostReceivePack":  transactionsEnabled,
 }
 
 func shouldUseTransaction(ctx context.Context, method string) bool {
-	_, ok := transactionRPCs[method]
-	return ok
+	condition, ok := transactionRPCs[method]
+	if !ok {
+		return false
+	}
+
+	return condition(ctx)
 }
 
 // getReplicationDetails determines the type of job and additional details based on the method name and incoming message
