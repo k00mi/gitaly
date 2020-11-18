@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strconv"
 	"testing"
 
@@ -49,8 +52,35 @@ func testUserCommitFiles(t *testing.T, ctx context.Context) {
 		ExecutableMode = "100755"
 	)
 
+	// Multiple locations in the call path depend on the global configuration.
+	// This creates a clean directory in the test storage. We then recreate the
+	// repository there on every test run. This allows us to use deterministic
+	// paths in the tests.
+	storageRoot, err := ioutil.TempDir(testhelper.GitlabTestStoragePath(), "")
+	require.NoError(t, err)
+	defer os.RemoveAll(storageRoot)
+
+	const storageName = "default"
+	relativePath, err := filepath.Rel(testhelper.GitlabTestStoragePath(), filepath.Join(storageRoot, "test-repository"))
+	require.NoError(t, err)
+
+	repoPath := filepath.Join(testhelper.GitlabTestStoragePath(), relativePath)
+
+	serverSocketPath, stop := runOperationServiceServer(t)
+	defer stop()
+
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	for key, values := range testhelper.GitalyServersMetadata(t, serverSocketPath) {
+		for _, value := range values {
+			ctx = metadata.AppendToOutgoingContext(ctx, key, value)
+		}
+	}
+
 	type step struct {
 		actions       []*gitalypb.UserCommitFilesRequest
+		changeHeader  func(*gitalypb.UserCommitFilesRequest)
 		error         error
 		indexError    string
 		repoCreated   bool
@@ -733,16 +763,32 @@ func testUserCommitFiles(t *testing.T, ctx context.Context) {
 				},
 			},
 		},
+		{
+			desc: "start repository refers to target repository",
+			steps: []step{
+				{
+					actions: []*gitalypb.UserCommitFilesRequest{
+						createFileHeaderRequest("file-1"),
+						actionContentRequest("content-1"),
+					},
+					changeHeader: func(header *gitalypb.UserCommitFilesRequest) {
+						setStartRepository(header, &gitalypb.Repository{
+							StorageName:  storageName,
+							RelativePath: relativePath,
+						})
+					},
+					branchCreated: true,
+					repoCreated:   true,
+					treeEntries: []testhelper.TreeEntry{
+						{Mode: DefaultMode, Path: "file-1", Content: "content-1"},
+					},
+				},
+			},
+		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
-			repo, repoPath, clean := testhelper.InitBareRepo(t)
-			defer clean()
-
-			serverSocketPath, stop := runOperationServiceServer(t)
-			defer stop()
-
-			client, conn := newOperationClient(t, serverSocketPath)
-			defer conn.Close()
+			defer os.RemoveAll(repoPath)
+			testhelper.MustRunCommand(t, nil, "git", "init", "--bare", repoPath)
 
 			const branch = "master"
 
@@ -750,8 +796,16 @@ func testUserCommitFiles(t *testing.T, ctx context.Context) {
 				stream, err := client.UserCommitFiles(ctx)
 				require.NoError(t, err)
 
-				headerRequest := headerRequest(repo, testhelper.TestUser, branch, []byte("commit message"))
+				headerRequest := headerRequest(&gitalypb.Repository{
+					StorageName:  storageName,
+					RelativePath: relativePath,
+				}, testhelper.TestUser, branch, []byte("commit message"))
 				setAuthorAndEmail(headerRequest, []byte("Author Name"), []byte("author.email@example.com"))
+
+				if step.changeHeader != nil {
+					step.changeHeader(headerRequest)
+				}
+
 				require.NoError(t, stream.Send(headerRequest))
 
 				for j, action := range step.actions {
