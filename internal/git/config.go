@@ -31,22 +31,6 @@ type Config interface {
 	Unset(ctx context.Context, name string, opts ConfigUnsetOpts) error
 }
 
-// UnimplementedConfig satisfies the Config interface and used by UnimplementedRepo to reduce friction in
-// writing new Repository implementations
-type UnimplementedConfig struct{}
-
-func (UnimplementedConfig) Add(context.Context, string, string, ConfigAddOpts) error {
-	return ErrUnimplemented
-}
-
-func (UnimplementedConfig) GetRegexp(context.Context, string, ConfigGetRegexpOpts) ([]ConfigPair, error) {
-	return nil, ErrUnimplemented
-}
-
-func (UnimplementedConfig) Unset(context.Context, string, ConfigUnsetOpts) error {
-	return ErrUnimplemented
-}
-
 // RepositoryConfig provides functionality of the 'config' git sub-command.
 type RepositoryConfig struct {
 	repo repository.GitRepo

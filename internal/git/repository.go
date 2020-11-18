@@ -89,7 +89,7 @@ func (opts FetchOpts) buildFlags() []Option {
 	return flags
 }
 
-// Repository represents a Git repository.
+// Repository is the common interface of different repository implementations.
 type Repository interface {
 	// ResolveRef resolves the given refish to its object ID. This uses the
 	// typical DWIM mechanism of Git to resolve the reference. See
@@ -97,119 +97,16 @@ type Repository interface {
 	// object ID exists. To do so, you can peel the reference to a given
 	// object type, e.g. by passing `refs/heads/master^{commit}`.
 	ResolveRefish(ctx context.Context, ref string) (string, error)
-
-	// ContainsRef checks if a ref in the repository exists. This will not
-	// verify whether the target object exists. To do so, you can peel the
-	// reference to a given object type, e.g. by passing
-	// `refs/heads/master^{commit}`.
-	ContainsRef(ctx context.Context, ref string) (bool, error)
-
-	// GetReference looks up and returns the given reference. Returns a
-	// ReferenceNotFound error if the reference was not found.
-	GetReference(ctx context.Context, ref string) (Reference, error)
-
-	// GetReferences returns references matching the given pattern.
-	GetReferences(ctx context.Context, pattern string) ([]Reference, error)
-
-	// GetBranch looks up and returns the given branch. Returns a
-	// ErrReferenceNotFound if it wasn't found.
-	GetBranch(ctx context.Context, branch string) (Reference, error)
-
-	// GetBranches returns all branches.
-	GetBranches(ctx context.Context) ([]Reference, error)
-
-	// UpdateRef updates reference from oldrev to newrev. If oldrev is a
-	// non-empty string, the update will fail it the reference is not
-	// currently at that revision. If newrev is the zero OID, the reference
-	// will be deleted. If oldrev is the zero OID, the reference will
-	// created.
-	UpdateRef(ctx context.Context, reference, newrev, oldrev string) error
-
-	// WriteBlob writes a blob to the repository's object database and
-	// returns its object ID. Path is used by git to decide which filters to
-	// run on the content.
-	WriteBlob(ctx context.Context, path string, content io.Reader) (string, error)
-
-	// ReadObject reads an object from the repository's object database. InvalidObjectError
-	// is returned if the oid does not refer to a valid object.
-	ReadObject(ctx context.Context, oid string) ([]byte, error)
-
-	// FetchRemote fetches changes from the specified remote.
-	FetchRemote(ctx context.Context, remoteName string, opts FetchOpts) error
-
-	// Config returns executor of the 'config' sub-command.
-	Config() Config
-
-	// Remote returns executor of the 'remote' sub-command.
-	Remote() Remote
 }
 
-// ErrUnimplemented indicates the repository abstraction does not yet implement
-// a specific behavior
-var ErrUnimplemented = errors.New("behavior not implemented yet")
-
-// UnimplementedRepo satisfies the Repository interface to reduce friction in
-// writing new Repository implementations
-type UnimplementedRepo struct{}
-
-func (UnimplementedRepo) ResolveRefish(ctx context.Context, ref string) (string, error) {
-	return "", ErrUnimplemented
-}
-
-func (UnimplementedRepo) ContainsRef(ctx context.Context, ref string) (bool, error) {
-	return false, ErrUnimplemented
-}
-
-func (UnimplementedRepo) GetReference(ctx context.Context, ref string) (Reference, error) {
-	return Reference{}, ErrUnimplemented
-}
-
-func (UnimplementedRepo) GetReferences(ctx context.Context, pattern string) ([]Reference, error) {
-	return nil, ErrUnimplemented
-}
-
-func (UnimplementedRepo) GetBranch(ctx context.Context, branch string) (Reference, error) {
-	return Reference{}, ErrUnimplemented
-}
-
-func (UnimplementedRepo) GetBranches(ctx context.Context) ([]Reference, error) {
-	return nil, ErrUnimplemented
-}
-
-func (UnimplementedRepo) UpdateRef(ctx context.Context, reference, newrev, oldrev string) error {
-	return ErrUnimplemented
-}
-
-func (UnimplementedRepo) WriteBlob(context.Context, string, io.Reader) (string, error) {
-	return "", ErrUnimplemented
-}
-
-func (UnimplementedRepo) ReadObject(context.Context, string) ([]byte, error) {
-	return nil, ErrUnimplemented
-}
-
-func (UnimplementedRepo) FetchRemote(context.Context, string, FetchOpts) error {
-	return ErrUnimplemented
-}
-
-func (UnimplementedRepo) Remote() Remote {
-	return UnimplementedRemote{}
-}
-
-func (UnimplementedRepo) Config() Config {
-	return UnimplementedConfig{}
-}
-
-var _ Repository = UnimplementedRepo{} // compile time assertion
-
-// localRepository represents a local Git repository.
-type localRepository struct {
+// LocalRepository represents a local Git repository.
+type LocalRepository struct {
 	repo repository.GitRepo
 }
 
 // NewRepository creates a new Repository from its protobuf representation.
-func NewRepository(repo repository.GitRepo) Repository {
-	return &localRepository{
+func NewRepository(repo repository.GitRepo) *LocalRepository {
+	return &LocalRepository{
 		repo: repo,
 	}
 }
@@ -217,11 +114,14 @@ func NewRepository(repo repository.GitRepo) Repository {
 // command creates a Git Command with the given args and Repository, executed
 // in the Repository. It validates the arguments in the command before
 // executing.
-func (repo *localRepository) command(ctx context.Context, globals []Option, cmd SubCmd, opts ...CmdOpt) (*command.Command, error) {
+func (repo *LocalRepository) command(ctx context.Context, globals []Option, cmd SubCmd, opts ...CmdOpt) (*command.Command, error) {
 	return SafeCmd(ctx, repo.repo, globals, cmd, opts...)
 }
 
-func (repo *localRepository) WriteBlob(ctx context.Context, path string, content io.Reader) (string, error) {
+// WriteBlob writes a blob to the repository's object database and
+// returns its object ID. Path is used by git to decide which filters to
+// run on the content.
+func (repo *LocalRepository) WriteBlob(ctx context.Context, path string, content io.Reader) (string, error) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 
@@ -248,7 +148,9 @@ func (repo *localRepository) WriteBlob(ctx context.Context, path string, content
 	return text.ChompBytes(stdout.Bytes()), nil
 }
 
-func (repo *localRepository) ReadObject(ctx context.Context, oid string) ([]byte, error) {
+// ReadObject reads an object from the repository's object database. InvalidObjectError
+// is returned if the oid does not refer to a valid object.
+func (repo *LocalRepository) ReadObject(ctx context.Context, oid string) ([]byte, error) {
 	const msgInvalidObject = "fatal: Not a valid object name "
 
 	stdout := &bytes.Buffer{}
@@ -278,7 +180,7 @@ func (repo *localRepository) ReadObject(ctx context.Context, oid string) ([]byte
 	return stdout.Bytes(), nil
 }
 
-func (repo *localRepository) ResolveRefish(ctx context.Context, refish string) (string, error) {
+func (repo *LocalRepository) ResolveRefish(ctx context.Context, refish string) (string, error) {
 	if refish == "" {
 		return "", errors.New("repository cannot contain empty reference name")
 	}
@@ -310,7 +212,11 @@ func (repo *localRepository) ResolveRefish(ctx context.Context, refish string) (
 	return oid, nil
 }
 
-func (repo *localRepository) ContainsRef(ctx context.Context, ref string) (bool, error) {
+// ContainsRef checks if a ref in the repository exists. This will not
+// verify whether the target object exists. To do so, you can peel the
+// reference to a given object type, e.g. by passing
+// `refs/heads/master^{commit}`.
+func (repo *LocalRepository) ContainsRef(ctx context.Context, ref string) (bool, error) {
 	if _, err := repo.ResolveRefish(ctx, ref); err != nil {
 		if errors.Is(err, ErrReferenceNotFound) {
 			return false, nil
@@ -320,7 +226,9 @@ func (repo *localRepository) ContainsRef(ctx context.Context, ref string) (bool,
 	return true, nil
 }
 
-func (repo *localRepository) GetReference(ctx context.Context, ref string) (Reference, error) {
+// GetReference looks up and returns the given reference. Returns a
+// ReferenceNotFound error if the reference was not found.
+func (repo *LocalRepository) GetReference(ctx context.Context, ref string) (Reference, error) {
 	refs, err := repo.GetReferences(ctx, ref)
 	if err != nil {
 		return Reference{}, err
@@ -333,7 +241,8 @@ func (repo *localRepository) GetReference(ctx context.Context, ref string) (Refe
 	return refs[0], nil
 }
 
-func (repo *localRepository) GetReferences(ctx context.Context, pattern string) ([]Reference, error) {
+// GetReferences returns references matching the given pattern.
+func (repo *LocalRepository) GetReferences(ctx context.Context, pattern string) ([]Reference, error) {
 	var args []string
 	if pattern != "" {
 		args = []string{pattern}
@@ -374,7 +283,9 @@ func (repo *localRepository) GetReferences(ctx context.Context, pattern string) 
 	return refs, nil
 }
 
-func (repo *localRepository) GetBranch(ctx context.Context, branch string) (Reference, error) {
+// GetBranch looks up and returns the given branch. Returns a
+// ErrReferenceNotFound if it wasn't found.
+func (repo *LocalRepository) GetBranch(ctx context.Context, branch string) (Reference, error) {
 	if strings.HasPrefix(branch, "refs/heads/") {
 		return repo.GetReference(ctx, branch)
 	}
@@ -385,11 +296,17 @@ func (repo *localRepository) GetBranch(ctx context.Context, branch string) (Refe
 	return repo.GetReference(ctx, "refs/heads/"+branch)
 }
 
-func (repo *localRepository) GetBranches(ctx context.Context) ([]Reference, error) {
+// GetBranches returns all branches.
+func (repo *LocalRepository) GetBranches(ctx context.Context) ([]Reference, error) {
 	return repo.GetReferences(ctx, "refs/heads/")
 }
 
-func (repo *localRepository) UpdateRef(ctx context.Context, reference, newrev, oldrev string) error {
+// UpdateRef updates reference from oldrev to newrev. If oldrev is a
+// non-empty string, the update will fail it the reference is not
+// currently at that revision. If newrev is the zero OID, the reference
+// will be deleted. If oldrev is the zero OID, the reference will
+// created.
+func (repo *LocalRepository) UpdateRef(ctx context.Context, reference, newrev, oldrev string) error {
 	cmd, err := repo.command(ctx, nil,
 		SubCmd{
 			Name:  "update-ref",
@@ -409,7 +326,8 @@ func (repo *localRepository) UpdateRef(ctx context.Context, reference, newrev, o
 	return nil
 }
 
-func (repo *localRepository) FetchRemote(ctx context.Context, remoteName string, opts FetchOpts) error {
+// FetchRemote fetches changes from the specified remote.
+func (repo *LocalRepository) FetchRemote(ctx context.Context, remoteName string, opts FetchOpts) error {
 	if err := validateNotBlank(remoteName, "remoteName"); err != nil {
 		return err
 	}
@@ -430,11 +348,13 @@ func (repo *localRepository) FetchRemote(ctx context.Context, remoteName string,
 	return cmd.Wait()
 }
 
-func (repo *localRepository) Config() Config {
+// Config returns executor of the 'config' sub-command.
+func (repo *LocalRepository) Config() Config {
 	return RepositoryConfig{repo: repo.repo}
 }
 
-func (repo *localRepository) Remote() Remote {
+// Remote returns executor of the 'remote' sub-command.
+func (repo *LocalRepository) Remote() Remote {
 	return RepositoryRemote{repo: repo.repo}
 }
 
