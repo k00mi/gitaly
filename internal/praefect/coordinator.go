@@ -28,6 +28,21 @@ import (
 // if the primary does not have the latest changes.
 var ErrRepositoryReadOnly = helper.ErrPreconditionFailedf("repository is in read-only mode")
 
+var transactionRPCs = map[string]interface{}{
+	"/gitaly.OperationService/UserCreateBranch": nil,
+	"/gitaly.OperationService/UserCreateTag":    nil,
+	"/gitaly.OperationService/UserDeleteBranch": nil,
+	"/gitaly.OperationService/UserDeleteTag":    nil,
+	"/gitaly.OperationService/UserUpdateBranch": nil,
+	"/gitaly.SSHService/SSHReceivePack":         nil,
+	"/gitaly.SmartHTTPService/PostReceivePack":  nil,
+}
+
+func shouldUseTransaction(ctx context.Context, method string) bool {
+	_, ok := transactionRPCs[method]
+	return ok
+}
+
 // getReplicationDetails determines the type of job and additional details based on the method name and incoming message
 func getReplicationDetails(methodName string, m proto.Message) (datastore.ChangeType, datastore.Params, error) {
 	switch methodName {
@@ -189,21 +204,6 @@ func (c *Coordinator) accessorStreamParameters(ctx context.Context, call grpcCal
 		Conn: node.Connection,
 		Msg:  b,
 	}, nil, nil, nil), nil
-}
-
-var transactionRPCs = map[string]interface{}{
-	"/gitaly.OperationService/UserCreateBranch": nil,
-	"/gitaly.OperationService/UserCreateTag":    nil,
-	"/gitaly.OperationService/UserDeleteBranch": nil,
-	"/gitaly.OperationService/UserDeleteTag":    nil,
-	"/gitaly.OperationService/UserUpdateBranch": nil,
-	"/gitaly.SSHService/SSHReceivePack":         nil,
-	"/gitaly.SmartHTTPService/PostReceivePack":  nil,
-}
-
-func shouldUseTransaction(ctx context.Context, method string) bool {
-	_, ok := transactionRPCs[method]
-	return ok
 }
 
 func (c *Coordinator) registerTransaction(ctx context.Context, primary RouterNode, secondaries []RouterNode) (*transactions.Transaction, transactions.CancelFunc, error) {
