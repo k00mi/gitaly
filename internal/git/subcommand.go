@@ -11,6 +11,7 @@ const (
 	scMultiPackIndex = "multi-pack-index"
 	scRepack         = "repack"
 	scDiff           = "diff"
+	scDiffTree       = "diff-tree"
 	scPackRefs       = "pack-refs"
 	scMergeBase      = "merge-base"
 	scHashObject     = "hash-object"
@@ -35,6 +36,7 @@ var knownReadOnlyCmds = map[string]struct{}{
 	scRevParse:      struct{}{},
 	scCountObjects:  struct{}{},
 	scDiff:          struct{}{},
+	scDiffTree:      struct{}{},
 	scMergeBase:     struct{}{},
 	scShowRef:       struct{}{},
 	scUploadPack:    struct{}{},

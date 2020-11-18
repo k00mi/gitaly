@@ -21,6 +21,8 @@ module Gitaly
       rpc :RawDiff, Gitaly::RawDiffRequest, stream(Gitaly::RawDiffResponse)
       rpc :RawPatch, Gitaly::RawPatchRequest, stream(Gitaly::RawPatchResponse)
       rpc :DiffStats, Gitaly::DiffStatsRequest, stream(Gitaly::DiffStatsResponse)
+      # Return a list of files changed along with the status of each file
+      rpc :FindChangedPaths, Gitaly::FindChangedPathsRequest, stream(Gitaly::FindChangedPathsResponse)
     end
 
     Stub = Service.rpc_stub_class

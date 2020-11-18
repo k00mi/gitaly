@@ -35,6 +35,12 @@ service DiffService {
       op: ACCESSOR
     };
   }
+  // Return a list of files changed along with the status of each file
+  rpc FindChangedPaths(FindChangedPathsRequest) returns (stream FindChangedPathsResponse) {
+    option (op_type) = {
+      op: ACCESSOR
+    };
+  }
 }
 
 message CommitDiffRequest {
@@ -143,3 +149,31 @@ message DiffStats {
 message DiffStatsResponse {
   repeated DiffStats stats = 1;
 }
+
+// Given a list of commits, return the files changed. Each commit is compared
+// to its parent. Merge commits will show files which are different to all of
+// its parents.
+message FindChangedPathsRequest {
+  Repository repository = 1 [(target_repository)=true];
+  repeated string commits = 2;
+}
+
+// Returns a list of files that have been changed in the commits given
+message FindChangedPathsResponse {
+  repeated ChangedPaths paths = 1;
+}
+
+// Includes the path of the file, and the status of the change
+message ChangedPaths {
+  enum Status {
+    ADDED = 0;
+    MODIFIED = 1;
+    DELETED = 2;
+    TYPE_CHANGE = 3;
+    COPIED = 4;
+  }
+
+  bytes path = 1;
+  Status status = 2;
+}
+
