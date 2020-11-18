@@ -11,7 +11,6 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	"github.com/sirupsen/logrus"
-	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/remoterepo"
 	"gitlab.com/gitlab-org/gitaly/internal/git2go"
@@ -323,7 +322,7 @@ func (s *server) userCommitFiles(ctx context.Context, header *gitalypb.UserCommi
 		return fmt.Errorf("commit: %w", err)
 	}
 
-	hasBranches, err := hasBranches(ctx, header.Repository)
+	hasBranches, err := localRepo.HasBranches(ctx)
 	if err != nil {
 		return fmt.Errorf("was repo created: %w", err)
 	}
@@ -440,30 +439,6 @@ func (s *server) fetchRemoteObject(ctx context.Context, local, remote *gitalypb.
 	}
 
 	return nil
-}
-
-func hasBranches(ctx context.Context, repo *gitalypb.Repository) (bool, error) {
-	stderr := &bytes.Buffer{}
-	cmd, err := git.SafeCmd(ctx, repo, nil,
-		git.SubCmd{
-			Name:  "show-ref",
-			Flags: []git.Option{git.Flag{Name: "--heads"}, git.Flag{"--dereference"}},
-		},
-		git.WithStderr(stderr),
-	)
-	if err != nil {
-		return false, err
-	}
-
-	if err := cmd.Wait(); err != nil {
-		if status, ok := command.ExitStatus(err); ok && status == 1 {
-			return false, nil
-		}
-
-		return false, errorWithStderr(err, stderr)
-	}
-
-	return true, nil
 }
 
 func validateUserCommitFilesHeader(header *gitalypb.UserCommitFilesRequestHeader) error {
