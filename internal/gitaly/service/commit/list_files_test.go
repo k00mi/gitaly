@@ -85,6 +85,11 @@ func TestListFiles_success(t *testing.T) {
 			files:    defaultFiles,
 		},
 		{
+			desc:     "valid fully qualified branch",
+			revision: "refs/heads/test-do-not-touch",
+			files:    defaultFiles,
+		},
+		{
 			desc:     "missing object ID uses default branch",
 			revision: "",
 			files:    defaultFiles,
@@ -97,6 +102,11 @@ func TestListFiles_success(t *testing.T) {
 		{
 			desc:     "invalid branch",
 			revision: "non/existing",
+			files:    [][]byte{},
+		},
+		{
+			desc:     "nonexisting fully qualified branch",
+			revision: "refs/heads/foobar",
 			files:    [][]byte{},
 		},
 	}
@@ -124,6 +134,86 @@ func TestListFiles_success(t *testing.T) {
 			}
 
 			require.ElementsMatch(t, files, tc.files)
+		})
+	}
+}
+
+func TestListFiles_unbornBranch(t *testing.T) {
+	server, serverSocketPath := startTestServices(t)
+	defer server.Stop()
+
+	client, conn := newCommitServiceClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, _, cleanupFn := testhelper.InitBareRepo(t)
+	defer cleanupFn()
+
+	tests := []struct {
+		desc     string
+		revision string
+		code     codes.Code
+	}{
+		{
+			desc:     "HEAD",
+			revision: "HEAD",
+		},
+		{
+			desc:     "unborn branch",
+			revision: "refs/heads/master",
+		},
+		{
+			desc:     "nonexisting branch",
+			revision: "i-dont-exist",
+		},
+		{
+			desc:     "nonexisting fully qualified branch",
+			revision: "refs/heads/i-dont-exist",
+		},
+		{
+			desc:     "missing revision without default branch",
+			revision: "",
+			code:     codes.FailedPrecondition,
+		},
+		{
+			desc:     "valid object ID",
+			revision: "54fcc214b94e78d7a41a9a8fe6d87a5e59500e51",
+		},
+		{
+			desc:     "invalid object ID",
+			revision: "1234123412341234",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			rpcRequest := gitalypb.ListFilesRequest{
+				Repository: testRepo, Revision: []byte(tc.revision),
+			}
+
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			c, err := client.ListFiles(ctx, &rpcRequest)
+			require.NoError(t, err)
+
+			var files [][]byte
+			for {
+				var resp *gitalypb.ListFilesResponse
+				resp, err = c.Recv()
+				if err != nil {
+					break
+				}
+
+				require.NoError(t, err)
+				files = append(files, resp.GetPaths()...)
+			}
+
+			if tc.code != codes.OK {
+				testhelper.RequireGrpcError(t, err, tc.code)
+			} else {
+				require.Equal(t, err, io.EOF)
+			}
+			require.Empty(t, files)
 		})
 	}
 }

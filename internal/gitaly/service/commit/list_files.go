@@ -13,6 +13,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/helper/chunk"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func (s *server) ListFiles(in *gitalypb.ListFilesRequest, stream gitalypb.CommitService_ListFilesServer) error {
@@ -34,6 +35,10 @@ func (s *server) ListFiles(in *gitalypb.ListFilesRequest, stream gitalypb.Commit
 		defaultBranch, err := defaultBranchName(stream.Context(), repo)
 		if err != nil {
 			return helper.DecorateError(codes.NotFound, fmt.Errorf("revision not found %q", revision))
+		}
+
+		if len(defaultBranch) == 0 {
+			return status.Errorf(codes.FailedPrecondition, "repository does not have a default branch")
 		}
 
 		revision = string(defaultBranch)
