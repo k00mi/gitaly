@@ -230,7 +230,7 @@ func (s *server) getRefspecs(refmaps []string) []string {
 	return refspecs
 }
 
-func (s *server) setRemote(ctx context.Context, repo git.Repository, name, url string) error {
+func (s *server) setRemote(ctx context.Context, repo *git.LocalRepository, name, url string) error {
 	if err := repo.Remote().Remove(ctx, name); err != nil {
 		if err != git.ErrNotFound {
 			return fmt.Errorf("remove remote: %w", err)
@@ -244,7 +244,7 @@ func (s *server) setRemote(ctx context.Context, repo git.Repository, name, url s
 	return nil
 }
 
-func (s *server) removeRemote(ctx context.Context, repo git.Repository, name string) error {
+func (s *server) removeRemote(ctx context.Context, repo *git.LocalRepository, name string) error {
 	if err := repo.Remote().Remove(ctx, name); err != nil {
 		if err != git.ErrNotFound {
 			return fmt.Errorf("remove remote: %w", err)
