@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os/exec"
 	"strings"
 
@@ -287,7 +288,7 @@ func (repo *localRepository) ResolveRefish(ctx context.Context, refish string) (
 		Name:  "rev-parse",
 		Flags: []Option{Flag{Name: "--verify"}},
 		Args:  []string{refish},
-	})
+	}, WithStderr(ioutil.Discard))
 	if err != nil {
 		return "", err
 	}

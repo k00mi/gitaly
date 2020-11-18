@@ -1,0 +1,5 @@
+---
+title: Discard git-rev-parse error messages in
+merge_request: 2809
+author:
+type: fixed
