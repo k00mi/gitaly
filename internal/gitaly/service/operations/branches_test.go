@@ -518,3 +518,76 @@ func testFailedUserDeleteBranchDueToHooks(t *testing.T, ctx context.Context) {
 		})
 	}
 }
+
+func TestBranchHookOutput(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserCreateBranch, testBranchHookOutput)
+}
+
+func testBranchHookOutput(t *testing.T, ctx context.Context) {
+	serverSocketPath, stop := runOperationServiceServer(t)
+	defer stop()
+
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	testCases := []struct {
+		desc        string
+		hookContent string
+		output      string
+	}{
+		{
+			desc:        "empty stdout and empty stderr",
+			hookContent: "#!/bin/sh\nexit 1",
+			output:      "",
+		},
+		{
+			desc:        "empty stdout and some stderr",
+			hookContent: "#!/bin/sh\necho stderr >&2\nexit 1",
+			output:      "stderr\n",
+		},
+		{
+			desc:        "some stdout and empty stderr",
+			hookContent: "#!/bin/sh\necho stdout\nexit 1",
+			output:      "stdout\n",
+		},
+		{
+			desc:        "some stdout and some stderr",
+			hookContent: "#!/bin/sh\necho stdout\necho stderr >&2\nexit 1",
+			output:      "stderr\n",
+		},
+		{
+			desc:        "whitespace stdout and some stderr",
+			hookContent: "#!/bin/sh\necho '   '\necho stderr >&2\nexit 1",
+			output:      "stderr\n",
+		},
+		{
+			desc:        "some stdout and whitespace stderr",
+			hookContent: "#!/bin/sh\necho stdout\necho '   ' >&2\nexit 1",
+			output:      "stdout\n",
+		},
+	}
+
+	for _, hookName := range gitlabPreHooks {
+		for _, testCase := range testCases {
+			t.Run(hookName+"/"+testCase.desc, func(t *testing.T) {
+				request := &gitalypb.UserCreateBranchRequest{
+					Repository: testRepo,
+					BranchName: []byte("some-branch"),
+					StartPoint: []byte("master"),
+					User:       testhelper.TestUser,
+				}
+
+				remove, err := testhelper.WriteCustomHook(testRepoPath, hookName, []byte(testCase.hookContent))
+				require.NoError(t, err)
+				defer remove()
+
+				response, err := client.UserCreateBranch(ctx, request)
+				require.NoError(t, err)
+				require.Equal(t, testCase.output, response.PreReceiveError)
+			})
+		}
+	}
+}
