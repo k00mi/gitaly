@@ -98,14 +98,6 @@ func testSuccessfulCreateBranchRequest(t *testing.T, ctx context.Context) {
 	}
 }
 
-func TestSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T) {
-	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
-		featureflag.GoUserCreateBranch,
-	}).Run(t, func(t *testing.T, ctx context.Context) {
-		testSuccessfulGitHooksForUserCreateBranchRequest(t, ctx)
-	})
-}
-
 func TestUserCreateBranchWithTransaction(t *testing.T) {
 	t.Run("with reftx hook", func(t *testing.T) {
 		testUserCreateBranchWithTransaction(t, true)
@@ -217,6 +209,10 @@ func testUserCreateBranchWithTransaction(t *testing.T, withRefTxHook bool) {
 			}
 		})
 	}
+}
+
+func TestSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserCreateBranch, testSuccessfulGitHooksForUserCreateBranchRequest)
 }
 
 func testSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T, ctx context.Context) {
@@ -357,36 +353,36 @@ func testFailedUserCreateBranchRequest(t *testing.T, ctx context.Context) {
 }
 
 func TestSuccessfulUserDeleteBranchRequest(t *testing.T) {
-	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
-		featureflag.GoUserDeleteBranch,
-	}).Run(t, func(t *testing.T, ctx context.Context) {
-		testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
-		defer cleanupFn()
+	testWithFeature(t, featureflag.GoUserDeleteBranch, testSuccessfulUserDeleteBranchRequest)
+}
 
-		serverSocketPath, stop := runOperationServiceServer(t)
-		defer stop()
+func testSuccessfulUserDeleteBranchRequest(t *testing.T, ctx context.Context) {
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
-		client, conn := newOperationClient(t, serverSocketPath)
-		defer conn.Close()
+	serverSocketPath, stop := runOperationServiceServer(t)
+	defer stop()
 
-		branchNameInput := "to-be-deleted-soon-branch"
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
 
-		defer exec.Command(command.GitPath(), "-C", testRepoPath, "branch", "-d", branchNameInput).Run()
+	branchNameInput := "to-be-deleted-soon-branch"
 
-		testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", branchNameInput)
+	defer exec.Command(command.GitPath(), "-C", testRepoPath, "branch", "-d", branchNameInput).Run()
 
-		request := &gitalypb.UserDeleteBranchRequest{
-			Repository: testRepo,
-			BranchName: []byte(branchNameInput),
-			User:       testhelper.TestUser,
-		}
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", branchNameInput)
 
-		_, err := client.UserDeleteBranch(ctx, request)
-		require.NoError(t, err)
+	request := &gitalypb.UserDeleteBranchRequest{
+		Repository: testRepo,
+		BranchName: []byte(branchNameInput),
+		User:       testhelper.TestUser,
+	}
 
-		branches := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch")
-		require.NotContains(t, string(branches), branchNameInput, "branch name still exists in branches list")
-	})
+	_, err := client.UserDeleteBranch(ctx, request)
+	require.NoError(t, err)
+
+	branches := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch")
+	require.NotContains(t, string(branches), branchNameInput, "branch name still exists in branches list")
 }
 
 func TestSuccessfulGitHooksForUserDeleteBranchRequest(t *testing.T) {
@@ -428,6 +424,10 @@ func TestSuccessfulGitHooksForUserDeleteBranchRequest(t *testing.T) {
 }
 
 func TestFailedUserDeleteBranchDueToValidation(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserDeleteBranch, testFailedUserDeleteBranchDueToValidation)
+}
+
+func testFailedUserDeleteBranchDueToValidation(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -469,19 +469,19 @@ func TestFailedUserDeleteBranchDueToValidation(t *testing.T) {
 		},
 	}
 
-	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
-		featureflag.GoUserDeleteBranch,
-	}).Run(t, func(t *testing.T, ctx context.Context) {
-		for _, testCase := range testCases {
-			t.Run(testCase.desc, func(t *testing.T) {
-				_, err := client.UserDeleteBranch(ctx, testCase.request)
-				testhelper.RequireGrpcError(t, err, testCase.code)
-			})
-		}
-	})
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			_, err := client.UserDeleteBranch(ctx, testCase.request)
+			testhelper.RequireGrpcError(t, err, testCase.code)
+		})
+	}
 }
 
 func TestFailedUserDeleteBranchDueToHooks(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserDeleteBranch, testFailedUserDeleteBranchDueToHooks)
+}
+
+func testFailedUserDeleteBranchDueToHooks(t *testing.T, ctx context.Context) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
@@ -503,22 +503,18 @@ func TestFailedUserDeleteBranchDueToHooks(t *testing.T) {
 
 	hookContent := []byte("#!/bin/sh\necho GL_ID=$GL_ID\nexit 1")
 
-	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
-		featureflag.GoUserDeleteBranch,
-	}).Run(t, func(t *testing.T, ctx context.Context) {
-		for _, hookName := range gitlabPreHooks {
-			t.Run(hookName, func(t *testing.T) {
-				remove, err := testhelper.WriteCustomHook(testRepoPath, hookName, hookContent)
-				require.NoError(t, err)
-				defer remove()
+	for _, hookName := range gitlabPreHooks {
+		t.Run(hookName, func(t *testing.T) {
+			remove, err := testhelper.WriteCustomHook(testRepoPath, hookName, hookContent)
+			require.NoError(t, err)
+			defer remove()
 
-				response, err := client.UserDeleteBranch(ctx, request)
-				require.NoError(t, err)
-				require.Contains(t, response.PreReceiveError, "GL_ID="+testhelper.TestUser.GlId)
+			response, err := client.UserDeleteBranch(ctx, request)
+			require.NoError(t, err)
+			require.Contains(t, response.PreReceiveError, "GL_ID="+testhelper.TestUser.GlId)
 
-				branches := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch")
-				require.Contains(t, string(branches), branchNameInput, "branch name does not exist in branches list")
-			})
-		}
-	})
+			branches := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch")
+			require.Contains(t, string(branches), branchNameInput, "branch name does not exist in branches list")
+		})
+	}
 }
