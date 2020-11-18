@@ -7,30 +7,36 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 )
 
 // CaptureHookEnv creates a bogus 'update' Git hook to sniff out what
 // environment variables get set for hooks.
-func CaptureHookEnv(t testing.TB) (hookPath string, cleanup func()) {
-	var err error
+func CaptureHookEnv(t testing.TB) (string, func()) {
+	tempDir, cleanup := TempDir(t)
+
 	oldOverride := hooks.Override
-	hooks.Override, err = filepath.Abs("testdata/scratch/hooks")
-	require.NoError(t, err)
+	hooks.Override = filepath.Join(tempDir, "hooks")
+	hookOutputFile := filepath.Join(tempDir, "hook.env")
 
-	hookOutputFile, err := filepath.Abs("testdata/scratch/hook.env")
-	require.NoError(t, err)
+	if !assert.NoError(t, os.MkdirAll(hooks.Override, 0755)) {
+		cleanup()
+		t.FailNow()
+	}
 
-	require.NoError(t, os.RemoveAll(hookOutputFile))
-
-	require.NoError(t, os.MkdirAll(hooks.Override, 0755))
-	require.NoError(t, ioutil.WriteFile(filepath.Join(hooks.Override, "update"), []byte(`
+	script := []byte(`
 #!/bin/sh
-env | grep -e ^GIT -e ^GL_ > `+hookOutputFile+"\n"), 0755))
+env | grep -e ^GIT -e ^GL_ > ` + hookOutputFile + "\n")
+
+	if !assert.NoError(t, ioutil.WriteFile(filepath.Join(hooks.Override, "update"), script, 0755)) {
+		cleanup()
+		t.FailNow()
+	}
 
 	return hookOutputFile, func() {
+		cleanup()
 		hooks.Override = oldOverride
 	}
 }
