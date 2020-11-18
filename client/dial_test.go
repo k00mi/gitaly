@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -51,8 +52,14 @@ func TestDial(t *testing.T) {
 
 	unixSocketAbsPath := connectionMap["unix"]
 
-	unixSocketRelPath := "testdata/gitaly.socket"
-	require.NoError(t, os.RemoveAll(unixSocketRelPath))
+	cwd, err := os.Getwd()
+	require.NoError(t, err)
+
+	tempDir, cleanup := testhelper.TempDir(t)
+	defer cleanup()
+
+	unixSocketRelPath, err := filepath.Rel(cwd, filepath.Join(tempDir, "gitaly.socket"))
+	require.NoError(t, err)
 	require.NoError(t, os.Symlink(unixSocketAbsPath, unixSocketRelPath))
 
 	tests := []struct {
