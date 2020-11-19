@@ -57,6 +57,16 @@ func TestPrintAlert(t *testing.T) {
 	}
 }
 
+func envWithout(envVars []string, value string) []string {
+	result := make([]string, 0, len(envVars))
+	for _, envVar := range envVars {
+		if !strings.HasPrefix(envVar, fmt.Sprintf("%s=", value)) {
+			result = append(result, envVar)
+		}
+	}
+	return result
+}
+
 func TestPostReceive_customHook(t *testing.T) {
 	repo, repoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
@@ -157,6 +167,16 @@ func TestPostReceive_customHook(t *testing.T) {
 			desc: "hook is not executed on secondary",
 			env:  append(standardEnv, secondaryEnv),
 			hook: "#!/bin/sh\necho foo\n",
+		},
+		{
+			desc:        "missing GL_ID causes error",
+			env:         envWithout(standardEnv, "GL_ID"),
+			expectedErr: "GL_ID not set",
+		},
+		{
+			desc:        "missing GL_REPOSITORY causes error",
+			env:         envWithout(standardEnv, "GL_REPOSITORY"),
+			expectedErr: "GL_REPOSITORY not set",
 		},
 	}
 

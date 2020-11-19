@@ -102,6 +102,21 @@ func TestPrereceive_customHooks(t *testing.T) {
 			env:  append(standardEnv, secondaryEnv),
 			hook: "#!/bin/sh\necho foo\n",
 		},
+		{
+			desc:        "missing GL_ID causes error",
+			env:         envWithout(standardEnv, "GL_ID"),
+			expectedErr: "GL_ID not set",
+		},
+		{
+			desc:        "missing GL_REPOSITORY causes error",
+			env:         envWithout(standardEnv, "GL_REPOSITORY"),
+			expectedErr: "GL_REPOSITORY not set",
+		},
+		{
+			desc:        "missing GL_PROTOCOL causes error",
+			env:         envWithout(standardEnv, "GL_PROTOCOL"),
+			expectedErr: "GL_PROTOCOL not set",
+		},
 	}
 
 	for _, tc := range testCases {

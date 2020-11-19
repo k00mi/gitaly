@@ -80,6 +80,15 @@ func (m *GitLabHookManager) preReceiveHook(ctx context.Context, repo *gitalypb.R
 	}
 
 	glID, glRepo, glProtocol := getEnvVar("GL_ID", env), getEnvVar("GL_REPOSITORY", env), getEnvVar("GL_PROTOCOL", env)
+	if glID == "" {
+		return helper.ErrInternalf("GL_ID not set")
+	}
+	if glRepo == "" {
+		return helper.ErrInternalf("GL_REPOSITORY not set")
+	}
+	if glProtocol == "" {
+		return helper.ErrInternalf("GL_PROTOCOL not set")
+	}
 
 	allowed, message, err := m.gitlabAPI.Allowed(ctx, repo, glRepo, glID, glProtocol, string(changes))
 	if err != nil {
