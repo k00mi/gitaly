@@ -25,7 +25,7 @@ type postReceiveRequest struct {
 // TestAllowedVerifyParams uses client cert fixtures to test TLS connections. To
 // regenerate these certs, run `go generate access_test.go`.
 //go:generate openssl req -newkey rsa:4096 -new -nodes -x509 -days 3650 -out testdata/certs/server.crt -keyout testdata/certs/server.key -subj "/C=US/ST=California/L=San Francisco/O=GitLab/OU=GitLab-Shell/CN=localhost" -addext "subjectAltName = IP:127.0.0.1"
-func TestAllowedVerifyParams(t *testing.T) {
+func TestAccess_verifyParams(t *testing.T) {
 	user, password := "user", "password"
 	secretToken := "topsecret"
 	glID, glRepository := "key-123", "repo-1"
@@ -120,7 +120,7 @@ func TestAllowedVerifyParams(t *testing.T) {
 	}
 }
 
-func TestEscapedAndRelativeURLs(t *testing.T) {
+func TestAccess_escapedAndRelativeURLs(t *testing.T) {
 	user, password := "user", "password"
 	secretToken := "topsecret"
 	glID, glRepository := "key-123", "repo-1"
@@ -216,7 +216,7 @@ func TestEscapedAndRelativeURLs(t *testing.T) {
 	}
 }
 
-func TestAllowedResponseHandling(t *testing.T) {
+func TestAccess_allowedResponseHandling(t *testing.T) {
 	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 
 	// set git quarantine directories
@@ -353,7 +353,7 @@ func TestAllowedResponseHandling(t *testing.T) {
 	}
 }
 
-func TestPrereceive(t *testing.T) {
+func TestAccess_preReceive(t *testing.T) {
 	tempDir, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 
@@ -439,7 +439,7 @@ func TestPrereceive(t *testing.T) {
 	}
 }
 
-func TestPostReceive(t *testing.T) {
+func TestAccess_postReceive(t *testing.T) {
 	tempDir, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 
