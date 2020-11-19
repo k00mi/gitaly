@@ -16,6 +16,9 @@ func TestSetHeadersBlocksUnknownMetadata(t *testing.T) {
 	otherValue := "test-value"
 	inCtx := metadata.NewIncomingContext(ctx, metadata.Pairs(otherKey, otherValue))
 
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
 	outCtx, err := SetHeaders(inCtx, testhelper.DefaultLocator(), testRepo)
 	require.NoError(t, err)
 
@@ -34,6 +37,9 @@ func TestSetHeadersPreservesAllowlistedMetadata(t *testing.T) {
 	value := "test-value"
 	inCtx := metadata.NewIncomingContext(ctx, metadata.Pairs(key, value))
 
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
 	outCtx, err := SetHeaders(inCtx, testhelper.DefaultLocator(), testRepo)
 	require.NoError(t, err)
 
@@ -50,6 +56,9 @@ func TestRubyFeatureHeaders(t *testing.T) {
 	key := "gitaly-feature-ruby-test-feature"
 	value := "true"
 	inCtx := metadata.NewIncomingContext(ctx, metadata.Pairs(key, value))
+
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
 
 	outCtx, err := SetHeaders(inCtx, testhelper.DefaultLocator(), testRepo)
 	require.NoError(t, err)

@@ -180,13 +180,22 @@ func TestGetArchiveWithLfsSuccess(t *testing.T) {
 		LfsBody:     lfsBody,
 	}
 
+	gitlabShellDir, cleanup := testhelper.TempDir(t)
+	defer cleanup()
+
+	defer func(cfg config.Cfg) {
+		config.Config = cfg
+	}(config.Config)
+
+	config.Config.GitlabShell.Dir = gitlabShellDir
+	config.Config.Gitlab.SecretFile = filepath.Join(config.Config.GitlabShell.Dir, ".gitlab_shell_secret")
+
 	url, cleanup := testhelper.SetupAndStartGitlabServer(t, &defaultOptions)
 	defer cleanup()
 
-	cfg := config.Config
-	cfg.Gitlab.URL = url
-	cfg.Gitlab.SecretFile = filepath.Join(cfg.GitlabShell.Dir, ".gitlab_shell_secret")
-	serverSocketPath, stop := runRepoServerWithConfig(t, cfg, config.NewLocator(cfg))
+	config.Config.Gitlab.URL = url
+
+	serverSocketPath, stop := runRepoServerWithConfig(t, config.Config, config.NewLocator(config.Config))
 	defer stop()
 
 	client, conn := newRepositoryClient(t, serverSocketPath)
@@ -429,9 +438,8 @@ func TestGetArchivePathInjection(t *testing.T) {
 	defer cancel()
 
 	// Adding a temp directory representing the .ssh directory
-	sshDirectory, err := ioutil.TempDir("", ".ssh")
-	require.NoError(t, err)
-	require.NoError(t, os.MkdirAll(sshDirectory, os.ModeDir|0755))
+	sshDirectory, cleanup := testhelper.TempDir(t)
+	defer cleanup()
 
 	// Adding an empty authorized_keys file
 	authorizedKeysPath := filepath.Join(sshDirectory, "authorized_keys")

@@ -15,6 +15,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
+	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -22,7 +23,10 @@ func TestInfo(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	c, err := New(ctx, testhelper.TestRepository())
+	testRepository, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	c, err := New(ctx, testRepository)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -55,7 +59,10 @@ func TestBlob(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	c, err := New(ctx, testhelper.TestRepository())
+	testRepository, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	c, err := New(ctx, testRepository)
 	require.NoError(t, err)
 
 	gitignoreBytes, err := ioutil.ReadFile("testdata/blob-dfaa3f97ca337e20154a98ac9d0be76ddd1fcc82")
@@ -119,7 +126,10 @@ func TestCommit(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	c, err := New(ctx, testhelper.TestRepository())
+	testRepository, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	c, err := New(ctx, testRepository)
 	require.NoError(t, err)
 
 	commitBytes, err := ioutil.ReadFile("testdata/commit-e63f41fe459e62e1228fcef60d7189127aeba95a")
@@ -154,7 +164,10 @@ func TestTag(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	c, err := New(ctx, testhelper.TestRepository())
+	testRepository, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	c, err := New(ctx, testRepository)
 	require.NoError(t, err)
 
 	tagBytes, err := ioutil.ReadFile("testdata/tag-a509fa67c27202a2bc9dd5e014b4af7e6063ac76")
@@ -218,7 +231,10 @@ func TestTree(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	c, err := New(ctx, testhelper.TestRepository())
+	testRepository, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	c, err := New(ctx, testRepository)
 	require.NoError(t, err)
 
 	treeBytes, err := ioutil.ReadFile("testdata/tree-7e2f26d033ee47cd0745649d1a28277c56197921")
@@ -282,7 +298,10 @@ func TestRepeatedCalls(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	c, err := New(ctx, testhelper.TestRepository())
+	testRepository, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	c, err := New(ctx, testRepository)
 	require.NoError(t, err)
 
 	treeOid := "7e2f26d033ee47cd0745649d1a28277c56197921"
@@ -344,8 +363,11 @@ func TestSpawnFailure(t *testing.T) {
 	ctx1, cancel1 := testhelper.Context()
 	defer cancel1()
 
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
 	injectSpawnErrors = false
-	_, err := catfileWithFreshSessionID(ctx1)
+	_, err := catfileWithFreshSessionID(ctx1, testRepo)
 	require.NoError(t, err, "catfile spawn should succeed in normal circumstances")
 	require.Equal(t, 2, numGitChildren(t), "there should be 2 git child processes")
 
@@ -373,7 +395,7 @@ func TestSpawnFailure(t *testing.T) {
 	defer cancel2()
 
 	injectSpawnErrors = true
-	_, err = catfileWithFreshSessionID(ctx2)
+	_, err = catfileWithFreshSessionID(ctx2, testRepo)
 	require.Error(t, err, "expect simulated error")
 	require.IsType(t, &simulatedBatchSpawnError{}, err)
 
@@ -384,7 +406,7 @@ func TestSpawnFailure(t *testing.T) {
 	)
 }
 
-func catfileWithFreshSessionID(ctx context.Context) (*Batch, error) {
+func catfileWithFreshSessionID(ctx context.Context, repo *gitalypb.Repository) (*Batch, error) {
 	id, err := text.RandomHex(4)
 	if err != nil {
 		return nil, err
@@ -394,7 +416,7 @@ func catfileWithFreshSessionID(ctx context.Context) (*Batch, error) {
 		SessionIDField: id,
 	})
 
-	return New(metadata.NewIncomingContext(ctx, md), testhelper.TestRepository())
+	return New(metadata.NewIncomingContext(ctx, md), repo)
 }
 
 func waitTrue(callback func() bool) bool {

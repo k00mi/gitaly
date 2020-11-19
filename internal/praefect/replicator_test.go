@@ -2,7 +2,6 @@ package praefect
 
 import (
 	"context"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -82,10 +81,9 @@ func testMain(m *testing.M) int {
 func TestReplMgr_ProcessBacklog(t *testing.T) {
 	backupStorageName := "backup"
 
-	backupDir, err := ioutil.TempDir(testhelper.GitlabTestStoragePath(), backupStorageName)
-	require.NoError(t, err)
+	backupDir, cleanup := testhelper.TempDir(t)
+	defer cleanup()
 
-	defer func() { os.RemoveAll(backupDir) }()
 	defer func(oldStorages []gitaly_config.Storage) { gitaly_config.Config.Storages = oldStorages }(gitaly_config.Config.Storages)
 
 	gitaly_config.Config.Storages = append(gitaly_config.Config.Storages,
@@ -537,9 +535,8 @@ func TestConfirmReplication(t *testing.T) {
 func TestProcessBacklog_FailedJobs(t *testing.T) {
 	backupStorageName := "backup"
 
-	backupDir, err := ioutil.TempDir(testhelper.GitlabTestStoragePath(), backupStorageName)
-	require.NoError(t, err)
-	defer os.RemoveAll(backupDir)
+	backupDir, cleanup := testhelper.TempDir(t)
+	defer cleanup()
 	defer func(oldStorages []gitaly_config.Storage) { gitaly_config.Config.Storages = oldStorages }(gitaly_config.Config.Storages)
 
 	gitaly_config.Config.Storages = append(gitaly_config.Config.Storages, gitaly_config.Storage{
@@ -668,9 +665,8 @@ func TestProcessBacklog_FailedJobs(t *testing.T) {
 func TestProcessBacklog_Success(t *testing.T) {
 	defer func(oldStorages []gitaly_config.Storage) { gitaly_config.Config.Storages = oldStorages }(gitaly_config.Config.Storages)
 
-	backupDir, err := ioutil.TempDir("", "")
-	require.NoError(t, err)
-	defer os.RemoveAll(backupDir)
+	backupDir, cleanup := testhelper.TempDir(t)
+	defer cleanup()
 
 	gitaly_config.Config.Storages = append(gitaly_config.Config.Storages, gitaly_config.Storage{
 		Name: "backup",
@@ -740,7 +736,7 @@ func TestProcessBacklog_Success(t *testing.T) {
 		},
 	}
 
-	_, err = queueInterceptor.Enqueue(ctx, eventType1)
+	_, err := queueInterceptor.Enqueue(ctx, eventType1)
 	require.NoError(t, err)
 
 	_, err = queueInterceptor.Enqueue(ctx, eventType1)

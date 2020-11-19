@@ -54,7 +54,8 @@ func TestSuccessfulInfoRefsUploadWithPartialClone(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	testRepo := testhelper.TestRepository()
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
 
 	request := &gitalypb.InfoRefsRequest{
 		Repository: testRepo,

@@ -1,7 +1,6 @@
 package git
 
 import (
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -27,9 +26,8 @@ func TestGitCommandProxy(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	dir, err := ioutil.TempDir("", "test-clone")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
+	dir, cleanup := testhelper.TempDir(t)
+	defer cleanup()
 
 	cmd, err := unsafeCmdWithoutRepo(ctx, CmdStream{}, "clone", "http://gitlab.com/bogus-repo", dir)
 	require.NoError(t, err)

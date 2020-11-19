@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -14,13 +13,7 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-const (
-	testPath     = "testdata/scratch"
-	testRepoRoot = testPath + "/data"
-)
-
 var (
-	testRepo      *gitalypb.Repository
 	gitalySSHPath string
 )
 
@@ -39,15 +32,6 @@ func testMain(m *testing.M) int {
 	defer cleanup()
 
 	config.Config.Ruby.Dir = filepath.Join("../../../ruby", "git-hooks")
-
-	err := os.RemoveAll(testPath)
-	if err != nil {
-		log.Error(err)
-		return 1
-	}
-
-	testRepo = testhelper.TestRepository()
-
 	testhelper.ConfigureGitalyHooksBinary()
 	testhelper.ConfigureGitalySSH()
 	gitalySSHPath = filepath.Join(config.Config.BinDir, "gitaly-ssh")

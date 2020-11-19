@@ -25,6 +25,9 @@ func TestFailedUploadArchiveRequestDueToTimeout(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
 	stream, err := client.SSHUploadArchive(ctx)
 	require.NoError(t, err)
 
@@ -103,6 +106,9 @@ func TestUploadArchiveSuccess(t *testing.T) {
 	defer stop()
 
 	cmd := exec.Command(command.GitPath(), "archive", "master", "--remote=git@localhost:test/test.git")
+
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
 
 	err := testArchive(t, serverSocketPath, testRepo, cmd)
 	require.NoError(t, err)

@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
 func TestCleanWalkDirNotExists(t *testing.T) {
@@ -19,9 +20,8 @@ func TestCleanWalkDirNotExists(t *testing.T) {
 }
 
 func TestCleanWalkEmptyDirs(t *testing.T) {
-	tmp, err := ioutil.TempDir("", t.Name())
-	require.NoError(t, err)
-	defer func() { require.NoError(t, os.RemoveAll(tmp)) }()
+	tmp, cleanup := testhelper.TempDir(t)
+	defer cleanup()
 
 	for _, tt := range []struct {
 		path  string

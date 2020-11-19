@@ -22,7 +22,8 @@ func TestSuccessfulRepositorySizeRequest(t *testing.T) {
 	client, conn := newRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
 
-	repo := testhelper.TestRepository()
+	repo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
 
 	request := &gitalypb.RepositorySizeRequest{Repository: repo}
 
@@ -76,7 +77,9 @@ func TestSuccessfulGetObjectDirectorySizeRequest(t *testing.T) {
 	client, conn := newRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
 
-	testRepo := testhelper.TestRepository()
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
 	testRepo.GitObjectDirectory = "objects/"
 
 	request := &gitalypb.GetObjectDirectorySizeRequest{

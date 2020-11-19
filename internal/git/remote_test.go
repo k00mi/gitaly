@@ -62,6 +62,11 @@ func TestRepositoryRemote_Add(t *testing.T) {
 	repo, repoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
+	_, remoteRepoPath, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "remote", "remove", "origin")
+
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
@@ -96,14 +101,12 @@ func TestRepositoryRemote_Add(t *testing.T) {
 	})
 
 	t.Run("fetch", func(t *testing.T) {
-		require.NoError(t, remote.Add(ctx, "first", testhelper.GitlabTestStoragePath()+"/gitlab-test.git", RemoteAddOpts{Fetch: true}))
+		require.NoError(t, remote.Add(ctx, "first", remoteRepoPath, RemoteAddOpts{Fetch: true}))
 
 		remotes := text.ChompBytes(testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "remote", "--verbose"))
 		require.Equal(t,
-			"first	"+testhelper.GitlabTestStoragePath()+"/gitlab-test.git (fetch)\n"+
-				"first	"+testhelper.GitlabTestStoragePath()+"/gitlab-test.git (push)\n"+
-				"origin	"+testhelper.GitlabTestStoragePath()+"/gitlab-test.git (fetch)\n"+
-				"origin	"+testhelper.GitlabTestStoragePath()+"/gitlab-test.git (push)",
+			"first	"+remoteRepoPath+" (fetch)\n"+
+				"first	"+remoteRepoPath+" (push)",
 			remotes,
 		)
 		latestSHA := text.ChompBytes(testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "rev-parse", "refs/remotes/first/master"))

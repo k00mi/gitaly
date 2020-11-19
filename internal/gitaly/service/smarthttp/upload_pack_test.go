@@ -38,8 +38,8 @@ func TestSuccessfulUploadPackRequest(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	testRepo := testhelper.TestRepository()
-	testRepoPath := filepath.Join(testhelper.GitlabTestStoragePath(), testRepo.RelativePath)
+	_, testRepoPath, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
 
 	storagePath := testhelper.GitlabTestStoragePath()
 	remoteRepoRelativePath := "gitlab-test-remote"
@@ -107,8 +107,8 @@ func TestUploadPackRequestWithGitConfigOptions(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	testRepo := testhelper.TestRepository()
-	testRepoPath := filepath.Join(testhelper.GitlabTestStoragePath(), testRepo.RelativePath)
+	_, testRepoPath, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
 
 	storagePath := testhelper.GitlabTestStoragePath()
 	ourRepoRelativePath := "gitlab-test-remote"
@@ -173,8 +173,8 @@ func TestUploadPackRequestWithGitProtocol(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	testRepo := testhelper.TestRepository()
-	testRepoPath := filepath.Join(testhelper.GitlabTestStoragePath(), testRepo.RelativePath)
+	_, testRepoPath, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
 
 	storagePath := testhelper.GitlabTestStoragePath()
 	relativePath, err := filepath.Rel(storagePath, testRepoPath)
@@ -218,7 +218,8 @@ func TestSuccessfulUploadPackDeepenRequest(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	testRepo := testhelper.TestRepository()
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
 
 	requestBody := &bytes.Buffer{}
 	pktline.WriteString(requestBody, fmt.Sprintf("want e63f41fe459e62e1228fcef60d7189127aeba95a %s\n", clientCapabilities))
@@ -330,8 +331,8 @@ func TestUploadPackRequestForPartialCloneSuccess(t *testing.T) {
 	)
 	defer stop()
 
-	testRepo := testhelper.TestRepository()
-	testRepoPath := filepath.Join(testhelper.GitlabTestStoragePath(), testRepo.RelativePath)
+	_, testRepoPath, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
 
 	storagePath := testhelper.GitlabTestStoragePath()
 	remoteRepoRelativePath := "gitlab-test-remote"

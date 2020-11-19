@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
@@ -108,15 +107,12 @@ unless out.chomp == ARGV[0]
   abort "error: expected #{ARGV[0]} object, got #{out}"
 end`, command.GitPath())
 
-	dir, err := ioutil.TempDir("", "gitaly-temp-dir-*")
-	require.NoError(t, err)
+	dir, cleanup := testhelper.TempDir(t)
 	hookPath := filepath.Join(dir, "pre-receive")
 
 	require.NoError(t, ioutil.WriteFile(hookPath, []byte(hook), 0755))
 
-	return hookPath, func() {
-		os.RemoveAll(dir)
-	}
+	return hookPath, cleanup
 }
 
 func writeAssertObjectTypeUpdateHook(t *testing.T) (string, func()) {
@@ -136,15 +132,12 @@ unless out.chomp == expected_object_type
   abort "error: expected #{expected_object_type} object, got #{out}"
 end`, command.GitPath())
 
-	dir, err := ioutil.TempDir("", "gitaly-temp-dir-*")
-	require.NoError(t, err)
+	dir, cleanup := testhelper.TempDir(t)
 	hookPath := filepath.Join(dir, "pre-receive")
 
 	require.NoError(t, ioutil.WriteFile(hookPath, []byte(hook), 0755))
 
-	return hookPath, func() {
-		os.RemoveAll(dir)
-	}
+	return hookPath, cleanup
 }
 
 func TestSuccessfulUserCreateTagRequest(t *testing.T) {

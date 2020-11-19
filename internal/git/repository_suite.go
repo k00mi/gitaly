@@ -20,7 +20,10 @@ func TestRepository(t *testing.T, getRepository func(testing.TB, *gitalypb.Repos
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
-			tc.test(t, getRepository(t, testhelper.TestRepository()))
+			testRepo, _, cleanup := testhelper.NewTestRepo(t)
+			defer cleanup()
+
+			tc.test(t, getRepository(t, testRepo))
 		})
 	}
 }

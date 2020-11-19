@@ -535,11 +535,8 @@ func TestCheckOK(t *testing.T) {
 	serverURL, cleanup := testhelper.NewGitlabTestServer(t, c)
 	defer cleanup()
 
-	tempDir, err := ioutil.TempDir("", t.Name())
-	require.NoError(t, err)
-	defer func() {
-		os.RemoveAll(tempDir)
-	}()
+	tempDir, cleanup := testhelper.TempDir(t)
+	defer cleanup()
 
 	gitlabShellDir := filepath.Join(tempDir, "gitlab-shell")
 	require.NoError(t, os.MkdirAll(gitlabShellDir, 0755))
@@ -554,7 +551,7 @@ func TestCheckOK(t *testing.T) {
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
 
-	err = cmd.Run()
+	err := cmd.Run()
 	require.NoError(t, err)
 	require.Empty(t, stderr.String())
 
@@ -583,11 +580,8 @@ func TestCheckBadCreds(t *testing.T) {
 	serverURL, cleanup := testhelper.NewGitlabTestServer(t, c)
 	defer cleanup()
 
-	tempDir, err := ioutil.TempDir("", t.Name())
-	require.NoError(t, err)
-	defer func() {
-		os.RemoveAll(tempDir)
-	}()
+	tempDir, cleanup := testhelper.TempDir(t)
+	defer cleanup()
 
 	gitlabShellDir := filepath.Join(tempDir, "gitlab-shell")
 	require.NoError(t, os.MkdirAll(gitlabShellDir, 0755))

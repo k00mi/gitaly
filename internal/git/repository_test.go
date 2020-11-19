@@ -35,7 +35,10 @@ func TestLocalRepository_ContainsRef(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	repo := NewRepository(testhelper.TestRepository())
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	repo := NewRepository(testRepo)
 
 	testcases := []struct {
 		desc      string
@@ -72,7 +75,10 @@ func TestLocalRepository_GetReference(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	repo := NewRepository(testhelper.TestRepository())
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	repo := NewRepository(testRepo)
 
 	testcases := []struct {
 		desc     string
@@ -118,7 +124,10 @@ func TestLocalRepository_GetBranch(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	repo := NewRepository(testhelper.TestRepository())
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	repo := NewRepository(testRepo)
 
 	testcases := []struct {
 		desc     string
@@ -164,7 +173,10 @@ func TestLocalRepository_GetReferences(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	repo := NewRepository(testhelper.TestRepository())
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	repo := NewRepository(testRepo)
 
 	testcases := []struct {
 		desc    string
@@ -291,7 +303,10 @@ func TestLocalRepository_ReadObject(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	repo := NewRepository(testhelper.TestRepository())
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	repo := NewRepository(testRepo)
 
 	for _, tc := range []struct {
 		desc    string
@@ -323,7 +338,10 @@ func TestLocalRepository_GetBranches(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	repo := NewRepository(testhelper.TestRepository())
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	repo := NewRepository(testRepo)
 
 	refs, err := repo.GetBranches(ctx)
 	require.NoError(t, err)
@@ -450,12 +468,15 @@ func TestLocalRepository_FetchRemote(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	_, remoteRepoPath, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
 	initBareWithRemote := func(t *testing.T, remote string) (*LocalRepository, string, testhelper.Cleanup) {
 		t.Helper()
 
 		testRepo, testRepoPath, cleanup := testhelper.InitBareRepo(t)
 
-		cmd := exec.Command(command.GitPath(), "-C", testRepoPath, "remote", "add", remote, testhelper.GitlabTestStoragePath()+"/gitlab-test.git")
+		cmd := exec.Command(command.GitPath(), "-C", testRepoPath, "remote", "add", remote, remoteRepoPath)
 		err := cmd.Run()
 		if err != nil {
 			cleanup()
