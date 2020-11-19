@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
 type mockUpgrader struct {
@@ -59,7 +60,10 @@ func (s *testServer) slowRequest(duration time.Duration) <-chan error {
 }
 
 func TestCreateUnixListener(t *testing.T) {
-	socketPath := filepath.Join(os.TempDir(), "gitaly-test-unix-socket")
+	tempDir, cleanup := testhelper.TempDir(t)
+	defer cleanup()
+
+	socketPath := filepath.Join(tempDir, "gitaly-test-unix-socket")
 	if err := os.Remove(socketPath); err != nil {
 		require.True(t, os.IsNotExist(err), "cannot delete dangling socket: %v", err)
 	}
@@ -288,9 +292,12 @@ func makeBootstrap(t *testing.T) (*Bootstrap, *testServer) {
 		}
 	}
 
+	tempDir, cleanup := testhelper.TempDir(t)
+	defer cleanup()
+
 	for network, address := range map[string]string{
 		"tcp":  "127.0.0.1:0",
-		"unix": filepath.Join(os.TempDir(), "gitaly-test-unix-socket"),
+		"unix": filepath.Join(tempDir, "gitaly-test-unix-socket"),
 	} {
 		b.RegisterStarter(start(network, address))
 	}

@@ -429,9 +429,8 @@ func TestGetArchivePathInjection(t *testing.T) {
 	defer cancel()
 
 	// Adding a temp directory representing the .ssh directory
-	sshDirectory, err := ioutil.TempDir("", ".ssh")
-	require.NoError(t, err)
-	require.NoError(t, os.MkdirAll(sshDirectory, os.ModeDir|0755))
+	sshDirectory, cleanup := testhelper.TempDir(t)
+	defer cleanup()
 
 	// Adding an empty authorized_keys file
 	authorizedKeysPath := filepath.Join(sshDirectory, "authorized_keys")

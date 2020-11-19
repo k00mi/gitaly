@@ -885,11 +885,8 @@ func startSocketHTTPServer(t FatalLogger, mux *http.ServeMux, tlsCfg *tls.Config
 // CreateTemporaryGitlabShellDir creates a temporary gitlab shell directory. It returns the path to the directory
 // and a cleanup function
 func CreateTemporaryGitlabShellDir(t testing.TB) (string, func()) {
-	tempDir, err := ioutil.TempDir("", "gitlab-shell")
-	require.NoError(t, err)
-	return tempDir, func() {
-		require.NoError(t, os.RemoveAll(tempDir))
-	}
+	tempDir, cleanup := TempDir(t)
+	return tempDir, cleanup
 }
 
 // WriteTemporaryGitlabShellConfigFile writes a gitlab shell config.yml in a temporary directory. It returns the path

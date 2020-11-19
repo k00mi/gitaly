@@ -144,9 +144,8 @@ func TestReceivePackPushHookFailure(t *testing.T) {
 	serverSocketPath, stop := runSSHServer(t)
 	defer stop()
 
-	hookDir, err := ioutil.TempDir("", "gitaly-tmp-hooks")
-	require.NoError(t, err)
-	defer os.RemoveAll(hookDir)
+	hookDir, cleanup := testhelper.TempDir(t)
+	defer cleanup()
 
 	defer func(old string) { hooks.Override = old }(hooks.Override)
 	hooks.Override = hookDir
@@ -156,7 +155,7 @@ func TestReceivePackPushHookFailure(t *testing.T) {
 	hookContent := []byte("#!/bin/sh\nexit 1")
 	ioutil.WriteFile(filepath.Join(hooks.Path(), "pre-receive"), hookContent, 0755)
 
-	_, _, err = testCloneAndPush(t, serverSocketPath, pushParams{storageName: testRepo.GetStorageName(), glID: "1"})
+	_, _, err := testCloneAndPush(t, serverSocketPath, pushParams{storageName: testRepo.GetStorageName(), glID: "1"})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "(pre-receive hook declined)")
 }

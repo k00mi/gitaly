@@ -93,8 +93,7 @@ func TestDiskCacheInitialClear(t *testing.T) {
 }
 
 func setupDiskCacheWalker(t testing.TB) func() {
-	tmpPath, err := ioutil.TempDir("", t.Name())
-	require.NoError(t, err)
+	tmpPath, cleanup := testhelper.TempDir(t)
 
 	oldStorages := config.Config.Storages
 	config.Config.Storages = []config.Storage{
@@ -104,12 +103,10 @@ func setupDiskCacheWalker(t testing.TB) func() {
 		},
 	}
 
-	cleanup := func() {
+	return func() {
 		config.Config.Storages = oldStorages
-		require.NoError(t, os.RemoveAll(tmpPath))
+		cleanup()
 	}
-
-	return cleanup
 }
 
 func pollCountersUntil(t testing.TB, expectRemovals int) {

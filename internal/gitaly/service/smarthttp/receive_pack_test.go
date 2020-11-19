@@ -138,9 +138,8 @@ func TestFailedReceivePackRequestWithGitOpts(t *testing.T) {
 }
 
 func TestFailedReceivePackRequestDueToHooksFailure(t *testing.T) {
-	hookDir, err := ioutil.TempDir("", "gitaly-tmp-hooks")
-	require.NoError(t, err)
-	defer os.RemoveAll(hookDir)
+	hookDir, cleanup := testhelper.TempDir(t)
+	defer cleanup()
 
 	defer func(override string) {
 		hooks.Override = override

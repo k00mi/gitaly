@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -15,9 +14,8 @@ import (
 )
 
 func TestRepositoryExists(t *testing.T) {
-	storageOtherDir, err := ioutil.TempDir("", "gitaly-repository-exists-test")
-	require.NoError(t, err, "tempdir")
-	defer os.Remove(storageOtherDir)
+	storageOtherDir, cleanup := testhelper.TempDir(t)
+	defer cleanup()
 
 	// Setup storage paths
 	testStorages := []config.Storage{

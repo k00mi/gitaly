@@ -134,8 +134,7 @@ func TestStreamDBNaiveKeyer(t *testing.T) {
 
 func injectTempStorage(t testing.TB) (string, testhelper.Cleanup) {
 	oldStorages := config.Config.Storages
-	tmpDir, err := ioutil.TempDir("", t.Name())
-	require.NoError(t, err)
+	tmpDir, cleanup := testhelper.TempDir(t)
 
 	name := filepath.Base(tmpDir)
 	config.Config.Storages = append(config.Config.Storages, config.Storage{
@@ -143,12 +142,10 @@ func injectTempStorage(t testing.TB) (string, testhelper.Cleanup) {
 		Path: tmpDir,
 	})
 
-	cleanup := func() {
+	return name, func() {
 		config.Config.Storages = oldStorages
-		require.NoError(t, os.RemoveAll(tmpDir))
+		cleanup()
 	}
-
-	return name, cleanup
 }
 
 func TestLoserCount(t *testing.T) {

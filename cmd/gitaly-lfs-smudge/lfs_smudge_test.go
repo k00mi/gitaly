@@ -91,9 +91,8 @@ func TestSuccessfulLfsSmudge(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	tmpDir, err := ioutil.TempDir("", "")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	tmpDir, cleanup := testhelper.TempDir(t)
+	defer cleanup()
 
 	env := map[string]string{
 		"GL_REPOSITORY":      "project-1",
@@ -186,9 +185,8 @@ func TestUnsuccessfulLfsSmudge(t *testing.T) {
 			tlsCfg, err := json.Marshal(tc.tlsCfg)
 			require.NoError(t, err)
 
-			tmpDir, err := ioutil.TempDir("", "")
-			require.NoError(t, err)
-			defer os.RemoveAll(tmpDir)
+			tmpDir, cleanup := testhelper.TempDir(t)
+			defer cleanup()
 
 			env := map[string]string{
 				"GL_REPOSITORY":      "project-1",
