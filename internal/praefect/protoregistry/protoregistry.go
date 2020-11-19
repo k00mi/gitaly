@@ -98,6 +98,7 @@ type MethodInfo struct {
 	requestName    string // protobuf message name for input type
 	requestFactory protoFactory
 	storage        []int
+	fullMethodName string
 }
 
 // TargetRepo returns the target repository for a protobuf message if it exists
@@ -115,6 +116,10 @@ func (mi MethodInfo) AdditionalRepo(msg proto.Message) (*gitalypb.Repository, bo
 	repo, err := mi.getRepo(msg, mi.additionalRepo)
 
 	return repo, true, err
+}
+
+func (mi MethodInfo) FullMethodName() string {
+	return mi.fullMethodName
 }
 
 func (mi MethodInfo) getRepo(msg proto.Message, targetOid []int) (*gitalypb.Repository, error) {
@@ -196,7 +201,7 @@ func New(protos ...*descriptor.FileDescriptorProto) (*Registry, error) {
 					continue
 				}
 
-				mi, err := parseMethodInfo(p, method)
+				mi, err := parseMethodInfo(p, method, fullMethodName)
 				if err != nil {
 					return nil, err
 				}
@@ -240,7 +245,11 @@ func methodReqFactory(method *descriptor.MethodDescriptorProto) (protoFactory, e
 	return f, nil
 }
 
-func parseMethodInfo(p *descriptor.FileDescriptorProto, methodDesc *descriptor.MethodDescriptorProto) (MethodInfo, error) {
+func parseMethodInfo(
+	p *descriptor.FileDescriptorProto,
+	methodDesc *descriptor.MethodDescriptorProto,
+	fullMethodName string,
+) (MethodInfo, error) {
 	opMsg, err := protoutil.GetOpExtension(methodDesc)
 	if err != nil {
 		return MethodInfo{}, err
@@ -277,6 +286,7 @@ func parseMethodInfo(p *descriptor.FileDescriptorProto, methodDesc *descriptor.M
 		Scope:          scope,
 		requestName:    requestName,
 		requestFactory: reqFactory,
+		fullMethodName: fullMethodName,
 	}
 
 	topLevelMsgs, err := getTopLevelMsgs(p)
@@ -449,6 +459,15 @@ func (pr *Registry) LookupMethod(fullMethodName string) (MethodInfo, error) {
 		return MethodInfo{}, fmt.Errorf("full method name not found: %v", fullMethodName)
 	}
 	return methodInfo, nil
+}
+
+// Methods returns all registered methods
+func (pr *Registry) Methods() []MethodInfo {
+	methods := make([]MethodInfo, 0, len(pr.protos))
+	for _, proto := range pr.protos {
+		methods = append(methods, proto)
+	}
+	return methods
 }
 
 // IsInterceptedMethod returns whether Praefect intercepts the method call instead of proxying it.

@@ -28,6 +28,116 @@ import (
 // if the primary does not have the latest changes.
 var ErrRepositoryReadOnly = helper.ErrPreconditionFailedf("repository is in read-only mode")
 
+type transactionsCondition func(context.Context) bool
+
+func transactionsEnabled(context.Context) bool  { return true }
+func transactionsDisabled(context.Context) bool { return false }
+
+// transactionRPCs contains the list of repository-scoped mutating calls which may take part in
+// transactions. An optional feature flag can be added to conditionally enable transactional
+// behaviour. If none is given, it's always enabled.
+var transactionRPCs = map[string]transactionsCondition{
+	"/gitaly.CleanupService/ApplyBfgObjectMapStream":           transactionsDisabled,
+	"/gitaly.ConflictsService/ResolveConflicts":                transactionsDisabled,
+	"/gitaly.ObjectPoolService/CreateObjectPool":               transactionsDisabled,
+	"/gitaly.ObjectPoolService/DeleteObjectPool":               transactionsDisabled,
+	"/gitaly.ObjectPoolService/DisconnectGitAlternates":        transactionsDisabled,
+	"/gitaly.ObjectPoolService/FetchIntoObjectPool":            transactionsDisabled,
+	"/gitaly.ObjectPoolService/LinkRepositoryToObjectPool":     transactionsDisabled,
+	"/gitaly.ObjectPoolService/ReduplicateRepository":          transactionsDisabled,
+	"/gitaly.ObjectPoolService/UnlinkRepositoryFromObjectPool": transactionsDisabled,
+	"/gitaly.OperationService/UserApplyPatch":                  transactionsDisabled,
+	"/gitaly.OperationService/UserCherryPick":                  transactionsDisabled,
+	"/gitaly.OperationService/UserCommitFiles":                 transactionsDisabled,
+	"/gitaly.OperationService/UserFFBranch":                    transactionsDisabled,
+	"/gitaly.OperationService/UserMergeBranch":                 transactionsDisabled,
+	"/gitaly.OperationService/UserMergeToRef":                  transactionsDisabled,
+	"/gitaly.OperationService/UserRebaseConfirmable":           transactionsDisabled,
+	"/gitaly.OperationService/UserRevert":                      transactionsDisabled,
+	"/gitaly.OperationService/UserSquash":                      transactionsDisabled,
+	"/gitaly.OperationService/UserUpdateSubmodule":             transactionsDisabled,
+	"/gitaly.RefService/DeleteRefs":                            transactionsDisabled,
+	"/gitaly.RefService/PackRefs":                              transactionsDisabled,
+	"/gitaly.RefTransaction/StopTransaction":                   transactionsDisabled,
+	"/gitaly.RefTransaction/VoteTransaction":                   transactionsDisabled,
+	"/gitaly.RemoteService/AddRemote":                          transactionsDisabled,
+	"/gitaly.RemoteService/FetchInternalRemote":                transactionsDisabled,
+	"/gitaly.RemoteService/RemoveRemote":                       transactionsDisabled,
+	"/gitaly.RemoteService/UpdateRemoteMirror":                 transactionsDisabled,
+	"/gitaly.RepositoryService/ApplyGitattributes":             transactionsDisabled,
+	"/gitaly.RepositoryService/Cleanup":                        transactionsDisabled,
+	"/gitaly.RepositoryService/CloneFromPool":                  transactionsDisabled,
+	"/gitaly.RepositoryService/CloneFromPoolInternal":          transactionsDisabled,
+	"/gitaly.RepositoryService/CreateFork":                     transactionsDisabled,
+	"/gitaly.RepositoryService/CreateRepository":               transactionsDisabled,
+	"/gitaly.RepositoryService/CreateRepositoryFromBundle":     transactionsDisabled,
+	"/gitaly.RepositoryService/CreateRepositoryFromSnapshot":   transactionsDisabled,
+	"/gitaly.RepositoryService/CreateRepositoryFromURL":        transactionsDisabled,
+	"/gitaly.RepositoryService/DeleteConfig":                   transactionsDisabled,
+	"/gitaly.RepositoryService/FetchRemote":                    transactionsDisabled,
+	"/gitaly.RepositoryService/FetchSourceBranch":              transactionsDisabled,
+	"/gitaly.RepositoryService/Fsck":                           transactionsDisabled,
+	"/gitaly.RepositoryService/GarbageCollect":                 transactionsDisabled,
+	"/gitaly.RepositoryService/MidxRepack":                     transactionsDisabled,
+	"/gitaly.RepositoryService/OptimizeRepository":             transactionsDisabled,
+	"/gitaly.RepositoryService/RemoveRepository":               transactionsDisabled,
+	"/gitaly.RepositoryService/RenameRepository":               transactionsDisabled,
+	"/gitaly.RepositoryService/RepackFull":                     transactionsDisabled,
+	"/gitaly.RepositoryService/RepackIncremental":              transactionsDisabled,
+	"/gitaly.RepositoryService/ReplicateRepository":            transactionsDisabled,
+	"/gitaly.RepositoryService/RestoreCustomHooks":             transactionsDisabled,
+	"/gitaly.RepositoryService/SetConfig":                      transactionsDisabled,
+	"/gitaly.RepositoryService/WriteCommitGraph":               transactionsDisabled,
+	"/gitaly.RepositoryService/WriteRef":                       transactionsDisabled,
+	"/gitaly.WikiService/WikiDeletePage":                       transactionsDisabled,
+	"/gitaly.WikiService/WikiUpdatePage":                       transactionsDisabled,
+	"/gitaly.WikiService/WikiWritePage":                        transactionsDisabled,
+
+	"/gitaly.OperationService/UserCreateBranch": transactionsEnabled,
+	"/gitaly.OperationService/UserCreateTag":    transactionsEnabled,
+	"/gitaly.OperationService/UserDeleteBranch": transactionsEnabled,
+	"/gitaly.OperationService/UserDeleteTag":    transactionsEnabled,
+	"/gitaly.OperationService/UserUpdateBranch": transactionsEnabled,
+	"/gitaly.SSHService/SSHReceivePack":         transactionsEnabled,
+	"/gitaly.SmartHTTPService/PostReceivePack":  transactionsEnabled,
+}
+
+func init() {
+	// Safety checks to verify that all registered RPCs are in `transactionRPCs`
+	for _, method := range protoregistry.GitalyProtoPreregistered.Methods() {
+		if method.Operation != protoregistry.OpMutator || method.Scope != protoregistry.ScopeRepository {
+			continue
+		}
+
+		if _, ok := transactionRPCs[method.FullMethodName()]; !ok {
+			panic(fmt.Sprintf("transactional RPCs miss repository-scoped mutator %q", method.FullMethodName()))
+		}
+	}
+
+	// Safety checks to verify that `transactionRPCs` has no unknown RPCs
+	for transactionalRPC := range transactionRPCs {
+		method, err := protoregistry.GitalyProtoPreregistered.LookupMethod(transactionalRPC)
+		if err != nil {
+			panic(fmt.Sprintf("transactional RPC not a registered method: %q", err))
+		}
+		if method.Operation != protoregistry.OpMutator {
+			panic(fmt.Sprintf("transactional RPC is not a mutator: %q", method.FullMethodName()))
+		}
+		if method.Scope != protoregistry.ScopeRepository {
+			panic(fmt.Sprintf("transactional RPC is not repository-scoped: %q", method.FullMethodName()))
+		}
+	}
+}
+
+func shouldUseTransaction(ctx context.Context, method string) bool {
+	condition, ok := transactionRPCs[method]
+	if !ok {
+		return false
+	}
+
+	return condition(ctx)
+}
+
 // getReplicationDetails determines the type of job and additional details based on the method name and incoming message
 func getReplicationDetails(methodName string, m proto.Message) (datastore.ChangeType, datastore.Params, error) {
 	switch methodName {
@@ -189,21 +299,6 @@ func (c *Coordinator) accessorStreamParameters(ctx context.Context, call grpcCal
 		Conn: node.Connection,
 		Msg:  b,
 	}, nil, nil, nil), nil
-}
-
-var transactionRPCs = map[string]interface{}{
-	"/gitaly.OperationService/UserCreateBranch": nil,
-	"/gitaly.OperationService/UserCreateTag":    nil,
-	"/gitaly.OperationService/UserDeleteBranch": nil,
-	"/gitaly.OperationService/UserDeleteTag":    nil,
-	"/gitaly.OperationService/UserUpdateBranch": nil,
-	"/gitaly.SSHService/SSHReceivePack":         nil,
-	"/gitaly.SmartHTTPService/PostReceivePack":  nil,
-}
-
-func shouldUseTransaction(ctx context.Context, method string) bool {
-	_, ok := transactionRPCs[method]
-	return ok
 }
 
 func (c *Coordinator) registerTransaction(ctx context.Context, primary RouterNode, secondaries []RouterNode) (*transactions.Transaction, transactions.CancelFunc, error) {
