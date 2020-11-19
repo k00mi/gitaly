@@ -3,10 +3,10 @@ package datastore
 import (
 	"context"
 	"io"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
@@ -433,33 +433,28 @@ func TestCachingStorageProvider_GetSyncedNodes(t *testing.T) {
 func TestSyncer_await(t *testing.T) {
 	sc := syncer{inflight: map[string]chan struct{}{}}
 
-	const dur = 50 * time.Millisecond
+	returned := make(chan string, 2)
 
-	var wg sync.WaitGroup
-	begin := make(chan struct{})
+	releaseA := sc.await("a")
+	go func() {
+		sc.await("a")()
+		returned <- "waiter"
+	}()
 
-	awaitKey := func(key string) {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	// different key should proceed immediately
+	sc.await("b")()
 
-			<-begin
+	// Yield to the 'waiter' goroutine. It should be blocked and
+	// not send to the channel before releaseA is called.
+	runtime.Gosched()
 
-			defer sc.await(key)()
-			time.Sleep(dur)
-		}()
+	returned <- "locker"
+	releaseA()
+
+	var returnOrder []string
+	for i := 0; i < cap(returned); i++ {
+		returnOrder = append(returnOrder, <-returned)
 	}
 
-	keys := []string{"a", "a", "b", "c", "d"}
-	for _, key := range keys {
-		awaitKey(key)
-	}
-
-	start := time.Now()
-	close(begin)
-	wg.Wait()
-	duration := time.Since(start).Milliseconds()
-
-	require.GreaterOrEqual(t, duration, 2*dur.Milliseconds(), "we use same key twice, so it should take at least 2 durations")
-	require.Less(t, duration, int64(len(keys))*dur.Milliseconds(), "it should take less time as sequential processing")
+	require.Equal(t, []string{"locker", "waiter"}, returnOrder)
 }
