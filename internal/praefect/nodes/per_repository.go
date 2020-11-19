@@ -92,6 +92,7 @@ UPDATE repositories
 		LEFT JOIN storage_repositories USING (virtual_storage, storage)
 		WHERE virtual_storage = repositories.virtual_storage
 		AND storage_repositories.relative_path = repositories.relative_path
+		AND assigned
 		ORDER BY generation DESC NULLS LAST, random()
 		LIMIT 1
 	)
@@ -100,10 +101,6 @@ WHERE NOT EXISTS (
 	FROM healthy_storages
 	WHERE virtual_storage = repositories.virtual_storage
 	AND storage = repositories."primary"
-) AND EXISTS (
-	SELECT 1
-	FROM healthy_storages
-	WHERE virtual_storage = repositories.virtual_storage
 )`, pq.StringArray(virtualStorages), pq.StringArray(physicalStorages)); err != nil {
 		return fmt.Errorf("query: %w", err)
 	}

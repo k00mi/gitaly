@@ -19,7 +19,12 @@ func TestPerRepositoryElector(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	type state map[string]map[string]map[string]int
+	type storageRecord struct {
+		generation int
+		assigned   bool
+	}
+
+	type state map[string]map[string]map[string]storageRecord
 
 	type matcher func(t testing.TB, primary string)
 	any := func(expected ...string) matcher {
@@ -52,8 +57,8 @@ func TestPerRepositoryElector(t *testing.T) {
 			state: state{
 				"virtual-storage-1": {
 					"relative-path-1": {
-						"gitaly-1": 1,
-						"gitaly-2": 0,
+						"gitaly-1": {generation: 1, assigned: true},
+						"gitaly-2": {generation: 0, assigned: true},
 					},
 				},
 			},
@@ -71,8 +76,8 @@ func TestPerRepositoryElector(t *testing.T) {
 			state: state{
 				"virtual-storage-1": {
 					"relative-path-1": {
-						"gitaly-1": 1,
-						"gitaly-2": 0,
+						"gitaly-1": {generation: 1, assigned: true},
+						"gitaly-2": {generation: 0, assigned: true},
 					},
 				},
 			},
@@ -102,8 +107,8 @@ func TestPerRepositoryElector(t *testing.T) {
 			state: state{
 				"virtual-storage-1": {
 					"relative-path-1": {
-						"gitaly-1": 0,
-						"gitaly-2": 0,
+						"gitaly-1": {generation: 0, assigned: true},
+						"gitaly-2": {generation: 0, assigned: true},
 					},
 				},
 			},
@@ -121,9 +126,9 @@ func TestPerRepositoryElector(t *testing.T) {
 			state: state{
 				"virtual-storage-1": {
 					"relative-path-1": {
-						"gitaly-1": 1,
-						"gitaly-2": 1,
-						"gitaly-3": 0,
+						"gitaly-1": {generation: 1, assigned: true},
+						"gitaly-2": {generation: 1, assigned: true},
+						"gitaly-3": {generation: 0, assigned: true},
 					},
 				},
 			},
@@ -147,8 +152,8 @@ func TestPerRepositoryElector(t *testing.T) {
 			state: state{
 				"virtual-storage-1": {
 					"relative-path-1": {
-						"gitaly-1": 1,
-						"gitaly-3": 0,
+						"gitaly-1": {generation: 1, assigned: true},
+						"gitaly-3": {generation: 0, assigned: true},
 					},
 				},
 			},
@@ -172,7 +177,8 @@ func TestPerRepositoryElector(t *testing.T) {
 			state: state{
 				"virtual-storage-1": {
 					"relative-path-1": {
-						"gitaly-1": 1,
+						"gitaly-1": {generation: 1, assigned: true},
+						"gitaly-2": {generation: 1, assigned: false},
 					},
 				},
 			},
@@ -204,8 +210,16 @@ func TestPerRepositoryElector(t *testing.T) {
 			rs := datastore.NewPostgresRepositoryStore(db, nil)
 			for virtualStorage, relativePaths := range tc.state {
 				for relativePath, storages := range relativePaths {
-					for storage, generation := range storages {
-						require.NoError(t, rs.SetGeneration(ctx, virtualStorage, relativePath, storage, generation))
+					for storage, record := range storages {
+						require.NoError(t, rs.SetGeneration(ctx, virtualStorage, relativePath, storage, record.generation))
+
+						_, err := db.ExecContext(ctx, `
+							UPDATE storage_repositories SET assigned = $4
+							WHERE virtual_storage = $1
+							AND   relative_path = $2
+							AND   storage = $3
+						`, virtualStorage, relativePath, storage, record.assigned)
+						require.NoError(t, err)
 					}
 				}
 			}
