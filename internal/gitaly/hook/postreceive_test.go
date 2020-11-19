@@ -2,10 +2,18 @@ package hook
 
 import (
 	"bytes"
+	"context"
+	"errors"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
+	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
+	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
 func TestPrintAlert(t *testing.T) {
@@ -46,5 +54,275 @@ func TestPrintAlert(t *testing.T) {
 
 		require.NoError(t, printAlert(PostReceiveMessage{Message: tc.message}, &result))
 		assert.Equal(t, tc.expected, result.String())
+	}
+}
+
+func TestPostReceive_customHook(t *testing.T) {
+	repo, repoPath, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	hookManager := NewManager(GitlabAPIStub, config.Config)
+
+	standardEnv := []string{
+		fmt.Sprintf("GITALY_SOCKET=%s", config.Config.GitalyInternalSocketPath()),
+		"GITALY_TOKEN=secret",
+		"GL_ID=1234",
+		fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
+		"GL_PROTOCOL=web",
+		fmt.Sprintf("GL_REPO=%s", repo),
+		fmt.Sprintf("GL_REPOSITORY=%s", repo.GetGlRepository()),
+		"GL_USERNAME=user",
+	}
+
+	primaryEnv, err := metadata.Transaction{
+		ID: 1234, Node: "primary", Primary: true,
+	}.Env()
+	require.NoError(t, err)
+
+	secondaryEnv, err := metadata.Transaction{
+		ID: 1234, Node: "secondary", Primary: false,
+	}.Env()
+	require.NoError(t, err)
+
+	testCases := []struct {
+		desc           string
+		env            []string
+		pushOptions    []string
+		hook           string
+		stdin          string
+		expectedErr    string
+		expectedStdout string
+		expectedStderr string
+	}{
+		{
+			desc:           "hook receives environment variables",
+			env:            standardEnv,
+			hook:           "#!/bin/sh\nenv | grep -e '^GL_' -e '^GITALY_' | sort\n",
+			expectedStdout: strings.Join(standardEnv, "\n") + "\n",
+		},
+		{
+			desc: "push options are passed through",
+			env:  standardEnv,
+			pushOptions: []string{
+				"mr.merge_when_pipeline_succeeds",
+				"mr.create",
+			},
+			hook: "#!/bin/sh\nenv | grep -e '^GIT_PUSH_OPTION' | sort\n",
+			expectedStdout: strings.Join([]string{
+				"GIT_PUSH_OPTION_0=mr.merge_when_pipeline_succeeds",
+				"GIT_PUSH_OPTION_1=mr.create",
+				"GIT_PUSH_OPTION_COUNT=2",
+			}, "\n") + "\n",
+		},
+		{
+			desc:           "hook can write to stderr and stdout",
+			env:            standardEnv,
+			hook:           "#!/bin/sh\necho foo >&1 && echo bar >&2\n",
+			expectedStdout: "foo\n",
+			expectedStderr: "bar\n",
+		},
+		{
+			desc:           "hook receives standard input",
+			env:            standardEnv,
+			hook:           "#!/bin/sh\ncat\n",
+			stdin:          "foo\n",
+			expectedStdout: "foo\n",
+		},
+		{
+			desc:           "hook succeeds without consuming stdin",
+			env:            standardEnv,
+			hook:           "#!/bin/sh\necho foo\n",
+			stdin:          "ignore me\n",
+			expectedStdout: "foo\n",
+		},
+		{
+			desc:        "invalid hook results in error",
+			env:         standardEnv,
+			hook:        "",
+			expectedErr: "exec format error",
+		},
+		{
+			desc:        "failing hook results in error",
+			env:         standardEnv,
+			hook:        "#!/bin/sh\nexit 123",
+			expectedErr: "exit status 123",
+		},
+		{
+			desc:           "hook is executed on primary",
+			env:            append(standardEnv, primaryEnv),
+			hook:           "#!/bin/sh\necho foo\n",
+			expectedStdout: "foo\n",
+		},
+		{
+			desc: "hook is not executed on secondary",
+			env:  append(standardEnv, secondaryEnv),
+			hook: "#!/bin/sh\necho foo\n",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			ctx, cleanup := testhelper.Context()
+			defer cleanup()
+
+			cleanup, err := testhelper.WriteCustomHook(repoPath, "post-receive", []byte(tc.hook))
+			require.NoError(t, err)
+			defer cleanup()
+
+			var stdout, stderr bytes.Buffer
+			err = hookManager.PostReceiveHook(ctx, repo, tc.pushOptions, tc.env, strings.NewReader(tc.stdin), &stdout, &stderr)
+
+			if tc.expectedErr != "" {
+				require.Contains(t, err.Error(), tc.expectedErr)
+			} else {
+				require.NoError(t, err)
+			}
+
+			require.Equal(t, tc.expectedStdout, stdout.String())
+			require.Equal(t, tc.expectedStderr, stderr.String())
+		})
+	}
+}
+
+type postreceiveAPIMock struct {
+	postreceive func(context.Context, string, string, string, ...string) (bool, []PostReceiveMessage, error)
+}
+
+func (m *postreceiveAPIMock) Allowed(ctx context.Context, repo *gitalypb.Repository, glRepository, glID, glProtocol, changes string) (bool, string, error) {
+	return true, "", nil
+}
+
+func (m *postreceiveAPIMock) PreReceive(ctx context.Context, glRepository string) (bool, error) {
+	return true, nil
+}
+
+func (m *postreceiveAPIMock) Check(ctx context.Context) (*CheckInfo, error) {
+	return nil, errors.New("unexpected call")
+}
+
+func (m *postreceiveAPIMock) PostReceive(ctx context.Context, glRepository, glID, changes string, pushOptions ...string) (bool, []PostReceiveMessage, error) {
+	return m.postreceive(ctx, glRepository, glID, changes, pushOptions...)
+}
+
+func TestPostReceive_gitlab(t *testing.T) {
+	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	standardEnv := []string{
+		fmt.Sprintf("GITALY_SOCKET=%s", config.Config.GitalyInternalSocketPath()),
+		"GITALY_TOKEN=secret",
+		"GL_ID=1234",
+		fmt.Sprintf("GL_PROJECT_PATH=%s", testRepo.GetGlProjectPath()),
+		"GL_PROTOCOL=web",
+		fmt.Sprintf("GL_REPO=%s", testRepo),
+		fmt.Sprintf("GL_REPOSITORY=%s", testRepo.GetGlRepository()),
+		"GL_USERNAME=user",
+	}
+
+	testCases := []struct {
+		desc           string
+		env            []string
+		pushOptions    []string
+		changes        string
+		postreceive    func(*testing.T, context.Context, string, string, string, ...string) (bool, []PostReceiveMessage, error)
+		expectHookCall bool
+		expectedErr    error
+		expectedStdout string
+		expectedStderr string
+	}{
+		{
+			desc:    "allowed change",
+			env:     standardEnv,
+			changes: "changes\n",
+			postreceive: func(t *testing.T, ctx context.Context, glRepo, glID, changes string, pushOptions ...string) (bool, []PostReceiveMessage, error) {
+				require.Equal(t, testRepo.GlRepository, glRepo)
+				require.Equal(t, "1234", glID)
+				require.Equal(t, "changes\n", changes)
+				require.Empty(t, pushOptions)
+				return true, nil, nil
+			},
+			expectedStdout: "hook called\n",
+		},
+		{
+			desc: "push options are passed through",
+			env:  standardEnv,
+			pushOptions: []string{
+				"mr.merge_when_pipeline_succeeds",
+				"mr.create",
+			},
+			changes: "changes\n",
+			postreceive: func(t *testing.T, ctx context.Context, glRepo, glID, changes string, pushOptions ...string) (bool, []PostReceiveMessage, error) {
+				require.Equal(t, []string{
+					"mr.merge_when_pipeline_succeeds",
+					"mr.create",
+				}, pushOptions)
+				return true, nil, nil
+			},
+			expectedStdout: "hook called\n",
+		},
+		{
+			desc:    "access denied without message",
+			env:     standardEnv,
+			changes: "changes\n",
+			postreceive: func(t *testing.T, ctx context.Context, glRepo, glID, changes string, pushOptions ...string) (bool, []PostReceiveMessage, error) {
+				return false, nil, nil
+			},
+			expectedErr: errors.New(""),
+		},
+		{
+			desc:    "access denied with message",
+			env:     standardEnv,
+			changes: "changes\n",
+			postreceive: func(t *testing.T, ctx context.Context, glRepo, glID, changes string, pushOptions ...string) (bool, []PostReceiveMessage, error) {
+				return false, []PostReceiveMessage{
+					{
+						Message: "access denied",
+						Type:    "alert",
+					},
+				}, nil
+			},
+			expectedStdout: "\n========================================================================\n\n                             access denied\n\n========================================================================\n\n",
+			expectedErr:    errors.New(""),
+		},
+		{
+			desc:    "access check returns error",
+			env:     standardEnv,
+			changes: "changes\n",
+			postreceive: func(t *testing.T, ctx context.Context, glRepo, glID, changes string, pushOptions ...string) (bool, []PostReceiveMessage, error) {
+				return false, nil, errors.New("failure")
+			},
+			expectedErr: errors.New("GitLab: failure"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			ctx, cleanup := testhelper.Context()
+			defer cleanup()
+
+			gitlabAPI := postreceiveAPIMock{
+				postreceive: func(ctx context.Context, glRepo, glID, changes string, pushOptions ...string) (bool, []PostReceiveMessage, error) {
+					return tc.postreceive(t, ctx, glRepo, glID, changes, pushOptions...)
+				},
+			}
+
+			hookManager := NewManager(&gitlabAPI, config.Config)
+
+			cleanup, err := testhelper.WriteCustomHook(testRepoPath, "post-receive", []byte("#!/bin/sh\necho hook called\n"))
+			require.NoError(t, err)
+			defer cleanup()
+
+			var stdout, stderr bytes.Buffer
+			err = hookManager.PostReceiveHook(ctx, testRepo, tc.pushOptions, tc.env, strings.NewReader(tc.changes), &stdout, &stderr)
+
+			if tc.expectedErr != nil {
+				require.Equal(t, tc.expectedErr, err)
+			} else {
+				require.NoError(t, err)
+			}
+
+			require.Equal(t, tc.expectedStdout, stdout.String())
+			require.Equal(t, tc.expectedStderr, stderr.String())
+		})
 	}
 }
