@@ -48,6 +48,7 @@ var All = []FeatureFlag{
 	GoFetchSourceBranch,
 	DistributedReads,
 	RubyReferenceTransactionHook,
+	LogCommandStats,
 	GoUserMergeBranch,
 	GoUserMergeToRef,
 	GoUserFFBranch,
