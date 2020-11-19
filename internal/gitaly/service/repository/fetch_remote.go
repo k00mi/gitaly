@@ -255,7 +255,10 @@ func (s *server) removeRemote(ctx context.Context, repo *git.LocalRepository, na
 }
 
 func (s *server) configureSSH(ctx context.Context, sshKey, knownHosts string) (string, func(), error) {
-	if sshKey == "" && knownHosts == "" {
+	sshKeyPresent := strings.TrimSpace(sshKey) != ""
+	knownHostsPresent := strings.TrimSpace(knownHosts) != ""
+
+	if !sshKeyPresent && !knownHostsPresent {
 		return "", func() {}, nil
 	}
 
@@ -272,24 +275,24 @@ func (s *server) configureSSH(ctx context.Context, sshKey, knownHosts string) (s
 
 	var conf []string
 
-	if sshKey != "" {
+	if sshKeyPresent {
 		identityFilePath := filepath.Join(tmpdir, "gitlab-shell-key-file")
 
 		if err := ioutil.WriteFile(identityFilePath, []byte(sshKey), 0400); err != nil {
 			cleanup()
 			return "", nil, err
 		}
-		conf = append(conf, "IdentitiesOnly=yes", "IdentityFile="+identityFilePath)
+		conf = append(conf, "-oIdentitiesOnly=yes", "-oIdentityFile="+identityFilePath)
 	}
 
-	if knownHosts != "" {
+	if knownHostsPresent {
 		hostsFilePath := filepath.Join(tmpdir, "gitlab-shell-known-hosts")
 
 		if err := ioutil.WriteFile(hostsFilePath, []byte(knownHosts), 0400); err != nil {
 			cleanup()
 			return "", nil, err
 		}
-		conf = append(conf, "StrictHostKeyChecking=yes", "UserKnownHostsFile="+hostsFilePath)
+		conf = append(conf, "-oStrictHostKeyChecking=yes", "-oUserKnownHostsFile="+hostsFilePath)
 	}
 
 	return "GIT_SSH_COMMAND=ssh " + strings.Join(conf, " "), cleanup, nil
