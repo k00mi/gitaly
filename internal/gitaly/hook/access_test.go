@@ -1,4 +1,4 @@
-package hook_test
+package hook
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
-	"gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -71,7 +70,7 @@ func TestAllowedVerifyParams(t *testing.T) {
 	})
 	defer cleanup()
 
-	c, err := hook.NewGitlabAPI(config.Gitlab{
+	c, err := NewGitlabAPI(config.Gitlab{
 		URL:        serverURL,
 		SecretFile: secretFilePath,
 		HTTPSettings: config.HTTPSettings{
@@ -200,7 +199,7 @@ func TestEscapedAndRelativeURLs(t *testing.T) {
 				serverURL = url.PathEscape(serverURL)
 			}
 
-			c, err := hook.NewGitlabAPI(config.Gitlab{
+			c, err := NewGitlabAPI(config.Gitlab{
 				URL:             serverURL,
 				RelativeURLRoot: tc.relativeURLRoot,
 				SecretFile:      secretFilePath,
@@ -337,7 +336,7 @@ func TestAllowedResponseHandling(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(tc.allowedHandler))
 			defer server.Close()
 
-			c, err := hook.NewGitlabAPI(config.Gitlab{
+			c, err := NewGitlabAPI(config.Gitlab{
 				URL:        server.URL,
 				SecretFile: secretFilePath,
 			}, config.TLS{})
@@ -425,7 +424,7 @@ func TestPrereceive(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(tc.prereceiveHandler))
 			defer server.Close()
 
-			c, err := hook.NewGitlabAPI(config.Gitlab{
+			c, err := NewGitlabAPI(config.Gitlab{
 				URL:        server.URL,
 				SecretFile: secretFilePath,
 			}, config.TLS{})
@@ -501,7 +500,7 @@ func TestPostReceive(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(tc.postReceiveHandler))
 			defer server.Close()
 
-			c, err := hook.NewGitlabAPI(config.Gitlab{
+			c, err := NewGitlabAPI(config.Gitlab{
 				URL:        server.URL,
 				SecretFile: secretFilePath,
 			}, config.TLS{})
