@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
@@ -27,6 +28,16 @@ func TestUpdate_customHooks(t *testing.T) {
 		fmt.Sprintf("GL_REPOSITORY=%s", repo.GetGlRepository()),
 		"GL_USERNAME=user",
 	}
+
+	primaryEnv, err := metadata.Transaction{
+		ID: 1234, Node: "primary", Primary: true,
+	}.Env()
+	require.NoError(t, err)
+
+	secondaryEnv, err := metadata.Transaction{
+		ID: 1234, Node: "secondary", Primary: false,
+	}.Env()
+	require.NoError(t, err)
 
 	hash1 := strings.Repeat("1", 40)
 	hash2 := strings.Repeat("2", 40)
@@ -103,6 +114,23 @@ func TestUpdate_customHooks(t *testing.T) {
 			expectedStdout: "foo\n",
 			expectedStderr: "bar\n",
 			expectedErr:    "exit status 123",
+		},
+		{
+			desc:           "hook is executed on primary",
+			env:            append(standardEnv, primaryEnv),
+			reference:      "refs/heads/master",
+			oldHash:        hash1,
+			newHash:        hash2,
+			hook:           "#!/bin/sh\necho foo\n",
+			expectedStdout: "foo\n",
+		},
+		{
+			desc:      "hook is not executed on secondary",
+			env:       append(standardEnv, secondaryEnv),
+			reference: "refs/heads/master",
+			oldHash:   hash1,
+			newHash:   hash2,
+			hook:      "#!/bin/sh\necho foo\n",
 		},
 	}
 
