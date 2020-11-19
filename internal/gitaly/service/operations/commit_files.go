@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/git/remoterepo"
 	"gitlab.com/gitlab-org/gitaly/internal/git2go"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/gitalyssh"
@@ -353,7 +354,7 @@ func (s *server) resolveParentCommit(ctx context.Context, local git.Repository, 
 	repo := local
 	if remote != nil {
 		var err error
-		repo, err = git.NewRemoteRepository(ctx, remote, s.conns)
+		repo, err = remoterepo.New(ctx, remote, s.conns)
 		if err != nil {
 			return "", fmt.Errorf("remote repository: %w", err)
 		}

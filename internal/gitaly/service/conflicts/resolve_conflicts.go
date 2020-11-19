@@ -13,6 +13,7 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/conflict"
+	"gitlab.com/gitlab-org/gitaly/internal/git/remoterepo"
 	"gitlab.com/gitlab-org/gitaly/internal/git2go"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/gitalyssh"
@@ -258,7 +259,7 @@ func (s *server) repoWithBranchCommit(ctx context.Context, srcRepo, targetRepo *
 		return err
 	}
 
-	target, err := git.NewRemoteRepository(ctx, targetRepo, s.pool)
+	target, err := remoterepo.New(ctx, targetRepo, s.pool)
 	if err != nil {
 		return err
 	}
