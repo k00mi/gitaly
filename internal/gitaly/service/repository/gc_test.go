@@ -147,9 +147,9 @@ func TestGarbageCollectWithPrune(t *testing.T) {
 	testhelper.CommitBlobWithName(t, repoPath, blobHashes[2], t.Name(), t.Name())
 
 	// change modification time of the blobs to make them attractive for the gc
-	aBitMoreThan24HoursAgo := time.Now().Add(-24*time.Hour - time.Second)
+	aBitMoreThan30MinutesAgo := time.Now().Add(-30*time.Minute - time.Second)
 	farAgo := time.Date(2015, 1, 1, 1, 1, 1, 1, time.UTC)
-	require.NoError(t, os.Chtimes(oldDanglingObjFile, aBitMoreThan24HoursAgo, aBitMoreThan24HoursAgo))
+	require.NoError(t, os.Chtimes(oldDanglingObjFile, aBitMoreThan30MinutesAgo, aBitMoreThan30MinutesAgo))
 	require.NoError(t, os.Chtimes(newDanglingObjFile, time.Now(), time.Now()))
 	require.NoError(t, os.Chtimes(oldReferencedObjFile, farAgo, farAgo))
 

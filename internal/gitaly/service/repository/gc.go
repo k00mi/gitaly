@@ -67,7 +67,7 @@ func (s *server) gc(ctx context.Context, in *gitalypb.GarbageCollectRequest) err
 
 	var flags []git.Option
 	if in.Prune {
-		flags = append(flags, git.Flag{Name: "--prune=24.hours.ago"})
+		flags = append(flags, git.Flag{Name: "--prune=30.minutes.ago"})
 	}
 
 	cmd, err := git.SafeCmd(ctx, in.GetRepository(), args,
