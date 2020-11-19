@@ -3,9 +3,9 @@ module gitlab.com/gitlab-org/gitaly
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cloudflare/tableflip v1.2.1-0.20200514155827-4baec9811f2b
+	github.com/containerd/cgroups v0.0.0-20201118023556-2819c83ced99
 	github.com/getsentry/sentry-go v0.7.0
 	github.com/git-lfs/git-lfs v1.5.1-0.20200916154635-9ea4eed5b112
-	github.com/gogo/protobuf v1.2.1 // indirect
 	github.com/golang/protobuf v1.3.2
 	github.com/google/uuid v1.1.1
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
@@ -17,6 +17,7 @@ require (
 	github.com/libgit2/git2go/v30 v30.0.18
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/olekukonko/tablewriter v0.0.2
+	github.com/opencontainers/runtime-spec v1.0.2
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/otiai10/curr v1.0.0 // indirect
 	github.com/pelletier/go-toml v1.8.1

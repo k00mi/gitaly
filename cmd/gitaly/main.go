@@ -12,6 +12,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/bootstrap"
 	"gitlab.com/gitlab-org/gitaly/internal/bootstrap/starter"
+	"gitlab.com/gitlab-org/gitaly/internal/cgroups"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config/sentry"
@@ -79,6 +80,16 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	cgroupsManager := cgroups.NewManager(config.Config.Cgroups)
+	if err := cgroupsManager.Setup(); err != nil {
+		log.WithError(err).Fatal("failed setting up cgroups")
+	}
+	defer func() {
+		if err := cgroupsManager.Cleanup(); err != nil {
+			log.WithError(err).Warn("error cleaning up cgroups")
+		}
+	}()
 
 	gitVersion, err := git.Version(ctx)
 	if err != nil {
