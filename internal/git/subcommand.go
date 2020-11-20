@@ -27,6 +27,7 @@ const (
 	scBundle         = "bundle"
 	scArchive        = "archive"
 	scFormatPatch    = "format-patch"
+	scInit           = "init"
 )
 
 var knownReadOnlyCmds = map[string]struct{}{
@@ -60,6 +61,7 @@ var knownNoRefUpdates = map[string]struct{}{
 	scRepack:         struct{}{},
 	scPackRefs:       struct{}{},
 	scHashObject:     struct{}{},
+	scInit:           struct{}{},
 }
 
 // mayUpdateRef indicates if a subcommand is known to update references.
