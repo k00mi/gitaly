@@ -219,6 +219,28 @@ called on `testing.T`.
 [require]: https://github.com/stretchr/testify/tree/master/require
 [assert]: https://github.com/stretchr/testify/tree/master/assert
 
+##### Troubleshooting
+
+There is a [known issue][] running Go tests while using the [asdf version
+manager][asdf].
+
+In order to avoid polluting local configurations during testing, a test may
+redefine the location of `$HOME`, which interferes with asdf's `$ASDF_DATA_DIR`
+definition of `$HOME/.asdf`. You may see errors like this:
+
+```
+unknown command: bundle. Perhaps you have to reshim?
+```
+
+As a workaround, explicitly define the variable prior to executing tests:
+
+```sh
+$ ASDF_DATA_DIR=~/.asdf go test ...
+```
+
+[known issue]: https://gitlab.com/gitlab-org/gitaly/-/issues/2646
+[asdf]: https://asdf-vm.com/
+
 #### RSpec tests
 
 It is possible to write end-to-end RSpec tests that run against a full
