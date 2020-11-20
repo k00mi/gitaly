@@ -150,6 +150,10 @@ test:
   script:
     - go version
     - _build/git/bin/git version
+    # This command will make all directories except of our build directory and Ruby code unwritable.
+    # The purpose is to verify that there is no test which writes into those directories anymore, as
+    # they should all instead use a temporary directory for runtime data.
+    - find . -type d \( -path ./_build -o -path ./ruby \) -prune -o -type d -exec chmod a-w {} \;
     - make ${TARGET}
   artifacts:
     paths:
