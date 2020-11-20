@@ -1,6 +1,7 @@
 package namespace
 
 import (
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -25,10 +26,17 @@ func testMain(m *testing.M) int {
 	cleanup := testhelper.Configure()
 	defer cleanup()
 
+	tempDir, err := ioutil.TempDir("", "gitaly-tests")
+	if err != nil {
+		log.Error(err)
+		return 1
+	}
+	defer os.RemoveAll(tempDir)
+
 	config.Config.Storages = nil
 
 	for _, st := range []string{"default", "other"} {
-		dir, err := filepath.Abs(filepath.Join("testdata", st))
+		dir, err := filepath.Abs(filepath.Join(tempDir, st))
 		if err != nil {
 			log.Error(err)
 			return 1
