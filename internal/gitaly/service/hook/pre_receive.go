@@ -23,16 +23,16 @@ type prePostRequest interface {
 	GetGitPushOptions() []string
 }
 
-func hookRequestEnv(req hookRequest) ([]string, error) {
-	gitlabshellEnv, err := gitlabshell.Env()
+func (s *server) hookRequestEnv(req hookRequest) ([]string, error) {
+	gitlabshellEnv, err := gitlabshell.EnvFromConfig(s.cfg)
 	if err != nil {
 		return nil, err
 	}
 	return append(gitlabshellEnv, req.GetEnvironmentVariables()...), nil
 }
 
-func preReceiveEnv(req prePostRequest) ([]string, error) {
-	env, err := hookRequestEnv(req)
+func (s *server) preReceiveEnv(req prePostRequest) ([]string, error) {
+	env, err := s.hookRequestEnv(req)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func (s *server) PreReceiveHook(stream gitalypb.HookService_PreReceiveHookServer
 		return stream.Send(&gitalypb.PreReceiveHookResponse{Stderr: p})
 	})
 
-	env, err := preReceiveEnv(firstRequest)
+	env, err := s.preReceiveEnv(firstRequest)
 	if err != nil {
 		return fmt.Errorf("getting env vars from request: %v", err)
 	}

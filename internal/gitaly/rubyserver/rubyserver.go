@@ -78,7 +78,7 @@ func (s *Server) start() error {
 
 	cfg := config.Config
 
-	gitlabshellEnv, err := gitlabshell.Env()
+	gitlabshellEnv, err := gitlabshell.EnvFromConfig(cfg)
 	if err != nil {
 		return err
 	}
