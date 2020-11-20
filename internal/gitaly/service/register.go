@@ -90,7 +90,7 @@ func RegisterAll(grpcServer *grpc.Server, cfg config.Cfg, rubyServer *rubyserver
 	gitalypb.RegisterRemoteServiceServer(grpcServer, remote.NewServer(rubyServer, locator))
 	gitalypb.RegisterServerServiceServer(grpcServer, server.NewServer(cfg.Storages))
 	gitalypb.RegisterObjectPoolServiceServer(grpcServer, objectpool.NewServer(locator))
-	gitalypb.RegisterHookServiceServer(grpcServer, hook.NewServer(hookManager))
+	gitalypb.RegisterHookServiceServer(grpcServer, hook.NewServer(cfg, hookManager))
 	gitalypb.RegisterInternalGitalyServer(grpcServer, internalgitaly.NewServer(cfg.Storages))
 
 	healthpb.RegisterHealthServer(grpcServer, health.NewServer())
