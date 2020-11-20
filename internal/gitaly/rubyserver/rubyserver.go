@@ -91,7 +91,7 @@ func (s *Server) start() error {
 		"GITALY_RUBY_GITALY_BIN_DIR="+cfg.BinDir,
 		"GITALY_RUBY_DIR="+cfg.Ruby.Dir,
 		"GITALY_VERSION="+version.GetVersion(),
-		"GITALY_GIT_HOOKS_DIR="+hooks.Path(),
+		"GITALY_GIT_HOOKS_DIR="+hooks.Path(cfg),
 		"GITALY_SOCKET="+cfg.GitalyInternalSocketPath(),
 		"GITALY_TOKEN="+cfg.Auth.Token,
 		"GITALY_RUGGED_GIT_CONFIG_SEARCH_PATH="+cfg.Ruby.RuggedGitConfigSearchPath)

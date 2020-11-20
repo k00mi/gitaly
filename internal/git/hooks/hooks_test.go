@@ -15,14 +15,14 @@ func TestPath(t *testing.T) {
 	config.Config.Ruby.Dir = "/bazqux/gitaly-ruby"
 
 	t.Run("default", func(t *testing.T) {
-		require.Equal(t, "/bazqux/gitaly-ruby/git-hooks", Path())
+		require.Equal(t, "/bazqux/gitaly-ruby/git-hooks", Path(config.Config))
 	})
 
 	t.Run("with an override", func(t *testing.T) {
 		Override = "/override/hooks"
 		defer func() { Override = "" }()
 
-		require.Equal(t, "/override/hooks", Path())
+		require.Equal(t, "/override/hooks", Path(config.Config))
 	})
 
 	t.Run("when an env override", func(t *testing.T) {
@@ -31,7 +31,7 @@ func TestPath(t *testing.T) {
 		os.Setenv(key, "1")
 		defer os.Unsetenv(key)
 
-		require.Equal(t, "/var/empty", Path())
+		require.Equal(t, "/var/empty", Path(config.Config))
 	})
 }
 

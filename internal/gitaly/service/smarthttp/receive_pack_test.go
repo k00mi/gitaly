@@ -146,10 +146,10 @@ func TestFailedReceivePackRequestDueToHooksFailure(t *testing.T) {
 	}(hooks.Override)
 	hooks.Override = hookDir
 
-	require.NoError(t, os.MkdirAll(hooks.Path(), 0755))
+	require.NoError(t, os.MkdirAll(hooks.Path(config.Config), 0755))
 
 	hookContent := []byte("#!/bin/sh\nexit 1")
-	ioutil.WriteFile(filepath.Join(hooks.Path(), "pre-receive"), hookContent, 0755)
+	ioutil.WriteFile(filepath.Join(hooks.Path(config.Config), "pre-receive"), hookContent, 0755)
 
 	serverSocketPath, stop := runSmartHTTPServer(t)
 	defer stop()

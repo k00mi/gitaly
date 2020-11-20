@@ -153,10 +153,10 @@ func TestReceivePackPushHookFailure(t *testing.T) {
 	defer func(old string) { hooks.Override = old }(hooks.Override)
 	hooks.Override = hookDir
 
-	require.NoError(t, os.MkdirAll(hooks.Path(), 0755))
+	require.NoError(t, os.MkdirAll(hooks.Path(config.Config), 0755))
 
 	hookContent := []byte("#!/bin/sh\nexit 1")
-	ioutil.WriteFile(filepath.Join(hooks.Path(), "pre-receive"), hookContent, 0755)
+	ioutil.WriteFile(filepath.Join(hooks.Path(config.Config), "pre-receive"), hookContent, 0755)
 
 	_, _, err := testCloneAndPush(t, serverSocketPath, pushParams{storageName: testhelper.DefaultStorageName, glID: "1"})
 	require.Error(t, err)
