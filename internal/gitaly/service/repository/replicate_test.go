@@ -197,62 +197,104 @@ func TestReplicateRepositoryInvalidArguments(t *testing.T) {
 }
 
 func TestReplicateRepository_BadRepository(t *testing.T) {
-	tmpPath, cleanup := testhelper.TempDir(t)
-	defer cleanup()
-
-	replicaPath := filepath.Join(tmpPath, "replica")
-	require.NoError(t, os.MkdirAll(replicaPath, 0755))
-
-	defer func(storages []config.Storage) {
-		config.Config.Storages = storages
-	}(config.Config.Storages)
-
-	config.Config.Storages = []config.Storage{
-		config.Storage{
-			Name: "default",
-			Path: testhelper.GitlabTestStoragePath(),
+	for _, tc := range []struct {
+		desc          string
+		invalidSource bool
+		invalidTarget bool
+		error         func(testing.TB, error)
+	}{
+		{
+			desc:          "target invalid",
+			invalidTarget: true,
 		},
-		config.Storage{
-			Name: "replica",
-			Path: replicaPath,
+		{
+			desc:          "source invalid",
+			invalidSource: true,
+			error: func(t testing.TB, actual error) {
+				testhelper.RequireGrpcError(t, actual, codes.NotFound)
+				require.Contains(t, actual.Error(), "rpc error: code = NotFound desc = GetRepoPath: not a git repository:")
+			},
 		},
+		{
+			desc:          "both invalid",
+			invalidSource: true,
+			invalidTarget: true,
+			error: func(t testing.TB, actual error) {
+				testhelper.RequireGrpcError(t, actual, codes.Internal)
+				require.Contains(t, actual.Error(), `rpc error: code = Internal desc = could not create repository from snapshot: wait for tar, stderr: "", err: rpc error: code = NotFound desc = GetRepoPath: not a git repository:`)
+			},
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			targetStorageRoot, cleanup := testhelper.TempDir(t)
+			defer cleanup()
+
+			defer func(storages []config.Storage) {
+				config.Config.Storages = storages
+			}(config.Config.Storages)
+
+			config.Config.Storages = []config.Storage{
+				config.Storage{
+					Name: "default",
+					Path: testhelper.GitlabTestStoragePath(),
+				},
+				config.Storage{
+					Name: "target",
+					Path: targetStorageRoot,
+				},
+			}
+
+			sourceRepo, _, cleanupRepo := testhelper.NewTestRepo(t)
+			defer cleanupRepo()
+
+			targetRepo := testhelper.NewTestRepoTo(t, targetStorageRoot, sourceRepo.RelativePath)
+			targetRepo.StorageName = "target"
+
+			var invalidRepos []*gitalypb.Repository
+			if tc.invalidSource {
+				invalidRepos = append(invalidRepos, sourceRepo)
+			}
+			if tc.invalidTarget {
+				invalidRepos = append(invalidRepos, targetRepo)
+			}
+
+			for _, invalidRepo := range invalidRepos {
+				invalidRepoPath, err := config.NewLocator(config.Config).GetPath(invalidRepo)
+				require.NoError(t, err)
+
+				// delete git data so make the repo invalid
+				for _, path := range []string{"refs", "objects", "HEAD"} {
+					require.NoError(t, os.RemoveAll(filepath.Join(invalidRepoPath, path)))
+				}
+			}
+
+			serverSocketPath, clean := runFullServer(t)
+			defer clean()
+
+			config.Config.SocketPath = serverSocketPath
+
+			repoClient, conn := repository.NewRepositoryClient(t, serverSocketPath)
+			defer conn.Close()
+
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
+			injectedCtx := metadata.NewOutgoingContext(ctx, md)
+
+			_, err := repoClient.ReplicateRepository(injectedCtx, &gitalypb.ReplicateRepositoryRequest{
+				Repository: targetRepo,
+				Source:     sourceRepo,
+			})
+			if tc.error != nil {
+				tc.error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			testhelper.MustRunCommand(t, nil, "git", "-C", filepath.Join(targetStorageRoot, targetRepo.RelativePath), "fsck")
+		})
 	}
-
-	serverSocketPath, clean := runFullServer(t)
-	defer clean()
-
-	locator := config.NewLocator(config.Config)
-
-	testRepo, _, cleanupRepo := testhelper.NewTestRepo(t)
-	defer cleanupRepo()
-
-	config.Config.SocketPath = serverSocketPath
-
-	repoClient, conn := repository.NewRepositoryClient(t, serverSocketPath)
-	defer conn.Close()
-
-	targetRepo := *testRepo
-	targetRepo.StorageName = "replica"
-
-	targetRepoPath, err := locator.GetPath(&targetRepo)
-	require.NoError(t, err)
-
-	require.NoError(t, os.MkdirAll(targetRepoPath, 0755))
-	testhelper.MustRunCommand(t, nil, "touch", filepath.Join(targetRepoPath, "invalid_git_repo"))
-
-	ctx, cancel := testhelper.Context()
-	defer cancel()
-
-	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
-	injectedCtx := metadata.NewOutgoingContext(ctx, md)
-
-	_, err = repoClient.ReplicateRepository(injectedCtx, &gitalypb.ReplicateRepositoryRequest{
-		Repository: &targetRepo,
-		Source:     testRepo,
-	})
-	require.NoError(t, err)
-
-	testhelper.MustRunCommand(t, nil, "git", "-C", targetRepoPath, "fsck")
 }
 
 func TestReplicateRepository_FailedFetchInternalRemote(t *testing.T) {
