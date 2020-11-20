@@ -39,7 +39,7 @@ func TestServerFactory(t *testing.T) {
 	go gitalyServerFactory.Serve(gitalyListener, false)
 
 	// start gitaly serving on internal endpoint
-	gitalyInternalSocketPath := gconfig.GitalyInternalSocketPath()
+	gitalyInternalSocketPath := gconfig.Config.GitalyInternalSocketPath()
 	defer func() { require.NoError(t, os.RemoveAll(gitalyInternalSocketPath)) }()
 	gitalyInternalListener, err := net.Listen(starter.Unix, gitalyInternalSocketPath)
 	require.NoError(t, err)

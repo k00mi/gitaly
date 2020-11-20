@@ -111,7 +111,7 @@ func testUserCreateBranchWithTransaction(t *testing.T, withRefTxHook bool) {
 	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	internalSocket := config.GitalyInternalSocketPath()
+	internalSocket := config.Config.GitalyInternalSocketPath()
 	internalListener, err := net.Listen("unix", internalSocket)
 	require.NoError(t, err)
 

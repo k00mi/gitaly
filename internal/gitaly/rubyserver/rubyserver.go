@@ -39,15 +39,6 @@ func init() {
 	}
 }
 
-func socketPath(id int) string {
-	socketDir := config.InternalSocketDir()
-	if socketDir == "" {
-		panic("internal socket directory is missing")
-	}
-
-	return filepath.Join(socketDir, fmt.Sprintf("ruby.%d", id))
-}
-
 // Server represents a gitaly-ruby helper process.
 type Server struct {
 	startOnce    sync.Once
@@ -101,7 +92,7 @@ func (s *Server) start() error {
 		"GITALY_RUBY_DIR="+cfg.Ruby.Dir,
 		"GITALY_VERSION="+version.GetVersion(),
 		"GITALY_GIT_HOOKS_DIR="+hooks.Path(),
-		"GITALY_SOCKET="+config.GitalyInternalSocketPath(),
+		"GITALY_SOCKET="+cfg.GitalyInternalSocketPath(),
 		"GITALY_TOKEN="+cfg.Auth.Token,
 		"GITALY_RUGGED_GIT_CONFIG_SEARCH_PATH="+cfg.Ruby.RuggedGitConfigSearchPath)
 	env = append(env, gitlabshellEnv...)
@@ -123,7 +114,7 @@ func (s *Server) start() error {
 
 	for i := 0; i < numWorkers; i++ {
 		name := fmt.Sprintf("gitaly-ruby.%d", i)
-		socketPath := socketPath(i)
+		socketPath := filepath.Join(cfg.InternalSocketDir, fmt.Sprintf("ruby.%d", i))
 
 		// Use 'ruby-cd' to make sure gitaly-ruby has the same working directory
 		// as the current process. This is a hack to sort-of support relative

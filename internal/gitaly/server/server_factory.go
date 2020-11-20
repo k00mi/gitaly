@@ -48,7 +48,7 @@ func (s *GitalyServerFactory) StartWorkers(ctx context.Context, l logrus.FieldLo
 		))
 	}
 
-	cc, err := client.Dial("unix://"+config.GitalyInternalSocketPath(), opts)
+	cc, err := client.Dial("unix://"+cfg.GitalyInternalSocketPath(), opts)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +96,6 @@ func (s *GitalyServerFactory) Stop() {
 	}
 
 	s.ruby.Stop()
-	CleanupInternalSocketDir()
 }
 
 // GracefulStop stops both the secure and insecure servers gracefully

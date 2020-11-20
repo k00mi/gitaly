@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"crypto/tls"
-	"os"
 	"time"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -152,11 +151,4 @@ func NewInsecure(rubyServer *rubyserver.Server, hookManager hook.Manager, cfg co
 // NewSecure returns a GRPC server enabling TLS credentials
 func NewSecure(rubyServer *rubyserver.Server, hookManager hook.Manager, cfg config.Cfg, conns *client.Pool) *grpc.Server {
 	return createNewServer(rubyServer, hookManager, cfg, true, conns)
-}
-
-// CleanupInternalSocketDir will clean up the directory for internal sockets if it is a generated temp dir
-func CleanupInternalSocketDir() {
-	if tmpDir := config.GeneratedInternalSocketDir(); tmpDir != "" {
-		os.RemoveAll(tmpDir)
-	}
 }

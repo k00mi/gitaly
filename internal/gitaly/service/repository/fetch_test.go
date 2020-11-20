@@ -394,7 +394,7 @@ func runFullServer(t *testing.T) (string, func()) {
 	require.NoError(t, err)
 
 	//listen on internal socket
-	internalListener, err := net.Listen("unix", config.GitalyInternalSocketPath())
+	internalListener, err := net.Listen("unix", config.Config.GitalyInternalSocketPath())
 	require.NoError(t, err)
 
 	go server.Serve(internalListener)

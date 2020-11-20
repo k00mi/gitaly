@@ -21,15 +21,18 @@ func TestConfigLocator_GetObjectDirectoryPath(t *testing.T) {
 	repoPath := filepath.Join(tmpDir, "relative")
 	require.NoError(t, os.MkdirAll(repoPath, 0755))
 
-	require.NoError(t, SetGitPath())
-	cmd := exec.Command(Config.Git.BinPath, "init", "--bare", "--quiet")
+	cfg := Cfg{
+		Storages: []Storage{{
+			Name: "gitaly-1",
+			Path: filepath.Dir(repoPath),
+		}},
+	}
+	require.NoError(t, cfg.SetGitPath())
+	cmd := exec.Command(cfg.Git.BinPath, "init", "--bare", "--quiet")
 	cmd.Dir = repoPath
 	require.NoError(t, cmd.Run())
 
-	locator := NewLocator(Cfg{Storages: []Storage{{
-		Name: "gitaly-1",
-		Path: filepath.Dir(repoPath),
-	}}})
+	locator := NewLocator(cfg)
 
 	repoWithGitObjDir := func(dir string) *gitalypb.Repository {
 		return &gitalypb.Repository{
@@ -101,11 +104,7 @@ func TestConfigLocator_GetObjectDirectoryPath(t *testing.T) {
 				return
 			}
 
-			if err != nil {
-				require.NoError(t, err)
-				return
-			}
-
+			require.NoError(t, err)
 			require.Equal(t, tc.path, path)
 		})
 	}

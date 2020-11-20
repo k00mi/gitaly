@@ -58,7 +58,7 @@ func RealGitaly(storages []config.Storage, authToken, internalSocketPath string)
 	}
 }
 
-func RunInternalGitalyServer(t testing.TB, storages []config.Storage, token string) (*grpc.Server, string, func()) {
+func RunInternalGitalyServer(t testing.TB, internalSocketPath string, storages []config.Storage, token string) (*grpc.Server, string, func()) {
 	streamInt := []grpc.StreamServerInterceptor{auth.StreamServerInterceptor(internalauth.Config{Token: token})}
 	unaryInt := []grpc.UnaryServerInterceptor{auth.UnaryServerInterceptor(internalauth.Config{Token: token})}
 
@@ -68,7 +68,6 @@ func RunInternalGitalyServer(t testing.TB, storages []config.Storage, token stri
 	listener, err := net.Listen("unix", serverSocketPath)
 	require.NoError(t, err)
 
-	internalSocketPath := config.GitalyInternalSocketPath()
 	internalListener, err := net.Listen("unix", internalSocketPath)
 	require.NoError(t, err)
 

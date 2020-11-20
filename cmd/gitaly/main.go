@@ -36,11 +36,17 @@ func loadConfig(configPath string) error {
 	}
 	defer cfgFile.Close()
 
-	if err = config.Load(cfgFile); err != nil {
+	cfg, err := config.Load(cfgFile)
+	if err != nil {
 		return err
 	}
 
-	return config.Validate()
+	if err := cfg.Validate(); err != nil {
+		return err
+	}
+
+	config.Config = cfg
+	return nil
 }
 
 func flagUsage() {
@@ -132,7 +138,7 @@ func run(b *bootstrap.Bootstrap) error {
 
 	for _, c := range []starter.Config{
 		{starter.Unix, config.Config.SocketPath},
-		{starter.Unix, config.GitalyInternalSocketPath()},
+		{starter.Unix, config.Config.GitalyInternalSocketPath()},
 		{starter.TCP, config.Config.ListenAddr},
 		{starter.TLS, config.Config.TLSListenAddr},
 	} {

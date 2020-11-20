@@ -439,7 +439,7 @@ func runSmartHTTPHookServiceServer(t *testing.T) (*grpc.Server, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	internalListener, err := net.Listen("unix", config.GitalyInternalSocketPath())
+	internalListener, err := net.Listen("unix", config.Config.GitalyInternalSocketPath())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -512,7 +512,7 @@ func TestPostReceiveWithTransactionsViaPraefect(t *testing.T) {
 	require.NoError(t, gitalyServer.Start())
 	defer gitalyServer.Stop()
 
-	internalSocket := config.GitalyInternalSocketPath()
+	internalSocket := config.Config.GitalyInternalSocketPath()
 	internalListener, err := net.Listen("unix", internalSocket)
 	require.NoError(t, err)
 
@@ -562,7 +562,7 @@ func TestPostReceiveWithReferenceTransactionHook(t *testing.T) {
 	listener, err := net.Listen("unix", gitalySocketPath)
 	require.NoError(t, err)
 
-	internalListener, err := net.Listen("unix", config.GitalyInternalSocketPath())
+	internalListener, err := net.Listen("unix", config.Config.GitalyInternalSocketPath())
 	require.NoError(t, err)
 
 	go gitalyServer.Serve(listener)

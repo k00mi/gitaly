@@ -14,7 +14,7 @@ import (
 )
 
 func TestRepository(t *testing.T) {
-	_, serverSocketPath, cleanup := testserver.RunInternalGitalyServer(t, config.Config.Storages, config.Config.Auth.Token)
+	_, serverSocketPath, cleanup := testserver.RunInternalGitalyServer(t, config.Config.GitalyInternalSocketPath(), config.Config.Storages, config.Config.Auth.Token)
 	defer cleanup()
 
 	ctx, cancel := testhelper.Context()

@@ -14,11 +14,11 @@ import (
 )
 
 func TestGitHooksConfig(t *testing.T) {
-	testhelper.ConfigureRuby()
-
 	defer func(cfg config.Cfg) {
 		config.Config = cfg
 	}(config.Config)
+
+	require.NoError(t, testhelper.ConfigureRuby(&config.Config))
 
 	loggingDir, err := ioutil.TempDir("", t.Name())
 	require.NoError(t, err)

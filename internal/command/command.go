@@ -133,7 +133,7 @@ func GitPath() string {
 	if config.Config.Git.BinPath == "" {
 		// This shouldn't happen outside of testing, SetGitPath should be called by
 		// main.go to ensure correctness of the configuration on start-up.
-		if err := config.SetGitPath(); err != nil {
+		if err := config.Config.SetGitPath(); err != nil {
 			logrus.Fatal(err) // Bail out.
 		}
 	}

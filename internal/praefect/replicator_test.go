@@ -979,7 +979,7 @@ func runFullGitalyServer(t *testing.T) (string, func()) {
 		t.Fatal(err)
 	}
 	//listen on internal socket
-	internalListener, err := net.Listen("unix", gitaly_config.GitalyInternalSocketPath())
+	internalListener, err := net.Listen("unix", gitaly_config.Config.GitalyInternalSocketPath())
 	require.NoError(t, err)
 
 	go server.Serve(listener)
@@ -995,7 +995,7 @@ func runFullGitalyServer(t *testing.T) (string, func()) {
 // are the only ones needed for replication
 func newReplicationService(tb testing.TB) (*grpc.Server, string) {
 	socketName := testhelper.GetTemporaryGitalySocketFileName()
-	internalSocketName := gitaly_config.GitalyInternalSocketPath()
+	internalSocketName := gitaly_config.Config.GitalyInternalSocketPath()
 	require.NoError(tb, os.RemoveAll(internalSocketName))
 
 	svr := testhelper.NewTestGrpcServer(tb, nil, nil)

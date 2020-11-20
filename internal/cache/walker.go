@@ -166,7 +166,7 @@ func moveAndClear(storagePath string) error {
 }
 
 func init() {
-	config.RegisterHook(func(cfg config.Cfg) error {
+	config.RegisterHook(func(cfg *config.Cfg) error {
 		pathSet := map[string]struct{}{}
 		for _, storage := range cfg.Storages {
 			pathSet[storage.Path] = struct{}{}

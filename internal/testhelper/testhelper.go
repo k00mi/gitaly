@@ -110,9 +110,9 @@ func Configure() func() {
 		}
 
 		for _, f := range []func() error{
-			ConfigureRuby,
+			func() error { return ConfigureRuby(&config.Config) },
 			ConfigureGit,
-			config.Validate,
+			func() error { return config.Config.Validate() },
 		} {
 			if err := f(); err != nil {
 				os.RemoveAll(testDirectory)
@@ -369,19 +369,19 @@ func ConfigureGit() error {
 }
 
 // ConfigureRuby configures Ruby settings for test purposes at run time.
-func ConfigureRuby() error {
+func ConfigureRuby(cfg *config.Cfg) error {
 	if dir := os.Getenv("GITALY_TEST_RUBY_DIR"); len(dir) > 0 {
 		// Sometimes runtime.Caller is unreliable. This environment variable provides a bypass.
-		config.Config.Ruby.Dir = dir
+		cfg.Ruby.Dir = dir
 	} else {
 		_, currentFile, _, ok := runtime.Caller(0)
 		if !ok {
 			return fmt.Errorf("could not get caller info")
 		}
-		config.Config.Ruby.Dir = filepath.Join(filepath.Dir(currentFile), "../../ruby")
+		cfg.Ruby.Dir = filepath.Join(filepath.Dir(currentFile), "../../ruby")
 	}
 
-	if err := config.ConfigureRuby(); err != nil {
+	if err := cfg.ConfigureRuby(); err != nil {
 		log.Fatalf("validate ruby config: %v", err)
 	}
 

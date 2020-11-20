@@ -106,7 +106,7 @@ func runRepoServerWithConfig(t *testing.T, cfg config.Cfg, locator storage.Locat
 
 	srv := testhelper.NewServerWithAuth(t, streamInt, unaryInt, cfg.Auth.Token, opts...)
 
-	gitalypb.RegisterRepositoryServiceServer(srv.GrpcServer(), NewServer(cfg, RubyServer, locator, config.GitalyInternalSocketPath()))
+	gitalypb.RegisterRepositoryServiceServer(srv.GrpcServer(), NewServer(cfg, RubyServer, locator, config.Config.GitalyInternalSocketPath()))
 	reflection.Register(srv.GrpcServer())
 
 	require.NoError(t, srv.Start())

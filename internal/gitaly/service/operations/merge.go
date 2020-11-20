@@ -11,7 +11,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/updateref"
 	"gitlab.com/gitlab-org/gitaly/internal/git2go"
-	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
@@ -122,7 +121,7 @@ func (s *server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 		fmt.Sprintf("GL_USERNAME=%s", user.GetGlUsername()),
 		fmt.Sprintf("GL_REPOSITORY=%s", repo.GetGlRepository()),
 		fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
-		fmt.Sprintf("GITALY_SOCKET=" + config.GitalyInternalSocketPath()),
+		fmt.Sprintf("GITALY_SOCKET=" + s.cfg.GitalyInternalSocketPath()),
 		fmt.Sprintf("GITALY_REPO=%s", repo),
 		fmt.Sprintf("GITALY_TOKEN=%s", s.cfg.Auth.Token),
 	}, gitlabshellEnv...)
