@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -129,6 +130,8 @@ func TestSafeCmdValid(t *testing.T) {
 	reenableGitCmd := disableGitCmd()
 	defer reenableGitCmd()
 
+	hooksPath := "core.hooksPath=" + hooks.Path(config.Config)
+
 	endOfOptions := "--end-of-options"
 
 	for _, tt := range []struct {
@@ -140,7 +143,7 @@ func TestSafeCmdValid(t *testing.T) {
 		{
 			desc:       "no args",
 			subCmd:     git.SubCmd{Name: "meow"},
-			expectArgs: []string{"meow", endOfOptions},
+			expectArgs: []string{"-c", hooksPath, "meow", endOfOptions},
 		},
 		{
 			desc: "single option",
@@ -148,7 +151,7 @@ func TestSafeCmdValid(t *testing.T) {
 				git.Flag{Name: "--aaaa-bbbb"},
 			},
 			subCmd:     git.SubCmd{Name: "cccc"},
-			expectArgs: []string{"--aaaa-bbbb", "cccc", endOfOptions},
+			expectArgs: []string{"--aaaa-bbbb", "-c", hooksPath, "cccc", endOfOptions},
 		},
 		{
 			desc: "empty arg and postsep args",
@@ -157,7 +160,7 @@ func TestSafeCmdValid(t *testing.T) {
 				Args:        []string{""},
 				PostSepArgs: []string{"-woof", ""},
 			},
-			expectArgs: []string{"meow", "", endOfOptions, "--", "-woof", ""},
+			expectArgs: []string{"-c", hooksPath, "meow", "", endOfOptions, "--", "-woof", ""},
 		},
 		{
 			desc: "full blown",
@@ -175,7 +178,7 @@ func TestSafeCmdValid(t *testing.T) {
 				Args:        []string{"1", "2"},
 				PostSepArgs: []string{"3", "4", "5"},
 			},
-			expectArgs: []string{"-a", "-b", "c", "d", "-e", "-f", "g", "-h=i", "1", "2", endOfOptions, "--", "3", "4", "5"},
+			expectArgs: []string{"-a", "-b", "c", "-c", hooksPath, "d", "-e", "-f", "g", "-h=i", "1", "2", endOfOptions, "--", "3", "4", "5"},
 		},
 		{
 			desc: "output to stdout",
@@ -187,7 +190,7 @@ func TestSafeCmdValid(t *testing.T) {
 					git.Flag{Name: "--adjective"},
 				},
 			},
-			expectArgs: []string{"noun", "verb", "-", "--adjective", endOfOptions},
+			expectArgs: []string{"-c", hooksPath, "noun", "verb", "-", "--adjective", endOfOptions},
 		},
 		{
 			desc: "multiple value flags",
@@ -203,7 +206,7 @@ func TestSafeCmdValid(t *testing.T) {
 					git.ValueFlag{"--why", "looking-for-first-contribution"},
 				},
 			},
-			expectArgs: []string{"--contributing", "--author", "a-gopher", "accept", "--is-important", "--why", "looking-for-first-contribution", "mr", endOfOptions},
+			expectArgs: []string{"--contributing", "--author", "a-gopher", "-c", hooksPath, "accept", "--is-important", "--why", "looking-for-first-contribution", "mr", endOfOptions},
 		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
@@ -255,7 +258,7 @@ func TestSafeCmdWithEnv(t *testing.T) {
 
 	subCmd := git.SubCmd{Name: "cccc"}
 	endOfOptions := "--end-of-options"
-	expectArgs := []string{"--aaaa-bbbb", "cccc", endOfOptions}
+	expectArgs := []string{"--aaaa-bbbb", "-c", "core.hooksPath=" + hooks.Path(config.Config), "cccc", endOfOptions}
 
 	env := []string{"TEST_VAR1=1", "TEST_VAR2=2"}
 

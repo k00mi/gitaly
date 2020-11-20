@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -355,6 +356,11 @@ func TestLocalRepository_UpdateRef(t *testing.T) {
 	testRepo, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
+	defer func(oldValue string) {
+		config.Config.Ruby.Dir = oldValue
+	}(config.Config.Ruby.Dir)
+	config.Config.Ruby.Dir = "/var/empty"
+
 	otherRef, err := NewRepository(testRepo).GetReference(ctx, "refs/heads/gitaly-test-ref")
 	require.NoError(t, err)
 
@@ -486,6 +492,11 @@ func TestLocalRepository_FetchRemote(t *testing.T) {
 
 		return NewRepository(testRepo), testRepoPath, cleanup
 	}
+
+	defer func(oldValue string) {
+		config.Config.Ruby.Dir = oldValue
+	}(config.Config.Ruby.Dir)
+	config.Config.Ruby.Dir = "/var/empty"
 
 	t.Run("invalid name", func(t *testing.T) {
 		repo := NewRepository(nil)

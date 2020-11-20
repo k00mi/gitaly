@@ -60,7 +60,8 @@ func TestWithRefHook(t *testing.T) {
 
 			cmd, err := tt.fn()
 			require.NoError(t, err)
-			require.NoError(t, cmd.Wait())
+			// There is no full setup, so executing the hook will fail.
+			require.Error(t, cmd.Wait())
 
 			var actualEnvVars []string
 			for _, env := range cmd.Env() {
