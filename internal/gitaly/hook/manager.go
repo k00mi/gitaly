@@ -7,6 +7,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
@@ -48,6 +49,7 @@ type Manager interface {
 // GitLabHookManager is a hook manager containing Git hook business logic. It
 // uses the GitLab API to authenticate and track ongoing hook calls.
 type GitLabHookManager struct {
+	locator           storage.Locator
 	gitlabAPI         GitlabAPI
 	hooksConfig       config.Hooks
 	conns             *client.Pool
@@ -55,8 +57,9 @@ type GitLabHookManager struct {
 }
 
 // NewManager returns a new hook manager
-func NewManager(gitlabAPI GitlabAPI, cfg config.Cfg) *GitLabHookManager {
+func NewManager(locator storage.Locator, gitlabAPI GitlabAPI, cfg config.Cfg) *GitLabHookManager {
 	return &GitLabHookManager{
+		locator:     locator,
 		gitlabAPI:   gitlabAPI,
 		hooksConfig: cfg.Hooks,
 		conns:       client.NewPool(),

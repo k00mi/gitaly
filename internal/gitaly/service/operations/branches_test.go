@@ -143,8 +143,8 @@ func testUserCreateBranchWithTransaction(t *testing.T, withRefTxHook bool) {
 
 	transactionServer := &testTransactionServer{}
 	srv := testhelper.NewServerWithAuth(t, nil, nil, config.Config.Auth.Token)
-	hookManager := gitalyhook.NewManager(gitalyhook.GitlabAPIStub, config.Config)
 	locator := config.NewLocator(config.Config)
+	hookManager := gitalyhook.NewManager(locator, gitalyhook.GitlabAPIStub, config.Config)
 
 	conns := client.NewPool()
 	defer conns.Close()

@@ -23,10 +23,10 @@ import (
 )
 
 func TestFetchSourceBranchSourceRepositorySuccess(t *testing.T) {
-	serverSocketPath, clean := runFullServer(t)
-	defer clean()
-
 	locator := config.NewLocator(config.Config)
+
+	serverSocketPath, clean := runFullServer(t, locator)
+	defer clean()
 
 	client, conn := repository.NewRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
@@ -83,10 +83,10 @@ func TestFetchSourceBranchSourceRepositorySuccess(t *testing.T) {
 }
 
 func TestFetchSourceBranchSameRepositorySuccess(t *testing.T) {
-	serverSocketPath, clean := runFullServer(t)
-	defer clean()
-
 	locator := config.NewLocator(config.Config)
+
+	serverSocketPath, clean := runFullServer(t, locator)
+	defer clean()
 
 	client, conn := repository.NewRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
@@ -140,10 +140,10 @@ func TestFetchSourceBranchSameRepositorySuccess(t *testing.T) {
 }
 
 func TestFetchSourceBranchBranchNotFound(t *testing.T) {
-	serverSocketPath, clean := runFullServer(t)
-	defer clean()
-
 	locator := config.NewLocator(config.Config)
+
+	serverSocketPath, clean := runFullServer(t, locator)
+	defer clean()
 
 	client, conn := repository.NewRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
@@ -216,10 +216,10 @@ func TestFetchSourceBranchBranchNotFound(t *testing.T) {
 }
 
 func TestFetchSourceBranchWrongRef(t *testing.T) {
-	serverSocketPath, clean := runFullServer(t)
-	defer clean()
-
 	locator := config.NewLocator(config.Config)
+
+	serverSocketPath, clean := runFullServer(t, locator)
+	defer clean()
 
 	client, conn := repository.NewRepositoryClient(t, serverSocketPath)
 	defer conn.Close()
@@ -352,7 +352,7 @@ func TestFetchFullServerRequiresAuthentication(t *testing.T) {
 	// we want to be sure that authentication is handled correctly. If the
 	// tests in this file were using a server without authentication we could
 	// not be confident that authentication is done right.
-	serverSocketPath, clean := runFullServer(t)
+	serverSocketPath, clean := runFullServer(t, config.NewLocator(config.Config))
 	defer clean()
 
 	connOpts := []grpc.DialOption{
@@ -386,9 +386,9 @@ func newTestRepo(t *testing.T, locator storage.Locator, relativePath string) (*g
 	return repo, repoPath, func() { require.NoError(t, os.RemoveAll(repoPath)) }
 }
 
-func runFullServer(t *testing.T) (string, func()) {
+func runFullServer(t *testing.T, locator storage.Locator) (string, func()) {
 	conns := client.NewPool()
-	hookManager := hook.NewManager(hook.GitlabAPIStub, config.Config)
+	hookManager := hook.NewManager(locator, hook.GitlabAPIStub, config.Config)
 
 	server := serverPkg.NewInsecure(repository.RubyServer, hookManager, config.Config, conns)
 
@@ -410,9 +410,9 @@ func runFullServer(t *testing.T) (string, func()) {
 	}
 }
 
-func runFullSecureServer(t *testing.T) (*grpc.Server, string, testhelper.Cleanup) {
+func runFullSecureServer(t *testing.T, locator storage.Locator) (*grpc.Server, string, testhelper.Cleanup) {
 	conns := client.NewPool()
-	hookManager := hook.NewManager(hook.GitlabAPIStub, config.Config)
+	hookManager := hook.NewManager(locator, hook.GitlabAPIStub, config.Config)
 
 	server := serverPkg.NewSecure(repository.RubyServer, hookManager, config.Config, conns)
 	listener, addr := testhelper.GetLocalhostListener(t)

@@ -85,8 +85,8 @@ func runOperationServiceServerWithRubyServer(t *testing.T, ruby *rubyserver.Serv
 
 	conns := client.NewPool()
 
-	hookManager := gitalyhook.NewManager(gitalyhook.GitlabAPIStub, config.Config)
 	locator := config.NewLocator(config.Config)
+	hookManager := gitalyhook.NewManager(locator, gitalyhook.GitlabAPIStub, config.Config)
 	server := NewServer(config.Config, ruby, hookManager, locator, conns)
 
 	gitalypb.RegisterOperationServiceServer(srv.GrpcServer(), server)

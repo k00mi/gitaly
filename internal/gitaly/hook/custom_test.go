@@ -150,6 +150,7 @@ func TestCustomHookPartialFailure(t *testing.T) {
 			defer cleanup()
 
 			mgr := GitLabHookManager{
+				locator: config.NewLocator(config.Config),
 				hooksConfig: config.Hooks{
 					CustomHooksDir: globalCustomHooksDir,
 				},
@@ -204,6 +205,7 @@ func TestCustomHooksMultipleHooks(t *testing.T) {
 	}
 
 	mgr := GitLabHookManager{
+		locator: config.NewLocator(config.Config),
 		hooksConfig: config.Hooks{
 			CustomHooksDir: globalCustomHooksDir,
 		},
@@ -275,6 +277,7 @@ func TestCustomHooksWithSymlinks(t *testing.T) {
 	expectedExecutedScripts := []string{updateHookPath, updateTildePath}
 
 	mgr := GitLabHookManager{
+		locator: config.NewLocator(config.Config),
 		hooksConfig: config.Hooks{
 			CustomHooksDir: globalCustomHooksDir,
 		},
@@ -307,6 +310,7 @@ func TestMultilineStdin(t *testing.T) {
 
 	writeCustomHook(t, "pre-receive-script", projectHooksPath, printStdinScript)
 	mgr := GitLabHookManager{
+		locator: config.NewLocator(config.Config),
 		hooksConfig: config.Hooks{
 			CustomHooksDir: globalCustomHooksDir,
 		},
@@ -345,6 +349,7 @@ func TestMultipleScriptsStdin(t *testing.T) {
 	}
 
 	mgr := GitLabHookManager{
+		locator: config.NewLocator(config.Config),
 		hooksConfig: config.Hooks{
 			CustomHooksDir: globalCustomHooksDir,
 		},
@@ -376,6 +381,7 @@ func callAndVerifyHooks(t *testing.T, repo *gitalypb.Repository, hookName, globa
 	defer cleanup()
 
 	mgr := GitLabHookManager{
+		locator: config.NewLocator(config.Config),
 		hooksConfig: config.Hooks{
 			CustomHooksDir: globalHooksDir,
 		},

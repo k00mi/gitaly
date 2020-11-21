@@ -126,7 +126,7 @@ func TestConnectivity(t *testing.T) {
 
 func runServer(t *testing.T, newServer func(rubyServer *rubyserver.Server, hookManager hook.Manager, cfg config.Cfg, conns *client.Pool) *grpc.Server, cfg config.Cfg, connectionType string, addr string) (int, func()) {
 	conns := client.NewPool()
-	srv := newServer(nil, hook.NewManager(hook.GitlabAPIStub, cfg), cfg, conns)
+	srv := newServer(nil, hook.NewManager(config.NewLocator(cfg), hook.GitlabAPIStub, cfg), cfg, conns)
 
 	listener, err := net.Listen(connectionType, addr)
 	require.NoError(t, err)

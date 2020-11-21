@@ -135,7 +135,7 @@ func TestPreReceiveHook_GitlabAPIAccess(t *testing.T) {
 	gitlabAPI, err := gitalyhook.NewGitlabAPI(gitlabConfig, config.Config.TLS)
 	require.NoError(t, err)
 
-	serverSocketPath, stop := runHooksServerWithAPI(t, gitlabAPI, config.Cfg{})
+	serverSocketPath, stop := runHooksServerWithAPI(t, gitlabAPI, config.Config)
 	defer stop()
 
 	client, conn := newHooksClient(t, serverSocketPath)
@@ -238,7 +238,7 @@ func TestPreReceive_APIErrors(t *testing.T) {
 			gitlabAPI, err := gitalyhook.NewGitlabAPI(gitlabConfig, config.Config.TLS)
 			require.NoError(t, err)
 
-			serverSocketPath, stop := runHooksServerWithAPI(t, gitlabAPI, config.Cfg{})
+			serverSocketPath, stop := runHooksServerWithAPI(t, gitlabAPI, config.Config)
 			defer stop()
 
 			client, conn := newHooksClient(t, serverSocketPath)
@@ -301,7 +301,7 @@ exit %d
 	gitlabAPI, err := gitalyhook.NewGitlabAPI(gitlabConfig, config.Config.TLS)
 	require.NoError(t, err)
 
-	serverSocketPath, stop := runHooksServerWithAPI(t, gitlabAPI, config.Cfg{})
+	serverSocketPath, stop := runHooksServerWithAPI(t, gitlabAPI, config.Config)
 	defer stop()
 
 	client, conn := newHooksClient(t, serverSocketPath)
@@ -421,7 +421,7 @@ func TestPreReceiveHook_Primary(t *testing.T) {
 			}, config.Config.TLS)
 			require.NoError(t, err)
 
-			serverSocketPath, stop := runHooksServerWithAPI(t, gitlabAPI, config.Cfg{})
+			serverSocketPath, stop := runHooksServerWithAPI(t, gitlabAPI, config.Config)
 			defer stop()
 
 			client, conn := newHooksClient(t, serverSocketPath)

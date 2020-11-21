@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git/gittest"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/repository"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -14,7 +15,7 @@ import (
 )
 
 func TestCloneFromPoolHTTP(t *testing.T) {
-	serverSocketPath, clean := runFullServer(t)
+	serverSocketPath, clean := runFullServer(t, config.NewLocator(config.Config))
 	defer clean()
 
 	ctxOuter, cancel := testhelper.Context()

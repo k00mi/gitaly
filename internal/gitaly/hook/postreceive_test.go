@@ -13,7 +13,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
 func TestPrintAlert(t *testing.T) {
@@ -71,7 +70,7 @@ func TestPostReceive_customHook(t *testing.T) {
 	repo, repoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	hookManager := NewManager(GitlabAPIStub, config.Config)
+	hookManager := NewManager(config.NewLocator(config.Config), GitlabAPIStub, config.Config)
 
 	standardEnv := []string{
 		fmt.Sprintf("GITALY_SOCKET=%s", config.Config.GitalyInternalSocketPath()),
@@ -222,7 +221,7 @@ type postreceiveAPIMock struct {
 	postreceive func(context.Context, string, string, string, ...string) (bool, []PostReceiveMessage, error)
 }
 
-func (m *postreceiveAPIMock) Allowed(ctx context.Context, repo *gitalypb.Repository, glRepository, glID, glProtocol, changes string) (bool, string, error) {
+func (m *postreceiveAPIMock) Allowed(ctx context.Context, params AllowedParams) (bool, string, error) {
 	return true, "", nil
 }
 
@@ -340,7 +339,7 @@ func TestPostReceive_gitlab(t *testing.T) {
 				},
 			}
 
-			hookManager := NewManager(&gitlabAPI, config.Config)
+			hookManager := NewManager(config.NewLocator(config.Config), &gitlabAPI, config.Config)
 
 			cleanup, err := testhelper.WriteCustomHook(testRepoPath, "post-receive", []byte("#!/bin/sh\necho hook called\n"))
 			require.NoError(t, err)

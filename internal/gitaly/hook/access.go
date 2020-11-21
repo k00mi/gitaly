@@ -13,9 +13,7 @@ import (
 	"strings"
 
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/version"
-	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitlab-shell/client"
 )
 
@@ -53,10 +51,28 @@ func marshallGitObjectDirs(gitObjectDirRel string, gitAltObjectDirsRel []string)
 	return string(envString), nil
 }
 
+// AllowedParams compose set of parameters required to call 'GitlabAPI.Allowed' method.
+type AllowedParams struct {
+	// RepoPath is an absolute path to the repository.
+	RepoPath string
+	// GitObjectDirectory is a path to git object directory.
+	GitObjectDirectory string
+	// GitAlternateObjectDirectories are the paths to alternate object directories.
+	GitAlternateObjectDirectories []string
+	// GLRepository is a name of the repository.
+	GLRepository string
+	// GLID is an identifier of the repository.
+	GLID string
+	// GLProtocol is a protocol used for operation.
+	GLProtocol string
+	// Changes is a set of changes to be applied.
+	Changes string
+}
+
 // GitlabAPI is an interface for accessing the gitlab internal API
 type GitlabAPI interface {
 	// Allowed queries the gitlab internal api /allowed endpoint to determine if a ref change for a given repository and user is allowed
-	Allowed(ctx context.Context, repo *gitalypb.Repository, glRepository, glID, glProtocol, changes string) (bool, string, error)
+	Allowed(ctx context.Context, params AllowedParams) (bool, string, error)
 	// Check verifies that GitLab can be reached, and authenticated to
 	Check(ctx context.Context) (*CheckInfo, error)
 	// PreReceive queries the gitlab internal api /pre_receive to increase the reference counter
@@ -125,27 +141,22 @@ func NewGitlabAPI(gitlabCfg config.Gitlab, tlsCfg config.TLS) (GitlabAPI, error)
 }
 
 // Allowed checks if a ref change for a given repository is allowed through the gitlab internal api /allowed endpoint
-func (a *gitlabAPI) Allowed(ctx context.Context, repo *gitalypb.Repository, glRepository, glID, glProtocol, changes string) (bool, string, error) {
-	repoPath, err := helper.GetRepoPath(repo)
-	if err != nil {
-		return false, "", fmt.Errorf("getting the repository path: %w", err)
-	}
-
-	gitObjDirVars, err := marshallGitObjectDirs(repo.GetGitObjectDirectory(), repo.GetGitAlternateObjectDirectories())
+func (a *gitlabAPI) Allowed(ctx context.Context, params AllowedParams) (bool, string, error) {
+	gitObjDirVars, err := marshallGitObjectDirs(params.GitObjectDirectory, params.GitAlternateObjectDirectories)
 	if err != nil {
 		return false, "", fmt.Errorf("when getting git object directories json encoded string: %w", err)
 	}
 
 	req := AllowedRequest{
 		Action:       "git-receive-pack",
-		GLRepository: glRepository,
-		Changes:      changes,
-		Protocol:     glProtocol,
-		Project:      strings.Replace(repoPath, "'", "", -1),
+		GLRepository: params.GLRepository,
+		Changes:      params.Changes,
+		Protocol:     params.GLProtocol,
+		Project:      strings.Replace(params.RepoPath, "'", "", -1),
 		Env:          gitObjDirVars,
 	}
 
-	if err := req.parseAndSetGLID(glID); err != nil {
+	if err := req.parseAndSetGLID(params.GLID); err != nil {
 		return false, "", fmt.Errorf("setting gl_id: %w", err)
 	}
 
@@ -295,7 +306,7 @@ func (a *AllowedRequest) parseAndSetGLID(glID string) error {
 // mockAPI is a noop gitlab API client
 type mockAPI struct{}
 
-func (m *mockAPI) Allowed(ctx context.Context, repo *gitalypb.Repository, glRepository, glID, glProtocol, changes string) (bool, string, error) {
+func (m *mockAPI) Allowed(ctx context.Context, params AllowedParams) (bool, string, error) {
 	return true, "", nil
 }
 

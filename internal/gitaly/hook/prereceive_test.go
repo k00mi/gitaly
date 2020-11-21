@@ -13,14 +13,13 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
-	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
 func TestPrereceive_customHooks(t *testing.T) {
 	repo, repoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	hookManager := NewManager(GitlabAPIStub, config.Config)
+	hookManager := NewManager(config.NewLocator(config.Config), GitlabAPIStub, config.Config)
 
 	standardEnv := []string{
 		fmt.Sprintf("GITALY_SOCKET=%s", config.Config.GitalyInternalSocketPath()),
@@ -158,12 +157,12 @@ func TestPrereceive_customHooks(t *testing.T) {
 }
 
 type prereceiveAPIMock struct {
-	allowed    func(context.Context, *gitalypb.Repository, string, string, string, string) (bool, string, error)
+	allowed    func(context.Context, AllowedParams) (bool, string, error)
 	prereceive func(context.Context, string) (bool, error)
 }
 
-func (m *prereceiveAPIMock) Allowed(ctx context.Context, repo *gitalypb.Repository, glRepository, glID, glProtocol, changes string) (bool, string, error) {
-	return m.allowed(ctx, repo, glRepository, glID, glProtocol, changes)
+func (m *prereceiveAPIMock) Allowed(ctx context.Context, params AllowedParams) (bool, string, error) {
+	return m.allowed(ctx, params)
 }
 
 func (m *prereceiveAPIMock) PreReceive(ctx context.Context, glRepository string) (bool, error) {
@@ -197,7 +196,7 @@ func TestPrereceive_gitlab(t *testing.T) {
 		desc           string
 		env            []string
 		changes        string
-		allowed        func(*testing.T, context.Context, *gitalypb.Repository, string, string, string, string) (bool, string, error)
+		allowed        func(*testing.T, context.Context, AllowedParams) (bool, string, error)
 		prereceive     func(*testing.T, context.Context, string) (bool, error)
 		expectHookCall bool
 		expectedErr    error
@@ -206,12 +205,12 @@ func TestPrereceive_gitlab(t *testing.T) {
 			desc:    "allowed change",
 			env:     standardEnv,
 			changes: "changes\n",
-			allowed: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, glRepo, glID, glProtocol, changes string) (bool, string, error) {
-				require.Equal(t, testRepo, repo)
-				require.Equal(t, testRepo.GlRepository, glRepo)
-				require.Equal(t, "1234", glID)
-				require.Equal(t, "web", glProtocol)
-				require.Equal(t, "changes\n", changes)
+			allowed: func(t *testing.T, ctx context.Context, params AllowedParams) (bool, string, error) {
+				require.Equal(t, testRepoPath, params.RepoPath)
+				require.Equal(t, testRepo.GlRepository, params.GLRepository)
+				require.Equal(t, "1234", params.GLID)
+				require.Equal(t, "web", params.GLProtocol)
+				require.Equal(t, "changes\n", params.Changes)
 				return true, "", nil
 			},
 			prereceive: func(t *testing.T, ctx context.Context, glRepo string) (bool, error) {
@@ -224,7 +223,7 @@ func TestPrereceive_gitlab(t *testing.T) {
 			desc:    "disallowed change",
 			env:     standardEnv,
 			changes: "changes\n",
-			allowed: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, glRepo, glID, glProtocol, changes string) (bool, string, error) {
+			allowed: func(t *testing.T, ctx context.Context, params AllowedParams) (bool, string, error) {
 				return false, "you shall not pass", nil
 			},
 			expectHookCall: false,
@@ -234,7 +233,7 @@ func TestPrereceive_gitlab(t *testing.T) {
 			desc:    "allowed returns error",
 			env:     standardEnv,
 			changes: "changes\n",
-			allowed: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, glRepo, glID, glProtocol, changes string) (bool, string, error) {
+			allowed: func(t *testing.T, ctx context.Context, params AllowedParams) (bool, string, error) {
 				return false, "", errors.New("oops")
 			},
 			expectHookCall: false,
@@ -244,7 +243,7 @@ func TestPrereceive_gitlab(t *testing.T) {
 			desc:    "prereceive rejects",
 			env:     standardEnv,
 			changes: "changes\n",
-			allowed: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, glRepo, glID, glProtocol, changes string) (bool, string, error) {
+			allowed: func(t *testing.T, ctx context.Context, params AllowedParams) (bool, string, error) {
 				return true, "", nil
 			},
 			prereceive: func(t *testing.T, ctx context.Context, glRepo string) (bool, error) {
@@ -257,7 +256,7 @@ func TestPrereceive_gitlab(t *testing.T) {
 			desc:    "prereceive errors",
 			env:     standardEnv,
 			changes: "changes\n",
-			allowed: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, glRepo, glID, glProtocol, changes string) (bool, string, error) {
+			allowed: func(t *testing.T, ctx context.Context, params AllowedParams) (bool, string, error) {
 				return true, "", nil
 			},
 			prereceive: func(t *testing.T, ctx context.Context, glRepo string) (bool, error) {
@@ -274,15 +273,15 @@ func TestPrereceive_gitlab(t *testing.T) {
 			defer cleanup()
 
 			gitlabAPI := prereceiveAPIMock{
-				allowed: func(ctx context.Context, repo *gitalypb.Repository, glRepo, glID, glProtocol, changes string) (bool, string, error) {
-					return tc.allowed(t, ctx, repo, glRepo, glID, glProtocol, changes)
+				allowed: func(ctx context.Context, params AllowedParams) (bool, string, error) {
+					return tc.allowed(t, ctx, params)
 				},
 				prereceive: func(ctx context.Context, glRepo string) (bool, error) {
 					return tc.prereceive(t, ctx, glRepo)
 				},
 			}
 
-			hookManager := NewManager(&gitlabAPI, config.Config)
+			hookManager := NewManager(config.NewLocator(config.Config), &gitlabAPI, config.Config)
 
 			cleanup, err := testhelper.WriteCustomHook(testRepoPath, "pre-receive", []byte("#!/bin/sh\necho called\n"))
 			require.NoError(t, err)
