@@ -104,9 +104,9 @@ proto:
     - make proto no-changes
   artifacts:
     paths:
+    - _build/proto.diff
     - ruby/proto/gitaly/*
     - proto/go/gitalypb/*
-    - proto.diff
     when: on_failure
 
 build:
