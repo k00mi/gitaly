@@ -44,6 +44,7 @@ func refHookEnv(ctx context.Context, repo *gitalypb.Repository, cfg config.Cfg) 
 	}
 
 	return []string{
+		"GITALY_BIN_DIR=" + cfg.BinDir,
 		"GITALY_SOCKET=" + cfg.GitalyInternalSocketPath(),
 		fmt.Sprintf("GITALY_REPO=%s", repoJSON),
 		fmt.Sprintf("GITALY_TOKEN=%s", cfg.Auth.Token),

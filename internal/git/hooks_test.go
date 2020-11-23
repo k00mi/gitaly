@@ -51,6 +51,7 @@ func TestWithRefHook(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			expectEnvVars := map[string]struct{}{
+				"GITALY_BIN_DIR":                    struct{}{},
 				"GITALY_SOCKET":                     struct{}{},
 				"GITALY_REPO":                       struct{}{},
 				"GITALY_TOKEN":                      struct{}{},
