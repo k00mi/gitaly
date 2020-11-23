@@ -21,7 +21,7 @@ import (
 
 func TestFetchIntoObjectPool_Success(t *testing.T) {
 	locator := config.NewLocator(config.Config)
-	server, serverSocketPath := runObjectPoolServer(t, locator)
+	server, serverSocketPath := runObjectPoolServer(t, config.Config, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -80,7 +80,7 @@ func TestFetchIntoObjectPool_CollectLogStatistics(t *testing.T) {
 	ctx = ctxlogrus.ToContext(ctx, log.WithField("test", "logging"))
 
 	locator := config.NewLocator(config.Config)
-	server, serverSocketPath := runObjectPoolServer(t, locator)
+	server, serverSocketPath := runObjectPoolServer(t, config.Config, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)

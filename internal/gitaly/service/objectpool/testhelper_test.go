@@ -6,11 +6,14 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
+	hookservice "gitlab.com/gitlab-org/gitaly/internal/gitaly/service/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 )
 
 func TestMain(m *testing.M) {
@@ -21,22 +24,25 @@ func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 	cleanup := testhelper.Configure()
 	defer cleanup()
+	testhelper.ConfigureGitalyHooksBinary()
 	return m.Run()
 }
 
-func runObjectPoolServer(t *testing.T, locator storage.Locator) (*grpc.Server, string) {
+func runObjectPoolServer(t *testing.T, cfg config.Cfg, locator storage.Locator) (*grpc.Server, string) {
 	server := testhelper.NewTestGrpcServer(t, nil, nil)
 
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 	listener, err := net.Listen("unix", serverSocketPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+
+	internalListener, err := net.Listen("unix", cfg.GitalyInternalSocketPath())
+	require.NoError(t, err)
 
 	gitalypb.RegisterObjectPoolServiceServer(server, NewServer(locator))
-	reflection.Register(server)
+	gitalypb.RegisterHookServiceServer(server, hookservice.NewServer(cfg, hook.NewManager(hook.GitlabAPIStub, cfg)))
 
 	go server.Serve(listener)
+	go server.Serve(internalListener)
 
 	return server, serverSocketPath
 }

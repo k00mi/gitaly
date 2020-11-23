@@ -16,7 +16,7 @@ import (
 
 func TestDisconnectGitAlternates(t *testing.T) {
 	locator := config.NewLocator(config.Config)
-	server, serverSocketPath := runObjectPoolServer(t, locator)
+	server, serverSocketPath := runObjectPoolServer(t, config.Config, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -66,7 +66,7 @@ func TestDisconnectGitAlternates(t *testing.T) {
 
 func TestDisconnectGitAlternatesNoAlternates(t *testing.T) {
 	locator := config.NewLocator(config.Config)
-	server, serverSocketPath := runObjectPoolServer(t, locator)
+	server, serverSocketPath := runObjectPoolServer(t, config.Config, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -90,7 +90,7 @@ func TestDisconnectGitAlternatesNoAlternates(t *testing.T) {
 
 func TestDisconnectGitAlternatesUnexpectedAlternates(t *testing.T) {
 	locator := config.NewLocator(config.Config)
-	server, serverSocketPath := runObjectPoolServer(t, locator)
+	server, serverSocketPath := runObjectPoolServer(t, config.Config, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
