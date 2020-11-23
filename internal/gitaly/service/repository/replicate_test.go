@@ -220,8 +220,7 @@ func TestReplicateRepository_BadRepository(t *testing.T) {
 			invalidSource: true,
 			invalidTarget: true,
 			error: func(t testing.TB, actual error) {
-				testhelper.RequireGrpcError(t, actual, codes.Internal)
-				require.Contains(t, actual.Error(), `rpc error: code = Internal desc = could not create repository from snapshot: wait for tar, stderr: "", err: rpc error: code = NotFound desc = GetRepoPath: not a git repository:`)
+				require.Equal(t, repository.ErrInvalidSourceRepository, actual)
 			},
 		},
 	} {

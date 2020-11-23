@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
@@ -19,7 +20,12 @@ import (
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
+
+// ErrInvalidSourceRepository is returned when attempting to replicate from an invalid source repository.
+var ErrInvalidSourceRepository = status.Error(codes.NotFound, "invalid source repository")
 
 func (s *server) ReplicateRepository(ctx context.Context, in *gitalypb.ReplicateRepositoryRequest) (*gitalypb.ReplicateRepositoryResponse, error) {
 	if err := validateReplicateRepository(in); err != nil {
@@ -33,6 +39,10 @@ func (s *server) ReplicateRepository(ctx context.Context, in *gitalypb.Replicate
 
 	if !storage.IsGitDirectory(repoPath) {
 		if err = s.create(ctx, in, repoPath); err != nil {
+			if errors.Is(err, ErrInvalidSourceRepository) {
+				return nil, ErrInvalidSourceRepository
+			}
+
 			return nil, helper.ErrInternal(err)
 		}
 	}
@@ -93,7 +103,7 @@ func (s *server) create(ctx context.Context, in *gitalypb.ReplicateRepositoryReq
 	}
 
 	if err := s.createFromSnapshot(ctx, in); err != nil {
-		return fmt.Errorf("could not create repository from snapshot: %v", err)
+		return fmt.Errorf("could not create repository from snapshot: %w", err)
 	}
 
 	return nil
@@ -121,10 +131,30 @@ func (s *server) createFromSnapshot(ctx context.Context, in *gitalypb.ReplicateR
 		return fmt.Errorf("get snapshot: %w", err)
 	}
 
-	snapshotReader := streamio.NewReader(func() ([]byte, error) {
-		resp, err := stream.Recv()
-		return resp.GetData(), err
-	})
+	// We need to catch a possible 'invalid repository' error from GetSnapshot. On an empty read,
+	// BSD tar exits with code 0 so we'd receive the error when waiting for the command. GNU tar on
+	// Linux exits with a non-zero code, which causes Go to return an os.ExitError hiding the original
+	// error reading from stdin. To get access to the error on both Linux and macOS, we read the first
+	// message from the stream here to get access to the possible 'invalid repository' first on both
+	// platforms.
+	firstBytes, err := stream.Recv()
+	if err != nil {
+		if st, ok := status.FromError(err); ok {
+			if st.Code() == codes.NotFound && strings.HasPrefix(st.Message(), "GetRepoPath: not a git repository:") {
+				return ErrInvalidSourceRepository
+			}
+		}
+
+		return fmt.Errorf("first snapshot read: %w", err)
+	}
+
+	snapshotReader := io.MultiReader(
+		bytes.NewReader(firstBytes.GetData()),
+		streamio.NewReader(func() ([]byte, error) {
+			resp, err := stream.Recv()
+			return resp.GetData(), err
+		}),
+	)
 
 	stderr := &bytes.Buffer{}
 	cmd, err := command.New(ctx, exec.Command("tar", "-C", tempPath, "-xvf", "-"), snapshotReader, nil, stderr)
