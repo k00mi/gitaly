@@ -119,10 +119,13 @@ func TestReceivePackPushSuccessWithGitProtocol(t *testing.T) {
 	serverSocketPath, stop := runSSHServer(t)
 	defer stop()
 
-	lHead, rHead, err := testCloneAndPush(t, serverSocketPath, pushParams{storageName: testhelper.DefaultStorageName, glID: "1", gitProtocol: git.ProtocolV2})
-	if err != nil {
-		t.Fatal(err)
-	}
+	lHead, rHead, err := testCloneAndPush(t, serverSocketPath, pushParams{
+		storageName:  testhelper.DefaultStorageName,
+		glRepository: "project-123",
+		glID:         "1",
+		gitProtocol:  git.ProtocolV2,
+	})
+	require.NoError(t, err)
 
 	require.Equal(t, lHead, rHead, "local and remote head not equal. push failed")
 
