@@ -222,6 +222,18 @@ func (m *MemoryRepositoryStore) RepositoryExists(ctx context.Context, virtualSto
 	return m.getRepositoryGeneration(virtualStorage, relativePath) != GenerationUnknown, nil
 }
 
+func (m *MemoryRepositoryStore) DeleteInvalidRepository(ctx context.Context, virtualStorage, relativePath, storage string) error {
+	m.m.Lock()
+	defer m.m.Unlock()
+
+	m.deleteStorageRepository(virtualStorage, relativePath, storage)
+	if len(m.storageState[virtualStorage][relativePath]) == 0 {
+		m.deleteRepository(virtualStorage, relativePath)
+	}
+
+	return nil
+}
+
 func (m *MemoryRepositoryStore) GetOutdatedRepositories(ctx context.Context, virtualStorage string) (map[string]map[string]int, error) {
 	m.m.Lock()
 	defer m.m.Unlock()

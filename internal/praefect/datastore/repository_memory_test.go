@@ -415,6 +415,36 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 		})
 	})
 
+	t.Run("DeleteInvalidRepository", func(t *testing.T) {
+		t.Run("only replica", func(t *testing.T) {
+			rs, requireState := newStore(t, nil)
+			require.NoError(t, rs.SetGeneration(ctx, vs, repo, "invalid-storage", 0))
+			require.NoError(t, rs.DeleteInvalidRepository(ctx, vs, repo, "invalid-storage"))
+			requireState(t, ctx, virtualStorageState{}, storageState{})
+		})
+
+		t.Run("another replica", func(t *testing.T) {
+			rs, requireState := newStore(t, nil)
+			require.NoError(t, rs.SetGeneration(ctx, vs, repo, "invalid-storage", 0))
+			require.NoError(t, rs.SetGeneration(ctx, vs, repo, "other-storage", 0))
+			require.NoError(t, rs.DeleteInvalidRepository(ctx, vs, repo, "invalid-storage"))
+			requireState(t, ctx,
+				virtualStorageState{
+					"virtual-storage-1": {
+						"repository-1": struct{}{},
+					},
+				},
+				storageState{
+					"virtual-storage-1": {
+						"repository-1": {
+							"other-storage": 0,
+						},
+					},
+				},
+			)
+		})
+	})
+
 	t.Run("IsLatestGeneration", func(t *testing.T) {
 		rs, _ := newStore(t, nil)
 
