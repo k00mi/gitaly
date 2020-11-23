@@ -23,32 +23,12 @@ type SecondariesProvider interface {
 
 // DirectStorageProvider provides the latest state of the synced nodes.
 type DirectStorageProvider struct {
-	sp          SecondariesProvider
-	errorsTotal *prometheus.CounterVec
+	sp SecondariesProvider
 }
 
 // NewDirectStorageProvider returns a new storage provider.
 func NewDirectStorageProvider(sp SecondariesProvider) *DirectStorageProvider {
-	csp := &DirectStorageProvider{
-		sp: sp,
-		errorsTotal: prometheus.NewCounterVec(
-			prometheus.CounterOpts{
-				Name: "gitaly_praefect_uptodate_storages_errors_total",
-				Help: "Total number of errors raised during defining up to date storages for reads distribution",
-			},
-			[]string{"type"},
-		),
-	}
-
-	return csp
-}
-
-func (c *DirectStorageProvider) Describe(descs chan<- *prometheus.Desc) {
-	prometheus.DescribeByCollect(c, descs)
-}
-
-func (c *DirectStorageProvider) Collect(collector chan<- prometheus.Metric) {
-	c.errorsTotal.Collect(collector)
+	return &DirectStorageProvider{sp: sp}
 }
 
 func (c *DirectStorageProvider) GetSyncedNodes(ctx context.Context, virtualStorage, relativePath, primaryStorage string) []string {
@@ -59,7 +39,6 @@ func (c *DirectStorageProvider) GetSyncedNodes(ctx context.Context, virtualStora
 func (c *DirectStorageProvider) getSyncedNodes(ctx context.Context, virtualStorage, relativePath, primaryStorage string) ([]string, bool) {
 	upToDateStorages, err := c.sp.GetConsistentSecondaries(ctx, virtualStorage, relativePath, primaryStorage)
 	if err != nil {
-		c.errorsTotal.WithLabelValues("retrieve").Inc()
 		// this is recoverable error - we can proceed with primary node
 		ctxlogrus.Extract(ctx).WithError(err).Warn("get consistent secondaries")
 		return []string{primaryStorage}, false
@@ -85,7 +64,7 @@ var errNotExistingVirtualStorage = errors.New("virtual storage does not exist")
 // CachingStorageProvider is a storage provider that caches up to date storages by repository.
 // Each virtual storage has it's own cache that invalidates entries based on notifications.
 type CachingStorageProvider struct {
-	*DirectStorageProvider
+	dsp *DirectStorageProvider
 	// caches is per virtual storage cache. It is initialized once on construction.
 	caches map[string]*lru.Cache
 	// access is access method to use: 0 - without caching; 1 - with caching.
@@ -100,10 +79,10 @@ type CachingStorageProvider struct {
 // NewCachingStorageProvider returns a storage provider that uses caching.
 func NewCachingStorageProvider(logger logrus.FieldLogger, sp SecondariesProvider, virtualStorages []string) (*CachingStorageProvider, error) {
 	csp := &CachingStorageProvider{
-		DirectStorageProvider: NewDirectStorageProvider(sp),
-		caches:                make(map[string]*lru.Cache, len(virtualStorages)),
-		syncer:                syncer{inflight: map[string]chan struct{}{}},
-		callbackLogger:        logger.WithField("component", "caching_storage_provider"),
+		dsp:            NewDirectStorageProvider(sp),
+		caches:         make(map[string]*lru.Cache, len(virtualStorages)),
+		syncer:         syncer{inflight: map[string]chan struct{}{}},
+		callbackLogger: logger.WithField("component", "caching_storage_provider"),
 		cacheAccessTotal: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "gitaly_praefect_uptodate_storages_cache_access_total",
@@ -143,12 +122,9 @@ func (c *CachingStorageProvider) Notification(n glsql.Notification) {
 	var change changeNotification
 	if err := json.NewDecoder(strings.NewReader(n.Payload)).Decode(&change); err != nil {
 		c.disableCaching() // as we can't update cache properly we should disable it
-		c.errorsTotal.WithLabelValues("notification_decode").Inc()
-		c.callbackLogger.WithError(err).WithField("channel", n.Channel).Error("received payload can't be processed")
+		c.callbackLogger.WithError(err).WithField("channel", n.Channel).Error("received payload can't be processed, cache disabled")
 		return
 	}
-
-	c.enableCaching()
 
 	entries := map[string][]string{}
 	for _, notificationEntries := range [][]notificationEntry{change.Old, change.New} {
@@ -184,7 +160,6 @@ func (c *CachingStorageProvider) Describe(descs chan<- *prometheus.Desc) {
 }
 
 func (c *CachingStorageProvider) Collect(collector chan<- prometheus.Metric) {
-	c.errorsTotal.Collect(collector)
 	c.cacheAccessTotal.Collect(collector)
 }
 
@@ -207,10 +182,10 @@ func (c *CachingStorageProvider) getCache(virtualStorage string) (*lru.Cache, bo
 
 func (c *CachingStorageProvider) cacheMiss(ctx context.Context, virtualStorage, relativePath, primaryStorage string) ([]string, bool) {
 	c.cacheAccessTotal.WithLabelValues(virtualStorage, "miss").Inc()
-	return c.getSyncedNodes(ctx, virtualStorage, relativePath, primaryStorage)
+	return c.dsp.getSyncedNodes(ctx, virtualStorage, relativePath, primaryStorage)
 }
 
-func (c *CachingStorageProvider) tryCache(ctx context.Context, virtualStorage, relativePath, primaryStorage string) (func(), *lru.Cache, []string, bool) {
+func (c *CachingStorageProvider) tryCache(virtualStorage, relativePath string) (func(), *lru.Cache, []string, bool) {
 	populateDone := func() {} // should be called AFTER any cache population is done
 
 	cache, found := c.getCache(virtualStorage)
@@ -242,7 +217,7 @@ func (c *CachingStorageProvider) GetSyncedNodes(ctx context.Context, virtualStor
 		var ok bool
 		var populationDone func()
 
-		populationDone, cache, storages, ok = c.tryCache(ctx, virtualStorage, relativePath, primaryStorage)
+		populationDone, cache, storages, ok = c.tryCache(virtualStorage, relativePath)
 		defer populationDone()
 		if ok {
 			c.cacheAccessTotal.WithLabelValues(virtualStorage, "hit").Inc()

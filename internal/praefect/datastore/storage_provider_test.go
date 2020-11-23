@@ -2,7 +2,7 @@ package datastore
 
 import (
 	"context"
-	"io"
+	"errors"
 	"runtime"
 	"strings"
 	"sync"
@@ -77,14 +77,6 @@ func TestDirectStorageProvider_GetSyncedNodes(t *testing.T) {
 		require.Equal(t, "get consistent secondaries", logHook.LastEntry().Message)
 		require.Equal(t, logrus.Fields{"error": assert.AnError}, logHook.LastEntry().Data)
 		require.Equal(t, logrus.WarnLevel, logHook.LastEntry().Level)
-
-		// "populate" metric is not set as there was an error and we don't want this result to be cached
-		err := testutil.CollectAndCompare(sp, strings.NewReader(`
-			# HELP gitaly_praefect_uptodate_storages_errors_total Total number of errors raised during defining up to date storages for reads distribution
-			# TYPE gitaly_praefect_uptodate_storages_errors_total counter
-			gitaly_praefect_uptodate_storages_errors_total{type="retrieve"} 1
-		`))
-		require.NoError(t, err)
 	})
 }
 
@@ -187,23 +179,20 @@ func TestCachingStorageProvider_GetSyncedNodes(t *testing.T) {
 		require.ElementsMatch(t, []string{"g1"}, storages)
 
 		require.Len(t, logHook.AllEntries(), 1)
-		require.Equal(t, "get consistent secondaries", logHook.LastEntry().Message)
-		require.Equal(t, logrus.Fields{"error": assert.AnError}, logHook.LastEntry().Data)
-		require.Equal(t, logrus.WarnLevel, logHook.LastEntry().Level)
+		assert.Equal(t, "get consistent secondaries", logHook.LastEntry().Message)
+		assert.Equal(t, logrus.Fields{"error": assert.AnError}, logHook.LastEntry().Data)
+		assert.Equal(t, logrus.WarnLevel, logHook.LastEntry().Level)
 
 		// "populate" metric is not set as there was an error and we don't want this result to be cached
 		err = testutil.CollectAndCompare(cache, strings.NewReader(`
 			# HELP gitaly_praefect_uptodate_storages_cache_access_total Total number of cache access operations during defining of up to date storages for reads distribution (per virtual storage)
 			# TYPE gitaly_praefect_uptodate_storages_cache_access_total counter
 			gitaly_praefect_uptodate_storages_cache_access_total{type="miss",virtual_storage="vs"} 1
-			# HELP gitaly_praefect_uptodate_storages_errors_total Total number of errors raised during defining up to date storages for reads distribution
-			# TYPE gitaly_praefect_uptodate_storages_errors_total counter
-			gitaly_praefect_uptodate_storages_errors_total{type="retrieve"} 1
 		`))
 		require.NoError(t, err)
 	})
 
-	t.Run("cache becomes disabled after handling invalid notification payload", func(t *testing.T) {
+	t.Run("cache is disabled after handling invalid payload", func(t *testing.T) {
 		logger := testhelper.DiscardTestEntry(t)
 		logHook := test.NewLocal(logger.Logger)
 
@@ -213,7 +202,7 @@ func TestCachingStorageProvider_GetSyncedNodes(t *testing.T) {
 		rs := &mockConsistentSecondariesProvider{}
 		rs.On("GetConsistentSecondaries", mock.Anything, "vs", "/repo/path/1", "g1").
 			Return(map[string]struct{}{"g2": {}, "g3": {}}, nil).
-			Twice()
+			Times(4)
 
 		cache, err := NewCachingStorageProvider(ctxlogrus.Extract(ctx), rs, []string{"vs"})
 		require.NoError(t, err)
@@ -224,60 +213,14 @@ func TestCachingStorageProvider_GetSyncedNodes(t *testing.T) {
 		require.ElementsMatch(t, []string{"g1", "g2", "g3"}, storages1)
 
 		// invalid payload disables caching
-		cache.Notification(glsql.Notification{Channel: "nt-channel", Payload: ``})
-
-		logEntries := logHook.AllEntries()
-		require.Len(t, logEntries, 1)
-		assert.Equal(t, logrus.Fields{
-			"component": "caching_storage_provider",
-			"channel":   "nt-channel",
-			"error":     io.EOF,
-		}, logEntries[0].Data)
-		assert.Equal(t, "received payload can't be processed", logEntries[0].Message)
-
-		// second access omits cached data as caching should be disabled
-		storages2 := cache.GetSyncedNodes(ctx, "vs", "/repo/path/1", "g1")
-		require.ElementsMatch(t, []string{"g1", "g2", "g3"}, storages2)
-
-		err = testutil.CollectAndCompare(cache, strings.NewReader(`
-			# HELP gitaly_praefect_uptodate_storages_cache_access_total Total number of cache access operations during defining of up to date storages for reads distribution (per virtual storage)
-			# TYPE gitaly_praefect_uptodate_storages_cache_access_total counter
-			gitaly_praefect_uptodate_storages_cache_access_total{type="evict",virtual_storage="vs"} 1
-			gitaly_praefect_uptodate_storages_cache_access_total{type="miss",virtual_storage="vs"} 2
-			gitaly_praefect_uptodate_storages_cache_access_total{type="populate",virtual_storage="vs"} 1
-			# HELP gitaly_praefect_uptodate_storages_errors_total Total number of errors raised during defining up to date storages for reads distribution
-			# TYPE gitaly_praefect_uptodate_storages_errors_total counter
-			gitaly_praefect_uptodate_storages_errors_total{type="notification_decode"} 1
-		`))
-		require.NoError(t, err)
-	})
-
-	t.Run("cache becomes enabled after handling valid payload after invalid payload", func(t *testing.T) {
-		ctx, cancel := testhelper.Context()
-		defer cancel()
-
-		rs := &mockConsistentSecondariesProvider{}
-		rs.On("GetConsistentSecondaries", mock.Anything, "vs", "/repo/path/1", "g1").
-			Return(map[string]struct{}{"g2": {}, "g3": {}}, nil).
-			Times(3)
-
-		cache, err := NewCachingStorageProvider(ctxlogrus.Extract(ctx), rs, []string{"vs"})
-		require.NoError(t, err)
-		cache.Connected()
-
-		// first access populates the cache
-		storages1 := cache.GetSyncedNodes(ctx, "vs", "/repo/path/1", "g1")
-		require.ElementsMatch(t, []string{"g1", "g2", "g3"}, storages1)
-
-		// invalid payload disables caching
-		cache.Notification(glsql.Notification{Payload: ``})
+		cache.Notification(glsql.Notification{Channel: "notification_channel_1", Payload: ``})
 
 		// second access omits cached data as caching should be disabled
 		storages2 := cache.GetSyncedNodes(ctx, "vs", "/repo/path/1", "g1")
 		require.ElementsMatch(t, []string{"g1", "g2", "g3"}, storages2)
 
 		// valid payload enables caching again
-		cache.Notification(glsql.Notification{Payload: `{}`})
+		cache.Notification(glsql.Notification{Channel: "notification_channel_2", Payload: `{}`})
 
 		// third access retrieves data and caches it
 		storages3 := cache.GetSyncedNodes(ctx, "vs", "/repo/path/1", "g1")
@@ -287,16 +230,21 @@ func TestCachingStorageProvider_GetSyncedNodes(t *testing.T) {
 		storages4 := cache.GetSyncedNodes(ctx, "vs", "/repo/path/1", "g1")
 		require.ElementsMatch(t, []string{"g1", "g2", "g3"}, storages4)
 
+		require.Len(t, logHook.AllEntries(), 1)
+		assert.Equal(t, "received payload can't be processed, cache disabled", logHook.LastEntry().Message)
+		assert.Equal(t, logrus.Fields{
+			"channel":   "notification_channel_1",
+			"component": "caching_storage_provider",
+			"error":     errors.New("EOF"),
+		}, logHook.LastEntry().Data)
+		assert.Equal(t, logrus.ErrorLevel, logHook.LastEntry().Level)
+
 		err = testutil.CollectAndCompare(cache, strings.NewReader(`
 			# HELP gitaly_praefect_uptodate_storages_cache_access_total Total number of cache access operations during defining of up to date storages for reads distribution (per virtual storage)
 			# TYPE gitaly_praefect_uptodate_storages_cache_access_total counter
 			gitaly_praefect_uptodate_storages_cache_access_total{type="evict",virtual_storage="vs"} 1
-			gitaly_praefect_uptodate_storages_cache_access_total{type="hit",virtual_storage="vs"} 1
-			gitaly_praefect_uptodate_storages_cache_access_total{type="miss",virtual_storage="vs"} 3
-			gitaly_praefect_uptodate_storages_cache_access_total{type="populate",virtual_storage="vs"} 2
-			# HELP gitaly_praefect_uptodate_storages_errors_total Total number of errors raised during defining up to date storages for reads distribution
-			# TYPE gitaly_praefect_uptodate_storages_errors_total counter
-			gitaly_praefect_uptodate_storages_errors_total{type="notification_decode"} 1
+			gitaly_praefect_uptodate_storages_cache_access_total{type="miss",virtual_storage="vs"} 4
+			gitaly_praefect_uptodate_storages_cache_access_total{type="populate",virtual_storage="vs"} 1
 		`))
 		require.NoError(t, err)
 	})

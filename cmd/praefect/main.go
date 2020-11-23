@@ -242,17 +242,13 @@ func run(cfgs []starter.Config, conf config.Config) error {
 	if conf.MemoryQueueEnabled {
 		queue = datastore.NewMemoryReplicationEventQueue(conf)
 		rs = datastore.NewMemoryRepositoryStore(conf.StorageNames())
-		storagesDirect := datastore.NewDirectStorageProvider(rs)
-		metricsCollectors = append(metricsCollectors, storagesDirect)
-		sp = storagesDirect
+		sp = datastore.NewDirectStorageProvider(rs)
 	} else {
 		queue = datastore.NewPostgresReplicationEventQueue(db)
 		rs = datastore.NewPostgresRepositoryStore(db, conf.StorageNames())
 
 		if conf.DB.ToPQString(true) == "" {
-			storagesDirect := datastore.NewDirectStorageProvider(rs)
-			metricsCollectors = append(metricsCollectors, storagesDirect)
-			sp = storagesDirect
+			sp = datastore.NewDirectStorageProvider(rs)
 		} else {
 			listenerOpts := datastore.DefaultPostgresListenerOpts
 			listenerOpts.Addr = conf.DB.ToPQString(true)
