@@ -20,7 +20,7 @@ func (s *Server) ServerInfo(ctx context.Context, in *gitalypb.ServerInfoRequest)
 	storageStatuses := make([]*gitalypb.ServerInfoResponse_StorageStatus, len(s.conf.VirtualStorages))
 
 	for i, virtualStorage := range s.conf.VirtualStorages {
-		shard, err := s.nodeMgr.GetShard(virtualStorage.Name)
+		shard, err := s.nodeMgr.GetShard(ctx, virtualStorage.Name)
 		if err != nil {
 			ctxlogrus.Extract(ctx).WithField("virtual_storage", virtualStorage.Name).WithError(err).Error("error when getting shard")
 			continue

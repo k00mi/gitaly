@@ -1,6 +1,8 @@
 package nodes
 
 import (
+	"context"
+
 	"google.golang.org/grpc"
 )
 
@@ -11,7 +13,7 @@ type MockManager struct {
 	GetShardFunc func(string) (Shard, error)
 }
 
-func (m *MockManager) GetShard(storage string) (Shard, error) {
+func (m *MockManager) GetShard(_ context.Context, storage string) (Shard, error) {
 	return m.GetShardFunc(storage)
 }
 

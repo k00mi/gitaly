@@ -13,7 +13,7 @@ func (s *Server) DiskStatistics(ctx context.Context, _ *gitalypb.DiskStatisticsR
 	var storageStatuses [][]*gitalypb.DiskStatisticsResponse_StorageStatus
 
 	for _, virtualStorage := range s.conf.VirtualStorages {
-		shard, err := s.nodeMgr.GetShard(virtualStorage.Name)
+		shard, err := s.nodeMgr.GetShard(ctx, virtualStorage.Name)
 		if err != nil {
 			return nil, err
 		}

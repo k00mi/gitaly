@@ -54,8 +54,8 @@ func TestGetPrimaryAndSecondaries(t *testing.T) {
 	err = elector.checkNodes(ctx)
 	db.RequireRowsInTable(t, "shard_primaries", 1)
 
-	elector.demotePrimary()
-	shard, err := elector.GetShard()
+	elector.demotePrimary(ctx)
+	shard, err := elector.GetShard(ctx)
 	db.RequireRowsInTable(t, "shard_primaries", 1)
 	require.Equal(t, ErrPrimaryNotHealthy, err)
 	require.Empty(t, shard)
@@ -109,7 +109,7 @@ func TestBasicFailover(t *testing.T) {
 	db.RequireRowsInTable(t, "shard_primaries", 1)
 
 	require.Equal(t, cs0, elector.primaryNode.Node)
-	shard, err := elector.GetShard()
+	shard, err := elector.GetShard(ctx)
 	require.NoError(t, err)
 	assertShard(t, shardAssertion{
 		Primary:     &nodeAssertion{cs0.GetStorage(), cs0.GetAddress()},
@@ -123,7 +123,7 @@ func TestBasicFailover(t *testing.T) {
 	// Primary should remain before the failover timeout is exceeded
 	err = elector.checkNodes(ctx)
 	require.NoError(t, err)
-	shard, err = elector.GetShard()
+	shard, err = elector.GetShard(ctx)
 	require.NoError(t, err)
 	assertShard(t, shardAssertion{
 		Primary:     &nodeAssertion{cs0.GetStorage(), cs0.GetAddress()},
@@ -139,7 +139,7 @@ func TestBasicFailover(t *testing.T) {
 
 	db.RequireRowsInTable(t, "node_status", 2)
 	db.RequireRowsInTable(t, "shard_primaries", 1)
-	shard, err = elector.GetShard()
+	shard, err = elector.GetShard(ctx)
 	require.NoError(t, err)
 	assertShard(t, shardAssertion{
 		Primary:     &nodeAssertion{cs1.GetStorage(), cs1.GetAddress()},
@@ -153,7 +153,7 @@ func TestBasicFailover(t *testing.T) {
 	predateLastSeenActiveAt(t, db, shardName, cs1.GetStorage(), failoverTimeout)
 	require.NoError(t, elector.checkNodes(ctx))
 
-	shard, err = elector.GetShard()
+	shard, err = elector.GetShard(ctx)
 	require.NoError(t, err)
 	assertShard(t, shardAssertion{
 		Primary:     &nodeAssertion{cs0.GetStorage(), cs0.GetAddress()},
@@ -167,7 +167,7 @@ func TestBasicFailover(t *testing.T) {
 	require.NoError(t, err)
 	db.RequireRowsInTable(t, "node_status", 2)
 	// No new candidates
-	_, err = elector.GetShard()
+	_, err = elector.GetShard(ctx)
 	require.Error(t, ErrPrimaryNotHealthy, err)
 }
 
@@ -183,24 +183,27 @@ func TestElectDemotedPrimary(t *testing.T) {
 		[]*nodeStatus{{node: node}},
 	)
 
-	candidates := []*sqlCandidate{{Node: &nodeStatus{node: node}}}
-	require.NoError(t, elector.electNewPrimary(candidates))
+	ctx, cancel := testhelper.Context()
+	defer cancel()
 
-	primary, err := elector.lookupPrimary()
+	candidates := []*sqlCandidate{{Node: &nodeStatus{node: node}}}
+	require.NoError(t, elector.electNewPrimary(ctx, candidates))
+
+	primary, err := elector.lookupPrimary(ctx)
 	require.NoError(t, err)
 	require.Equal(t, node.Storage, primary.GetStorage())
 
-	require.NoError(t, elector.demotePrimary())
+	require.NoError(t, elector.demotePrimary(ctx))
 
-	primary, err = elector.lookupPrimary()
+	primary, err = elector.lookupPrimary(ctx)
 	require.NoError(t, err)
 	require.Nil(t, primary)
 
 	predateElection(t, db, shardName, failoverTimeout)
 	require.NoError(t, err)
-	require.NoError(t, elector.electNewPrimary(candidates))
+	require.NoError(t, elector.electNewPrimary(ctx, candidates))
 
-	primary, err = elector.lookupPrimary()
+	primary, err = elector.lookupPrimary(ctx)
 	require.NoError(t, err)
 	require.Equal(t, node.Storage, primary.GetStorage())
 }
@@ -353,8 +356,11 @@ func TestElectNewPrimary(t *testing.T) {
 
 			elector := newSQLElector(shardName, config.Config{}, db.DB, logger, ns)
 
-			require.NoError(t, elector.electNewPrimary(candidates))
-			primary, err := elector.lookupPrimary()
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			require.NoError(t, elector.electNewPrimary(ctx, candidates))
+			primary, err := elector.lookupPrimary(ctx)
 
 			require.NoError(t, err)
 			require.Equal(t, testCase.expectedPrimary, primary.GetStorage())

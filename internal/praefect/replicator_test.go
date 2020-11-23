@@ -158,7 +158,7 @@ func TestReplMgr_ProcessBacklog(t *testing.T) {
 	require.NoError(t, err)
 	nodeMgr.Start(1*time.Millisecond, 5*time.Millisecond)
 
-	shard, err := nodeMgr.GetShard(conf.VirtualStorages[0].Name)
+	shard, err := nodeMgr.GetShard(ctx, conf.VirtualStorages[0].Name)
 	require.NoError(t, err)
 	require.Len(t, shard.Secondaries, 1)
 

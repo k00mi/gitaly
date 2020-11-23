@@ -31,8 +31,8 @@ func (s *Server) validateConsistencyCheckRequest(req *gitalypb.ConsistencyCheckR
 	return nil
 }
 
-func (s *Server) getNodes(req *gitalypb.ConsistencyCheckRequest) (target, reference nodes.Node, _ error) {
-	shard, err := s.nodeMgr.GetShard(req.GetVirtualStorage())
+func (s *Server) getNodes(ctx context.Context, req *gitalypb.ConsistencyCheckRequest) (target, reference nodes.Node, _ error) {
+	shard, err := s.nodeMgr.GetShard(ctx, req.GetVirtualStorage())
 	if err != nil {
 		return nil, nil, status.Error(codes.NotFound, err.Error())
 	}
@@ -245,17 +245,17 @@ func (s *Server) ConsistencyCheck(req *gitalypb.ConsistencyCheckRequest, stream 
 		return err
 	}
 
+	g, ctx := errgroup.WithContext(stream.Context())
+
 	// target is the node we are checking, reference is the node we are
 	// checking against (e.g. the primary node)
-	target, reference, err := s.getNodes(req)
+	target, reference, err := s.getNodes(ctx, req)
 	if err != nil {
 		return err
 	}
 
 	walkerQ := make(chan string)
 	checksumResultQ := make(chan checksumResult)
-
-	g, ctx := errgroup.WithContext(stream.Context())
 
 	// the following goroutines form a pipeline where data flows from top
 	// to bottom
