@@ -23,6 +23,7 @@ include:
   - template: Security/SAST.gitlab-ci.yml
   - template: Security/Dependency-Scanning.gitlab-ci.yml
   - template: Security/Coverage-Fuzzing.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml
 
 danger-review:
   image: registry.gitlab.com/gitlab-org/gitlab-build-images:danger
@@ -230,13 +231,43 @@ docker-tag:
 gosec-sast:
   before_script:
     - apk add pkgconfig libgit2-dev gcc libc-dev
+  rules:
+    - if: $SAST_DISABLED
+      when: never
+    - if: $CI_COMMIT_BRANCH && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_MERGE_REQUEST_IID
+    - if: $CI_COMMIT_TAG
 
 license_scanning:
   before_script:
     - sudo apt-get update
     - sudo apt-get install -y libicu-dev libgit2-dev cmake
+  rules:
+    - if: $LICENSE_SCANNING_DISABLED
+      when: never
+    - if: $CI_COMMIT_BRANCH && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_MERGE_REQUEST_IID
+    - if: $CI_COMMIT_TAG
   variables:
     LICENSE_FINDER_CLI_OPTS: '--aggregate-paths=. ruby'
+
+gemnasium-dependency_scanning:
+  rules:
+    - if: $DEPENDENCY_SCANNING_DISABLED
+      when: never
+    - if: $CI_COMMIT_BRANCH && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_MERGE_REQUEST_IID
+    - if: $CI_COMMIT_TAG
+
+secret_detection:
+  inherit:
+    default: false
+  rules:
+    - if: $SECRET_DETECTION_DISABLED
+      when: never
+    - if: $CI_COMMIT_BRANCH && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_MERGE_REQUEST_IID
+    - if: $CI_COMMIT_TAG
 
 praefect_sql_connect:
   <<: *test_definition
