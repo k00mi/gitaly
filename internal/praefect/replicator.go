@@ -8,6 +8,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/repository"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/metadatahandler"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
@@ -53,9 +54,10 @@ func (dr defaultReplicator) Replicate(ctx context.Context, event datastore.Repli
 	}
 
 	logger := dr.log.WithFields(logrus.Fields{
-		logWithVirtualStorage: event.Job.VirtualStorage,
-		logWithReplTarget:     event.Job.TargetNodeStorage,
-		logWithCorrID:         correlation.ExtractFromContext(ctx),
+		logWithVirtualStorage:    event.Job.VirtualStorage,
+		logWithReplTarget:        event.Job.TargetNodeStorage,
+		"replication_job_source": event.Job.SourceNodeStorage,
+		logWithCorrID:            correlation.ExtractFromContext(ctx),
 	})
 
 	generation, err := dr.rs.GetReplicatedGeneration(ctx, event.Job.VirtualStorage, event.Job.RelativePath, event.Job.SourceNodeStorage, event.Job.TargetNodeStorage)
@@ -82,6 +84,19 @@ func (dr defaultReplicator) Replicate(ctx context.Context, event datastore.Repli
 		Source:     sourceRepository,
 		Repository: targetRepository,
 	}); err != nil {
+		if errors.Is(err, repository.ErrInvalidSourceRepository) {
+			if err := dr.rs.DeleteInvalidRepository(ctx,
+				event.Job.VirtualStorage,
+				event.Job.RelativePath,
+				event.Job.SourceNodeStorage,
+			); err != nil {
+				return fmt.Errorf("delete invalid repository: %w", err)
+			}
+
+			logger.Info("invalid repository record removed")
+			return nil
+		}
+
 		return fmt.Errorf("failed to create repository: %w", err)
 	}
 
