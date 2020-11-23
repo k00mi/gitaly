@@ -5,6 +5,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
+	hookservice "gitlab.com/gitlab-org/gitaly/internal/gitaly/service/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
@@ -19,13 +22,15 @@ func testMain(m *testing.M) int {
 	defer testhelper.MustHaveNoChildProcess()
 	cleanup := testhelper.Configure()
 	defer cleanup()
+	testhelper.ConfigureGitalyHooksBinary()
 	return m.Run()
 }
 
-func runCleanupServiceServer(t *testing.T) (string, func()) {
-	srv := testhelper.NewServer(t, nil, nil)
+func runCleanupServiceServer(t *testing.T, cfg config.Cfg) (string, func()) {
+	srv := testhelper.NewServer(t, nil, nil, testhelper.WithInternalSocket(cfg))
 
 	gitalypb.RegisterCleanupServiceServer(srv.GrpcServer(), NewServer())
+	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hookservice.NewServer(cfg, hook.NewManager(hook.GitlabAPIStub, cfg)))
 	reflection.Register(srv.GrpcServer())
 
 	require.NoError(t, srv.Start())

@@ -11,13 +11,14 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
 )
 
 func TestApplyBfgObjectMapStreamSuccess(t *testing.T) {
-	serverSocketPath, stop := runCleanupServiceServer(t)
+	serverSocketPath, stop := runCleanupServiceServer(t, config.Config)
 	defer stop()
 
 	client, conn := newCleanupServiceClient(t, serverSocketPath)
@@ -96,7 +97,7 @@ func requireEntry(t *testing.T, entry *gitalypb.ApplyBfgObjectMapStreamResponse_
 }
 
 func TestApplyBfgObjectMapStreamFailsOnInvalidInput(t *testing.T) {
-	serverSocketPath, stop := runCleanupServiceServer(t)
+	serverSocketPath, stop := runCleanupServiceServer(t, config.Config)
 	defer stop()
 
 	client, conn := newCleanupServiceClient(t, serverSocketPath)
