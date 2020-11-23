@@ -14,7 +14,9 @@ import (
 	"gitlab.com/gitlab-org/gitaly/client"
 	dcache "gitlab.com/gitlab-org/gitaly/internal/cache"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
+	hookservice "gitlab.com/gitlab-org/gitaly/internal/gitaly/service/hook"
 	mcache "gitlab.com/gitlab-org/gitaly/internal/middleware/cache"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
@@ -23,7 +25,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/reflection"
 )
 
 // Stamp taken from https://golang.org/pkg/time/#pkg-constants
@@ -53,6 +54,7 @@ func testMain(m *testing.M) int {
 		return 1
 	}
 
+	testhelper.ConfigureGitalyHooksBinary()
 	testhelper.ConfigureGitalySSH()
 
 	if err := RubyServer.Start(); err != nil {
@@ -107,7 +109,7 @@ func runRepoServerWithConfig(t *testing.T, cfg config.Cfg, locator storage.Locat
 	srv := testhelper.NewServerWithAuth(t, streamInt, unaryInt, cfg.Auth.Token, opts...)
 
 	gitalypb.RegisterRepositoryServiceServer(srv.GrpcServer(), NewServer(cfg, RubyServer, locator, config.Config.GitalyInternalSocketPath()))
-	reflection.Register(srv.GrpcServer())
+	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hookservice.NewServer(config.Config, hook.NewManager(hook.GitlabAPIStub, cfg)))
 
 	require.NoError(t, srv.Start())
 
