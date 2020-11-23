@@ -120,7 +120,7 @@ func TestSafeCmdInvalidArg(t *testing.T) {
 }
 
 func TestSafeCmdValid(t *testing.T) {
-	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
 	ctx, cancel := testhelper.Context()
@@ -132,15 +132,18 @@ func TestSafeCmdValid(t *testing.T) {
 	endOfOptions := "--end-of-options"
 
 	for _, tt := range []struct {
+		desc       string
 		globals    []git.Option
 		subCmd     git.SubCmd
 		expectArgs []string
 	}{
 		{
+			desc:       "no args",
 			subCmd:     git.SubCmd{Name: "meow"},
 			expectArgs: []string{"meow", endOfOptions},
 		},
 		{
+			desc: "single option",
 			globals: []git.Option{
 				git.Flag{Name: "--aaaa-bbbb"},
 			},
@@ -148,6 +151,7 @@ func TestSafeCmdValid(t *testing.T) {
 			expectArgs: []string{"--aaaa-bbbb", "cccc", endOfOptions},
 		},
 		{
+			desc: "empty arg and postsep args",
 			subCmd: git.SubCmd{
 				Name:        "meow",
 				Args:        []string{""},
@@ -156,6 +160,7 @@ func TestSafeCmdValid(t *testing.T) {
 			expectArgs: []string{"meow", "", endOfOptions, "--", "-woof", ""},
 		},
 		{
+			desc: "full blown",
 			globals: []git.Option{
 				git.Flag{Name: "-a"},
 				git.ValueFlag{"-b", "c"},
@@ -173,6 +178,7 @@ func TestSafeCmdValid(t *testing.T) {
 			expectArgs: []string{"-a", "-b", "c", "d", "-e", "-f", "g", "-h=i", "1", "2", endOfOptions, "--", "3", "4", "5"},
 		},
 		{
+			desc: "output to stdout",
 			subCmd: git.SubCmd{
 				Name: "noun",
 				Flags: []git.Option{
@@ -184,6 +190,7 @@ func TestSafeCmdValid(t *testing.T) {
 			expectArgs: []string{"noun", "verb", "-", "--adjective", endOfOptions},
 		},
 		{
+			desc: "multiple value flags",
 			globals: []git.Option{
 				git.Flag{Name: "--contributing"},
 				git.ValueFlag{"--author", "a-gopher"},
@@ -199,29 +206,36 @@ func TestSafeCmdValid(t *testing.T) {
 			expectArgs: []string{"--contributing", "--author", "a-gopher", "accept", "--is-important", "--why", "looking-for-first-contribution", "mr", endOfOptions},
 		},
 	} {
-		opts := []git.CmdOpt{git.WithRefTxHook(ctx, &gitalypb.Repository{}, config.Config)}
-		cmd, err := git.SafeCmd(ctx, testRepo, tt.globals, tt.subCmd, opts...)
-		require.NoError(t, err)
-		// ignore first 3 indeterministic args (executable path and repo args)
-		require.Equal(t, tt.expectArgs, cmd.Args()[3:])
+		t.Run(tt.desc, func(t *testing.T) {
+			opts := []git.CmdOpt{git.WithRefTxHook(ctx, &gitalypb.Repository{}, config.Config)}
 
-		cmd, err = git.SafeCmdWithEnv(ctx, nil, testRepo, tt.globals, tt.subCmd, opts...)
-		require.NoError(t, err)
-		// ignore first 3 indeterministic args (executable path and repo args)
-		require.Equal(t, tt.expectArgs, cmd.Args()[3:])
+			cmd, err := git.SafeCmd(ctx, testRepo, tt.globals, tt.subCmd, opts...)
+			require.NoError(t, err)
+			// ignore first 3 indeterministic args (executable path and repo args)
+			require.Equal(t, tt.expectArgs, cmd.Args()[3:])
 
-		cmd, err = git.SafeStdinCmd(ctx, testRepo, tt.globals, tt.subCmd, opts...)
-		require.NoError(t, err)
-		require.Equal(t, tt.expectArgs, cmd.Args()[3:])
+			cmd, err = git.SafeCmdWithEnv(ctx, nil, testRepo, tt.globals, tt.subCmd, opts...)
+			require.NoError(t, err)
+			// ignore first 3 indeterministic args (executable path and repo args)
+			require.Equal(t, tt.expectArgs, cmd.Args()[3:])
 
-		cmd, err = git.SafeBareCmd(ctx, git.CmdStream{}, nil, tt.globals, tt.subCmd, opts...)
-		require.NoError(t, err)
-		// ignore first indeterministic arg (executable path)
-		require.Equal(t, tt.expectArgs, cmd.Args()[1:])
+			cmd, err = git.SafeStdinCmd(ctx, testRepo, tt.globals, tt.subCmd, opts...)
+			require.NoError(t, err)
+			require.Equal(t, tt.expectArgs, cmd.Args()[3:])
 
-		cmd, err = git.SafeCmdWithoutRepo(ctx, git.CmdStream{}, tt.globals, tt.subCmd)
-		require.NoError(t, err)
-		require.Equal(t, tt.expectArgs, cmd.Args()[1:])
+			cmd, err = git.SafeBareCmd(ctx, git.CmdStream{}, nil, tt.globals, tt.subCmd, opts...)
+			require.NoError(t, err)
+			// ignore first indeterministic arg (executable path)
+			require.Equal(t, tt.expectArgs, cmd.Args()[1:])
+
+			cmd, err = git.SafeCmdWithoutRepo(ctx, git.CmdStream{}, tt.globals, tt.subCmd, opts...)
+			require.NoError(t, err)
+			require.Equal(t, tt.expectArgs, cmd.Args()[1:])
+
+			cmd, err = git.SafeBareCmdInDir(ctx, testRepoPath, git.CmdStream{}, nil, tt.globals, tt.subCmd, opts...)
+			require.NoError(t, err)
+			require.Equal(t, tt.expectArgs, cmd.Args()[1:])
+		})
 	}
 }
 

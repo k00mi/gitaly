@@ -329,9 +329,15 @@ func SafeBareCmd(ctx context.Context, stream CmdStream, env []string, globals []
 }
 
 // SafeBareCmdInDir runs SafeBareCmd in the dir.
-func SafeBareCmdInDir(ctx context.Context, dir string, stream CmdStream, env []string, globals []Option, sc Cmd) (*command.Command, error) {
+func SafeBareCmdInDir(ctx context.Context, dir string, stream CmdStream, env []string, globals []Option, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
 	if dir == "" {
 		return nil, errors.New("no 'dir' provided")
+	}
+
+	cc := &cmdCfg{}
+
+	if err := handleOpts(ctx, sc, cc, opts); err != nil {
+		return nil, err
 	}
 
 	args, err := combineArgs(globals, sc)
@@ -362,7 +368,13 @@ func SafeStdinCmd(ctx context.Context, repo repository.GitRepo, globals []Option
 
 // SafeCmdWithoutRepo works like Command but without a git repository. It
 // validates the arguments in the command before executing.
-func SafeCmdWithoutRepo(ctx context.Context, stream CmdStream, globals []Option, sc SubCmd) (*command.Command, error) {
+func SafeCmdWithoutRepo(ctx context.Context, stream CmdStream, globals []Option, sc SubCmd, opts ...CmdOpt) (*command.Command, error) {
+	cc := &cmdCfg{}
+
+	if err := handleOpts(ctx, sc, cc, opts); err != nil {
+		return nil, err
+	}
+
 	args, err := combineArgs(globals, sc)
 	if err != nil {
 		return nil, err

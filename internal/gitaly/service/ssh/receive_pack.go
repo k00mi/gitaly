@@ -61,7 +61,7 @@ func (s *server) sshReceivePack(stream gitalypb.SSHService_SSHReceivePackServer,
 		return err
 	}
 
-	globalOpts := git.ReceivePackConfig()
+	globalOpts := git.ReceivePackConfig(config.Config)
 	for _, o := range req.GitConfigOptions {
 		globalOpts = append(globalOpts, git.ValueFlag{"-c", o})
 	}

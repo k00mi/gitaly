@@ -4,13 +4,14 @@ import (
 	"fmt"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 )
 
 // ReceivePackConfig contains config options we want to enforce when
 // receiving a push with git-receive-pack.
-func ReceivePackConfig() []Option {
+func ReceivePackConfig(cfg config.Cfg) []Option {
 	return []Option{
-		ValueFlag{"-c", fmt.Sprintf("core.hooksPath=%s", hooks.Path())},
+		ValueFlag{"-c", fmt.Sprintf("core.hooksPath=%s", hooks.Path(cfg))},
 
 		// In case the repository belongs to an object pool, we want to prevent
 		// Git from including the pool's refs in the ref advertisement. We do

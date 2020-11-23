@@ -14,7 +14,7 @@ var Override string
 // environment variable GITALY_TESTING_NO_GIT_HOOKS is set to "1", Path
 // will return an empty directory, which has the effect that no Git hooks
 // will run at all.
-func Path() string {
+func Path(cfg config.Cfg) string {
 	if len(Override) > 0 {
 		return Override
 	}
@@ -23,7 +23,7 @@ func Path() string {
 		return "/var/empty"
 	}
 
-	return filepath.Join(config.Config.Ruby.Dir, "git-hooks")
+	return filepath.Join(cfg.Ruby.Dir, "git-hooks")
 }
 
 // GitPushOptions turns a slice of git push option values into a GIT_PUSH_OPTION_COUNT and individual

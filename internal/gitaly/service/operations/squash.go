@@ -216,7 +216,7 @@ func (s *server) userSquashWithDiffInFiles(ctx context.Context, req *gitalypb.Us
 		return "", fmt.Errorf("create sparse checkout file: %w", err)
 	}
 
-	if err := s.checkout(ctx, worktreePath, req); err != nil {
+	if err := s.checkout(ctx, repo, worktreePath, req); err != nil {
 		if !errors.Is(err, errNoFilesCheckedOut) {
 			return "", fmt.Errorf("perform 'git checkout' with core.sparseCheckout true: %w", err)
 		}
@@ -226,12 +226,12 @@ func (s *server) userSquashWithDiffInFiles(ctx context.Context, req *gitalypb.Us
 			return "", fmt.Errorf("on 'git config core.sparseCheckout false': %w", err)
 		}
 
-		if err := s.checkout(ctx, worktreePath, req); err != nil {
+		if err := s.checkout(ctx, repo, worktreePath, req); err != nil {
 			return "", fmt.Errorf("perform 'git checkout' with core.sparseCheckout false: %w", err)
 		}
 	}
 
-	sha, err := s.applyDiff(ctx, req, worktreePath, env)
+	sha, err := s.applyDiff(ctx, repo, req, worktreePath, env)
 	if err != nil {
 		return "", fmt.Errorf("apply diff: %w", err)
 	}
@@ -239,7 +239,7 @@ func (s *server) userSquashWithDiffInFiles(ctx context.Context, req *gitalypb.Us
 	return sha, nil
 }
 
-func (s *server) checkout(ctx context.Context, worktreePath string, req *gitalypb.UserSquashRequest) error {
+func (s *server) checkout(ctx context.Context, repo *gitalypb.Repository, worktreePath string, req *gitalypb.UserSquashRequest) error {
 	var stderr bytes.Buffer
 	checkoutCmd, err := git.SafeBareCmdInDir(ctx, worktreePath, git.CmdStream{Err: &stderr}, nil, nil,
 		git.SubCmd{
@@ -247,6 +247,7 @@ func (s *server) checkout(ctx context.Context, worktreePath string, req *gitalyp
 			Flags: []git.Option{git.Flag{Name: "--detach"}},
 			Args:  []string{req.GetStartSha()},
 		},
+		git.WithRefTxHook(ctx, repo, s.cfg),
 	)
 	if err != nil {
 		return fmt.Errorf("create 'git checkout': %w", gitError{ErrMsg: stderr.String(), Err: err})
@@ -297,7 +298,7 @@ func (s *server) userSquashWithNoDiff(ctx context.Context, req *gitalypb.UserSqu
 		}
 	}(filepath.Base(worktreePath))
 
-	sha, err := s.applyDiff(ctx, req, worktreePath, env)
+	sha, err := s.applyDiff(ctx, repo, req, worktreePath, env)
 	if err != nil {
 		return "", fmt.Errorf("apply diff: %w", err)
 	}
@@ -355,7 +356,7 @@ func (s *server) removeWorktree(ctx context.Context, repo *gitalypb.Repository, 
 	return nil
 }
 
-func (s *server) applyDiff(ctx context.Context, req *gitalypb.UserSquashRequest, worktreePath string, env []string) (string, error) {
+func (s *server) applyDiff(ctx context.Context, repo *gitalypb.Repository, req *gitalypb.UserSquashRequest, worktreePath string, env []string) (string, error) {
 	diffRange := diffRange(req)
 
 	var diffStderr bytes.Buffer
@@ -381,7 +382,7 @@ func (s *server) applyDiff(ctx context.Context, req *gitalypb.UserSquashRequest,
 			git.Flag{Name: "--3way"},
 			git.Flag{Name: "--whitespace=nowarn"},
 		},
-	})
+	}, git.WithRefTxHook(ctx, repo, s.cfg))
 	if err != nil {
 		return "", fmt.Errorf("creation of 'git apply' for range %q: %w", diffRange, gitError{ErrMsg: applyStderr.String(), Err: err})
 	}
@@ -413,7 +414,7 @@ func (s *server) applyDiff(ctx context.Context, req *gitalypb.UserSquashRequest,
 			git.Flag{Name: "--quiet"},
 			git.ValueFlag{Name: "--message", Value: string(req.GetCommitMessage())},
 		},
-	})
+	}, git.WithRefTxHook(ctx, repo, s.cfg))
 	if err != nil {
 		return "", fmt.Errorf("creation of 'git commit': %w", gitError{ErrMsg: commitStderr.String(), Err: err})
 	}

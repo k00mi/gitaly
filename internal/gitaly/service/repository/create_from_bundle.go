@@ -80,6 +80,7 @@ func (s *server) CreateRepositoryFromBundle(stream gitalypb.RepositoryService_Cr
 			},
 			PostSepArgs: []string{bundlePath, repoPath},
 		},
+		git.WithRefTxHook(ctx, repo, s.cfg),
 	)
 	if err != nil {
 		cleanError := sanitizedError(repoPath, "CreateRepositoryFromBundle: cmd start failed: %v", err)
@@ -99,6 +100,7 @@ func (s *server) CreateRepositoryFromBundle(stream gitalypb.RepositoryService_Cr
 			Flags: []git.Option{git.Flag{Name: "--quiet"}},
 			Args:  []string{bundlePath, "refs/*:refs/*"},
 		},
+		git.WithRefTxHook(ctx, repo, s.cfg),
 	)
 	if err != nil {
 		cleanError := sanitizedError(repoPath, "CreateRepositoryFromBundle: cmd start failed fetching refs: %v", err)
