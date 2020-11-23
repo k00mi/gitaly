@@ -60,8 +60,3 @@ func unsafeBareCmdInDir(ctx context.Context, dir string, stream CmdStream, env [
 	cmd.Dir = dir
 	return command.New(ctx, cmd, stream.In, stream.Out, stream.Err, env...)
 }
-
-// unsafeCmdWithoutRepo works like Command but without a git repository
-func unsafeCmdWithoutRepo(ctx context.Context, stream CmdStream, args ...string) (*command.Command, error) {
-	return unsafeBareCmd(ctx, stream, nil, args...)
-}

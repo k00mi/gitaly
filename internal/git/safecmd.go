@@ -380,7 +380,7 @@ func SafeCmdWithoutRepo(ctx context.Context, stream CmdStream, globals []Option,
 		return nil, err
 	}
 
-	return unsafeCmdWithoutRepo(ctx, stream, args...)
+	return unsafeBareCmd(ctx, stream, nil, args...)
 }
 
 func combineArgs(globals []Option, sc Cmd) (_ []string, err error) {
