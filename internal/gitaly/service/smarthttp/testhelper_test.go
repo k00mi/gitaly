@@ -9,14 +9,14 @@ import (
 	"github.com/stretchr/testify/require"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	diskcache "gitlab.com/gitlab-org/gitaly/internal/cache"
-	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
+	hookservice "gitlab.com/gitlab-org/gitaly/internal/gitaly/service/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/cache"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 )
 
 const (
@@ -32,8 +32,6 @@ func testMain(m *testing.M) int {
 
 	cleanup := testhelper.Configure()
 	defer cleanup()
-
-	hooks.Override = "/"
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -58,10 +56,10 @@ func runSmartHTTPServer(t *testing.T, serverOpts ...ServerOpt) (string, func()) 
 		[]grpc.UnaryServerInterceptor{
 			cache.UnaryInvalidator(keyer, protoregistry.GitalyProtoPreregistered),
 		},
-	)
+		testhelper.WithInternalSocket(config.Config))
 
 	gitalypb.RegisterSmartHTTPServiceServer(srv.GrpcServer(), NewServer(config.NewLocator(config.Config), serverOpts...))
-	reflection.Register(srv.GrpcServer())
+	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hookservice.NewServer(config.Config, hook.NewManager(hook.GitlabAPIStub, config.Config)))
 
 	require.NoError(t, srv.Start())
 
