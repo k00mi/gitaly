@@ -2,14 +2,11 @@ package repository
 
 import (
 	"context"
-	"io/ioutil"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // Deprecated
@@ -27,22 +24,10 @@ func (s *server) RepositoryExists(ctx context.Context, in *gitalypb.RepositoryEx
 }
 
 func (s *server) HasLocalBranches(ctx context.Context, in *gitalypb.HasLocalBranchesRequest) (*gitalypb.HasLocalBranchesResponse, error) {
-	cmd, err := git.SafeCmd(ctx, in.GetRepository(), nil, git.SubCmd{Name: "for-each-ref", Flags: []git.Option{git.Flag{Name: "--count=1"}}, Args: []string{"refs/heads"}})
+	hasBranches, err := git.NewRepository(in.Repository).HasBranches(ctx)
 	if err != nil {
-		if _, ok := status.FromError(err); ok {
-			return nil, err
-		}
-		return nil, status.Errorf(codes.Internal, "HasLocalBranches: gitCommand: %v", err)
+		return nil, helper.ErrInternal(err)
 	}
 
-	buff, err := ioutil.ReadAll(cmd)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "HasLocalBranches: read: %v", err)
-	}
-
-	if err := cmd.Wait(); err != nil {
-		return nil, status.Errorf(codes.Internal, "HasLocalBranches: cmd wait: %v", err)
-	}
-
-	return &gitalypb.HasLocalBranchesResponse{Value: len(buff) > 0}, nil
+	return &gitalypb.HasLocalBranchesResponse{Value: hasBranches}, nil
 }

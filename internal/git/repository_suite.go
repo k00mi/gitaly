@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -12,25 +13,29 @@ import (
 func TestRepository(t *testing.T, getRepository func(testing.TB, *gitalypb.Repository) Repository) {
 	for _, tc := range []struct {
 		desc string
-		test func(*testing.T, Repository)
+		test func(*testing.T, func(testing.TB, *gitalypb.Repository) Repository)
 	}{
 		{
 			desc: "ResolveRefish",
 			test: testRepositoryResolveRefish,
 		},
+		{
+			desc: "HasBranches",
+			test: testRepositoryHasBranches,
+		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
-			testRepo, _, cleanup := testhelper.NewTestRepo(t)
-			defer cleanup()
-
-			tc.test(t, getRepository(t, testRepo))
+			tc.test(t, getRepository)
 		})
 	}
 }
 
-func testRepositoryResolveRefish(t *testing.T, repo Repository) {
+func testRepositoryResolveRefish(t *testing.T, getRepository func(testing.TB, *gitalypb.Repository) Repository) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
+
+	pbRepo, _, clean := testhelper.NewTestRepo(t)
+	defer clean()
 
 	for _, tc := range []struct {
 		desc     string
@@ -67,7 +72,7 @@ func testRepositoryResolveRefish(t *testing.T, repo Repository) {
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
-			oid, err := repo.ResolveRefish(ctx, tc.refish)
+			oid, err := getRepository(t, pbRepo).ResolveRefish(ctx, tc.refish)
 			if tc.expected == "" {
 				require.Equal(t, err, ErrReferenceNotFound)
 				return
@@ -77,4 +82,34 @@ func testRepositoryResolveRefish(t *testing.T, repo Repository) {
 			require.Equal(t, tc.expected, oid)
 		})
 	}
+}
+
+func testRepositoryHasBranches(t *testing.T, getRepository func(testing.TB, *gitalypb.Repository) Repository) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	pbRepo, repoPath, clean := testhelper.InitBareRepo(t)
+	defer clean()
+
+	repo := getRepository(t, pbRepo)
+
+	emptyCommit := text.ChompBytes(testhelper.MustRunCommand(t, nil,
+		"git", "-C", repoPath, "commit-tree", EmptyTreeID,
+	))
+
+	testhelper.MustRunCommand(t, nil,
+		"git", "-C", repoPath, "update-ref", "refs/headsbranch", emptyCommit,
+	)
+
+	hasBranches, err := repo.HasBranches(ctx)
+	require.NoError(t, err)
+	require.False(t, hasBranches)
+
+	testhelper.MustRunCommand(t, nil,
+		"git", "-C", repoPath, "update-ref", "refs/heads/branch", emptyCommit,
+	)
+
+	hasBranches, err = repo.HasBranches(ctx)
+	require.NoError(t, err)
+	require.True(t, hasBranches)
 }

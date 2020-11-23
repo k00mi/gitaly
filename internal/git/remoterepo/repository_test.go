@@ -23,17 +23,13 @@ func TestRepository(t *testing.T) {
 	ctx, err := helper.InjectGitalyServers(ctx, "default", serverSocketPath, config.Config.Auth.Token)
 	require.NoError(t, err)
 
-	testRepo, _, cleanup := testhelper.NewTestRepo(t)
-	defer cleanup()
+	pool := client.NewPool()
+	defer pool.Close()
 
 	git.TestRepository(t, func(t testing.TB, pbRepo *gitalypb.Repository) git.Repository {
 		t.Helper()
 
-		r, err := New(
-			helper.OutgoingToIncoming(ctx),
-			testRepo,
-			client.NewPool(),
-		)
+		r, err := New(helper.OutgoingToIncoming(ctx), pbRepo, pool)
 		require.NoError(t, err)
 		return r
 	})
