@@ -64,14 +64,6 @@ func (sc SubCmd) IsCmd() {}
 // Subcommand returns the subcommand name
 func (sc SubCmd) Subcommand() string { return sc.Name }
 
-func (sc SubCmd) supportsEndOfOptions() bool {
-	switch sc.Name {
-	case "checkout", "linguist", "for-each-ref", "archive", "upload-archive", "grep", "clone", "config", "rev-parse", "remote", "blame", "ls-tree":
-		return false
-	}
-	return true
-}
-
 // ValidateArgs checks all arguments in the sub command and validates them
 func (sc SubCmd) ValidateArgs() ([]string, error) {
 	var safeArgs []string
@@ -96,7 +88,7 @@ func (sc SubCmd) ValidateArgs() ([]string, error) {
 		safeArgs = append(safeArgs, a)
 	}
 
-	if sc.supportsEndOfOptions() {
+	if supportsEndOfOptions(sc.Name) {
 		safeArgs = append(safeArgs, "--end-of-options")
 	}
 

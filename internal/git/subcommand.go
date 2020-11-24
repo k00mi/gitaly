@@ -5,36 +5,42 @@ const (
 	scReadOnly = 1 << iota
 	// scNoRefUpdates denotes a command which will never update refs
 	scNoRefUpdates
+	// scNoEndOfOptions denotes a command which doesn't know --end-of-options
+	scNoEndOfOptions
 )
 
 // subcommands is a curated list of Git command names for special git.SafeCmd
 // validation logic
 var subcommands = map[string]uint{
-	"archive":          scReadOnly,
-	"blame":            scReadOnly,
+	"archive":          scReadOnly | scNoEndOfOptions,
+	"blame":            scReadOnly | scNoEndOfOptions,
 	"bundle":           scReadOnly,
 	"cat-file":         scReadOnly,
-	"config":           scNoRefUpdates,
+	"checkout":         scNoEndOfOptions,
+	"clone":            scNoEndOfOptions,
+	"config":           scNoRefUpdates | scNoEndOfOptions,
 	"count-objects":    scReadOnly,
 	"diff":             scReadOnly,
 	"diff-tree":        scReadOnly,
-	"for-each-ref":     scReadOnly,
+	"for-each-ref":     scReadOnly | scNoEndOfOptions,
 	"format-patch":     scReadOnly,
 	"fsck":             scReadOnly,
-	"grep":             scReadOnly,
+	"grep":             scReadOnly | scNoEndOfOptions,
 	"hash-object":      scNoRefUpdates,
 	"init":             scNoRefUpdates,
+	"linguist":         scNoEndOfOptions,
 	"log":              scReadOnly,
 	"ls-remote":        scReadOnly,
-	"ls-tree":          scReadOnly,
+	"ls-tree":          scReadOnly | scNoEndOfOptions,
 	"merge-base":       scReadOnly,
 	"multi-pack-index": scNoRefUpdates,
 	"pack-refs":        scNoRefUpdates,
+	"remote":           scNoEndOfOptions,
 	"repack":           scNoRefUpdates,
 	"rev-list":         scReadOnly,
-	"rev-parse":        scReadOnly,
+	"rev-parse":        scReadOnly | scNoEndOfOptions,
 	"show-ref":         scReadOnly,
-	"upload-archive":   scReadOnly,
+	"upload-archive":   scReadOnly | scNoEndOfOptions,
 	"upload-pack":      scReadOnly,
 }
 
@@ -49,4 +55,14 @@ func mayUpdateRef(subcmd string) bool {
 		return true
 	}
 	return flags&(scReadOnly|scNoRefUpdates) == 0
+}
+
+// supportsEndOfOptions indicates whether a command can handle the
+// `--end-of-options` option.
+func supportsEndOfOptions(subcmd string) bool {
+	flags, ok := subcommands[subcmd]
+	if !ok {
+		return true
+	}
+	return flags&scNoEndOfOptions == 0
 }
