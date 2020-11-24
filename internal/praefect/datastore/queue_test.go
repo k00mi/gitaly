@@ -631,8 +631,6 @@ func TestPostgresReplicationEventQueue_AcknowledgeMultiple(t *testing.T) {
 }
 
 func TestPostgresReplicationEventQueue_StartHealthUpdate(t *testing.T) {
-	db := getDB(t)
-
 	eventType1 := ReplicationEvent{Job: ReplicationJob{
 		Change:            UpdateRepo,
 		VirtualStorage:    "vs-1",
@@ -652,7 +650,7 @@ func TestPostgresReplicationEventQueue_StartHealthUpdate(t *testing.T) {
 
 	t.Run("no events is valid", func(t *testing.T) {
 		// 'qc' is not initialized, so the test will fail if there will be an attempt to make SQL operation
-		queue := PostgresReplicationEventQueue{}
+		queue := NewPostgresReplicationEventQueue(nil)
 
 		ctx, cancel := testhelper.Context()
 		defer cancel()
@@ -665,12 +663,14 @@ func TestPostgresReplicationEventQueue_StartHealthUpdate(t *testing.T) {
 		defer cancel()
 
 		// 'qc' is not initialized, so the test will fail if there will be an attempt to make SQL operation
-		queue := PostgresReplicationEventQueue{}
+		queue := NewPostgresReplicationEventQueue(nil)
 		cancel()
 		require.NoError(t, queue.StartHealthUpdate(ctx, nil, []ReplicationEvent{eventType1}))
 	})
 
 	t.Run("stops after first error", func(t *testing.T) {
+		db := getDB(t)
+
 		ctx, cancel := testhelper.Context()
 		defer cancel()
 
@@ -679,7 +679,7 @@ func TestPostgresReplicationEventQueue_StartHealthUpdate(t *testing.T) {
 		require.NoError(t, qc.Rollback())
 
 		// 'qc' is initialized with invalid connection (transaction is finished), so operations on it will fail
-		queue := PostgresReplicationEventQueue{qc: qc}
+		queue := NewPostgresReplicationEventQueue(qc)
 
 		trigger := make(chan time.Time, 1)
 		trigger <- time.Time{}
@@ -688,13 +688,13 @@ func TestPostgresReplicationEventQueue_StartHealthUpdate(t *testing.T) {
 	})
 
 	t.Run("stops if nothing to update (extended coverage)", func(t *testing.T) {
-		db.TruncateAll(t)
+		db := getDB(t)
 
 		ctx, cancel := testhelper.Context()
 		defer cancel()
 
 		done := make(chan struct{})
-		queue := PostgresReplicationEventQueue{qc: db}
+		queue := NewPostgresReplicationEventQueue(db)
 		go func() {
 			trigger := make(chan time.Time)
 			close(trigger)
@@ -712,7 +712,7 @@ func TestPostgresReplicationEventQueue_StartHealthUpdate(t *testing.T) {
 	})
 
 	t.Run("triggers all passed in events", func(t *testing.T) {
-		db.TruncateAll(t)
+		db := getDB(t)
 
 		var wg sync.WaitGroup
 		ctx, cancel := testhelper.Context()
@@ -721,7 +721,7 @@ func TestPostgresReplicationEventQueue_StartHealthUpdate(t *testing.T) {
 			wg.Wait()
 		}()
 
-		queue := PostgresReplicationEventQueue{qc: db}
+		queue := NewPostgresReplicationEventQueue(db)
 		events := []ReplicationEvent{eventType1, eventType2, eventType3, eventType4}
 		for i := range events {
 			var err error
@@ -769,12 +769,8 @@ func TestPostgresReplicationEventQueue_StartHealthUpdate(t *testing.T) {
 }
 
 func TestPostgresReplicationEventQueue_AcknowledgeStale(t *testing.T) {
-	db := getDB(t)
-
 	ctx, cancel := testhelper.Context()
 	defer cancel()
-
-	source := PostgresReplicationEventQueue{qc: db}
 
 	eventType := ReplicationEvent{Job: ReplicationJob{
 		Change:            UpdateRepo,
@@ -797,7 +793,8 @@ func TestPostgresReplicationEventQueue_AcknowledgeStale(t *testing.T) {
 	eventType4.Job.TargetNodeStorage = "gitaly-3"
 
 	t.Run("no stale jobs yet", func(t *testing.T) {
-		db.TruncateAll(t)
+		db := getDB(t)
+		source := NewPostgresReplicationEventQueue(db)
 
 		event, err := source.Enqueue(ctx, eventType1)
 		require.NoError(t, err)
@@ -811,7 +808,8 @@ func TestPostgresReplicationEventQueue_AcknowledgeStale(t *testing.T) {
 	})
 
 	t.Run("jobs considered stale only at 'in_progress' state", func(t *testing.T) {
-		db.TruncateAll(t)
+		db := getDB(t)
+		source := NewPostgresReplicationEventQueue(db)
 
 		// move event to 'ready' state
 		event1, err := source.Enqueue(ctx, eventType1)
@@ -849,7 +847,8 @@ func TestPostgresReplicationEventQueue_AcknowledgeStale(t *testing.T) {
 	})
 
 	t.Run("stale jobs updated for all virtual storages and storages at once", func(t *testing.T) {
-		db.TruncateAll(t)
+		db := getDB(t)
+		source := NewPostgresReplicationEventQueue(db)
 
 		var exp []ReplicationEvent
 		for _, eventType := range []ReplicationEvent{eventType1, eventType2, eventType3} {
