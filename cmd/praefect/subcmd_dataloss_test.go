@@ -1,3 +1,5 @@
+// +build postgres
+
 package main
 
 import (
@@ -7,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore/glsql"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/service/info"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -52,7 +55,10 @@ func TestDatalossSubcommand(t *testing.T) {
 		},
 	}
 
-	gs := datastore.NewMemoryRepositoryStore(cfg.StorageNames())
+	db := glsql.GetDB(t, "cmd_praefect")
+	defer glsql.Clean()
+
+	gs := datastore.NewPostgresRepositoryStore(db, cfg.StorageNames())
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
