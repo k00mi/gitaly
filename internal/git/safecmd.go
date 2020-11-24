@@ -68,7 +68,7 @@ func (sc SubCmd) Subcommand() string { return sc.Name }
 func (sc SubCmd) ValidateArgs() ([]string, error) {
 	var safeArgs []string
 
-	if !subCmdNameRegex.MatchString(sc.Name) {
+	if _, ok := subcommands[sc.Name]; !ok {
 		return nil, fmt.Errorf("invalid sub command name %q: %w", sc.Name, ErrInvalidArg)
 	}
 	safeArgs = append(safeArgs, sc.Name)
