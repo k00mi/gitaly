@@ -27,6 +27,7 @@ var subcommands = map[string]uint{
 	"for-each-ref":     scReadOnly | scNoEndOfOptions,
 	"format-patch":     scReadOnly,
 	"fsck":             scReadOnly,
+	"gc":               scNoRefUpdates,
 	"grep":             scReadOnly | scNoEndOfOptions,
 	"hash-object":      scNoRefUpdates,
 	"init":             scNoRefUpdates,

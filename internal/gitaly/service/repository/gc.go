@@ -72,7 +72,6 @@ func (s *server) gc(ctx context.Context, in *gitalypb.GarbageCollectRequest) err
 
 	cmd, err := git.SafeCmd(ctx, in.GetRepository(), args,
 		git.SubCmd{Name: "gc", Flags: flags},
-		git.WithRefTxHook(ctx, in.GetRepository(), s.cfg),
 	)
 
 	if err != nil {
