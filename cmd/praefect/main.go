@@ -243,12 +243,14 @@ func run(cfgs []starter.Config, conf config.Config) error {
 		queue = datastore.NewMemoryReplicationEventQueue(conf)
 		rs = datastore.NewMemoryRepositoryStore(conf.StorageNames())
 		sp = datastore.NewDirectStorageProvider(rs)
+		logger.Info("reads distribution caching is disabled for in memory storage")
 	} else {
 		queue = datastore.NewPostgresReplicationEventQueue(db)
 		rs = datastore.NewPostgresRepositoryStore(db, conf.StorageNames())
 
 		if conf.DB.ToPQString(true) == "" {
 			sp = datastore.NewDirectStorageProvider(rs)
+			logger.Info("reads distribution caching is disabled because direct connection to Postgres is not set")
 		} else {
 			listenerOpts := datastore.DefaultPostgresListenerOpts
 			listenerOpts.Addr = conf.DB.ToPQString(true)
@@ -272,6 +274,7 @@ func run(cfgs []starter.Config, conf config.Config) error {
 
 			metricsCollectors = append(metricsCollectors, storagesCached, postgresListener)
 			sp = storagesCached
+			logger.Info("reads distribution caching is enabled by configuration")
 		}
 	}
 
