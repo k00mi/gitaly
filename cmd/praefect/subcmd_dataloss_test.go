@@ -68,7 +68,8 @@ func TestDatalossSubcommand(t *testing.T) {
   Outdated repositories:
     repository-2 (read-only):
       Primary: gitaly-1
-      gitaly-1 is behind by 1 change or less
+      Outdated Storages:
+        gitaly-1 is behind by 1 change or less
 `,
 		},
 		{
@@ -77,11 +78,13 @@ func TestDatalossSubcommand(t *testing.T) {
   Outdated repositories:
     repository-1 (writable):
       Primary: gitaly-1
-      gitaly-2 is behind by 1 change or less
-      gitaly-3 is behind by 2 changes or less
+      Outdated Storages:
+        gitaly-2 is behind by 1 change or less
+        gitaly-3 is behind by 2 changes or less
     repository-2 (read-only):
       Primary: gitaly-1
-      gitaly-1 is behind by 1 change or less
+      Outdated Storages:
+        gitaly-1 is behind by 1 change or less
 `,
 		},
 		{
@@ -91,7 +94,8 @@ func TestDatalossSubcommand(t *testing.T) {
   Outdated repositories:
     repository-2 (read-only):
       Primary: gitaly-1
-      gitaly-1 is behind by 1 change or less
+      Outdated Storages:
+        gitaly-1 is behind by 1 change or less
 Virtual storage: virtual-storage-2
   All repositories are writable!
 `,
@@ -104,11 +108,13 @@ Virtual storage: virtual-storage-2
   Outdated repositories:
     repository-1 (writable):
       Primary: gitaly-1
-      gitaly-2 is behind by 1 change or less
-      gitaly-3 is behind by 2 changes or less
+      Outdated Storages:
+        gitaly-2 is behind by 1 change or less
+        gitaly-3 is behind by 2 changes or less
     repository-2 (read-only):
       Primary: gitaly-1
-      gitaly-1 is behind by 1 change or less
+      Outdated Storages:
+        gitaly-1 is behind by 1 change or less
 Virtual storage: virtual-storage-2
   All repositories are up to date!
 `,
