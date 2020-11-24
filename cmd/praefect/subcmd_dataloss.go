@@ -113,14 +113,28 @@ func (cmd *datalossSubcommand) Exec(flags *flag.FlagSet, cfg config.Config) erro
 				primary = "No Primary"
 			}
 			cmd.println(3, "Primary: %s", primary)
+
+			cmd.println(3, "In-Sync Storages:")
+			for _, storage := range repo.Storages {
+				if storage.BehindBy != 0 {
+					continue
+				}
+
+				cmd.println(4, storage.Name)
+			}
+
 			cmd.println(3, "Outdated Storages:")
-			for _, s := range repo.Storages {
+			for _, storage := range repo.Storages {
+				if storage.BehindBy == 0 {
+					continue
+				}
+
 				plural := ""
-				if s.BehindBy > 1 {
+				if storage.BehindBy > 1 {
 					plural = "s"
 				}
 
-				cmd.println(4, "%s is behind by %d change%s or less", s.Name, s.BehindBy, plural)
+				cmd.println(4, "%s is behind by %d change%s or less", storage.Name, storage.BehindBy, plural)
 			}
 		}
 	}

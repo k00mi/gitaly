@@ -33,10 +33,26 @@ func TestDatalossSubcommand(t *testing.T) {
 		},
 	}
 
-	gs := datastore.NewMemoryRepositoryStore(map[string][]string{
-		"virtual-storage-1": {"gitaly-1", "gitaly-2", "gitaly-3"},
-		"virtual-storage-2": {"gitaly-4"},
-	})
+	cfg := config.Config{
+		VirtualStorages: []*config.VirtualStorage{
+			{
+				Name: "virtual-storage-1",
+				Nodes: []*config.Node{
+					{Storage: "gitaly-1"},
+					{Storage: "gitaly-2"},
+					{Storage: "gitaly-3"},
+				},
+			},
+			{
+				Name: "virtual-storage-2",
+				Nodes: []*config.Node{
+					{Storage: "gitaly-4"},
+				},
+			},
+		},
+	}
+
+	gs := datastore.NewMemoryRepositoryStore(cfg.StorageNames())
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
@@ -48,7 +64,7 @@ func TestDatalossSubcommand(t *testing.T) {
 	require.NoError(t, gs.SetGeneration(ctx, "virtual-storage-1", "repository-2", "gitaly-3", 0))
 
 	ln, clean := listenAndServe(t, []svcRegistrar{
-		registerPraefectInfoServer(info.NewServer(mgr, config.Config{}, nil, gs))})
+		registerPraefectInfoServer(info.NewServer(mgr, cfg, nil, gs))})
 	defer clean()
 	for _, tc := range []struct {
 		desc            string
@@ -68,6 +84,9 @@ func TestDatalossSubcommand(t *testing.T) {
   Outdated repositories:
     repository-2 (read-only):
       Primary: gitaly-1
+      In-Sync Storages:
+        gitaly-2
+        gitaly-3
       Outdated Storages:
         gitaly-1 is behind by 1 change or less
 `,
@@ -78,11 +97,16 @@ func TestDatalossSubcommand(t *testing.T) {
   Outdated repositories:
     repository-1 (writable):
       Primary: gitaly-1
+      In-Sync Storages:
+        gitaly-1
       Outdated Storages:
         gitaly-2 is behind by 1 change or less
         gitaly-3 is behind by 2 changes or less
     repository-2 (read-only):
       Primary: gitaly-1
+      In-Sync Storages:
+        gitaly-2
+        gitaly-3
       Outdated Storages:
         gitaly-1 is behind by 1 change or less
 `,
@@ -94,6 +118,9 @@ func TestDatalossSubcommand(t *testing.T) {
   Outdated repositories:
     repository-2 (read-only):
       Primary: gitaly-1
+      In-Sync Storages:
+        gitaly-2
+        gitaly-3
       Outdated Storages:
         gitaly-1 is behind by 1 change or less
 Virtual storage: virtual-storage-2
@@ -108,11 +135,16 @@ Virtual storage: virtual-storage-2
   Outdated repositories:
     repository-1 (writable):
       Primary: gitaly-1
+      In-Sync Storages:
+        gitaly-1
       Outdated Storages:
         gitaly-2 is behind by 1 change or less
         gitaly-3 is behind by 2 changes or less
     repository-2 (read-only):
       Primary: gitaly-1
+      In-Sync Storages:
+        gitaly-2
+        gitaly-3
       Outdated Storages:
         gitaly-1 is behind by 1 change or less
 Virtual storage: virtual-storage-2
