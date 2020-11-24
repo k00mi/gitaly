@@ -573,10 +573,16 @@ func testBranchHookOutput(t *testing.T, ctx context.Context) {
 	for _, hookName := range gitlabPreHooks {
 		for _, testCase := range testCases {
 			t.Run(hookName+"/"+testCase.desc, func(t *testing.T) {
-				request := &gitalypb.UserCreateBranchRequest{
+				branchNameInput := "some-branch"
+				createRequest := &gitalypb.UserCreateBranchRequest{
 					Repository: testRepo,
-					BranchName: []byte("some-branch"),
+					BranchName: []byte(branchNameInput),
 					StartPoint: []byte("master"),
+					User:       testhelper.TestUser,
+				}
+				deleteRequest := &gitalypb.UserDeleteBranchRequest{
+					Repository: testRepo,
+					BranchName: []byte(branchNameInput),
 					User:       testhelper.TestUser,
 				}
 
@@ -584,9 +590,16 @@ func testBranchHookOutput(t *testing.T, ctx context.Context) {
 				require.NoError(t, err)
 				defer remove()
 
-				response, err := client.UserCreateBranch(ctx, request)
+				createResponse, err := client.UserCreateBranch(ctx, createRequest)
 				require.NoError(t, err)
-				require.Equal(t, testCase.output, response.PreReceiveError)
+				require.Equal(t, testCase.output, createResponse.PreReceiveError)
+
+				testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", branchNameInput)
+				defer exec.Command(command.GitPath(), "-C", testRepoPath, "branch", "-d", branchNameInput).Run()
+
+				deleteResponse, err := client.UserDeleteBranch(ctx, deleteRequest)
+				require.NoError(t, err)
+				require.Equal(t, testCase.output, deleteResponse.PreReceiveError)
 			})
 		}
 	}
