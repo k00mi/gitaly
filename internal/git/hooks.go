@@ -63,9 +63,9 @@ type ReceivePackRequest interface {
 // WithReceivePackHooks returns an option that populates the safe command with the environment
 // variables necessary to properly execute the pre-receive, update and post-receive hooks for
 // git-receive-pack(1).
-func WithReceivePackHooks(ctx context.Context, req ReceivePackRequest, protocol string) CmdOpt {
+func WithReceivePackHooks(ctx context.Context, cfg config.Cfg, req ReceivePackRequest, protocol string) CmdOpt {
 	return func(cc *cmdCfg) error {
-		env, err := receivePackHookEnv(ctx, req, protocol)
+		env, err := receivePackHookEnv(ctx, cfg, req, protocol)
 		if err != nil {
 			return fmt.Errorf("receive-pack hook envvars: %w", err)
 		}
@@ -75,8 +75,8 @@ func WithReceivePackHooks(ctx context.Context, req ReceivePackRequest, protocol 
 	}
 }
 
-func receivePackHookEnv(ctx context.Context, req ReceivePackRequest, protocol string) ([]string, error) {
-	gitlabshellEnv, err := gitlabshell.Env()
+func receivePackHookEnv(ctx context.Context, cfg config.Cfg, req ReceivePackRequest, protocol string) ([]string, error) {
+	gitlabshellEnv, err := gitlabshell.EnvFromConfig(cfg)
 	if err != nil {
 		return nil, err
 	}

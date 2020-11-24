@@ -9,6 +9,14 @@ import (
 )
 
 func (m *GitLabHookManager) UpdateHook(ctx context.Context, repo *gitalypb.Repository, ref, oldValue, newValue string, env []string, stdout, stderr io.Writer) error {
+	primary, err := isPrimary(env)
+	if err != nil {
+		return helper.ErrInternalf("could not check role: %w", err)
+	}
+	if !primary {
+		return nil
+	}
+
 	executor, err := m.newCustomHooksExecutor(repo, "update")
 	if err != nil {
 		return helper.ErrInternal(err)

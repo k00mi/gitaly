@@ -131,6 +131,12 @@ func (m *GitLabHookManager) PostReceiveHook(ctx context.Context, repo *gitalypb.
 	}
 
 	glID, glRepo := getEnvVar("GL_ID", env), getEnvVar("GL_REPOSITORY", env)
+	if glID == "" {
+		return helper.ErrInternalf("GL_ID not set")
+	}
+	if glRepo == "" {
+		return helper.ErrInternalf("GL_REPOSITORY not set")
+	}
 
 	ok, messages, err := m.gitlabAPI.PostReceive(ctx, glRepo, glID, string(changes), pushOptions...)
 	if err != nil {

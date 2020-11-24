@@ -54,7 +54,7 @@ func (s *server) PostReceivePack(stream gitalypb.SmartHTTPService_PostReceivePac
 			Flags: []git.Option{git.Flag{Name: "--stateless-rpc"}},
 			Args:  []string{repoPath},
 		},
-		git.WithReceivePackHooks(ctx, req, "http"),
+		git.WithReceivePackHooks(ctx, config.Config, req, "http"),
 		git.WithGitProtocol(ctx, req),
 		git.WithRefTxHook(ctx, req.Repository, config.Config),
 	)

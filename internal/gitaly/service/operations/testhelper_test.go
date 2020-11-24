@@ -101,7 +101,7 @@ func runOperationServiceServerWithRubyServer(t *testing.T, ruby *rubyserver.Serv
 	server := NewServer(config.Config, ruby, hookManager, locator, conns)
 
 	gitalypb.RegisterOperationServiceServer(srv.GrpcServer(), server)
-	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hook.NewServer(hookManager))
+	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hook.NewServer(config.Config, hookManager))
 	gitalypb.RegisterRepositoryServiceServer(srv.GrpcServer(), repository.NewServer(config.Config, ruby, locator, internalSocket))
 	gitalypb.RegisterRefServiceServer(srv.GrpcServer(), ref.NewServer(locator))
 	gitalypb.RegisterCommitServiceServer(srv.GrpcServer(), commit.NewServer(locator))

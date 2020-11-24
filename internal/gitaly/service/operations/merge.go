@@ -117,7 +117,7 @@ func hookErrorFromStdoutAndStderr(sout string, serr string) string {
 }
 
 func (s *server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Repository, user *gitalypb.User, reference, newrev, oldrev string) error {
-	gitlabshellEnv, err := gitlabshell.Env()
+	gitlabshellEnv, err := gitlabshell.EnvFromConfig(s.cfg)
 	if err != nil {
 		return err
 	}

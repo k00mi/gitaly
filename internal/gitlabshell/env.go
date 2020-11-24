@@ -8,13 +8,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/log"
 )
 
-// Env is a helper that returns a slice with environment variables used by gitlab shell
-func Env() ([]string, error) {
-	cfg := config.Config
-
-	return EnvFromConfig(cfg)
-}
-
 type Config struct {
 	CustomHooksDir string              `json:"custom_hooks_dir"`
 	GitlabURL      string              `json:"gitlab_url"`

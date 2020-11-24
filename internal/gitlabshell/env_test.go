@@ -42,7 +42,7 @@ func TestGitHooksConfig(t *testing.T) {
 		SecretFile: "secret_file_path",
 	}
 
-	env, err := gitlabshell.Env()
+	env, err := gitlabshell.EnvFromConfig(config.Config)
 	require.NoError(t, err)
 
 	require.Contains(t, env, "GITALY_GITLAB_SHELL_DIR="+config.Config.GitlabShell.Dir)

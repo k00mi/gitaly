@@ -129,7 +129,7 @@ func testUserCreateBranchWithTransaction(t *testing.T, withRefTxHook bool) {
 	server := NewServer(config.Config, RubyServer, hookManager, locator, conns)
 
 	gitalypb.RegisterOperationServiceServer(srv.GrpcServer(), server)
-	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hook.NewServer(hookManager))
+	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hook.NewServer(config.Config, hookManager))
 	gitalypb.RegisterRefTransactionServer(srv.GrpcServer(), transactionServer)
 
 	require.NoError(t, srv.Start())
