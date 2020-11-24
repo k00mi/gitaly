@@ -120,7 +120,7 @@ func (cmd *datalossSubcommand) Exec(flags *flag.FlagSet, cfg config.Config) erro
 					continue
 				}
 
-				cmd.println(4, storage.Name)
+				cmd.println(4, "%s%s", storage.Name, assignedMessage(storage.Assigned))
 			}
 
 			cmd.println(3, "Outdated Storages:")
@@ -134,10 +134,19 @@ func (cmd *datalossSubcommand) Exec(flags *flag.FlagSet, cfg config.Config) erro
 					plural = "s"
 				}
 
-				cmd.println(4, "%s is behind by %d change%s or less", storage.Name, storage.BehindBy, plural)
+				cmd.println(4, "%s is behind by %d change%s or less%s", storage.Name, storage.BehindBy, plural, assignedMessage(storage.Assigned))
 			}
 		}
 	}
 
 	return nil
+}
+
+func assignedMessage(assigned bool) string {
+	assignedMsg := ""
+	if assigned {
+		assignedMsg = ", assigned host"
+	}
+
+	return assignedMsg
 }

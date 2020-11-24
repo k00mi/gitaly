@@ -85,10 +85,10 @@ func TestDatalossSubcommand(t *testing.T) {
     repository-2 (read-only):
       Primary: gitaly-1
       In-Sync Storages:
-        gitaly-2
-        gitaly-3
+        gitaly-2, assigned host
+        gitaly-3, assigned host
       Outdated Storages:
-        gitaly-1 is behind by 1 change or less
+        gitaly-1 is behind by 1 change or less, assigned host
 `,
 		},
 		{
@@ -98,17 +98,17 @@ func TestDatalossSubcommand(t *testing.T) {
     repository-1 (writable):
       Primary: gitaly-1
       In-Sync Storages:
-        gitaly-1
+        gitaly-1, assigned host
       Outdated Storages:
-        gitaly-2 is behind by 1 change or less
-        gitaly-3 is behind by 2 changes or less
+        gitaly-2 is behind by 1 change or less, assigned host
+        gitaly-3 is behind by 2 changes or less, assigned host
     repository-2 (read-only):
       Primary: gitaly-1
       In-Sync Storages:
-        gitaly-2
-        gitaly-3
+        gitaly-2, assigned host
+        gitaly-3, assigned host
       Outdated Storages:
-        gitaly-1 is behind by 1 change or less
+        gitaly-1 is behind by 1 change or less, assigned host
 `,
 		},
 		{
@@ -119,10 +119,10 @@ func TestDatalossSubcommand(t *testing.T) {
     repository-2 (read-only):
       Primary: gitaly-1
       In-Sync Storages:
-        gitaly-2
-        gitaly-3
+        gitaly-2, assigned host
+        gitaly-3, assigned host
       Outdated Storages:
-        gitaly-1 is behind by 1 change or less
+        gitaly-1 is behind by 1 change or less, assigned host
 Virtual storage: virtual-storage-2
   All repositories are writable!
 `,
@@ -136,17 +136,17 @@ Virtual storage: virtual-storage-2
     repository-1 (writable):
       Primary: gitaly-1
       In-Sync Storages:
-        gitaly-1
+        gitaly-1, assigned host
       Outdated Storages:
-        gitaly-2 is behind by 1 change or less
-        gitaly-3 is behind by 2 changes or less
+        gitaly-2 is behind by 1 change or less, assigned host
+        gitaly-3 is behind by 2 changes or less, assigned host
     repository-2 (read-only):
       Primary: gitaly-1
       In-Sync Storages:
-        gitaly-2
-        gitaly-3
+        gitaly-2, assigned host
+        gitaly-3, assigned host
       Outdated Storages:
-        gitaly-1 is behind by 1 change or less
+        gitaly-1 is behind by 1 change or less, assigned host
 Virtual storage: virtual-storage-2
   All repositories are up to date!
 `,

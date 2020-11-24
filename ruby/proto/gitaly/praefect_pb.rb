@@ -30,6 +30,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     add_message "gitaly.DatalossCheckResponse.Repository.Storage" do
       optional :name, :string, 1
       optional :behind_by, :int64, 2
+      optional :assigned, :bool, 3
     end
     add_message "gitaly.RepositoryReplicasRequest" do
       optional :repository, :message, 1, "gitaly.Repository"

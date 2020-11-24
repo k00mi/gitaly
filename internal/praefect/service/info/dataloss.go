@@ -31,7 +31,8 @@ func (s *Server) DatalossCheck(ctx context.Context, req *gitalypb.DatalossCheckR
 		storages := make(map[string]*gitalypb.DatalossCheckResponse_Repository_Storage, len(configuredStorages))
 		for _, storage := range configuredStorages {
 			storages[storage] = &gitalypb.DatalossCheckResponse_Repository_Storage{
-				Name: storage,
+				Name:     storage,
+				Assigned: true,
 			}
 		}
 

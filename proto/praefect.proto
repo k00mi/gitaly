@@ -50,6 +50,8 @@ message DatalossCheckResponse {
       string name = 1;
       // behind_by indicates how many generations this storage is behind.
       int64 behind_by = 2;
+      // assigned indicates whether the storage is assigned to host the repository.
+      bool assigned = 3;
     }
 
     // relative path of the repository with outdated replicas
