@@ -56,8 +56,6 @@ func TestNewAsRepositoryFailStorageUnknown(t *testing.T) {
 	require.Error(t, err)
 }
 
-var cleanRoot = filepath.Join("testdata", "clean", tmpRootPrefix)
-
 func TestCleanerSafety(t *testing.T) {
 	defer func() {
 		if p := recover(); p != nil {

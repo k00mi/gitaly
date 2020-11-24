@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -310,17 +309,8 @@ func TestAuthBeforeLimit(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	gitlabShellDir := filepath.Join(cwd, "testdata", "gitlab-shell")
-	os.RemoveAll(gitlabShellDir)
-
-	if err := os.MkdirAll(gitlabShellDir, 0755); err != nil {
-		t.Fatal(err)
-	}
-
+	gitlabShellDir, cleanup := testhelper.TempDir(t)
+	defer cleanup()
 	config.Config.GitlabShell.Dir = gitlabShellDir
 
 	url, cleanup := testhelper.SetupAndStartGitlabServer(t, &testhelper.GitlabTestServerOptions{
@@ -353,8 +343,6 @@ func TestAuthBeforeLimit(t *testing.T) {
 	defer cancel()
 
 	targetRevision := "c7fbe50c7c7419d9701eebe64b1fdacc3df5b9dd"
-	require.NoError(t, err)
-
 	inputTagName := "to-be-créated-soon"
 
 	request := &gitalypb.UserCreateTagRequest{

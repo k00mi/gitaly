@@ -1,9 +1,9 @@
 package operations
 
 import (
+	"io/ioutil"
 	"net"
 	"os"
-	"path/filepath"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
@@ -47,20 +47,14 @@ func testMain(m *testing.M) int {
 	cleanup := testhelper.Configure()
 	defer cleanup()
 
-	cwd, err := os.Getwd()
+	gitlabShellDir, err := ioutil.TempDir("", "gitlab-shell")
 	if err != nil {
 		log.Error(err)
 		return 1
 	}
-	gitlabShellDir := filepath.Join(cwd, "testdata", "gitlab-shell")
-	os.RemoveAll(gitlabShellDir)
+	defer os.RemoveAll(gitlabShellDir)
 
-	if err := os.MkdirAll(gitlabShellDir, 0755); err != nil {
-		log.Error(err)
-		return 1
-	}
-
-	config.Config.GitlabShell.Dir = filepath.Join(cwd, "testdata", "gitlab-shell")
+	config.Config.GitlabShell.Dir = gitlabShellDir
 
 	testhelper.ConfigureGitalySSH()
 	testhelper.ConfigureGitalyGit2Go()

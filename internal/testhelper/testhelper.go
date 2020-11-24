@@ -50,7 +50,6 @@ import (
 const (
 	RepositoryAuthToken = "the-secret-token"
 	DefaultStorageName  = "default"
-	testGitEnv          = "testdata/git-env"
 	GlRepository        = "project-1"
 	GlID                = "user-123"
 	GlProjectPath       = "gitlab-org/gitlab-test"
@@ -390,7 +389,7 @@ func ConfigureRuby(cfg *config.Cfg) error {
 
 // GetGitEnvData reads and returns the content of testGitEnv
 func GetGitEnvData() (string, error) {
-	gitEnvBytes, err := ioutil.ReadFile(testGitEnv)
+	gitEnvBytes, err := ioutil.ReadFile(filepath.Join(testDirectory, "git-env"))
 
 	if err != nil {
 		return "", err
@@ -566,7 +565,7 @@ func testRepositoryPath(t testing.TB) string {
 		log.Fatal("could not get caller info")
 	}
 
-	path := filepath.Join(filepath.Dir(currentFile), "testdata", "data", "gitlab-test.git")
+	path := filepath.Join(filepath.Dir(currentFile), "..", "..", "_build", "testrepos", "gitlab-test.git")
 	if !isValidRepoPath(path) {
 		t.Fatalf("local clone of 'gitlab-org/gitlab-test.git' not found in %q, did you run `make prepare-tests`?", path)
 	}

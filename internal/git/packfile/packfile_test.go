@@ -21,8 +21,10 @@ func testMain(m *testing.M) int {
 }
 
 func TestList(t *testing.T) {
-	repoPath0 := "testdata/empty.git"
-	require.NoError(t, os.RemoveAll(repoPath0))
+	tempDir, cleanup := testhelper.TempDir(t)
+	defer cleanup()
+
+	repoPath0 := filepath.Join(tempDir, "empty.git")
 	testhelper.MustRunCommand(t, nil, "git", "init", "--bare", repoPath0)
 
 	_, repoPath1, cleanup1 := testhelper.NewTestRepo(t)

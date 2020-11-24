@@ -680,7 +680,7 @@ dir = '%s'`, gitlabShellDir))
 
 func TestValidateInternalSocketDir(t *testing.T) {
 	// create a valid socket directory
-	tempDir, err := ioutil.TempDir("testdata", t.Name())
+	tempDir, err := ioutil.TempDir("", t.Name())
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 

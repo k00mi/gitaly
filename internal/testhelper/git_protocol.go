@@ -2,12 +2,11 @@ package testhelper
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 )
@@ -17,25 +16,29 @@ import (
 // restores the given settings as well as an array of environment variables
 // which need to be set when invoking Git with this setup.
 func EnableGitProtocolV2Support(t *testing.T) func() {
+	envPath := filepath.Join(testDirectory, "git-env")
+
 	script := fmt.Sprintf(`#!/bin/sh
 mkdir -p testdata
-env | grep ^GIT_PROTOCOL= >>testdata/git-env
+env | grep ^GIT_PROTOCOL= >>"%s"
 exec "%s" "$@"
-`, command.GitPath())
+`, envPath, command.GitPath())
 
-	dir, err := ioutil.TempDir("", "gitaly-test-*")
-	require.NoError(t, err)
+	dir, cleanupDir := TempDir(t)
 
 	path := filepath.Join(dir, "git")
-
-	cleanup, err := WriteExecutable(path, []byte(script))
-	require.NoError(t, err)
+	cleanupExe, err := WriteExecutable(path, []byte(script))
+	if !assert.NoError(t, err) {
+		cleanupDir()
+		t.FailNow()
+	}
 
 	oldGitBinPath := config.Config.Git.BinPath
 	config.Config.Git.BinPath = path
 	return func() {
-		os.Remove("testdata/git-env")
+		os.Remove(envPath)
 		config.Config.Git.BinPath = oldGitBinPath
-		cleanup()
+		cleanupExe()
+		cleanupDir()
 	}
 }
