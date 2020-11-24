@@ -65,21 +65,22 @@ func TestDatalossSubcommand(t *testing.T) {
 		{
 			desc: "data loss with read-only repositories",
 			args: []string{"-virtual-storage=virtual-storage-1"}, output: `Virtual storage: virtual-storage-1
-  Primary: gitaly-1
   Outdated repositories:
     repository-2 (read-only):
+      Primary: gitaly-1
       gitaly-1 is behind by 1 change or less
 `,
 		},
 		{
 			desc: "data loss with partially replicated repositories",
 			args: []string{"-virtual-storage=virtual-storage-1", "-partially-replicated"}, output: `Virtual storage: virtual-storage-1
-  Primary: gitaly-1
   Outdated repositories:
     repository-1 (writable):
+      Primary: gitaly-1
       gitaly-2 is behind by 1 change or less
       gitaly-3 is behind by 2 changes or less
     repository-2 (read-only):
+      Primary: gitaly-1
       gitaly-1 is behind by 1 change or less
 `,
 		},
@@ -87,12 +88,11 @@ func TestDatalossSubcommand(t *testing.T) {
 			desc:            "multiple virtual storages with read-only repositories",
 			virtualStorages: []*config.VirtualStorage{{Name: "virtual-storage-2"}, {Name: "virtual-storage-1"}},
 			output: `Virtual storage: virtual-storage-1
-  Primary: gitaly-1
   Outdated repositories:
     repository-2 (read-only):
+      Primary: gitaly-1
       gitaly-1 is behind by 1 change or less
 Virtual storage: virtual-storage-2
-  Primary: gitaly-4
   All repositories are writable!
 `,
 		},
@@ -101,15 +101,15 @@ Virtual storage: virtual-storage-2
 			args:            []string{"-partially-replicated"},
 			virtualStorages: []*config.VirtualStorage{{Name: "virtual-storage-2"}, {Name: "virtual-storage-1"}},
 			output: `Virtual storage: virtual-storage-1
-  Primary: gitaly-1
   Outdated repositories:
     repository-1 (writable):
+      Primary: gitaly-1
       gitaly-2 is behind by 1 change or less
       gitaly-3 is behind by 2 changes or less
     repository-2 (read-only):
+      Primary: gitaly-1
       gitaly-1 is behind by 1 change or less
 Virtual storage: virtual-storage-2
-  Primary: gitaly-4
   All repositories are up to date!
 `,
 		},

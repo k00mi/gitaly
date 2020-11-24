@@ -89,7 +89,6 @@ func (cmd *datalossSubcommand) Exec(flags *flag.FlagSet, cfg config.Config) erro
 		}
 
 		cmd.println(0, "Virtual storage: %s", vs)
-		cmd.println(1, "Primary: %s", resp.Primary)
 		if len(resp.Repositories) == 0 {
 			msg := "All repositories are writable!"
 			if cmd.includePartiallyReplicated {
@@ -108,6 +107,12 @@ func (cmd *datalossSubcommand) Exec(flags *flag.FlagSet, cfg config.Config) erro
 			}
 
 			cmd.println(2, "%s (%s):", repo.RelativePath, mode)
+
+			primary := repo.Primary
+			if primary == "" {
+				primary = "No Primary"
+			}
+			cmd.println(3, "Primary: %s", primary)
 			for _, s := range repo.Storages {
 				plural := ""
 				if s.BehindBy > 1 {

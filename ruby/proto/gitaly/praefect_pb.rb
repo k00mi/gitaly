@@ -19,13 +19,13 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
       optional :include_partially_replicated, :bool, 2
     end
     add_message "gitaly.DatalossCheckResponse" do
-      optional :primary, :string, 1
       repeated :repositories, :message, 2, "gitaly.DatalossCheckResponse.Repository"
     end
     add_message "gitaly.DatalossCheckResponse.Repository" do
       optional :relative_path, :string, 1
       repeated :storages, :message, 2, "gitaly.DatalossCheckResponse.Repository.Storage"
       optional :read_only, :bool, 3
+      optional :primary, :string, 4
     end
     add_message "gitaly.DatalossCheckResponse.Repository.Storage" do
       optional :name, :string, 1

@@ -43,13 +43,13 @@ func (s *Server) DatalossCheck(ctx context.Context, req *gitalypb.DatalossCheckR
 			RelativePath: relativePath,
 			ReadOnly:     readOnly,
 			Storages:     pbStorages,
+			Primary:      shard.Primary.GetStorage(),
 		})
 	}
 
 	sort.Slice(pbRepos, func(i, j int) bool { return pbRepos[i].RelativePath < pbRepos[j].RelativePath })
 
 	return &gitalypb.DatalossCheckResponse{
-		Primary:      shard.Primary.GetStorage(),
 		Repositories: pbRepos,
 	}, nil
 }
