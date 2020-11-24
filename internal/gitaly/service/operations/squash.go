@@ -382,7 +382,7 @@ func (s *server) applyDiff(ctx context.Context, repo *gitalypb.Repository, req *
 			git.Flag{Name: "--3way"},
 			git.Flag{Name: "--whitespace=nowarn"},
 		},
-	}, git.WithRefTxHook(ctx, repo, s.cfg))
+	})
 	if err != nil {
 		return "", fmt.Errorf("creation of 'git apply' for range %q: %w", diffRange, gitError{ErrMsg: applyStderr.String(), Err: err})
 	}

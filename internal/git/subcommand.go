@@ -12,6 +12,7 @@ const (
 // subcommands is a curated list of Git command names for special git.SafeCmd
 // validation logic
 var subcommands = map[string]uint{
+	"apply":            scNoRefUpdates,
 	"archive":          scReadOnly | scNoEndOfOptions,
 	"blame":            scReadOnly | scNoEndOfOptions,
 	"bundle":           scReadOnly,
