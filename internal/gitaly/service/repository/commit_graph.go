@@ -31,7 +31,6 @@ func (s *server) writeCommitGraph(ctx context.Context, in *gitalypb.WriteCommitG
 				git.Flag{Name: "--reachable"},
 			},
 		},
-		git.WithRefTxHook(ctx, in.Repository, s.cfg),
 	)
 	if err != nil {
 		return err

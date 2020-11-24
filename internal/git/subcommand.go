@@ -19,6 +19,7 @@ var subcommands = map[string]uint{
 	"cat-file":         scReadOnly,
 	"checkout":         scNoEndOfOptions,
 	"clone":            scNoEndOfOptions,
+	"commit-graph":     scNoRefUpdates,
 	"config":           scNoRefUpdates | scNoEndOfOptions,
 	"count-objects":    scReadOnly,
 	"diff":             scReadOnly,
