@@ -8,19 +8,16 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
+// virtualStorageStates represents the virtual storage's view of which repositories should exist.
+// It's structured as virtual-storage->relative_path.
+type virtualStorageState map[string]map[string]struct{}
+
+// storageState contains individual storage's repository states.
+// It structured as virtual-storage->relative_path->storage->generation.
+type storageState map[string]map[string]map[string]int
+
 type requireState func(t *testing.T, ctx context.Context, vss virtualStorageState, ss storageState)
 type repositoryStoreFactory func(t *testing.T, storages map[string][]string) (RepositoryStore, requireState)
-
-func TestRepositoryStore_Memory(t *testing.T) {
-	testRepositoryStore(t, func(t *testing.T, storages map[string][]string) (RepositoryStore, requireState) {
-		rs := NewMemoryRepositoryStore(storages)
-		return rs, func(t *testing.T, _ context.Context, vss virtualStorageState, ss storageState) {
-			t.Helper()
-			require.Equal(t, vss, rs.virtualStorageState)
-			require.Equal(t, ss, rs.storageState)
-		}
-	})
-}
 
 func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 	ctx, cancel := testhelper.Context()

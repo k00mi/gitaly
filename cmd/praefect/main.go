@@ -241,7 +241,7 @@ func run(cfgs []starter.Config, conf config.Config) error {
 
 	if conf.MemoryQueueEnabled {
 		queue = datastore.NewMemoryReplicationEventQueue(conf)
-		rs = datastore.NewMemoryRepositoryStore(conf.StorageNames())
+		rs = datastore.MockRepositoryStore{}
 		sp = datastore.NewDirectStorageProvider(rs)
 		logger.Info("reads distribution caching is disabled for in memory storage")
 	} else {
