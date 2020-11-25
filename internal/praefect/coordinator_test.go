@@ -75,11 +75,10 @@ func TestStreamDirectorReadOnlyEnforcement(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
-			require.NoError(t, rs.SetGeneration(ctx, virtualStorage, relativePath, "latest", 1))
-			require.NoError(t, rs.SetGeneration(ctx, virtualStorage, relativePath, storage, 1))
-			if tc.readOnly {
-				require.NoError(t, rs.SetGeneration(ctx, virtualStorage, relativePath, storage, 0))
+			rs := datastore.MockRepositoryStore{
+				IsLatestGenerationFunc: func(ctx context.Context, virtualStorage, relativePath, storage string) (bool, error) {
+					return !tc.readOnly, nil
+				},
 			}
 
 			coordinator := NewCoordinator(
@@ -157,7 +156,7 @@ func TestStreamDirectorMutator(t *testing.T) {
 	nodeMgr.Start(0, time.Hour)
 
 	txMgr := transactions.NewManager(conf)
-	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
+	rs := datastore.MockRepositoryStore{}
 
 	coordinator := NewCoordinator(
 		queueInterceptor,
@@ -262,9 +261,10 @@ func TestStreamDirectorMutator_StopTransaction(t *testing.T) {
 		waitNodeToChangeHealthStatus(ctx, t, node, true)
 	}
 
-	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
-	for _, node := range []string{"primary", "secondary"} {
-		require.NoError(t, rs.SetGeneration(ctx, "praefect", repo.RelativePath, node, 1))
+	rs := datastore.MockRepositoryStore{
+		GetConsistentSecondariesFunc: func(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error) {
+			return map[string]struct{}{"primary": {}, "secondary": {}}, nil
+		},
 	}
 
 	txMgr := transactions.NewManager(conf)
@@ -372,7 +372,7 @@ func TestStreamDirectorAccessor(t *testing.T) {
 	nodeMgr.Start(0, time.Minute)
 
 	txMgr := transactions.NewManager(conf)
-	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
+	rs := datastore.MockRepositoryStore{}
 
 	coordinator := NewCoordinator(
 		queue,
@@ -451,11 +451,11 @@ func TestCoordinatorStreamDirector_distributesReads(t *testing.T) {
 
 	entry := testhelper.DiscardTestEntry(t)
 
-	repoStore := datastore.NewMemoryRepositoryStore(conf.StorageNames())
-	require.NoError(t, repoStore.IncrementGeneration(ctx, conf.VirtualStorages[0].Name, targetRepo.RelativePath, primaryNodeConf.Storage, nil))
-	generation, err := repoStore.GetGeneration(ctx, conf.VirtualStorages[0].Name, targetRepo.RelativePath, primaryNodeConf.Storage)
-	require.NoError(t, err)
-	require.NoError(t, repoStore.SetGeneration(ctx, conf.VirtualStorages[0].Name, targetRepo.RelativePath, secondaryNodeConf.Storage, generation))
+	repoStore := datastore.MockRepositoryStore{
+		GetConsistentSecondariesFunc: func(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error) {
+			return map[string]struct{}{primaryNodeConf.Storage: {}, secondaryNodeConf.Storage: {}}, nil
+		},
+	}
 
 	sp := datastore.NewDirectStorageProvider(repoStore)
 
@@ -663,7 +663,7 @@ func TestAbsentCorrelationID(t *testing.T) {
 	nodeMgr.Start(0, time.Hour)
 
 	txMgr := transactions.NewManager(conf)
-	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
+	rs := datastore.MockRepositoryStore{}
 
 	coordinator := NewCoordinator(
 		queueInterceptor,
@@ -783,7 +783,7 @@ func TestStreamDirectorStorageScope(t *testing.T) {
 			Nodes: []*config.Node{primaryGitaly, secondaryGitaly},
 		}}}
 
-	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
+	rs := datastore.MockRepositoryStore{}
 
 	nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf, nil, nil, nil, promtest.NewMockHistogramVec(), protoregistry.GitalyProtoPreregistered, nil)
 	require.NoError(t, err)
@@ -853,7 +853,7 @@ func TestStreamDirectorStorageScopeError(t *testing.T) {
 			},
 		}
 
-		rs := datastore.NewMemoryRepositoryStore(nil)
+		rs := datastore.MockRepositoryStore{}
 		coordinator := NewCoordinator(
 			nil,
 			rs,
@@ -882,7 +882,7 @@ func TestStreamDirectorStorageScopeError(t *testing.T) {
 			},
 		}
 
-		rs := datastore.NewMemoryRepositoryStore(nil)
+		rs := datastore.MockRepositoryStore{}
 		coordinator := NewCoordinator(
 			nil,
 			rs,
@@ -912,7 +912,7 @@ func TestStreamDirectorStorageScopeError(t *testing.T) {
 				},
 			}
 
-			rs := datastore.NewMemoryRepositoryStore(nil)
+			rs := datastore.MockRepositoryStore{}
 			coordinator := NewCoordinator(
 				nil,
 				rs,
@@ -943,7 +943,7 @@ func TestStreamDirectorStorageScopeError(t *testing.T) {
 					return nodes.Shard{}, nodes.ErrPrimaryNotHealthy
 				},
 			}
-			rs := datastore.NewMemoryRepositoryStore(nil)
+			rs := datastore.MockRepositoryStore{}
 			coordinator := NewCoordinator(
 				nil,
 				rs,

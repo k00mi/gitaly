@@ -203,13 +203,11 @@ func TestReplMgr_ProcessBacklog(t *testing.T) {
 	_, err = queue.Enqueue(ctx, events[0])
 	require.NoError(t, err)
 
-	store := datastore.NewMemoryRepositoryStore(conf.StorageNames())
-
 	replMgr := NewReplMgr(
 		loggerEntry,
 		conf.VirtualStorageNames(),
 		queue,
-		store,
+		datastore.MockRepositoryStore{},
 		nodeMgr,
 		NodeSetFromNodeManager(nodeMgr),
 		WithLatencyMetric(&mockReplicationLatencyHistogramVec),
@@ -269,9 +267,17 @@ func TestReplicatorDowngradeAttempt(t *testing.T) {
 
 	ctx = correlation.ContextWithCorrelation(ctx, "correlation-id")
 
-	rs := datastore.NewMemoryRepositoryStore(nil)
-	require.NoError(t, rs.SetGeneration(ctx, "virtual-storage-1", "relative-path-1", "gitaly-1", 0))
-	require.NoError(t, rs.SetGeneration(ctx, "virtual-storage-1", "relative-path-1", "gitaly-2", 0))
+	rs := datastore.MockRepositoryStore{
+		GetReplicatedGenerationFunc: func(ctx context.Context, virtualStorage, relativePath, source, target string) (int, error) {
+			return 0, datastore.DowngradeAttemptedError{
+				VirtualStorage:      "virtual-storage-1",
+				RelativePath:        "relative-path-1",
+				Storage:             "gitaly-2",
+				CurrentGeneration:   0,
+				AttemptedGeneration: 0,
+			}
+		},
+	}
 
 	logger := testhelper.DiscardTestLogger(t)
 	hook := test.NewLocal(logger)
@@ -296,27 +302,6 @@ func TestReplicatorDowngradeAttempt(t *testing.T) {
 	}, hook.LastEntry().Data["error"])
 	require.Equal(t, "correlation-id", hook.LastEntry().Data[logWithCorrID])
 	require.Equal(t, "target repository already on the same generation, skipping replication job", hook.LastEntry().Message)
-
-	require.NoError(t, rs.SetGeneration(ctx, "virtual-storage-1", "relative-path-1", "gitaly-2", 1))
-	require.NoError(t, r.Replicate(ctx, datastore.ReplicationEvent{
-		Job: datastore.ReplicationJob{
-			VirtualStorage:    "virtual-storage-1",
-			RelativePath:      "relative-path-1",
-			SourceNodeStorage: "gitaly-1",
-			TargetNodeStorage: "gitaly-2",
-		},
-	}, nil, nil))
-
-	require.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
-	require.Equal(t, datastore.DowngradeAttemptedError{
-		VirtualStorage:      "virtual-storage-1",
-		RelativePath:        "relative-path-1",
-		Storage:             "gitaly-2",
-		CurrentGeneration:   1,
-		AttemptedGeneration: 0,
-	}, hook.LastEntry().Data["error"])
-	require.Equal(t, "correlation-id", hook.LastEntry().Data[logWithCorrID])
-	require.Equal(t, "repository downgrade prevented", hook.LastEntry().Message)
 }
 
 func TestPropagateReplicationJob(t *testing.T) {
@@ -354,7 +339,7 @@ func TestPropagateReplicationJob(t *testing.T) {
 
 	txMgr := transactions.NewManager(conf)
 
-	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
+	rs := datastore.MockRepositoryStore{}
 
 	coordinator := NewCoordinator(
 		queue,
@@ -647,7 +632,7 @@ func TestProcessBacklog_FailedJobs(t *testing.T) {
 		logEntry,
 		conf.VirtualStorageNames(),
 		queueInterceptor,
-		datastore.NewMemoryRepositoryStore(conf.StorageNames()),
+		datastore.MockRepositoryStore{},
 		nodeMgr,
 		NodeSetFromNodeManager(nodeMgr),
 	)
@@ -793,7 +778,7 @@ func TestProcessBacklog_Success(t *testing.T) {
 		logEntry,
 		conf.VirtualStorageNames(),
 		queueInterceptor,
-		datastore.NewMemoryRepositoryStore(conf.StorageNames()),
+		datastore.MockRepositoryStore{},
 		nodeMgr,
 		NodeSetFromNodeManager(nodeMgr),
 	)
@@ -927,7 +912,7 @@ func TestProcessBacklog_ReplicatesToReadOnlyPrimary(t *testing.T) {
 		testhelper.DiscardTestEntry(t),
 		conf.VirtualStorageNames(),
 		queue,
-		datastore.NewMemoryRepositoryStore(conf.StorageNames()),
+		datastore.MockRepositoryStore{},
 		StaticHealthChecker{virtualStorage: {primaryStorage, secondaryStorage}},
 		NodeSet{virtualStorage: {
 			primaryStorage:   {Storage: primaryStorage, Connection: primaryConn},
@@ -1064,7 +1049,7 @@ func TestReplMgr_ProcessStale(t *testing.T) {
 	hook := test.NewLocal(logger)
 
 	queue := datastore.NewReplicationEventQueueInterceptor(nil)
-	mgr := NewReplMgr(logger.WithField("test", t.Name()), nil, queue, datastore.NewMemoryRepositoryStore(nil), nil, nil)
+	mgr := NewReplMgr(logger.WithField("test", t.Name()), nil, queue, datastore.MockRepositoryStore{}, nil, nil)
 
 	var counter int32
 	queue.OnAcknowledgeStale(func(ctx context.Context, duration time.Duration) error {
