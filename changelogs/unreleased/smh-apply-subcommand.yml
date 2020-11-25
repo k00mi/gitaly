@@ -1,0 +1,5 @@
+---
+title: Print host assignments and primary per repository in `praefect dataloss`
+merge_request: 2843
+author:
+type: changed
