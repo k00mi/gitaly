@@ -2,7 +2,6 @@ package operations
 
 import (
 	"io/ioutil"
-	"net"
 	"os"
 	"testing"
 
@@ -82,11 +81,7 @@ func runOperationServiceServer(t *testing.T) (string, func()) {
 }
 
 func runOperationServiceServerWithRubyServer(t *testing.T, ruby *rubyserver.Server) (string, func()) {
-	srv := testhelper.NewServerWithAuth(t, nil, nil, config.Config.Auth.Token)
-
-	internalSocket := config.Config.GitalyInternalSocketPath()
-	internalListener, err := net.Listen("unix", internalSocket)
-	require.NoError(t, err)
+	srv := testhelper.NewServerWithAuth(t, nil, nil, config.Config.Auth.Token, testhelper.WithInternalSocket(config.Config))
 
 	conns := client.NewPool()
 
@@ -96,18 +91,13 @@ func runOperationServiceServerWithRubyServer(t *testing.T, ruby *rubyserver.Serv
 
 	gitalypb.RegisterOperationServiceServer(srv.GrpcServer(), server)
 	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hook.NewServer(config.Config, hookManager))
-	gitalypb.RegisterRepositoryServiceServer(srv.GrpcServer(), repository.NewServer(config.Config, ruby, locator, internalSocket))
+	gitalypb.RegisterRepositoryServiceServer(srv.GrpcServer(), repository.NewServer(config.Config, ruby, locator, config.Config.GitalyInternalSocketPath()))
 	gitalypb.RegisterRefServiceServer(srv.GrpcServer(), ref.NewServer(locator))
 	gitalypb.RegisterCommitServiceServer(srv.GrpcServer(), commit.NewServer(locator))
 	gitalypb.RegisterSSHServiceServer(srv.GrpcServer(), ssh.NewServer(locator))
 	reflection.Register(srv.GrpcServer())
 
 	require.NoError(t, srv.Start())
-
-	go func() {
-		conns.Close()
-		srv.GrpcServer().Serve(internalListener)
-	}()
 
 	return "unix://" + srv.Socket(), srv.Stop
 }
