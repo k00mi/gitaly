@@ -19,12 +19,12 @@ const (
 	MaxTagReferenceDepth = 10
 )
 
-// GetTagCatfile looks up a commit by tagID using an existing *catfile.Batch instance.
+// GetTagCatfile looks up a commit by tagID using an existing catfile.Batch instance.
 // When 'trim' is 'true', the tag message will be trimmed to fit in a gRPC message.
 // When 'trimRightNewLine' is 'true', the tag message will be trimmed to remove all '\n' characters from right.
 // note: we pass in the tagName because the tag name from refs/tags may be different
 // than the name found in the actual tag object. We want to use the tagName found in refs/tags
-func GetTagCatfile(ctx context.Context, c *catfile.Batch, tagID, tagName string, trimLen, trimRightNewLine bool) (*gitalypb.Tag, error) {
+func GetTagCatfile(ctx context.Context, c catfile.Batch, tagID, tagName string, trimLen, trimRightNewLine bool) (*gitalypb.Tag, error) {
 	tagObj, err := c.Tag(ctx, tagID)
 	if err != nil {
 		return nil, err
@@ -93,7 +93,7 @@ func splitRawTag(r io.Reader, trimRightNewLine bool) (*tagHeader, []byte, error)
 	return &header, body, nil
 }
 
-func buildAnnotatedTag(ctx context.Context, b *catfile.Batch, tagID, name string, header *tagHeader, body []byte, trimLen, trimRightNewLine bool) (*gitalypb.Tag, error) {
+func buildAnnotatedTag(ctx context.Context, b catfile.Batch, tagID, name string, header *tagHeader, body []byte, trimLen, trimRightNewLine bool) (*gitalypb.Tag, error) {
 	tag := &gitalypb.Tag{
 		Id:          tagID,
 		Name:        []byte(name),
@@ -143,7 +143,7 @@ func buildAnnotatedTag(ctx context.Context, b *catfile.Batch, tagID, name string
 // we also protect against circular tag references. Even though this is not possible in git,
 // we still want to protect against an infinite looop
 
-func dereferenceTag(ctx context.Context, b *catfile.Batch, Oid string) (*gitalypb.GitCommit, error) {
+func dereferenceTag(ctx context.Context, b catfile.Batch, Oid string) (*gitalypb.GitCommit, error) {
 	for depth := 0; depth < MaxTagReferenceDepth; depth++ {
 		i, err := b.Info(ctx, Oid)
 		if err != nil {

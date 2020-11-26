@@ -406,7 +406,7 @@ func TestSpawnFailure(t *testing.T) {
 	)
 }
 
-func catfileWithFreshSessionID(ctx context.Context, repo *gitalypb.Repository) (*Batch, error) {
+func catfileWithFreshSessionID(ctx context.Context, repo *gitalypb.Repository) (Batch, error) {
 	id, err := text.RandomHex(4)
 	if err != nil {
 		return nil, err

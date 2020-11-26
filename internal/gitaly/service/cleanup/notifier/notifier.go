@@ -11,7 +11,7 @@ import (
 // Notifier sends messages stating that an OID has been rewritten, looking
 // up the type of the OID if necessary. It is not safe for concurrent use
 type Notifier struct {
-	catfile *catfile.Batch
+	catfile catfile.Batch
 	chunker *chunk.Chunker
 }
 

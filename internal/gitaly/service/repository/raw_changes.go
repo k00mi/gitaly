@@ -37,7 +37,7 @@ func (s *server) GetRawChanges(req *gitalypb.GetRawChangesRequest, stream gitaly
 	return nil
 }
 
-func validateRawChangesRequest(ctx context.Context, req *gitalypb.GetRawChangesRequest, batch *catfile.Batch) error {
+func validateRawChangesRequest(ctx context.Context, req *gitalypb.GetRawChangesRequest, batch catfile.Batch) error {
 	if from := req.FromRevision; from != git.NullSHA {
 		if _, err := batch.Info(ctx, from); err != nil {
 			return fmt.Errorf("invalid 'from' revision: %q", from)
@@ -53,7 +53,7 @@ func validateRawChangesRequest(ctx context.Context, req *gitalypb.GetRawChangesR
 	return nil
 }
 
-func getRawChanges(stream gitalypb.RepositoryService_GetRawChangesServer, repo *gitalypb.Repository, batch *catfile.Batch, from, to string) error {
+func getRawChanges(stream gitalypb.RepositoryService_GetRawChangesServer, repo *gitalypb.Repository, batch catfile.Batch, from, to string) error {
 	if to == git.NullSHA {
 		return nil
 	}
@@ -126,7 +126,7 @@ var zeroRegexp = regexp.MustCompile(`\A0+\z`)
 
 const submoduleTreeEntryMode = "160000"
 
-func changeFromDiff(ctx context.Context, batch *catfile.Batch, d *rawdiff.Diff) (*gitalypb.GetRawChangesResponse_RawChange, error) {
+func changeFromDiff(ctx context.Context, batch catfile.Batch, d *rawdiff.Diff) (*gitalypb.GetRawChangesResponse_RawChange, error) {
 	resp := &gitalypb.GetRawChangesResponse_RawChange{}
 
 	newMode64, err := strconv.ParseInt(d.DstMode, 8, 32)

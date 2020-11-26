@@ -27,7 +27,7 @@ func validateGetTreeEntriesRequest(in *gitalypb.GetTreeEntriesRequest) error {
 	return nil
 }
 
-func populateFlatPath(ctx context.Context, c *catfile.Batch, entries []*gitalypb.TreeEntry) error {
+func populateFlatPath(ctx context.Context, c catfile.Batch, entries []*gitalypb.TreeEntry) error {
 	for _, entry := range entries {
 		entry.FlatPath = entry.Path
 
@@ -53,7 +53,7 @@ func populateFlatPath(ctx context.Context, c *catfile.Batch, entries []*gitalypb
 	return nil
 }
 
-func sendTreeEntries(stream gitalypb.CommitService_GetTreeEntriesServer, c *catfile.Batch, revision, path string, recursive bool) error {
+func sendTreeEntries(stream gitalypb.CommitService_GetTreeEntriesServer, c catfile.Batch, revision, path string, recursive bool) error {
 	ctx := stream.Context()
 
 	entries, err := treeEntries(ctx, c, revision, path, "", recursive)

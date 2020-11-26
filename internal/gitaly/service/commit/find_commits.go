@@ -78,11 +78,11 @@ func calculateOffsetManually(req *gitalypb.FindCommitsRequest) bool {
 // GetCommits wraps a git log command that can be interated on to get individual commit objects
 type GetCommits struct {
 	scanner *bufio.Scanner
-	batch   *catfile.Batch
+	batch   catfile.Batch
 }
 
 // NewGetCommits returns a new GetCommits object
-func NewGetCommits(cmd *command.Command, batch *catfile.Batch) *GetCommits {
+func NewGetCommits(cmd *command.Command, batch catfile.Batch) *GetCommits {
 	return &GetCommits{
 		scanner: bufio.NewScanner(cmd),
 		batch:   batch,

@@ -17,7 +17,7 @@ import (
 
 const attributesFileMode os.FileMode = 0644
 
-func applyGitattributes(ctx context.Context, c *catfile.Batch, repoPath string, revision []byte) error {
+func applyGitattributes(ctx context.Context, c catfile.Batch, repoPath string, revision []byte) error {
 	infoPath := filepath.Join(repoPath, "info")
 	attributesPath := filepath.Join(infoPath, "attributes")
 

@@ -18,7 +18,7 @@ type Parser struct {
 	scanner       *bufio.Scanner
 	currentCommit *gitalypb.GitCommit
 	err           error
-	c             *catfile.Batch
+	c             catfile.Batch
 }
 
 // NewLogParser returns a new Parser

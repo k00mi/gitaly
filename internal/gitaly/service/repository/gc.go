@@ -157,7 +157,7 @@ func (s *server) cleanupKeepArounds(ctx context.Context, repo *gitalypb.Reposito
 	return nil
 }
 
-func checkRef(ctx context.Context, batch *catfile.Batch, refName string, info os.FileInfo) error {
+func checkRef(ctx context.Context, batch catfile.Batch, refName string, info os.FileInfo) error {
 	if info.Size() == 0 {
 		return errors.New("checkRef: Ref file is empty")
 	}
@@ -166,7 +166,7 @@ func checkRef(ctx context.Context, batch *catfile.Batch, refName string, info os
 	return err
 }
 
-func (s *server) fixRef(ctx context.Context, repo *gitalypb.Repository, batch *catfile.Batch, refPath string, name string, sha string) error {
+func (s *server) fixRef(ctx context.Context, repo *gitalypb.Repository, batch catfile.Batch, refPath string, name string, sha string) error {
 	// So the ref is broken, let's get rid of it
 	if err := os.RemoveAll(refPath); err != nil {
 		return err

@@ -19,12 +19,12 @@ type revisionPath struct{ revision, path string }
 
 // TreeEntryFinder is a struct for searching through a tree with caching.
 type TreeEntryFinder struct {
-	c         *catfile.Batch
+	c         catfile.Batch
 	treeCache map[revisionPath][]*gitalypb.TreeEntry
 }
 
 // NewTreeEntryFinder initializes a TreeEntryFinder with an empty tree cache.
-func NewTreeEntryFinder(c *catfile.Batch) *TreeEntryFinder {
+func NewTreeEntryFinder(c catfile.Batch) *TreeEntryFinder {
 	return &TreeEntryFinder{
 		c:         c,
 		treeCache: make(map[revisionPath][]*gitalypb.TreeEntry),
@@ -103,7 +103,7 @@ func extractEntryInfoFromTreeData(treeData io.Reader, commitOid, rootOid, rootPa
 	return entries, nil
 }
 
-func treeEntries(ctx context.Context, c *catfile.Batch, revision, path string, rootOid string, recursive bool) ([]*gitalypb.TreeEntry, error) {
+func treeEntries(ctx context.Context, c catfile.Batch, revision, path string, rootOid string, recursive bool) ([]*gitalypb.TreeEntry, error) {
 	if path == "." {
 		path = ""
 	}

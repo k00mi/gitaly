@@ -19,7 +19,7 @@ var treeEntryToObjectType = map[gitalypb.TreeEntry_EntryType]gitalypb.ObjectType
 	gitalypb.TreeEntry_TREE:   gitalypb.ObjectType_TREE,
 	gitalypb.TreeEntry_COMMIT: gitalypb.ObjectType_COMMIT}
 
-func sendGetBlobsResponse(req *gitalypb.GetBlobsRequest, stream gitalypb.BlobService_GetBlobsServer, c *catfile.Batch) error {
+func sendGetBlobsResponse(req *gitalypb.GetBlobsRequest, stream gitalypb.BlobService_GetBlobsServer, c catfile.Batch) error {
 	ctx := stream.Context()
 
 	tef := commit.NewTreeEntryFinder(c)
@@ -90,7 +90,7 @@ func sendGetBlobsResponse(req *gitalypb.GetBlobsRequest, stream gitalypb.BlobSer
 	return nil
 }
 
-func sendBlobTreeEntry(response *gitalypb.GetBlobsResponse, stream gitalypb.BlobService_GetBlobsServer, c *catfile.Batch, limit int64) error {
+func sendBlobTreeEntry(response *gitalypb.GetBlobsResponse, stream gitalypb.BlobService_GetBlobsServer, c catfile.Batch, limit int64) error {
 	ctx := stream.Context()
 
 	var readLimit int64

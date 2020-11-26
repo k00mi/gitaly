@@ -379,7 +379,7 @@ func (s *server) FindTag(ctx context.Context, in *gitalypb.FindTagRequest) (*git
 }
 
 // parseTagLine parses a line of text with the output format %(objectname) %(objecttype) %(refname:lstrip=2)
-func parseTagLine(ctx context.Context, c *catfile.Batch, tagLine string) (*gitalypb.Tag, error) {
+func parseTagLine(ctx context.Context, c catfile.Batch, tagLine string) (*gitalypb.Tag, error) {
 	fields := strings.SplitN(tagLine, " ", 3)
 	if len(fields) != 3 {
 		return nil, fmt.Errorf("invalid output from for-each-ref command: %v", tagLine)

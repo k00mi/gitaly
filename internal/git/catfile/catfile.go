@@ -60,7 +60,15 @@ func init() {
 //
 // A Batch instance can only serve single request at a time. If you want to
 // use it across multiple goroutines you need to add your own locking.
-type Batch struct {
+type Batch interface {
+	Info(ctx context.Context, revspec string) (*ObjectInfo, error)
+	Tree(ctx context.Context, revspec string) (*Object, error)
+	Commit(ctx context.Context, revspec string) (*Object, error)
+	Blob(ctx context.Context, revspec string) (*Object, error)
+	Tag(ctx context.Context, revspec string) (*Object, error)
+}
+
+type batch struct {
 	sync.Mutex
 	*batchCheck
 	*batchProcess
@@ -70,7 +78,7 @@ type Batch struct {
 
 // Info returns an ObjectInfo if spec exists. If spec does not exist the
 // error is of type NotFoundError.
-func (c *Batch) Info(ctx context.Context, revspec string) (*ObjectInfo, error) {
+func (c *batch) Info(ctx context.Context, revspec string) (*ObjectInfo, error) {
 	catfileLookupCounter.WithLabelValues("info").Inc()
 	return c.batchCheck.info(revspec)
 }
@@ -79,7 +87,7 @@ func (c *Batch) Info(ctx context.Context, revspec string) (*ObjectInfo, error) {
 // point to a tree. To prevent this firstuse Info to resolve the revspec
 // and check the object type. Caller must consume the Reader before
 // making another call on C.
-func (c *Batch) Tree(ctx context.Context, revspec string) (*Object, error) {
+func (c *batch) Tree(ctx context.Context, revspec string) (*Object, error) {
 	catfileLookupCounter.WithLabelValues("tree").Inc()
 	return c.batchProcess.reader(revspec, "tree")
 }
@@ -88,7 +96,7 @@ func (c *Batch) Tree(ctx context.Context, revspec string) (*Object, error) {
 // point to a commit. To prevent this first use Info to resolve the revspec
 // and check the object type. Caller must consume the Reader before
 // making another call on C.
-func (c *Batch) Commit(ctx context.Context, revspec string) (*Object, error) {
+func (c *batch) Commit(ctx context.Context, revspec string) (*Object, error) {
 	catfileLookupCounter.WithLabelValues("commit").Inc()
 	return c.batchProcess.reader(revspec, "commit")
 }
@@ -98,21 +106,21 @@ func (c *Batch) Commit(ctx context.Context, revspec string) (*Object, error) {
 //
 // It is an error if revspec does not point to a blob. To prevent this
 // first use Info to resolve the revspec and check the object type.
-func (c *Batch) Blob(ctx context.Context, revspec string) (*Object, error) {
+func (c *batch) Blob(ctx context.Context, revspec string) (*Object, error) {
 	catfileLookupCounter.WithLabelValues("blob").Inc()
 	return c.batchProcess.reader(revspec, "blob")
 }
 
 // Tag returns a raw tag object. Caller must consume the Reader before
 // making another call on C.
-func (c *Batch) Tag(ctx context.Context, revspec string) (*Object, error) {
+func (c *batch) Tag(ctx context.Context, revspec string) (*Object, error) {
 	catfileLookupCounter.WithLabelValues("tag").Inc()
 	return c.batchProcess.reader(revspec, "tag")
 }
 
 // Close closes the writers for batchCheck and batch. This is only used for
 // cached Batches
-func (c *Batch) Close() {
+func (c *batch) Close() {
 	c.Lock()
 	defer c.Unlock()
 
@@ -128,7 +136,7 @@ func (c *Batch) Close() {
 	}
 }
 
-func (c *Batch) isClosed() bool {
+func (c *batch) isClosed() bool {
 	c.Lock()
 	defer c.Unlock()
 	return c.closed
@@ -137,7 +145,7 @@ func (c *Batch) isClosed() bool {
 // New returns a new Batch instance. It is important that ctx gets canceled
 // somewhere, because if it doesn't the cat-file processes spawned by
 // New() never terminate.
-func New(ctx context.Context, repo repository.GitRepo) (*Batch, error) {
+func New(ctx context.Context, repo repository.GitRepo) (Batch, error) {
 	if ctx.Done() == nil {
 		panic("empty ctx.Done() in catfile.Batch.New()")
 	}
@@ -170,7 +178,7 @@ func New(ctx context.Context, repo repository.GitRepo) (*Batch, error) {
 	return c, nil
 }
 
-func returnWhenDone(done <-chan struct{}, bc *batchCache, cacheKey key, c *Batch) {
+func returnWhenDone(done <-chan struct{}, bc *batchCache, cacheKey key, c *batch) {
 	<-done
 
 	if c == nil || c.isClosed() {
@@ -192,15 +200,15 @@ type simulatedBatchSpawnError struct{}
 
 func (simulatedBatchSpawnError) Error() string { return "simulated spawn error" }
 
-func newBatch(_ctx context.Context, repo repository.GitRepo) (_ *Batch, err error) {
-	ctx, cancel := context.WithCancel(_ctx)
+func newBatch(ctx context.Context, repo repository.GitRepo) (_ *batch, err error) {
+	ctx, cancel := context.WithCancel(ctx)
 	defer func() {
 		if err != nil {
 			cancel()
 		}
 	}()
 
-	batch, err := newBatchProcess(ctx, repo)
+	b, err := newBatchProcess(ctx, repo)
 	if err != nil {
 		return nil, err
 	}
@@ -210,5 +218,5 @@ func newBatch(_ctx context.Context, repo repository.GitRepo) (_ *Batch, err erro
 		return nil, err
 	}
 
-	return &Batch{batchProcess: batch, batchCheck: batchCheck}, nil
+	return &batch{batchProcess: b, batchCheck: batchCheck}, nil
 }
