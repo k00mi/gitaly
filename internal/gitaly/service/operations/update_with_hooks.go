@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"strings"
 
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/updateref"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -34,6 +36,16 @@ func (s *Server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 	gitlabshellEnv, err := gitlabshell.EnvFromConfig(s.cfg)
 	if err != nil {
 		return err
+	}
+
+	if reference == "" {
+		return helper.ErrInternalf("updateReferenceWithHooks: got no reference")
+	}
+	if err := git.ValidateCommitID(oldrev); err != nil {
+		return helper.ErrInternalf("updateReferenceWithHooks: got invalid old value: %w", err)
+	}
+	if err := git.ValidateCommitID(newrev); err != nil {
+		return helper.ErrInternalf("updateReferenceWithHooks: got invalid new value: %w", err)
 	}
 
 	env := append([]string{
