@@ -89,8 +89,7 @@ func (s *Server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 	// hook if the corresponding Ruby feature flag is set.
 	if featureflag.IsEnabled(ctx, featureflag.RubyReferenceTransactionHook) {
 		if err := s.hookManager.ReferenceTransactionHook(ctx, hook.ReferenceTransactionPrepared, env, strings.NewReader(changes)); err != nil {
-			msg := hookErrorFromStdoutAndStderr(stdout.String(), stderr.String())
-			return preReceiveError{message: msg}
+			return preReceiveError{message: err.Error()}
 		}
 	}
 
@@ -108,7 +107,8 @@ func (s *Server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 	}
 
 	if err := s.hookManager.PostReceiveHook(ctx, repo, nil, env, strings.NewReader(changes), &stdout, &stderr); err != nil {
-		return err
+		msg := hookErrorFromStdoutAndStderr(stdout.String(), stderr.String())
+		return preReceiveError{message: msg}
 	}
 
 	return nil
