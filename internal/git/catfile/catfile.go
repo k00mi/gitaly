@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/opentracing/opentracing-go"
 	"github.com/prometheus/client_golang/prometheus"
 	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata"
@@ -79,7 +80,6 @@ type batch struct {
 // Info returns an ObjectInfo if spec exists. If spec does not exist the
 // error is of type NotFoundError.
 func (c *batch) Info(ctx context.Context, revspec string) (*ObjectInfo, error) {
-	catfileLookupCounter.WithLabelValues("info").Inc()
 	return c.batchCheck.info(revspec)
 }
 
@@ -88,7 +88,6 @@ func (c *batch) Info(ctx context.Context, revspec string) (*ObjectInfo, error) {
 // and check the object type. Caller must consume the Reader before
 // making another call on C.
 func (c *batch) Tree(ctx context.Context, revspec string) (*Object, error) {
-	catfileLookupCounter.WithLabelValues("tree").Inc()
 	return c.batchProcess.reader(revspec, "tree")
 }
 
@@ -97,7 +96,6 @@ func (c *batch) Tree(ctx context.Context, revspec string) (*Object, error) {
 // and check the object type. Caller must consume the Reader before
 // making another call on C.
 func (c *batch) Commit(ctx context.Context, revspec string) (*Object, error) {
-	catfileLookupCounter.WithLabelValues("commit").Inc()
 	return c.batchProcess.reader(revspec, "commit")
 }
 
@@ -107,14 +105,12 @@ func (c *batch) Commit(ctx context.Context, revspec string) (*Object, error) {
 // It is an error if revspec does not point to a blob. To prevent this
 // first use Info to resolve the revspec and check the object type.
 func (c *batch) Blob(ctx context.Context, revspec string) (*Object, error) {
-	catfileLookupCounter.WithLabelValues("blob").Inc()
 	return c.batchProcess.reader(revspec, "blob")
 }
 
 // Tag returns a raw tag object. Caller must consume the Reader before
 // making another call on C.
 func (c *batch) Tag(ctx context.Context, revspec string) (*Object, error) {
-	catfileLookupCounter.WithLabelValues("tag").Inc()
 	return c.batchProcess.reader(revspec, "tag")
 }
 
@@ -152,7 +148,11 @@ func New(ctx context.Context, repo repository.GitRepo) (Batch, error) {
 
 	sessionID := metadata.GetValue(ctx, SessionIDField)
 	if sessionID == "" {
-		return newBatch(ctx, repo)
+		c, err := newBatch(ctx, repo)
+		if err != nil {
+			return nil, err
+		}
+		return newInstrumentedBatch(c), err
 	}
 
 	cacheKey := newCacheKey(sessionID, repo)
@@ -160,7 +160,7 @@ func New(ctx context.Context, repo repository.GitRepo) (Batch, error) {
 
 	if c, ok := cache.Checkout(cacheKey); ok {
 		go returnWhenDone(requestDone, cache, cacheKey, c)
-		return c, nil
+		return newInstrumentedBatch(c), nil
 	}
 
 	// if we are using caching, create a fresh context for the new batch
@@ -175,7 +175,7 @@ func New(ctx context.Context, repo repository.GitRepo) (Batch, error) {
 	c.cancel = cacheCancel
 	go returnWhenDone(requestDone, cache, cacheKey, c)
 
-	return c, nil
+	return newInstrumentedBatch(c), nil
 }
 
 func returnWhenDone(done <-chan struct{}, bc *batchCache, cacheKey key, c *batch) {
@@ -219,4 +219,57 @@ func newBatch(ctx context.Context, repo repository.GitRepo) (_ *batch, err error
 	}
 
 	return &batch{batchProcess: b, batchCheck: batchCheck}, nil
+}
+
+func newInstrumentedBatch(c Batch) Batch {
+	return &instrumentedBatch{c}
+}
+
+type instrumentedBatch struct {
+	Batch
+}
+
+func (ib *instrumentedBatch) Info(ctx context.Context, revspec string) (*ObjectInfo, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Batch.Info", opentracing.Tag{"revspec", revspec})
+	defer span.Finish()
+
+	catfileLookupCounter.WithLabelValues("info").Inc()
+
+	return ib.Batch.Info(ctx, revspec)
+}
+
+func (ib *instrumentedBatch) Tree(ctx context.Context, revspec string) (*Object, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Batch.Tree", opentracing.Tag{"revspec", revspec})
+	defer span.Finish()
+
+	catfileLookupCounter.WithLabelValues("tree").Inc()
+
+	return ib.Batch.Tree(ctx, revspec)
+}
+
+func (ib *instrumentedBatch) Commit(ctx context.Context, revspec string) (*Object, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Batch.Commit", opentracing.Tag{"revspec", revspec})
+	defer span.Finish()
+
+	catfileLookupCounter.WithLabelValues("commit").Inc()
+
+	return ib.Batch.Commit(ctx, revspec)
+}
+
+func (ib *instrumentedBatch) Blob(ctx context.Context, revspec string) (*Object, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Batch.Blob", opentracing.Tag{"revspec", revspec})
+	defer span.Finish()
+
+	catfileLookupCounter.WithLabelValues("blob").Inc()
+
+	return ib.Batch.Blob(ctx, revspec)
+}
+
+func (ib *instrumentedBatch) Tag(ctx context.Context, revspec string) (*Object, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Batch.Tag", opentracing.Tag{"revspec", revspec})
+	defer span.Finish()
+
+	catfileLookupCounter.WithLabelValues("tag").Inc()
+
+	return ib.Batch.Tag(ctx, revspec)
 }
