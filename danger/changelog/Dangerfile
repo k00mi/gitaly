@@ -6,7 +6,8 @@ NO_CHANGELOG_LABELS = [
   'tooling::pipelines',
   'tooling::workflow',
   'ci-build',
-  'meta'
+  'meta',
+  'documentation'
 ].freeze
 SEE_DOC = "See the [changelog documentation](https://docs.gitlab.com/ee/development/changelog.html)."
 CREATE_CHANGELOG_MESSAGE = <<~MSG
