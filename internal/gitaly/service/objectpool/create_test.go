@@ -17,7 +17,7 @@ import (
 
 func TestCreate(t *testing.T) {
 	locator := config.NewLocator(config.Config)
-	server, serverSocketPath := runObjectPoolServer(t, locator)
+	server, serverSocketPath := runObjectPoolServer(t, config.Config, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -64,7 +64,7 @@ func TestCreate(t *testing.T) {
 
 func TestUnsuccessfulCreate(t *testing.T) {
 	locator := config.NewLocator(config.Config)
-	server, serverSocketPath := runObjectPoolServer(t, locator)
+	server, serverSocketPath := runObjectPoolServer(t, config.Config, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -164,7 +164,7 @@ func TestUnsuccessfulCreate(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	locator := config.NewLocator(config.Config)
-	server, serverSocketPath := runObjectPoolServer(t, locator)
+	server, serverSocketPath := runObjectPoolServer(t, config.Config, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)

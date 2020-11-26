@@ -25,6 +25,14 @@ func TestVisibilityOfHiddenRefs(t *testing.T) {
 	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
+	socketPath := testhelper.GetTemporaryGitalySocketFileName()
+
+	_, clean := runServer(t, server.NewInsecure, config.Config, "unix", socketPath)
+	defer clean()
+
+	_, clean = runServer(t, server.NewInsecure, config.Config, "unix", config.Config.GitalyInternalSocketPath())
+	defer clean()
+
 	// Create a keep-around ref
 	existingSha := "1e292f8fedd741b75372e19097c76d327140c312"
 	keepAroundRef := fmt.Sprintf("%s/%s", keepAroundNamespace, existingSha)
@@ -39,11 +47,6 @@ func TestVisibilityOfHiddenRefs(t *testing.T) {
 
 	output := testhelper.MustRunCommand(t, nil, "git", "ls-remote", testRepoPath, keepAroundNamespace)
 	require.Empty(t, output, "there should be no keep-around refs in normal ls-remote output")
-
-	socketPath := testhelper.GetTemporaryGitalySocketFileName()
-
-	_, clean := runServer(t, server.NewInsecure, config.Config, "unix", socketPath)
-	defer clean()
 
 	wd, err := os.Getwd()
 	require.NoError(t, err)

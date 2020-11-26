@@ -18,7 +18,7 @@ import (
 
 func TestLink(t *testing.T) {
 	locator := config.NewLocator(config.Config)
-	server, serverSocketPath := runObjectPoolServer(t, locator)
+	server, serverSocketPath := runObjectPoolServer(t, config.Config, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -92,7 +92,7 @@ func TestLink(t *testing.T) {
 
 func TestLinkIdempotent(t *testing.T) {
 	locator := config.NewLocator(config.Config)
-	server, serverSocketPath := runObjectPoolServer(t, locator)
+	server, serverSocketPath := runObjectPoolServer(t, config.Config, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -123,7 +123,7 @@ func TestLinkIdempotent(t *testing.T) {
 
 func TestLinkNoClobber(t *testing.T) {
 	locator := config.NewLocator(config.Config)
-	server, serverSocketPath := runObjectPoolServer(t, locator)
+	server, serverSocketPath := runObjectPoolServer(t, config.Config, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -163,7 +163,7 @@ func TestLinkNoClobber(t *testing.T) {
 
 func TestLinkNoPool(t *testing.T) {
 	locator := config.NewLocator(config.Config)
-	server, serverSocketPath := runObjectPoolServer(t, locator)
+	server, serverSocketPath := runObjectPoolServer(t, config.Config, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -196,7 +196,7 @@ func TestLinkNoPool(t *testing.T) {
 
 func TestUnlink(t *testing.T) {
 	locator := config.NewLocator(config.Config)
-	server, serverSocketPath := runObjectPoolServer(t, locator)
+	server, serverSocketPath := runObjectPoolServer(t, config.Config, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -309,7 +309,7 @@ func TestUnlink(t *testing.T) {
 
 func TestUnlinkIdempotent(t *testing.T) {
 	locator := config.NewLocator(config.Config)
-	server, serverSocketPath := runObjectPoolServer(t, locator)
+	server, serverSocketPath := runObjectPoolServer(t, config.Config, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)

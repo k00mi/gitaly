@@ -62,6 +62,13 @@ func WithStorages(storages []string) TestServerOpt {
 	}
 }
 
+// WithStorages is a TestServerOpt that sets the storages for a TestServer
+func WithInternalSocket(cfg config.Cfg) TestServerOpt {
+	return func(t *TestServer) {
+		t.withInternalSocketPath = cfg.GitalyInternalSocketPath()
+	}
+}
+
 // NewTestServer instantiates a new TestServer
 func NewTestServer(srv *grpc.Server, opts ...TestServerOpt) *TestServer {
 	ts := &TestServer{
@@ -101,12 +108,13 @@ func NewServerWithAuth(tb testing.TB, streamInterceptors []grpc.StreamServerInte
 // TestServer wraps a grpc Server and handles automatically putting a praefect in front of a gitaly instance
 // if necessary
 type TestServer struct {
-	grpcServer *grpc.Server
-	socket     string
-	process    *os.Process
-	token      string
-	storages   []string
-	waitCh     chan struct{}
+	grpcServer             *grpc.Server
+	socket                 string
+	process                *os.Process
+	token                  string
+	storages               []string
+	waitCh                 chan struct{}
+	withInternalSocketPath string
 }
 
 // GrpcServer returns the underlying grpc.Server
@@ -237,27 +245,37 @@ func (p *TestServer) Start() error {
 func (p *TestServer) listen() (string, error) {
 	gitalyServerSocketPath := GetTemporaryGitalySocketFileName()
 
-	listener, err := net.Listen("unix", gitalyServerSocketPath)
-	if err != nil {
-		return "", err
+	sockets := []string{
+		gitalyServerSocketPath,
 	}
 
-	go p.grpcServer.Serve(listener)
-
-	opts := []grpc.DialOption{grpc.WithInsecure()}
-	if p.token != "" {
-		opts = append(opts, grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(p.token)))
+	if p.withInternalSocketPath != "" {
+		sockets = append(sockets, p.withInternalSocketPath)
 	}
 
-	conn, err := grpc.Dial("unix://"+gitalyServerSocketPath, opts...)
+	for _, socket := range sockets {
+		listener, err := net.Listen("unix", socket)
+		if err != nil {
+			return "", err
+		}
 
-	if err != nil {
-		return "", err
-	}
-	defer conn.Close()
+		go p.grpcServer.Serve(listener)
 
-	if err := WaitHealthy(conn, 3, time.Second); err != nil {
-		return "", err
+		opts := []grpc.DialOption{grpc.WithInsecure()}
+		if p.token != "" {
+			opts = append(opts, grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(p.token)))
+		}
+
+		conn, err := grpc.Dial("unix://"+socket, opts...)
+
+		if err != nil {
+			return "", err
+		}
+		defer conn.Close()
+
+		if err := WaitHealthy(conn, 3, time.Second); err != nil {
+			return "", err
+		}
 	}
 
 	return gitalyServerSocketPath, nil

@@ -7,11 +7,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
+	hookservice "gitlab.com/gitlab-org/gitaly/internal/gitaly/service/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/lines"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 )
 
 var (
@@ -32,6 +33,8 @@ func testMain(m *testing.M) int {
 	cleanup := testhelper.Configure()
 	defer cleanup()
 
+	testhelper.ConfigureGitalyHooksBinary()
+
 	// Force small messages to test that fragmenting the
 	// ref list works correctly
 	lines.ItemsPerMessage = 3
@@ -40,10 +43,10 @@ func testMain(m *testing.M) int {
 }
 
 func runRefServiceServer(t *testing.T) (func(), string) {
-	srv := testhelper.NewServer(t, nil, nil)
+	srv := testhelper.NewServer(t, nil, nil, testhelper.WithInternalSocket(config.Config))
 
 	gitalypb.RegisterRefServiceServer(srv.GrpcServer(), NewServer(config.NewLocator(config.Config)))
-	reflection.Register(srv.GrpcServer())
+	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hookservice.NewServer(config.Config, hook.NewManager(hook.GitlabAPIStub, config.Config)))
 
 	require.NoError(t, srv.Start())
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/jsonpb"
+	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
@@ -30,6 +31,7 @@ func WithRefTxHook(ctx context.Context, repo *gitalypb.Repository, cfg config.Cf
 		}
 
 		cc.env = append(cc.env, rfEnvs...)
+		cc.globals = append(cc.globals, ValueFlag{"-c", fmt.Sprintf("core.hooksPath=%s", hooks.Path(cfg))})
 		cc.refHookConfigured = true
 
 		return nil
@@ -44,6 +46,7 @@ func refHookEnv(ctx context.Context, repo *gitalypb.Repository, cfg config.Cfg) 
 	}
 
 	return []string{
+		"GITALY_BIN_DIR=" + cfg.BinDir,
 		"GITALY_SOCKET=" + cfg.GitalyInternalSocketPath(),
 		fmt.Sprintf("GITALY_REPO=%s", repoJSON),
 		fmt.Sprintf("GITALY_TOKEN=%s", cfg.Auth.Token),

@@ -9,7 +9,9 @@ import (
 	"gitlab.com/gitlab-org/gitaly/client"
 	gitLog "gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	serverPkg "gitlab.com/gitlab-org/gitaly/internal/gitaly/server"
+	hookservice "gitlab.com/gitlab-org/gitaly/internal/gitaly/service/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/repository"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
@@ -386,7 +388,9 @@ func newTestRepo(t *testing.T, locator storage.Locator, relativePath string) (*g
 
 func runFullServer(t *testing.T) (string, func()) {
 	conns := client.NewPool()
-	server := serverPkg.NewInsecure(repository.RubyServer, nil, config.Config, conns)
+	hookManager := hook.NewManager(hook.GitlabAPIStub, config.Config)
+
+	server := serverPkg.NewInsecure(repository.RubyServer, hookManager, config.Config, conns)
 
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 
@@ -408,16 +412,26 @@ func runFullServer(t *testing.T) (string, func()) {
 
 func runFullSecureServer(t *testing.T) (*grpc.Server, string, testhelper.Cleanup) {
 	conns := client.NewPool()
-	server := serverPkg.NewSecure(repository.RubyServer, nil, config.Config, conns)
+	hookManager := hook.NewManager(hook.GitlabAPIStub, config.Config)
+
+	server := serverPkg.NewSecure(repository.RubyServer, hookManager, config.Config, conns)
 	listener, addr := testhelper.GetLocalhostListener(t)
 
 	errQ := make(chan error)
+
+	// This creates a secondary GRPC server which isn't "secure". Reusing
+	// the one created above won't work as its internal socket would be
+	// protected by the same TLS certificate.
+	internalServer := testhelper.NewServer(t, nil, nil, testhelper.WithInternalSocket(config.Config))
+	gitalypb.RegisterHookServiceServer(internalServer.GrpcServer(), hookservice.NewServer(config.Config, hookManager))
+	require.NoError(t, internalServer.Start())
 
 	go func() { errQ <- server.Serve(listener) }()
 
 	cleanup := func() {
 		conns.Close()
 		server.Stop()
+		internalServer.Stop()
 		require.NoError(t, <-errQ)
 	}
 

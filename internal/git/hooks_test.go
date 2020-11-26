@@ -51,6 +51,7 @@ func TestWithRefHook(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			expectEnvVars := map[string]struct{}{
+				"GITALY_BIN_DIR":                    struct{}{},
 				"GITALY_SOCKET":                     struct{}{},
 				"GITALY_REPO":                       struct{}{},
 				"GITALY_TOKEN":                      struct{}{},
@@ -59,7 +60,8 @@ func TestWithRefHook(t *testing.T) {
 
 			cmd, err := tt.fn()
 			require.NoError(t, err)
-			require.NoError(t, cmd.Wait())
+			// There is no full setup, so executing the hook will fail.
+			require.Error(t, cmd.Wait())
 
 			var actualEnvVars []string
 			for _, env := range cmd.Env() {

@@ -225,6 +225,7 @@ func ConvertGlobalOptions(options *gitalypb.GlobalOptions) []Option {
 
 type cmdCfg struct {
 	env               []string
+	globals           []Option
 	stdin             io.Reader
 	stdout            io.Writer
 	stderr            io.Writer
@@ -299,7 +300,7 @@ func SafeCmdWithEnv(ctx context.Context, env []string, repo repository.GitRepo, 
 		return nil, err
 	}
 
-	args, err := combineArgs(globals, sc)
+	args, err := combineArgs(globals, sc, cc)
 	if err != nil {
 		return nil, err
 	}
@@ -320,7 +321,7 @@ func SafeBareCmd(ctx context.Context, stream CmdStream, env []string, globals []
 		return nil, err
 	}
 
-	args, err := combineArgs(globals, sc)
+	args, err := combineArgs(globals, sc, cc)
 	if err != nil {
 		return nil, err
 	}
@@ -340,12 +341,12 @@ func SafeBareCmdInDir(ctx context.Context, dir string, stream CmdStream, env []s
 		return nil, err
 	}
 
-	args, err := combineArgs(globals, sc)
+	args, err := combineArgs(globals, sc, cc)
 	if err != nil {
 		return nil, err
 	}
 
-	return unsafeBareCmdInDir(ctx, dir, stream, env, args...)
+	return unsafeBareCmdInDir(ctx, dir, stream, append(env, cc.env...), args...)
 }
 
 // SafeStdinCmd creates a git.Command with the given args and Repository that is
@@ -358,7 +359,7 @@ func SafeStdinCmd(ctx context.Context, repo repository.GitRepo, globals []Option
 		return nil, err
 	}
 
-	args, err := combineArgs(globals, sc)
+	args, err := combineArgs(globals, sc, cc)
 	if err != nil {
 		return nil, err
 	}
@@ -375,15 +376,15 @@ func SafeCmdWithoutRepo(ctx context.Context, stream CmdStream, globals []Option,
 		return nil, err
 	}
 
-	args, err := combineArgs(globals, sc)
+	args, err := combineArgs(globals, sc, cc)
 	if err != nil {
 		return nil, err
 	}
 
-	return unsafeCmdWithoutRepo(ctx, stream, args...)
+	return unsafeBareCmd(ctx, stream, cc.env, args...)
 }
 
-func combineArgs(globals []Option, sc Cmd) (_ []string, err error) {
+func combineArgs(globals []Option, sc Cmd, cc *cmdCfg) (_ []string, err error) {
 	var args []string
 
 	defer func() {
@@ -392,7 +393,7 @@ func combineArgs(globals []Option, sc Cmd) (_ []string, err error) {
 		}
 	}()
 
-	for _, g := range globals {
+	for _, g := range append(globals, cc.globals...) {
 		gargs, err := g.ValidateArgs()
 		if err != nil {
 			return nil, err

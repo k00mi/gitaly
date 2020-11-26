@@ -68,6 +68,7 @@ func testMain(m *testing.M) int {
 	}
 
 	testhelper.ConfigureGitalySSH()
+	testhelper.ConfigureGitalyHooksBinary()
 
 	if err := RubyServer.Start(); err != nil {
 		logrus.Error(err)
