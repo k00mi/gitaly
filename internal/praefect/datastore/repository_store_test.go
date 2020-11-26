@@ -1,3 +1,5 @@
+// +build postgres
+
 package datastore
 
 import (
@@ -18,6 +20,70 @@ type storageState map[string]map[string]map[string]int
 
 type requireState func(t *testing.T, ctx context.Context, vss virtualStorageState, ss storageState)
 type repositoryStoreFactory func(t *testing.T, storages map[string][]string) (RepositoryStore, requireState)
+
+func TestRepositoryStore_Postgres(t *testing.T) {
+	testRepositoryStore(t, func(t *testing.T, storages map[string][]string) (RepositoryStore, requireState) {
+		db := getDB(t)
+		gs := NewPostgresRepositoryStore(db, storages)
+
+		requireVirtualStorageState := func(t *testing.T, ctx context.Context, exp virtualStorageState) {
+			rows, err := db.QueryContext(ctx, `
+SELECT virtual_storage, relative_path
+FROM repositories
+				`)
+			require.NoError(t, err)
+			defer rows.Close()
+
+			act := make(virtualStorageState)
+			for rows.Next() {
+				var vs, rel string
+				require.NoError(t, rows.Scan(&vs, &rel))
+				if act[vs] == nil {
+					act[vs] = make(map[string]struct{})
+				}
+
+				act[vs][rel] = struct{}{}
+			}
+
+			require.NoError(t, rows.Err())
+			require.Equal(t, exp, act)
+		}
+
+		requireStorageState := func(t *testing.T, ctx context.Context, exp storageState) {
+			rows, err := db.QueryContext(ctx, `
+SELECT virtual_storage, relative_path, storage, generation
+FROM storage_repositories
+	`)
+			require.NoError(t, err)
+			defer rows.Close()
+
+			act := make(storageState)
+			for rows.Next() {
+				var vs, rel, storage string
+				var gen int
+				require.NoError(t, rows.Scan(&vs, &rel, &storage, &gen))
+
+				if act[vs] == nil {
+					act[vs] = make(map[string]map[string]int)
+				}
+				if act[vs][rel] == nil {
+					act[vs][rel] = make(map[string]int)
+				}
+
+				act[vs][rel][storage] = gen
+			}
+
+			require.NoError(t, rows.Err())
+			require.Equal(t, exp, act)
+		}
+
+		return gs, func(t *testing.T, ctx context.Context, vss virtualStorageState, ss storageState) {
+			t.Helper()
+			requireVirtualStorageState(t, ctx, vss)
+			requireStorageState(t, ctx, ss)
+		}
+	})
+}
 
 func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 	ctx, cancel := testhelper.Context()
