@@ -1,0 +1,5 @@
+---
+title: 'User{Branch,Submodule}: remove erroneously copy/pasted error handling'
+merge_request: 2841
+author:
+type: fixed

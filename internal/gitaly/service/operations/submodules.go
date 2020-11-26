@@ -156,14 +156,6 @@ func (s *server) userUpdateSubmodule(ctx context.Context, req *gitalypb.UserUpda
 				PreReceiveError: preReceiveError.Error(),
 			}, nil
 		}
-
-		var updateRefError updateRefError
-		if errors.As(err, &updateRefError) {
-			// When an error happens updating the reference, e.g. because of a race
-			// with another update, then Ruby code didn't send an error but just an
-			// empty response.
-			return &gitalypb.UserUpdateSubmoduleResponse{}, nil
-		}
 	}
 
 	return &gitalypb.UserUpdateSubmoduleResponse{

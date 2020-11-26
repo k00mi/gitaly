@@ -56,14 +56,6 @@ func (s *server) UserCreateBranch(ctx context.Context, req *gitalypb.UserCreateB
 			}, nil
 		}
 
-		var updateRefError updateRefError
-		if errors.As(err, &updateRefError) {
-			// When an error happens updating the reference, e.g. because of a race
-			// with another update, then Ruby code didn't send an error but just an
-			// empty response.
-			return &gitalypb.UserCreateBranchResponse{}, nil
-		}
-
 		return nil, err
 	}
 
@@ -132,15 +124,6 @@ func (s *server) UserDeleteBranch(ctx context.Context, req *gitalypb.UserDeleteB
 				PreReceiveError: preReceiveError.message,
 			}, nil
 		}
-
-		var updateRefError updateRefError
-		if errors.As(err, &updateRefError) {
-			// When an error happens updating the reference, e.g. because of a race
-			// with another update, then Ruby code didn't send an error but just an
-			// empty response.
-			return &gitalypb.UserDeleteBranchResponse{}, nil
-		}
-
 		return nil, err
 	}
 
