@@ -30,12 +30,6 @@ func registerServerService(impl gitalypb.ServerServiceServer) svcRegistrar {
 	}
 }
 
-func registerPraefectInfoServer(impl gitalypb.PraefectInfoServiceServer) svcRegistrar {
-	return func(srv *grpc.Server) {
-		gitalypb.RegisterPraefectInfoServiceServer(srv, impl)
-	}
-}
-
 func listenAndServe(t testing.TB, svcs []svcRegistrar) (net.Listener, testhelper.Cleanup) {
 	t.Helper()
 
