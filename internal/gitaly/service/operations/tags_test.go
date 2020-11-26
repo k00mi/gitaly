@@ -571,7 +571,7 @@ func TestTagHookOutput(t *testing.T) {
 
 				response, err := client.UserCreateTag(ctx, request)
 				require.NoError(t, err)
-				require.Equal(t, false, response.Exists)
+				require.False(t, response.Exists)
 				require.Equal(t, testCase.output, response.PreReceiveError)
 			})
 		}
