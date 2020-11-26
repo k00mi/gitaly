@@ -56,12 +56,14 @@ func TestPrereceive_customHooks(t *testing.T) {
 			desc:           "hook receives environment variables",
 			env:            standardEnv,
 			hook:           "#!/bin/sh\nenv | grep -e '^GL_' -e '^GITALY_' | sort\n",
+			stdin:          "change\n",
 			expectedStdout: strings.Join(standardEnv, "\n") + "\n",
 		},
 		{
 			desc:           "hook can write to stderr and stdout",
 			env:            standardEnv,
 			hook:           "#!/bin/sh\necho foo >&1 && echo bar >&2\n",
+			stdin:          "change\n",
 			expectedStdout: "foo\n",
 			expectedStderr: "bar\n",
 		},
@@ -83,39 +85,51 @@ func TestPrereceive_customHooks(t *testing.T) {
 			desc:        "invalid hook results in error",
 			env:         standardEnv,
 			hook:        "",
+			stdin:       "change\n",
 			expectedErr: "exec format error",
 		},
 		{
 			desc:        "failing hook results in error",
 			env:         standardEnv,
 			hook:        "#!/bin/sh\nexit 123",
+			stdin:       "change\n",
 			expectedErr: "exit status 123",
 		},
 		{
 			desc:           "hook is executed on primary",
 			env:            append(standardEnv, primaryEnv),
 			hook:           "#!/bin/sh\necho foo\n",
+			stdin:          "change\n",
 			expectedStdout: "foo\n",
 		},
 		{
-			desc: "hook is not executed on secondary",
-			env:  append(standardEnv, secondaryEnv),
-			hook: "#!/bin/sh\necho foo\n",
+			desc:  "hook is not executed on secondary",
+			env:   append(standardEnv, secondaryEnv),
+			hook:  "#!/bin/sh\necho foo\n",
+			stdin: "change\n",
 		},
 		{
 			desc:        "missing GL_ID causes error",
 			env:         envWithout(standardEnv, "GL_ID"),
+			stdin:       "change\n",
 			expectedErr: "GL_ID not set",
 		},
 		{
 			desc:        "missing GL_REPOSITORY causes error",
 			env:         envWithout(standardEnv, "GL_REPOSITORY"),
+			stdin:       "change\n",
 			expectedErr: "GL_REPOSITORY not set",
 		},
 		{
 			desc:        "missing GL_PROTOCOL causes error",
 			env:         envWithout(standardEnv, "GL_PROTOCOL"),
+			stdin:       "change\n",
 			expectedErr: "GL_PROTOCOL not set",
+		},
+		{
+			desc:        "missing changes cause error",
+			env:         standardEnv,
+			expectedErr: "hook got no reference updates",
 		},
 	}
 
@@ -207,8 +221,9 @@ func TestPrereceive_gitlab(t *testing.T) {
 			expectHookCall: true,
 		},
 		{
-			desc: "disallowed change",
-			env:  standardEnv,
+			desc:    "disallowed change",
+			env:     standardEnv,
+			changes: "changes\n",
 			allowed: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, glRepo, glID, glProtocol, changes string) (bool, string, error) {
 				return false, "you shall not pass", nil
 			},
@@ -216,8 +231,9 @@ func TestPrereceive_gitlab(t *testing.T) {
 			expectedErr:    errors.New("you shall not pass"),
 		},
 		{
-			desc: "allowed returns error",
-			env:  standardEnv,
+			desc:    "allowed returns error",
+			env:     standardEnv,
+			changes: "changes\n",
 			allowed: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, glRepo, glID, glProtocol, changes string) (bool, string, error) {
 				return false, "", errors.New("oops")
 			},
@@ -225,8 +241,9 @@ func TestPrereceive_gitlab(t *testing.T) {
 			expectedErr:    errors.New("GitLab: oops"),
 		},
 		{
-			desc: "prereceive rejects",
-			env:  standardEnv,
+			desc:    "prereceive rejects",
+			env:     standardEnv,
+			changes: "changes\n",
 			allowed: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, glRepo, glID, glProtocol, changes string) (bool, string, error) {
 				return true, "", nil
 			},
@@ -237,8 +254,9 @@ func TestPrereceive_gitlab(t *testing.T) {
 			expectedErr:    errors.New(""),
 		},
 		{
-			desc: "prereceive errors",
-			env:  standardEnv,
+			desc:    "prereceive errors",
+			env:     standardEnv,
+			changes: "changes\n",
 			allowed: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, glRepo, glID, glProtocol, changes string) (bool, string, error) {
 				return true, "", nil
 			},

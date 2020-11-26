@@ -79,6 +79,10 @@ func (m *GitLabHookManager) preReceiveHook(ctx context.Context, repo *gitalypb.R
 		repo.GitAlternateObjectDirectories = gitAltObjectDirRel
 	}
 
+	if len(changes) == 0 {
+		return helper.ErrInternalf("hook got no reference updates")
+	}
+
 	glID, glRepo, glProtocol := getEnvVar("GL_ID", env), getEnvVar("GL_REPOSITORY", env), getEnvVar("GL_PROTOCOL", env)
 	if glID == "" {
 		return helper.ErrInternalf("GL_ID not set")

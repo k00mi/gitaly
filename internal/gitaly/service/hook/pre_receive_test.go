@@ -258,6 +258,9 @@ func TestPreReceive_APIErrors(t *testing.T) {
 					"GL_REPOSITORY=repository",
 				},
 			}))
+			require.NoError(t, stream.Send(&gitalypb.PreReceiveHookRequest{
+				Stdin: []byte("changes\n"),
+			}))
 			require.NoError(t, stream.CloseSend())
 
 			_, stderr, status := receivePreReceive(t, stream, &bytes.Buffer{})
@@ -318,7 +321,9 @@ exit %d
 			"GL_REPOSITORY=repository",
 		},
 	}))
-
+	require.NoError(t, stream.Send(&gitalypb.PreReceiveHookRequest{
+		Stdin: []byte("changes\n"),
+	}))
 	require.NoError(t, stream.CloseSend())
 
 	_, stderr, status := receivePreReceive(t, stream, &bytes.Buffer{})
@@ -446,6 +451,9 @@ func TestPreReceiveHook_Primary(t *testing.T) {
 			require.NoError(t, stream.Send(&gitalypb.PreReceiveHookRequest{
 				Repository:           testRepo,
 				EnvironmentVariables: environment,
+			}))
+			require.NoError(t, stream.Send(&gitalypb.PreReceiveHookRequest{
+				Stdin: []byte("changes\n"),
 			}))
 			require.NoError(t, stream.CloseSend())
 
