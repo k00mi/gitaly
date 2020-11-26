@@ -9,7 +9,7 @@ import (
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/internal/command"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
@@ -105,7 +105,7 @@ func TestUploadArchiveSuccess(t *testing.T) {
 	serverSocketPath, stop := runSSHServer(t)
 	defer stop()
 
-	cmd := exec.Command(command.GitPath(), "archive", "master", "--remote=git@localhost:test/test.git")
+	cmd := exec.Command(config.Config.Git.BinPath, "archive", "master", "--remote=git@localhost:test/test.git")
 
 	testRepo, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()

@@ -33,7 +33,7 @@ func startTestServices(t testing.TB) (*grpc.Server, string) {
 		t.Fatal("failed to start server")
 	}
 
-	gitalypb.RegisterCommitServiceServer(server, NewServer(config.NewLocator(config.Config)))
+	gitalypb.RegisterCommitServiceServer(server, NewServer(config.Config, config.NewLocator(config.Config)))
 	reflection.Register(server)
 
 	go server.Serve(listener)

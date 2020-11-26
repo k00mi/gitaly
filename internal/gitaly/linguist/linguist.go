@@ -33,8 +33,8 @@ type Language struct {
 type ByteCountPerLanguage map[string]uint64
 
 // Stats returns the repository's language stats as reported by 'git-linguist'.
-func Stats(ctx context.Context, repoPath string, commitID string) (ByteCountPerLanguage, error) {
-	cmd, err := startGitLinguist(ctx, repoPath, commitID, "stats")
+func Stats(ctx context.Context, cfg config.Cfg, repoPath string, commitID string) (ByteCountPerLanguage, error) {
+	cmd, err := startGitLinguist(ctx, cfg, repoPath, commitID, "stats")
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func LoadColors(cfg *config.Cfg) error {
 	return json.NewDecoder(jsonReader).Decode(&colorMap)
 }
 
-func startGitLinguist(ctx context.Context, repoPath string, commitID string, linguistCommand string) (*command.Command, error) {
+func startGitLinguist(ctx context.Context, cfg config.Cfg, repoPath string, commitID string, linguistCommand string) (*command.Command, error) {
 	bundle, err := exec.LookPath("bundle")
 	if err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func startGitLinguist(ctx context.Context, repoPath string, commitID string, lin
 	// Git's directory to PATH. But as our internal command interface will
 	// overwrite PATH even if we pass it in here, we need to work around it
 	// and instead execute the command with `env PATH=$GITDIR:$PATH`.
-	gitDir := filepath.Dir(command.GitPath())
+	gitDir := filepath.Dir(cfg.Git.BinPath)
 	if path, ok := os.LookupEnv("PATH"); ok && gitDir != "." {
 		args = append([]string{
 			"env", fmt.Sprintf("PATH=%s:%s", gitDir, path),

@@ -28,7 +28,7 @@ func TestStatsUnmarshalJSONError(t *testing.T) {
 
 	// When an error occurs, this used to trigger JSON marshelling of a plain string
 	// the new behaviour shouldn't do that, and return an command error
-	_, err := Stats(ctx, "/var/empty", "deadbeef")
+	_, err := Stats(ctx, config.Config, "/var/empty", "deadbeef")
 	require.Error(t, err)
 
 	_, ok := err.(*json.SyntaxError)

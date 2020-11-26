@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/client"
-	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	gitalyhook "gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
@@ -85,7 +84,7 @@ func testSuccessfulCreateBranchRequest(t *testing.T, ctx context.Context) {
 
 			response, err := client.UserCreateBranch(ctx, request)
 			if testCase.expectedBranch != nil {
-				defer exec.Command(command.GitPath(), "-C", testRepoPath, "branch", "-D", branchName).Run()
+				defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "branch", "-D", branchName).Run()
 			}
 
 			require.NoError(t, err)
@@ -171,7 +170,7 @@ func testUserCreateBranchWithTransaction(t *testing.T, withRefTxHook bool) {
 
 	for _, tc := range testcases {
 		t.Run(tc.desc, func(t *testing.T) {
-			defer exec.Command(command.GitPath(), "-C", testRepoPath, "branch", "-D", "new-branch").Run()
+			defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "branch", "-D", "new-branch").Run()
 
 			client, conn := newOperationClient(t, tc.address)
 			defer conn.Close()
@@ -235,7 +234,7 @@ func testSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T, ctx context.
 
 	for _, hookName := range GitlabHooks {
 		t.Run(hookName, func(t *testing.T) {
-			defer exec.Command(command.GitPath(), "-C", testRepoPath, "branch", "-D", branchName).Run()
+			defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "branch", "-D", branchName).Run()
 
 			hookOutputTempPath, cleanup := testhelper.WriteEnvToCustomHook(t, testRepoPath, hookName)
 			defer cleanup()
@@ -368,7 +367,7 @@ func testSuccessfulUserDeleteBranchRequest(t *testing.T, ctx context.Context) {
 
 	branchNameInput := "to-be-deleted-soon-branch"
 
-	defer exec.Command(command.GitPath(), "-C", testRepoPath, "branch", "-d", branchNameInput).Run()
+	defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "branch", "-d", branchNameInput).Run()
 
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", branchNameInput)
 
@@ -396,7 +395,7 @@ func TestSuccessfulGitHooksForUserDeleteBranchRequest(t *testing.T) {
 	defer conn.Close()
 
 	branchNameInput := "to-be-deleted-soon-branch"
-	defer exec.Command(command.GitPath(), "-C", testRepoPath, "branch", "-d", branchNameInput).Run()
+	defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "branch", "-d", branchNameInput).Run()
 
 	request := &gitalypb.UserDeleteBranchRequest{
 		Repository: testRepo,
@@ -493,7 +492,7 @@ func testFailedUserDeleteBranchDueToHooks(t *testing.T, ctx context.Context) {
 
 	branchNameInput := "to-be-deleted-soon-branch"
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", branchNameInput)
-	defer exec.Command(command.GitPath(), "-C", testRepoPath, "branch", "-d", branchNameInput).Run()
+	defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "branch", "-d", branchNameInput).Run()
 
 	request := &gitalypb.UserDeleteBranchRequest{
 		Repository: testRepo,
@@ -595,7 +594,7 @@ func testBranchHookOutput(t *testing.T, ctx context.Context) {
 				require.Equal(t, testCase.output, createResponse.PreReceiveError)
 
 				testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", branchNameInput)
-				defer exec.Command(command.GitPath(), "-C", testRepoPath, "branch", "-d", branchNameInput).Run()
+				defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "branch", "-d", branchNameInput).Run()
 
 				deleteResponse, err := client.UserDeleteBranch(ctx, deleteRequest)
 				require.NoError(t, err)

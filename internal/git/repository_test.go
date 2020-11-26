@@ -14,7 +14,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -482,7 +481,7 @@ func TestLocalRepository_FetchRemote(t *testing.T) {
 
 		testRepo, testRepoPath, cleanup := testhelper.InitBareRepo(t)
 
-		cmd := exec.Command(command.GitPath(), "-C", testRepoPath, "remote", "add", remote, remoteRepoPath)
+		cmd := exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "remote", "add", remote, remoteRepoPath)
 		err := cmd.Run()
 		if err != nil {
 			cleanup()

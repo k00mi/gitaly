@@ -15,9 +15,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	promtest "github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/pktline"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -215,12 +215,12 @@ func TestUploadPackCloneSuccess(t *testing.T) {
 		deepen float64
 	}{
 		{
-			cmd:    exec.Command(command.GitPath(), "clone", "git@localhost:test/test.git", localRepoPath),
+			cmd:    exec.Command(config.Config.Git.BinPath, "clone", "git@localhost:test/test.git", localRepoPath),
 			desc:   "full clone",
 			deepen: 0,
 		},
 		{
-			cmd:    exec.Command(command.GitPath(), "clone", "--depth", "1", "git@localhost:test/test.git", localRepoPath),
+			cmd:    exec.Command(config.Config.Git.BinPath, "clone", "--depth", "1", "git@localhost:test/test.git", localRepoPath),
 			desc:   "shallow clone",
 			deepen: 1,
 		},
@@ -332,7 +332,7 @@ func TestUploadPackCloneWithPartialCloneFilter(t *testing.T) {
 
 			cmd := cloneCommand{
 				repository: testRepo,
-				command:    exec.Command(command.GitPath(), append(tc.cloneArgs, localPath)...),
+				command:    exec.Command(config.Config.Git.BinPath, append(tc.cloneArgs, localPath)...),
 				server:     serverSocketPath,
 			}
 			err := cmd.execute(t)
@@ -354,11 +354,11 @@ func TestUploadPackCloneSuccessWithGitProtocol(t *testing.T) {
 		desc string
 	}{
 		{
-			cmd:  exec.Command(command.GitPath(), "clone", "git@localhost:test/test.git", localRepoPath),
+			cmd:  exec.Command(config.Config.Git.BinPath, "clone", "git@localhost:test/test.git", localRepoPath),
 			desc: "full clone",
 		},
 		{
-			cmd:  exec.Command(command.GitPath(), "clone", "--depth", "1", "git@localhost:test/test.git", localRepoPath),
+			cmd:  exec.Command(config.Config.Git.BinPath, "clone", "--depth", "1", "git@localhost:test/test.git", localRepoPath),
 			desc: "shallow clone",
 		},
 	}
@@ -404,7 +404,7 @@ func TestUploadPackCloneHideTags(t *testing.T) {
 
 	cmd := cloneCommand{
 		repository: testRepo,
-		command:    exec.Command(command.GitPath(), "clone", "--mirror", "git@localhost:test/test.git", localRepoPath),
+		command:    exec.Command(config.Config.Git.BinPath, "clone", "--mirror", "git@localhost:test/test.git", localRepoPath),
 		server:     serverSocketPath,
 		gitConfig:  "transfer.hideRefs=refs/tags",
 	}
@@ -433,7 +433,7 @@ func TestUploadPackCloneFailure(t *testing.T) {
 			StorageName:  "foobar",
 			RelativePath: testRepo.GetRelativePath(),
 		},
-		command: exec.Command(command.GitPath(), "clone", "git@localhost:test/test.git", localRepoPath),
+		command: exec.Command(config.Config.Git.BinPath, "clone", "git@localhost:test/test.git", localRepoPath),
 		server:  serverSocketPath,
 	}
 	err := cmd.execute(t)

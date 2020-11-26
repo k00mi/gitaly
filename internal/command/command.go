@@ -17,7 +17,6 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
-	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/labkit/tracing"
 )
@@ -125,20 +124,6 @@ func (c *Command) Wait() error {
 	c.waitOnce.Do(c.wait)
 
 	return c.waitError
-}
-
-// GitPath returns the path to the `git` binary. See `SetGitPath` for details
-// on how this is set
-func GitPath() string {
-	if config.Config.Git.BinPath == "" {
-		// This shouldn't happen outside of testing, SetGitPath should be called by
-		// main.go to ensure correctness of the configuration on start-up.
-		if err := config.Config.SetGitPath(); err != nil {
-			logrus.Fatal(err) // Bail out.
-		}
-	}
-
-	return config.Config.Git.BinPath
 }
 
 var wg = &sync.WaitGroup{}

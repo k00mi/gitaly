@@ -216,7 +216,7 @@ func MustRunCommand(t testing.TB, stdin io.Reader, name string, args ...string) 
 
 	var cmd *exec.Cmd
 	if name == "git" {
-		cmd = exec.Command(command.GitPath(), args...)
+		cmd = exec.Command(config.Config.Git.BinPath, args...)
 		cmd.Env = os.Environ()
 		cmd.Env = append(command.GitEnv, cmd.Env...)
 		cmd.Env = append(cmd.Env,
@@ -809,7 +809,7 @@ func GitObjectMustNotExist(t testing.TB, repoPath, sha string) {
 }
 
 func gitObjectExists(t testing.TB, repoPath, sha string, exists bool) {
-	cmd := exec.Command(command.GitPath(), "-C", repoPath, "cat-file", "-e", sha)
+	cmd := exec.Command(config.Config.Git.BinPath, "-C", repoPath, "cat-file", "-e", sha)
 	cmd.Env = []string{
 		"GIT_ALLOW_PROTOCOL=", // To prevent partial clone reaching remote repo over SSH
 	}
@@ -904,7 +904,7 @@ STDIN.each_line do |line|
   exit 1 unless new_object
   exit 1 unless	system(*%%W[%s cat-file -e #{new_object}])
 end
-`, command.GitPath())
+`, config.Config.Git.BinPath)
 
 	cleanup, err := WriteCustomHook(repoPath, "pre-receive", []byte(hook))
 	require.NoError(t, err)

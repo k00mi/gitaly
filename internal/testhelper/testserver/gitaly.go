@@ -53,7 +53,7 @@ func RealGitaly(storages []config.Storage, authToken, internalSocketPath string)
 		gitalyserver.NewServer(storages),
 		repository.NewServer(config.Config, RubyServer, config.NewLocator(config.Config), internalSocketPath),
 		internalgitaly.NewServer(config.Config.Storages),
-		commit.NewServer(config.NewLocator(config.Config)),
+		commit.NewServer(config.Config, config.NewLocator(config.Config)),
 		health.NewServer(),
 	}
 }
