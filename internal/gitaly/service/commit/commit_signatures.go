@@ -35,7 +35,7 @@ func getCommitSignatures(s *server, request *gitalypb.GetCommitSignaturesRequest
 	}
 
 	for _, commitID := range request.CommitIds {
-		commitObj, err := c.Commit(commitID)
+		commitObj, err := c.Commit(ctx, commitID)
 		if err != nil {
 			if catfile.IsNotFound(err) {
 				continue

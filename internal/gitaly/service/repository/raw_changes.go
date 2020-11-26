@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"regexp"
@@ -17,13 +18,15 @@ import (
 )
 
 func (s *server) GetRawChanges(req *gitalypb.GetRawChangesRequest, stream gitalypb.RepositoryService_GetRawChangesServer) error {
+	ctx := stream.Context()
+
 	repo := req.Repository
 	batch, err := catfile.New(stream.Context(), repo)
 	if err != nil {
 		return helper.ErrInternal(err)
 	}
 
-	if err := validateRawChangesRequest(req, batch); err != nil {
+	if err := validateRawChangesRequest(ctx, req, batch); err != nil {
 		return helper.ErrInvalidArgument(err)
 	}
 
@@ -34,15 +37,15 @@ func (s *server) GetRawChanges(req *gitalypb.GetRawChangesRequest, stream gitaly
 	return nil
 }
 
-func validateRawChangesRequest(req *gitalypb.GetRawChangesRequest, batch *catfile.Batch) error {
+func validateRawChangesRequest(ctx context.Context, req *gitalypb.GetRawChangesRequest, batch *catfile.Batch) error {
 	if from := req.FromRevision; from != git.NullSHA {
-		if _, err := batch.Info(from); err != nil {
+		if _, err := batch.Info(ctx, from); err != nil {
 			return fmt.Errorf("invalid 'from' revision: %q", from)
 		}
 	}
 
 	if to := req.ToRevision; to != git.NullSHA {
-		if _, err := batch.Info(to); err != nil {
+		if _, err := batch.Info(ctx, to); err != nil {
 			return fmt.Errorf("invalid 'to' revision: %q", to)
 		}
 	}
@@ -82,7 +85,7 @@ func getRawChanges(stream gitalypb.RepositoryService_GetRawChangesServer, repo *
 			return fmt.Errorf("read diff: %v", err)
 		}
 
-		change, err := changeFromDiff(batch, d)
+		change, err := changeFromDiff(ctx, batch, d)
 		if err != nil {
 			return fmt.Errorf("build change from diff line: %v", err)
 		}
@@ -123,7 +126,7 @@ var zeroRegexp = regexp.MustCompile(`\A0+\z`)
 
 const submoduleTreeEntryMode = "160000"
 
-func changeFromDiff(batch *catfile.Batch, d *rawdiff.Diff) (*gitalypb.GetRawChangesResponse_RawChange, error) {
+func changeFromDiff(ctx context.Context, batch *catfile.Batch, d *rawdiff.Diff) (*gitalypb.GetRawChangesResponse_RawChange, error) {
 	resp := &gitalypb.GetRawChangesResponse_RawChange{}
 
 	newMode64, err := strconv.ParseInt(d.DstMode, 8, 32)
@@ -150,7 +153,7 @@ func changeFromDiff(batch *catfile.Batch, d *rawdiff.Diff) (*gitalypb.GetRawChan
 	}
 
 	if blobMode != submoduleTreeEntryMode {
-		info, err := batch.Info(shortBlobID)
+		info, err := batch.Info(ctx, shortBlobID)
 		if err != nil {
 			return nil, fmt.Errorf("find %q: %v", shortBlobID, err)
 		}

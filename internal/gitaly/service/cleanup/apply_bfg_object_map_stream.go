@@ -52,7 +52,7 @@ func (s *server) ApplyBfgObjectMapStream(server gitalypb.CleanupService_ApplyBfg
 		return helper.ErrInternal(err)
 	}
 
-	if err := cleaner.ApplyObjectMap(reader.streamReader()); err != nil {
+	if err := cleaner.ApplyObjectMap(ctx, reader.streamReader()); err != nil {
 		if invalidErr, ok := err.(internalrefs.ErrInvalidObjectMap); ok {
 			return helper.ErrInvalidArgument(invalidErr)
 		}

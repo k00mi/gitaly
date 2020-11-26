@@ -39,14 +39,14 @@ func NewLogParser(ctx context.Context, repo *gitalypb.Repository, src io.Reader)
 // Parse parses a single git log line. It returns true if successful, false if it finished
 // parsing all logs or when it encounters an error, in which case use Parser.Err()
 // to get the error.
-func (parser *Parser) Parse() bool {
+func (parser *Parser) Parse(ctx context.Context) bool {
 	if !parser.scanner.Scan() || parser.err != nil {
 		return false
 	}
 
 	commitID := parser.scanner.Text()
 
-	commit, err := GetCommitCatfile(parser.c, commitID)
+	commit, err := GetCommitCatfile(ctx, parser.c, commitID)
 	if err != nil {
 		parser.err = err
 		return false

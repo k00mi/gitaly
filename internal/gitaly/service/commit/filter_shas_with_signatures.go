@@ -1,6 +1,7 @@
 package commit
 
 import (
+	"context"
 	"errors"
 	"io"
 
@@ -42,7 +43,7 @@ func (s *server) filterShasWithSignatures(bidi gitalypb.CommitService_FilterShas
 
 	var request = firstRequest
 	for {
-		shas, err := filterCommitShasWithSignatures(c, request.GetShas())
+		shas, err := filterCommitShasWithSignatures(ctx, c, request.GetShas())
 		if err != nil {
 			return err
 		}
@@ -62,10 +63,10 @@ func (s *server) filterShasWithSignatures(bidi gitalypb.CommitService_FilterShas
 	}
 }
 
-func filterCommitShasWithSignatures(c *catfile.Batch, shas [][]byte) ([][]byte, error) {
+func filterCommitShasWithSignatures(ctx context.Context, c *catfile.Batch, shas [][]byte) ([][]byte, error) {
 	var foundShas [][]byte
 	for _, sha := range shas {
-		commit, err := log.GetCommitCatfile(c, string(sha))
+		commit, err := log.GetCommitCatfile(ctx, c, string(sha))
 		if catfile.IsNotFound(err) {
 			continue
 		}

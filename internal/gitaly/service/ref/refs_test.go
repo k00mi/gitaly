@@ -720,7 +720,7 @@ func TestFindAllTagNestedTags(t *testing.T) {
 			batch, err := catfile.New(ctx, testRepoCopy)
 			require.NoError(t, err)
 
-			info, err := batch.Info(tc.originalOid)
+			info, err := batch.Info(ctx, tc.originalOid)
 			require.NoError(t, err)
 
 			expectedTags := make(map[string]*gitalypb.Tag)
@@ -746,7 +746,7 @@ func TestFindAllTagNestedTags(t *testing.T) {
 
 				// only expect the TargetCommit to be populated if it is a commit and if its less than 10 tags deep
 				if info.Type == "commit" && depth < log.MaxTagReferenceDepth {
-					commit, err := log.GetCommitCatfile(batch, tc.originalOid)
+					commit, err := log.GetCommitCatfile(ctx, batch, tc.originalOid)
 					require.NoError(t, err)
 					expectedTag.TargetCommit = commit
 				}
@@ -1651,7 +1651,7 @@ func TestFindTagNestedTag(t *testing.T) {
 			batch, err := catfile.New(ctx, testRepoCopy)
 			require.NoError(t, err)
 
-			info, err := batch.Info(tc.originalOid)
+			info, err := batch.Info(ctx, tc.originalOid)
 			require.NoError(t, err)
 
 			tagID := tc.originalOid
@@ -1676,7 +1676,7 @@ func TestFindTagNestedTag(t *testing.T) {
 			}
 			// only expect the TargetCommit to be populated if it is a commit and if its less than 10 tags deep
 			if info.Type == "commit" && tc.depth < log.MaxTagReferenceDepth {
-				commit, err := log.GetCommitCatfile(batch, tc.originalOid)
+				commit, err := log.GetCommitCatfile(ctx, batch, tc.originalOid)
 				require.NoError(t, err)
 				expectedTag.TargetCommit = commit
 			}

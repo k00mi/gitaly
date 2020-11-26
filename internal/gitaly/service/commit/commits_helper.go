@@ -22,7 +22,7 @@ func sendCommits(ctx context.Context, sender chunk.Sender, repo *gitalypb.Reposi
 	}
 
 	chunker := chunk.New(sender)
-	for logParser.Parse() {
+	for logParser.Parse(ctx) {
 		if err := chunker.Send(logParser.Commit()); err != nil {
 			return err
 		}

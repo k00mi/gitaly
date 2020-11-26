@@ -24,12 +24,12 @@ func GetCommit(ctx context.Context, repo *gitalypb.Repository, revision string) 
 		return nil, err
 	}
 
-	return GetCommitCatfile(c, revision)
+	return GetCommitCatfile(ctx, c, revision)
 }
 
 // GetCommitCatfile looks up a commit by revision using an existing *catfile.Batch instance.
-func GetCommitCatfile(c *catfile.Batch, revision string) (*gitalypb.GitCommit, error) {
-	obj, err := c.Commit(revision + "^{commit}")
+func GetCommitCatfile(ctx context.Context, c *catfile.Batch, revision string) (*gitalypb.GitCommit, error) {
+	obj, err := c.Commit(ctx, revision+"^{commit}")
 	if err != nil {
 		return nil, err
 	}
@@ -38,8 +38,8 @@ func GetCommitCatfile(c *catfile.Batch, revision string) (*gitalypb.GitCommit, e
 }
 
 // GetCommitMessage looks up a commit message and returns it in its entirety.
-func GetCommitMessage(c *catfile.Batch, repo *gitalypb.Repository, revision string) ([]byte, error) {
-	obj, err := c.Commit(revision + "^{commit}")
+func GetCommitMessage(ctx context.Context, c *catfile.Batch, repo *gitalypb.Repository, revision string) ([]byte, error) {
+	obj, err := c.Commit(ctx, revision+"^{commit}")
 	if err != nil {
 		return nil, err
 	}

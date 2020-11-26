@@ -3,6 +3,7 @@ package log
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -23,8 +24,8 @@ const (
 // When 'trimRightNewLine' is 'true', the tag message will be trimmed to remove all '\n' characters from right.
 // note: we pass in the tagName because the tag name from refs/tags may be different
 // than the name found in the actual tag object. We want to use the tagName found in refs/tags
-func GetTagCatfile(c *catfile.Batch, tagID, tagName string, trimLen, trimRightNewLine bool) (*gitalypb.Tag, error) {
-	tagObj, err := c.Tag(tagID)
+func GetTagCatfile(ctx context.Context, c *catfile.Batch, tagID, tagName string, trimLen, trimRightNewLine bool) (*gitalypb.Tag, error) {
+	tagObj, err := c.Tag(ctx, tagID)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +36,7 @@ func GetTagCatfile(c *catfile.Batch, tagID, tagName string, trimLen, trimRightNe
 	}
 
 	// the tagID is the oid of the tag object
-	tag, err := buildAnnotatedTag(c, tagID, tagName, header, body, trimLen, trimRightNewLine)
+	tag, err := buildAnnotatedTag(ctx, c, tagID, tagName, header, body, trimLen, trimRightNewLine)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +93,7 @@ func splitRawTag(r io.Reader, trimRightNewLine bool) (*tagHeader, []byte, error)
 	return &header, body, nil
 }
 
-func buildAnnotatedTag(b *catfile.Batch, tagID, name string, header *tagHeader, body []byte, trimLen, trimRightNewLine bool) (*gitalypb.Tag, error) {
+func buildAnnotatedTag(ctx context.Context, b *catfile.Batch, tagID, name string, header *tagHeader, body []byte, trimLen, trimRightNewLine bool) (*gitalypb.Tag, error) {
 	tag := &gitalypb.Tag{
 		Id:          tagID,
 		Name:        []byte(name),
@@ -107,13 +108,13 @@ func buildAnnotatedTag(b *catfile.Batch, tagID, name string, header *tagHeader, 
 	var err error
 	switch header.tagType {
 	case "commit":
-		tag.TargetCommit, err = GetCommitCatfile(b, header.oid)
+		tag.TargetCommit, err = GetCommitCatfile(ctx, b, header.oid)
 		if err != nil {
 			return nil, fmt.Errorf("buildAnnotatedTag error when getting target commit: %v", err)
 		}
 
 	case "tag":
-		tag.TargetCommit, err = dereferenceTag(b, header.oid)
+		tag.TargetCommit, err = dereferenceTag(ctx, b, header.oid)
 		if err != nil {
 			return nil, fmt.Errorf("buildAnnotatedTag error when dereferencing tag: %v", err)
 		}
@@ -142,16 +143,16 @@ func buildAnnotatedTag(b *catfile.Batch, tagID, name string, header *tagHeader, 
 // we also protect against circular tag references. Even though this is not possible in git,
 // we still want to protect against an infinite looop
 
-func dereferenceTag(b *catfile.Batch, Oid string) (*gitalypb.GitCommit, error) {
+func dereferenceTag(ctx context.Context, b *catfile.Batch, Oid string) (*gitalypb.GitCommit, error) {
 	for depth := 0; depth < MaxTagReferenceDepth; depth++ {
-		i, err := b.Info(Oid)
+		i, err := b.Info(ctx, Oid)
 		if err != nil {
 			return nil, err
 		}
 
 		switch i.Type {
 		case "tag":
-			tagObj, err := b.Tag(Oid)
+			tagObj, err := b.Tag(ctx, Oid)
 			if err != nil {
 				return nil, err
 			}
@@ -164,7 +165,7 @@ func dereferenceTag(b *catfile.Batch, Oid string) (*gitalypb.GitCommit, error) {
 			Oid = header.oid
 			continue
 		case "commit":
-			return GetCommitCatfile(b, Oid)
+			return GetCommitCatfile(ctx, b, Oid)
 		default: // This current tag points to a tree or a blob
 			return nil, nil
 		}

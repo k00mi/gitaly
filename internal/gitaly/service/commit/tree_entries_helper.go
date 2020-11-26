@@ -3,6 +3,7 @@ package commit
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/sha1"
 	"fmt"
 	"io"
@@ -31,14 +32,14 @@ func NewTreeEntryFinder(c *catfile.Batch) *TreeEntryFinder {
 }
 
 // FindByRevisionAndPath returns a TreeEntry struct for the object present at the revision/path pair.
-func (tef *TreeEntryFinder) FindByRevisionAndPath(revision, path string) (*gitalypb.TreeEntry, error) {
+func (tef *TreeEntryFinder) FindByRevisionAndPath(ctx context.Context, revision, path string) (*gitalypb.TreeEntry, error) {
 	dir := pathPkg.Dir(path)
 	cacheKey := revisionPath{revision: revision, path: dir}
 	entries, ok := tef.treeCache[cacheKey]
 
 	if !ok {
 		var err error
-		entries, err = treeEntries(tef.c, revision, dir, "", false)
+		entries, err = treeEntries(ctx, tef.c, revision, dir, "", false)
 		if err != nil {
 			return nil, err
 		}
@@ -102,7 +103,7 @@ func extractEntryInfoFromTreeData(treeData io.Reader, commitOid, rootOid, rootPa
 	return entries, nil
 }
 
-func treeEntries(c *catfile.Batch, revision, path string, rootOid string, recursive bool) ([]*gitalypb.TreeEntry, error) {
+func treeEntries(ctx context.Context, c *catfile.Batch, revision, path string, rootOid string, recursive bool) ([]*gitalypb.TreeEntry, error) {
 	if path == "." {
 		path = ""
 	}
@@ -114,7 +115,7 @@ func treeEntries(c *catfile.Batch, revision, path string, rootOid string, recurs
 	}
 
 	if len(rootOid) == 0 {
-		rootTreeInfo, err := c.Info(revision + "^{tree}")
+		rootTreeInfo, err := c.Info(ctx, revision+"^{tree}")
 		if err != nil {
 			if catfile.IsNotFound(err) {
 				return nil, nil
@@ -126,7 +127,7 @@ func treeEntries(c *catfile.Batch, revision, path string, rootOid string, recurs
 		rootOid = rootTreeInfo.Oid
 	}
 
-	treeObj, err := c.Tree(fmt.Sprintf("%s:%s", revision, path))
+	treeObj, err := c.Tree(ctx, fmt.Sprintf("%s:%s", revision, path))
 	if err != nil {
 		if catfile.IsNotFound(err) {
 			return nil, nil
@@ -148,7 +149,7 @@ func treeEntries(c *catfile.Batch, revision, path string, rootOid string, recurs
 		orderedEntries = append(orderedEntries, entry)
 
 		if entry.Type == gitalypb.TreeEntry_TREE {
-			subentries, err := treeEntries(c, revision, string(entry.Path), rootOid, true)
+			subentries, err := treeEntries(ctx, c, revision, string(entry.Path), rootOid, true)
 			if err != nil {
 				return nil, err
 			}

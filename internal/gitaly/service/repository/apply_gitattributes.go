@@ -17,11 +17,11 @@ import (
 
 const attributesFileMode os.FileMode = 0644
 
-func applyGitattributes(c *catfile.Batch, repoPath string, revision []byte) error {
+func applyGitattributes(ctx context.Context, c *catfile.Batch, repoPath string, revision []byte) error {
 	infoPath := filepath.Join(repoPath, "info")
 	attributesPath := filepath.Join(infoPath, "attributes")
 
-	_, err := c.Info(string(revision))
+	_, err := c.Info(ctx, string(revision))
 	if err != nil {
 		if catfile.IsNotFound(err) {
 			return status.Errorf(codes.InvalidArgument, "Revision doesn't exist")
@@ -30,7 +30,7 @@ func applyGitattributes(c *catfile.Batch, repoPath string, revision []byte) erro
 		return err
 	}
 
-	blobInfo, err := c.Info(fmt.Sprintf("%s:.gitattributes", revision))
+	blobInfo, err := c.Info(ctx, fmt.Sprintf("%s:.gitattributes", revision))
 	if err != nil && !catfile.IsNotFound(err) {
 		return err
 	}
@@ -55,7 +55,7 @@ func applyGitattributes(c *catfile.Batch, repoPath string, revision []byte) erro
 	}
 	defer os.Remove(tempFile.Name())
 
-	blobObj, err := c.Blob(blobInfo.Oid)
+	blobObj, err := c.Blob(ctx, blobInfo.Oid)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func (s *server) ApplyGitattributes(ctx context.Context, in *gitalypb.ApplyGitat
 		return nil, err
 	}
 
-	if err := applyGitattributes(c, repoPath, in.GetRevision()); err != nil {
+	if err := applyGitattributes(ctx, c, repoPath, in.GetRevision()); err != nil {
 		return nil, err
 	}
 

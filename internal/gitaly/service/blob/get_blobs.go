@@ -20,6 +20,8 @@ var treeEntryToObjectType = map[gitalypb.TreeEntry_EntryType]gitalypb.ObjectType
 	gitalypb.TreeEntry_COMMIT: gitalypb.ObjectType_COMMIT}
 
 func sendGetBlobsResponse(req *gitalypb.GetBlobsRequest, stream gitalypb.BlobService_GetBlobsServer, c *catfile.Batch) error {
+	ctx := stream.Context()
+
 	tef := commit.NewTreeEntryFinder(c)
 
 	for _, revisionPath := range req.RevisionPaths {
@@ -30,7 +32,7 @@ func sendGetBlobsResponse(req *gitalypb.GetBlobsRequest, stream gitalypb.BlobSer
 			path = bytes.TrimRight(path, "/")
 		}
 
-		treeEntry, err := tef.FindByRevisionAndPath(revision, string(path))
+		treeEntry, err := tef.FindByRevisionAndPath(ctx, revision, string(path))
 		if err != nil {
 			return err
 		}
@@ -59,7 +61,7 @@ func sendGetBlobsResponse(req *gitalypb.GetBlobsRequest, stream gitalypb.BlobSer
 			continue
 		}
 
-		objectInfo, err := c.Info(treeEntry.Oid)
+		objectInfo, err := c.Info(ctx, treeEntry.Oid)
 		if err != nil {
 			return status.Errorf(codes.Internal, "GetBlobs: %v", err)
 		}
@@ -89,6 +91,8 @@ func sendGetBlobsResponse(req *gitalypb.GetBlobsRequest, stream gitalypb.BlobSer
 }
 
 func sendBlobTreeEntry(response *gitalypb.GetBlobsResponse, stream gitalypb.BlobService_GetBlobsServer, c *catfile.Batch, limit int64) error {
+	ctx := stream.Context()
+
 	var readLimit int64
 	if limit < 0 || limit > response.Size {
 		readLimit = response.Size
@@ -106,7 +110,7 @@ func sendBlobTreeEntry(response *gitalypb.GetBlobsResponse, stream gitalypb.Blob
 		return nil
 	}
 
-	blobObj, err := c.Blob(response.Oid)
+	blobObj, err := c.Blob(ctx, response.Oid)
 	if err != nil {
 		return status.Errorf(codes.Internal, "GetBlobs: %v", err)
 	}

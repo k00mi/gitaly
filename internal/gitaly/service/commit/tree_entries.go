@@ -1,6 +1,7 @@
 package commit
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/golang/protobuf/proto"
@@ -26,7 +27,7 @@ func validateGetTreeEntriesRequest(in *gitalypb.GetTreeEntriesRequest) error {
 	return nil
 }
 
-func populateFlatPath(c *catfile.Batch, entries []*gitalypb.TreeEntry) error {
+func populateFlatPath(ctx context.Context, c *catfile.Batch, entries []*gitalypb.TreeEntry) error {
 	for _, entry := range entries {
 		entry.FlatPath = entry.Path
 
@@ -35,7 +36,7 @@ func populateFlatPath(c *catfile.Batch, entries []*gitalypb.TreeEntry) error {
 		}
 
 		for i := 1; i < defaultFlatTreeRecursion; i++ {
-			subEntries, err := treeEntries(c, entry.CommitOid, string(entry.FlatPath), "", false)
+			subEntries, err := treeEntries(ctx, c, entry.CommitOid, string(entry.FlatPath), "", false)
 
 			if err != nil {
 				return err
@@ -53,13 +54,15 @@ func populateFlatPath(c *catfile.Batch, entries []*gitalypb.TreeEntry) error {
 }
 
 func sendTreeEntries(stream gitalypb.CommitService_GetTreeEntriesServer, c *catfile.Batch, revision, path string, recursive bool) error {
-	entries, err := treeEntries(c, revision, path, "", recursive)
+	ctx := stream.Context()
+
+	entries, err := treeEntries(ctx, c, revision, path, "", recursive)
 	if err != nil {
 		return err
 	}
 
 	if !recursive {
-		if err := populateFlatPath(c, entries); err != nil {
+		if err := populateFlatPath(ctx, c, entries); err != nil {
 			return err
 		}
 	}

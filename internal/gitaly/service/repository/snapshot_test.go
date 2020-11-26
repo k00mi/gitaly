@@ -138,7 +138,7 @@ func TestGetSnapshotWithDedupe(t *testing.T) {
 			// ensure commit cannot be found in current repository
 			c, err := catfile.New(ctx, testRepo)
 			require.NoError(t, err)
-			_, err = c.Info(originalAlternatesCommit)
+			_, err = c.Info(ctx, originalAlternatesCommit)
 			require.True(t, catfile.IsNotFound(err))
 
 			locator := config.NewLocator(config.Config)
@@ -157,7 +157,7 @@ func TestGetSnapshotWithDedupe(t *testing.T) {
 
 			c, err = catfile.New(ctx, testRepo)
 			require.NoError(t, err)
-			_, err = c.Info(string(commitSha))
+			_, err = c.Info(ctx, string(commitSha))
 			require.NoError(t, err)
 
 			_, repoCopyPath, cleanupCopy := copyRepoUsingSnapshot(t, locator, testRepo)
