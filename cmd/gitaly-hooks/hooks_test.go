@@ -561,10 +561,6 @@ func TestCheckOK(t *testing.T) {
 }
 
 func TestCheckBadCreds(t *testing.T) {
-	defer func(cfg config.Cfg) {
-		config.Config = cfg
-	}(config.Config)
-
 	user, password := "user123", "password321"
 
 	c := testhelper.GitlabTestServerOptions{
@@ -587,7 +583,6 @@ func TestCheckBadCreds(t *testing.T) {
 	require.NoError(t, os.MkdirAll(gitlabShellDir, 0755))
 	testhelper.WriteShellSecretFile(t, gitlabShellDir, "the secret")
 
-	config.Config.Gitlab.URL = serverURL
 	configPath, cleanup := testhelper.WriteTemporaryGitalyConfigFile(t, tempDir, serverURL, "wrong", password, path.Join(gitlabShellDir, ".gitlab_shell_secret"))
 	defer cleanup()
 
@@ -598,8 +593,8 @@ func TestCheckBadCreds(t *testing.T) {
 	cmd.Stdout = &stdout
 
 	require.Error(t, cmd.Run())
-	require.Contains(t, stderr.String(), "Internal API error (401)")
-	require.Equal(t, "Checking GitLab API access: FAIL\n", stdout.String())
+	require.Contains(t, stderr.String(), "HTTP GET to GitLab endpoint /check failed: authorization failed")
+	require.Regexp(t, `Checking GitLab API access: .* level=error msg="Internal API error" .* error="authorization failed" method=GET status=401 url="http://127.0.0.1:[0-9]+/api/v4/internal/check"\nFAIL`, stdout.String())
 }
 
 func runHookServiceServer(t *testing.T, token string) (string, func()) {

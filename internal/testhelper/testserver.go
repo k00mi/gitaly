@@ -789,7 +789,10 @@ func handleCheck(options GitlabTestServerOptions) func(w http.ResponseWriter, r 
 	return func(w http.ResponseWriter, r *http.Request) {
 		u, p, ok := r.BasicAuth()
 		if !ok || u != options.User || p != options.Password {
-			http.Error(w, "authorization failed", http.StatusUnauthorized)
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(struct {
+				Message string `json:"message"`
+			}{Message: "authorization failed"})
 			return
 		}
 
