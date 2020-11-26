@@ -555,11 +555,17 @@ func TestTagHookOutput(t *testing.T) {
 	for _, hookName := range gitlabPreHooks {
 		for _, testCase := range testCases {
 			t.Run(hookName+"/"+testCase.desc, func(t *testing.T) {
-				request := &gitalypb.UserCreateTagRequest{
+				tagNameInput := "some-tag"
+				createRequest := &gitalypb.UserCreateTagRequest{
 					Repository:     testRepo,
-					TagName:        []byte("some-tag"),
+					TagName:        []byte(tagNameInput),
 					TargetRevision: []byte("master"),
 					User:           testhelper.TestUser,
+				}
+				deleteRequest := &gitalypb.UserDeleteTagRequest{
+					Repository: testRepo,
+					TagName:    []byte(tagNameInput),
+					User:       testhelper.TestUser,
 				}
 
 				ctx, cancel := testhelper.Context()
@@ -569,10 +575,18 @@ func TestTagHookOutput(t *testing.T) {
 				require.NoError(t, err)
 				defer remove()
 
-				response, err := client.UserCreateTag(ctx, request)
+				createResponse, err := client.UserCreateTag(ctx, createRequest)
 				require.NoError(t, err)
-				require.Equal(t, false, response.Exists)
-				require.Equal(t, testCase.output, response.PreReceiveError)
+				require.False(t, createResponse.Exists)
+				require.Equal(t, testCase.output, createResponse.PreReceiveError)
+
+				defer exec.Command(command.GitPath(), "-C", testRepoPath, "tag", "-d", tagNameInput).Run()
+				testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", tagNameInput)
+
+				deleteResponse, err := client.UserDeleteTag(ctx, deleteRequest)
+				require.NoError(t, err)
+
+				require.Equal(t, testCase.output, deleteResponse.PreReceiveError)
 			})
 		}
 	}
