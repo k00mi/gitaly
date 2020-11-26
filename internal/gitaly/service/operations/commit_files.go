@@ -34,7 +34,7 @@ func errorWithStderr(err error, stderr *bytes.Buffer) error {
 
 // UserCommitFiles allows for committing from a set of actions. See the protobuf documentation
 // for details.
-func (s *server) UserCommitFiles(stream gitalypb.OperationService_UserCommitFilesServer) error {
+func (s *Server) UserCommitFiles(stream gitalypb.OperationService_UserCommitFilesServer) error {
 	firstRequest, err := stream.Recv()
 	if err != nil {
 		return err
@@ -155,7 +155,7 @@ func validatePath(rootPath, relPath string) (string, error) {
 	return path, nil
 }
 
-func (s *server) userCommitFiles(ctx context.Context, header *gitalypb.UserCommitFilesRequestHeader, stream gitalypb.OperationService_UserCommitFilesServer) error {
+func (s *Server) userCommitFiles(ctx context.Context, header *gitalypb.UserCommitFilesRequestHeader, stream gitalypb.OperationService_UserCommitFilesServer) error {
 	repoPath, err := s.locator.GetRepoPath(header.Repository)
 	if err != nil {
 		return fmt.Errorf("get repo path: %w", err)
@@ -348,7 +348,7 @@ func (s *server) userCommitFiles(ctx context.Context, header *gitalypb.UserCommi
 	}})
 }
 
-func (s *server) resolveParentCommit(ctx context.Context, local git.Repository, remote *gitalypb.Repository, targetBranch, targetBranchCommit, startBranch string) (string, error) {
+func (s *Server) resolveParentCommit(ctx context.Context, local git.Repository, remote *gitalypb.Repository, targetBranch, targetBranchCommit, startBranch string) (string, error) {
 	if remote == nil && startBranch == "" {
 		return targetBranchCommit, nil
 	}
@@ -400,7 +400,7 @@ func (s *server) resolveParentCommit(ctx context.Context, local git.Repository, 
 	return commit, nil
 }
 
-func (s *server) fetchMissingCommit(ctx context.Context, local, remote *gitalypb.Repository, commitID string) error {
+func (s *Server) fetchMissingCommit(ctx context.Context, local, remote *gitalypb.Repository, commitID string) error {
 	if _, err := git.NewRepository(local).ResolveRefish(ctx, commitID+"^{commit}"); err != nil {
 		if !errors.Is(err, git.ErrReferenceNotFound) || remote == nil {
 			return fmt.Errorf("lookup parent commit: %w", err)
@@ -414,7 +414,7 @@ func (s *server) fetchMissingCommit(ctx context.Context, local, remote *gitalypb
 	return nil
 }
 
-func (s *server) fetchRemoteObject(ctx context.Context, local, remote *gitalypb.Repository, sha string) error {
+func (s *Server) fetchRemoteObject(ctx context.Context, local, remote *gitalypb.Repository, sha string) error {
 	env, err := gitalyssh.UploadPackEnv(ctx, &gitalypb.SSHUploadPackRequest{
 		Repository:       remote,
 		GitConfigOptions: []string{"uploadpack.allowAnySHA1InWant=true"},

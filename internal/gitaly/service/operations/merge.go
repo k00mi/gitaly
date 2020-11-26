@@ -16,7 +16,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
-func (s *server) UserMergeBranch(bidi gitalypb.OperationService_UserMergeBranchServer) error {
+func (s *Server) UserMergeBranch(bidi gitalypb.OperationService_UserMergeBranchServer) error {
 	ctx := bidi.Context()
 
 	if featureflag.IsEnabled(ctx, featureflag.GoUserMergeBranch) {
@@ -95,7 +95,7 @@ func hookErrorFromStdoutAndStderr(sout string, serr string) string {
 	return sout
 }
 
-func (s *server) userMergeBranch(stream gitalypb.OperationService_UserMergeBranchServer) error {
+func (s *Server) userMergeBranch(stream gitalypb.OperationService_UserMergeBranchServer) error {
 	ctx := stream.Context()
 
 	firstRequest, err := stream.Recv()
@@ -195,7 +195,7 @@ func validateFFRequest(in *gitalypb.UserFFBranchRequest) error {
 	return nil
 }
 
-func (s *server) UserFFBranch(ctx context.Context, in *gitalypb.UserFFBranchRequest) (*gitalypb.UserFFBranchResponse, error) {
+func (s *Server) UserFFBranch(ctx context.Context, in *gitalypb.UserFFBranchRequest) (*gitalypb.UserFFBranchResponse, error) {
 	if err := validateFFRequest(in); err != nil {
 		return nil, helper.ErrInvalidArgument(err)
 	}
@@ -257,7 +257,7 @@ func (s *server) UserFFBranch(ctx context.Context, in *gitalypb.UserFFBranchRequ
 	}, nil
 }
 
-func (s *server) userFFBranchRuby(ctx context.Context, in *gitalypb.UserFFBranchRequest) (*gitalypb.UserFFBranchResponse, error) {
+func (s *Server) userFFBranchRuby(ctx context.Context, in *gitalypb.UserFFBranchRequest) (*gitalypb.UserFFBranchResponse, error) {
 	client, err := s.ruby.OperationServiceClient(ctx)
 	if err != nil {
 		return nil, err
@@ -298,7 +298,7 @@ func validateUserMergeToRefRequest(in *gitalypb.UserMergeToRefRequest) error {
 // userMergeToRef overwrites the given TargetRef to point to either Branch or
 // FirstParentRef. Afterwards, it performs a merge of SourceSHA with either
 // Branch or FirstParentRef and updates TargetRef to the merge commit.
-func (s *server) userMergeToRef(ctx context.Context, request *gitalypb.UserMergeToRefRequest) (*gitalypb.UserMergeToRefResponse, error) {
+func (s *Server) userMergeToRef(ctx context.Context, request *gitalypb.UserMergeToRefRequest) (*gitalypb.UserMergeToRefResponse, error) {
 	repoPath, err := s.locator.GetPath(request.Repository)
 	if err != nil {
 		return nil, err
@@ -357,7 +357,7 @@ func (s *server) userMergeToRef(ctx context.Context, request *gitalypb.UserMerge
 	}, nil
 }
 
-func (s *server) UserMergeToRef(ctx context.Context, in *gitalypb.UserMergeToRefRequest) (*gitalypb.UserMergeToRefResponse, error) {
+func (s *Server) UserMergeToRef(ctx context.Context, in *gitalypb.UserMergeToRefRequest) (*gitalypb.UserMergeToRefResponse, error) {
 	if err := validateUserMergeToRefRequest(in); err != nil {
 		return nil, helper.ErrInvalidArgument(err)
 	}

@@ -30,7 +30,7 @@ func (e updateRefError) Error() string {
 	return fmt.Sprintf("Could not update %s. Please refresh and try again.", e.reference)
 }
 
-func (s *server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Repository, user *gitalypb.User, reference, newrev, oldrev string) error {
+func (s *Server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Repository, user *gitalypb.User, reference, newrev, oldrev string) error {
 	gitlabshellEnv, err := gitlabshell.EnvFromConfig(s.cfg)
 	if err != nil {
 		return err

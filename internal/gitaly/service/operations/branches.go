@@ -15,7 +15,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) UserCreateBranch(ctx context.Context, req *gitalypb.UserCreateBranchRequest) (*gitalypb.UserCreateBranchResponse, error) {
+func (s *Server) UserCreateBranch(ctx context.Context, req *gitalypb.UserCreateBranchRequest) (*gitalypb.UserCreateBranchResponse, error) {
 	if featureflag.IsDisabled(ctx, featureflag.GoUserCreateBranch) {
 		return s.UserCreateBranchRuby(ctx, req)
 	}
@@ -73,7 +73,7 @@ func (s *server) UserCreateBranch(ctx context.Context, req *gitalypb.UserCreateB
 	}, nil
 }
 
-func (s *server) UserCreateBranchRuby(ctx context.Context, req *gitalypb.UserCreateBranchRequest) (*gitalypb.UserCreateBranchResponse, error) {
+func (s *Server) UserCreateBranchRuby(ctx context.Context, req *gitalypb.UserCreateBranchRequest) (*gitalypb.UserCreateBranchResponse, error) {
 	client, err := s.ruby.OperationServiceClient(ctx)
 	if err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func (s *server) UserCreateBranchRuby(ctx context.Context, req *gitalypb.UserCre
 	return client.UserCreateBranch(clientCtx, req)
 }
 
-func (s *server) UserUpdateBranch(ctx context.Context, req *gitalypb.UserUpdateBranchRequest) (*gitalypb.UserUpdateBranchResponse, error) {
+func (s *Server) UserUpdateBranch(ctx context.Context, req *gitalypb.UserUpdateBranchRequest) (*gitalypb.UserUpdateBranchResponse, error) {
 	client, err := s.ruby.OperationServiceClient(ctx)
 	if err != nil {
 		return nil, err
@@ -101,7 +101,7 @@ func (s *server) UserUpdateBranch(ctx context.Context, req *gitalypb.UserUpdateB
 	return client.UserUpdateBranch(clientCtx, req)
 }
 
-func (s *server) UserDeleteBranch(ctx context.Context, req *gitalypb.UserDeleteBranchRequest) (*gitalypb.UserDeleteBranchResponse, error) {
+func (s *Server) UserDeleteBranch(ctx context.Context, req *gitalypb.UserDeleteBranchRequest) (*gitalypb.UserDeleteBranchResponse, error) {
 	if len(req.BranchName) == 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "Bad Request (empty branch name)")
 	}
@@ -136,7 +136,7 @@ func (s *server) UserDeleteBranch(ctx context.Context, req *gitalypb.UserDeleteB
 	return &gitalypb.UserDeleteBranchResponse{}, nil
 }
 
-func (s *server) UserDeleteBranchRuby(ctx context.Context, req *gitalypb.UserDeleteBranchRequest) (*gitalypb.UserDeleteBranchResponse, error) {
+func (s *Server) UserDeleteBranchRuby(ctx context.Context, req *gitalypb.UserDeleteBranchRequest) (*gitalypb.UserDeleteBranchResponse, error) {
 	client, err := s.ruby.OperationServiceClient(ctx)
 	if err != nil {
 		return nil, err
