@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -47,8 +48,8 @@ func TestUpdate_CustomHooks(t *testing.T) {
 	req := gitalypb.UpdateHookRequest{
 		Repository:           testRepo,
 		Ref:                  []byte("master"),
-		OldValue:             "a",
-		NewValue:             "b",
+		OldValue:             strings.Repeat("a", 40),
+		NewValue:             strings.Repeat("b", 40),
 		EnvironmentVariables: []string{"GL_ID=key-123", "GL_USERNAME=username", "GL_PROTOCOL=protocol", "GL_REPOSITORY=repository"},
 	}
 

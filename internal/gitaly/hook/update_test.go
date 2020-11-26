@@ -56,6 +56,9 @@ func TestUpdate_customHooks(t *testing.T) {
 		{
 			desc:           "hook receives environment variables",
 			env:            standardEnv,
+			reference:      "refs/heads/master",
+			oldHash:        hash1,
+			newHash:        hash2,
 			hook:           "#!/bin/sh\nenv | grep -e '^GL_' -e '^GITALY_' | sort\n",
 			expectedStdout: strings.Join(standardEnv, "\n") + "\n",
 		},
@@ -131,6 +134,27 @@ func TestUpdate_customHooks(t *testing.T) {
 			oldHash:   hash1,
 			newHash:   hash2,
 			hook:      "#!/bin/sh\necho foo\n",
+		},
+		{
+			desc:        "hook fails with missing reference",
+			env:         standardEnv,
+			oldHash:     hash1,
+			newHash:     hash2,
+			expectedErr: "hook got no reference",
+		},
+		{
+			desc:        "hook fails with missing old value",
+			env:         standardEnv,
+			reference:   "refs/heads/master",
+			newHash:     hash2,
+			expectedErr: "hook got invalid old value",
+		},
+		{
+			desc:        "hook fails with missing new value",
+			env:         standardEnv,
+			reference:   "refs/heads/master",
+			oldHash:     hash1,
+			expectedErr: "hook got invalid new value",
 		},
 	}
 

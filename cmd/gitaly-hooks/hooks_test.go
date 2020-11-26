@@ -270,7 +270,7 @@ func testHooksUpdate(t *testing.T, gitlabShellDir, socket, token string, glValue
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	refval, oldval, newval := "refval", "oldval", "newval"
+	refval, oldval, newval := "refval", strings.Repeat("a", 40), strings.Repeat("b", 40)
 	updateHookPath, err := filepath.Abs("../../ruby/git-hooks/update")
 	require.NoError(t, err)
 	cmd := exec.Command(updateHookPath, refval, oldval, newval)

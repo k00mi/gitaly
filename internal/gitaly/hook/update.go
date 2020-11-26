@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -15,6 +16,16 @@ func (m *GitLabHookManager) UpdateHook(ctx context.Context, repo *gitalypb.Repos
 	}
 	if !primary {
 		return nil
+	}
+
+	if ref == "" {
+		return helper.ErrInternalf("hook got no reference")
+	}
+	if err := git.ValidateCommitID(oldValue); err != nil {
+		return helper.ErrInternalf("hook got invalid old value: %w", err)
+	}
+	if err := git.ValidateCommitID(newValue); err != nil {
+		return helper.ErrInternalf("hook got invalid new value: %w", err)
 	}
 
 	executor, err := m.newCustomHooksExecutor(repo, "update")
