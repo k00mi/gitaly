@@ -29,7 +29,7 @@ func TestGitCommandProxy(t *testing.T) {
 	dir, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 
-	cmd, err := unsafeBareCmd(ctx, CmdStream{}, nil, "clone", "http://gitlab.com/bogus-repo", dir)
+	cmd, err := NewCommandFactory().unsafeBareCmd(ctx, CmdStream{}, nil, "clone", "http://gitlab.com/bogus-repo", dir)
 	require.NoError(t, err)
 
 	err = cmd.Wait()
