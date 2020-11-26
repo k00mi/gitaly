@@ -130,6 +130,10 @@ func (m *GitLabHookManager) PostReceiveHook(ctx context.Context, repo *gitalypb.
 		return nil
 	}
 
+	if len(changes) == 0 {
+		return helper.ErrInternalf("hook got no reference updates")
+	}
+
 	glID, glRepo := getEnvVar("GL_ID", env), getEnvVar("GL_REPOSITORY", env)
 	if glID == "" {
 		return helper.ErrInternalf("GL_ID not set")
