@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 
 	"gitlab.com/gitlab-org/gitaly/client"
+	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git2go"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
@@ -29,6 +30,6 @@ func NewServer(cfg config.Cfg, rs *rubyserver.Server, hookManager hook.Manager, 
 		hookManager: hookManager,
 		locator:     locator,
 		conns:       conns,
-		git2go:      git2go.New(filepath.Join(cfg.BinDir, "gitaly-git2go")),
+		git2go:      git2go.New(filepath.Join(cfg.BinDir, "gitaly-git2go"), command.GitPath()),
 	}
 }

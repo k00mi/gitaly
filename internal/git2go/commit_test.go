@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -63,7 +64,7 @@ func TestExecutor_Commit(t *testing.T) {
 	updatedFile, err := repo.WriteBlob(ctx, "file", bytes.NewBufferString("updated"))
 	require.NoError(t, err)
 
-	executor := New(filepath.Join(config.Config.BinDir, "gitaly-git2go"))
+	executor := New(filepath.Join(config.Config.BinDir, "gitaly-git2go"), command.GitPath())
 
 	for _, tc := range []struct {
 		desc  string
@@ -461,12 +462,14 @@ func TestExecutor_Commit(t *testing.T) {
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
 			author := NewSignature("Author Name", "author.email@example.com", time.Now())
+			committer := NewSignature("Committer Name", "committer.email@example.com", time.Now())
 			var parentCommit string
 			for i, step := range tc.steps {
 				message := fmt.Sprintf("commit %d", i+1)
 				commitID, err := executor.Commit(ctx, CommitParams{
 					Repository: repoPath,
 					Author:     author,
+					Committer:  committer,
 					Message:    message,
 					Parent:     parentCommit,
 					Actions:    step.actions,
@@ -482,7 +485,7 @@ func TestExecutor_Commit(t *testing.T) {
 				require.Equal(t, commit{
 					Parent:    parentCommit,
 					Author:    author,
-					Committer: author,
+					Committer: committer,
 					Message:   message,
 				}, getCommit(t, ctx, repo, commitID))
 

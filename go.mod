@@ -14,7 +14,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/kelseyhightower/envconfig v1.3.0
 	github.com/lib/pq v1.2.0
-	github.com/libgit2/git2go/v30 v30.0.5
+	github.com/libgit2/git2go/v30 v30.0.18
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/olekukonko/tablewriter v0.0.2
 	github.com/opentracing/opentracing-go v1.2.0
