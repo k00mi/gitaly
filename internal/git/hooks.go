@@ -178,8 +178,14 @@ func WithRefTxHook(ctx context.Context, repo *gitalypb.Repository, cfg config.Cf
 		if err != nil {
 			return fmt.Errorf("ref hook env var: %w", err)
 		}
-
 		cc.env = append(cc.env, rfEnvs...)
+
+		txEnvs, err := transactionEnv(ctx)
+		if err != nil {
+			return fmt.Errorf("transaction environment: %w", err)
+		}
+		cc.env = append(cc.env, txEnvs...)
+
 		cc.globals = append(cc.globals, ValueFlag{"-c", fmt.Sprintf("core.hooksPath=%s", hooks.Path(cfg))})
 		cc.refHookConfigured = true
 
