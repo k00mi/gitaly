@@ -24,21 +24,16 @@ import (
 	"testing"
 	"time"
 
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
-	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
-	"gitlab.com/gitlab-org/gitaly/internal/helper/fieldextractors"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -161,24 +156,6 @@ func GetLocalhostListener(t testing.TB) (net.Listener, string) {
 	addr := fmt.Sprintf("localhost:%d", l.Addr().(*net.TCPAddr).Port)
 
 	return l, addr
-}
-
-// NewTestGrpcServer creates a GRPC Server for testing purposes
-func NewTestGrpcServer(tb testing.TB, streamInterceptors []grpc.StreamServerInterceptor, unaryInterceptors []grpc.UnaryServerInterceptor) *grpc.Server {
-	logger := NewTestLogger(tb)
-	logrusEntry := log.NewEntry(logger).WithField("test", tb.Name())
-
-	ctxTagger := grpc_ctxtags.WithFieldExtractorForInitialReq(fieldextractors.FieldExtractor)
-	ctxStreamTagger := grpc_ctxtags.StreamServerInterceptor(ctxTagger)
-	ctxUnaryTagger := grpc_ctxtags.UnaryServerInterceptor(ctxTagger)
-
-	streamInterceptors = append([]grpc.StreamServerInterceptor{ctxStreamTagger, grpc_logrus.StreamServerInterceptor(logrusEntry)}, streamInterceptors...)
-	unaryInterceptors = append([]grpc.UnaryServerInterceptor{ctxUnaryTagger, grpc_logrus.UnaryServerInterceptor(logrusEntry)}, unaryInterceptors...)
-
-	return grpc.NewServer(
-		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(streamInterceptors...)),
-		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(unaryInterceptors...)),
-	)
 }
 
 // MustHaveNoChildProcess panics if it finds a running or finished child
