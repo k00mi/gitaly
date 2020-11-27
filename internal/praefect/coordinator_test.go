@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -1194,6 +1195,25 @@ func TestStreamDirectorStorageScopeError(t *testing.T) {
 			require.Equal(t, `mutator storage scoped: get shard "fake": primary is not healthy`, result.Message())
 		})
 	})
+}
+
+func TestDisabledTransactionsWithEnvVar(t *testing.T) {
+	os.Setenv(gitalyDisabledRefEnvVar, "1")
+	defer os.Unsetenv(gitalyDisabledRefEnvVar)
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	var rpcname string
+	for name, enabledFn := range transactionRPCs {
+		if enabledFn(ctx) {
+			rpcname = name
+			break
+		}
+	}
+
+	require.NotEmpty(t, rpcname, "no enabled reference transaction RPCs")
+	require.False(t, shouldUseTransaction(ctx, rpcname))
 }
 
 func requireScopeOperation(t *testing.T, registry *protoregistry.Registry, fullMethod string, scope protoregistry.Scope, op protoregistry.OpType) {
