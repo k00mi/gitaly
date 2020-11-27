@@ -41,9 +41,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
 
 const (
@@ -99,26 +97,6 @@ func GitalyServersMetadata(t testing.TB, serverSocketPath string) metadata.MD {
 	return metadata.Pairs("gitaly-servers", base64.StdEncoding.EncodeToString(gitalyServersJSON))
 }
 
-// MergeOutgoingMetadata merges provided metadata-s and returns context with resulting value.
-func MergeOutgoingMetadata(ctx context.Context, md ...metadata.MD) context.Context {
-	ctxmd, ok := metadata.FromOutgoingContext(ctx)
-	if !ok {
-		return metadata.NewOutgoingContext(ctx, metadata.Join(md...))
-	}
-
-	return metadata.NewOutgoingContext(ctx, metadata.Join(append(md, ctxmd)...))
-}
-
-// MergeIncomingMetadata merges provided metadata-s and returns context with resulting value.
-func MergeIncomingMetadata(ctx context.Context, md ...metadata.MD) context.Context {
-	ctxmd, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return metadata.NewIncomingContext(ctx, metadata.Join(md...))
-	}
-
-	return metadata.NewIncomingContext(ctx, metadata.Join(append(md, ctxmd)...))
-}
-
 // isValidRepoPath checks whether a valid git repository exists at the given path.
 func isValidRepoPath(absolutePath string) bool {
 	if _, err := os.Stat(filepath.Join(absolutePath, "objects")); err != nil {
@@ -126,21 +104,6 @@ func isValidRepoPath(absolutePath string) bool {
 	}
 
 	return true
-}
-
-// RequireGrpcError asserts the passed err is of the same code as expectedCode.
-func RequireGrpcError(t testing.TB, err error, expectedCode codes.Code) {
-	t.Helper()
-
-	if err == nil {
-		t.Fatal("Expected an error, got nil")
-	}
-
-	// Check that the code matches
-	status, _ := status.FromError(err)
-	if code := status.Code(); code != expectedCode {
-		t.Fatalf("Expected an error with code %v, got %v. The error was %q", expectedCode, code, err.Error())
-	}
 }
 
 // MustRunCommand runs a command with an optional standard input and returns the standard output, or fails.
@@ -706,14 +669,6 @@ func getGitDirSize(t testing.TB, repoPath string, subdirs ...string) int64 {
 	require.NoError(t, err)
 
 	return blocks
-}
-
-func GrpcErrorHasMessage(grpcError error, msg string) bool {
-	status, ok := status.FromError(grpcError)
-	if !ok {
-		return false
-	}
-	return status.Message() == msg
 }
 
 // dump the env vars that the custom hooks receives to a file
