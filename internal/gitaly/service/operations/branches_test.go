@@ -469,23 +469,36 @@ func testSuccessfulUserDeleteBranchRequest(t *testing.T, ctx context.Context) {
 	client, conn := newOperationClient(t, serverSocketPath)
 	defer conn.Close()
 
-	branchNameInput := "to-be-deleted-soon-branch"
-
-	defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "branch", "-d", branchNameInput).Run()
-
-	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", branchNameInput)
-
-	request := &gitalypb.UserDeleteBranchRequest{
-		Repository: testRepo,
-		BranchName: []byte(branchNameInput),
-		User:       testhelper.TestUser,
+	testCases := []struct {
+		desc            string
+		branchNameInput string
+	}{
+		{
+			desc:            "simple successful deletion",
+			branchNameInput: "to-be-deleted-soon-branch",
+		},
 	}
 
-	_, err := client.UserDeleteBranch(ctx, request)
-	require.NoError(t, err)
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			branchNameInput := testCase.branchNameInput
 
-	branches := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "for-each-ref", "--", "refs/heads/"+branchNameInput)
-	require.NotContains(t, string(branches), branchNameInput, "branch name still exists in branches list")
+			defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "branch", "-d", branchNameInput).Run()
+			testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", branchNameInput)
+
+			request := &gitalypb.UserDeleteBranchRequest{
+				Repository: testRepo,
+				BranchName: []byte(branchNameInput),
+				User:       testhelper.TestUser,
+			}
+
+			_, err := client.UserDeleteBranch(ctx, request)
+			require.NoError(t, err)
+
+			branches := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "for-each-ref", "--", "refs/heads/"+branchNameInput)
+			require.NotContains(t, string(branches), branchNameInput, "branch name still exists in branches list")
+		})
+	}
 }
 
 func TestSuccessfulGitHooksForUserDeleteBranchRequest(t *testing.T) {
