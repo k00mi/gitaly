@@ -432,13 +432,6 @@ func ListenGitalySSHCalls(t *testing.T, conf config.Cfg) (config.Cfg, func() []G
 	return conf, getSSHParams, clean
 }
 
-// GetRepositoryRefs gives a list of each repository ref as a string
-func GetRepositoryRefs(t testing.TB, repoPath string) string {
-	refs := MustRunCommand(t, nil, "git", "-C", repoPath, "for-each-ref")
-
-	return string(refs)
-}
-
 // AssertPathNotExists asserts true if the path doesn't exist, false otherwise
 func AssertPathNotExists(t testing.TB, path string) {
 	_, err := os.Stat(path)

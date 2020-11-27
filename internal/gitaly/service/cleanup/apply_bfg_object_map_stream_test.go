@@ -69,18 +69,25 @@ func TestApplyBfgObjectMapStreamSuccess(t *testing.T) {
 	require.NoError(t, err)
 
 	// Ensure that the internal refs are gone, but the others still exist
-	refs := testhelper.GetRepositoryRefs(t, testRepoPath)
-	assert.NotContains(t, refs, "refs/environments/1")
-	assert.NotContains(t, refs, "refs/keep-around/1")
-	assert.NotContains(t, refs, "refs/merge-requests/1")
-	assert.NotContains(t, refs, "refs/pipelines/1")
-	assert.Contains(t, refs, "refs/heads/_keep")
-	assert.Contains(t, refs, "refs/tags/_keep")
-	assert.Contains(t, refs, "refs/notes/_keep")
-	assert.Contains(t, refs, "refs/environments/_keep")
-	assert.Contains(t, refs, "refs/keep-around/_keep")
-	assert.Contains(t, refs, "refs/merge-requests/_keep")
-	assert.Contains(t, refs, "refs/pipelines/_keep")
+	refs, err := git.NewRepository(testRepo).GetReferences(ctx, "refs/")
+	require.NoError(t, err)
+
+	refNames := make([]string, len(refs))
+	for i, branch := range refs {
+		refNames[i] = branch.Name
+	}
+
+	assert.NotContains(t, refNames, "refs/environments/1")
+	assert.NotContains(t, refNames, "refs/keep-around/1")
+	assert.NotContains(t, refNames, "refs/merge-requests/1")
+	assert.NotContains(t, refNames, "refs/pipelines/1")
+	assert.Contains(t, refNames, "refs/heads/_keep")
+	assert.Contains(t, refNames, "refs/tags/_keep")
+	assert.Contains(t, refNames, "refs/notes/_keep")
+	assert.Contains(t, refNames, "refs/environments/_keep")
+	assert.Contains(t, refNames, "refs/keep-around/_keep")
+	assert.Contains(t, refNames, "refs/merge-requests/_keep")
+	assert.Contains(t, refNames, "refs/pipelines/_keep")
 
 	// Ensure that the returned entry is correct
 	require.Len(t, entries, 4, "wrong number of entries returned")
