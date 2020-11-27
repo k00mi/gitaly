@@ -83,6 +83,11 @@ type RepositoryStore interface {
 	// with key structure `relative_path-> storage -> generation`, indicating how many changes a storage is missing for a given
 	// repository.
 	GetOutdatedRepositories(ctx context.Context, virtualStorage string) (map[string]map[string]int, error)
+
+	// DeleteInvalidRepository is a method for deleting records of invalid repositories. It deletes a storage's
+	// record of the invalid repository. If the storage was the only storage with the repository, the repository's
+	// record on the virtual storage is also deleted.
+	DeleteInvalidRepository(ctx context.Context, virtualStorage, relativePath, storage string) error
 }
 
 // PostgresRepositoryStore is a Postgres implementation of RepositoryStore.
@@ -417,6 +422,29 @@ AND relative_path = $2
 	}
 
 	return exists, nil
+}
+
+func (rs *PostgresRepositoryStore) DeleteInvalidRepository(ctx context.Context, virtualStorage, relativePath, storage string) error {
+	_, err := rs.db.ExecContext(ctx, `
+WITH invalid_repository AS (
+	DELETE FROM storage_repositories
+	WHERE virtual_storage = $1
+	AND   relative_path = $2
+	AND   storage = $3
+)
+
+DELETE FROM repositories
+WHERE virtual_storage = $1
+AND relative_path = $2
+AND NOT EXISTS (
+	SELECT 1
+	FROM storage_repositories
+	WHERE virtual_storage = $1
+	AND relative_path = $2
+	AND storage != $3
+)
+	`, virtualStorage, relativePath, storage)
+	return err
 }
 
 func (rs *PostgresRepositoryStore) GetOutdatedRepositories(ctx context.Context, virtualStorage string) (map[string]map[string]int, error) {
