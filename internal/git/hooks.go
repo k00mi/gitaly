@@ -244,27 +244,38 @@ func receivePackHookEnv(ctx context.Context, cfg config.Cfg, req ReceivePackRequ
 	)
 	env = append(env, gitlabshellEnv...)
 
+	transactionEnv, err := transactionEnv(ctx)
+	if err != nil {
+		return nil, err
+	}
+	env = append(env, transactionEnv...)
+
+	return env, nil
+}
+
+func transactionEnv(ctx context.Context) ([]string, error) {
 	transaction, err := metadata.TransactionFromContext(ctx)
-	if err == nil {
-		praefect, err := metadata.PraefectFromContext(ctx)
-		if err != nil {
-			return nil, err
+	if err != nil {
+		if errors.Is(err, metadata.ErrTransactionNotFound) {
+			return nil, nil
 		}
-
-		praefectEnv, err := praefect.Env()
-		if err != nil {
-			return nil, err
-		}
-
-		transactionEnv, err := transaction.Env()
-		if err != nil {
-			return nil, err
-		}
-
-		env = append(env, praefectEnv, transactionEnv)
-	} else if !errors.Is(err, metadata.ErrTransactionNotFound) {
 		return nil, err
 	}
 
-	return env, nil
+	praefect, err := metadata.PraefectFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	praefectEnv, err := praefect.Env()
+	if err != nil {
+		return nil, err
+	}
+
+	transactionEnv, err := transaction.Env()
+	if err != nil {
+		return nil, err
+	}
+
+	return []string{praefectEnv, transactionEnv}, nil
 }
