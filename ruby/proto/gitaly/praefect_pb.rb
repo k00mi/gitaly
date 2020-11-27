@@ -7,6 +7,14 @@ require 'lint_pb'
 require 'shared_pb'
 Google::Protobuf::DescriptorPool.generated_pool.build do
   add_file("praefect.proto", :syntax => :proto3) do
+    add_message "gitaly.SetReplicationFactorRequest" do
+      optional :virtual_storage, :string, 1
+      optional :relative_path, :string, 2
+      optional :replication_factor, :int32, 3
+    end
+    add_message "gitaly.SetReplicationFactorResponse" do
+      repeated :storages, :string, 1
+    end
     add_message "gitaly.SetAuthoritativeStorageRequest" do
       optional :virtual_storage, :string, 1
       optional :relative_path, :string, 2
@@ -60,6 +68,8 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
 end
 
 module Gitaly
+  SetReplicationFactorRequest = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.SetReplicationFactorRequest").msgclass
+  SetReplicationFactorResponse = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.SetReplicationFactorResponse").msgclass
   SetAuthoritativeStorageRequest = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.SetAuthoritativeStorageRequest").msgclass
   SetAuthoritativeStorageResponse = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.SetAuthoritativeStorageResponse").msgclass
   DatalossCheckRequest = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("gitaly.DatalossCheckRequest").msgclass

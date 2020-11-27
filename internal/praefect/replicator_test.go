@@ -367,7 +367,7 @@ func TestPropagateReplicationJob(t *testing.T) {
 
 	replmgr := NewReplMgr(logEntry, conf.VirtualStorageNames(), queue, rs, nodeMgr, NodeSetFromNodeManager(nodeMgr))
 
-	prf := NewGRPCServer(conf, logEntry, protoregistry.GitalyProtoPreregistered, coordinator.StreamDirector, nodeMgr, txMgr, queue, rs)
+	prf := NewGRPCServer(conf, logEntry, protoregistry.GitalyProtoPreregistered, coordinator.StreamDirector, nodeMgr, txMgr, queue, rs, nil)
 
 	listener, port := listenAvailPort(t)
 	ctx, cancel := testhelper.Context()

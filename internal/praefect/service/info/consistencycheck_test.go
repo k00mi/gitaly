@@ -115,7 +115,7 @@ func TestServer_ConsistencyCheck(t *testing.T) {
 	grpcSrv := grpc.NewServer()
 	defer grpcSrv.Stop()
 
-	gitalypb.RegisterPraefectInfoServiceServer(grpcSrv, NewServer(nm, conf, queue, nil))
+	gitalypb.RegisterPraefectInfoServiceServer(grpcSrv, NewServer(nm, conf, queue, nil, nil))
 	go grpcSrv.Serve(praefectListener)
 
 	infoConn, err := client.Dial("unix://"+praefectAddr, nil)

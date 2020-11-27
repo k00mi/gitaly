@@ -178,7 +178,7 @@ func runServer(t *testing.T, token string, required bool) (*grpc.Server, string,
 
 	coordinator := NewCoordinator(queue, nil, NewNodeManagerRouter(nodeMgr, nil), txMgr, conf, registry)
 
-	srv := NewGRPCServer(conf, logEntry, registry, coordinator.StreamDirector, nodeMgr, txMgr, queue, nil)
+	srv := NewGRPCServer(conf, logEntry, registry, coordinator.StreamDirector, nodeMgr, txMgr, queue, nil, nil)
 
 	serverSocketPath := testhelper.GetTemporaryGitalySocketFileName()
 

@@ -16,15 +16,18 @@ type Server struct {
 	conf    config.Config
 	queue   datastore.ReplicationEventQueue
 	rs      datastore.RepositoryStore
+
+	rfs ReplicationFactorSetter
 }
 
 // NewServer creates a new instance of a grpc InfoServiceServer
-func NewServer(nodeMgr nodes.Manager, conf config.Config, queue datastore.ReplicationEventQueue, rs datastore.RepositoryStore) gitalypb.PraefectInfoServiceServer {
+func NewServer(nodeMgr nodes.Manager, conf config.Config, queue datastore.ReplicationEventQueue, rs datastore.RepositoryStore, rfs ReplicationFactorSetter) gitalypb.PraefectInfoServiceServer {
 	return &Server{
 		nodeMgr: nodeMgr,
 		conf:    conf,
 		queue:   queue,
 		rs:      rs,
+		rfs:     rfs,
 	}
 }
 

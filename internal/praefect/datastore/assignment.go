@@ -74,14 +74,8 @@ AND   storage = ANY($3)
 	return assignedStorages, nil
 }
 
-// SetReplicationFactor assigns or unassigns host nodes from the repository to meet the desired replication factor.
-// SetReplicationFactor returns an error when trying to set a replication factor that exceeds the storage node count
-// in the virtual storage. An error is also returned when trying to set a replication factor below one. The primary node
-// won't be unassigned as it needs a copy of the repository to accept writes. Likewise, the primary is the first storage
-// that gets assigned when setting a replication factor for a repository. Assignments of unconfigured storages are ignored.
-// This might cause the actual replication factor to be higher than desired if the replication factor is set during an upgrade
-// from a Praefect node that does not yet know about a new node. As assignments of unconfigured storages are ignored, replication
-// factor of repositories assigned to a storage node removed from the cluster is effectively decreased.
+// SetReplicationFactor assigns or unassigns a repository's host nodes until the desired replication factor is met.
+// Please see the protobuf documentation of the method for details.
 func (s AssignmentStore) SetReplicationFactor(ctx context.Context, virtualStorage, relativePath string, replicationFactor int) ([]string, error) {
 	candidateStorages, ok := s.configuredStorages[virtualStorage]
 	if !ok {

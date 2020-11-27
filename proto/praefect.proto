@@ -24,6 +24,32 @@ service PraefectInfoService {
   // This causes the current version of the repository on the authoritative storage to be considered the
   // latest and overwrite any other version on the virtual storage.
   rpc SetAuthoritativeStorage(SetAuthoritativeStorageRequest) returns (SetAuthoritativeStorageResponse);
+
+  // SetReplicationFactor assigns or unassigns host nodes from the repository to meet the desired replication factor.
+  // SetReplicationFactor returns an error when trying to set a replication factor that exceeds the storage node count
+  // in the virtual storage. An error is also returned when trying to set a replication factor below one. The primary node
+  // won't be unassigned as it needs a copy of the repository to accept writes. Likewise, the primary is the first storage
+  // that gets assigned when setting a replication factor for a repository. Assignments of unconfigured storages are ignored.
+  // This might cause the actual replication factor to be higher than desired if the replication factor is set during an upgrade
+  // from a Praefect node that does not yet know about a new node. As assignments of unconfigured storages are ignored, replication
+  // factor of repositories assigned to a storage node removed from the cluster is effectively decreased.
+  rpc SetReplicationFactor(SetReplicationFactorRequest) returns (SetReplicationFactorResponse);
+}
+
+// SetReplicationFactorRequest sets the desired replication factor for a repository.
+message SetReplicationFactorRequest {
+  // virtual_storage is the virtual storage the repository is located in
+  string virtual_storage = 1;
+  // relative_path is the relative path of the repository
+  string relative_path = 2;
+  // replication_factor is the desired replication factor. Replication must be equal or greater than 1.
+  int32 replication_factor = 3;
+}
+
+// SetReplicationFactorResponse returns the assigned hosts after setting the desired replication factor.
+message SetReplicationFactorResponse {
+  // storages are the storages assigned to host the repository.
+  repeated string storages = 1;
 }
 
 message SetAuthoritativeStorageRequest {
