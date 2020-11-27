@@ -70,7 +70,7 @@ func assertContainsLocalBranch(t *testing.T, branches []*gitalypb.FindLocalBranc
 
 	for _, b := range branches {
 		if bytes.Equal(branch.Name, b.Name) {
-			if !testhelper.FindLocalBranchResponsesEqual(branch, b) {
+			if !findLocalBranchResponsesEqual(branch, b) {
 				t.Errorf("Expected branch\n%v\ngot\n%v", branch, b)
 			}
 
@@ -79,6 +79,19 @@ func assertContainsLocalBranch(t *testing.T, branches []*gitalypb.FindLocalBranc
 		}
 	}
 	t.Errorf("Expected to find branch %q in local branches", branch.Name)
+}
+
+func findLocalBranchCommitAuthorsEqual(a *gitalypb.FindLocalBranchCommitAuthor, b *gitalypb.FindLocalBranchCommitAuthor) bool {
+	return bytes.Equal(a.Name, b.Name) &&
+		bytes.Equal(a.Email, b.Email) &&
+		a.Date.Seconds == b.Date.Seconds
+}
+
+func findLocalBranchResponsesEqual(a *gitalypb.FindLocalBranchResponse, b *gitalypb.FindLocalBranchResponse) bool {
+	return a.CommitId == b.CommitId &&
+		bytes.Equal(a.CommitSubject, b.CommitSubject) &&
+		findLocalBranchCommitAuthorsEqual(a.CommitAuthor, b.CommitAuthor) &&
+		findLocalBranchCommitAuthorsEqual(a.CommitCommitter, b.CommitCommitter)
 }
 
 func assertContainsBranch(t *testing.T, branches []*gitalypb.FindAllBranchesResponse_Branch, branch *gitalypb.FindAllBranchesResponse_Branch) {
