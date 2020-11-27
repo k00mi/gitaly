@@ -267,41 +267,56 @@ func TestReplicatorDowngradeAttempt(t *testing.T) {
 
 	ctx = correlation.ContextWithCorrelation(ctx, "correlation-id")
 
-	rs := datastore.MockRepositoryStore{
-		GetReplicatedGenerationFunc: func(ctx context.Context, virtualStorage, relativePath, source, target string) (int, error) {
-			return 0, datastore.DowngradeAttemptedError{
+	for _, tc := range []struct {
+		desc                string
+		attemptedGeneration int
+		expectedMessage     string
+	}{
+		{
+			desc:                "same generation attempted",
+			attemptedGeneration: 1,
+			expectedMessage:     "target repository already on the same generation, skipping replication job",
+		},
+		{
+			desc:                "lower generation attempted",
+			attemptedGeneration: 0,
+			expectedMessage:     "repository downgrade prevented",
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			returnedErr := datastore.DowngradeAttemptedError{
 				VirtualStorage:      "virtual-storage-1",
 				RelativePath:        "relative-path-1",
 				Storage:             "gitaly-2",
-				CurrentGeneration:   0,
-				AttemptedGeneration: 0,
+				CurrentGeneration:   1,
+				AttemptedGeneration: tc.attemptedGeneration,
 			}
-		},
+
+			rs := datastore.MockRepositoryStore{
+				GetReplicatedGenerationFunc: func(ctx context.Context, virtualStorage, relativePath, source, target string) (int, error) {
+					return 0, returnedErr
+				},
+			}
+
+			logger := testhelper.DiscardTestLogger(t)
+			hook := test.NewLocal(logger)
+			r := &defaultReplicator{rs: rs, log: logger}
+
+			require.NoError(t, r.Replicate(ctx, datastore.ReplicationEvent{
+				Job: datastore.ReplicationJob{
+					VirtualStorage:    "virtual-storage-1",
+					RelativePath:      "relative-path-1",
+					SourceNodeStorage: "gitaly-1",
+					TargetNodeStorage: "gitaly-2",
+				},
+			}, nil, nil))
+
+			require.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
+			require.Equal(t, returnedErr, hook.LastEntry().Data["error"])
+			require.Equal(t, "correlation-id", hook.LastEntry().Data[logWithCorrID])
+			require.Equal(t, tc.expectedMessage, hook.LastEntry().Message)
+		})
 	}
-
-	logger := testhelper.DiscardTestLogger(t)
-	hook := test.NewLocal(logger)
-	r := &defaultReplicator{rs: rs, log: logger}
-
-	require.NoError(t, r.Replicate(ctx, datastore.ReplicationEvent{
-		Job: datastore.ReplicationJob{
-			VirtualStorage:    "virtual-storage-1",
-			RelativePath:      "relative-path-1",
-			SourceNodeStorage: "gitaly-1",
-			TargetNodeStorage: "gitaly-2",
-		},
-	}, nil, nil))
-
-	require.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
-	require.Equal(t, datastore.DowngradeAttemptedError{
-		VirtualStorage:      "virtual-storage-1",
-		RelativePath:        "relative-path-1",
-		Storage:             "gitaly-2",
-		CurrentGeneration:   0,
-		AttemptedGeneration: 0,
-	}, hook.LastEntry().Data["error"])
-	require.Equal(t, "correlation-id", hook.LastEntry().Data[logWithCorrID])
-	require.Equal(t, "target repository already on the same generation, skipping replication job", hook.LastEntry().Message)
 }
 
 func TestPropagateReplicationJob(t *testing.T) {
