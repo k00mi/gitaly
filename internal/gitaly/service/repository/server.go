@@ -22,7 +22,7 @@ func NewServer(cfg config.Cfg, rs *rubyserver.Server, locator storage.Locator) g
 	return &server{
 		ruby:       rs,
 		locator:    locator,
-		conns:      client.NewPool(),
+		conns:      client.NewPoolWithOptions(client.WithDialOptions(client.FailOnNonTempDialError()...)),
 		cfg:        cfg,
 		binDir:     cfg.BinDir,
 		loggingCfg: cfg.Logging,

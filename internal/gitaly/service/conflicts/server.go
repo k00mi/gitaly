@@ -21,6 +21,6 @@ func NewServer(rs *rubyserver.Server, cfg config.Cfg, locator storage.Locator) g
 		ruby:    rs,
 		cfg:     cfg,
 		locator: locator,
-		pool:    client.NewPool(),
+		pool:    client.NewPoolWithOptions(client.WithDialOptions(client.FailOnNonTempDialError()...)),
 	}
 }

@@ -29,18 +29,6 @@ import (
 
 var proxyEnvironmentKeys = []string{"http_proxy", "https_proxy", "no_proxy"}
 
-func doDialAndExecuteCall(ctx context.Context, addr string) error {
-	conn, err := Dial(addr, nil)
-	if err != nil {
-		return fmt.Errorf("dial: %v", err)
-	}
-	defer conn.Close()
-
-	client := healthpb.NewHealthClient(conn)
-	_, err = client.Check(ctx, &healthpb.HealthCheckRequest{})
-	return err
-}
-
 func TestDial(t *testing.T) {
 	if emitProxyWarning() {
 		t.Log("WARNING. Proxy configuration detected from environment settings. This test failure may be related to proxy configuration. Please process with caution")
@@ -63,6 +51,7 @@ func TestDial(t *testing.T) {
 		name           string
 		rawAddress     string
 		envSSLCertFile string
+		dialOpts       []grpc.DialOption
 		expectFailure  bool
 	}{
 		{
@@ -112,6 +101,12 @@ func TestDial(t *testing.T) {
 			rawAddress:    "",
 			expectFailure: true,
 		},
+		{
+			name:          "dial fail if there is no listener on address",
+			rawAddress:    "tcp://invalid.address",
+			dialOpts:      FailOnNonTempDialError(),
+			expectFailure: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -127,11 +122,16 @@ func TestDial(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			err := doDialAndExecuteCall(ctx, tt.rawAddress)
+			conn, err := Dial(tt.rawAddress, tt.dialOpts)
 			if tt.expectFailure {
 				require.Error(t, err)
 				return
 			}
+
+			require.NoError(t, err)
+			defer conn.Close()
+
+			_, err = healthpb.NewHealthClient(conn).Check(ctx, &healthpb.HealthCheckRequest{})
 			require.NoError(t, err)
 		})
 	}

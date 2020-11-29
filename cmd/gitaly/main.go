@@ -128,7 +128,7 @@ func run(b *bootstrap.Bootstrap) error {
 	hookManager := hook.NewManager(config.NewLocator(config.Config), gitlabAPI, config.Config)
 	prometheus.MustRegister(hookManager)
 
-	conns := client.NewPool()
+	conns := client.NewPoolWithOptions(client.WithDialOptions(client.FailOnNonTempDialError()...))
 	defer conns.Close()
 
 	servers := server.NewGitalyServerFactory(hookManager, conns)

@@ -122,3 +122,11 @@ func getConnectionType(rawAddress string) connectionType {
 		return invalidConnection
 	}
 }
+
+// FailOnNonTempDialError helps to identify if remote listener is ready to accept new connections.
+func FailOnNonTempDialError() []grpc.DialOption {
+	return []grpc.DialOption{
+		grpc.WithBlock(),
+		grpc.FailOnNonTempDialError(true),
+	}
+}
