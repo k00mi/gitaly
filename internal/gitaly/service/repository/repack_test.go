@@ -13,7 +13,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git/gittest"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -93,7 +92,7 @@ func TestRepackLocal(t *testing.T) {
 
 	commiterArgs := []string{"-c", "user.name=Scrooge McDuck", "-c", "user.email=scrooge@mcduck.com"}
 	cmdArgs := append(commiterArgs, "-C", repoPath, "commit", "--allow-empty", "-m", "An empty commit")
-	cmd := exec.Command(command.GitPath(), cmdArgs...)
+	cmd := exec.Command(config.Config.Git.BinPath, cmdArgs...)
 	altObjectsDir := "./alt-objects"
 	altDirsCommit := testhelper.CreateCommitInAlternateObjectDirectory(t, repoPath, altObjectsDir, cmd)
 

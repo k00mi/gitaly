@@ -9,7 +9,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -233,7 +232,7 @@ func TestCleanupDisconnectedWorktrees(t *testing.T) {
 		"disconnecting worktree by removing work tree at %s should succeed", worktreePath,
 	)
 
-	err = exec.Command(command.GitPath(), testhelper.AddWorktreeArgs(testRepoPath, worktreePath)...).Run()
+	err = exec.Command(config.Config.Git.BinPath, testhelper.AddWorktreeArgs(testRepoPath, worktreePath)...).Run()
 	require.Error(t, err, "creating a new work tree at the same path as a disconnected work tree should fail")
 
 	// cleanup should prune the disconnected worktree administrative files

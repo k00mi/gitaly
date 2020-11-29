@@ -85,7 +85,7 @@ func (s *Server) start() error {
 
 	env := append(
 		os.Environ(),
-		"GITALY_RUBY_GIT_BIN_PATH="+command.GitPath(),
+		"GITALY_RUBY_GIT_BIN_PATH="+cfg.Git.BinPath,
 		fmt.Sprintf("GITALY_RUBY_WRITE_BUFFER_SIZE=%d", streamio.WriteBufferSize),
 		fmt.Sprintf("GITALY_RUBY_MAX_COMMIT_OR_TAG_MESSAGE_SIZE=%d", helper.MaxCommitOrTagMessageSize),
 		"GITALY_RUBY_GITALY_BIN_DIR="+cfg.BinDir,

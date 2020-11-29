@@ -305,7 +305,7 @@ func SafeCmdWithEnv(ctx context.Context, env []string, repo repository.GitRepo, 
 		return nil, err
 	}
 
-	return unsafeCmdWithEnv(ctx, append(env, cc.env...), CmdStream{
+	return NewCommandFactory().unsafeCmdWithEnv(ctx, append(env, cc.env...), CmdStream{
 		In:  cc.stdin,
 		Out: cc.stdout,
 		Err: cc.stderr,
@@ -326,7 +326,7 @@ func SafeBareCmd(ctx context.Context, stream CmdStream, env []string, globals []
 		return nil, err
 	}
 
-	return unsafeBareCmd(ctx, stream, append(env, cc.env...), args...)
+	return NewCommandFactory().unsafeBareCmd(ctx, stream, append(env, cc.env...), args...)
 }
 
 // SafeBareCmdInDir runs SafeBareCmd in the dir.
@@ -346,7 +346,7 @@ func SafeBareCmdInDir(ctx context.Context, dir string, stream CmdStream, env []s
 		return nil, err
 	}
 
-	return unsafeBareCmdInDir(ctx, dir, stream, append(env, cc.env...), args...)
+	return NewCommandFactory().unsafeBareCmdInDir(ctx, dir, stream, append(env, cc.env...), args...)
 }
 
 // SafeStdinCmd creates a git.Command with the given args and Repository that is
@@ -364,7 +364,7 @@ func SafeStdinCmd(ctx context.Context, repo repository.GitRepo, globals []Option
 		return nil, err
 	}
 
-	return unsafeStdinCmd(ctx, cc.env, repo, args...)
+	return NewCommandFactory().unsafeStdinCmd(ctx, cc.env, repo, args...)
 }
 
 // SafeCmdWithoutRepo works like Command but without a git repository. It
@@ -381,7 +381,7 @@ func SafeCmdWithoutRepo(ctx context.Context, stream CmdStream, globals []Option,
 		return nil, err
 	}
 
-	return unsafeBareCmd(ctx, stream, cc.env, args...)
+	return NewCommandFactory().unsafeBareCmd(ctx, stream, cc.env, args...)
 }
 
 func combineArgs(globals []Option, sc Cmd, cc *cmdCfg) (_ []string, err error) {

@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 )
 
@@ -22,7 +21,7 @@ func EnableGitProtocolV2Support(t *testing.T) func() {
 mkdir -p testdata
 env | grep ^GIT_PROTOCOL= >>"%s"
 exec "%s" "$@"
-`, envPath, command.GitPath())
+`, envPath, config.Config.Git.BinPath)
 
 	dir, cleanupDir := TempDir(t)
 

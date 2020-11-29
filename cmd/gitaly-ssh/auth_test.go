@@ -13,7 +13,6 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/client"
-	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
@@ -99,7 +98,7 @@ func TestConnectivity(t *testing.T) {
 	require.NoError(t, err)
 	for _, testcase := range testCases {
 		t.Run(testcase.name, func(t *testing.T) {
-			cmd := exec.Command(command.GitPath(), "ls-remote", "git@localhost:test/test.git", "refs/heads/master")
+			cmd := exec.Command(config.Config.Git.BinPath, "ls-remote", "git@localhost:test/test.git", "refs/heads/master")
 			cmd.Stderr = os.Stderr
 			cmd.Env = []string{
 				fmt.Sprintf("GITALY_PAYLOAD=%s", payload),

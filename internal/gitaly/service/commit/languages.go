@@ -47,7 +47,7 @@ func (s *server) CommitLanguages(ctx context.Context, req *gitalypb.CommitLangua
 	if err != nil {
 		return nil, err
 	}
-	stats, err := linguist.Stats(ctx, repoPath, commitID)
+	stats, err := linguist.Stats(ctx, s.cfg, repoPath, commitID)
 	if err != nil {
 		return nil, err
 	}

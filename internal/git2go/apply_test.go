@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -19,7 +18,7 @@ func TestExecutor_Apply(t *testing.T) {
 	defer clean()
 
 	repo := git.NewRepository(pbRepo)
-	executor := New(filepath.Join(config.Config.BinDir, "gitaly-git2go"), command.GitPath())
+	executor := New(filepath.Join(config.Config.BinDir, "gitaly-git2go"), config.Config.Git.BinPath)
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()

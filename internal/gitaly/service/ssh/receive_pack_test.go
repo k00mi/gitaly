@@ -14,7 +14,6 @@ import (
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/git/objectpool"
@@ -326,7 +325,7 @@ func sshPush(t *testing.T, cloneDetails SSHCloneDetails, serverSocketPath string
 	})
 	require.NoError(t, err)
 
-	cmd := exec.Command(command.GitPath(), "-C", cloneDetails.LocalRepoPath, "push", "-v", "git@localhost:test/test.git", "master")
+	cmd := exec.Command(config.Config.Git.BinPath, "-C", cloneDetails.LocalRepoPath, "push", "-v", "git@localhost:test/test.git", "master")
 	cmd.Env = []string{
 		fmt.Sprintf("GITALY_PAYLOAD=%s", payload),
 		fmt.Sprintf("GITALY_ADDRESS=%s", serverSocketPath),

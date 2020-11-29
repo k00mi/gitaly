@@ -39,7 +39,7 @@ func main() {
 	if subCmd == "check" {
 		logrus.SetLevel(logrus.ErrorLevel)
 		if len(os.Args) != 3 {
-			logger.Fatal(errors.New("no configuration file path provided invoke with: gitaly-hooks check <config_path>"))
+			log.Fatal(errors.New("no configuration file path provided invoke with: gitaly-hooks check <config_path>"))
 		}
 
 		configPath := os.Args[2]
