@@ -27,28 +27,34 @@ func (s *server) UserCreateBranch(ctx context.Context, req *gitalypb.UserCreateB
 	}
 
 	if req.User == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Bad Request (empty user)")
+		return nil, status.Errorf(codes.InvalidArgument, "empty user")
 	}
 
 	if len(req.StartPoint) == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "Bad Request (empty starting point)")
+		return nil, status.Errorf(codes.InvalidArgument, "empty start point")
 	}
 
+	// BEGIN TODO: Uncomment if StartPoint started behaving sensibly
+	// like BranchName. See
+	// https://gitlab.com/gitlab-org/gitaly/-/issues/3331
+	//
+	// startPointReference, err := git.NewRepository(req.Repository).GetReference(ctx, "refs/heads/"+string(req.StartPoint))
+	// startPointCommit, err := log.GetCommit(ctx, req.Repository, startPointReference.Target)
 	startPointCommit, err := log.GetCommit(ctx, req.Repository, string(req.StartPoint))
+	// END TODO
 	if err != nil {
-		return nil, helper.ErrPreconditionFailed(err)
+		return nil, status.Errorf(codes.FailedPrecondition, "revspec '%s' not found", req.StartPoint)
 	}
 
-	_, err = git.NewRepository(req.Repository).GetBranch(ctx, string(req.BranchName))
+	referenceName := fmt.Sprintf("refs/heads/%s", req.BranchName)
+	_, err = git.NewRepository(req.Repository).GetReference(ctx, referenceName)
 	if err == nil {
-		return nil, status.Errorf(codes.FailedPrecondition, "Bad Request (branch exists)")
+		return nil, status.Errorf(codes.FailedPrecondition, "Could not update %s. Please refresh and try again.", req.BranchName)
 	} else if !errors.Is(err, git.ErrReferenceNotFound) {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	branch := fmt.Sprintf("refs/heads/%s", req.BranchName)
-
-	if err := s.updateReferenceWithHooks(ctx, req.Repository, req.User, branch, string(req.StartPoint), git.NullSHA); err != nil {
+	if err := s.updateReferenceWithHooks(ctx, req.Repository, req.User, referenceName, startPointCommit.Id, git.NullSHA); err != nil {
 		var preReceiveError preReceiveError
 		if errors.As(err, &preReceiveError) {
 			return &gitalypb.UserCreateBranchResponse{
