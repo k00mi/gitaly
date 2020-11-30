@@ -57,16 +57,16 @@ func TestSuccessfulDeleteRefs(t *testing.T) {
 			refs, err := git.NewRepository(repo).GetReferences(ctx, "refs/")
 			require.NoError(t, err)
 
-			refs := make([]string, len(refs))
+			refNames := make([]string, len(refs))
 			for i, branch := range refs {
-				refs[i] = branch.Name
+				refNames[i] = branch.Name
 			}
 
-			require.NotContains(t, refs, "refs/delete/a")
-			require.NotContains(t, refs, "refs/also-delete/b")
-			require.Contains(t, refs, "refs/keep/c")
-			require.Contains(t, refs, "refs/also-keep/d")
-			require.Contains(t, refs, "refs/heads/master")
+			require.NotContains(t, refNames, "refs/delete/a")
+			require.NotContains(t, refNames, "refs/also-delete/b")
+			require.Contains(t, refNames, "refs/keep/c")
+			require.Contains(t, refNames, "refs/also-keep/d")
+			require.Contains(t, refNames, "refs/heads/master")
 		})
 	}
 }

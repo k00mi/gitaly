@@ -438,13 +438,6 @@ func AssertPathNotExists(t testing.TB, path string) {
 	assert.True(t, os.IsNotExist(err), "file should not exist: %s", path)
 }
 
-// CreateLooseRef creates a ref that points to master
-func CreateLooseRef(t testing.TB, repoPath, refName string) {
-	relRefPath := fmt.Sprintf("refs/heads/%s", refName)
-	MustRunCommand(t, nil, "git", "-C", repoPath, "update-ref", relRefPath, "master")
-	require.FileExists(t, filepath.Join(repoPath, relRefPath), "ref must be in loose file")
-}
-
 // TempDir is a wrapper around ioutil.TempDir that provides a cleanup function.
 func TempDir(t testing.TB) (string, func()) {
 	if testDirectory == "" {
