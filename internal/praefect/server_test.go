@@ -891,13 +891,16 @@ func TestErrorThreshold(t *testing.T) {
 	testCases := []struct {
 		desc     string
 		accessor bool
+		error    error
 	}{
 		{
 			desc:     "read threshold reached",
 			accessor: true,
+			error:    errors.New(`read error threshold reached for storage "praefect-internal-0"`),
 		},
 		{
-			desc: "write threshold reached",
+			desc:  "write threshold reached",
+			error: errors.New(`write error threshold reached for storage "praefect-internal-0"`),
 		},
 	}
 
@@ -917,7 +920,7 @@ func TestErrorThreshold(t *testing.T) {
 				writeThreshold = 5000
 			}
 
-			errorTracker, err := tracker.NewErrors(ctx, 10*time.Second, readThreshold, writeThreshold)
+			errorTracker, err := tracker.NewErrors(ctx, 10*time.Hour, readThreshold, writeThreshold)
 			require.NoError(t, err)
 
 			rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
@@ -950,15 +953,19 @@ func TestErrorThreshold(t *testing.T) {
 			require.NoError(t, err)
 			cli := mock.NewSimpleServiceClient(conn)
 
-			nodeMgr.Start(0, time.Nanosecond)
 			repo, _, cleanup := testhelper.NewTestRepo(t)
 			defer cleanup()
 
-			shard, err := nodeMgr.GetShard(ctx, "default")
-			require.NoError(t, err)
-			require.Equal(t, "praefect-internal-0", shard.Primary.GetStorage())
+			node := nodeMgr.Nodes()["default"][0]
+			require.Equal(t, "praefect-internal-0", node.GetStorage())
 
-			expectedErr := status.Error(codes.Internal, "something went wrong")
+			// to get the node in a healthy starting state, three consecutive successful checks
+			// are needed
+			for i := 0; i < 3; i++ {
+				healthy, err := node.CheckHealth(ctx)
+				require.NoError(t, err)
+				require.True(t, healthy)
+			}
 
 			for i := 0; i < 5; i++ {
 				ctx := grpc_metadata.AppendToOutgoingContext(ctx, "bad-header", "true")
@@ -968,17 +975,17 @@ func TestErrorThreshold(t *testing.T) {
 					handler = cli.RepoAccessorUnary
 				}
 
-				_, err := handler(ctx, &mock.RepoRequest{Repo: repo})
-				require.Equal(t, expectedErr, err)
+				healthy, err := node.CheckHealth(ctx)
+				require.NoError(t, err)
+				require.True(t, healthy)
+
+				_, err = handler(ctx, &mock.RepoRequest{Repo: repo})
+				require.Equal(t, status.Error(codes.Internal, "something went wrong"), err)
 			}
 
-			for i := 0; i < 50; i++ {
-				if _, err = nodeMgr.GetShard(ctx, "default"); err != nil {
-					break
-				}
-				time.Sleep(1 * time.Millisecond)
-			}
-			require.Equal(t, nodes.ErrPrimaryNotHealthy, err)
+			healthy, err := node.CheckHealth(ctx)
+			require.Equal(t, tc.error, err)
+			require.False(t, healthy)
 		})
 	}
 }

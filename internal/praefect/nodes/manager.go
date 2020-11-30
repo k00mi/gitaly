@@ -357,41 +357,27 @@ func (n *nodeStatus) updateStatus(status bool) {
 }
 
 func (n *nodeStatus) CheckHealth(ctx context.Context) (bool, error) {
+	health := healthpb.NewHealthClient(n.clientConn)
 	if n.errTracker != nil {
-		if n.errTracker.ReadThresholdReached(n.GetStorage()) {
-			n.updateStatus(false)
-			return false, fmt.Errorf("read error threshold reached for storage %q", n.GetStorage())
-		}
-
-		if n.errTracker.WriteThresholdReached(n.GetStorage()) {
-			n.updateStatus(false)
-			return false, fmt.Errorf("write error threshold reached for storage %q", n.GetStorage())
-		}
+		health = tracker.NewHealthClient(health, n.GetStorage(), n.errTracker)
 	}
 
-	health := healthpb.NewHealthClient(n.clientConn)
 	ctx, cancel := context.WithTimeout(ctx, healthcheckTimeout)
 	defer cancel()
-	status := false
 
 	start := time.Now()
-	resp, err := health.Check(ctx, &healthpb.HealthCheckRequest{Service: ""})
+	resp, err := health.Check(ctx, &healthpb.HealthCheckRequest{})
 	n.latencyHist.WithLabelValues(n.node.Storage).Observe(time.Since(start).Seconds())
-
-	if err == nil && resp.Status == healthpb.HealthCheckResponse_SERVING {
-		status = true
-	} else {
+	if err != nil {
 		n.log.WithError(err).WithFields(logrus.Fields{
 			"storage": n.node.Storage,
 			"address": n.node.Address,
 		}).Warn("error when pinging healthcheck")
 	}
 
-	var gaugeValue float64
-	if status {
-		gaugeValue = 1
-	}
-	metrics.NodeLastHealthcheckGauge.WithLabelValues(n.GetStorage()).Set(gaugeValue)
+	status := resp.GetStatus() == healthpb.HealthCheckResponse_SERVING
+
+	metrics.NodeLastHealthcheckGauge.WithLabelValues(n.GetStorage()).Set(metrics.BoolAsFloat(status))
 
 	n.updateStatus(status)
 
