@@ -1,3 +1,5 @@
+// +build postgres
+
 package main
 
 import (
@@ -7,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore/glsql"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/service/info"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -33,10 +36,29 @@ func TestDatalossSubcommand(t *testing.T) {
 		},
 	}
 
-	gs := datastore.NewMemoryRepositoryStore(map[string][]string{
-		"virtual-storage-1": {"gitaly-1", "gitaly-2", "gitaly-3"},
-		"virtual-storage-2": {"gitaly-4"},
-	})
+	cfg := config.Config{
+		VirtualStorages: []*config.VirtualStorage{
+			{
+				Name: "virtual-storage-1",
+				Nodes: []*config.Node{
+					{Storage: "gitaly-1"},
+					{Storage: "gitaly-2"},
+					{Storage: "gitaly-3"},
+				},
+			},
+			{
+				Name: "virtual-storage-2",
+				Nodes: []*config.Node{
+					{Storage: "gitaly-4"},
+				},
+			},
+		},
+	}
+
+	db := glsql.GetDB(t, "cmd_praefect")
+	defer glsql.Clean()
+
+	gs := datastore.NewPostgresRepositoryStore(db, cfg.StorageNames())
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
@@ -48,7 +70,7 @@ func TestDatalossSubcommand(t *testing.T) {
 	require.NoError(t, gs.SetGeneration(ctx, "virtual-storage-1", "repository-2", "gitaly-3", 0))
 
 	ln, clean := listenAndServe(t, []svcRegistrar{
-		registerPraefectInfoServer(info.NewServer(mgr, config.Config{}, nil, gs))})
+		registerPraefectInfoServer(info.NewServer(mgr, cfg, nil, gs))})
 	defer clean()
 	for _, tc := range []struct {
 		desc            string
@@ -65,34 +87,49 @@ func TestDatalossSubcommand(t *testing.T) {
 		{
 			desc: "data loss with read-only repositories",
 			args: []string{"-virtual-storage=virtual-storage-1"}, output: `Virtual storage: virtual-storage-1
-  Primary: gitaly-1
   Outdated repositories:
     repository-2 (read-only):
-      gitaly-1 is behind by 1 change or less
+      Primary: gitaly-1
+      In-Sync Storages:
+        gitaly-2, assigned host
+        gitaly-3, assigned host
+      Outdated Storages:
+        gitaly-1 is behind by 1 change or less, assigned host
 `,
 		},
 		{
 			desc: "data loss with partially replicated repositories",
 			args: []string{"-virtual-storage=virtual-storage-1", "-partially-replicated"}, output: `Virtual storage: virtual-storage-1
-  Primary: gitaly-1
   Outdated repositories:
     repository-1 (writable):
-      gitaly-2 is behind by 1 change or less
-      gitaly-3 is behind by 2 changes or less
+      Primary: gitaly-1
+      In-Sync Storages:
+        gitaly-1, assigned host
+      Outdated Storages:
+        gitaly-2 is behind by 1 change or less, assigned host
+        gitaly-3 is behind by 2 changes or less, assigned host
     repository-2 (read-only):
-      gitaly-1 is behind by 1 change or less
+      Primary: gitaly-1
+      In-Sync Storages:
+        gitaly-2, assigned host
+        gitaly-3, assigned host
+      Outdated Storages:
+        gitaly-1 is behind by 1 change or less, assigned host
 `,
 		},
 		{
 			desc:            "multiple virtual storages with read-only repositories",
 			virtualStorages: []*config.VirtualStorage{{Name: "virtual-storage-2"}, {Name: "virtual-storage-1"}},
 			output: `Virtual storage: virtual-storage-1
-  Primary: gitaly-1
   Outdated repositories:
     repository-2 (read-only):
-      gitaly-1 is behind by 1 change or less
+      Primary: gitaly-1
+      In-Sync Storages:
+        gitaly-2, assigned host
+        gitaly-3, assigned host
+      Outdated Storages:
+        gitaly-1 is behind by 1 change or less, assigned host
 Virtual storage: virtual-storage-2
-  Primary: gitaly-4
   All repositories are writable!
 `,
 		},
@@ -101,15 +138,22 @@ Virtual storage: virtual-storage-2
 			args:            []string{"-partially-replicated"},
 			virtualStorages: []*config.VirtualStorage{{Name: "virtual-storage-2"}, {Name: "virtual-storage-1"}},
 			output: `Virtual storage: virtual-storage-1
-  Primary: gitaly-1
   Outdated repositories:
     repository-1 (writable):
-      gitaly-2 is behind by 1 change or less
-      gitaly-3 is behind by 2 changes or less
+      Primary: gitaly-1
+      In-Sync Storages:
+        gitaly-1, assigned host
+      Outdated Storages:
+        gitaly-2 is behind by 1 change or less, assigned host
+        gitaly-3 is behind by 2 changes or less, assigned host
     repository-2 (read-only):
-      gitaly-1 is behind by 1 change or less
+      Primary: gitaly-1
+      In-Sync Storages:
+        gitaly-2, assigned host
+        gitaly-3, assigned host
+      Outdated Storages:
+        gitaly-1 is behind by 1 change or less, assigned host
 Virtual storage: virtual-storage-2
-  Primary: gitaly-4
   All repositories are up to date!
 `,
 		},

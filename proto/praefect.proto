@@ -50,6 +50,8 @@ message DatalossCheckResponse {
       string name = 1;
       // behind_by indicates how many generations this storage is behind.
       int64 behind_by = 2;
+      // assigned indicates whether the storage is assigned to host the repository.
+      bool assigned = 3;
     }
 
     // relative path of the repository with outdated replicas
@@ -58,10 +60,10 @@ message DatalossCheckResponse {
     repeated Storage storages = 2;
     // read_only indicates whether the repository is in read-only mode.
     bool read_only = 3;
-  }
 
-  // current primary storage
-  string primary = 1;
+    // current primary storage of the repository
+    string primary = 4;
+  }
 
   // repositories with data loss
   repeated Repository repositories = 2;

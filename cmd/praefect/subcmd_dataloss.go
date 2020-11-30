@@ -89,7 +89,6 @@ func (cmd *datalossSubcommand) Exec(flags *flag.FlagSet, cfg config.Config) erro
 		}
 
 		cmd.println(0, "Virtual storage: %s", vs)
-		cmd.println(1, "Primary: %s", resp.Primary)
 		if len(resp.Repositories) == 0 {
 			msg := "All repositories are writable!"
 			if cmd.includePartiallyReplicated {
@@ -108,16 +107,46 @@ func (cmd *datalossSubcommand) Exec(flags *flag.FlagSet, cfg config.Config) erro
 			}
 
 			cmd.println(2, "%s (%s):", repo.RelativePath, mode)
-			for _, s := range repo.Storages {
+
+			primary := repo.Primary
+			if primary == "" {
+				primary = "No Primary"
+			}
+			cmd.println(3, "Primary: %s", primary)
+
+			cmd.println(3, "In-Sync Storages:")
+			for _, storage := range repo.Storages {
+				if storage.BehindBy != 0 {
+					continue
+				}
+
+				cmd.println(4, "%s%s", storage.Name, assignedMessage(storage.Assigned))
+			}
+
+			cmd.println(3, "Outdated Storages:")
+			for _, storage := range repo.Storages {
+				if storage.BehindBy == 0 {
+					continue
+				}
+
 				plural := ""
-				if s.BehindBy > 1 {
+				if storage.BehindBy > 1 {
 					plural = "s"
 				}
 
-				cmd.println(3, "%s is behind by %d change%s or less", s.Name, s.BehindBy, plural)
+				cmd.println(4, "%s is behind by %d change%s or less%s", storage.Name, storage.BehindBy, plural, assignedMessage(storage.Assigned))
 			}
 		}
 	}
 
 	return nil
+}
+
+func assignedMessage(assigned bool) string {
+	assignedMsg := ""
+	if assigned {
+		assignedMsg = ", assigned host"
+	}
+
+	return assignedMsg
 }
