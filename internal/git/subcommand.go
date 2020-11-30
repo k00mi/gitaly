@@ -1,67 +1,57 @@
 package git
 
-// Curated list of Git command names for special git.SafeCmd validation logic
 const (
-	scCatFile        = "cat-file"
-	scLog            = "log"
-	scForEachRef     = "for-each-ref"
-	scRevParse       = "rev-parse"
-	scCountObjects   = "count-objects"
-	scConfig         = "config"
-	scMultiPackIndex = "multi-pack-index"
-	scRepack         = "repack"
-	scDiff           = "diff"
-	scDiffTree       = "diff-tree"
-	scPackRefs       = "pack-refs"
-	scMergeBase      = "merge-base"
-	scHashObject     = "hash-object"
-	scShowRef        = "show-ref"
-	scUploadPack     = "upload-pack"
-	scUploadArchive  = "upload-archive"
-	scBlame          = "blame"
-	scLsTree         = "ls-tree"
-	scRevList        = "rev-list"
-	scLsRemote       = "ls-remote"
-	scFsck           = "fsck"
-	scGrep           = "grep"
-	scBundle         = "bundle"
-	scArchive        = "archive"
-	scFormatPatch    = "format-patch"
-	scInit           = "init"
+	// scReadOnly denotes a read-only command
+	scReadOnly = 1 << iota
+	// scNoRefUpdates denotes a command which will never update refs
+	scNoRefUpdates
+	// scNoEndOfOptions denotes a command which doesn't know --end-of-options
+	scNoEndOfOptions
 )
 
-var knownReadOnlyCmds = map[string]struct{}{
-	scCatFile:       struct{}{},
-	scLog:           struct{}{},
-	scForEachRef:    struct{}{},
-	scRevParse:      struct{}{},
-	scCountObjects:  struct{}{},
-	scDiff:          struct{}{},
-	scDiffTree:      struct{}{},
-	scMergeBase:     struct{}{},
-	scShowRef:       struct{}{},
-	scUploadPack:    struct{}{},
-	scUploadArchive: struct{}{},
-	scBlame:         struct{}{},
-	scLsTree:        struct{}{},
-	scRevList:       struct{}{},
-	scLsRemote:      struct{}{},
-	scFsck:          struct{}{},
-	scGrep:          struct{}{},
-	scBundle:        struct{}{},
-	scArchive:       struct{}{},
-	scFormatPatch:   struct{}{},
-}
-
-// knownNoRefUpdates indicates all repo mutating commands where it is known
-// whether references are never updated
-var knownNoRefUpdates = map[string]struct{}{
-	scConfig:         struct{}{},
-	scMultiPackIndex: struct{}{},
-	scRepack:         struct{}{},
-	scPackRefs:       struct{}{},
-	scHashObject:     struct{}{},
-	scInit:           struct{}{},
+// subcommands is a curated list of Git command names for special git.SafeCmd
+// validation logic
+var subcommands = map[string]uint{
+	"apply":            scNoRefUpdates,
+	"archive":          scReadOnly | scNoEndOfOptions,
+	"blame":            scReadOnly | scNoEndOfOptions,
+	"bundle":           scReadOnly,
+	"cat-file":         scReadOnly,
+	"checkout":         scNoEndOfOptions,
+	"clone":            scNoEndOfOptions,
+	"commit":           0,
+	"commit-graph":     scNoRefUpdates,
+	"config":           scNoRefUpdates | scNoEndOfOptions,
+	"count-objects":    scReadOnly,
+	"diff":             scReadOnly,
+	"diff-tree":        scReadOnly,
+	"fetch":            0,
+	"for-each-ref":     scReadOnly | scNoEndOfOptions,
+	"format-patch":     scReadOnly,
+	"fsck":             scReadOnly,
+	"gc":               scNoRefUpdates,
+	"grep":             scReadOnly | scNoEndOfOptions,
+	"hash-object":      scNoRefUpdates,
+	"init":             scNoRefUpdates,
+	"linguist":         scNoEndOfOptions,
+	"log":              scReadOnly,
+	"ls-remote":        scReadOnly,
+	"ls-tree":          scReadOnly | scNoEndOfOptions,
+	"merge-base":       scReadOnly,
+	"multi-pack-index": scNoRefUpdates,
+	"pack-refs":        scNoRefUpdates,
+	"receive-pack":     0,
+	"remote":           scNoEndOfOptions,
+	"repack":           scNoRefUpdates,
+	"rev-list":         scReadOnly,
+	"rev-parse":        scReadOnly | scNoEndOfOptions,
+	"show-ref":         scReadOnly,
+	"symbolic-ref":     0,
+	"tag":              0,
+	"update-ref":       0,
+	"upload-archive":   scReadOnly | scNoEndOfOptions,
+	"upload-pack":      scReadOnly,
+	"worktree":         0,
 }
 
 // mayUpdateRef indicates if a subcommand is known to update references.
@@ -70,11 +60,19 @@ var knownNoRefUpdates = map[string]struct{}{
 // refs are updated. When unknown, true is returned to err on the side of
 // caution.
 func mayUpdateRef(subcmd string) bool {
-	if _, ok := knownReadOnlyCmds[subcmd]; ok {
-		return false
+	flags, ok := subcommands[subcmd]
+	if !ok {
+		return true
 	}
-	if _, ok := knownNoRefUpdates[subcmd]; ok {
-		return false
+	return flags&(scReadOnly|scNoRefUpdates) == 0
+}
+
+// supportsEndOfOptions indicates whether a command can handle the
+// `--end-of-options` option.
+func supportsEndOfOptions(subcmd string) bool {
+	flags, ok := subcommands[subcmd]
+	if !ok {
+		return true
 	}
-	return true
+	return flags&scNoEndOfOptions == 0
 }
