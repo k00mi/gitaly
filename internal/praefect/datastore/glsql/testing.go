@@ -11,6 +11,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/lib/pq"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 )
@@ -31,12 +32,12 @@ type DB struct {
 func (db DB) Truncate(t testing.TB, tables ...string) {
 	t.Helper()
 
-	tmpl := strings.Repeat("TRUNCATE TABLE %q RESTART IDENTITY CASCADE;\n", len(tables))
-	params := make([]interface{}, len(tables))
+	params := make([]string, len(tables))
 	for i, table := range tables {
-		params[i] = table
+		params[i] = pq.QuoteIdentifier(table) + " *"
 	}
-	query := fmt.Sprintf(tmpl, params...)
+
+	query := fmt.Sprintf("TRUNCATE TABLE %s RESTART IDENTITY CASCADE", strings.Join(params, ", "))
 	_, err := db.DB.Exec(query)
 	require.NoError(t, err, "database truncation failed: %s", tables)
 }
