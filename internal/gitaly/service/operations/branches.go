@@ -102,6 +102,9 @@ func (s *Server) UserUpdateBranch(ctx context.Context, req *gitalypb.UserUpdateB
 }
 
 func (s *Server) UserDeleteBranch(ctx context.Context, req *gitalypb.UserDeleteBranchRequest) (*gitalypb.UserDeleteBranchResponse, error) {
+	// That we do the branch name & user check here first only in
+	// UserDelete but not UserCreate is "intentional", i.e. it's
+	// always been that way.
 	if len(req.BranchName) == 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "Bad Request (empty branch name)")
 	}
@@ -110,11 +113,10 @@ func (s *Server) UserDeleteBranch(ctx context.Context, req *gitalypb.UserDeleteB
 		return nil, status.Errorf(codes.InvalidArgument, "Bad Request (empty user)")
 	}
 
+	// Implement UserDeleteBranch in Go
 	if featureflag.IsDisabled(ctx, featureflag.GoUserDeleteBranch) {
 		return s.UserDeleteBranchRuby(ctx, req)
 	}
-
-	// Implement UserDeleteBranch in Go
 
 	revision, err := git.NewRepository(req.Repository).GetBranch(ctx, string(req.BranchName))
 	if err != nil {
