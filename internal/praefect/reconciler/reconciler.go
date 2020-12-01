@@ -25,14 +25,10 @@ type Reconciler struct {
 	// handleError is called with a possible error from reconcile.
 	// If it returns an error, Run stops and returns with the error.
 	handleError func(error) error
-	// assignmentsEnabled controls whether the reconciliation takes repository host node assignments
-	// in to consideration. If enabled, only assigned nodes are targeted by reconciliation jobs but any
-	// node can be used as a source. If disabled, all healthy nodes are considered assigned and targeted.
-	assignmentsEnabled bool
 }
 
 // NewReconciler returns a new Reconciler for repairing outdated repositories.
-func NewReconciler(log logrus.FieldLogger, db glsql.Querier, hc praefect.HealthChecker, storages map[string][]string, buckets []float64, assignmentsEnabled bool) *Reconciler {
+func NewReconciler(log logrus.FieldLogger, db glsql.Querier, hc praefect.HealthChecker, storages map[string][]string, buckets []float64) *Reconciler {
 	log = log.WithField("component", "reconciler")
 
 	r := &Reconciler{
@@ -53,7 +49,6 @@ func NewReconciler(log logrus.FieldLogger, db glsql.Querier, hc praefect.HealthC
 			log.WithError(err).Error("automatic reconciliation failed")
 			return nil
 		},
-		assignmentsEnabled: assignmentsEnabled,
 	}
 
 	// create the timeseries prior to having observations
@@ -167,8 +162,16 @@ WITH healthy_storages AS (
 			FROM repositories
 			JOIN healthy_storages USING (virtual_storage)
 			LEFT JOIN storage_repositories USING (virtual_storage, relative_path, storage)
+
 			WHERE COALESCE(storage_repositories.generation != repositories.generation, true)
-			AND (NOT $3 OR assigned)
+			AND (
+				-- If assignments exist for the repository, only the assigned storages are targeted for replication.
+				-- If no assignments exist, every healthy node is targeted for replication.
+				SELECT COUNT(storage) = 0 OR COUNT(storage) FILTER (WHERE storage = storage_repositories.storage) = 1
+				FROM repository_assignments
+				WHERE virtual_storage = storage_repositories.virtual_storage
+				AND   relative_path   = storage_repositories.relative_path
+			)
 			ORDER BY virtual_storage, relative_path
 		) AS unhealthy_repositories
 		JOIN (
@@ -204,7 +207,7 @@ SELECT
 	job->>'source_node_storage',
 	job->>'target_node_storage'
 FROM reconciliation_jobs
-`, pq.StringArray(virtualStorages), pq.StringArray(storages), r.assignmentsEnabled)
+`, pq.StringArray(virtualStorages), pq.StringArray(storages))
 	if err != nil {
 		return fmt.Errorf("query: %w", err)
 	}
