@@ -13,11 +13,9 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/metadatahandler"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
-	"gitlab.com/gitlab-org/gitaly/internal/praefect/metrics"
 	prommetrics "gitlab.com/gitlab-org/gitaly/internal/prometheus/metrics"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/labkit/correlation"
-	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
 
@@ -122,21 +120,6 @@ func (dr defaultReplicator) Replicate(ctx context.Context, event datastore.Repli
 		}); err != nil {
 			return err
 		}
-	}
-
-	checksumsMatch, err := dr.confirmChecksums(ctx, logger, gitalypb.NewRepositoryServiceClient(sourceCC), targetRepositoryClient, sourceRepository, targetRepository)
-	if err != nil {
-		return err
-	}
-
-	// TODO: Do something meaninful with the result of confirmChecksums if checksums do not match
-	if !checksumsMatch {
-		metrics.ChecksumMismatchCounter.WithLabelValues(
-			targetRepository.GetStorageName(),
-			sourceRepository.GetStorageName(),
-		).Inc()
-
-		logger.Error("checksums do not match")
 	}
 
 	if generation != datastore.GenerationUnknown {
@@ -285,39 +268,6 @@ func (dr defaultReplicator) RepackFull(ctx context.Context, event datastore.Repl
 	})
 
 	return err
-}
-
-func getChecksumFunc(ctx context.Context, client gitalypb.RepositoryServiceClient, repo *gitalypb.Repository, checksum *string) func() error {
-	return func() error {
-		primaryChecksumRes, err := client.CalculateChecksum(ctx, &gitalypb.CalculateChecksumRequest{
-			Repository: repo,
-		})
-		if err != nil {
-			return err
-		}
-		*checksum = primaryChecksumRes.GetChecksum()
-		return nil
-	}
-}
-
-func (dr defaultReplicator) confirmChecksums(ctx context.Context, logger logrus.FieldLogger, primaryClient, replicaClient gitalypb.RepositoryServiceClient, primary, replica *gitalypb.Repository) (bool, error) {
-	g, gCtx := errgroup.WithContext(ctx)
-
-	var primaryChecksum, replicaChecksum string
-
-	g.Go(getChecksumFunc(gCtx, primaryClient, primary, &primaryChecksum))
-	g.Go(getChecksumFunc(gCtx, replicaClient, replica, &replicaChecksum))
-
-	if err := g.Wait(); err != nil {
-		return false, err
-	}
-
-	logger.WithFields(logrus.Fields{
-		"primary_checksum": primaryChecksum,
-		"replica_checksum": replicaChecksum,
-	}).Info("checksum comparison completed")
-
-	return primaryChecksum == replicaChecksum, nil
 }
 
 // ReplMgr is a replication manager for handling replication jobs
