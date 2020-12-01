@@ -123,7 +123,7 @@ func (s *Server) UserDeleteBranch(ctx context.Context, req *gitalypb.UserDeleteB
 
 	branch := fmt.Sprintf("refs/heads/%s", req.BranchName)
 
-	if err := s.updateReferenceWithHooks(ctx, req.Repository, req.User, branch, git.NullSHA, revision.Name); err != nil {
+	if err := s.updateReferenceWithHooks(ctx, req.Repository, req.User, branch, git.NullSHA, revision.Target); err != nil {
 		var preReceiveError preReceiveError
 		if errors.As(err, &preReceiveError) {
 			return &gitalypb.UserDeleteBranchResponse{
