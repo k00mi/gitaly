@@ -78,11 +78,11 @@ func calculateOffsetManually(req *gitalypb.FindCommitsRequest) bool {
 // GetCommits wraps a git log command that can be interated on to get individual commit objects
 type GetCommits struct {
 	scanner *bufio.Scanner
-	batch   *catfile.Batch
+	batch   catfile.Batch
 }
 
 // NewGetCommits returns a new GetCommits object
-func NewGetCommits(cmd *command.Command, batch *catfile.Batch) *GetCommits {
+func NewGetCommits(cmd *command.Command, batch catfile.Batch) *GetCommits {
 	return &GetCommits{
 		scanner: bufio.NewScanner(cmd),
 		batch:   batch,
@@ -110,9 +110,9 @@ func (g *GetCommits) Offset(offset int) error {
 }
 
 // Commit returns the current commit
-func (g *GetCommits) Commit() (*gitalypb.GitCommit, error) {
+func (g *GetCommits) Commit(ctx context.Context) (*gitalypb.GitCommit, error) {
 	revision := strings.TrimSpace(g.scanner.Text())
-	commit, err := log.GetCommitCatfile(g.batch, revision)
+	commit, err := log.GetCommitCatfile(ctx, g.batch, revision)
 	if err != nil {
 		return nil, fmt.Errorf("cat-file get commit %q: %v", revision, err)
 	}
@@ -134,10 +134,12 @@ func (s *findCommitsSender) Send() error {
 }
 
 func streamCommits(getCommits *GetCommits, stream gitalypb.CommitService_FindCommitsServer) error {
+	ctx := stream.Context()
+
 	chunker := chunk.New(&findCommitsSender{stream: stream})
 
 	for getCommits.Scan() {
-		commit, err := getCommits.Commit()
+		commit, err := getCommits.Commit(ctx)
 		if err != nil {
 			return err
 		}

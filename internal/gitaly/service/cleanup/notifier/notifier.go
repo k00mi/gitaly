@@ -11,7 +11,7 @@ import (
 // Notifier sends messages stating that an OID has been rewritten, looking
 // up the type of the OID if necessary. It is not safe for concurrent use
 type Notifier struct {
-	catfile *catfile.Batch
+	catfile catfile.Batch
 	chunker *chunk.Chunker
 }
 
@@ -26,8 +26,8 @@ func New(ctx context.Context, repo *gitalypb.Repository, chunker *chunk.Chunker)
 }
 
 // Notify builds a new message and sends it to the chunker
-func (n *Notifier) Notify(oldOid, newOid string, isInternalRef bool) error {
-	objectType := n.lookupType(newOid, isInternalRef)
+func (n *Notifier) Notify(ctx context.Context, oldOid, newOid string, isInternalRef bool) error {
+	objectType := n.lookupType(ctx, newOid, isInternalRef)
 
 	entry := &gitalypb.ApplyBfgObjectMapStreamResponse_Entry{
 		Type:   objectType,
@@ -38,12 +38,12 @@ func (n *Notifier) Notify(oldOid, newOid string, isInternalRef bool) error {
 	return n.chunker.Send(entry)
 }
 
-func (n *Notifier) lookupType(oid string, isInternalRef bool) gitalypb.ObjectType {
+func (n *Notifier) lookupType(ctx context.Context, oid string, isInternalRef bool) gitalypb.ObjectType {
 	if isInternalRef {
 		return gitalypb.ObjectType_COMMIT
 	}
 
-	info, err := n.catfile.Info(oid)
+	info, err := n.catfile.Info(ctx, oid)
 	if err != nil {
 		return gitalypb.ObjectType_UNKNOWN
 	}

@@ -12,7 +12,7 @@ import (
 )
 
 // LastCommitForPath returns the last commit which modified path.
-func LastCommitForPath(ctx context.Context, batch *catfile.Batch, repo *gitalypb.Repository, revision string, path string, options *gitalypb.GlobalOptions) (*gitalypb.GitCommit, error) {
+func LastCommitForPath(ctx context.Context, batch catfile.Batch, repo *gitalypb.Repository, revision string, path string, options *gitalypb.GlobalOptions) (*gitalypb.GitCommit, error) {
 	cmd, err := git.SafeCmd(ctx, repo, git.ConvertGlobalOptions(options), git.SubCmd{
 		Name:        "log",
 		Flags:       []git.Option{git.Flag{Name: "--format=%H"}, git.Flag{Name: "--max-count=1"}},
@@ -27,7 +27,7 @@ func LastCommitForPath(ctx context.Context, batch *catfile.Batch, repo *gitalypb
 		return nil, err
 	}
 
-	return GetCommitCatfile(batch, text.ChompBytes(commitID))
+	return GetCommitCatfile(ctx, batch, text.ChompBytes(commitID))
 }
 
 // GitLogCommand returns a Command that executes git log with the given the arguments

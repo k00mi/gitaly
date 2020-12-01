@@ -144,7 +144,7 @@ func (s *server) cleanupKeepArounds(ctx context.Context, repo *gitalypb.Reposito
 		refName := fmt.Sprintf("%s/%s", keepAroundsPrefix, info.Name())
 		path := filepath.Join(repoPath, keepAroundsPrefix, info.Name())
 
-		if err = checkRef(batch, refName, info); err == nil {
+		if err = checkRef(ctx, batch, refName, info); err == nil {
 			continue
 		}
 
@@ -156,23 +156,23 @@ func (s *server) cleanupKeepArounds(ctx context.Context, repo *gitalypb.Reposito
 	return nil
 }
 
-func checkRef(batch *catfile.Batch, refName string, info os.FileInfo) error {
+func checkRef(ctx context.Context, batch catfile.Batch, refName string, info os.FileInfo) error {
 	if info.Size() == 0 {
 		return errors.New("checkRef: Ref file is empty")
 	}
 
-	_, err := batch.Info(refName)
+	_, err := batch.Info(ctx, refName)
 	return err
 }
 
-func (s *server) fixRef(ctx context.Context, repo *gitalypb.Repository, batch *catfile.Batch, refPath string, name string, sha string) error {
+func (s *server) fixRef(ctx context.Context, repo *gitalypb.Repository, batch catfile.Batch, refPath string, name string, sha string) error {
 	// So the ref is broken, let's get rid of it
 	if err := os.RemoveAll(refPath); err != nil {
 		return err
 	}
 
 	// If the sha is not in the the repository, we can't fix it
-	if _, err := batch.Info(sha); err != nil {
+	if _, err := batch.Info(ctx, sha); err != nil {
 		return nil
 	}
 

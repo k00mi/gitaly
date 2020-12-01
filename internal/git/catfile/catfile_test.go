@@ -47,7 +47,7 @@ func TestInfo(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			oi, err := c.Info(tc.spec)
+			oi, err := c.Info(ctx, tc.spec)
 			require.NoError(t, err)
 
 			require.Equal(t, tc.output, oi)
@@ -105,7 +105,7 @@ func TestBlob(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			blobObj, err := c.Blob(tc.spec)
+			blobObj, err := c.Blob(ctx, tc.spec)
 
 			if tc.requireErr != nil {
 				tc.requireErr(t, err)
@@ -149,7 +149,7 @@ func TestCommit(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			commitReader, err := c.Commit(tc.spec)
+			commitReader, err := c.Commit(ctx, tc.spec)
 			require.NoError(t, err)
 
 			contents, err := ioutil.ReadAll(commitReader)
@@ -210,7 +210,7 @@ func TestTag(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			tagObj, err := c.Tag(tc.spec)
+			tagObj, err := c.Tag(ctx, tc.spec)
 
 			if tc.requireErr != nil {
 				tc.requireErr(t, err)
@@ -277,7 +277,7 @@ func TestTree(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			treeObj, err := c.Tree(tc.spec)
+			treeObj, err := c.Tree(ctx, tc.spec)
 
 			if tc.requireErr != nil {
 				tc.requireErr(t, err)
@@ -308,7 +308,7 @@ func TestRepeatedCalls(t *testing.T) {
 	treeBytes, err := ioutil.ReadFile("testdata/tree-7e2f26d033ee47cd0745649d1a28277c56197921")
 	require.NoError(t, err)
 
-	tree1Obj, err := c.Tree(treeOid)
+	tree1Obj, err := c.Tree(ctx, treeOid)
 	require.NoError(t, err)
 
 	tree1, err := ioutil.ReadAll(tree1Obj.Reader)
@@ -316,22 +316,22 @@ func TestRepeatedCalls(t *testing.T) {
 
 	require.Equal(t, string(treeBytes), string(tree1))
 
-	blobReader, err := c.Blob("dfaa3f97ca337e20154a98ac9d0be76ddd1fcc82")
+	blobReader, err := c.Blob(ctx, "dfaa3f97ca337e20154a98ac9d0be76ddd1fcc82")
 	require.NoError(t, err)
 
-	_, err = c.Tree(treeOid)
+	_, err = c.Tree(ctx, treeOid)
 	require.Error(t, err, "request should fail because of unconsumed blob data")
 
 	_, err = io.CopyN(ioutil.Discard, blobReader, 10)
 	require.NoError(t, err)
 
-	_, err = c.Tree(treeOid)
+	_, err = c.Tree(ctx, treeOid)
 	require.Error(t, err, "request should fail because of unconsumed blob data")
 
 	_, err = io.Copy(ioutil.Discard, blobReader)
 	require.NoError(t, err, "blob reading should still work")
 
-	tree2Obj, err := c.Tree(treeOid)
+	tree2Obj, err := c.Tree(ctx, treeOid)
 	require.NoError(t, err)
 
 	tree2, err := ioutil.ReadAll(tree2Obj.Reader)
@@ -406,7 +406,7 @@ func TestSpawnFailure(t *testing.T) {
 	)
 }
 
-func catfileWithFreshSessionID(ctx context.Context, repo *gitalypb.Repository) (*Batch, error) {
+func catfileWithFreshSessionID(ctx context.Context, repo *gitalypb.Repository) (Batch, error) {
 	id, err := text.RandomHex(4)
 	if err != nil {
 		return nil, err

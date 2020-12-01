@@ -154,7 +154,7 @@ func TestGetCommitCatfile(t *testing.T) {
 	require.NoError(t, err)
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			c, err := GetCommitCatfile(c, tc.revision)
+			c, err := GetCommitCatfile(ctx, c, tc.revision)
 
 			if tc.errStr == "" {
 				require.NoError(t, err)

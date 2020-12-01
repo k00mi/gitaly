@@ -119,7 +119,7 @@ func TestCacheEnforceTTL(t *testing.T) {
 
 	requireCacheValid(t, bc)
 
-	for i, v := range []*Batch{value0, value1} {
+	for i, v := range []*batch{value0, value1} {
 		require.True(t, v.isClosed(), "value %d %v should be closed", i, v)
 	}
 
@@ -167,7 +167,7 @@ func requireCacheValid(t *testing.T, bc *batchCache) {
 	}
 }
 
-func testValue() *Batch { return &Batch{} }
+func testValue() *batch { return &batch{} }
 
 func testKey(i int) key { return key{sessionID: fmt.Sprintf("key-%d", i)} }
 

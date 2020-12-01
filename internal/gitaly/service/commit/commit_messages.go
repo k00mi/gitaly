@@ -30,7 +30,7 @@ func getAndStreamCommitMessages(request *gitalypb.GetCommitMessagesRequest, stre
 		return err
 	}
 	for _, commitID := range request.GetCommitIds() {
-		msg, err := log.GetCommitMessage(c, request.GetRepository(), commitID)
+		msg, err := log.GetCommitMessage(ctx, c, request.GetRepository(), commitID)
 		if err != nil {
 			return fmt.Errorf("failed to get commit message: %v", err)
 		}
