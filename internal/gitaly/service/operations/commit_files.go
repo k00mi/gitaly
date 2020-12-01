@@ -11,7 +11,6 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	"github.com/sirupsen/logrus"
-	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/remoterepo"
 	"gitlab.com/gitlab-org/gitaly/internal/git2go"
@@ -326,7 +325,7 @@ func (s *server) userCommitFiles(ctx context.Context, header *gitalypb.UserCommi
 		return fmt.Errorf("commit: %w", err)
 	}
 
-	hasBranches, err := hasBranches(ctx, header.Repository)
+	hasBranches, err := localRepo.HasBranches(ctx)
 	if err != nil {
 		return fmt.Errorf("was repo created: %w", err)
 	}
@@ -361,14 +360,38 @@ func (s *server) resolveParentCommit(ctx context.Context, local git.Repository, 
 		if err != nil {
 			return "", fmt.Errorf("remote repository: %w", err)
 		}
+
+		if hasBranches, err := repo.HasBranches(ctx); err != nil {
+			return "", fmt.Errorf("has branches: %w", err)
+		} else if !hasBranches {
+			// GitLab sends requests to UserCommitFiles where target repository
+			// and start repository are the same. If the request hits Gitaly directly,
+			// Gitaly could check if the repos are the same by comparing their storages
+			// and relative paths and simply resolve the branch locally. When request is proxied
+			// through Praefect, the start repository's storage is not rewritten, thus Gitaly can't
+			// identify the repos as being the same.
+			//
+			// If the start repository is set, we have to resolve the branch there as it
+			// might be on a different commit than the local repository. As Gitaly can't identify
+			// the repositories are the same behind Praefect, it has to perform an RPC to resolve
+			// the branch. The resolving would fail as the branch does not yet exist in the start
+			// repository, which is actually the local repository.
+			//
+			// Due to this, we check if the remote has any branches. If not, we likely hit this case
+			// and we're creating the first branch. If so, we'll just return the commit that was
+			// already resolved locally.
+			//
+			// See: https://gitlab.com/gitlab-org/gitaly/-/issues/3294
+			return targetBranchCommit, nil
+		}
 	}
 
 	branch := targetBranch
 	if startBranch != "" {
 		branch = "refs/heads/" + startBranch
 	}
-
 	refish := branch + "^{commit}"
+
 	commit, err := repo.ResolveRefish(ctx, refish)
 	if err != nil {
 		return "", fmt.Errorf("resolving refish %q in %T: %w", refish, repo, err)
@@ -419,30 +442,6 @@ func (s *server) fetchRemoteObject(ctx context.Context, local, remote *gitalypb.
 	}
 
 	return nil
-}
-
-func hasBranches(ctx context.Context, repo *gitalypb.Repository) (bool, error) {
-	stderr := &bytes.Buffer{}
-	cmd, err := git.SafeCmd(ctx, repo, nil,
-		git.SubCmd{
-			Name:  "show-ref",
-			Flags: []git.Option{git.Flag{Name: "--heads"}, git.Flag{"--dereference"}},
-		},
-		git.WithStderr(stderr),
-	)
-	if err != nil {
-		return false, err
-	}
-
-	if err := cmd.Wait(); err != nil {
-		if status, ok := command.ExitStatus(err); ok && status == 1 {
-			return false, nil
-		}
-
-		return false, errorWithStderr(err, stderr)
-	}
-
-	return true, nil
 }
 
 func validateUserCommitFilesHeader(header *gitalypb.UserCommitFilesRequestHeader) error {
