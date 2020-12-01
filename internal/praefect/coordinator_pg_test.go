@@ -24,12 +24,13 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper/promtest"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
-	"gitlab.com/gitlab-org/labkit/correlation"
 )
 
-func TestStreamDirectorMutator_Transaction(t *testing.T) {
-	defer glsql.Clean()
+func getDB(t *testing.T) glsql.DB {
+	return glsql.GetDB(t, "praefect")
+}
 
+func TestStreamDirectorMutator_Transaction(t *testing.T) {
 	type node struct {
 		primary           bool
 		vote              string
@@ -153,7 +154,7 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 			txMgr := transactions.NewManager(conf)
 
 			// set up the generations prior to transaction
-			rs := datastore.NewPostgresRepositoryStore(glsql.GetDB(t, "praefect"), conf.StorageNames())
+			rs := datastore.NewPostgresRepositoryStore(getDB(t), conf.StorageNames())
 			for i, n := range tc.nodes {
 				if n.generation == datastore.GenerationUnknown {
 					continue

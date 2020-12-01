@@ -31,6 +31,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/metadatahandler"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore/glsql"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/transactions"
@@ -53,6 +54,8 @@ func TestMain(m *testing.M) {
 }
 
 func testMain(m *testing.M) int {
+	defer glsql.Clean()
+
 	defer testhelper.MustHaveNoChildProcess()
 
 	cleanup := testhelper.Configure()
@@ -314,56 +317,6 @@ func TestReplicatorDowngradeAttempt(t *testing.T) {
 	}, hook.LastEntry().Data["error"])
 	require.Equal(t, "correlation-id", hook.LastEntry().Data[logWithCorrID])
 	require.Equal(t, "repository downgrade prevented", hook.LastEntry().Message)
-}
-
-type MockRepositoryService struct {
-	gitalypb.UnimplementedRepositoryServiceServer
-	ReplicateRepositoryFunc func(context.Context, *gitalypb.ReplicateRepositoryRequest) (*gitalypb.ReplicateRepositoryResponse, error)
-}
-
-func (m *MockRepositoryService) ReplicateRepository(ctx context.Context, r *gitalypb.ReplicateRepositoryRequest) (*gitalypb.ReplicateRepositoryResponse, error) {
-	return m.ReplicateRepositoryFunc(ctx, r)
-}
-
-func TestReplicatorInvalidSourceRepository(t *testing.T) {
-	ctx, cancel := testhelper.Context()
-	defer cancel()
-
-	tmp, cleanDir := testhelper.TempDir(t)
-	defer cleanDir()
-
-	socketPath := filepath.Join(tmp, "socket")
-	ln, err := net.Listen("unix", socketPath)
-	require.NoError(t, err)
-
-	srv := grpc.NewServer()
-	gitalypb.RegisterRepositoryServiceServer(srv, &MockRepositoryService{
-		ReplicateRepositoryFunc: func(context.Context, *gitalypb.ReplicateRepositoryRequest) (*gitalypb.ReplicateRepositoryResponse, error) {
-			return nil, repository.ErrInvalidSourceRepository
-		},
-	})
-	defer srv.Stop()
-	go srv.Serve(ln)
-
-	targetCC, err := client.Dial(ln.Addr().Network()+":"+ln.Addr().String(), nil)
-	require.NoError(t, err)
-
-	rs := datastore.NewMemoryRepositoryStore(nil)
-	require.NoError(t, rs.SetGeneration(ctx, "virtual-storage-1", "relative-path-1", "gitaly-1", 0))
-
-	r := &defaultReplicator{rs: rs, log: testhelper.DiscardTestLogger(t)}
-	require.NoError(t, r.Replicate(ctx, datastore.ReplicationEvent{
-		Job: datastore.ReplicationJob{
-			VirtualStorage:    "virtual-storage-1",
-			RelativePath:      "relative-path-1",
-			SourceNodeStorage: "gitaly-1",
-			TargetNodeStorage: "gitaly-2",
-		},
-	}, nil, targetCC))
-
-	exists, err := rs.RepositoryExists(ctx, "virtual-storage-1", "relative-path-1")
-	require.NoError(t, err)
-	require.False(t, exists)
 }
 
 func TestPropagateReplicationJob(t *testing.T) {
