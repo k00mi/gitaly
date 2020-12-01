@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
@@ -118,12 +118,14 @@ func (s *Server) UserDeleteBranch(ctx context.Context, req *gitalypb.UserDeleteB
 		return s.UserDeleteBranchRuby(ctx, req)
 	}
 
-	revision, err := git.NewRepository(req.Repository).GetBranch(ctx, string(req.BranchName))
-	if err != nil {
-		return nil, helper.ErrPreconditionFailed(err)
-	}
-
 	branch := fmt.Sprintf("refs/heads/%s", req.BranchName)
+	if strings.HasPrefix(string(req.BranchName), "refs/") {
+		branch = string(req.BranchName)
+	}
+	revision, err := git.NewRepository(req.Repository).GetReference(ctx, branch)
+	if err != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, "branch not found: %s", req.BranchName)
+	}
 
 	if err := s.updateReferenceWithHooks(ctx, req.Repository, req.User, branch, git.NullSHA, revision.Target); err != nil {
 		var preReceiveError preReceiveError
