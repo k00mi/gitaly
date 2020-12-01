@@ -118,16 +118,17 @@ func (s *Server) UserDeleteBranch(ctx context.Context, req *gitalypb.UserDeleteB
 		return s.UserDeleteBranchRuby(ctx, req)
 	}
 
-	branch := fmt.Sprintf("refs/heads/%s", req.BranchName)
+	referenceFmt := "refs/heads/%s"
 	if strings.HasPrefix(string(req.BranchName), "refs/") {
-		branch = string(req.BranchName)
+		referenceFmt = "%s"
 	}
-	revision, err := git.NewRepository(req.Repository).GetReference(ctx, branch)
+	referenceName := fmt.Sprintf(referenceFmt, req.BranchName)
+	referenceValue, err := git.NewRepository(req.Repository).GetReference(ctx, referenceName)
 	if err != nil {
 		return nil, status.Errorf(codes.FailedPrecondition, "branch not found: %s", req.BranchName)
 	}
 
-	if err := s.updateReferenceWithHooks(ctx, req.Repository, req.User, branch, git.NullSHA, revision.Target); err != nil {
+	if err := s.updateReferenceWithHooks(ctx, req.Repository, req.User, referenceName, git.NullSHA, referenceValue.Target); err != nil {
 		var preReceiveError preReceiveError
 		if errors.As(err, &preReceiveError) {
 			return &gitalypb.UserDeleteBranchResponse{
