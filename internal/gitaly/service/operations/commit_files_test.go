@@ -796,10 +796,12 @@ func testUserCommitFiles(t *testing.T, ctx context.Context) {
 				stream, err := client.UserCommitFiles(ctx)
 				require.NoError(t, err)
 
-				headerRequest := headerRequest(&gitalypb.Repository{
-					StorageName:  storageName,
-					RelativePath: relativePath,
-				}, testhelper.TestUser, branch, []byte("commit message"))
+				headerRequest := headerRequest(
+					testhelper.CreateRepo(t, storageRoot, relativePath),
+					testhelper.TestUser,
+					branch,
+					[]byte("commit message"),
+				)
 				setAuthorAndEmail(headerRequest, []byte("Author Name"), []byte("author.email@example.com"))
 
 				if step.changeHeader != nil {
