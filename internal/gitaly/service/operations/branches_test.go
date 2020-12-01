@@ -20,6 +20,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type testTransactionServer struct {
@@ -67,6 +68,29 @@ func testSuccessfulCreateBranchRequest(t *testing.T, ctx context.Context) {
 				TargetCommit: startPointCommit,
 			},
 		},
+		// On input like heads/foo and refs/heads/foo we don't
+		// DWYM and map it to refs/heads/foo and
+		// refs/heads/foo, respectively. Instead we always
+		// prepend refs/heads/*, so you get
+		// refs/heads/heads/foo and refs/heads/refs/heads/foo
+		{
+			desc:       "valid branch",
+			branchName: "heads/new-branch",
+			startPoint: startPoint,
+			expectedBranch: &gitalypb.Branch{
+				Name:         []byte("heads/new-branch"),
+				TargetCommit: startPointCommit,
+			},
+		},
+		{
+			desc:       "valid branch",
+			branchName: "refs/heads/new-branch",
+			startPoint: startPoint,
+			expectedBranch: &gitalypb.Branch{
+				Name:         []byte("refs/heads/new-branch"),
+				TargetCommit: startPointCommit,
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -91,8 +115,8 @@ func testSuccessfulCreateBranchRequest(t *testing.T, ctx context.Context) {
 			require.Equal(t, testCase.expectedBranch, response.Branch)
 			require.Empty(t, response.PreReceiveError)
 
-			branches := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch")
-			require.Contains(t, string(branches), branchName)
+			branches := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "for-each-ref", "--", "refs/heads/"+branchName)
+			require.Contains(t, string(branches), "refs/heads/"+branchName)
 		})
 	}
 }
@@ -253,6 +277,85 @@ func TestFailedUserCreateBranchDueToHooks(t *testing.T) {
 	testWithFeature(t, featureflag.GoUserCreateBranch, testFailedUserCreateBranchDueToHooks)
 }
 
+func TestSuccessfulCreateBranchRequestWithStartPointRefPrefix(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserCreateBranch, testSuccessfulCreateBranchRequestWithStartPointRefPrefix)
+}
+
+func testSuccessfulCreateBranchRequestWithStartPointRefPrefix(t *testing.T, ctx context.Context) {
+	serverSocketPath, stop := runOperationServiceServer(t)
+	defer stop()
+
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	testCases := []struct {
+		desc             string
+		branchName       string
+		startPoint       string
+		startPointCommit string
+		user             *gitalypb.User
+	}{
+		// Similar to prefixing branchName in
+		// TestSuccessfulCreateBranchRequest() above:
+		// Unfortunately (and inconsistently), the StartPoint
+		// reference does have DWYM semantics. See
+		// https://gitlab.com/gitlab-org/gitaly/-/issues/3331
+		{
+			desc:             "the StartPoint parameter does DWYM references (boo!)",
+			branchName:       "topic",
+			startPoint:       "heads/master",
+			startPointCommit: "9a944d90955aaf45f6d0c88f30e27f8d2c41cec0", // TODO: see below
+			user:             testhelper.TestUser,
+		},
+		{
+			desc:             "the StartPoint parameter does DWYM references (boo!) 2",
+			branchName:       "topic2",
+			startPoint:       "refs/heads/master",
+			startPointCommit: "c642fe9b8b9f28f9225d7ea953fe14e74748d53b", // TODO: see below
+			user:             testhelper.TestUser,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "update-ref", "refs/heads/"+testCase.startPoint,
+				testCase.startPointCommit,
+				"0000000000000000000000000000000000000000",
+			)
+			request := &gitalypb.UserCreateBranchRequest{
+				Repository: testRepo,
+				BranchName: []byte(testCase.branchName),
+				StartPoint: []byte(testCase.startPoint),
+				User:       testCase.user,
+			}
+
+			// BEGIN TODO: Uncomment if StartPoint started behaving sensibly
+			// like BranchName. See
+			// https://gitlab.com/gitlab-org/gitaly/-/issues/3331
+			//
+			//targetCommitOK, err := log.GetCommit(ctx, testRepo, testCase.startPointCommit)
+			// END TODO
+			targetCommitOK, err := log.GetCommit(ctx, testRepo, "1e292f8fedd741b75372e19097c76d327140c312")
+			require.NoError(t, err)
+
+			response, err := client.UserCreateBranch(ctx, request)
+			require.NoError(t, err)
+			responseOk := &gitalypb.UserCreateBranchResponse{
+				Branch: &gitalypb.Branch{
+					Name:         []byte(testCase.branchName),
+					TargetCommit: targetCommitOK,
+				},
+			}
+			require.Equal(t, responseOk, response)
+			branches := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "for-each-ref", "--", "refs/heads/"+testCase.branchName)
+			require.Contains(t, string(branches), "refs/heads/"+testCase.branchName)
+		})
+	}
+}
+
 func testFailedUserCreateBranchDueToHooks(t *testing.T, ctx context.Context) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
@@ -303,28 +406,28 @@ func testFailedUserCreateBranchRequest(t *testing.T, ctx context.Context) {
 		branchName string
 		startPoint string
 		user       *gitalypb.User
-		code       codes.Code
+		err        error
 	}{
 		{
 			desc:       "empty start_point",
 			branchName: "shiny-new-branch",
 			startPoint: "",
 			user:       testhelper.TestUser,
-			code:       codes.InvalidArgument,
+			err:        status.Error(codes.InvalidArgument, "empty start point"),
 		},
 		{
 			desc:       "empty user",
 			branchName: "shiny-new-branch",
 			startPoint: "master",
 			user:       nil,
-			code:       codes.InvalidArgument,
+			err:        status.Error(codes.InvalidArgument, "empty user"),
 		},
 		{
 			desc:       "non-existing starting point",
 			branchName: "new-branch",
 			startPoint: "i-dont-exist",
 			user:       testhelper.TestUser,
-			code:       codes.FailedPrecondition,
+			err:        status.Errorf(codes.FailedPrecondition, "revspec '%s' not found", "i-dont-exist"),
 		},
 
 		{
@@ -332,7 +435,7 @@ func testFailedUserCreateBranchRequest(t *testing.T, ctx context.Context) {
 			branchName: "master",
 			startPoint: "master",
 			user:       testhelper.TestUser,
-			code:       codes.FailedPrecondition,
+			err:        status.Errorf(codes.FailedPrecondition, "Could not update %s. Please refresh and try again.", "master"),
 		},
 	}
 
@@ -345,8 +448,9 @@ func testFailedUserCreateBranchRequest(t *testing.T, ctx context.Context) {
 				User:       testCase.user,
 			}
 
-			_, err := client.UserCreateBranch(ctx, request)
-			testhelper.RequireGrpcError(t, err, testCase.code)
+			response, err := client.UserCreateBranch(ctx, request)
+			require.Equal(t, testCase.err, err)
+			require.Empty(t, response)
 		})
 	}
 }
@@ -380,7 +484,7 @@ func testSuccessfulUserDeleteBranchRequest(t *testing.T, ctx context.Context) {
 	_, err := client.UserDeleteBranch(ctx, request)
 	require.NoError(t, err)
 
-	branches := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch")
+	branches := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "for-each-ref", "--", "refs/heads/"+branchNameInput)
 	require.NotContains(t, string(branches), branchNameInput, "branch name still exists in branches list")
 }
 
@@ -512,7 +616,7 @@ func testFailedUserDeleteBranchDueToHooks(t *testing.T, ctx context.Context) {
 			require.NoError(t, err)
 			require.Contains(t, response.PreReceiveError, "GL_ID="+testhelper.TestUser.GlId)
 
-			branches := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch")
+			branches := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "for-each-ref", "--", "refs/heads/"+branchNameInput)
 			require.Contains(t, string(branches), branchNameInput, "branch name does not exist in branches list")
 		})
 	}
