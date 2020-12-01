@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
@@ -52,13 +53,20 @@ func TestSuccessfulDeleteRefs(t *testing.T) {
 			_, err := client.DeleteRefs(ctx, testCase.request)
 			require.NoError(t, err)
 
-			refs := testhelper.GetRepositoryRefs(t, repoPath)
+			// Ensure that the internal refs are gone, but the others still exist
+			refs, err := git.NewRepository(repo).GetReferences(ctx, "refs/")
+			require.NoError(t, err)
 
-			require.NotContains(t, refs, "refs/delete/a")
-			require.NotContains(t, refs, "refs/also-delete/b")
-			require.Contains(t, refs, "refs/keep/c")
-			require.Contains(t, refs, "refs/also-keep/d")
-			require.Contains(t, refs, "refs/heads/master")
+			refNames := make([]string, len(refs))
+			for i, branch := range refs {
+				refNames[i] = branch.Name
+			}
+
+			require.NotContains(t, refNames, "refs/delete/a")
+			require.NotContains(t, refNames, "refs/also-delete/b")
+			require.Contains(t, refNames, "refs/keep/c")
+			require.Contains(t, refNames, "refs/also-keep/d")
+			require.Contains(t, refNames, "refs/heads/master")
 		})
 	}
 }

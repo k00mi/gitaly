@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/stats"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -45,12 +46,9 @@ func TestMidxWrite(t *testing.T) {
 	require.NoError(t, err)
 	defer cfgF.Close()
 
-	cfg, err := testhelper.ParseConfig(cfgF)
+	cfg, err := git.NewRepository(testRepo).Config().GetRegexp(ctx, "core.multipackindex", git.ConfigGetRegexpOpts{})
 	require.NoError(t, err)
-
-	actualValue, ok := cfg.GetValue("core", "multiPackIndex")
-	require.True(t, ok)
-	require.Equal(t, "true", actualValue)
+	require.Equal(t, []git.ConfigPair{{Key: "core.multipackindex", Value: "true"}}, cfg)
 }
 
 func TestMidxRewrite(t *testing.T) {

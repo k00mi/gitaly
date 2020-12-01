@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/gittest"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
@@ -57,12 +58,9 @@ func TestGarbageCollectCommitGraph(t *testing.T) {
 	require.NoError(t, err)
 	defer cfgF.Close()
 
-	cfg, err := testhelper.ParseConfig(cfgF)
+	cfg, err := git.NewRepository(testRepo).Config().GetRegexp(ctx, "core.commitgraph", git.ConfigGetRegexpOpts{})
 	require.NoError(t, err)
-
-	actualValue, ok := cfg.GetValue("core", "commitGraph")
-	require.True(t, ok)
-	require.Equal(t, "true", actualValue)
+	require.Equal(t, []git.ConfigPair{{Key: "core.commitgraph", Value: "true"}}, cfg)
 }
 
 func TestGarbageCollectSuccess(t *testing.T) {

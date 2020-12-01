@@ -343,6 +343,24 @@ func NewServer(tb testing.TB, streamInterceptors []grpc.StreamServerInterceptor,
 	)
 }
 
+// NewTestGrpcServer creates a GRPC Server for testing purposes
+func NewTestGrpcServer(tb testing.TB, streamInterceptors []grpc.StreamServerInterceptor, unaryInterceptors []grpc.UnaryServerInterceptor) *grpc.Server {
+	logger := NewTestLogger(tb)
+	logrusEntry := log.NewEntry(logger).WithField("test", tb.Name())
+
+	ctxTagger := grpc_ctxtags.WithFieldExtractorForInitialReq(fieldextractors.FieldExtractor)
+	ctxStreamTagger := grpc_ctxtags.StreamServerInterceptor(ctxTagger)
+	ctxUnaryTagger := grpc_ctxtags.UnaryServerInterceptor(ctxTagger)
+
+	streamInterceptors = append([]grpc.StreamServerInterceptor{ctxStreamTagger, grpc_logrus.StreamServerInterceptor(logrusEntry)}, streamInterceptors...)
+	unaryInterceptors = append([]grpc.UnaryServerInterceptor{ctxUnaryTagger, grpc_logrus.UnaryServerInterceptor(logrusEntry)}, unaryInterceptors...)
+
+	return grpc.NewServer(
+		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(streamInterceptors...)),
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(unaryInterceptors...)),
+	)
+}
+
 var changeLineRegex = regexp.MustCompile("^[a-f0-9]{40} [a-f0-9]{40} refs/[^ ]+$")
 
 const secretHeaderName = "Gitlab-Shared-Secret"

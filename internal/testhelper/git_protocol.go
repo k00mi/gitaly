@@ -18,7 +18,6 @@ func EnableGitProtocolV2Support(t *testing.T) func() {
 	envPath := filepath.Join(testDirectory, "git-env")
 
 	script := fmt.Sprintf(`#!/bin/sh
-mkdir -p testdata
 env | grep ^GIT_PROTOCOL= >>"%s"
 exec "%s" "$@"
 `, envPath, config.Config.Git.BinPath)

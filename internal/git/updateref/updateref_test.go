@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -114,7 +114,7 @@ func TestDelete(t *testing.T) {
 }
 
 func TestBulkOperation(t *testing.T) {
-	ctx, testRepo, testRepoPath, teardown := setup(t)
+	ctx, testRepo, _, teardown := setup(t)
 	defer teardown()
 
 	headCommit, err := log.GetCommit(ctx, testRepo, "HEAD")
@@ -130,9 +130,9 @@ func TestBulkOperation(t *testing.T) {
 
 	require.NoError(t, updater.Wait())
 
-	refs := testhelper.GetRepositoryRefs(t, testRepoPath)
-	split := strings.Split(refs, "\n")
-	require.True(t, len(split) > 1000, "At least 1000 refs should be present")
+	refs, err := git.NewRepository(testRepo).GetReferences(ctx, "refs/")
+	require.NoError(t, err)
+	require.Greater(t, len(refs), 1000, "At least 1000 refs should be present")
 }
 
 func TestContextCancelAbortsRefChanges(t *testing.T) {

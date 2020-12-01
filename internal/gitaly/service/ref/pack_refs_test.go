@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -30,10 +31,12 @@ func TestPackRefsSuccessfulRequest(t *testing.T) {
 
 	packedRefs := linesInPackfile(t, testRepoPath)
 
+	repo := git.NewRepository(testRepo)
+
 	// creates some new heads
 	newBranches := 10
 	for i := 0; i < newBranches; i++ {
-		testhelper.CreateLooseRef(t, testRepoPath, fmt.Sprintf("new-ref-%d", i))
+		require.NoError(t, repo.UpdateRef(ctx, fmt.Sprintf("refs/heads/new-ref-%d", i), "refs/heads/master", git.NullSHA))
 	}
 
 	// pack all refs
