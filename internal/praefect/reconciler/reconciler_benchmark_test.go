@@ -68,6 +68,7 @@ CROSS JOIN (SELECT unnest('{gitaly-1, gitaly-2, gitaly-3}'::text[]) AS storage) 
 			praefect.StaticHealthChecker(storages),
 			storages,
 			prometheus.DefBuckets,
+			false,
 		)
 
 		b.StartTimer()
