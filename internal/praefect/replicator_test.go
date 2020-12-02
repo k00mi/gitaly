@@ -1052,7 +1052,7 @@ func newReplicationService(tb testing.TB) (*grpc.Server, string) {
 	svr := testhelper.NewTestGrpcServer(tb, nil, nil)
 
 	locator := gitaly_config.NewLocator(gitaly_config.Config)
-	gitalypb.RegisterRepositoryServiceServer(svr, repository.NewServer(gitaly_config.Config, RubyServer, locator, internalSocketName))
+	gitalypb.RegisterRepositoryServiceServer(svr, repository.NewServer(gitaly_config.Config, RubyServer, locator))
 	gitalypb.RegisterObjectPoolServiceServer(svr, objectpoolservice.NewServer(locator))
 	gitalypb.RegisterRemoteServiceServer(svr, remote.NewServer(RubyServer, locator))
 	gitalypb.RegisterSSHServiceServer(svr, ssh.NewServer(locator))

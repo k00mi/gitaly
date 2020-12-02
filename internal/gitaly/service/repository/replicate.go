@@ -254,7 +254,7 @@ func (s *server) syncInfoAttributes(ctx context.Context, in *gitalypb.ReplicateR
 
 // newRemoteClient creates a new RemoteClient that talks to the same gitaly server
 func (s *server) newRemoteClient(ctx context.Context) (gitalypb.RemoteServiceClient, error) {
-	conn, err := s.conns.Dial(ctx, fmt.Sprintf("unix:%s", s.internalGitalySocket), "")
+	conn, err := s.conns.Dial(ctx, fmt.Sprintf("unix:%s", s.cfg.GitalyInternalSocketPath()), "")
 	if err != nil {
 		return nil, err
 	}
