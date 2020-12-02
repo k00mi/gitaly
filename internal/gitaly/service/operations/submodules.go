@@ -21,7 +21,7 @@ import (
 
 const userUpdateSubmoduleName = "UserUpdateSubmodule"
 
-func (s *server) UserUpdateSubmodule(ctx context.Context, req *gitalypb.UserUpdateSubmoduleRequest) (*gitalypb.UserUpdateSubmoduleResponse, error) {
+func (s *Server) UserUpdateSubmodule(ctx context.Context, req *gitalypb.UserUpdateSubmoduleRequest) (*gitalypb.UserUpdateSubmoduleResponse, error) {
 	if err := validateUserUpdateSubmoduleRequest(req); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, userUpdateSubmoduleName+": %v", err)
 	}
@@ -75,7 +75,7 @@ func validateUserUpdateSubmoduleRequest(req *gitalypb.UserUpdateSubmoduleRequest
 	return nil
 }
 
-func (s *server) userUpdateSubmodule(ctx context.Context, req *gitalypb.UserUpdateSubmoduleRequest) (*gitalypb.UserUpdateSubmoduleResponse, error) {
+func (s *Server) userUpdateSubmodule(ctx context.Context, req *gitalypb.UserUpdateSubmoduleRequest) (*gitalypb.UserUpdateSubmoduleResponse, error) {
 	repo := git.NewRepository(req.GetRepository())
 	branches, err := repo.GetBranches(ctx)
 	if err != nil {

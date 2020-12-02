@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) UserApplyPatch(stream gitalypb.OperationService_UserApplyPatchServer) error {
+func (s *Server) UserApplyPatch(stream gitalypb.OperationService_UserApplyPatchServer) error {
 	firstRequest, err := stream.Recv()
 	if err != nil {
 		return err

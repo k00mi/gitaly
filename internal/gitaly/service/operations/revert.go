@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s *server) UserRevert(ctx context.Context, req *gitalypb.UserRevertRequest) (*gitalypb.UserRevertResponse, error) {
+func (s *Server) UserRevert(ctx context.Context, req *gitalypb.UserRevertRequest) (*gitalypb.UserRevertResponse, error) {
 	if err := validateCherryPickOrRevertRequest(req); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "UserRevert: %v", err)
 	}

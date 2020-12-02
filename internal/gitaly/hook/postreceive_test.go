@@ -107,12 +107,14 @@ func TestPostReceive_customHook(t *testing.T) {
 		{
 			desc:           "hook receives environment variables",
 			env:            standardEnv,
+			stdin:          "changes\n",
 			hook:           "#!/bin/sh\nenv | grep -e '^GL_' -e '^GITALY_' | sort\n",
 			expectedStdout: strings.Join(standardEnv, "\n") + "\n",
 		},
 		{
-			desc: "push options are passed through",
-			env:  standardEnv,
+			desc:  "push options are passed through",
+			env:   standardEnv,
+			stdin: "changes\n",
 			pushOptions: []string{
 				"mr.merge_when_pipeline_succeeds",
 				"mr.create",
@@ -127,6 +129,7 @@ func TestPostReceive_customHook(t *testing.T) {
 		{
 			desc:           "hook can write to stderr and stdout",
 			env:            standardEnv,
+			stdin:          "changes\n",
 			hook:           "#!/bin/sh\necho foo >&1 && echo bar >&2\n",
 			expectedStdout: "foo\n",
 			expectedStderr: "bar\n",
@@ -148,35 +151,46 @@ func TestPostReceive_customHook(t *testing.T) {
 		{
 			desc:        "invalid hook results in error",
 			env:         standardEnv,
+			stdin:       "changes\n",
 			hook:        "",
 			expectedErr: "exec format error",
 		},
 		{
 			desc:        "failing hook results in error",
 			env:         standardEnv,
+			stdin:       "changes\n",
 			hook:        "#!/bin/sh\nexit 123",
 			expectedErr: "exit status 123",
 		},
 		{
 			desc:           "hook is executed on primary",
 			env:            append(standardEnv, primaryEnv),
+			stdin:          "changes\n",
 			hook:           "#!/bin/sh\necho foo\n",
 			expectedStdout: "foo\n",
 		},
 		{
-			desc: "hook is not executed on secondary",
-			env:  append(standardEnv, secondaryEnv),
-			hook: "#!/bin/sh\necho foo\n",
+			desc:  "hook is not executed on secondary",
+			env:   append(standardEnv, secondaryEnv),
+			stdin: "changes\n",
+			hook:  "#!/bin/sh\necho foo\n",
 		},
 		{
 			desc:        "missing GL_ID causes error",
 			env:         envWithout(standardEnv, "GL_ID"),
+			stdin:       "changes\n",
 			expectedErr: "GL_ID not set",
 		},
 		{
 			desc:        "missing GL_REPOSITORY causes error",
 			env:         envWithout(standardEnv, "GL_REPOSITORY"),
+			stdin:       "changes\n",
 			expectedErr: "GL_REPOSITORY not set",
+		},
+		{
+			desc:        "missing changes cause error",
+			env:         standardEnv,
+			expectedErr: "hook got no reference updates",
 		},
 	}
 

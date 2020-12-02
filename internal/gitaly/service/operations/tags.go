@@ -7,7 +7,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
-func (s *server) UserDeleteTag(ctx context.Context, req *gitalypb.UserDeleteTagRequest) (*gitalypb.UserDeleteTagResponse, error) {
+func (s *Server) UserDeleteTag(ctx context.Context, req *gitalypb.UserDeleteTagRequest) (*gitalypb.UserDeleteTagResponse, error) {
 	client, err := s.ruby.OperationServiceClient(ctx)
 	if err != nil {
 		return nil, err
@@ -21,7 +21,7 @@ func (s *server) UserDeleteTag(ctx context.Context, req *gitalypb.UserDeleteTagR
 	return client.UserDeleteTag(clientCtx, req)
 }
 
-func (s *server) UserCreateTag(ctx context.Context, req *gitalypb.UserCreateTagRequest) (*gitalypb.UserCreateTagResponse, error) {
+func (s *Server) UserCreateTag(ctx context.Context, req *gitalypb.UserCreateTagRequest) (*gitalypb.UserCreateTagResponse, error) {
 	client, err := s.ruby.OperationServiceClient(ctx)
 	if err != nil {
 		return nil, err

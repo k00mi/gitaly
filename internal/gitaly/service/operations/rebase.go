@@ -11,7 +11,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
-func (s *server) UserRebaseConfirmable(stream gitalypb.OperationService_UserRebaseConfirmableServer) error {
+func (s *Server) UserRebaseConfirmable(stream gitalypb.OperationService_UserRebaseConfirmableServer) error {
 	firstRequest, err := stream.Recv()
 	if err != nil {
 		return err
@@ -33,7 +33,7 @@ func (s *server) UserRebaseConfirmable(stream gitalypb.OperationService_UserReba
 	return nil
 }
 
-func (s *server) userRebaseConfirmable(stream gitalypb.OperationService_UserRebaseConfirmableServer, firstRequest *gitalypb.UserRebaseConfirmableRequest, repository *gitalypb.Repository) error {
+func (s *Server) userRebaseConfirmable(stream gitalypb.OperationService_UserRebaseConfirmableServer, firstRequest *gitalypb.UserRebaseConfirmableRequest, repository *gitalypb.Repository) error {
 	ctx := stream.Context()
 	client, err := s.ruby.OperationServiceClient(ctx)
 	if err != nil {

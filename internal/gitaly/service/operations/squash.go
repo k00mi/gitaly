@@ -45,7 +45,7 @@ const (
 	gitlabWorktreesSubDir = "gitlab-worktree"
 )
 
-func (s *server) UserSquash(ctx context.Context, req *gitalypb.UserSquashRequest) (*gitalypb.UserSquashResponse, error) {
+func (s *Server) UserSquash(ctx context.Context, req *gitalypb.UserSquashRequest) (*gitalypb.UserSquashResponse, error) {
 	if err := validateUserSquashRequest(req); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "UserSquash: %v", err)
 	}
@@ -113,7 +113,7 @@ func (er gitError) Error() string {
 	return er.ErrMsg + ": " + er.Err.Error()
 }
 
-func (s *server) userSquashGo(ctx context.Context, req *gitalypb.UserSquashRequest) (*gitalypb.UserSquashResponse, error) {
+func (s *Server) userSquashGo(ctx context.Context, req *gitalypb.UserSquashRequest) (*gitalypb.UserSquashResponse, error) {
 	if strings.Contains(req.GetSquashId(), "/") {
 		return nil, helper.ErrInvalidArgument(errors.New("worktree id can't contain slashes"))
 	}
@@ -140,7 +140,7 @@ func (s *server) userSquashGo(ctx context.Context, req *gitalypb.UserSquashReque
 	return &gitalypb.UserSquashResponse{SquashSha: sha}, nil
 }
 
-func (s *server) runUserSquashGo(ctx context.Context, req *gitalypb.UserSquashRequest, env []string, repoPath string) (string, error) {
+func (s *Server) runUserSquashGo(ctx context.Context, req *gitalypb.UserSquashRequest, env []string, repoPath string) (string, error) {
 	sparseDiffFiles, err := s.diffFiles(ctx, env, repoPath, req)
 	if err != nil {
 		return "", fmt.Errorf("define diff files: %w", err)
@@ -163,7 +163,7 @@ func (s *server) runUserSquashGo(ctx context.Context, req *gitalypb.UserSquashRe
 	return sha, nil
 }
 
-func (s *server) diffFiles(ctx context.Context, env []string, repoPath string, req *gitalypb.UserSquashRequest) ([]byte, error) {
+func (s *Server) diffFiles(ctx context.Context, env []string, repoPath string, req *gitalypb.UserSquashRequest) ([]byte, error) {
 	var stdout, stderr bytes.Buffer
 	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{Out: &stdout, Err: &stderr}, env,
 		[]git.Option{git.ValueFlag{Name: "--git-dir", Value: repoPath}},
@@ -186,7 +186,7 @@ func (s *server) diffFiles(ctx context.Context, env []string, repoPath string, r
 
 var errNoFilesCheckedOut = errors.New("no files checked out")
 
-func (s *server) userSquashWithDiffInFiles(ctx context.Context, req *gitalypb.UserSquashRequest, repoPath string, env []string, diffFilesOut []byte) (string, error) {
+func (s *Server) userSquashWithDiffInFiles(ctx context.Context, req *gitalypb.UserSquashRequest, repoPath string, env []string, diffFilesOut []byte) (string, error) {
 	repo := req.GetRepository()
 	worktreePath := newSquashWorktreePath(repoPath, req.GetSquashId())
 
@@ -239,7 +239,7 @@ func (s *server) userSquashWithDiffInFiles(ctx context.Context, req *gitalypb.Us
 	return sha, nil
 }
 
-func (s *server) checkout(ctx context.Context, repo *gitalypb.Repository, worktreePath string, req *gitalypb.UserSquashRequest) error {
+func (s *Server) checkout(ctx context.Context, repo *gitalypb.Repository, worktreePath string, req *gitalypb.UserSquashRequest) error {
 	var stderr bytes.Buffer
 	checkoutCmd, err := git.SafeBareCmdInDir(ctx, worktreePath, git.CmdStream{Err: &stderr}, nil, nil,
 		git.SubCmd{
@@ -264,7 +264,7 @@ func (s *server) checkout(ctx context.Context, repo *gitalypb.Repository, worktr
 	return nil
 }
 
-func (s *server) revParseGitDir(ctx context.Context, worktreePath string) (string, error) {
+func (s *Server) revParseGitDir(ctx context.Context, worktreePath string) (string, error) {
 	var stdout, stderr bytes.Buffer
 	cmd, err := git.SafeBareCmdInDir(ctx, worktreePath, git.CmdStream{Out: &stdout, Err: &stderr}, nil, nil, git.SubCmd{
 		Name:  "rev-parse",
@@ -281,7 +281,7 @@ func (s *server) revParseGitDir(ctx context.Context, worktreePath string) (strin
 	return text.ChompBytes(stdout.Bytes()), nil
 }
 
-func (s *server) userSquashWithNoDiff(ctx context.Context, req *gitalypb.UserSquashRequest, repoPath string, env []string) (string, error) {
+func (s *Server) userSquashWithNoDiff(ctx context.Context, req *gitalypb.UserSquashRequest, repoPath string, env []string) (string, error) {
 	repo := req.GetRepository()
 	worktreePath := newSquashWorktreePath(repoPath, req.GetSquashId())
 
@@ -306,7 +306,7 @@ func (s *server) userSquashWithNoDiff(ctx context.Context, req *gitalypb.UserSqu
 	return sha, nil
 }
 
-func (s *server) addWorktree(ctx context.Context, repo *gitalypb.Repository, worktreePath string, committish string) error {
+func (s *Server) addWorktree(ctx context.Context, repo *gitalypb.Repository, worktreePath string, committish string) error {
 	if err := runCmd(ctx, repo, "config", []git.Option{git.ConfigPair{Key: "core.splitIndex", Value: "false"}}, nil); err != nil {
 		return fmt.Errorf("on 'git config core.splitIndex false': %w", err)
 	}
@@ -336,7 +336,7 @@ func (s *server) addWorktree(ctx context.Context, repo *gitalypb.Repository, wor
 	return nil
 }
 
-func (s *server) removeWorktree(ctx context.Context, repo *gitalypb.Repository, worktreeName string) error {
+func (s *Server) removeWorktree(ctx context.Context, repo *gitalypb.Repository, worktreeName string) error {
 	cmd, err := git.SafeCmd(ctx, repo, nil,
 		git.SubCmd{
 			Name:  "worktree",
@@ -356,7 +356,7 @@ func (s *server) removeWorktree(ctx context.Context, repo *gitalypb.Repository, 
 	return nil
 }
 
-func (s *server) applyDiff(ctx context.Context, repo *gitalypb.Repository, req *gitalypb.UserSquashRequest, worktreePath string, env []string) (string, error) {
+func (s *Server) applyDiff(ctx context.Context, repo *gitalypb.Repository, req *gitalypb.UserSquashRequest, worktreePath string, env []string) (string, error) {
 	diffRange := diffRange(req)
 
 	var diffStderr bytes.Buffer
@@ -443,7 +443,7 @@ func (s *server) applyDiff(ctx context.Context, repo *gitalypb.Repository, req *
 	return text.ChompBytes(revParseStdout.Bytes()), nil
 }
 
-func (s *server) createSparseCheckoutFile(worktreeGitPath string, diffFilesOut []byte) error {
+func (s *Server) createSparseCheckoutFile(worktreeGitPath string, diffFilesOut []byte) error {
 	if err := os.MkdirAll(filepath.Join(worktreeGitPath, "info"), 0755); err != nil {
 		return fmt.Errorf("create 'info' dir for worktree %q: %w", worktreeGitPath, err)
 	}
