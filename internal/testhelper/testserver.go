@@ -21,7 +21,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/jsonpb"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
@@ -29,15 +28,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
-	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config/auth"
 	serverauth "gitlab.com/gitlab-org/gitaly/internal/gitaly/server/auth"
-	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/fieldextractors"
-	gitalylog "gitlab.com/gitlab-org/gitaly/internal/log"
 	praefectconfig "gitlab.com/gitlab-org/gitaly/internal/praefect/config"
-	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	grpccorrelation "gitlab.com/gitlab-org/labkit/correlation/grpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -967,66 +962,6 @@ func WriteTemporaryGitalyConfigFile(t testing.TB, tempDir, gitlabURL, user, pass
 	return path, func() {
 		os.RemoveAll(path)
 	}
-}
-
-type GlHookValues struct {
-	GLID, GLUsername, GLRepo, GLProtocol, GitObjectDir string
-	GitAlternateObjectDirs                             []string
-}
-
-type ProxyValues struct {
-	HTTPProxy, HTTPSProxy, NoProxy string
-}
-
-var jsonpbMarshaller jsonpb.Marshaler
-
-// EnvForHooks generates a set of environment variables for gitaly hooks
-func EnvForHooks(t testing.TB, gitlabShellDir, gitalySocket, gitalyToken string, repo *gitalypb.Repository, glHookValues GlHookValues, proxyValues ProxyValues, gitPushOptions ...string) []string {
-	rubyDir, err := filepath.Abs("../../ruby")
-	require.NoError(t, err)
-
-	repoString, err := jsonpbMarshaller.MarshalToString(repo)
-	require.NoError(t, err)
-
-	env, err := gitlabshell.EnvFromConfig(config.Config)
-	require.NoError(t, err)
-
-	env = append(env, os.Environ()...)
-	env = append(env, []string{
-		fmt.Sprintf("GITALY_RUBY_DIR=%s", rubyDir),
-		fmt.Sprintf("GL_ID=%s", glHookValues.GLID),
-		fmt.Sprintf("GL_REPOSITORY=%s", glHookValues.GLRepo),
-		fmt.Sprintf("GL_PROTOCOL=%s", glHookValues.GLProtocol),
-		fmt.Sprintf("GL_USERNAME=%s", glHookValues.GLUsername),
-		fmt.Sprintf("GITALY_SOCKET=%s", gitalySocket),
-		fmt.Sprintf("GITALY_TOKEN=%s", gitalyToken),
-		fmt.Sprintf("GITALY_REPO=%v", repoString),
-		fmt.Sprintf("GITALY_GITLAB_SHELL_DIR=%s", gitlabShellDir),
-		fmt.Sprintf("%s=%s", gitalylog.GitalyLogDirEnvKey, gitlabShellDir),
-	}...)
-	env = append(env, hooks.GitPushOptions(gitPushOptions)...)
-
-	if proxyValues.HTTPProxy != "" {
-		env = append(env, fmt.Sprintf("HTTP_PROXY=%s", proxyValues.HTTPProxy))
-		env = append(env, fmt.Sprintf("http_proxy=%s", proxyValues.HTTPProxy))
-	}
-	if proxyValues.HTTPSProxy != "" {
-		env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", proxyValues.HTTPSProxy))
-		env = append(env, fmt.Sprintf("https_proxy=%s", proxyValues.HTTPSProxy))
-	}
-	if proxyValues.NoProxy != "" {
-		env = append(env, fmt.Sprintf("NO_PROXY=%s", proxyValues.NoProxy))
-		env = append(env, fmt.Sprintf("no_proxy=%s", proxyValues.NoProxy))
-	}
-
-	if glHookValues.GitObjectDir != "" {
-		env = append(env, fmt.Sprintf("GIT_OBJECT_DIRECTORY=%s", glHookValues.GitObjectDir))
-	}
-	if len(glHookValues.GitAlternateObjectDirs) > 0 {
-		env = append(env, fmt.Sprintf("GIT_ALTERNATE_OBJECT_DIRECTORIES=%s", strings.Join(glHookValues.GitAlternateObjectDirs, ":")))
-	}
-
-	return env
 }
 
 type FatalLogger interface {

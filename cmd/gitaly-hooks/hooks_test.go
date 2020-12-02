@@ -13,17 +13,81 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/golang/protobuf/jsonpb"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
+	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	gitalyhook "gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/hook"
+	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
+	gitalylog "gitlab.com/gitlab-org/gitaly/internal/log"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/reflection"
 )
+
+var jsonpbMarshaller jsonpb.Marshaler
+
+type glHookValues struct {
+	GLID, GLUsername, GLRepo, GLProtocol, GitObjectDir string
+	GitAlternateObjectDirs                             []string
+}
+
+type proxyValues struct {
+	HTTPProxy, HTTPSProxy, NoProxy string
+}
+
+// envForHooks generates a set of environment variables for gitaly hooks
+func envForHooks(t testing.TB, gitlabShellDir, gitalySocket, gitalyToken string, repo *gitalypb.Repository, glHookValues glHookValues, proxyValues proxyValues, gitPushOptions ...string) []string {
+	rubyDir, err := filepath.Abs("../../ruby")
+	require.NoError(t, err)
+
+	repoString, err := jsonpbMarshaller.MarshalToString(repo)
+	require.NoError(t, err)
+
+	env, err := gitlabshell.EnvFromConfig(config.Config)
+	require.NoError(t, err)
+
+	env = append(env, os.Environ()...)
+	env = append(env, []string{
+		fmt.Sprintf("GITALY_RUBY_DIR=%s", rubyDir),
+		fmt.Sprintf("GL_ID=%s", glHookValues.GLID),
+		fmt.Sprintf("GL_REPOSITORY=%s", glHookValues.GLRepo),
+		fmt.Sprintf("GL_PROTOCOL=%s", glHookValues.GLProtocol),
+		fmt.Sprintf("GL_USERNAME=%s", glHookValues.GLUsername),
+		fmt.Sprintf("GITALY_SOCKET=%s", gitalySocket),
+		fmt.Sprintf("GITALY_TOKEN=%s", gitalyToken),
+		fmt.Sprintf("GITALY_REPO=%v", repoString),
+		fmt.Sprintf("GITALY_GITLAB_SHELL_DIR=%s", gitlabShellDir),
+		fmt.Sprintf("%s=%s", gitalylog.GitalyLogDirEnvKey, gitlabShellDir),
+	}...)
+	env = append(env, hooks.GitPushOptions(gitPushOptions)...)
+
+	if proxyValues.HTTPProxy != "" {
+		env = append(env, fmt.Sprintf("HTTP_PROXY=%s", proxyValues.HTTPProxy))
+		env = append(env, fmt.Sprintf("http_proxy=%s", proxyValues.HTTPProxy))
+	}
+	if proxyValues.HTTPSProxy != "" {
+		env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", proxyValues.HTTPSProxy))
+		env = append(env, fmt.Sprintf("https_proxy=%s", proxyValues.HTTPSProxy))
+	}
+	if proxyValues.NoProxy != "" {
+		env = append(env, fmt.Sprintf("NO_PROXY=%s", proxyValues.NoProxy))
+		env = append(env, fmt.Sprintf("no_proxy=%s", proxyValues.NoProxy))
+	}
+
+	if glHookValues.GitObjectDir != "" {
+		env = append(env, fmt.Sprintf("GIT_OBJECT_DIRECTORY=%s", glHookValues.GitObjectDir))
+	}
+	if len(glHookValues.GitAlternateObjectDirs) > 0 {
+		env = append(env, fmt.Sprintf("GIT_ALTERNATE_OBJECT_DIRECTORIES=%s", strings.Join(glHookValues.GitAlternateObjectDirs, ":")))
+	}
+
+	return env
+}
 
 func TestMain(m *testing.M) {
 	os.Exit(testMain(m))
@@ -170,13 +234,13 @@ func testHooksPrePostReceive(t *testing.T) {
 			cmd.Stderr = &stderr
 			cmd.Stdout = &stdout
 			cmd.Stdin = stdin
-			cmd.Env = testhelper.EnvForHooks(
+			cmd.Env = envForHooks(
 				t,
 				tempGitlabShellDir,
 				socket,
 				token,
 				testRepo,
-				testhelper.GlHookValues{
+				glHookValues{
 					GLID:                   glID,
 					GLUsername:             glUsername,
 					GLRepo:                 glRepository,
@@ -184,7 +248,7 @@ func testHooksPrePostReceive(t *testing.T) {
 					GitObjectDir:           c.GitObjectDir,
 					GitAlternateObjectDirs: c.GitAlternateObjectDirs,
 				},
-				testhelper.ProxyValues{
+				proxyValues{
 					HTTPProxy:  httpProxy,
 					HTTPSProxy: httpsProxy,
 					NoProxy:    noProxy,
@@ -254,7 +318,7 @@ func TestHooksUpdate(t *testing.T) {
 
 	config.Config.Hooks.CustomHooksDir = customHooksDir
 
-	testHooksUpdate(t, tempGitlabShellDir, socket, token, testhelper.GlHookValues{
+	testHooksUpdate(t, tempGitlabShellDir, socket, token, glHookValues{
 		GLID:       glID,
 		GLUsername: glUsername,
 		GLRepo:     glRepository,
@@ -262,7 +326,7 @@ func TestHooksUpdate(t *testing.T) {
 	})
 }
 
-func testHooksUpdate(t *testing.T, gitlabShellDir, socket, token string, glValues testhelper.GlHookValues) {
+func testHooksUpdate(t *testing.T, gitlabShellDir, socket, token string, glValues glHookValues) {
 	defer func(cfg config.Cfg) {
 		config.Config = cfg
 	}(config.Config)
@@ -274,7 +338,7 @@ func testHooksUpdate(t *testing.T, gitlabShellDir, socket, token string, glValue
 	updateHookPath, err := filepath.Abs("../../ruby/git-hooks/update")
 	require.NoError(t, err)
 	cmd := exec.Command(updateHookPath, refval, oldval, newval)
-	cmd.Env = testhelper.EnvForHooks(t, gitlabShellDir, socket, token, testRepo, glValues, testhelper.ProxyValues{})
+	cmd.Env = envForHooks(t, gitlabShellDir, socket, token, testRepo, glValues, proxyValues{})
 	cmd.Dir = testRepoPath
 
 	tempDir, cleanup := testhelper.TempDir(t)
@@ -422,14 +486,14 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 			}.Env()
 			require.NoError(t, err)
 
-			env := testhelper.EnvForHooks(t, tempGitlabShellDir, socket, token, testRepo,
-				testhelper.GlHookValues{
+			env := envForHooks(t, tempGitlabShellDir, socket, token, testRepo,
+				glHookValues{
 					GLID:       glID,
 					GLUsername: glUsername,
 					GLRepo:     glRepository,
 					GLProtocol: glProtocol,
 				},
-				testhelper.ProxyValues{},
+				proxyValues{},
 			)
 			env = append(env, transactionEnv)
 
@@ -502,14 +566,14 @@ func TestHooksNotAllowed(t *testing.T) {
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
 	cmd.Stdin = strings.NewReader(changes)
-	cmd.Env = testhelper.EnvForHooks(t, tempGitlabShellDir, socket, token, testRepo,
-		testhelper.GlHookValues{
+	cmd.Env = envForHooks(t, tempGitlabShellDir, socket, token, testRepo,
+		glHookValues{
 			GLID:       glID,
 			GLUsername: glUsername,
 			GLRepo:     glRepository,
 			GLProtocol: glProtocol,
 		},
-		testhelper.ProxyValues{})
+		proxyValues{})
 	cmd.Dir = testRepoPath
 
 	require.Error(t, cmd.Run())
