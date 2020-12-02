@@ -61,6 +61,44 @@ func TestGetPrimaryAndSecondaries(t *testing.T) {
 	require.Empty(t, shard)
 }
 
+func TestSqlElector_slow_execution(t *testing.T) {
+	db := getDB(t)
+
+	praefectSocket := "unix://" + testhelper.GetTemporaryGitalySocketFileName()
+	logger := testhelper.NewTestLogger(t).WithField("test", t.Name())
+
+	gitalySocket := testhelper.GetTemporaryGitalySocketFileName()
+	gitalySrv, _ := testhelper.NewServerWithHealth(t, gitalySocket)
+	defer gitalySrv.Stop()
+
+	gitalyConn, err := grpc.Dial(
+		"unix://"+gitalySocket,
+		grpc.WithInsecure(),
+	)
+	require.NoError(t, err)
+
+	gitalyNodeStatus := newConnectionStatus(config.Node{Storage: "gitaly", Address: "gitaly-address"}, gitalyConn, logger, promtest.NewMockHistogramVec(), nil)
+	elector := newSQLElector(shardName, config.Config{SocketPath: praefectSocket}, db.DB, logger, []*nodeStatus{gitalyNodeStatus})
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	// Failover timeout is set to 0. If the election checks do not happen exactly at the same time
+	// as when the health checks are updated, gitaly node in the test is going to be considered
+	// unhealthy and the test will fail.
+	elector.failoverTimeout = 0
+
+	err = elector.checkNodes(ctx)
+	require.NoError(t, err)
+
+	shard, err := elector.GetShard(ctx)
+	require.NoError(t, err)
+	assertShard(t, shardAssertion{
+		Primary:     &nodeAssertion{gitalyNodeStatus.GetStorage(), gitalyNodeStatus.GetAddress()},
+		Secondaries: []nodeAssertion{},
+	}, shard)
+}
+
 func TestBasicFailover(t *testing.T) {
 	db := getDB(t)
 

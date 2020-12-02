@@ -76,13 +76,14 @@ type sqlCandidate struct {
 // set, mutator RPCs against the storage shard should be blocked in order to prevent new primary from
 // diverging from the previous primary before data recovery attempts have been made.
 type sqlElector struct {
-	m            sync.RWMutex
-	praefectName string
-	shardName    string
-	nodes        []*sqlCandidate
-	primaryNode  *sqlCandidate
-	db           *sql.DB
-	log          logrus.FieldLogger
+	m               sync.RWMutex
+	praefectName    string
+	shardName       string
+	nodes           []*sqlCandidate
+	primaryNode     *sqlCandidate
+	db              *sql.DB
+	log             logrus.FieldLogger
+	failoverTimeout time.Duration
 }
 
 func newSQLElector(name string, c config.Config, db *sql.DB, log logrus.FieldLogger, ns []*nodeStatus) *sqlElector {
@@ -98,12 +99,13 @@ func newSQLElector(name string, c config.Config, db *sql.DB, log logrus.FieldLog
 	}
 
 	return &sqlElector{
-		praefectName: praefectName,
-		shardName:    name,
-		db:           db,
-		log:          log,
-		nodes:        nodes,
-		primaryNode:  nodes[0],
+		praefectName:    praefectName,
+		shardName:       name,
+		db:              db,
+		log:             log,
+		nodes:           nodes,
+		primaryNode:     nodes[0],
+		failoverTimeout: failoverTimeout,
 	}
 }
 
@@ -413,7 +415,7 @@ func (s *sqlElector) electNewPrimary(ctx context.Context, candidates []*sqlCandi
 				, demoted = false
 	   WHERE shard_primaries.elected_at < now() - INTERVAL '1 MICROSECOND' * $4
 	`
-	_, err := s.db.ExecContext(ctx, q, s.praefectName, s.shardName, newPrimaryStorage, failoverTimeout.Microseconds())
+	_, err := s.db.ExecContext(ctx, q, s.praefectName, s.shardName, newPrimaryStorage, s.failoverTimeout.Microseconds())
 	if err != nil {
 		s.log.Errorf("error updating new primary: %s", err)
 		return err
@@ -436,7 +438,7 @@ func (s *sqlElector) validateAndUpdatePrimary(ctx context.Context) error {
 			HAVING COUNT(praefect_name) >= $3
 			ORDER BY COUNT(node_name) DESC, node_name ASC`
 
-	rows, err := s.db.QueryContext(ctx, q, s.shardName, failoverTimeout.Microseconds(), quorumCount)
+	rows, err := s.db.QueryContext(ctx, q, s.shardName, s.failoverTimeout.Microseconds(), quorumCount)
 	if err != nil {
 		return fmt.Errorf("error retrieving candidates: %w", err)
 	}
