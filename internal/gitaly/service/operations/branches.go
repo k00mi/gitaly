@@ -120,6 +120,9 @@ func (s *Server) UserDeleteBranch(ctx context.Context, req *gitalypb.UserDeleteB
 
 	referenceFmt := "refs/heads/%s"
 	if strings.HasPrefix(string(req.BranchName), "refs/") {
+		// Not the same behavior as UserCreateBranch. This is
+		// Ruby bug emulation. See
+		// https://gitlab.com/gitlab-org/gitaly/-/issues/3218
 		referenceFmt = "%s"
 	}
 	referenceName := fmt.Sprintf(referenceFmt, req.BranchName)
