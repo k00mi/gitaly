@@ -15,12 +15,6 @@ import (
 
 type hookRequest interface {
 	GetEnvironmentVariables() []string
-	GetRepository() *gitalypb.Repository
-}
-
-type prePostRequest interface {
-	hookRequest
-	GetGitPushOptions() []string
 }
 
 func (s *server) hookRequestEnv(req hookRequest) ([]string, error) {
@@ -29,17 +23,6 @@ func (s *server) hookRequestEnv(req hookRequest) ([]string, error) {
 		return nil, err
 	}
 	return append(gitlabshellEnv, req.GetEnvironmentVariables()...), nil
-}
-
-func (s *server) preReceiveEnv(req prePostRequest) ([]string, error) {
-	env, err := s.hookRequestEnv(req)
-	if err != nil {
-		return nil, err
-	}
-
-	env = append(env, hooks.GitPushOptions(req.GetGitPushOptions())...)
-
-	return env, nil
 }
 
 func (s *server) PreReceiveHook(stream gitalypb.HookService_PreReceiveHookServer) error {
@@ -51,7 +34,6 @@ func (s *server) PreReceiveHook(stream gitalypb.HookService_PreReceiveHookServer
 	if err := validatePreReceiveHookRequest(firstRequest); err != nil {
 		return helper.ErrInvalidArgument(err)
 	}
-	reqEnvVars := firstRequest.GetEnvironmentVariables()
 	repository := firstRequest.GetRepository()
 
 	stdin := streamio.NewReader(func() ([]byte, error) {
@@ -67,15 +49,16 @@ func (s *server) PreReceiveHook(stream gitalypb.HookService_PreReceiveHookServer
 		return stream.Send(&gitalypb.PreReceiveHookResponse{Stderr: p})
 	})
 
-	env, err := s.preReceiveEnv(firstRequest)
+	env, err := s.hookRequestEnv(firstRequest)
 	if err != nil {
 		return fmt.Errorf("getting env vars from request: %v", err)
 	}
+	env = append(env, hooks.GitPushOptions(firstRequest.GetGitPushOptions())...)
 
 	if err := s.manager.PreReceiveHook(
 		stream.Context(),
 		repository,
-		append(env, reqEnvVars...),
+		env,
 		stdin,
 		stdout,
 		stderr,
