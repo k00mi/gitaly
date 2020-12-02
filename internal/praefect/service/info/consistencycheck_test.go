@@ -66,7 +66,7 @@ func TestServer_ConsistencyCheck(t *testing.T) {
 
 		gitalySrv := grpc.NewServer()
 		defer gitalySrv.Stop()
-		gitalypb.RegisterRepositoryServiceServer(gitalySrv, repository.NewServer(gconfig.Config, nil, gconfig.NewLocator(gconfig.Config), ""))
+		gitalypb.RegisterRepositoryServiceServer(gitalySrv, repository.NewServer(gconfig.Config, nil, gconfig.NewLocator(gconfig.Config)))
 		gitalypb.RegisterInternalGitalyServer(gitalySrv, internalgitaly.NewServer(gconfig.Config.Storages))
 		go func() { gitalySrv.Serve(gitalyListener) }()
 	}

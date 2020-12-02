@@ -25,7 +25,7 @@ func (mo *mockOptimizer) OptimizeRepository(ctx context.Context, req *gitalypb.O
 	mo.actual = append(mo.actual, req.Repository)
 	cfg := config.Cfg{Storages: mo.storages}
 	l := config.NewLocator(cfg)
-	resp, err := repository.NewServer(cfg, nil, l, "").OptimizeRepository(ctx, req)
+	resp, err := repository.NewServer(cfg, nil, l).OptimizeRepository(ctx, req)
 	assert.NoError(mo.t, err)
 	return resp, err
 }
