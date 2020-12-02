@@ -104,8 +104,7 @@ func testSuccessfulMerge(t *testing.T, ctx context.Context) {
 
 	require.Equal(t, gitalypb.OperationBranchUpdate{CommitId: commit.Id}, *(secondResponse.BranchUpdate))
 
-	require.Contains(t, commit.ParentIds, mergeBranchHeadBefore, "merge parents must include previous HEAD of branch")
-	require.Contains(t, commit.ParentIds, commitToMerge, "merge parents must include commit to merge")
+	require.Equal(t, commit.ParentIds, []string{mergeBranchHeadBefore, commitToMerge})
 
 	require.True(t, strings.HasPrefix(string(commit.Body), mergeCommitMessage), "expected %q to start with %q", commit.Body, mergeCommitMessage)
 

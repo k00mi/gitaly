@@ -123,8 +123,8 @@ func (s *Server) userMergeBranch(stream gitalypb.OperationService_UserMergeBranc
 		AuthorName: string(firstRequest.User.Name),
 		AuthorMail: string(firstRequest.User.Email),
 		Message:    string(firstRequest.Message),
-		Ours:       firstRequest.CommitId,
-		Theirs:     revision,
+		Ours:       revision,
+		Theirs:     firstRequest.CommitId,
 	}.Run(ctx, s.cfg)
 	if err != nil {
 		if errors.Is(err, git2go.ErrInvalidArgument) {
