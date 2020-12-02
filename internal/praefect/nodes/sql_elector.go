@@ -14,6 +14,7 @@ import (
 	"github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore/glsql"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metrics"
 )
 
@@ -155,6 +156,18 @@ func (s *sqlElector) monitor(d time.Duration) {
 }
 
 func (s *sqlElector) checkNodes(ctx context.Context) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		s.log.WithError(err).Error("unable to begin a database transaction")
+		return err
+	}
+
+	defer func() {
+		if err := tx.Commit(); err != nil {
+			s.log.WithError(err).Error("failed committing transaction")
+		}
+	}()
+
 	var wg sync.WaitGroup
 
 	defer s.updateMetrics()
@@ -165,7 +178,7 @@ func (s *sqlElector) checkNodes(ctx context.Context) error {
 		go func(n Node) {
 			defer wg.Done()
 			result, _ := n.CheckHealth(ctx)
-			if err := s.updateNode(ctx, n, result); err != nil {
+			if err := s.updateNode(ctx, tx, n, result); err != nil {
 				s.log.WithError(err).WithFields(logrus.Fields{
 					"storage": n.GetStorage(),
 					"address": n.GetAddress(),
@@ -176,7 +189,7 @@ func (s *sqlElector) checkNodes(ctx context.Context) error {
 
 	wg.Wait()
 
-	err := s.validateAndUpdatePrimary(ctx)
+	err = s.validateAndUpdatePrimary(ctx, tx)
 
 	if err != nil {
 		s.log.WithError(err).Error("unable to validate primary")
@@ -186,7 +199,7 @@ func (s *sqlElector) checkNodes(ctx context.Context) error {
 	// The attempt to elect a primary may have conflicted with another
 	// node attempting to elect a primary. We check the database again
 	// to see the current state.
-	candidate, err := s.lookupPrimary(ctx)
+	candidate, err := s.lookupPrimary(ctx, tx)
 	if err != nil {
 		s.log.WithError(err).Error("error looking up primary")
 		return err
@@ -221,7 +234,7 @@ func (s *sqlElector) setPrimary(candidate *sqlCandidate) {
 	}
 }
 
-func (s *sqlElector) updateNode(ctx context.Context, node Node, result bool) error {
+func (s *sqlElector) updateNode(ctx context.Context, tx *sql.Tx, node Node, result bool) error {
 	var q string
 
 	if result {
@@ -240,7 +253,7 @@ DO UPDATE SET
 last_contact_attempt_at = NOW()`
 	}
 
-	_, err := s.db.ExecContext(ctx, q, s.praefectName, s.shardName, node.GetStorage())
+	_, err := tx.ExecContext(ctx, q, s.praefectName, s.shardName, node.GetStorage())
 
 	if err != nil {
 		s.log.Errorf("Error updating node: %s", err)
@@ -252,7 +265,7 @@ last_contact_attempt_at = NOW()`
 // GetShard gets the current status of the shard. ErrPrimaryNotHealthy
 // is returned if a primary does not exist.
 func (s *sqlElector) GetShard(ctx context.Context) (Shard, error) {
-	primary, err := s.lookupPrimary(ctx)
+	primary, err := s.lookupPrimary(ctx, s.db)
 	if err != nil {
 		return Shard{}, err
 	}
@@ -291,14 +304,14 @@ func (s *sqlElector) updateMetrics() {
 	}
 }
 
-func (s *sqlElector) getQuorumCount(ctx context.Context) (int, error) {
+func (s *sqlElector) getQuorumCount(ctx context.Context, tx *sql.Tx) (int, error) {
 	// This is crude form of service discovery. Find how many active
 	// Praefect nodes based on whether they attempted to update entries.
 	q := `SELECT COUNT (DISTINCT praefect_name) FROM node_status WHERE shard_name = $1 AND last_contact_attempt_at >= NOW() - INTERVAL '1 MICROSECOND' * $2`
 
 	var totalCount int
 
-	if err := s.db.QueryRowContext(ctx, q, s.shardName, activePraefectTimeout.Microseconds()).Scan(&totalCount); err != nil {
+	if err := tx.QueryRowContext(ctx, q, s.shardName, activePraefectTimeout.Microseconds()).Scan(&totalCount); err != nil {
 		return 0, fmt.Errorf("error retrieving quorum count: %w", err)
 	}
 
@@ -331,7 +344,7 @@ func nodeInSlice(candidates []*sqlCandidate, node *sqlCandidate) bool {
 	return false
 }
 
-func (s *sqlElector) demotePrimary(ctx context.Context) error {
+func (s *sqlElector) demotePrimary(ctx context.Context, tx glsql.Querier) error {
 	log := s.log
 	if s.primaryNode != nil {
 		log = s.log.WithField("primary", s.primaryNode.GetStorage())
@@ -341,12 +354,12 @@ func (s *sqlElector) demotePrimary(ctx context.Context) error {
 	s.setPrimary(nil)
 
 	q := "UPDATE shard_primaries SET demoted = true WHERE shard_name = $1"
-	_, err := s.db.ExecContext(ctx, q, s.shardName)
+	_, err := tx.ExecContext(ctx, q, s.shardName)
 
 	return err
 }
 
-func (s *sqlElector) electNewPrimary(ctx context.Context, candidates []*sqlCandidate) error {
+func (s *sqlElector) electNewPrimary(ctx context.Context, tx *sql.Tx, candidates []*sqlCandidate) error {
 	if len(candidates) == 0 {
 		return errors.New("candidates cannot be empty")
 	}
@@ -369,7 +382,7 @@ func (s *sqlElector) electNewPrimary(ctx context.Context, candidates []*sqlCandi
 
 	var newPrimaryStorage string
 	var fallbackChoice bool
-	if err := s.db.QueryRowContext(ctx, q, pq.StringArray(candidateStorages), s.shardName).Scan(&newPrimaryStorage); err != nil {
+	if err := tx.QueryRowContext(ctx, q, pq.StringArray(candidateStorages), s.shardName).Scan(&newPrimaryStorage); err != nil {
 		if err != sql.ErrNoRows {
 			return fmt.Errorf("retrieve potential candidate: %w", err)
 		}
@@ -415,7 +428,7 @@ func (s *sqlElector) electNewPrimary(ctx context.Context, candidates []*sqlCandi
 				, demoted = false
 	   WHERE shard_primaries.elected_at < now() - INTERVAL '1 MICROSECOND' * $4
 	`
-	_, err := s.db.ExecContext(ctx, q, s.praefectName, s.shardName, newPrimaryStorage, s.failoverTimeout.Microseconds())
+	_, err := tx.ExecContext(ctx, q, s.praefectName, s.shardName, newPrimaryStorage, s.failoverTimeout.Microseconds())
 	if err != nil {
 		s.log.Errorf("error updating new primary: %s", err)
 		return err
@@ -424,8 +437,8 @@ func (s *sqlElector) electNewPrimary(ctx context.Context, candidates []*sqlCandi
 	return nil
 }
 
-func (s *sqlElector) validateAndUpdatePrimary(ctx context.Context) error {
-	quorumCount, err := s.getQuorumCount(ctx)
+func (s *sqlElector) validateAndUpdatePrimary(ctx context.Context, tx *sql.Tx) error {
+	quorumCount, err := s.getQuorumCount(ctx, tx)
 
 	if err != nil {
 		return err
@@ -438,7 +451,7 @@ func (s *sqlElector) validateAndUpdatePrimary(ctx context.Context) error {
 			HAVING COUNT(praefect_name) >= $3
 			ORDER BY COUNT(node_name) DESC, node_name ASC`
 
-	rows, err := s.db.QueryContext(ctx, q, s.shardName, s.failoverTimeout.Microseconds(), quorumCount)
+	rows, err := tx.QueryContext(ctx, q, s.shardName, s.failoverTimeout.Microseconds(), quorumCount)
 	if err != nil {
 		return fmt.Errorf("error retrieving candidates: %w", err)
 	}
@@ -466,27 +479,27 @@ func (s *sqlElector) validateAndUpdatePrimary(ctx context.Context) error {
 	}
 
 	// Check if primary is in this list
-	primaryNode, err := s.lookupPrimary(ctx)
+	primaryNode, err := s.lookupPrimary(ctx, tx)
 	if err != nil {
 		s.log.WithError(err).Error("error looking up primary")
 		return err
 	}
 
 	if len(candidates) == 0 {
-		return s.demotePrimary(ctx)
+		return s.demotePrimary(ctx, tx)
 	}
 
 	if primaryNode == nil || !nodeInSlice(candidates, primaryNode) {
-		return s.electNewPrimary(ctx, candidates)
+		return s.electNewPrimary(ctx, tx, candidates)
 	}
 
 	return nil
 }
 
-func (s *sqlElector) lookupPrimary(ctx context.Context) (*sqlCandidate, error) {
+func (s *sqlElector) lookupPrimary(ctx context.Context, tx glsql.Querier) (*sqlCandidate, error) {
 	var primaryName string
 	const q = `SELECT node_name FROM shard_primaries WHERE shard_name = $1 AND demoted = false`
-	if err := s.db.QueryRowContext(ctx, q, s.shardName).Scan(&primaryName); err != nil {
+	if err := tx.QueryRowContext(ctx, q, s.shardName).Scan(&primaryName); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
