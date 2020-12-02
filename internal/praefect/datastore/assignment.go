@@ -12,10 +12,6 @@ func newVirtualStorageNotFoundError(virtualStorage string) error {
 	return fmt.Errorf("virtual storage %q not found", virtualStorage)
 }
 
-func newAssignmentsNotFoundError(virtualStorage, relativePath string) error {
-	return fmt.Errorf("host assignments for repository %q/%q not found", virtualStorage, relativePath)
-}
-
 // AssignmentStore manages host assignments in Postgres.
 type AssignmentStore struct {
 	db                 glsql.Querier
@@ -35,13 +31,11 @@ func (s AssignmentStore) GetHostAssignments(ctx context.Context, virtualStorage,
 
 	rows, err := s.db.QueryContext(ctx, `
 SELECT storage
-FROM repositories
-JOIN storage_repositories USING (virtual_storage, relative_path)
+FROM repository_assignments
 WHERE virtual_storage = $1
 AND   relative_path = $2
-AND   assigned
-AND   storage = ANY($3::text[])
-	`, virtualStorage, relativePath, pq.StringArray(configuredStorages))
+AND   storage = ANY($3)
+`, virtualStorage, relativePath, pq.StringArray(configuredStorages))
 	if err != nil {
 		return nil, fmt.Errorf("query: %w", err)
 	}
@@ -62,7 +56,7 @@ AND   storage = ANY($3::text[])
 	}
 
 	if len(assignedStorages) == 0 {
-		return nil, newAssignmentsNotFoundError(virtualStorage, relativePath)
+		return configuredStorages, nil
 	}
 
 	return assignedStorages, nil
