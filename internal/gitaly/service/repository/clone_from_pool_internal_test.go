@@ -90,6 +90,53 @@ func TestCloneFromPoolInternal(t *testing.T) {
 	testhelper.MustRunCommand(t, nil, "git", "-C", forkRepoPath, "show-ref", "--verify", fmt.Sprintf("refs/heads/%s", newBranch))
 }
 
+func TestCloneFromPoolInternal_bad_token(t *testing.T) {
+	defer func(old string) { config.Config.Auth.Token = old }(config.Config.Auth.Token)
+	config.Config.Auth.Token = "invalid"
+
+	serverSocketPath, clean := runFullServer(t)
+	defer clean()
+
+	ctxOuter, cancel := testhelper.Context()
+	defer cancel()
+
+	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
+	ctx := metadata.NewOutgoingContext(ctxOuter, md)
+
+	client, conn := repository.NewRepositoryClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.InitBareRepo(t)
+	defer cleanupFn()
+
+	pool, poolRepo := NewTestObjectPool(t)
+	defer pool.Remove(ctx)
+
+	require.NoError(t, pool.Create(ctx, testRepo))
+	require.NoError(t, pool.Link(ctx, testRepo))
+
+	fullRepack(t, testRepoPath)
+
+	forkedRepo, _, forkRepoCleanup := getForkDestination(t)
+	defer forkRepoCleanup()
+
+	req := &gitalypb.CloneFromPoolInternalRequest{
+		Repository:       forkedRepo,
+		SourceRepository: testRepo,
+		Pool: &gitalypb.ObjectPool{
+			Repository: poolRepo,
+		},
+	}
+
+	_, err := client.CloneFromPoolInternal(ctx, req)
+	require.Error(t, err)
+	require.Equal(t,
+		err.Error(),
+		"rpc error: code = Internal desc = fetch internal remote: "+
+			"rpc error: code = Internal desc = FetchInternalRemote: remote default branch: getRemoteDefaultBranch: "+
+			"rpc error: code = PermissionDenied desc = permission denied")
+}
+
 // fullRepack does a full repack on the repository, which means if it has a pool repository linked, it will get rid of redundant objects that are reachable in the pool
 func fullRepack(t *testing.T, repoPath string) {
 	testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "repack", "-A", "-l", "-d")
