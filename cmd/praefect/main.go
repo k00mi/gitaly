@@ -471,6 +471,7 @@ func run(cfgs []starter.Config, conf config.Config) error {
 				healthChecker,
 				conf.StorageNames(),
 				conf.Reconciliation.HistogramBuckets,
+				conf.Failover.ElectionStrategy == config.ElectionStrategyPerRepository,
 			)
 			prometheus.MustRegister(r)
 			go r.Run(ctx, helper.NewTimerTicker(interval))
