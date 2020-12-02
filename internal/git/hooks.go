@@ -195,7 +195,13 @@ func refHookEnv(ctx context.Context, repo *gitalypb.Repository, cfg config.Cfg) 
 		return nil, err
 	}
 
+	payload, err := NewHooksPayload(cfg, repo).Env()
+	if err != nil {
+		return nil, err
+	}
+
 	return []string{
+		payload,
 		"GITALY_BIN_DIR=" + cfg.BinDir,
 		"GITALY_SOCKET=" + cfg.GitalyInternalSocketPath(),
 		fmt.Sprintf("GITALY_REPO=%s", repoJSON),

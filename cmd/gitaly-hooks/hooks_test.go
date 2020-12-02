@@ -17,6 +17,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	gitalyhook "gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
@@ -51,8 +52,12 @@ func envForHooks(t testing.TB, gitlabShellDir string, repo *gitalypb.Repository,
 	env, err := gitlabshell.EnvFromConfig(config.Config)
 	require.NoError(t, err)
 
+	payload, err := git.NewHooksPayload(config.Config, repo).Env()
+	require.NoError(t, err)
+
 	env = append(env, os.Environ()...)
 	env = append(env, []string{
+		payload,
 		fmt.Sprintf("GITALY_RUBY_DIR=%s", rubyDir),
 		fmt.Sprintf("GL_ID=%s", glHookValues.GLID),
 		fmt.Sprintf("GL_REPOSITORY=%s", glHookValues.GLRepo),

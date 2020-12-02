@@ -38,6 +38,11 @@ func (s *Server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 		return err
 	}
 
+	payload, err := git.NewHooksPayload(s.cfg, repo).Env()
+	if err != nil {
+		return err
+	}
+
 	if reference == "" {
 		return helper.ErrInternalf("updateReferenceWithHooks: got no reference")
 	}
@@ -49,6 +54,7 @@ func (s *Server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 	}
 
 	env := append([]string{
+		payload,
 		"GL_PROTOCOL=web",
 		fmt.Sprintf("GL_ID=%s", user.GetGlId()),
 		fmt.Sprintf("GL_USERNAME=%s", user.GetGlUsername()),
