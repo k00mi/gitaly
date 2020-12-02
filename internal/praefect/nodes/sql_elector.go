@@ -330,6 +330,12 @@ func nodeInSlice(candidates []*sqlCandidate, node *sqlCandidate) bool {
 }
 
 func (s *sqlElector) demotePrimary(ctx context.Context) error {
+	log := s.log
+	if s.primaryNode != nil {
+		log = s.log.WithField("primary", s.primaryNode.GetStorage())
+	}
+	log.Info("demoting primary node")
+
 	s.setPrimary(nil)
 
 	q := "UPDATE shard_primaries SET demoted = true WHERE shard_name = $1"
