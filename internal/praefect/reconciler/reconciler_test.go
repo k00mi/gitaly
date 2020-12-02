@@ -361,6 +361,20 @@ func TestReconciler(t *testing.T) {
 						"storage-2": {generation: 0},
 						"storage-3": {generation: 0, assigned: true},
 					},
+					// assert query correctly scopes for relative path
+					"relative-path-2": {
+						"storage-1": {generation: 2, assigned: true},
+						"storage-2": {generation: 2, assigned: true},
+						"storage-3": {generation: 2, assigned: true},
+					},
+				},
+				// assert query correctly scopes for virtual storage
+				"virtual-storage-2": {
+					"relative-path-1": {
+						"storage-1": {generation: 2, assigned: true},
+						"storage-2": {generation: 2, assigned: true},
+						"storage-3": {generation: 2, assigned: true},
+					},
 				},
 			},
 			reconciliationJobs: jobs{
@@ -410,13 +424,12 @@ func TestReconciler(t *testing.T) {
 					for storage, repo := range storages {
 						require.NoError(t, rs.SetGeneration(ctx, virtualStorage, relativePath, storage, repo.generation))
 
-						_, err := db.ExecContext(ctx, `
-							UPDATE storage_repositories SET assigned = $4
-							WHERE virtual_storage = $1
-							AND   relative_path = $2
-							AND   storage = $3
-						`, virtualStorage, relativePath, storage, repo.assigned)
-						require.NoError(t, err)
+						if repo.assigned {
+							_, err := db.ExecContext(ctx, `
+							INSERT INTO repository_assignments VALUES ($1, $2, $3)
+						`, virtualStorage, relativePath, storage)
+							require.NoError(t, err)
+						}
 					}
 				}
 			}
@@ -463,7 +476,6 @@ func TestReconciler(t *testing.T) {
 				praefect.StaticHealthChecker(tc.healthyStorages),
 				configuredStorages,
 				prometheus.DefBuckets,
-				tc.assignmentsEnabled,
 			)
 			reconciler.handleError = func(err error) error { return err }
 

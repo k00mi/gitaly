@@ -10,25 +10,19 @@ import (
 )
 
 func TestAssignmentStore_GetHostAssignments(t *testing.T) {
-	type repository struct {
-		virtualStorage string
-		relativePath   string
-	}
-
-	type storage struct {
+	type assignment struct {
 		virtualStorage string
 		relativePath   string
 		storage        string
-		assigned       bool
 	}
 
+	configuredStorages := []string{"storage-1", "storage-2", "storage-3"}
 	for _, tc := range []struct {
-		desc           string
-		virtualStorage string
-		repositories   []repository
-		storages       []storage
-		assignments    []string
-		error          error
+		desc                string
+		virtualStorage      string
+		existingAssignments []assignment
+		expectedAssignments []string
+		error               error
 	}{
 		{
 			desc:           "virtual storage not found",
@@ -36,70 +30,43 @@ func TestAssignmentStore_GetHostAssignments(t *testing.T) {
 			error:          newVirtualStorageNotFoundError("invalid-virtual-storage"),
 		},
 		{
-			desc:           "not found when no records",
-			virtualStorage: "virtual-storage",
-			error:          newAssignmentsNotFoundError("virtual-storage", "relative-path"),
+			desc:                "configured storages fallback when no records",
+			virtualStorage:      "virtual-storage",
+			expectedAssignments: configuredStorages,
 		},
 		{
-			desc:           "not found when only repository record",
+			desc:           "configured storages fallback when a repo exists in different virtual storage",
 			virtualStorage: "virtual-storage",
-			repositories: []repository{
-				{virtualStorage: "virtual-storage", relativePath: "relative-path"},
+			existingAssignments: []assignment{
+				{virtualStorage: "other-virtual-storage", relativePath: "relative-path", storage: "storage-1"},
 			},
-			error: newAssignmentsNotFoundError("virtual-storage", "relative-path"),
+			expectedAssignments: configuredStorages,
 		},
 		{
-			desc:           "not found with incorrect virtual storage",
+			desc:           "configured storages fallback when a different repo exists in the virtual storage ",
 			virtualStorage: "virtual-storage",
-			repositories: []repository{
-				{virtualStorage: "other-virtual-storage", relativePath: "relative-path"},
+			existingAssignments: []assignment{
+				{virtualStorage: "virtual-storage", relativePath: "other-relative-path", storage: "storage-1"},
 			},
-			storages: []storage{
-				{virtualStorage: "other-virtual-storage", relativePath: "relative-path", storage: "storage-1", assigned: true},
-			},
-			error: newAssignmentsNotFoundError("virtual-storage", "relative-path"),
-		},
-		{
-			desc:           "not found with incorrect relative path",
-			virtualStorage: "virtual-storage",
-			repositories: []repository{
-				{virtualStorage: "virtual-storage", relativePath: "other-relative-path"},
-			},
-			storages: []storage{
-				{virtualStorage: "virtual-storage", relativePath: "other-relative-path", storage: "storage-1", assigned: true},
-			},
-			error: newAssignmentsNotFoundError("virtual-storage", "relative-path"),
-		},
-
-		{
-			desc:           "not found when only storage record",
-			virtualStorage: "virtual-storage",
-			storages: []storage{
-				{virtualStorage: "virtual-storage", relativePath: "relative-path", storage: "storage-1", assigned: true},
-			},
-			error: newAssignmentsNotFoundError("virtual-storage", "relative-path"),
+			expectedAssignments: configuredStorages,
 		},
 		{
 			desc:           "unconfigured storages are ignored",
 			virtualStorage: "virtual-storage",
-			storages: []storage{
-				{virtualStorage: "virtual-storage", relativePath: "relative-path", storage: "unconfigured-storage", assigned: true},
+			existingAssignments: []assignment{
+				{virtualStorage: "virtual-storage", relativePath: "relative-path", storage: "unconfigured-storage"},
 			},
-			error: newAssignmentsNotFoundError("virtual-storage", "relative-path"),
+			expectedAssignments: configuredStorages,
 		},
 		{
 			desc:           "assignments found",
 			virtualStorage: "virtual-storage",
-			repositories: []repository{
-				{virtualStorage: "virtual-storage", relativePath: "relative-path"},
+			existingAssignments: []assignment{
+				{virtualStorage: "virtual-storage", relativePath: "relative-path", storage: "storage-1"},
+				{virtualStorage: "virtual-storage", relativePath: "relative-path", storage: "storage-2"},
+				{virtualStorage: "virtual-storage", relativePath: "relative-path", storage: "unconfigured"},
 			},
-			storages: []storage{
-				{virtualStorage: "virtual-storage", relativePath: "relative-path", storage: "storage-1", assigned: true},
-				{virtualStorage: "virtual-storage", relativePath: "relative-path", storage: "storage-2", assigned: true},
-				{virtualStorage: "virtual-storage", relativePath: "relative-path", storage: "storage-3", assigned: false},
-				{virtualStorage: "virtual-storage", relativePath: "relative-path", storage: "unconfigured", assigned: true},
-			},
-			assignments: []string{"storage-1", "storage-2"},
+			expectedAssignments: []string{"storage-1", "storage-2"},
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -108,28 +75,26 @@ func TestAssignmentStore_GetHostAssignments(t *testing.T) {
 
 			db := getDB(t)
 
-			for _, repository := range tc.repositories {
+			for _, assignment := range tc.existingAssignments {
 				_, err := db.ExecContext(ctx, `
 					INSERT INTO repositories (virtual_storage, relative_path)
 					VALUES ($1, $2)
-				`, repository.virtualStorage, repository.relativePath)
+					ON CONFLICT DO NOTHING
+				`, assignment.virtualStorage, assignment.relativePath)
+				require.NoError(t, err)
+
+				_, err = db.ExecContext(ctx, `
+					INSERT INTO repository_assignments VALUES ($1, $2, $3)
+				`, assignment.virtualStorage, assignment.relativePath, assignment.storage)
 				require.NoError(t, err)
 			}
 
-			for _, storage := range tc.storages {
-				_, err := db.ExecContext(ctx, `
-					INSERT INTO storage_repositories (virtual_storage, relative_path, storage, assigned, generation)
-					VALUES ($1, $2, $3, $4, 0)
-				`, storage.virtualStorage, storage.relativePath, storage.storage, storage.assigned)
-				require.NoError(t, err)
-			}
-
-			assignments, err := NewAssignmentStore(
+			actualAssignments, err := NewAssignmentStore(
 				db,
-				map[string][]string{"virtual-storage": {"storage-1", "storage-2", "storage-3"}},
+				map[string][]string{"virtual-storage": configuredStorages},
 			).GetHostAssignments(ctx, tc.virtualStorage, "relative-path")
 			require.Equal(t, tc.error, err)
-			require.ElementsMatch(t, tc.assignments, assignments)
+			require.ElementsMatch(t, tc.expectedAssignments, actualAssignments)
 		})
 	}
 }
