@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
@@ -49,14 +48,6 @@ func TestWithRefHook(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			expectEnvVars := map[string]struct{}{
-				"GITALY_BIN_DIR":                    struct{}{},
-				"GITALY_SOCKET":                     struct{}{},
-				"GITALY_REPO":                       struct{}{},
-				"GITALY_TOKEN":                      struct{}{},
-				"GITALY_REFERENCE_TRANSACTION_HOOK": struct{}{},
-			}
-
 			cmd, err := tt.fn()
 			require.NoError(t, err)
 			// There is no full setup, so executing the hook will fail.
@@ -65,21 +56,23 @@ func TestWithRefHook(t *testing.T) {
 			var actualEnvVars []string
 			for _, env := range cmd.Env() {
 				kv := strings.SplitN(env, "=", 2)
-				if len(kv) < 2 {
-					continue
-				}
+				require.Len(t, kv, 2)
 				key, val := kv[0], kv[1]
 
-				if _, ok := expectEnvVars[key]; ok {
-					assert.NotEmptyf(t, strings.TrimSpace(val),
+				if strings.HasPrefix(key, "GL_") || strings.HasPrefix(key, "GITALY_") {
+					require.NotEmptyf(t, strings.TrimSpace(val),
 						"env var %s value should not be empty string", key)
+					actualEnvVars = append(actualEnvVars, key)
 				}
-				actualEnvVars = append(actualEnvVars, key)
 			}
 
-			for k := range expectEnvVars {
-				assert.Contains(t, actualEnvVars, k)
-			}
+			require.EqualValues(t, []string{
+				"GITALY_BIN_DIR",
+				"GITALY_SOCKET",
+				"GITALY_REPO",
+				"GITALY_TOKEN",
+				"GITALY_REFERENCE_TRANSACTION_HOOK",
+			}, actualEnvVars)
 		})
 	}
 }
