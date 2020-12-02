@@ -1,4 +1,4 @@
-package git_test
+package git
 
 import (
 	"strings"
@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
-	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
@@ -23,8 +22,8 @@ func TestWithRefHook(t *testing.T) {
 	defer func(oldToken string) { config.Config.Auth.Token = oldToken }(config.Config.Auth.Token)
 	config.Config.Auth.Token = token
 
-	opt := git.WithRefTxHook(ctx, testRepo, config.Config)
-	subCmd := git.SubCmd{Name: "update-ref", Args: []string{"refs/heads/master", git.NullSHA}}
+	opt := WithRefTxHook(ctx, testRepo, config.Config)
+	subCmd := SubCmd{Name: "update-ref", Args: []string{"refs/heads/master", NullSHA}}
 
 	for _, tt := range []struct {
 		name string
@@ -33,19 +32,19 @@ func TestWithRefHook(t *testing.T) {
 		{
 			name: "SafeCmd",
 			fn: func() (*command.Command, error) {
-				return git.SafeCmd(ctx, testRepo, nil, subCmd, opt)
+				return SafeCmd(ctx, testRepo, nil, subCmd, opt)
 			},
 		},
 		{
 			name: "SafeCmdWithEnv",
 			fn: func() (*command.Command, error) {
-				return git.SafeCmdWithEnv(ctx, nil, testRepo, nil, subCmd, opt)
+				return SafeCmdWithEnv(ctx, nil, testRepo, nil, subCmd, opt)
 			},
 		},
 		{
 			name: "SafeStdinCmd",
 			fn: func() (*command.Command, error) {
-				return git.SafeStdinCmd(ctx, testRepo, nil, subCmd, opt)
+				return SafeStdinCmd(ctx, testRepo, nil, subCmd, opt)
 			},
 		},
 	} {
