@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
@@ -102,6 +102,9 @@ func (s *Server) UserUpdateBranch(ctx context.Context, req *gitalypb.UserUpdateB
 }
 
 func (s *Server) UserDeleteBranch(ctx context.Context, req *gitalypb.UserDeleteBranchRequest) (*gitalypb.UserDeleteBranchResponse, error) {
+	// That we do the branch name & user check here first only in
+	// UserDelete but not UserCreate is "intentional", i.e. it's
+	// always been that way.
 	if len(req.BranchName) == 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "Bad Request (empty branch name)")
 	}
@@ -110,20 +113,25 @@ func (s *Server) UserDeleteBranch(ctx context.Context, req *gitalypb.UserDeleteB
 		return nil, status.Errorf(codes.InvalidArgument, "Bad Request (empty user)")
 	}
 
+	// Implement UserDeleteBranch in Go
 	if featureflag.IsDisabled(ctx, featureflag.GoUserDeleteBranch) {
 		return s.UserDeleteBranchRuby(ctx, req)
 	}
 
-	// Implement UserDeleteBranch in Go
-
-	revision, err := git.NewRepository(req.Repository).GetBranch(ctx, string(req.BranchName))
+	referenceFmt := "refs/heads/%s"
+	if strings.HasPrefix(string(req.BranchName), "refs/") {
+		// Not the same behavior as UserCreateBranch. This is
+		// Ruby bug emulation. See
+		// https://gitlab.com/gitlab-org/gitaly/-/issues/3218
+		referenceFmt = "%s"
+	}
+	referenceName := fmt.Sprintf(referenceFmt, req.BranchName)
+	referenceValue, err := git.NewRepository(req.Repository).GetReference(ctx, referenceName)
 	if err != nil {
-		return nil, helper.ErrPreconditionFailed(err)
+		return nil, status.Errorf(codes.FailedPrecondition, "branch not found: %s", req.BranchName)
 	}
 
-	branch := fmt.Sprintf("refs/heads/%s", req.BranchName)
-
-	if err := s.updateReferenceWithHooks(ctx, req.Repository, req.User, branch, git.NullSHA, revision.Target); err != nil {
+	if err := s.updateReferenceWithHooks(ctx, req.Repository, req.User, referenceName, git.NullSHA, referenceValue.Target); err != nil {
 		var preReceiveError preReceiveError
 		if errors.As(err, &preReceiveError) {
 			return &gitalypb.UserDeleteBranchResponse{
