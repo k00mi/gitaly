@@ -216,6 +216,7 @@ func runServer(t *testing.T) (string, func()) {
 	return runServerWithRuby(t, nil)
 }
 
+//go:generate openssl req -newkey rsa:4096 -new -nodes -x509 -days 3650 -out testdata/gitalycert.pem -keyout testdata/gitalykey.pem -subj "/C=US/ST=California/L=San Francisco/O=GitLab/OU=GitLab-Shell/CN=localhost" -addext "subjectAltName = IP:127.0.0.1, DNS:localhost"
 func runSecureServer(t *testing.T) (string, func()) {
 	config.Config.TLS = config.TLS{
 		CertPath: "testdata/gitalycert.pem",
