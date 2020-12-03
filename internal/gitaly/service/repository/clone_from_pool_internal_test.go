@@ -39,7 +39,7 @@ func getForkDestination(t *testing.T) (*gitalypb.Repository, string, func()) {
 }
 
 func TestCloneFromPoolInternal(t *testing.T) {
-	serverSocketPath, clean := runFullServer(t)
+	serverSocketPath, clean := runFullServer(t, config.NewLocator(config.Config))
 	defer clean()
 
 	ctxOuter, cancel := testhelper.Context()
@@ -94,7 +94,7 @@ func TestCloneFromPoolInternal_bad_token(t *testing.T) {
 	defer func(old string) { config.Config.Auth.Token = old }(config.Config.Auth.Token)
 	config.Config.Auth.Token = "invalid"
 
-	serverSocketPath, clean := runFullServer(t)
+	serverSocketPath, clean := runFullServer(t, config.NewLocator(config.Config))
 	defer clean()
 
 	ctxOuter, cancel := testhelper.Context()

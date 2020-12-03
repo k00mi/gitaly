@@ -30,7 +30,7 @@ func runCleanupServiceServer(t *testing.T, cfg config.Cfg) (string, func()) {
 	srv := testhelper.NewServer(t, nil, nil, testhelper.WithInternalSocket(cfg))
 
 	gitalypb.RegisterCleanupServiceServer(srv.GrpcServer(), NewServer())
-	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hookservice.NewServer(cfg, hook.NewManager(hook.GitlabAPIStub, cfg)))
+	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hookservice.NewServer(cfg, hook.NewManager(config.NewLocator(cfg), hook.GitlabAPIStub, cfg)))
 	reflection.Register(srv.GrpcServer())
 
 	require.NoError(t, srv.Start())

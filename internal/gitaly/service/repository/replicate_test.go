@@ -44,7 +44,9 @@ func TestReplicateRepository(t *testing.T) {
 		},
 	}
 
-	serverSocketPath, clean := runFullServer(t)
+	locator := config.NewLocator(config.Config)
+
+	serverSocketPath, clean := runFullServer(t, locator)
 	defer clean()
 
 	testRepo, testRepoPath, cleanupRepo := testhelper.NewTestRepo(t)
@@ -79,7 +81,6 @@ func TestReplicateRepository(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	locator := config.NewLocator(config.Config)
 	targetRepoPath, err := locator.GetRepoPath(&targetRepo)
 	require.NoError(t, err)
 
@@ -257,8 +258,9 @@ func TestReplicateRepository_BadRepository(t *testing.T) {
 				invalidRepos = append(invalidRepos, targetRepo)
 			}
 
+			locator := config.NewLocator(config.Config)
 			for _, invalidRepo := range invalidRepos {
-				invalidRepoPath, err := config.NewLocator(config.Config).GetPath(invalidRepo)
+				invalidRepoPath, err := locator.GetPath(invalidRepo)
 				require.NoError(t, err)
 
 				// delete git data so make the repo invalid
@@ -267,7 +269,7 @@ func TestReplicateRepository_BadRepository(t *testing.T) {
 				}
 			}
 
-			serverSocketPath, clean := runFullServer(t)
+			serverSocketPath, clean := runFullServer(t, locator)
 			defer clean()
 
 			config.Config.SocketPath = serverSocketPath

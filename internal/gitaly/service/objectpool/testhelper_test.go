@@ -39,7 +39,7 @@ func runObjectPoolServer(t *testing.T, cfg config.Cfg, locator storage.Locator) 
 	require.NoError(t, err)
 
 	gitalypb.RegisterObjectPoolServiceServer(server, NewServer(locator))
-	gitalypb.RegisterHookServiceServer(server, hookservice.NewServer(cfg, hook.NewManager(hook.GitlabAPIStub, cfg)))
+	gitalypb.RegisterHookServiceServer(server, hookservice.NewServer(cfg, hook.NewManager(locator, hook.GitlabAPIStub, cfg)))
 
 	go server.Serve(listener)
 	go server.Serve(internalListener)

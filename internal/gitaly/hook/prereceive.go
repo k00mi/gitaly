@@ -64,12 +64,12 @@ func (m *GitLabHookManager) PreReceiveHook(ctx context.Context, repo *gitalypb.R
 }
 
 func (m *GitLabHookManager) preReceiveHook(ctx context.Context, repo *gitalypb.Repository, env []string, changes []byte, stdout, stderr io.Writer) error {
-	if gitObjDir, gitAltObjDirs := getEnvVar("GIT_OBJECT_DIRECTORY", env), getEnvVar("GIT_ALTERNATE_OBJECT_DIRECTORIES", env); gitObjDir != "" && gitAltObjDirs != "" {
-		repoPath, err := helper.GetRepoPath(repo)
-		if err != nil {
-			return helper.ErrInternalf("getting repo path: %v", err)
-		}
+	repoPath, err := m.locator.GetRepoPath(repo)
+	if err != nil {
+		return helper.ErrInternalf("getting repo path: %v", err)
+	}
 
+	if gitObjDir, gitAltObjDirs := getEnvVar("GIT_OBJECT_DIRECTORY", env), getEnvVar("GIT_ALTERNATE_OBJECT_DIRECTORIES", env); gitObjDir != "" && gitAltObjDirs != "" {
 		gitObjectDirRel, gitAltObjectDirRel, err := getRelativeObjectDirs(repoPath, gitObjDir, gitAltObjDirs)
 		if err != nil {
 			return helper.ErrInternalf("getting relative git object directories: %v", err)
@@ -94,7 +94,17 @@ func (m *GitLabHookManager) preReceiveHook(ctx context.Context, repo *gitalypb.R
 		return helper.ErrInternalf("GL_PROTOCOL not set")
 	}
 
-	allowed, message, err := m.gitlabAPI.Allowed(ctx, repo, glRepo, glID, glProtocol, string(changes))
+	params := AllowedParams{
+		RepoPath:                      repoPath,
+		GitObjectDirectory:            repo.GitObjectDirectory,
+		GitAlternateObjectDirectories: repo.GitAlternateObjectDirectories,
+		GLRepository:                  glRepo,
+		GLID:                          glID,
+		GLProtocol:                    glProtocol,
+		Changes:                       string(changes),
+	}
+
+	allowed, message, err := m.gitlabAPI.Allowed(ctx, params)
 	if err != nil {
 		return fmt.Errorf("GitLab: %v", err)
 	}

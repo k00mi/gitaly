@@ -331,12 +331,11 @@ func check(configPath string) (*hook.CheckInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	config.Config = cfg
 
-	gitlabAPI, err := hook.NewGitlabAPI(config.Config.Gitlab, config.Config.TLS)
+	gitlabAPI, err := hook.NewGitlabAPI(cfg.Gitlab, cfg.TLS)
 	if err != nil {
 		return nil, err
 	}
 
-	return hook.NewManager(gitlabAPI, config.Config).Check(context.TODO())
+	return hook.NewManager(config.NewLocator(cfg), gitlabAPI, cfg).Check(context.TODO())
 }

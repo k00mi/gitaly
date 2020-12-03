@@ -125,7 +125,7 @@ func run(b *bootstrap.Bootstrap) error {
 		}
 	}
 
-	hookManager := hook.NewManager(gitlabAPI, config.Config)
+	hookManager := hook.NewManager(config.NewLocator(config.Config), gitlabAPI, config.Config)
 	prometheus.MustRegister(hookManager)
 
 	conns := client.NewPool()

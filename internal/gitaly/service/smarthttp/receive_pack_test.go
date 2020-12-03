@@ -444,8 +444,9 @@ func runSmartHTTPHookServiceServer(t *testing.T) (*grpc.Server, string) {
 		t.Fatal(err)
 	}
 
-	gitalypb.RegisterSmartHTTPServiceServer(server, NewServer(config.NewLocator(config.Config)))
-	gitalypb.RegisterHookServiceServer(server, hook.NewServer(config.Config, gitalyhook.NewManager(gitalyhook.GitlabAPIStub, config.Config)))
+	locator := config.NewLocator(config.Config)
+	gitalypb.RegisterSmartHTTPServiceServer(server, NewServer(locator))
+	gitalypb.RegisterHookServiceServer(server, hook.NewServer(config.Config, gitalyhook.NewManager(locator, gitalyhook.GitlabAPIStub, config.Config)))
 	reflection.Register(server)
 
 	go server.Serve(listener)
@@ -505,9 +506,10 @@ func TestPostReceiveWithTransactionsViaPraefect(t *testing.T) {
 
 	testhelper.WriteShellSecretFile(t, gitlabShellDir, secretToken)
 
+	locator := config.NewLocator(config.Config)
 	gitalyServer := testhelper.NewServerWithAuth(t, nil, nil, config.Config.Auth.Token)
-	gitalypb.RegisterSmartHTTPServiceServer(gitalyServer.GrpcServer(), NewServer(config.NewLocator(config.Config)))
-	gitalypb.RegisterHookServiceServer(gitalyServer.GrpcServer(), hook.NewServer(config.Config, gitalyhook.NewManager(gitalyhook.GitlabAPIStub, config.Config)))
+	gitalypb.RegisterSmartHTTPServiceServer(gitalyServer.GrpcServer(), NewServer(locator))
+	gitalypb.RegisterHookServiceServer(gitalyServer.GrpcServer(), hook.NewServer(config.Config, gitalyhook.NewManager(locator, gitalyhook.GitlabAPIStub, config.Config)))
 	reflection.Register(gitalyServer.GrpcServer())
 	require.NoError(t, gitalyServer.Start())
 	defer gitalyServer.Stop()
@@ -552,9 +554,10 @@ func (t *testTransactionServer) VoteTransaction(ctx context.Context, in *gitalyp
 func TestPostReceiveWithReferenceTransactionHook(t *testing.T) {
 	refTransactionServer := &testTransactionServer{}
 
+	locator := config.NewLocator(config.Config)
 	gitalyServer := testhelper.NewTestGrpcServer(t, nil, nil)
-	gitalypb.RegisterSmartHTTPServiceServer(gitalyServer, NewServer(config.NewLocator(config.Config)))
-	gitalypb.RegisterHookServiceServer(gitalyServer, hook.NewServer(config.Config, gitalyhook.NewManager(gitalyhook.GitlabAPIStub, config.Config)))
+	gitalypb.RegisterSmartHTTPServiceServer(gitalyServer, NewServer(locator))
+	gitalypb.RegisterHookServiceServer(gitalyServer, hook.NewServer(config.Config, gitalyhook.NewManager(locator, gitalyhook.GitlabAPIStub, config.Config)))
 	gitalypb.RegisterRefTransactionServer(gitalyServer, refTransactionServer)
 	reflection.Register(gitalyServer)
 

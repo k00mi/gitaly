@@ -42,8 +42,9 @@ func testMain(m *testing.M) int {
 func runSSHServer(t *testing.T, serverOpts ...ServerOpt) (string, func()) {
 	srv := testhelper.NewServer(t, nil, nil, testhelper.WithInternalSocket(config.Config))
 
-	gitalypb.RegisterSSHServiceServer(srv.GrpcServer(), NewServer(config.NewLocator(config.Config), serverOpts...))
-	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hookservice.NewServer(config.Config, hook.NewManager(hook.GitlabAPIStub, config.Config)))
+	locator := config.NewLocator(config.Config)
+	gitalypb.RegisterSSHServiceServer(srv.GrpcServer(), NewServer(locator, serverOpts...))
+	gitalypb.RegisterHookServiceServer(srv.GrpcServer(), hookservice.NewServer(config.Config, hook.NewManager(locator, hook.GitlabAPIStub, config.Config)))
 
 	require.NoError(t, srv.Start())
 

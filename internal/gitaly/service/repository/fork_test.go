@@ -40,14 +40,14 @@ func TestSuccessfulCreateForkRequest(t *testing.T) {
 				defer sslCleanup()
 
 				var serverCleanup testhelper.Cleanup
-				_, serverSocketPath, serverCleanup = runFullSecureServer(t)
+				_, serverSocketPath, serverCleanup = runFullSecureServer(t, locator)
 				defer serverCleanup()
 
 				client, conn = repository.NewSecureRepoClient(t, serverSocketPath, testPool)
 				defer conn.Close()
 			} else {
 				var clean func()
-				serverSocketPath, clean = runFullServer(t)
+				serverSocketPath, clean = runFullServer(t, locator)
 				defer clean()
 
 				client, conn = repository.NewRepositoryClient(t, serverSocketPath)
@@ -94,10 +94,10 @@ func TestSuccessfulCreateForkRequest(t *testing.T) {
 }
 
 func TestFailedCreateForkRequestDueToExistingTarget(t *testing.T) {
-	serverSocketPath, clean := runFullServer(t)
-	defer clean()
-
 	locator := config.NewLocator(config.Config)
+
+	serverSocketPath, clean := runFullServer(t, locator)
+	defer clean()
 
 	client, conn := repository.NewRepositoryClient(t, serverSocketPath)
 	defer conn.Close()

@@ -114,7 +114,15 @@ func TestAccess_verifyParams(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		allowed, _, err := c.Allowed(context.Background(), tc.repo, tc.glRepository, tc.glID, tc.protocol, tc.changes)
+		allowed, _, err := c.Allowed(context.Background(), AllowedParams{
+			RepoPath:                      tc.repo.RelativePath,
+			GitObjectDirectory:            tc.repo.GitObjectDirectory,
+			GitAlternateObjectDirectories: tc.repo.GitAlternateObjectDirectories,
+			GLRepository:                  tc.glRepository,
+			GLID:                          tc.glID,
+			GLProtocol:                    tc.protocol,
+			Changes:                       tc.changes,
+		})
 		require.NoError(t, err)
 		require.Equal(t, tc.allowed, allowed)
 	}
@@ -209,7 +217,15 @@ func TestAccess_escapedAndRelativeURLs(t *testing.T) {
 				},
 			}, config.TLS{})
 			require.NoError(t, err)
-			allowed, _, err := c.Allowed(context.Background(), testRepo, glRepository, glID, protocol, changes)
+			allowed, _, err := c.Allowed(context.Background(), AllowedParams{
+				RepoPath:                      testRepo.RelativePath,
+				GitObjectDirectory:            testRepo.GitObjectDirectory,
+				GitAlternateObjectDirectories: testRepo.GitAlternateObjectDirectories,
+				GLID:                          glID,
+				GLRepository:                  glRepository,
+				GLProtocol:                    protocol,
+				Changes:                       changes,
+			})
 			require.NoError(t, err)
 			require.True(t, allowed)
 		})
@@ -342,7 +358,15 @@ func TestAccess_allowedResponseHandling(t *testing.T) {
 			}, config.TLS{})
 			require.NoError(t, err)
 
-			allowed, message, err := c.Allowed(context.Background(), testRepo, "repo-1", "key-123", "http", "a\nb\nc\nd")
+			allowed, message, err := c.Allowed(context.Background(), AllowedParams{
+				RepoPath:                      testRepo.RelativePath,
+				GitObjectDirectory:            testRepo.GitObjectDirectory,
+				GitAlternateObjectDirectories: testRepo.GitAlternateObjectDirectories,
+				GLRepository:                  "repo-1",
+				GLID:                          "key-123",
+				GLProtocol:                    "http",
+				Changes:                       "a\nb\nc\nd",
+			})
 			require.Equal(t, tc.allowed, allowed)
 			if err != nil {
 				require.Contains(t, err.Error(), tc.errMsg)
