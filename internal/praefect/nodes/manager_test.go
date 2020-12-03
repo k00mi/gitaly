@@ -324,9 +324,16 @@ func TestMgr_GetSyncedNode(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	var consistentSecondariesErr error
+	consistentSecondaries := map[string]struct{}{}
+
 	verify := func(failover bool, scenario func(t *testing.T, nm Manager, rs datastore.RepositoryStore)) func(*testing.T) {
 		conf.Failover.Enabled = failover
-		rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
+		rs := datastore.MockRepositoryStore{
+			GetConsistentSecondariesFunc: func(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error) {
+				return consistentSecondaries, consistentSecondariesErr
+			},
+		}
 		sp := datastore.NewDirectStorageProvider(rs)
 
 		nm, err := NewManager(testhelper.DiscardTestEntry(t), conf, nil, rs, sp, promtest.NewMockHistogramVec(), protoregistry.GitalyProtoPreregistered, nil)
@@ -341,22 +348,20 @@ func TestMgr_GetSyncedNode(t *testing.T) {
 	}
 
 	t.Run("unknown virtual storage", verify(true, func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
+		consistentSecondariesErr = ErrVirtualStorageNotExist
 		_, err := nm.GetSyncedNode(ctx, "virtual-storage-unknown", "stub")
 		require.True(t, errors.Is(err, ErrVirtualStorageNotExist))
 	}))
 
 	t.Run("state is undefined", verify(true, func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
+		consistentSecondariesErr = nil
 		node, err := nm.GetSyncedNode(ctx, virtualStorage, "no/matter")
 		require.NoError(t, err)
 		require.Equal(t, conf.VirtualStorages[0].Nodes[0].Address, node.GetAddress(), "")
 	}))
 
 	t.Run("multiple storages up to date", verify(true, func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
-		require.NoError(t, rs.IncrementGeneration(ctx, virtualStorage, repoPath, "gitaly-0", nil))
-		generation, err := rs.GetGeneration(ctx, virtualStorage, repoPath, "gitaly-0")
-		require.NoError(t, err)
-		require.NoError(t, rs.SetGeneration(ctx, virtualStorage, repoPath, "gitaly-1", generation))
-		require.NoError(t, rs.SetGeneration(ctx, virtualStorage, repoPath, "gitaly-2", generation))
+		consistentSecondaries = map[string]struct{}{"gitaly-0": {}, "gitaly-1": {}, "gitaly-2": {}}
 
 		chosen := map[Node]struct{}{}
 		for i := 0; i < 1000 && len(chosen) < 2; i++ {
@@ -370,10 +375,7 @@ func TestMgr_GetSyncedNode(t *testing.T) {
 	}))
 
 	t.Run("single secondary storage up to date but unhealthy", verify(true, func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
-		require.NoError(t, rs.IncrementGeneration(ctx, virtualStorage, repoPath, "gitaly-0", nil))
-		generation, err := rs.GetGeneration(ctx, virtualStorage, repoPath, "gitaly-0")
-		require.NoError(t, err)
-		require.NoError(t, rs.SetGeneration(ctx, virtualStorage, repoPath, "gitaly-1", generation))
+		consistentSecondaries = map[string]struct{}{"gitaly-0": {}, "gitaly-1": {}}
 
 		healthSrvs[1].SetServingStatus("", grpc_health_v1.HealthCheckResponse_UNKNOWN)
 
@@ -393,10 +395,7 @@ func TestMgr_GetSyncedNode(t *testing.T) {
 	}))
 
 	t.Run("no healthy storages", verify(true, func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
-		require.NoError(t, rs.IncrementGeneration(ctx, virtualStorage, repoPath, "gitaly-0", nil))
-		generation, err := rs.GetGeneration(ctx, virtualStorage, repoPath, "gitaly-0")
-		require.NoError(t, err)
-		require.NoError(t, rs.SetGeneration(ctx, virtualStorage, repoPath, "gitaly-1", generation))
+		consistentSecondaries = map[string]struct{}{"gitaly-0": {}, "gitaly-1": {}}
 
 		healthSrvs[0].SetServingStatus("", grpc_health_v1.HealthCheckResponse_UNKNOWN)
 		healthSrvs[1].SetServingStatus("", grpc_health_v1.HealthCheckResponse_UNKNOWN)
@@ -423,10 +422,7 @@ func TestMgr_GetSyncedNode(t *testing.T) {
 	}))
 
 	t.Run("disabled failover doesn't disable health state", verify(false, func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
-		require.NoError(t, rs.IncrementGeneration(ctx, virtualStorage, repoPath, "gitaly-0", nil))
-		generation, err := rs.GetGeneration(ctx, virtualStorage, repoPath, "gitaly-0")
-		require.NoError(t, err)
-		require.NoError(t, rs.SetGeneration(ctx, virtualStorage, repoPath, "gitaly-1", generation))
+		consistentSecondaries = map[string]struct{}{"gitaly-0": {}, "gitaly-1": {}}
 
 		shard, err := nm.GetShard(ctx, virtualStorage)
 		require.NoError(t, err)

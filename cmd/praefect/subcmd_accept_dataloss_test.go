@@ -1,3 +1,5 @@
+// +build postgres
+
 package main
 
 import (
@@ -34,7 +36,7 @@ func TestAcceptDatalossSubcommand(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
+	rs := datastore.NewPostgresRepositoryStore(getDB(t), conf.StorageNames())
 	startingGenerations := map[string]int{st1: 1, st2: 0, st3: datastore.GenerationUnknown}
 	for storage, generation := range startingGenerations {
 		if generation == datastore.GenerationUnknown {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha1"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"sync"
@@ -76,11 +75,10 @@ func TestStreamDirectorReadOnlyEnforcement(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
-			require.NoError(t, rs.SetGeneration(ctx, virtualStorage, relativePath, "latest", 1))
-			require.NoError(t, rs.SetGeneration(ctx, virtualStorage, relativePath, storage, 1))
-			if tc.readOnly {
-				require.NoError(t, rs.SetGeneration(ctx, virtualStorage, relativePath, storage, 0))
+			rs := datastore.MockRepositoryStore{
+				IsLatestGenerationFunc: func(ctx context.Context, virtualStorage, relativePath, storage string) (bool, error) {
+					return !tc.readOnly, nil
+				},
 			}
 
 			coordinator := NewCoordinator(
@@ -158,7 +156,7 @@ func TestStreamDirectorMutator(t *testing.T) {
 	nodeMgr.Start(0, time.Hour)
 
 	txMgr := transactions.NewManager(conf)
-	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
+	rs := datastore.MockRepositoryStore{}
 
 	coordinator := NewCoordinator(
 		queueInterceptor,
@@ -225,233 +223,6 @@ func TestStreamDirectorMutator(t *testing.T) {
 	require.Equal(t, expectedEvent, events[0], "ensure replication job created by stream director is correct")
 }
 
-func TestStreamDirectorMutator_Transaction(t *testing.T) {
-	type node struct {
-		primary           bool
-		vote              string
-		shouldSucceed     bool
-		shouldGetRepl     bool
-		shouldParticipate bool
-		generation        int
-	}
-
-	testcases := []struct {
-		desc  string
-		nodes []node
-	}{
-		{
-			desc: "successful vote should not create replication jobs",
-			nodes: []node{
-				{primary: true, vote: "foobar", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
-				{primary: false, vote: "foobar", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
-				{primary: false, vote: "foobar", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
-			},
-		},
-		{
-			desc: "failing vote should not create replication jobs",
-			nodes: []node{
-				{primary: true, vote: "foo", shouldSucceed: false, shouldGetRepl: false, shouldParticipate: true},
-				{primary: false, vote: "qux", shouldSucceed: false, shouldGetRepl: false, shouldParticipate: true},
-				{primary: false, vote: "bar", shouldSucceed: false, shouldGetRepl: false, shouldParticipate: true},
-			},
-		},
-		{
-			desc: "primary should reach quorum with disagreeing secondary",
-			nodes: []node{
-				{primary: true, vote: "foobar", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
-				{primary: false, vote: "barfoo", shouldSucceed: false, shouldGetRepl: true, shouldParticipate: true},
-			},
-		},
-		{
-			desc: "quorum should create replication jobs for disagreeing node",
-			nodes: []node{
-				{primary: true, vote: "foobar", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
-				{primary: false, vote: "foobar", shouldSucceed: true, shouldGetRepl: false, shouldParticipate: true},
-				{primary: false, vote: "barfoo", shouldSucceed: false, shouldGetRepl: true, shouldParticipate: true},
-			},
-		},
-		{
-			desc: "only consistent secondaries should participate",
-			nodes: []node{
-				{primary: true, vote: "foobar", shouldSucceed: true, shouldParticipate: true, generation: 1},
-				{primary: false, vote: "foobar", shouldSucceed: true, shouldParticipate: true, generation: 1},
-				{shouldParticipate: false, generation: 0},
-				{shouldParticipate: false, generation: datastore.GenerationUnknown},
-			},
-		},
-		{
-			desc: "secondaries should not participate when primary's generation is unknown",
-			nodes: []node{
-				{primary: true, vote: "foobar", shouldSucceed: true, shouldParticipate: true, generation: datastore.GenerationUnknown},
-				{shouldParticipate: false, generation: datastore.GenerationUnknown},
-			},
-		},
-		{
-			// If the transaction didn't receive any votes at all, we need to assume
-			// that the RPC wasn't aware of transactions and thus need to schedule
-			// replication jobs.
-			desc: "unstarted transaction should create replication jobs",
-			nodes: []node{
-				{primary: true, shouldSucceed: true, shouldGetRepl: false},
-				{primary: false, shouldSucceed: false, shouldGetRepl: true},
-			},
-		},
-	}
-
-	for _, tc := range testcases {
-		t.Run(tc.desc, func(t *testing.T) {
-			storageNodes := make([]*config.Node, 0, len(tc.nodes))
-			for i := range tc.nodes {
-				socket := testhelper.GetTemporaryGitalySocketFileName()
-				server, _ := testhelper.NewServerWithHealth(t, socket)
-				defer server.Stop()
-				node := &config.Node{Address: "unix://" + socket, Storage: fmt.Sprintf("node-%d", i)}
-				storageNodes = append(storageNodes, node)
-			}
-
-			conf := config.Config{
-				VirtualStorages: []*config.VirtualStorage{
-					&config.VirtualStorage{
-						Name:  "praefect",
-						Nodes: storageNodes,
-					},
-				},
-			}
-
-			var replicationWaitGroup sync.WaitGroup
-			queueInterceptor := datastore.NewReplicationEventQueueInterceptor(datastore.NewMemoryReplicationEventQueue(conf))
-			queueInterceptor.OnEnqueue(func(ctx context.Context, event datastore.ReplicationEvent, queue datastore.ReplicationEventQueue) (datastore.ReplicationEvent, error) {
-				defer replicationWaitGroup.Done()
-				return queue.Enqueue(ctx, event)
-			})
-
-			repo := gitalypb.Repository{
-				StorageName:  "praefect",
-				RelativePath: "/path/to/hashed/storage",
-			}
-
-			ctx, cancel := testhelper.Context()
-			defer cancel()
-
-			nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf, nil, nil, nil, promtest.NewMockHistogramVec(), protoregistry.GitalyProtoPreregistered, nil)
-			require.NoError(t, err)
-			nodeMgr.Start(0, time.Hour)
-
-			shard, err := nodeMgr.GetShard(ctx, conf.VirtualStorages[0].Name)
-			require.NoError(t, err)
-
-			for i := range tc.nodes {
-				node, err := shard.GetNode(fmt.Sprintf("node-%d", i))
-				require.NoError(t, err)
-				waitNodeToChangeHealthStatus(ctx, t, node, true)
-			}
-
-			txMgr := transactions.NewManager(conf)
-
-			// set up the generations prior to transaction
-			rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
-			for i, n := range tc.nodes {
-				if n.generation == datastore.GenerationUnknown {
-					continue
-				}
-
-				require.NoError(t, rs.SetGeneration(ctx, repo.StorageName, repo.RelativePath, storageNodes[i].Storage, n.generation))
-			}
-
-			coordinator := NewCoordinator(
-				queueInterceptor,
-				rs,
-				NewNodeManagerRouter(nodeMgr, rs),
-				txMgr,
-				conf,
-				protoregistry.GitalyProtoPreregistered,
-			)
-
-			fullMethod := "/gitaly.SmartHTTPService/PostReceivePack"
-
-			frame, err := proto.Marshal(&gitalypb.PostReceivePackRequest{
-				Repository: &repo,
-			})
-			require.NoError(t, err)
-			peeker := &mockPeeker{frame}
-
-			streamParams, err := coordinator.StreamDirector(correlation.ContextWithCorrelation(ctx, "my-correlation-id"), fullMethod, peeker)
-			require.NoError(t, err)
-
-			transaction, err := praefect_metadata.TransactionFromContext(streamParams.Primary().Ctx)
-			require.NoError(t, err)
-
-			var voterWaitGroup sync.WaitGroup
-			for i, node := range tc.nodes {
-				if node.shouldGetRepl {
-					replicationWaitGroup.Add(1)
-				}
-
-				if !node.shouldParticipate {
-					continue
-				}
-
-				i := i
-				node := node
-
-				voterWaitGroup.Add(1)
-				go func() {
-					defer voterWaitGroup.Done()
-
-					vote := sha1.Sum([]byte(node.vote))
-					err := txMgr.VoteTransaction(ctx, transaction.ID, fmt.Sprintf("node-%d", i), vote[:])
-					if node.shouldSucceed {
-						assert.NoError(t, err)
-					} else {
-						assert.True(t, errors.Is(err, transactions.ErrTransactionVoteFailed))
-					}
-				}()
-			}
-			voterWaitGroup.Wait()
-
-			// this call creates new events in the queue and simulates usual flow of the update operation
-			var primaryShouldSucceed bool
-			for _, node := range tc.nodes {
-				if !node.primary {
-					continue
-				}
-				primaryShouldSucceed = node.shouldSucceed
-			}
-			err = streamParams.RequestFinalizer()
-			if primaryShouldSucceed {
-				require.NoError(t, err)
-			} else {
-				require.Equal(t, errors.New("transaction: primary failed vote"), err)
-			}
-
-			// Nodes that successfully committed should have their generations incremented.
-			// Nodes that did not successfully commit or did not participate should remain on their
-			// existing generation.
-			for i, n := range tc.nodes {
-				gen, err := rs.GetGeneration(ctx, repo.StorageName, repo.RelativePath, storageNodes[i].Storage)
-				require.NoError(t, err)
-				expectedGeneration := n.generation
-				if n.shouldSucceed {
-					expectedGeneration++
-				}
-				require.Equal(t, expectedGeneration, gen)
-			}
-
-			replicationWaitGroup.Wait()
-
-			for i, node := range tc.nodes {
-				events, err := queueInterceptor.Dequeue(ctx, "praefect", fmt.Sprintf("node-%d", i), 10)
-				require.NoError(t, err)
-				if node.shouldGetRepl {
-					require.Len(t, events, 1)
-				} else {
-					require.Empty(t, events)
-				}
-			}
-		})
-	}
-}
-
 func TestStreamDirectorMutator_StopTransaction(t *testing.T) {
 	socket := testhelper.GetTemporaryGitalySocketFileName()
 	server, _ := testhelper.NewServerWithHealth(t, socket)
@@ -490,9 +261,10 @@ func TestStreamDirectorMutator_StopTransaction(t *testing.T) {
 		waitNodeToChangeHealthStatus(ctx, t, node, true)
 	}
 
-	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
-	for _, node := range []string{"primary", "secondary"} {
-		require.NoError(t, rs.SetGeneration(ctx, "praefect", repo.RelativePath, node, 1))
+	rs := datastore.MockRepositoryStore{
+		GetConsistentSecondariesFunc: func(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error) {
+			return map[string]struct{}{"primary": {}, "secondary": {}}, nil
+		},
 	}
 
 	txMgr := transactions.NewManager(conf)
@@ -600,7 +372,7 @@ func TestStreamDirectorAccessor(t *testing.T) {
 	nodeMgr.Start(0, time.Minute)
 
 	txMgr := transactions.NewManager(conf)
-	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
+	rs := datastore.MockRepositoryStore{}
 
 	coordinator := NewCoordinator(
 		queue,
@@ -679,11 +451,11 @@ func TestCoordinatorStreamDirector_distributesReads(t *testing.T) {
 
 	entry := testhelper.DiscardTestEntry(t)
 
-	repoStore := datastore.NewMemoryRepositoryStore(conf.StorageNames())
-	require.NoError(t, repoStore.IncrementGeneration(ctx, conf.VirtualStorages[0].Name, targetRepo.RelativePath, primaryNodeConf.Storage, nil))
-	generation, err := repoStore.GetGeneration(ctx, conf.VirtualStorages[0].Name, targetRepo.RelativePath, primaryNodeConf.Storage)
-	require.NoError(t, err)
-	require.NoError(t, repoStore.SetGeneration(ctx, conf.VirtualStorages[0].Name, targetRepo.RelativePath, secondaryNodeConf.Storage, generation))
+	repoStore := datastore.MockRepositoryStore{
+		GetConsistentSecondariesFunc: func(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error) {
+			return map[string]struct{}{primaryNodeConf.Storage: {}, secondaryNodeConf.Storage: {}}, nil
+		},
+	}
 
 	sp := datastore.NewDirectStorageProvider(repoStore)
 
@@ -891,7 +663,7 @@ func TestAbsentCorrelationID(t *testing.T) {
 	nodeMgr.Start(0, time.Hour)
 
 	txMgr := transactions.NewManager(conf)
-	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
+	rs := datastore.MockRepositoryStore{}
 
 	coordinator := NewCoordinator(
 		queueInterceptor,
@@ -1011,7 +783,7 @@ func TestStreamDirectorStorageScope(t *testing.T) {
 			Nodes: []*config.Node{primaryGitaly, secondaryGitaly},
 		}}}
 
-	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
+	rs := datastore.MockRepositoryStore{}
 
 	nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf, nil, nil, nil, promtest.NewMockHistogramVec(), protoregistry.GitalyProtoPreregistered, nil)
 	require.NoError(t, err)
@@ -1081,7 +853,7 @@ func TestStreamDirectorStorageScopeError(t *testing.T) {
 			},
 		}
 
-		rs := datastore.NewMemoryRepositoryStore(nil)
+		rs := datastore.MockRepositoryStore{}
 		coordinator := NewCoordinator(
 			nil,
 			rs,
@@ -1110,7 +882,7 @@ func TestStreamDirectorStorageScopeError(t *testing.T) {
 			},
 		}
 
-		rs := datastore.NewMemoryRepositoryStore(nil)
+		rs := datastore.MockRepositoryStore{}
 		coordinator := NewCoordinator(
 			nil,
 			rs,
@@ -1140,7 +912,7 @@ func TestStreamDirectorStorageScopeError(t *testing.T) {
 				},
 			}
 
-			rs := datastore.NewMemoryRepositoryStore(nil)
+			rs := datastore.MockRepositoryStore{}
 			coordinator := NewCoordinator(
 				nil,
 				rs,
@@ -1171,7 +943,7 @@ func TestStreamDirectorStorageScopeError(t *testing.T) {
 					return nodes.Shard{}, nodes.ErrPrimaryNotHealthy
 				},
 			}
-			rs := datastore.NewMemoryRepositoryStore(nil)
+			rs := datastore.MockRepositoryStore{}
 			coordinator := NewCoordinator(
 				nil,
 				rs,

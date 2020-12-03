@@ -1,3 +1,5 @@
+// +build postgres
+
 package datastore
 
 import (
@@ -8,16 +10,77 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 )
 
+// virtualStorageStates represents the virtual storage's view of which repositories should exist.
+// It's structured as virtual-storage->relative_path.
+type virtualStorageState map[string]map[string]struct{}
+
+// storageState contains individual storage's repository states.
+// It structured as virtual-storage->relative_path->storage->generation.
+type storageState map[string]map[string]map[string]int
+
 type requireState func(t *testing.T, ctx context.Context, vss virtualStorageState, ss storageState)
 type repositoryStoreFactory func(t *testing.T, storages map[string][]string) (RepositoryStore, requireState)
 
-func TestRepositoryStore_Memory(t *testing.T) {
+func TestRepositoryStore_Postgres(t *testing.T) {
 	testRepositoryStore(t, func(t *testing.T, storages map[string][]string) (RepositoryStore, requireState) {
-		rs := NewMemoryRepositoryStore(storages)
-		return rs, func(t *testing.T, _ context.Context, vss virtualStorageState, ss storageState) {
+		db := getDB(t)
+		gs := NewPostgresRepositoryStore(db, storages)
+
+		requireVirtualStorageState := func(t *testing.T, ctx context.Context, exp virtualStorageState) {
+			rows, err := db.QueryContext(ctx, `
+SELECT virtual_storage, relative_path
+FROM repositories
+				`)
+			require.NoError(t, err)
+			defer rows.Close()
+
+			act := make(virtualStorageState)
+			for rows.Next() {
+				var vs, rel string
+				require.NoError(t, rows.Scan(&vs, &rel))
+				if act[vs] == nil {
+					act[vs] = make(map[string]struct{})
+				}
+
+				act[vs][rel] = struct{}{}
+			}
+
+			require.NoError(t, rows.Err())
+			require.Equal(t, exp, act)
+		}
+
+		requireStorageState := func(t *testing.T, ctx context.Context, exp storageState) {
+			rows, err := db.QueryContext(ctx, `
+SELECT virtual_storage, relative_path, storage, generation
+FROM storage_repositories
+	`)
+			require.NoError(t, err)
+			defer rows.Close()
+
+			act := make(storageState)
+			for rows.Next() {
+				var vs, rel, storage string
+				var gen int
+				require.NoError(t, rows.Scan(&vs, &rel, &storage, &gen))
+
+				if act[vs] == nil {
+					act[vs] = make(map[string]map[string]int)
+				}
+				if act[vs][rel] == nil {
+					act[vs][rel] = make(map[string]int)
+				}
+
+				act[vs][rel][storage] = gen
+			}
+
+			require.NoError(t, rows.Err())
+			require.Equal(t, exp, act)
+		}
+
+		return gs, func(t *testing.T, ctx context.Context, vss virtualStorageState, ss storageState) {
 			t.Helper()
-			require.Equal(t, vss, rs.virtualStorageState)
-			require.Equal(t, ss, rs.storageState)
+			requireVirtualStorageState(t, ctx, vss)
+			requireStorageState(t, ctx, ss)
 		}
 	})
 }

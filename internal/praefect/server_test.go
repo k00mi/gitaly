@@ -750,11 +750,10 @@ func TestProxyWrites(t *testing.T) {
 	testRepo, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
-	for _, vs := range conf.VirtualStorages {
-		for _, n := range vs.Nodes {
-			require.NoError(t, rs.SetGeneration(ctx, vs.Name, testRepo.RelativePath, n.Storage, 0))
-		}
+	rs := datastore.MockRepositoryStore{
+		GetConsistentSecondariesFunc: func(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error) {
+			return map[string]struct{}{"praefect-internal-1": {}, "praefect-internal-2": {}}, nil
+		},
 	}
 
 	coordinator := NewCoordinator(
@@ -923,7 +922,7 @@ func TestErrorThreshold(t *testing.T) {
 			errorTracker, err := tracker.NewErrors(ctx, 10*time.Hour, readThreshold, writeThreshold)
 			require.NoError(t, err)
 
-			rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
+			rs := datastore.MockRepositoryStore{}
 			sp := datastore.NewDirectStorageProvider(rs)
 			nodeMgr, err := nodes.NewManager(entry, conf, nil, rs, sp, promtest.NewMockHistogramVec(), registry, errorTracker)
 			require.NoError(t, err)

@@ -10,6 +10,17 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore/glsql"
 )
 
+type storages map[string][]string
+
+func (s storages) storages(virtualStorage string) ([]string, error) {
+	storages, ok := s[virtualStorage]
+	if !ok {
+		return nil, fmt.Errorf("unknown virtual storage: %q", virtualStorage)
+	}
+
+	return storages, nil
+}
+
 // GenerationUnknown is used to indicate lack of generation number in
 // a replication job. Older instances can produce replication jobs
 // without a generation number.

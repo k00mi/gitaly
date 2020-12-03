@@ -13,7 +13,19 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/service/info"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
+	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
+	"google.golang.org/grpc"
 )
+
+func getDB(t *testing.T) glsql.DB {
+	return glsql.GetDB(t, "cmd_praefect")
+}
+
+func registerPraefectInfoServer(impl gitalypb.PraefectInfoServiceServer) svcRegistrar {
+	return func(srv *grpc.Server) {
+		gitalypb.RegisterPraefectInfoServiceServer(srv, impl)
+	}
+}
 
 func TestDatalossSubcommand(t *testing.T) {
 	mgr := &nodes.MockManager{
@@ -55,10 +67,7 @@ func TestDatalossSubcommand(t *testing.T) {
 		},
 	}
 
-	db := glsql.GetDB(t, "cmd_praefect")
-	defer glsql.Clean()
-
-	gs := datastore.NewPostgresRepositoryStore(db, cfg.StorageNames())
+	gs := datastore.NewPostgresRepositoryStore(getDB(t), cfg.StorageNames())
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()

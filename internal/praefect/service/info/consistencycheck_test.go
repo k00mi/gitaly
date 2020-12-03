@@ -111,12 +111,11 @@ func TestServer_ConsistencyCheck(t *testing.T) {
 	queue.OnEnqueue(func(ctx context.Context, e datastore.ReplicationEvent, q datastore.ReplicationEventQueue) (datastore.ReplicationEvent, error) {
 		return datastore.ReplicationEvent{ID: 1}, nil
 	})
-	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
 
 	grpcSrv := grpc.NewServer()
 	defer grpcSrv.Stop()
 
-	gitalypb.RegisterPraefectInfoServiceServer(grpcSrv, NewServer(nm, conf, queue, rs))
+	gitalypb.RegisterPraefectInfoServiceServer(grpcSrv, NewServer(nm, conf, queue, nil))
 	go grpcSrv.Serve(praefectListener)
 
 	infoConn, err := client.Dial("unix://"+praefectAddr, nil)

@@ -193,7 +193,7 @@ func defaultNodeMgr(t testing.TB, conf config.Config, rs datastore.RepositorySto
 }
 
 func defaultRepoStore(conf config.Config) datastore.RepositoryStore {
-	return datastore.NewMemoryRepositoryStore(conf.StorageNames())
+	return datastore.MockRepositoryStore{}
 }
 
 func runPraefectServer(t testing.TB, conf config.Config, opt buildOptions) (*grpc.ClientConn, *grpc.Server, testhelper.Cleanup) {
@@ -221,7 +221,7 @@ func runPraefectServer(t testing.TB, conf config.Config, opt buildOptions) (*grp
 		opt.withNodeMgr = defaultNodeMgr(t, conf, opt.withRepoStore)
 	}
 
-	rs := datastore.NewMemoryRepositoryStore(conf.StorageNames())
+	rs := datastore.MockRepositoryStore{}
 
 	coordinator := NewCoordinator(
 		opt.withQueue,
