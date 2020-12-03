@@ -128,10 +128,15 @@ func TestUpdateReferenceWithHooks(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	repo, repoPath, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	payload, err := git.NewHooksPayload(config.Config, repo).Env()
+	require.NoError(t, err)
+
 	expectedEnv := []string{
+		payload,
 		"GITALY_BIN_DIR=" + config.Config.BinDir,
-		"GITALY_SOCKET=" + config.Config.GitalyInternalSocketPath(),
-		"GITALY_TOKEN=the-secret-token",
 		"GL_ID=1234",
 		"GL_PROJECT_PATH=gitlab-org/gitlab-test",
 		"GL_PROTOCOL=web",
@@ -252,9 +257,6 @@ func TestUpdateReferenceWithHooks(t *testing.T) {
 
 			hookServer := NewServer(config.Config, nil, hookManager, nil, nil)
 
-			repo, _, cleanup := testhelper.NewTestRepo(t)
-			defer cleanup()
-
 			err := hookServer.updateReferenceWithHooks(ctx, repo, user, "refs/heads/master", git.NullSHA, oldRev)
 			if tc.expectedErr == "" {
 				require.NoError(t, err)
@@ -266,6 +268,7 @@ func TestUpdateReferenceWithHooks(t *testing.T) {
 				contained, err := git.NewRepository(repo).ContainsRef(ctx, "refs/heads/master")
 				require.NoError(t, err)
 				require.False(t, contained, "branch should have been deleted")
+				testhelper.MustRunCommand(t, nil, "git", "-C", repoPath, "branch", "master", oldRev)
 			} else {
 				ref, err := git.NewRepository(repo).GetReference(ctx, "refs/heads/master")
 				require.NoError(t, err)

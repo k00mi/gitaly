@@ -115,8 +115,18 @@ module Gitlab
         err_message
       end
 
+      def hooks_payload
+        Base64.strict_encode64({
+          repository: repository.gitaly_repository.to_json,
+          binary_directory: Gitlab.config.gitaly.bin_dir,
+          internal_socket: Gitlab.config.gitaly.internal_socket,
+          internal_socket_token: ENV['GITALY_TOKEN']
+        }.to_json)
+      end
+
       def env_base_vars(gl_id, gl_username)
         {
+          'GITALY_HOOKS_PAYLOAD' => hooks_payload,
           'GITALY_GITLAB_SHELL_DIR' => Gitlab.config.gitlab_shell.path,
           'GITLAB_SHELL_DIR' => Gitlab.config.gitlab_shell.path,
           'GITALY_LOG_DIR' => Gitlab.config.logging.dir,
@@ -131,8 +141,6 @@ module Gitlab
           'GL_PROTOCOL' => GL_PROTOCOL,
           'PWD' => repo_path,
           'GIT_DIR' => repo_path,
-          'GITALY_REPO' => repository.gitaly_repository.to_json,
-          'GITALY_SOCKET' => Gitlab.config.gitaly.internal_socket,
           'GITALY_REFERENCE_TRANSACTION_HOOK' => repository.feature_enabled?('reference-transaction-hook').to_s
         }
       end

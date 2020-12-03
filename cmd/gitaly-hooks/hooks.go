@@ -10,11 +10,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/golang/protobuf/jsonpb"
 	"github.com/sirupsen/logrus"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	gitalylog "gitlab.com/gitlab-org/gitaly/internal/log"
@@ -69,12 +69,12 @@ func main() {
 	ctx, finished := tracing.ExtractFromEnv(ctx)
 	defer finished()
 
-	repository, err := repositoryFromEnv()
+	payload, err := git.HooksPayloadFromEnv(os.Environ())
 	if err != nil {
-		logger.Fatalf("error when getting repository: %v", err)
+		logger.Fatalf("error when getting hooks payload: %v", err)
 	}
 
-	conn, err := gitalyFromEnv()
+	conn, err := dialGitaly(payload)
 	if err != nil {
 		logger.Fatalf("error when connecting to gitaly: %v", err)
 	}
@@ -92,7 +92,7 @@ func main() {
 		ref, oldValue, newValue := args[0], args[1], args[2]
 
 		req := &gitalypb.UpdateHookRequest{
-			Repository:           repository,
+			Repository:           payload.Repo,
 			EnvironmentVariables: glValues(),
 			Ref:                  []byte(ref),
 			OldValue:             oldValue,
@@ -124,7 +124,7 @@ func main() {
 		}
 
 		if err := preReceiveHookStream.Send(&gitalypb.PreReceiveHookRequest{
-			Repository:           repository,
+			Repository:           payload.Repo,
 			EnvironmentVariables: environment,
 			GitPushOptions:       gitPushOptions(),
 		}); err != nil {
@@ -156,7 +156,7 @@ func main() {
 		}
 
 		if err := postReceiveHookStream.Send(&gitalypb.PostReceiveHookRequest{
-			Repository:           repository,
+			Repository:           payload.Repo,
 			EnvironmentVariables: environment,
 			GitPushOptions:       gitPushOptions(),
 		}); err != nil {
@@ -208,7 +208,7 @@ func main() {
 		}
 
 		if err := referenceTransactionHookStream.Send(&gitalypb.ReferenceTransactionHookRequest{
-			Repository:           repository,
+			Repository:           payload.Repo,
 			EnvironmentVariables: environment,
 			State:                state,
 		}); err != nil {
@@ -233,37 +233,13 @@ func main() {
 
 func noopSender(c chan error) {}
 
-func repositoryFromEnv() (*gitalypb.Repository, error) {
-	repoString, ok := os.LookupEnv("GITALY_REPO")
-	if !ok {
-		return nil, errors.New("GITALY_REPO not found")
-	}
-
-	var repo gitalypb.Repository
-	if err := jsonpb.UnmarshalString(repoString, &repo); err != nil {
-		return nil, fmt.Errorf("unmarshal JSON %q: %w", repoString, err)
-	}
-
-	return &repo, nil
-}
-
-func gitalyFromEnv() (*grpc.ClientConn, error) {
-	gitalySocket := os.Getenv("GITALY_SOCKET")
-	if gitalySocket == "" {
-		return nil, errors.New("GITALY_SOCKET not set")
-	}
-
-	gitalyToken, ok := os.LookupEnv("GITALY_TOKEN")
-	if !ok {
-		return nil, errors.New("GITALY_TOKEN not set")
-	}
-
+func dialGitaly(payload git.HooksPayload) (*grpc.ClientConn, error) {
 	dialOpts := client.DefaultDialOpts
-	if gitalyToken != "" {
-		dialOpts = append(dialOpts, grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(gitalyToken)))
+	if payload.InternalSocketToken != "" {
+		dialOpts = append(dialOpts, grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2(payload.InternalSocketToken)))
 	}
 
-	conn, err := client.Dial("unix://"+gitalySocket, dialOpts)
+	conn, err := client.Dial("unix://"+payload.InternalSocket, dialOpts)
 	if err != nil {
 		return nil, fmt.Errorf("error when dialing: %w", err)
 	}

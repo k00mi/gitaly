@@ -38,6 +38,11 @@ func (s *Server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 		return err
 	}
 
+	payload, err := git.NewHooksPayload(s.cfg, repo).Env()
+	if err != nil {
+		return err
+	}
+
 	if reference == "" {
 		return helper.ErrInternalf("updateReferenceWithHooks: got no reference")
 	}
@@ -49,14 +54,12 @@ func (s *Server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 	}
 
 	env := append([]string{
+		payload,
 		"GL_PROTOCOL=web",
 		fmt.Sprintf("GL_ID=%s", user.GetGlId()),
 		fmt.Sprintf("GL_USERNAME=%s", user.GetGlUsername()),
 		fmt.Sprintf("GL_REPOSITORY=%s", repo.GetGlRepository()),
 		fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
-		fmt.Sprintf("GITALY_SOCKET=" + s.cfg.GitalyInternalSocketPath()),
-		fmt.Sprintf("GITALY_REPO=%s", repo),
-		fmt.Sprintf("GITALY_TOKEN=%s", s.cfg.Auth.Token),
 	}, gitlabshellEnv...)
 
 	transaction, err := metadata.TransactionFromContext(ctx)
