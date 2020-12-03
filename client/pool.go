@@ -13,13 +13,15 @@ import (
 // Dialer is used by the Pool to create a *grpc.ClientConn.
 type Dialer func(ctx context.Context, address string, dialOptions []grpc.DialOption) (*grpc.ClientConn, error)
 
+type poolKey struct{ address, token string }
+
 // Pool is a pool of GRPC connections. Connections created by it are safe for
 // concurrent use.
 type Pool struct {
-	lock           sync.RWMutex
-	connsByAddress map[string]*grpc.ClientConn
-	dialer         Dialer
-	dialOptions    []grpc.DialOption
+	lock        sync.RWMutex
+	conns       map[poolKey]*grpc.ClientConn
+	dialer      Dialer
+	dialOptions []grpc.DialOption
 }
 
 // NewPool creates a new connection pool that's ready for use.
@@ -31,9 +33,9 @@ func NewPool(dialOptions ...grpc.DialOption) *Pool {
 func NewPoolWithOptions(poolOptions ...PoolOption) *Pool {
 	opts := applyPoolOptions(poolOptions)
 	return &Pool{
-		connsByAddress: make(map[string]*grpc.ClientConn),
-		dialer:         opts.dialer,
-		dialOptions:    opts.dialOptions,
+		conns:       make(map[poolKey]*grpc.ClientConn),
+		dialer:      opts.dialer,
+		dialOptions: opts.dialOptions,
 	}
 }
 
@@ -43,12 +45,12 @@ func (p *Pool) Close() error {
 	defer p.lock.Unlock()
 
 	var firstError error
-	for addr, conn := range p.connsByAddress {
+	for addr, conn := range p.conns {
 		if err := conn.Close(); err != nil && firstError == nil {
 			firstError = err
 		}
 
-		delete(p.connsByAddress, addr)
+		delete(p.conns, addr)
 	}
 
 	return firstError
@@ -66,8 +68,10 @@ func (p *Pool) getOrCreateConnection(ctx context.Context, address, token string)
 		return nil, errors.New("address is empty")
 	}
 
+	key := poolKey{address: address, token: token}
+
 	p.lock.RLock()
-	cc, ok := p.connsByAddress[address]
+	cc, ok := p.conns[key]
 	p.lock.RUnlock()
 
 	if ok {
@@ -77,7 +81,7 @@ func (p *Pool) getOrCreateConnection(ctx context.Context, address, token string)
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	cc, ok = p.connsByAddress[address]
+	cc, ok = p.conns[key]
 	if ok {
 		return cc, nil
 	}
@@ -93,7 +97,7 @@ func (p *Pool) getOrCreateConnection(ctx context.Context, address, token string)
 		return nil, fmt.Errorf("could not dial source: %v", err)
 	}
 
-	p.connsByAddress[address] = cc
+	p.conns[key] = cc
 
 	return cc, nil
 }
