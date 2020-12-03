@@ -13,7 +13,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang/protobuf/jsonpb"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
@@ -30,8 +29,6 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-var jsonpbMarshaller jsonpb.Marshaler
-
 type glHookValues struct {
 	GLID, GLUsername, GLRepo, GLProtocol, GitObjectDir string
 	GitAlternateObjectDirs                             []string
@@ -44,9 +41,6 @@ type proxyValues struct {
 // envForHooks generates a set of environment variables for gitaly hooks
 func envForHooks(t testing.TB, gitlabShellDir string, repo *gitalypb.Repository, glHookValues glHookValues, proxyValues proxyValues, gitPushOptions ...string) []string {
 	rubyDir, err := filepath.Abs("../../ruby")
-	require.NoError(t, err)
-
-	repoString, err := jsonpbMarshaller.MarshalToString(repo)
 	require.NoError(t, err)
 
 	env, err := gitlabshell.EnvFromConfig(config.Config)
@@ -63,9 +57,6 @@ func envForHooks(t testing.TB, gitlabShellDir string, repo *gitalypb.Repository,
 		fmt.Sprintf("GL_REPOSITORY=%s", glHookValues.GLRepo),
 		fmt.Sprintf("GL_PROTOCOL=%s", glHookValues.GLProtocol),
 		fmt.Sprintf("GL_USERNAME=%s", glHookValues.GLUsername),
-		fmt.Sprintf("GITALY_SOCKET=%s", config.Config.GitalyInternalSocketPath()),
-		fmt.Sprintf("GITALY_TOKEN=%s", config.Config.Auth.Token),
-		fmt.Sprintf("GITALY_REPO=%v", repoString),
 		fmt.Sprintf("GITALY_GITLAB_SHELL_DIR=%s", gitlabShellDir),
 		fmt.Sprintf("%s=%s", gitalylog.GitalyLogDirEnvKey, gitlabShellDir),
 	}...)

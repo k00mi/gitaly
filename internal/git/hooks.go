@@ -190,11 +190,6 @@ func WithRefTxHook(ctx context.Context, repo *gitalypb.Repository, cfg config.Cf
 
 // refHookEnv returns all env vars required by the reference transaction hook
 func refHookEnv(ctx context.Context, repo *gitalypb.Repository, cfg config.Cfg) ([]string, error) {
-	repoJSON, err := jsonpbMarshaller.MarshalToString(repo)
-	if err != nil {
-		return nil, err
-	}
-
 	payload, err := NewHooksPayload(cfg, repo).Env()
 	if err != nil {
 		return nil, err
@@ -203,9 +198,6 @@ func refHookEnv(ctx context.Context, repo *gitalypb.Repository, cfg config.Cfg) 
 	return []string{
 		payload,
 		"GITALY_BIN_DIR=" + cfg.BinDir,
-		"GITALY_SOCKET=" + cfg.GitalyInternalSocketPath(),
-		fmt.Sprintf("GITALY_REPO=%s", repoJSON),
-		fmt.Sprintf("GITALY_TOKEN=%s", cfg.Auth.Token),
 		fmt.Sprintf("%s=true", featureflag.ReferenceTransactionHookEnvVar),
 	}, nil
 }

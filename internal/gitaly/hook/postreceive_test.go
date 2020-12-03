@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -72,9 +73,11 @@ func TestPostReceive_customHook(t *testing.T) {
 
 	hookManager := NewManager(config.NewLocator(config.Config), GitlabAPIStub, config.Config)
 
+	payload, err := git.NewHooksPayload(config.Config, repo).Env()
+	require.NoError(t, err)
+
 	standardEnv := []string{
-		fmt.Sprintf("GITALY_SOCKET=%s", config.Config.GitalyInternalSocketPath()),
-		"GITALY_TOKEN=secret",
+		payload,
 		"GL_ID=1234",
 		fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
 		"GL_PROTOCOL=web",
@@ -241,9 +244,11 @@ func TestPostReceive_gitlab(t *testing.T) {
 	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
+	payload, err := git.NewHooksPayload(config.Config, testRepo).Env()
+	require.NoError(t, err)
+
 	standardEnv := []string{
-		fmt.Sprintf("GITALY_SOCKET=%s", config.Config.GitalyInternalSocketPath()),
-		"GITALY_TOKEN=secret",
+		payload,
 		"GL_ID=1234",
 		fmt.Sprintf("GL_PROJECT_PATH=%s", testRepo.GetGlProjectPath()),
 		"GL_PROTOCOL=web",

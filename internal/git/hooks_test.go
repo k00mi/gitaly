@@ -70,9 +70,6 @@ func TestWithRefHook(t *testing.T) {
 			require.EqualValues(t, []string{
 				"GITALY_HOOKS_PAYLOAD",
 				"GITALY_BIN_DIR",
-				"GITALY_SOCKET",
-				"GITALY_REPO",
-				"GITALY_TOKEN",
 				"GITALY_REFERENCE_TRANSACTION_HOOK",
 			}, actualEnvVars)
 		})

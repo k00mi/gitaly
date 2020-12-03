@@ -60,9 +60,6 @@ func (s *Server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 		fmt.Sprintf("GL_USERNAME=%s", user.GetGlUsername()),
 		fmt.Sprintf("GL_REPOSITORY=%s", repo.GetGlRepository()),
 		fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
-		fmt.Sprintf("GITALY_SOCKET=" + s.cfg.GitalyInternalSocketPath()),
-		fmt.Sprintf("GITALY_REPO=%s", repo),
-		fmt.Sprintf("GITALY_TOKEN=%s", s.cfg.Auth.Token),
 	}, gitlabshellEnv...)
 
 	transaction, err := metadata.TransactionFromContext(ctx)

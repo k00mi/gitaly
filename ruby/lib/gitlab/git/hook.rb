@@ -141,8 +141,6 @@ module Gitlab
           'GL_PROTOCOL' => GL_PROTOCOL,
           'PWD' => repo_path,
           'GIT_DIR' => repo_path,
-          'GITALY_REPO' => repository.gitaly_repository.to_json,
-          'GITALY_SOCKET' => Gitlab.config.gitaly.internal_socket,
           'GITALY_REFERENCE_TRANSACTION_HOOK' => repository.feature_enabled?('reference-transaction-hook').to_s
         }
       end
