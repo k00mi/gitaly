@@ -52,15 +52,12 @@ func TestDial(t *testing.T) {
 
 	unixSocketAbsPath := connectionMap["unix"]
 
-	cwd, err := os.Getwd()
-	require.NoError(t, err)
-
 	tempDir, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 
-	unixSocketRelPath, err := filepath.Rel(cwd, filepath.Join(tempDir, "gitaly.socket"))
+	unixSocketPath := filepath.Join(tempDir, "gitaly.socket")
 	require.NoError(t, err)
-	require.NoError(t, os.Symlink(unixSocketAbsPath, unixSocketRelPath))
+	require.NoError(t, os.Symlink(unixSocketAbsPath, unixSocketPath))
 
 	tests := []struct {
 		name           string
@@ -86,7 +83,7 @@ func TestDial(t *testing.T) {
 		},
 		{
 			name:          "unix relative",
-			rawAddress:    "unix:" + unixSocketRelPath, // "unix:../../tmp/temp-socket"
+			rawAddress:    "unix:" + unixSocketPath, // "unix:../../tmp/temp-socket"
 			expectFailure: false,
 		},
 		{
@@ -96,7 +93,7 @@ func TestDial(t *testing.T) {
 		},
 		{
 			name:          "unix relative does not exist",
-			rawAddress:    "unix:" + unixSocketRelPath + ".does_not_exist", // "unix:../../tmp/temp-socket.does_not_exist"
+			rawAddress:    "unix:" + unixSocketPath + ".does_not_exist", // "unix:../../tmp/temp-socket.does_not_exist"
 			expectFailure: true,
 		},
 		{
@@ -400,6 +397,7 @@ func startUnixListener() (func(), string, error) {
 }
 
 // startTLSListener will start a secure TLS listener on a random unused port
+//go:generate openssl req -newkey rsa:4096 -new -nodes -x509 -days 3650 -out testdata/gitalycert.pem -keyout testdata/gitalykey.pem -subj "/C=US/ST=California/L=San Francisco/O=GitLab/OU=GitLab-Shell/CN=localhost" -addext "subjectAltName = IP:127.0.0.1, DNS:localhost"
 func startTLSListener() (func(), string, error) {
 	listener, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
@@ -408,7 +406,7 @@ func startTLSListener() (func(), string, error) {
 	tcpPort := listener.Addr().(*net.TCPAddr).Port
 	address := fmt.Sprintf("%d", tcpPort)
 
-	cert, err := tls.LoadX509KeyPair("./testdata/gitalycert.pem", "./testdata/gitalykey.pem")
+	cert, err := tls.LoadX509KeyPair("testdata/gitalycert.pem", "testdata/gitalykey.pem")
 	if err != nil {
 		return nil, "", err
 	}

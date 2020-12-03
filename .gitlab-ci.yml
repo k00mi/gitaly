@@ -4,7 +4,7 @@ stages:
   - publish
 
 default:
-  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.7-golang-1.14-git-2.29
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:ruby-2.7-golang-1.15-git-2.29
   tags:
     - gitlab-org
 
@@ -14,7 +14,7 @@ variables:
   SAST_DISABLE_DIND: "true"
   SAST_DEFAULT_ANALYZERS: "gosec"
   GIT_VERSION: "v2.29.0"
-  GO_VERSION: "1.14"
+  GO_VERSION: "1.15"
   RUBY_VERSION: "2.7"
 
 include:
@@ -120,7 +120,7 @@ build:
     - _support/test-boot .
   parallel:
     matrix:
-      - GO_VERSION: [ "1.13", "1.14" ]
+      - GO_VERSION: [ "1.14", "1.15" ]
         GIT_VERSION: [ "v2.29.0" ]
 
 binaries:
@@ -141,7 +141,7 @@ binaries:
     expire_in: 6 months
   parallel:
     matrix:
-      - GO_VERSION: [ "1.13", "1.14" ]
+      - GO_VERSION: [ "1.14", "1.15" ]
         GIT_VERSION: "v2.29.0"
 
 test:
@@ -162,10 +162,10 @@ test:
       junit: _build/reports/go-tests-report-go-${GO_VERSION}-git-${GIT_VERSION}.xml
   parallel:
     matrix:
-      - GO_VERSION: [ "1.13", "1.14" ]
+      - GO_VERSION: [ "1.14", "1.15" ]
         GIT_VERSION: [ "v2.29.0" ]
         TARGET: test
-      - GO_VERSION: "1.14"
+      - GO_VERSION: "1.15"
         GIT_VERSION: "v2.29.0"
         TARGET: [ test-with-proxies, test-with-praefect, race-go ]
 
@@ -177,7 +177,7 @@ nightly:git:
     - make all ${TARGET}
   parallel:
     matrix:
-      - GO_VERSION: "1.14"
+      - GO_VERSION: "1.15"
         GIT_VERSION: ["master", "next"]
         TARGET: [ test, test-with-proxies, test-with-praefect ]
   rules:

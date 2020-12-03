@@ -22,7 +22,9 @@ import (
 	"google.golang.org/grpc"
 )
 
+//go:generate openssl req -newkey rsa:4096 -new -nodes -x509 -days 3650 -out testdata/certs/gitalycert.pem -keyout testdata/gitalykey.pem -subj "/C=US/ST=California/L=San Francisco/O=GitLab/OU=GitLab-Shell/CN=localhost" -addext "subjectAltName = IP:127.0.0.1, DNS:localhost"
 func TestConnectivity(t *testing.T) {
+	// regenerate the test cert and key via `go generate`
 	config.Config.TLS = config.TLS{
 		CertPath: "testdata/certs/gitalycert.pem",
 		KeyPath:  "testdata/gitalykey.pem",
