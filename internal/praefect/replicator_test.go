@@ -40,6 +40,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper/promtest"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/labkit/correlation"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
@@ -235,13 +236,8 @@ func TestReplMgr_ProcessBacklog(t *testing.T) {
 	require.Equal(t, []string{"backup", "default"}, []string{dequeuedEvent.Job.TargetNodeStorage, dequeuedEvent.Job.SourceNodeStorage})
 
 	require.Equal(t,
-		[]interface{}{"checksum comparison completed", "default", "correlation-id"},
-		[]interface{}{logEntries[2].Message, logEntries[2].Data["virtual_storage"], logEntries[2].Data[logWithCorrID]},
-	)
-
-	require.Equal(t,
 		[]interface{}{"replication job processing finished", "default", datastore.JobStateCompleted, "correlation-id"},
-		[]interface{}{logEntries[3].Message, logEntries[3].Data["virtual_storage"], logEntries[3].Data["new_state"], logEntries[3].Data[logWithCorrID]},
+		[]interface{}{logEntries[2].Message, logEntries[2].Data["virtual_storage"], logEntries[2].Data["new_state"], logEntries[2].Data[logWithCorrID]},
 	)
 
 	relativeRepoPath, err := filepath.Rel(testhelper.GitlabTestStoragePath(), testRepoPath)
@@ -521,9 +517,7 @@ func TestConfirmReplication(t *testing.T) {
 	conn, err := grpc.Dial(srvSocketPath, connOpts...)
 	require.NoError(t, err)
 
-	var replicator defaultReplicator
-
-	equal, err := replicator.confirmChecksums(ctx, testhelper.DiscardTestLogger(t), gitalypb.NewRepositoryServiceClient(conn), gitalypb.NewRepositoryServiceClient(conn), testRepoA, testRepoB)
+	equal, err := confirmChecksums(ctx, testhelper.DiscardTestLogger(t), gitalypb.NewRepositoryServiceClient(conn), gitalypb.NewRepositoryServiceClient(conn), testRepoA, testRepoB)
 	require.NoError(t, err)
 	require.True(t, equal)
 
@@ -531,9 +525,42 @@ func TestConfirmReplication(t *testing.T) {
 		Message: "a commit",
 	})
 
-	equal, err = replicator.confirmChecksums(ctx, testhelper.DiscardTestLogger(t), gitalypb.NewRepositoryServiceClient(conn), gitalypb.NewRepositoryServiceClient(conn), testRepoA, testRepoB)
+	equal, err = confirmChecksums(ctx, testhelper.DiscardTestLogger(t), gitalypb.NewRepositoryServiceClient(conn), gitalypb.NewRepositoryServiceClient(conn), testRepoA, testRepoB)
 	require.NoError(t, err)
 	require.False(t, equal)
+}
+
+func confirmChecksums(ctx context.Context, logger logrus.FieldLogger, primaryClient, replicaClient gitalypb.RepositoryServiceClient, primary, replica *gitalypb.Repository) (bool, error) {
+	g, gCtx := errgroup.WithContext(ctx)
+
+	var primaryChecksum, replicaChecksum string
+
+	g.Go(getChecksumFunc(gCtx, primaryClient, primary, &primaryChecksum))
+	g.Go(getChecksumFunc(gCtx, replicaClient, replica, &replicaChecksum))
+
+	if err := g.Wait(); err != nil {
+		return false, err
+	}
+
+	logger.WithFields(logrus.Fields{
+		"primary_checksum": primaryChecksum,
+		"replica_checksum": replicaChecksum,
+	}).Info("checksum comparison completed")
+
+	return primaryChecksum == replicaChecksum, nil
+}
+
+func getChecksumFunc(ctx context.Context, client gitalypb.RepositoryServiceClient, repo *gitalypb.Repository, checksum *string) func() error {
+	return func() error {
+		primaryChecksumRes, err := client.CalculateChecksum(ctx, &gitalypb.CalculateChecksumRequest{
+			Repository: repo,
+		})
+		if err != nil {
+			return err
+		}
+		*checksum = primaryChecksumRes.GetChecksum()
+		return nil
+	}
 }
 
 func TestProcessBacklog_FailedJobs(t *testing.T) {
