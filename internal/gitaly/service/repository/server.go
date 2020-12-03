@@ -20,9 +20,12 @@ type server struct {
 // NewServer creates a new instance of a gRPC repo server
 func NewServer(cfg config.Cfg, rs *rubyserver.Server, locator storage.Locator) gitalypb.RepositoryServiceServer {
 	return &server{
-		ruby:       rs,
-		locator:    locator,
-		conns:      client.NewPoolWithOptions(client.WithDialOptions(client.FailOnNonTempDialError()...)),
+		ruby:    rs,
+		locator: locator,
+		conns: client.NewPoolWithOptions(
+			client.WithDialer(client.HealthCheckDialer(client.DialContext)),
+			client.WithDialOptions(client.FailOnNonTempDialError()...),
+		),
 		cfg:        cfg,
 		binDir:     cfg.BinDir,
 		loggingCfg: cfg.Logging,

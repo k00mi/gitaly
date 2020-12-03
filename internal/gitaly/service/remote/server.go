@@ -19,6 +19,9 @@ func NewServer(rs *rubyserver.Server, locator storage.Locator) gitalypb.RemoteSe
 	return &server{
 		ruby:    rs,
 		locator: locator,
-		conns:   client.NewPoolWithOptions(client.WithDialOptions(client.FailOnNonTempDialError()...)),
+		conns: client.NewPoolWithOptions(
+			client.WithDialer(client.HealthCheckDialer(client.DialContext)),
+			client.WithDialOptions(client.FailOnNonTempDialError()...),
+		),
 	}
 }
