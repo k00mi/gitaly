@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -174,9 +175,9 @@ func TestMergeTrees(t *testing.T) {
 		_, repoPath, cleanup := testhelper.NewTestRepo(t)
 		defer cleanup()
 
-		base := cmdtesthelper.BuildCommit(t, repoPath, nil, tc.base)
-		ours := cmdtesthelper.BuildCommit(t, repoPath, base, tc.ours)
-		theirs := cmdtesthelper.BuildCommit(t, repoPath, base, tc.theirs)
+		base := cmdtesthelper.BuildCommit(t, repoPath, []*git.Oid{nil}, tc.base)
+		ours := cmdtesthelper.BuildCommit(t, repoPath, []*git.Oid{base}, tc.ours)
+		theirs := cmdtesthelper.BuildCommit(t, repoPath, []*git.Oid{base}, tc.theirs)
 
 		authorDate := time.Date(2020, 7, 30, 7, 45, 50, 0, time.FixedZone("UTC+2", +2*60*60))
 
@@ -226,5 +227,116 @@ func TestMergeTrees(t *testing.T) {
 				require.Equal(t, []byte(contents), blob.Contents())
 			}
 		})
+	}
+}
+
+func TestMerge_recursive(t *testing.T) {
+	_, repoPath, cleanup := testhelper.InitBareRepo(t)
+	defer cleanup()
+
+	base := cmdtesthelper.BuildCommit(t, repoPath, nil, map[string]string{"base": "base\n"})
+
+	oursContents := map[string]string{"base": "base\n", "ours": "ours-0\n"}
+	ours := make([]*git.Oid, git2go.MergeRecursionLimit)
+	ours[0] = cmdtesthelper.BuildCommit(t, repoPath, []*git.Oid{base}, oursContents)
+
+	theirsContents := map[string]string{"base": "base\n", "theirs": "theirs-0\n"}
+	theirs := make([]*git.Oid, git2go.MergeRecursionLimit)
+	theirs[0] = cmdtesthelper.BuildCommit(t, repoPath, []*git.Oid{base}, theirsContents)
+
+	// We're now creating a set of criss-cross merges which look like the following graph:
+	//
+	//        o---o---o---o---o-   -o---o ours
+	//       / \ / \ / \ / \ / \ . / \ /
+	// base o   X   X   X   X    .    X
+	//       \ / \ / \ / \ / \ / . \ / \
+	//        o---o---o---o---o-   -o---o theirs
+	//
+	// We then merge ours with theirs. The peculiarity about this merge is that the merge base
+	// is not unique, and as a result the merge will generate virtual merge bases for each of
+	// the criss-cross merges. This operation may thus be heavily expensive to perform.
+	for i := 1; i < git2go.MergeRecursionLimit; i++ {
+		oursContents["ours"] = fmt.Sprintf("ours-%d\n", i)
+		oursContents["theirs"] = fmt.Sprintf("theirs-%d\n", i-1)
+		theirsContents["ours"] = fmt.Sprintf("ours-%d\n", i-1)
+		theirsContents["theirs"] = fmt.Sprintf("theirs-%d\n", i)
+
+		ours[i] = cmdtesthelper.BuildCommit(t, repoPath, []*git.Oid{ours[i-1], theirs[i-1]}, oursContents)
+		theirs[i] = cmdtesthelper.BuildCommit(t, repoPath, []*git.Oid{theirs[i-1], ours[i-1]}, theirsContents)
+	}
+
+	authorDate := time.Date(2020, 7, 30, 7, 45, 50, 0, time.FixedZone("UTC+2", +2*60*60))
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	// When creating the criss-cross merges, we have been doing evil merges
+	// as each merge has applied changes from the other side while at the
+	// same time incrementing the own file contents. As we exceed the merge
+	// limit, git will just pick one of both possible merge bases when
+	// hitting that limit instead of computing another virtual merge base.
+	// The result is thus a merge of the following three commits:
+	//
+	// merge base           ours                theirs
+	// ----------           ----                ------
+	//
+	// base:   "base"       base:   "base"      base:   "base"
+	// theirs: "theirs-1"   theirs: "theirs-1   theirs: "theirs-2"
+	// ours:   "ours-0"     ours:   "ours-2"    ours:   "ours-1"
+	//
+	// This is a classical merge commit as "ours" differs in all three
+	// cases. We thus expect a merge conflict, which unfortunately
+	// demonstrates that restricting the recursion limit may cause us to
+	// fail resolution.
+	_, err := git2go.MergeCommand{
+		Repository: repoPath,
+		AuthorName: "John Doe",
+		AuthorMail: "john.doe@example.com",
+		AuthorDate: authorDate,
+		Message:    "Merge message",
+		Ours:       ours[len(ours)-1].String(),
+		Theirs:     theirs[len(theirs)-1].String(),
+	}.Run(ctx, config.Config)
+	require.Error(t, err)
+	require.Equal(t, err.Error(), "merge: could not auto-merge due to conflicts\n")
+
+	// Otherwise, if we're merging an earlier criss-cross merge which has
+	// half of the limit many criss-cross patterns, we exactly hit the
+	// recursion limit and thus succeed.
+	response, err := git2go.MergeCommand{
+		Repository: repoPath,
+		AuthorName: "John Doe",
+		AuthorMail: "john.doe@example.com",
+		AuthorDate: authorDate,
+		Message:    "Merge message",
+		Ours:       ours[git2go.MergeRecursionLimit/2].String(),
+		Theirs:     theirs[git2go.MergeRecursionLimit/2].String(),
+	}.Run(ctx, config.Config)
+	require.NoError(t, err)
+
+	repo, err := git.OpenRepository(repoPath)
+	require.NoError(t, err)
+
+	commitOid, err := git.NewOid(response.CommitID)
+	require.NoError(t, err)
+
+	commit, err := repo.LookupCommit(commitOid)
+	require.NoError(t, err)
+
+	tree, err := commit.Tree()
+	require.NoError(t, err)
+
+	require.EqualValues(t, 3, tree.EntryCount())
+	for name, contents := range map[string]string{
+		"base":   "base\n",
+		"ours":   "ours-10\n",
+		"theirs": "theirs-10\n",
+	} {
+		entry := tree.EntryByName(name)
+		require.NotNil(t, entry)
+
+		blob, err := repo.LookupBlob(entry.Id)
+		require.NoError(t, err)
+		require.Equal(t, []byte(contents), blob.Contents())
 	}
 }

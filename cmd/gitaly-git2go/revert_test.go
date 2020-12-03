@@ -88,11 +88,11 @@ func TestRevert_trees(t *testing.T) {
 					"a": "apple",
 					"b": "banana",
 				})
-				revertOid := cmdtesthelper.BuildCommit(t, repoPath, baseOid, map[string]string{
+				revertOid := cmdtesthelper.BuildCommit(t, repoPath, []*git.Oid{baseOid}, map[string]string{
 					"a": "apple",
 					"b": "pineapple",
 				})
-				oursOid := cmdtesthelper.BuildCommit(t, repoPath, revertOid, map[string]string{
+				oursOid := cmdtesthelper.BuildCommit(t, repoPath, []*git.Oid{revertOid}, map[string]string{
 					"a": "apple",
 					"b": "pineapple",
 					"c": "carrot",
@@ -113,10 +113,10 @@ func TestRevert_trees(t *testing.T) {
 				baseOid := cmdtesthelper.BuildCommit(t, repoPath, nil, map[string]string{
 					"a": "apple",
 				})
-				revertOid := cmdtesthelper.BuildCommit(t, repoPath, baseOid, map[string]string{
+				revertOid := cmdtesthelper.BuildCommit(t, repoPath, []*git.Oid{baseOid}, map[string]string{
 					"a": "pineapple",
 				})
-				oursOid := cmdtesthelper.BuildCommit(t, repoPath, revertOid, map[string]string{
+				oursOid := cmdtesthelper.BuildCommit(t, repoPath, []*git.Oid{revertOid}, map[string]string{
 					"a": "carrot",
 				})
 

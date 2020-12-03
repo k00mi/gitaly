@@ -51,7 +51,13 @@ func (cmd *mergeSubcommand) Run(context.Context, io.Reader, io.Writer) error {
 		return fmt.Errorf("could not lookup commit %q: %w", request.Theirs, err)
 	}
 
-	index, err := repo.MergeCommits(ours, theirs, nil)
+	mergeOpts, err := git.DefaultMergeOptions()
+	if err != nil {
+		return fmt.Errorf("could not create merge options: %w", err)
+	}
+	mergeOpts.RecursionLimit = git2go.MergeRecursionLimit
+
+	index, err := repo.MergeCommits(ours, theirs, &mergeOpts)
 	if err != nil {
 		return fmt.Errorf("could not merge commits: %w", err)
 	}
