@@ -1,0 +1,5 @@
+---
+title: Remove MemoryRepositoryStore
+merge_request: 2845
+author:
+type: removed
