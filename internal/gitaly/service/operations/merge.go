@@ -8,6 +8,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
 	"gitlab.com/gitlab-org/gitaly/internal/git2go"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -209,24 +210,11 @@ func (s *Server) UserFFBranch(ctx context.Context, in *gitalypb.UserFFBranchRequ
 		return nil, helper.ErrInvalidArgument(err)
 	}
 
-	cmd, err := git.SafeCmd(ctx, in.Repository, nil, git.SubCmd{
-		Name:  "merge-base",
-		Flags: []git.Option{git.Flag{Name: "--is-ancestor"}},
-		Args:  []string{revision, in.CommitId},
-	})
+	ancestor, err := isAncestor(ctx, in.Repository, revision, in.CommitId)
 	if err != nil {
-		return nil, helper.ErrInternal(err)
+		return nil, err
 	}
-	if err := cmd.Wait(); err != nil {
-		status, ok := command.ExitStatus(err)
-		if !ok {
-			return nil, helper.ErrInternal(err)
-		}
-		// --is-ancestor errors are signaled by a non-zero status that is not 1.
-		// https://git-scm.com/docs/git-merge-base#Documentation/git-merge-base.txt---is-ancestor
-		if status != 1 {
-			return nil, helper.ErrInvalidArgument(err)
-		}
+	if !ancestor {
 		return nil, helper.ErrPreconditionFailedf("not fast forward")
 	}
 
@@ -377,4 +365,28 @@ func (s *Server) UserMergeToRef(ctx context.Context, in *gitalypb.UserMergeToRef
 	}
 
 	return client.UserMergeToRef(clientCtx, in)
+}
+
+func isAncestor(ctx context.Context, repo repository.GitRepo, ancestor, descendant string) (bool, error) {
+	cmd, err := git.SafeCmd(ctx, repo, nil, git.SubCmd{
+		Name:  "merge-base",
+		Flags: []git.Option{git.Flag{Name: "--is-ancestor"}},
+		Args:  []string{ancestor, descendant},
+	})
+	if err != nil {
+		return false, helper.ErrInternalf("isAncestor: %w", err)
+	}
+	if err := cmd.Wait(); err != nil {
+		status, ok := command.ExitStatus(err)
+		if !ok {
+			return false, helper.ErrInternalf("isAncestor: %w", err)
+		}
+		// --is-ancestor errors are signaled by a non-zero status that is not 1.
+		// https://git-scm.com/docs/git-merge-base#Documentation/git-merge-base.txt---is-ancestor
+		if status != 1 {
+			return false, helper.ErrInvalidArgumentf("isAncestor: %w", err)
+		}
+		return false, nil
+	}
+	return true, nil
 }

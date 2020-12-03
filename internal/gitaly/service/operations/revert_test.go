@@ -6,16 +6,17 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 )
 
-func TestSuccessfulUserRevertRequest(t *testing.T) {
-	ctxOuter, cancel := testhelper.Context()
-	defer cancel()
+func TestServer_UserRevert_successful(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserRevert, testServerUserRevertSuccessful)
+}
 
+func testServerUserRevertSuccessful(t *testing.T, ctxOuter context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -149,7 +150,7 @@ func TestSuccessfulUserRevertRequest(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
 			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
-			ctx := metadata.NewOutgoingContext(ctxOuter, md)
+			ctx := testhelper.MergeOutgoingMetadata(ctxOuter, md)
 
 			response, err := client.UserRevert(ctx, testCase.request)
 			require.NoError(t, err)
@@ -175,14 +176,66 @@ func TestSuccessfulUserRevertRequest(t *testing.T) {
 	}
 }
 
-func TestSuccessfulGitHooksForUserRevertRequest(t *testing.T) {
-	ctx, cancel := testhelper.Context()
-	defer cancel()
-
-	testSuccessfulGitHooksForUserRevertRequest(t, ctx)
+func TestServer_UserRevert_successful_into_empty_repo(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserRevert, testServerUserRevertSuccessfulIntoNewRepo)
 }
 
-func testSuccessfulGitHooksForUserRevertRequest(t *testing.T, ctxOuter context.Context) {
+func testServerUserRevertSuccessfulIntoNewRepo(t *testing.T, ctxOuter context.Context) {
+	serverSocketPath, stop := runOperationServiceServer(t)
+	defer stop()
+
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	startRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	revertedCommit, err := log.GetCommit(ctxOuter, startRepo, "d59c60028b053793cecfb4022de34602e1a9218e")
+	require.NoError(t, err)
+
+	masterHeadCommit, err := log.GetCommit(ctxOuter, startRepo, "master")
+	require.NoError(t, err)
+
+	testRepo, _, cleanup := testhelper.InitBareRepo(t)
+	defer cleanup()
+
+	request := &gitalypb.UserRevertRequest{
+		Repository:      testRepo,
+		User:            testhelper.TestUser,
+		Commit:          revertedCommit,
+		BranchName:      []byte("dst-branch"),
+		Message:         []byte("Reverting " + revertedCommit.Id),
+		StartRepository: startRepo,
+		StartBranchName: []byte("master"),
+	}
+
+	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
+	ctx := testhelper.MergeOutgoingMetadata(ctxOuter, md)
+
+	response, err := client.UserRevert(ctx, request)
+	require.NoError(t, err)
+
+	headCommit, err := log.GetCommit(ctx, testRepo, string(request.BranchName))
+	require.NoError(t, err)
+
+	expectedBranchUpdate := &gitalypb.OperationBranchUpdate{
+		BranchCreated: true,
+		RepoCreated:   true,
+		CommitId:      headCommit.Id,
+	}
+
+	require.Equal(t, expectedBranchUpdate, response.BranchUpdate)
+	require.Empty(t, response.CreateTreeError)
+	require.Empty(t, response.CreateTreeErrorCode)
+	require.Equal(t, request.Message, headCommit.Subject)
+	require.Equal(t, masterHeadCommit.Id, headCommit.ParentIds[0])
+}
+
+func TestServer_UserRevert_successful_git_hooks(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserRevert, testServerUserRevertSuccessfulGitHooks)
+}
+
+func testServerUserRevertSuccessfulGitHooks(t *testing.T, ctxOuter context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -214,7 +267,7 @@ func testSuccessfulGitHooksForUserRevertRequest(t *testing.T, ctxOuter context.C
 	}
 
 	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
-	ctx := metadata.NewOutgoingContext(ctxOuter, md)
+	ctx := testhelper.MergeOutgoingMetadata(ctxOuter, md)
 
 	response, err := client.UserRevert(ctx, request)
 	require.NoError(t, err)
@@ -226,10 +279,11 @@ func testSuccessfulGitHooksForUserRevertRequest(t *testing.T, ctxOuter context.C
 	}
 }
 
-func TestFailedUserRevertRequestDueToValidations(t *testing.T) {
-	ctxOuter, cancel := testhelper.Context()
-	defer cancel()
+func TestServer_UserRevert_failued_due_to_validations(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserRevert, testServerUserRevertFailuedDueToValidations)
+}
 
+func testServerUserRevertFailuedDueToValidations(t *testing.T, ctxOuter context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -298,7 +352,7 @@ func TestFailedUserRevertRequestDueToValidations(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
 			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
-			ctx := metadata.NewOutgoingContext(ctxOuter, md)
+			ctx := testhelper.MergeOutgoingMetadata(ctxOuter, md)
 
 			_, err := client.UserRevert(ctx, testCase.request)
 			testhelper.RequireGrpcError(t, err, testCase.code)
@@ -306,10 +360,11 @@ func TestFailedUserRevertRequestDueToValidations(t *testing.T) {
 	}
 }
 
-func TestFailedUserRevertRequestDueToPreReceiveError(t *testing.T) {
-	ctxOuter, cancel := testhelper.Context()
-	defer cancel()
+func TestServer_UserRevert_failed_due_to_pre_receive_error(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserRevert, testServerUserRevertFailedDueToPreReceiveError)
+}
 
+func testServerUserRevertFailedDueToPreReceiveError(t *testing.T, ctxOuter context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -342,7 +397,7 @@ func TestFailedUserRevertRequestDueToPreReceiveError(t *testing.T) {
 			defer remove()
 
 			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
-			ctx := metadata.NewOutgoingContext(ctxOuter, md)
+			ctx := testhelper.MergeOutgoingMetadata(ctxOuter, md)
 
 			response, err := client.UserRevert(ctx, request)
 			require.NoError(t, err)
@@ -351,10 +406,11 @@ func TestFailedUserRevertRequestDueToPreReceiveError(t *testing.T) {
 	}
 }
 
-func TestFailedUserRevertRequestDueToCreateTreeError(t *testing.T) {
-	ctxOuter, cancel := testhelper.Context()
-	defer cancel()
+func TestServer_UserRevert_failed_due_to_create_tree_error(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserRevert, testServerUserRevertFailedDueToCreateTreeError)
+}
 
+func testServerUserRevertFailedDueToCreateTreeError(t *testing.T, ctxOuter context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -380,7 +436,7 @@ func TestFailedUserRevertRequestDueToCreateTreeError(t *testing.T) {
 	}
 
 	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
-	ctx := metadata.NewOutgoingContext(ctxOuter, md)
+	ctx := testhelper.MergeOutgoingMetadata(ctxOuter, md)
 
 	response, err := client.UserRevert(ctx, request)
 	require.NoError(t, err)
@@ -388,10 +444,11 @@ func TestFailedUserRevertRequestDueToCreateTreeError(t *testing.T) {
 	require.Equal(t, gitalypb.UserRevertResponse_CONFLICT, response.CreateTreeErrorCode)
 }
 
-func TestFailedUserRevertRequestDueToCommitError(t *testing.T) {
-	ctxOuter, cancel := testhelper.Context()
-	defer cancel()
+func TestServer_UserRevert_failed_due_to_commit_error(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserRevert, testServerUserRevertFailedDueToCommitError)
+}
 
+func testServerUserRevertFailedDueToCommitError(t *testing.T, ctxOuter context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -419,7 +476,7 @@ func TestFailedUserRevertRequestDueToCommitError(t *testing.T) {
 	}
 
 	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
-	ctx := metadata.NewOutgoingContext(ctxOuter, md)
+	ctx := testhelper.MergeOutgoingMetadata(ctxOuter, md)
 
 	response, err := client.UserRevert(ctx, request)
 	require.NoError(t, err)
