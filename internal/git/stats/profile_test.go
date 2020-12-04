@@ -20,7 +20,7 @@ func TestRepositoryProfile(t *testing.T) {
 	hasBitmap, err := HasBitmap(testRepoPath)
 	require.NoError(t, err)
 	require.False(t, hasBitmap, "repository should not have a bitmap initially")
-	unpackedObjects, err := UnpackedObjects(testRepo)
+	unpackedObjects, err := UnpackedObjects(testRepoPath)
 	require.NoError(t, err)
 	require.Zero(t, unpackedObjects)
 	packfiles, err := GetPackfiles(testRepoPath)
@@ -33,7 +33,7 @@ func TestRepositoryProfile(t *testing.T) {
 	blobs := 10
 	blobIDs := testhelper.WriteBlobs(t, testRepoPath, blobs)
 
-	unpackedObjects, err = UnpackedObjects(testRepo)
+	unpackedObjects, err = UnpackedObjects(testRepoPath)
 	require.NoError(t, err)
 	require.Equal(t, int64(blobs), unpackedObjects)
 
@@ -51,7 +51,7 @@ func TestRepositoryProfile(t *testing.T) {
 
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "repack", "-A", "-b", "-d")
 
-	unpackedObjects, err = UnpackedObjects(testRepo)
+	unpackedObjects, err = UnpackedObjects(testRepoPath)
 	require.NoError(t, err)
 	require.Zero(t, unpackedObjects)
 	looseObjects, err = LooseObjects(ctx, testRepo)
@@ -68,7 +68,7 @@ func TestRepositoryProfile(t *testing.T) {
 	theFuture := time.Now().Add(10 * time.Minute)
 	require.NoError(t, os.Chtimes(filepath.Join(testRepoPath, "objects", blobID[0:2], blobID[2:]), theFuture, theFuture))
 
-	unpackedObjects, err = UnpackedObjects(testRepo)
+	unpackedObjects, err = UnpackedObjects(testRepoPath)
 	require.NoError(t, err)
 	require.Equal(t, int64(1), unpackedObjects)
 

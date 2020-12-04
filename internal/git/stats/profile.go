@@ -11,7 +11,6 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 )
 
 // HasBitmap returns whether or not the repository contains an object bitmap.
@@ -52,12 +51,7 @@ func GetPackfiles(repoPath string) ([]os.FileInfo, error) {
 
 // UnpackedObjects returns the number of loose objects that have a timestamp later than the newest
 // packfile.
-func UnpackedObjects(repo repository.GitRepo) (int64, error) {
-	repoPath, err := helper.GetRepoPath(repo)
-	if err != nil {
-		return 0, err
-	}
-
+func UnpackedObjects(repoPath string) (int64, error) {
 	unpackedObjects, err := getUnpackedObjects(repoPath)
 	if err != nil {
 		return 0, err
