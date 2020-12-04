@@ -10,11 +10,13 @@ code is accessible to different developers with varying setups.
 
 ## Errors
 
-### Use %v when wrapping errors
+### Use %w when wrapping errors
 
-Use `%v` when wrapping errors with context.
+Use `%w` when wrapping errors with context.
 
-    fmt.Errorf("foo context: %v", err)
+    fmt.Errorf("foo context: %w", err)
+
+It allows to inspect the wrapped error by the caller with [`errors.As`](https://golang.org/pkg/errors/#As) and [`errors.Is`](https://golang.org/pkg/errors/#Is). More info about `errors` package capabilities could be found in the [blog post](https://blog.golang.org/go1.13-errors).
 
 ### Keep errors short
 
@@ -23,10 +25,10 @@ them. To be a good neighbor to the rest of the call stack we should keep
 our errors short.
 
     // Good
-    fmt.Errorf("peek diff line: %v", err)
+    fmt.Errorf("peek diff line: %w", err)
 
     // Too long
-    fmt.Errorf("ParseDiffOutput: Unexpected error while peeking: %v", err)
+    fmt.Errorf("ParseDiffOutput: Unexpected error while peeking: %w", err)
 
 ### Use lower case in errors
 
