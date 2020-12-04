@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
-	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
@@ -21,19 +20,10 @@ type conflictFile struct {
 	content []byte
 }
 
-func testListConflictFiles(t *testing.T, testcase func(t *testing.T, ctx context.Context)) {
-	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
-		featureflag.GoListConflictFiles,
-	}).Run(t, func(t *testing.T, ctx context.Context) {
-		testcase(t, ctx)
-	})
-}
-
 func TestSuccessfulListConflictFilesRequest(t *testing.T) {
-	testListConflictFiles(t, testSuccessfulListConflictFilesRequest)
-}
+	ctx, cleanup := testhelper.Context()
+	defer cleanup()
 
-func testSuccessfulListConflictFilesRequest(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runConflictsServer(t)
 	defer stop()
 
@@ -105,10 +95,9 @@ end
 }
 
 func TestSuccessfulListConflictFilesRequestWithAncestor(t *testing.T) {
-	testListConflictFiles(t, testSuccessfulListConflictFilesRequestWithAncestor)
-}
+	ctx, cleanup := testhelper.Context()
+	defer cleanup()
 
-func testSuccessfulListConflictFilesRequestWithAncestor(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runConflictsServer(t)
 	defer stop()
 
@@ -160,10 +149,9 @@ func testSuccessfulListConflictFilesRequestWithAncestor(t *testing.T, ctx contex
 }
 
 func TestListConflictFilesHugeDiff(t *testing.T) {
-	testListConflictFiles(t, testListConflictFilesHugeDiff)
-}
+	ctx, cleanup := testhelper.Context()
+	defer cleanup()
 
-func testListConflictFilesHugeDiff(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runConflictsServer(t)
 	defer stop()
 
@@ -229,10 +217,9 @@ func buildCommit(t *testing.T, ctx context.Context, repo *gitalypb.Repository, r
 }
 
 func TestListConflictFilesFailedPrecondition(t *testing.T) {
-	testListConflictFiles(t, testListConflictFilesFailedPrecondition)
-}
+	ctx, cleanup := testhelper.Context()
+	defer cleanup()
 
-func testListConflictFilesFailedPrecondition(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runConflictsServer(t)
 	defer stop()
 
@@ -295,10 +282,9 @@ func testListConflictFilesFailedPrecondition(t *testing.T, ctx context.Context) 
 }
 
 func TestFailedListConflictFilesRequestDueToValidation(t *testing.T) {
-	testListConflictFiles(t, testFailedListConflictFilesRequestDueToValidation)
-}
+	ctx, cleanup := testhelper.Context()
+	defer cleanup()
 
-func testFailedListConflictFilesRequestDueToValidation(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runConflictsServer(t)
 	defer stop()
 

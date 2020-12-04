@@ -9,16 +9,12 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git2go"
-	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
-	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
-func (s *server) listConflictFiles(request *gitalypb.ListConflictFilesRequest, stream gitalypb.ConflictsService_ListConflictFilesServer) error {
+func (s *server) ListConflictFiles(request *gitalypb.ListConflictFilesRequest, stream gitalypb.ConflictsService_ListConflictFilesServer) error {
 	ctx := stream.Context()
 
 	if err := validateListConflictFilesRequest(request); err != nil {
@@ -127,43 +123,6 @@ func (s *server) listConflictFiles(request *gitalypb.ListConflictFilesRequest, s
 	}
 
 	return nil
-}
-
-func (s *server) ListConflictFiles(in *gitalypb.ListConflictFilesRequest, stream gitalypb.ConflictsService_ListConflictFilesServer) error {
-	ctx := stream.Context()
-
-	if featureflag.IsEnabled(ctx, featureflag.GoListConflictFiles) {
-		return s.listConflictFiles(in, stream)
-	}
-
-	if err := validateListConflictFilesRequest(in); err != nil {
-		return status.Errorf(codes.InvalidArgument, "ListConflictFiles: %v", err)
-	}
-
-	client, err := s.ruby.ConflictsServiceClient(ctx)
-	if err != nil {
-		return err
-	}
-
-	clientCtx, err := rubyserver.SetHeaders(ctx, s.locator, in.GetRepository())
-	if err != nil {
-		return err
-	}
-
-	rubyStream, err := client.ListConflictFiles(clientCtx, in)
-	if err != nil {
-		return err
-	}
-
-	return rubyserver.Proxy(func() error {
-		resp, err := rubyStream.Recv()
-		if err != nil {
-			md := rubyStream.Trailer()
-			stream.SetTrailer(md)
-			return err
-		}
-		return stream.Send(resp)
-	})
 }
 
 func validateListConflictFilesRequest(in *gitalypb.ListConflictFilesRequest) error {
