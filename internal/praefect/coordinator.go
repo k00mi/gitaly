@@ -11,6 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/metadatahandler"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
@@ -33,42 +34,47 @@ type transactionsCondition func(context.Context) bool
 
 func transactionsEnabled(context.Context) bool  { return true }
 func transactionsDisabled(context.Context) bool { return false }
+func transactionsFlag(flag featureflag.FeatureFlag) transactionsCondition {
+	return func(ctx context.Context) bool {
+		return featureflag.IsEnabled(ctx, flag)
+	}
+}
 
 // transactionRPCs contains the list of repository-scoped mutating calls which may take part in
 // transactions. An optional feature flag can be added to conditionally enable transactional
 // behaviour. If none is given, it's always enabled.
 var transactionRPCs = map[string]transactionsCondition{
-	"/gitaly.CleanupService/ApplyBfgObjectMapStream":         transactionsDisabled,
-	"/gitaly.ConflictsService/ResolveConflicts":              transactionsDisabled,
-	"/gitaly.ObjectPoolService/FetchIntoObjectPool":          transactionsDisabled,
-	"/gitaly.OperationService/UserApplyPatch":                transactionsDisabled,
-	"/gitaly.OperationService/UserCherryPick":                transactionsDisabled,
-	"/gitaly.OperationService/UserCommitFiles":               transactionsDisabled,
-	"/gitaly.OperationService/UserFFBranch":                  transactionsDisabled,
-	"/gitaly.OperationService/UserMergeBranch":               transactionsDisabled,
-	"/gitaly.OperationService/UserMergeToRef":                transactionsDisabled,
-	"/gitaly.OperationService/UserRebaseConfirmable":         transactionsDisabled,
-	"/gitaly.OperationService/UserRevert":                    transactionsDisabled,
-	"/gitaly.OperationService/UserSquash":                    transactionsDisabled,
-	"/gitaly.OperationService/UserUpdateSubmodule":           transactionsDisabled,
-	"/gitaly.RefService/DeleteRefs":                          transactionsDisabled,
-	"/gitaly.RemoteService/AddRemote":                        transactionsDisabled,
-	"/gitaly.RemoteService/FetchInternalRemote":              transactionsDisabled,
-	"/gitaly.RemoteService/RemoveRemote":                     transactionsDisabled,
-	"/gitaly.RemoteService/UpdateRemoteMirror":               transactionsDisabled,
-	"/gitaly.RepositoryService/CloneFromPool":                transactionsDisabled,
-	"/gitaly.RepositoryService/CloneFromPoolInternal":        transactionsDisabled,
-	"/gitaly.RepositoryService/CreateFork":                   transactionsDisabled,
-	"/gitaly.RepositoryService/CreateRepositoryFromBundle":   transactionsDisabled,
-	"/gitaly.RepositoryService/CreateRepositoryFromSnapshot": transactionsDisabled,
-	"/gitaly.RepositoryService/CreateRepositoryFromURL":      transactionsDisabled,
-	"/gitaly.RepositoryService/FetchRemote":                  transactionsDisabled,
-	"/gitaly.RepositoryService/FetchSourceBranch":            transactionsDisabled,
-	"/gitaly.RepositoryService/ReplicateRepository":          transactionsDisabled,
-	"/gitaly.RepositoryService/WriteRef":                     transactionsDisabled,
-	"/gitaly.WikiService/WikiDeletePage":                     transactionsDisabled,
-	"/gitaly.WikiService/WikiUpdatePage":                     transactionsDisabled,
-	"/gitaly.WikiService/WikiWritePage":                      transactionsDisabled,
+	"/gitaly.CleanupService/ApplyBfgObjectMapStream":         transactionsFlag(featureflag.TxApplyBfgObjectMapStream),
+	"/gitaly.ConflictsService/ResolveConflicts":              transactionsFlag(featureflag.TxResolveConflicts),
+	"/gitaly.ObjectPoolService/FetchIntoObjectPool":          transactionsFlag(featureflag.TxFetchIntoObjectPool),
+	"/gitaly.OperationService/UserApplyPatch":                transactionsFlag(featureflag.TxUserApplyPatch),
+	"/gitaly.OperationService/UserCherryPick":                transactionsFlag(featureflag.TxUserCherryPick),
+	"/gitaly.OperationService/UserCommitFiles":               transactionsFlag(featureflag.TxUserCommitFiles),
+	"/gitaly.OperationService/UserFFBranch":                  transactionsFlag(featureflag.TxUserFFBranch),
+	"/gitaly.OperationService/UserMergeBranch":               transactionsFlag(featureflag.TxUserMergeBranch),
+	"/gitaly.OperationService/UserMergeToRef":                transactionsFlag(featureflag.TxUserMergeToRef),
+	"/gitaly.OperationService/UserRebaseConfirmable":         transactionsFlag(featureflag.TxUserRebaseConfirmable),
+	"/gitaly.OperationService/UserRevert":                    transactionsFlag(featureflag.TxUserRevert),
+	"/gitaly.OperationService/UserSquash":                    transactionsFlag(featureflag.TxUserSquash),
+	"/gitaly.OperationService/UserUpdateSubmodule":           transactionsFlag(featureflag.TxUserUpdateSubmodule),
+	"/gitaly.RefService/DeleteRefs":                          transactionsFlag(featureflag.TxDeleteRefs),
+	"/gitaly.RemoteService/AddRemote":                        transactionsFlag(featureflag.TxAddRemote),
+	"/gitaly.RemoteService/FetchInternalRemote":              transactionsFlag(featureflag.TxFetchInternalRemote),
+	"/gitaly.RemoteService/RemoveRemote":                     transactionsFlag(featureflag.TxRemoveRemote),
+	"/gitaly.RemoteService/UpdateRemoteMirror":               transactionsFlag(featureflag.TxUpdateRemoteMirror),
+	"/gitaly.RepositoryService/CloneFromPool":                transactionsFlag(featureflag.TxCloneFromPool),
+	"/gitaly.RepositoryService/CloneFromPoolInternal":        transactionsFlag(featureflag.TxCloneFromPoolInternal),
+	"/gitaly.RepositoryService/CreateFork":                   transactionsFlag(featureflag.TxCreateFork),
+	"/gitaly.RepositoryService/CreateRepositoryFromBundle":   transactionsFlag(featureflag.TxCreateRepositoryFromBundle),
+	"/gitaly.RepositoryService/CreateRepositoryFromSnapshot": transactionsFlag(featureflag.TxCreateRepositoryFromSnapshot),
+	"/gitaly.RepositoryService/CreateRepositoryFromURL":      transactionsFlag(featureflag.TxCreateRepositoryFromURL),
+	"/gitaly.RepositoryService/FetchRemote":                  transactionsFlag(featureflag.TxFetchRemote),
+	"/gitaly.RepositoryService/FetchSourceBranch":            transactionsFlag(featureflag.TxFetchSourceBranch),
+	"/gitaly.RepositoryService/ReplicateRepository":          transactionsFlag(featureflag.TxReplicateRepository),
+	"/gitaly.RepositoryService/WriteRef":                     transactionsFlag(featureflag.TxWriteRef),
+	"/gitaly.WikiService/WikiDeletePage":                     transactionsFlag(featureflag.TxWikiDeletePage),
+	"/gitaly.WikiService/WikiUpdatePage":                     transactionsFlag(featureflag.TxWikiUpdatePage),
+	"/gitaly.WikiService/WikiWritePage":                      transactionsFlag(featureflag.TxWikiWritePage),
 
 	"/gitaly.OperationService/UserCreateBranch": transactionsEnabled,
 	"/gitaly.OperationService/UserCreateTag":    transactionsEnabled,

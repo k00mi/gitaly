@@ -1,0 +1,5 @@
+---
+title: Conditionally enable use of transactions for all reference-modifying RPCs
+merge_request: 2850
+author:
+type: added
