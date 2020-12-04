@@ -178,8 +178,14 @@ func WithRefTxHook(ctx context.Context, repo *gitalypb.Repository, cfg config.Cf
 		if err != nil {
 			return fmt.Errorf("ref hook env var: %w", err)
 		}
-
 		cc.env = append(cc.env, rfEnvs...)
+
+		txEnvs, err := transactionEnv(ctx)
+		if err != nil {
+			return fmt.Errorf("transaction environment: %w", err)
+		}
+		cc.env = append(cc.env, txEnvs...)
+
 		cc.globals = append(cc.globals, ValueFlag{"-c", fmt.Sprintf("core.hooksPath=%s", hooks.Path(cfg))})
 		cc.refHookConfigured = true
 
@@ -244,27 +250,38 @@ func receivePackHookEnv(ctx context.Context, cfg config.Cfg, req ReceivePackRequ
 	)
 	env = append(env, gitlabshellEnv...)
 
+	transactionEnv, err := transactionEnv(ctx)
+	if err != nil {
+		return nil, err
+	}
+	env = append(env, transactionEnv...)
+
+	return env, nil
+}
+
+func transactionEnv(ctx context.Context) ([]string, error) {
 	transaction, err := metadata.TransactionFromContext(ctx)
-	if err == nil {
-		praefect, err := metadata.PraefectFromContext(ctx)
-		if err != nil {
-			return nil, err
+	if err != nil {
+		if errors.Is(err, metadata.ErrTransactionNotFound) {
+			return nil, nil
 		}
-
-		praefectEnv, err := praefect.Env()
-		if err != nil {
-			return nil, err
-		}
-
-		transactionEnv, err := transaction.Env()
-		if err != nil {
-			return nil, err
-		}
-
-		env = append(env, praefectEnv, transactionEnv)
-	} else if !errors.Is(err, metadata.ErrTransactionNotFound) {
 		return nil, err
 	}
 
-	return env, nil
+	praefect, err := metadata.PraefectFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	praefectEnv, err := praefect.Env()
+	if err != nil {
+		return nil, err
+	}
+
+	transactionEnv, err := transaction.Env()
+	if err != nil {
+		return nil, err
+	}
+
+	return []string{praefectEnv, transactionEnv}, nil
 }
