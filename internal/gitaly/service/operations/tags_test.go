@@ -247,6 +247,93 @@ func testSuccessfulUserCreateTagRequest(t *testing.T, ctx context.Context) {
 	}
 }
 
+func TestSuccessfulUserCreateTagRequestToNonCommit(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	serverSocketPath, stop := runOperationServiceServer(t)
+	defer stop()
+
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	inputTagName := "to-be-créated-soon"
+
+	preReceiveHook, cleanup := writeAssertObjectTypePreReceiveHook(t)
+	defer cleanup()
+
+	updateHook, cleanup := writeAssertObjectTypeUpdateHook(t)
+	defer cleanup()
+
+	testCases := []struct {
+		desc               string
+		tagName            string
+		message            string
+		targetRevision     string
+		expectedObjectType string
+	}{
+		{
+			desc:               "lightweight tag to tree",
+			tagName:            inputTagName,
+			targetRevision:     "612036fac47c5d31c212b17268e2f3ba807bce1e",
+			expectedObjectType: "tree",
+		},
+		{
+			desc:               "lightweight tag to blob",
+			tagName:            inputTagName,
+			targetRevision:     "dfaa3f97ca337e20154a98ac9d0be76ddd1fcc82",
+			expectedObjectType: "blob",
+		},
+		{
+			desc:               "annotated tag to tree",
+			tagName:            inputTagName,
+			targetRevision:     "612036fac47c5d31c212b17268e2f3ba807bce1e",
+			message:            "This is an annotated tag",
+			expectedObjectType: "tag",
+		},
+		{
+			desc:               "annotated tag to blob",
+			tagName:            inputTagName,
+			targetRevision:     "dfaa3f97ca337e20154a98ac9d0be76ddd1fcc82",
+			message:            "This is an annotated tag",
+			expectedObjectType: "tag",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			for hook, content := range map[string]string{
+				"pre-receive": fmt.Sprintf("#!/bin/sh\n%s %s \"$@\"", preReceiveHook, testCase.expectedObjectType),
+				"update":      fmt.Sprintf("#!/bin/sh\n%s %s \"$@\"", updateHook, testCase.expectedObjectType),
+			} {
+				hookCleanup, err := testhelper.WriteCustomHook(testRepoPath, hook, []byte(content))
+				require.NoError(t, err)
+				defer hookCleanup()
+			}
+
+			request := &gitalypb.UserCreateTagRequest{
+				Repository:     testRepo,
+				TagName:        []byte(testCase.tagName),
+				TargetRevision: []byte(testCase.targetRevision),
+				User:           testhelper.TestUser,
+				Message:        []byte(testCase.message),
+			}
+
+			client.UserCreateTag(ctx, request)
+			defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "tag", "-d", inputTagName).Run()
+
+			peeledID := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", inputTagName+"^{}")
+			require.Equal(t, testCase.targetRevision, text.ChompBytes(peeledID))
+
+			objectType := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "cat-file", "-t", inputTagName)
+			require.Equal(t, testCase.expectedObjectType, text.ChompBytes(objectType))
+		})
+	}
+}
+
 // TODO: Rename to TestUserDeleteTag_successfulDeletionOfPrefixedTag,
 // see
 // https://gitlab.com/gitlab-org/gitaly/-/merge_requests/2839#note_458751929
