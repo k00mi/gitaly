@@ -17,7 +17,7 @@ func TestRepositoryProfile(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	hasBitmap, err := HasBitmap(testRepo)
+	hasBitmap, err := HasBitmap(testRepoPath)
 	require.NoError(t, err)
 	require.False(t, hasBitmap, "repository should not have a bitmap initially")
 	unpackedObjects, err := UnpackedObjects(testRepo)

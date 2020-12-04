@@ -15,12 +15,7 @@ import (
 )
 
 // HasBitmap returns whether or not the repository contains an object bitmap.
-func HasBitmap(repo repository.GitRepo) (bool, error) {
-	repoPath, err := helper.GetRepoPath(repo)
-	if err != nil {
-		return false, err
-	}
-
+func HasBitmap(repoPath string) (bool, error) {
 	hasBitmap, err := hasBitmap(repoPath)
 	if err != nil {
 		return false, err
