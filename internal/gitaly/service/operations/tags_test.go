@@ -273,32 +273,55 @@ func TestSuccessfulUserCreateTagRequestToNonCommit(t *testing.T) {
 		tagName            string
 		message            string
 		targetRevision     string
+		expectedTag        *gitalypb.Tag
 		expectedObjectType string
 	}{
 		{
-			desc:               "lightweight tag to tree",
-			tagName:            inputTagName,
-			targetRevision:     "612036fac47c5d31c212b17268e2f3ba807bce1e",
+			desc:           "lightweight tag to tree",
+			tagName:        inputTagName,
+			targetRevision: "612036fac47c5d31c212b17268e2f3ba807bce1e",
+			expectedTag: &gitalypb.Tag{
+				Name: []byte(inputTagName),
+				Id:   "612036fac47c5d31c212b17268e2f3ba807bce1e",
+			},
 			expectedObjectType: "tree",
 		},
 		{
-			desc:               "lightweight tag to blob",
-			tagName:            inputTagName,
-			targetRevision:     "dfaa3f97ca337e20154a98ac9d0be76ddd1fcc82",
+			desc:           "lightweight tag to blob",
+			tagName:        inputTagName,
+			targetRevision: "dfaa3f97ca337e20154a98ac9d0be76ddd1fcc82",
+			expectedTag: &gitalypb.Tag{
+				Name: []byte(inputTagName),
+				Id:   "dfaa3f97ca337e20154a98ac9d0be76ddd1fcc82",
+			},
 			expectedObjectType: "blob",
 		},
 		{
-			desc:               "annotated tag to tree",
-			tagName:            inputTagName,
-			targetRevision:     "612036fac47c5d31c212b17268e2f3ba807bce1e",
-			message:            "This is an annotated tag",
+			desc:           "annotated tag to tree",
+			tagName:        inputTagName,
+			targetRevision: "612036fac47c5d31c212b17268e2f3ba807bce1e",
+			message:        "This is an annotated tag",
+			expectedTag: &gitalypb.Tag{
+				Name: []byte(inputTagName),
+				//Id: is a new object, filled in below
+				TargetCommit: nil,
+				Message:      []byte("This is an annotated tag"),
+				MessageSize:  24,
+			},
 			expectedObjectType: "tag",
 		},
 		{
-			desc:               "annotated tag to blob",
-			tagName:            inputTagName,
-			targetRevision:     "dfaa3f97ca337e20154a98ac9d0be76ddd1fcc82",
-			message:            "This is an annotated tag",
+			desc:           "annotated tag to blob",
+			tagName:        inputTagName,
+			targetRevision: "dfaa3f97ca337e20154a98ac9d0be76ddd1fcc82",
+			message:        "This is an annotated tag",
+			expectedTag: &gitalypb.Tag{
+				Name: []byte(inputTagName),
+				//Id: is a new object, filled in below
+				TargetCommit: nil,
+				Message:      []byte("This is an annotated tag"),
+				MessageSize:  24,
+			},
 			expectedObjectType: "tag",
 		},
 	}
@@ -322,8 +345,19 @@ func TestSuccessfulUserCreateTagRequestToNonCommit(t *testing.T) {
 				Message:        []byte(testCase.message),
 			}
 
-			client.UserCreateTag(ctx, request)
+			responseOk := &gitalypb.UserCreateTagResponse{
+				Tag: testCase.expectedTag,
+			}
+			response, err := client.UserCreateTag(ctx, request)
 			defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "tag", "-d", inputTagName).Run()
+
+			// Fake up *.Id for annotated tags
+			if len(testCase.expectedTag.Id) == 0 {
+				tagID := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", inputTagName)
+				testCase.expectedTag.Id = text.ChompBytes(tagID)
+			}
+			require.NoError(t, err)
+			require.Equal(t, responseOk, response)
 
 			peeledID := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", inputTagName+"^{}")
 			require.Equal(t, testCase.targetRevision, text.ChompBytes(peeledID))
