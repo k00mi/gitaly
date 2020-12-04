@@ -490,9 +490,9 @@ followed by the commit subject and the commit date. You may create an alias for
 this to have it easily available:
 
 ```
-$ git config alias.reference "log -1 --pretty='tformat:%h (%s, %ad)' --date=short"
+$ git config alias.reference "show -s --pretty=reference"
 $ git reference HEAD
-b981a648 (style: Document best practices for commit hygiene, 2020-11-20)
+cf7f9ffe5 (style: Document best practices for commit hygiene, 2020-11-20)
 ```
 
 ### Use interactive rebases to shape your commit series
