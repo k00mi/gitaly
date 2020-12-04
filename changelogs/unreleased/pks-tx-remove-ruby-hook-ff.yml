@@ -1,0 +1,5 @@
+---
+title: 'hooks: Remove the Ruby reference-transaction hook feature flag'
+merge_request: 2866
+author:
+type: added

@@ -18,7 +18,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	gitalylog "gitlab.com/gitlab-org/gitaly/internal/log"
-	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/internal/stream"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -173,10 +172,6 @@ func main() {
 			logger.Fatalf("error when receiving data for %q: %v", subCmd, err)
 		}
 	case "reference-transaction":
-		if os.Getenv(featureflag.ReferenceTransactionHookEnvVar) != "true" {
-			os.Exit(0)
-		}
-
 		if len(os.Args) != 3 {
 			logger.Fatalf("hook %q is missing required arguments", subCmd)
 		}

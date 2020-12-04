@@ -13,9 +13,6 @@ var (
 	GoFetchSourceBranch = FeatureFlag{Name: "go_fetch_source_branch", OnByDefault: false}
 	// DistributedReads allows praefect to redirect accessor operations to up-to-date secondaries
 	DistributedReads = FeatureFlag{Name: "distributed_reads", OnByDefault: false}
-	// RubyReferenceTransactionHook will enable the reference-transaction hook
-	// introduced with Git v2.28.0 for voting on transactions in the Ruby sidecar.
-	RubyReferenceTransactionHook = FeatureFlag{Name: "ruby_reference_transaction_hook", OnByDefault: true}
 	// LogCommandStats will log additional rusage stats for commands
 	LogCommandStats = FeatureFlag{Name: "log_command_stats", OnByDefault: false}
 	// GoUserMergeBranch enables the Go implementation of UserMergeBranch
@@ -51,7 +48,6 @@ var (
 var All = []FeatureFlag{
 	GoFetchSourceBranch,
 	DistributedReads,
-	RubyReferenceTransactionHook,
 	LogCommandStats,
 	GoUserMergeBranch,
 	GoUserMergeToRef,
@@ -67,9 +63,3 @@ var All = []FeatureFlag{
 	GoUserDeleteTag,
 	GoUserRevert,
 }
-
-const (
-	// This environment variable is still required by the Ruby reference transaction hook
-	// feature flag, even though it's unconditionally set by Go code.
-	ReferenceTransactionHookEnvVar = "GITALY_REFERENCE_TRANSACTION_HOOK"
-)

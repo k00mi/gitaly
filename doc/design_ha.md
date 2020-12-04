@@ -461,14 +461,8 @@ changes.
 ## Using Strong Consistency
 
 The current implementation of strong consistency via reference-transaction hook
-is enabled by default. You can use the following feature flags to change its
-behavior:
-
-- `gitaly_ruby_reference_transaction_hook`: This feature flag is enabled by
-  default. If enabled, it will cause Ruby RPCs to perform voting via the
-  reference-transaction hook.
-
-In order to observe reference transactions, the following metrics can be used:
+is enabled by default. In order to observe reference transactions, the following
+metrics can be used:
 
 - `gitaly_praefect_transactions_total`: The number of transactions created.
 
