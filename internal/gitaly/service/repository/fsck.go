@@ -12,10 +12,13 @@ import (
 func (s *server) Fsck(ctx context.Context, req *gitalypb.FsckRequest) (*gitalypb.FsckResponse, error) {
 	var stdout, stderr bytes.Buffer
 
-	repoPath, env, err := alternates.PathAndEnv(req.GetRepository())
+	repo := req.GetRepository()
+	repoPath, err := s.locator.GetRepoPath(repo)
 	if err != nil {
 		return nil, err
 	}
+
+	env := alternates.Env(repoPath, repo.GetGitObjectDirectory(), repo.GetGitAlternateObjectDirectories())
 
 	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{Out: &stdout, Err: &stderr}, env,
 		[]git.Option{git.ValueFlag{"--git-dir", repoPath}},

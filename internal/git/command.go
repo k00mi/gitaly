@@ -30,7 +30,7 @@ func (cf *CommandFactory) gitPath() string {
 
 // unsafeCmdWithEnv creates a git.unsafeCmd with the given args, environment, and Repository
 func (cf *CommandFactory) unsafeCmdWithEnv(ctx context.Context, extraEnv []string, stream CmdStream, repo repository.GitRepo, args ...string) (*command.Command, error) {
-	args, env, err := argsAndEnv(repo, args...)
+	args, env, err := cf.argsAndEnv(repo, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (cf *CommandFactory) unsafeCmdWithEnv(ctx context.Context, extraEnv []strin
 // unsafeStdinCmd creates a git.Command with the given args and Repository that is
 // suitable for Write()ing to
 func (cf *CommandFactory) unsafeStdinCmd(ctx context.Context, extraEnv []string, repo repository.GitRepo, args ...string) (*command.Command, error) {
-	args, env, err := argsAndEnv(repo, args...)
+	args, env, err := cf.argsAndEnv(repo, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -53,12 +53,13 @@ func (cf *CommandFactory) unsafeStdinCmd(ctx context.Context, extraEnv []string,
 	return cf.unsafeBareCmd(ctx, CmdStream{In: command.SetupStdin}, env, args...)
 }
 
-func argsAndEnv(repo repository.GitRepo, args ...string) ([]string, []string, error) {
-	repoPath, env, err := alternates.PathAndEnv(repo)
+func (cf *CommandFactory) argsAndEnv(repo repository.GitRepo, args ...string) ([]string, []string, error) {
+	repoPath, err := cf.locator.GetRepoPath(repo)
 	if err != nil {
 		return nil, nil, err
 	}
 
+	env := alternates.Env(repoPath, repo.GetGitObjectDirectory(), repo.GetGitAlternateObjectDirectories())
 	args = append([]string{"--git-dir", repoPath}, args...)
 
 	return args, env, nil
