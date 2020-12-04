@@ -350,7 +350,9 @@ func (s *Server) UserMergeToRef(ctx context.Context, in *gitalypb.UserMergeToRef
 		return nil, helper.ErrInvalidArgument(err)
 	}
 
-	if featureflag.IsEnabled(ctx, featureflag.GoUserMergeToRef) && !in.AllowConflicts {
+	// Ruby has grown a new feature since being ported to Go, and we don't
+	// handle that yet.
+	if !in.AllowConflicts {
 		return s.userMergeToRef(ctx, in)
 	}
 
