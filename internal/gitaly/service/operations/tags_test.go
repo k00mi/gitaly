@@ -543,35 +543,40 @@ func TestFailedUserCreateTagRequestDueToValidation(t *testing.T) {
 		tagName        string
 		targetRevision string
 		user           *gitalypb.User
-		code           codes.Code
+		response       *gitalypb.UserCreateTagResponse
+		err            error
 	}{
 		{
 			desc:           "empty target revision",
 			tagName:        "shiny-new-tag",
 			targetRevision: "",
 			user:           testhelper.TestUser,
-			code:           codes.InvalidArgument,
+			response:       nil,
+			err:            status.Error(codes.InvalidArgument, "empty target revision"),
 		},
 		{
 			desc:           "empty user",
 			tagName:        "shiny-new-tag",
 			targetRevision: "master",
 			user:           nil,
-			code:           codes.InvalidArgument,
+			response:       nil,
+			err:            status.Error(codes.InvalidArgument, "empty user"),
 		},
 		{
 			desc:           "empty starting point",
 			tagName:        "new-tag",
 			targetRevision: "",
 			user:           testhelper.TestUser,
-			code:           codes.InvalidArgument,
+			response:       nil,
+			err:            status.Error(codes.InvalidArgument, "empty target revision"),
 		},
 		{
 			desc:           "non-existing starting point",
 			tagName:        "new-tag",
 			targetRevision: "i-dont-exist",
 			user:           testhelper.TestUser,
-			code:           codes.FailedPrecondition,
+			response:       nil,
+			err:            status.Errorf(codes.FailedPrecondition, "revspec '%s' not found", "i-dont-exist"),
 		},
 	}
 
@@ -587,8 +592,9 @@ func TestFailedUserCreateTagRequestDueToValidation(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			_, err := client.UserCreateTag(ctx, request)
-			testhelper.RequireGrpcError(t, err, testCase.code)
+			response, err := client.UserCreateTag(ctx, request)
+			require.Equal(t, testCase.err, err)
+			require.Equal(t, testCase.response, response)
 		})
 	}
 }
