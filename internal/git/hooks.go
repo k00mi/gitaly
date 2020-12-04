@@ -12,7 +12,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
-	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -198,7 +197,6 @@ func refHookEnv(ctx context.Context, repo *gitalypb.Repository, cfg config.Cfg) 
 	return []string{
 		payload,
 		"GITALY_BIN_DIR=" + cfg.BinDir,
-		fmt.Sprintf("%s=true", featureflag.ReferenceTransactionHookEnvVar),
 	}, nil
 }
 
@@ -243,7 +241,6 @@ func receivePackHookEnv(ctx context.Context, cfg config.Cfg, req ReceivePackRequ
 		fmt.Sprintf("GL_REPOSITORY=%s", req.GetGlRepository()),
 		fmt.Sprintf("GL_PROJECT_PATH=%s", req.GetRepository().GetGlProjectPath()),
 		fmt.Sprintf("GL_PROTOCOL=%s", protocol),
-		fmt.Sprintf("%s=true", featureflag.ReferenceTransactionHookEnvVar),
 	)
 	env = append(env, gitlabshellEnv...)
 

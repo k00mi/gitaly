@@ -11,7 +11,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
-	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -100,12 +99,8 @@ func (s *Server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 		return preReceiveError{message: msg}
 	}
 
-	// For backwards compatibility with Ruby, we need to only call the reference-transaction
-	// hook if the corresponding Ruby feature flag is set.
-	if featureflag.IsEnabled(ctx, featureflag.RubyReferenceTransactionHook) {
-		if err := s.hookManager.ReferenceTransactionHook(ctx, hook.ReferenceTransactionPrepared, env, strings.NewReader(changes)); err != nil {
-			return preReceiveError{message: err.Error()}
-		}
+	if err := s.hookManager.ReferenceTransactionHook(ctx, hook.ReferenceTransactionPrepared, env, strings.NewReader(changes)); err != nil {
+		return preReceiveError{message: err.Error()}
 	}
 
 	updater, err := updateref.New(ctx, repo)

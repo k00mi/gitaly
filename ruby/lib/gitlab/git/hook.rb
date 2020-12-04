@@ -140,8 +140,7 @@ module Gitlab
           'GL_PROJECT_PATH' => repository.gl_project_path,
           'GL_PROTOCOL' => GL_PROTOCOL,
           'PWD' => repo_path,
-          'GIT_DIR' => repo_path,
-          'GITALY_REFERENCE_TRANSACTION_HOOK' => repository.feature_enabled?('reference-transaction-hook').to_s
+          'GIT_DIR' => repo_path
         }
       end
     end
