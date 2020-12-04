@@ -560,6 +560,13 @@ func TestFailedUserCreateTagRequestDueToValidation(t *testing.T) {
 			code:           codes.InvalidArgument,
 		},
 		{
+			desc:           "empty starting point",
+			tagName:        "new-tag",
+			targetRevision: "",
+			user:           testhelper.TestUser,
+			code:           codes.InvalidArgument,
+		},
+		{
 			desc:           "non-existing starting point",
 			tagName:        "new-tag",
 			targetRevision: "i-dont-exist",
