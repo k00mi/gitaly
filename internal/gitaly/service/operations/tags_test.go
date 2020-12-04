@@ -298,10 +298,71 @@ func testUserDeleteTagsuccessfulDeletionOfPrefixedTag(t *testing.T, ctx context.
 
 			response, err := client.UserDeleteTag(ctx, request)
 			require.Equal(t, testCase.err, err)
-			testhelper.ProtoEqual(t, testCase.response, response)
+			require.Equal(t, testCase.response, response)
 
 			refs := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "for-each-ref", "--", "refs/tags/"+testCase.tagNameInput)
 			require.NotContains(t, string(refs), testCase.tagCommit, "tag kept because we stripped off refs/tags/*")
+		})
+	}
+}
+
+func TestUserCreateTagsuccessfulCreationOfPrefixedTag(t *testing.T) {
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	serverSocketPath, stop := runOperationServiceServer(t)
+	defer stop()
+
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testCases := []struct {
+		desc                   string
+		tagNameInput           string
+		tagTargetRevisionInput string
+		user                   *gitalypb.User
+		err                    error
+	}{
+		{
+			desc:                   "possible to create a tag called refs/tags/something",
+			tagNameInput:           "refs/tags/can-create-this",
+			tagTargetRevisionInput: "1a0b36b3cdad1d2ee32457c102a8c0b7056fa863",
+			user:                   testhelper.TestUser,
+			err:                    nil,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "tag", "-d", testCase.tagNameInput).Run()
+
+			request := &gitalypb.UserCreateTagRequest{
+				Repository:     testRepo,
+				TagName:        []byte(testCase.tagNameInput),
+				TargetRevision: []byte(testCase.tagTargetRevisionInput),
+				User:           testCase.user,
+			}
+
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			response, err := client.UserCreateTag(ctx, request)
+			require.Equal(t, testCase.err, err)
+			commitOk, err := log.GetCommit(ctx, testRepo, testCase.tagTargetRevisionInput)
+			require.NoError(t, err)
+
+			responseOk := &gitalypb.UserCreateTagResponse{
+				Tag: &gitalypb.Tag{
+					Name:         []byte(testCase.tagNameInput),
+					Id:           testCase.tagTargetRevisionInput,
+					TargetCommit: commitOk,
+				},
+			}
+
+			require.Equal(t, responseOk, response)
+
+			refs := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "for-each-ref", "--", "refs/tags/"+testCase.tagNameInput)
+			require.Contains(t, string(refs), testCase.tagTargetRevisionInput, "tag created, we did not strip off refs/tags/*")
 		})
 	}
 }
