@@ -3,6 +3,7 @@
 package nodes
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -54,11 +55,49 @@ func TestGetPrimaryAndSecondaries(t *testing.T) {
 	err = elector.checkNodes(ctx)
 	db.RequireRowsInTable(t, "shard_primaries", 1)
 
-	elector.demotePrimary(ctx)
+	elector.demotePrimary(ctx, db)
 	shard, err := elector.GetShard(ctx)
 	db.RequireRowsInTable(t, "shard_primaries", 1)
 	require.Equal(t, ErrPrimaryNotHealthy, err)
 	require.Empty(t, shard)
+}
+
+func TestSqlElector_slow_execution(t *testing.T) {
+	db := getDB(t)
+
+	praefectSocket := "unix://" + testhelper.GetTemporaryGitalySocketFileName()
+	logger := testhelper.NewTestLogger(t).WithField("test", t.Name())
+
+	gitalySocket := testhelper.GetTemporaryGitalySocketFileName()
+	gitalySrv, _ := testhelper.NewServerWithHealth(t, gitalySocket)
+	defer gitalySrv.Stop()
+
+	gitalyConn, err := grpc.Dial(
+		"unix://"+gitalySocket,
+		grpc.WithInsecure(),
+	)
+	require.NoError(t, err)
+
+	gitalyNodeStatus := newConnectionStatus(config.Node{Storage: "gitaly", Address: "gitaly-address"}, gitalyConn, logger, promtest.NewMockHistogramVec(), nil)
+	elector := newSQLElector(shardName, config.Config{SocketPath: praefectSocket}, db.DB, logger, []*nodeStatus{gitalyNodeStatus})
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	// Failover timeout is set to 0. If the election checks do not happen exactly at the same time
+	// as when the health checks are updated, gitaly node in the test is going to be considered
+	// unhealthy and the test will fail.
+	elector.failoverTimeout = 0
+
+	err = elector.checkNodes(ctx)
+	require.NoError(t, err)
+
+	shard, err := elector.GetShard(ctx)
+	require.NoError(t, err)
+	assertShard(t, shardAssertion{
+		Primary:     &nodeAssertion{gitalyNodeStatus.GetStorage(), gitalyNodeStatus.GetAddress()},
+		Secondaries: []nodeAssertion{},
+	}, shard)
 }
 
 func TestBasicFailover(t *testing.T) {
@@ -118,7 +157,7 @@ func TestBasicFailover(t *testing.T) {
 
 	// Bring first node down
 	healthSrv0.SetServingStatus("", grpc_health_v1.HealthCheckResponse_UNKNOWN)
-	predateElection(t, db, shardName, failoverTimeout)
+	predateElection(t, ctx, db, shardName, failoverTimeout)
 
 	// Primary should remain before the failover timeout is exceeded
 	err = elector.checkNodes(ctx)
@@ -149,7 +188,7 @@ func TestBasicFailover(t *testing.T) {
 	// Failover back to the original node
 	healthSrv0.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthSrv1.SetServingStatus("", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
-	predateElection(t, db, shardName, failoverTimeout)
+	predateElection(t, ctx, db, shardName, failoverTimeout)
 	predateLastSeenActiveAt(t, db, shardName, cs1.GetStorage(), failoverTimeout)
 	require.NoError(t, elector.checkNodes(ctx))
 
@@ -174,6 +213,10 @@ func TestBasicFailover(t *testing.T) {
 func TestElectDemotedPrimary(t *testing.T) {
 	db := getDB(t)
 
+	tx, err := db.Begin()
+	require.NoError(t, err)
+	defer func() { require.NoError(t, tx.Commit()) }()
+
 	node := config.Node{Storage: "gitaly-0"}
 	elector := newSQLElector(
 		shardName,
@@ -187,23 +230,23 @@ func TestElectDemotedPrimary(t *testing.T) {
 	defer cancel()
 
 	candidates := []*sqlCandidate{{Node: &nodeStatus{node: node}}}
-	require.NoError(t, elector.electNewPrimary(ctx, candidates))
+	require.NoError(t, elector.electNewPrimary(ctx, tx, candidates))
 
-	primary, err := elector.lookupPrimary(ctx)
+	primary, err := elector.lookupPrimary(ctx, tx)
 	require.NoError(t, err)
 	require.Equal(t, node.Storage, primary.GetStorage())
 
-	require.NoError(t, elector.demotePrimary(ctx))
+	require.NoError(t, elector.demotePrimary(ctx, tx))
 
-	primary, err = elector.lookupPrimary(ctx)
+	primary, err = elector.lookupPrimary(ctx, tx)
 	require.NoError(t, err)
 	require.Nil(t, primary)
 
-	predateElection(t, db, shardName, failoverTimeout)
+	predateElection(t, ctx, tx, shardName, failoverTimeout+time.Microsecond)
 	require.NoError(t, err)
-	require.NoError(t, elector.electNewPrimary(ctx, candidates))
+	require.NoError(t, elector.electNewPrimary(ctx, tx, candidates))
 
-	primary, err = elector.lookupPrimary(ctx)
+	primary, err = elector.lookupPrimary(ctx, tx)
 	require.NoError(t, err)
 	require.Equal(t, node.Storage, primary.GetStorage())
 }
@@ -223,14 +266,15 @@ WHERE shard_name = $2 AND node_name = $3`, amount.Microseconds(), shardName, nod
 
 // predateElection shifts the election to an earlier time. This avoids waiting for the failover timeout to trigger
 // a new election.
-func predateElection(t testing.TB, db glsql.DB, shardName string, amount time.Duration) {
+func predateElection(t testing.TB, ctx context.Context, db glsql.Querier, shardName string, amount time.Duration) {
 	t.Helper()
 
-	_, err := db.Exec(
+	_, err := db.ExecContext(ctx,
 		"UPDATE shard_primaries SET elected_at = elected_at - INTERVAL '1 MICROSECOND' * $1 WHERE shard_name = $2",
 		amount.Microseconds(),
 		shardName,
 	)
+
 	require.NoError(t, err)
 }
 
@@ -349,7 +393,11 @@ func TestElectNewPrimary(t *testing.T) {
 		t.Run(testCase.desc, func(t *testing.T) {
 			db.TruncateAll(t)
 
-			_, err := db.Exec(testCase.initialReplQueueInsert)
+			tx, err := db.Begin()
+			require.NoError(t, err)
+			defer func() { require.NoError(t, tx.Commit()) }()
+
+			_, err = tx.Exec(testCase.initialReplQueueInsert)
 			require.NoError(t, err)
 
 			logger, hook := test.NewNullLogger()
@@ -359,8 +407,8 @@ func TestElectNewPrimary(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			require.NoError(t, elector.electNewPrimary(ctx, candidates))
-			primary, err := elector.lookupPrimary(ctx)
+			require.NoError(t, elector.electNewPrimary(ctx, tx, candidates))
+			primary, err := elector.lookupPrimary(ctx, tx)
 
 			require.NoError(t, err)
 			require.Equal(t, testCase.expectedPrimary, primary.GetStorage())
