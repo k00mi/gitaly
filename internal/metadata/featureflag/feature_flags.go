@@ -17,8 +17,6 @@ var (
 	LogCommandStats = FeatureFlag{Name: "log_command_stats", OnByDefault: false}
 	// GoUserMergeBranch enables the Go implementation of UserMergeBranch
 	GoUserMergeBranch = FeatureFlag{Name: "go_user_merge_branch", OnByDefault: false}
-	// GoUserMergeToRef enable the Go implementation of UserMergeToRef
-	GoUserMergeToRef = FeatureFlag{Name: "go_user_merge_to_ref", OnByDefault: true}
 	// GoUserFFBranch enables the Go implementation of UserFFBranch
 	GoUserFFBranch = FeatureFlag{Name: "go_user_ff_branch", OnByDefault: false}
 	// GoUserCreateBranch enables the Go implementation of UserCreateBranch
@@ -113,7 +111,6 @@ var All = []FeatureFlag{
 	DistributedReads,
 	LogCommandStats,
 	GoUserMergeBranch,
-	GoUserMergeToRef,
 	GoUserFFBranch,
 	GoUserCreateBranch,
 	GoUserDeleteBranch,

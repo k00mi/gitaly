@@ -494,10 +494,9 @@ func TestFailedUserFFBranchDueToHooks(t *testing.T) {
 }
 
 func TestSuccessfulUserMergeToRefRequest(t *testing.T) {
-	testWithFeature(t, featureflag.GoUserMergeToRef, testSuccessfulUserMergeToRefRequest)
-}
+	ctx, cleanup := testhelper.Context()
+	defer cleanup()
 
-func testSuccessfulUserMergeToRefRequest(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -604,10 +603,9 @@ func testSuccessfulUserMergeToRefRequest(t *testing.T, ctx context.Context) {
 }
 
 func TestConflictsOnUserMergeToRefRequest(t *testing.T) {
-	testWithFeature(t, featureflag.GoUserMergeToRef, testConflictsOnUserMergeToRefRequest)
-}
+	ctx, cleanup := testhelper.Context()
+	defer cleanup()
 
-func testConflictsOnUserMergeToRefRequest(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -655,10 +653,9 @@ func testConflictsOnUserMergeToRefRequest(t *testing.T, ctx context.Context) {
 }
 
 func TestFailedUserMergeToRefRequest(t *testing.T) {
-	testWithFeature(t, featureflag.GoUserMergeToRef, testFailedUserMergeToRefRequest)
-}
+	ctx, cleanup := testhelper.Context()
+	defer cleanup()
 
-func testFailedUserMergeToRefRequest(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -758,10 +755,9 @@ func testFailedUserMergeToRefRequest(t *testing.T, ctx context.Context) {
 }
 
 func TestUserMergeToRefIgnoreHooksRequest(t *testing.T) {
-	testWithFeature(t, featureflag.GoUserMergeToRef, testUserMergeToRefIgnoreHooksRequest)
-}
+	ctx, cleanup := testhelper.Context()
+	defer cleanup()
 
-func testUserMergeToRefIgnoreHooksRequest(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
