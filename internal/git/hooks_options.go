@@ -21,36 +21,34 @@ func WithRefTxHook(ctx context.Context, repo *gitalypb.Repository, cfg config.Cf
 			return fmt.Errorf("missing repo: %w", ErrInvalidArg)
 		}
 
-		rfEnvs, err := refHookEnv(ctx, repo, cfg)
-		if err != nil {
+		if err := cc.configureHooks(ctx, repo, cfg); err != nil {
 			return fmt.Errorf("ref hook env var: %w", err)
 		}
-		cc.env = append(cc.env, rfEnvs...)
-
-		txEnvs, err := transactionEnv(ctx)
-		if err != nil {
-			return fmt.Errorf("transaction environment: %w", err)
-		}
-		cc.env = append(cc.env, txEnvs...)
-
-		cc.globals = append(cc.globals, ValueFlag{"-c", fmt.Sprintf("core.hooksPath=%s", hooks.Path(cfg))})
-		cc.refHookConfigured = true
 
 		return nil
 	}
 }
 
-// refHookEnv returns all env vars required by the reference transaction hook
-func refHookEnv(ctx context.Context, repo *gitalypb.Repository, cfg config.Cfg) ([]string, error) {
+// configureHooks updates the command configuration to include all environment
+// variables required by the reference transaction hook and any other needed
+// options to successfully execute hooks.
+func (cc *cmdCfg) configureHooks(ctx context.Context, repo *gitalypb.Repository, cfg config.Cfg) error {
 	payload, err := NewHooksPayload(cfg, repo).Env()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return []string{
-		payload,
-		"GITALY_BIN_DIR=" + cfg.BinDir,
-	}, nil
+	txEnvs, err := transactionEnv(ctx)
+	if err != nil {
+		return fmt.Errorf("transaction environment: %w", err)
+	}
+	cc.env = append(cc.env, txEnvs...)
+	cc.env = append(cc.env, payload, "GITALY_BIN_DIR="+cfg.BinDir)
+
+	cc.globals = append(cc.globals, ValueFlag{"-c", fmt.Sprintf("core.hooksPath=%s", hooks.Path(cfg))})
+	cc.refHookConfigured = true
+
+	return nil
 }
 
 // ReceivePackRequest abstracts away the different requests that end up
@@ -67,7 +65,11 @@ type ReceivePackRequest interface {
 // git-receive-pack(1).
 func WithReceivePackHooks(ctx context.Context, cfg config.Cfg, req ReceivePackRequest, protocol string) CmdOpt {
 	return func(cc *cmdCfg) error {
-		env, err := receivePackHookEnv(ctx, cfg, req, protocol)
+		if err := cc.configureHooks(ctx, req.GetRepository(), config.Config); err != nil {
+			return err
+		}
+
+		env, err := receivePackHookEnv(ctx, cc, cfg, req, protocol)
 		if err != nil {
 			return fmt.Errorf("receive-pack hook envvars: %w", err)
 		}
@@ -77,31 +79,19 @@ func WithReceivePackHooks(ctx context.Context, cfg config.Cfg, req ReceivePackRe
 	}
 }
 
-func receivePackHookEnv(ctx context.Context, cfg config.Cfg, req ReceivePackRequest, protocol string) ([]string, error) {
+func receivePackHookEnv(ctx context.Context, cc *cmdCfg, cfg config.Cfg, req ReceivePackRequest, protocol string) ([]string, error) {
 	gitlabshellEnv, err := gitlabshell.EnvFromConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	env, err := refHookEnv(ctx, req.GetRepository(), config.Config)
-	if err != nil {
-		return nil, err
-	}
-
-	env = append(env,
+	env := append(gitlabshellEnv,
 		fmt.Sprintf("GL_ID=%s", req.GetGlId()),
 		fmt.Sprintf("GL_USERNAME=%s", req.GetGlUsername()),
 		fmt.Sprintf("GL_REPOSITORY=%s", req.GetGlRepository()),
 		fmt.Sprintf("GL_PROJECT_PATH=%s", req.GetRepository().GetGlProjectPath()),
 		fmt.Sprintf("GL_PROTOCOL=%s", protocol),
 	)
-	env = append(env, gitlabshellEnv...)
-
-	transactionEnv, err := transactionEnv(ctx)
-	if err != nil {
-		return nil, err
-	}
-	env = append(env, transactionEnv...)
 
 	return env, nil
 }

@@ -51,7 +51,7 @@ func (s *server) handleInfoRefs(ctx context.Context, service string, req *gitaly
 	var globalOpts []git.Option
 	cmdOpts := []git.CmdOpt{git.WithGitProtocol(ctx, req)}
 	if service == "receive-pack" {
-		globalOpts = append(globalOpts, git.ReceivePackConfig(config.Config)...)
+		globalOpts = append(globalOpts, git.ReceivePackConfig()...)
 		cmdOpts = append(cmdOpts, git.WithRefTxHook(ctx, req.Repository, config.Config))
 	}
 
