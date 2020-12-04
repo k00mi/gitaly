@@ -12,6 +12,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/grpc-proxy/proxy"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/protoregistry"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/service/info"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/transactions"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -26,6 +27,7 @@ func NewServerFactory(
 	txMgr *transactions.Manager,
 	queue datastore.ReplicationEventQueue,
 	rs datastore.RepositoryStore,
+	rfs info.ReplicationFactorSetter,
 	registry *protoregistry.Registry,
 ) *ServerFactory {
 	return &ServerFactory{
@@ -36,6 +38,7 @@ func NewServerFactory(
 		txMgr:    txMgr,
 		queue:    queue,
 		rs:       rs,
+		rfs:      rfs,
 		registry: registry,
 	}
 }
@@ -50,6 +53,7 @@ type ServerFactory struct {
 	txMgr            *transactions.Manager
 	queue            datastore.ReplicationEventQueue
 	rs               datastore.RepositoryStore
+	rfs              info.ReplicationFactorSetter
 	registry         *protoregistry.Registry
 	secure, insecure []*grpc.Server
 }
@@ -116,6 +120,7 @@ func (s *ServerFactory) createGRPC(grpcOpts ...grpc.ServerOption) *grpc.Server {
 		s.txMgr,
 		s.queue,
 		s.rs,
+		s.rfs,
 		grpcOpts...,
 	)
 }

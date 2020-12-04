@@ -242,7 +242,7 @@ func runPraefectServer(t testing.TB, conf config.Config, opt buildOptions) (*grp
 		NodeSetFromNodeManager(opt.withNodeMgr),
 	)
 
-	prf := NewGRPCServer(conf, opt.withLogger, protoregistry.GitalyProtoPreregistered, coordinator.StreamDirector, opt.withNodeMgr, opt.withTxMgr, opt.withQueue, rs)
+	prf := NewGRPCServer(conf, opt.withLogger, protoregistry.GitalyProtoPreregistered, coordinator.StreamDirector, opt.withNodeMgr, opt.withTxMgr, opt.withQueue, rs, nil)
 
 	listener, port := listenAvailPort(t)
 	t.Logf("proxy listening on port %d", port)

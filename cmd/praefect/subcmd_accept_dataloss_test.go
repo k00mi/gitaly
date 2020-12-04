@@ -61,7 +61,7 @@ func TestAcceptDatalossSubcommand(t *testing.T) {
 		},
 	}
 
-	ln, clean := listenAndServe(t, []svcRegistrar{registerPraefectInfoServer(info.NewServer(nil, conf, q, rs))})
+	ln, clean := listenAndServe(t, []svcRegistrar{registerPraefectInfoServer(info.NewServer(nil, conf, q, rs, nil))})
 	defer clean()
 
 	conf.SocketPath = ln.Addr().String()
