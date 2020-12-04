@@ -24,12 +24,7 @@ func HasBitmap(repoPath string) (bool, error) {
 }
 
 // PackfilesCount returns the number of packfiles a repository has.
-func PackfilesCount(repository repository.GitRepo) (int, error) {
-	repoPath, err := helper.GetRepoPath(repository)
-	if err != nil {
-		return 0, err
-	}
-
+func PackfilesCount(repoPath string) (int, error) {
 	packFiles, err := GetPackfiles(repoPath)
 	if err != nil {
 		return 0, err

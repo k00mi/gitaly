@@ -26,7 +26,7 @@ func TestRepositoryProfile(t *testing.T) {
 	packfiles, err := GetPackfiles(testRepoPath)
 	require.NoError(t, err)
 	require.Empty(t, packfiles)
-	packfilesCount, err := PackfilesCount(testRepo)
+	packfilesCount, err := PackfilesCount(testRepoPath)
 	require.NoError(t, err)
 	require.Zero(t, packfilesCount)
 
