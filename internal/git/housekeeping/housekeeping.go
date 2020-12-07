@@ -45,7 +45,7 @@ func Perform(ctx context.Context, repoPath string) error {
 
 // Delete a directory structure while ensuring the current user has permission to delete the directory structure
 func forceRemove(ctx context.Context, path string) error {
-	err := os.RemoveAll(path)
+	err := os.Remove(path)
 	if err == nil {
 		return nil
 	}
@@ -55,7 +55,7 @@ func forceRemove(ctx context.Context, path string) error {
 		return err
 	}
 
-	return os.RemoveAll(path)
+	return os.Remove(path)
 }
 
 func findTemporaryObjects(ctx context.Context, repoPath string) ([]string, error) {
@@ -72,8 +72,9 @@ func findTemporaryObjects(ctx context.Context, repoPath string) ([]string, error
 			return nil
 		}
 
-		if repoPath == path {
-			// Never consider the root path
+		// Git will never create temporary directories, but only
+		// temporary objects, packfiles and packfile indices.
+		if info.IsDir() {
 			return nil
 		}
 
@@ -82,11 +83,6 @@ func findTemporaryObjects(ctx context.Context, repoPath string) ([]string, error
 		}
 
 		temporaryObjects = append(temporaryObjects, path)
-
-		if info.IsDir() {
-			// Do not walk removed directories
-			return filepath.SkipDir
-		}
 
 		return nil
 	})

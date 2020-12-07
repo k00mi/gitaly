@@ -132,7 +132,7 @@ func TestPerform(t *testing.T) {
 			name: "emptytempdir",
 			entries: []entry{
 				d("objects", 0700, 240*time.Hour, Keep, []entry{
-					d("tmp_d", 0000, 240*time.Hour, Delete, []entry{}),
+					d("tmp_d", 0000, 240*time.Hour, Keep, []entry{}),
 					f("b", 0700, 24*time.Hour, Keep),
 				}),
 			},
@@ -160,7 +160,7 @@ func TestPerform(t *testing.T) {
 			name: "inaccessible tmp directory",
 			entries: []entry{
 				d("objects", 0700, 240*time.Hour, Keep, []entry{
-					d("tmp_a", 0000, 240*time.Hour, Delete, []entry{
+					d("tmp_a", 0000, 240*time.Hour, Keep, []entry{
 						f("tmp_b", 0700, 240*time.Hour, Delete),
 					}),
 				}),
@@ -170,9 +170,9 @@ func TestPerform(t *testing.T) {
 			name: "deeply nested inaccessible tmp directory",
 			entries: []entry{
 				d("objects", 0700, 240*time.Hour, Keep, []entry{
-					d("tmp_a", 0000, 240*time.Hour, Delete, []entry{
-						d("tmp_a", 0000, 24*time.Hour, Delete, []entry{
-							f("tmp_b", 0000, 24*time.Hour, Delete),
+					d("tmp_a", 0700, 240*time.Hour, Keep, []entry{
+						d("tmp_a", 0700, 24*time.Hour, Keep, []entry{
+							f("tmp_b", 0000, 240*time.Hour, Delete),
 						}),
 					}),
 				}),
@@ -194,12 +194,16 @@ func TestPerform(t *testing.T) {
 			rootPath, cleanup := testhelper.TempDir(t)
 			defer cleanup()
 
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			// We need to fix permissions so we don't fail to
+			// remove the temporary directory after the test.
+			defer FixDirectoryPermissions(ctx, rootPath)
+
 			for _, e := range tc.entries {
 				e.create(t, rootPath)
 			}
-
-			ctx, cancel := testhelper.Context()
-			defer cancel()
 
 			require.NoError(t, Perform(ctx, rootPath))
 
