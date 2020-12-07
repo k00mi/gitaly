@@ -1,5 +1,9 @@
 # Gitaly changelog
 
+## 13.6.2 (2020-12-07)
+
+- No changes.
+
 ## 13.6.1 (2020-11-23)
 
 - No changes.
@@ -65,6 +69,10 @@
 - Remove the RepositoryService.FetchHTTPRemote RPC. !2744
 - Improve logging in ReplicateRepository. !2767
 
+
+## 13.5.5 (2020-12-07)
+
+- No changes.
 
 ## 13.5.4 (2020-11-13)
 
@@ -134,6 +142,10 @@
 - Remote repository abstraction for resolving refish. !2629
 - Upgrade Rubocop to 0.86.0. !2634
 
+
+## 13.4.7 (2020-12-07)
+
+- No changes.
 
 ## 13.4.6 (2020-11-03)
 
