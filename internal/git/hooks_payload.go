@@ -77,29 +77,35 @@ func lookupEnv(envs []string, key string) (string, bool) {
 // variables. If no HooksPayload exists, it returns a ErrPayloadNotFound
 // error.
 func HooksPayloadFromEnv(envs []string) (HooksPayload, error) {
-	encoded, ok := lookupEnv(envs, ErrHooksPayloadNotFound)
-	if !ok {
-		return fallbackPayloadFromEnv(envs)
-	}
+	var payload HooksPayload
 
-	decoded, err := base64.StdEncoding.DecodeString(encoded)
-	if err != nil {
-		return HooksPayload{}, err
-	}
+	if encoded, ok := lookupEnv(envs, ErrHooksPayloadNotFound); ok {
+		decoded, err := base64.StdEncoding.DecodeString(encoded)
+		if err != nil {
+			return HooksPayload{}, err
+		}
 
-	var jsonPayload jsonHooksPayload
-	if err := json.Unmarshal(decoded, &jsonPayload); err != nil {
-		return HooksPayload{}, err
-	}
+		var jsonPayload jsonHooksPayload
+		if err := json.Unmarshal(decoded, &jsonPayload); err != nil {
+			return HooksPayload{}, err
+		}
 
-	var repo gitalypb.Repository
-	err = jsonpbUnmarshaller.Unmarshal(strings.NewReader(jsonPayload.Repo), &repo)
-	if err != nil {
-		return HooksPayload{}, err
-	}
+		var repo gitalypb.Repository
+		err = jsonpbUnmarshaller.Unmarshal(strings.NewReader(jsonPayload.Repo), &repo)
+		if err != nil {
+			return HooksPayload{}, err
+		}
 
-	payload := jsonPayload.HooksPayload
-	payload.Repo = &repo
+		payload = jsonPayload.HooksPayload
+		payload.Repo = &repo
+	} else {
+		fallback, err := fallbackPayloadFromEnv(envs)
+		if err != nil {
+			return HooksPayload{}, err
+		}
+
+		payload = fallback
+	}
 
 	return payload, nil
 }
