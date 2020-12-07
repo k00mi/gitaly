@@ -480,6 +480,13 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 			}.Env()
 			require.NoError(t, err)
 
+			praefect := &metadata.PraefectServer{
+				SocketPath: "/path/to/socket",
+				Token:      "secret",
+			}
+			praefectEnv, err := praefect.Env()
+			require.NoError(t, err)
+
 			env := envForHooks(t, tempGitlabShellDir, testRepo,
 				glHookValues{
 					GLID:       glID,
@@ -489,7 +496,7 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 				},
 				proxyValues{},
 			)
-			env = append(env, transactionEnv)
+			env = append(env, transactionEnv, praefectEnv)
 
 			cmd := exec.Command(postReceiveHookPath)
 			cmd.Env = env

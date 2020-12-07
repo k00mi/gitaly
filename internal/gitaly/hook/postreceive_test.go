@@ -96,6 +96,13 @@ func TestPostReceive_customHook(t *testing.T) {
 	}.Env()
 	require.NoError(t, err)
 
+	praefect := &metadata.PraefectServer{
+		SocketPath: "/path/to/socket",
+		Token:      "secret",
+	}
+	praefectEnv, err := praefect.Env()
+	require.NoError(t, err)
+
 	testCases := []struct {
 		desc           string
 		env            []string
@@ -166,14 +173,14 @@ func TestPostReceive_customHook(t *testing.T) {
 		},
 		{
 			desc:           "hook is executed on primary",
-			env:            append(standardEnv, primaryEnv),
+			env:            append(standardEnv, primaryEnv, praefectEnv),
 			stdin:          "changes\n",
 			hook:           "#!/bin/sh\necho foo\n",
 			expectedStdout: "foo\n",
 		},
 		{
 			desc:  "hook is not executed on secondary",
-			env:   append(standardEnv, secondaryEnv),
+			env:   append(standardEnv, secondaryEnv, praefectEnv),
 			stdin: "changes\n",
 			hook:  "#!/bin/sh\necho foo\n",
 		},

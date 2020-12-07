@@ -42,6 +42,13 @@ func TestUpdate_customHooks(t *testing.T) {
 	}.Env()
 	require.NoError(t, err)
 
+	praefect := &metadata.PraefectServer{
+		SocketPath: "/path/to/socket",
+		Token:      "secret",
+	}
+	praefectEnv, err := praefect.Env()
+	require.NoError(t, err)
+
 	hash1 := strings.Repeat("1", 40)
 	hash2 := strings.Repeat("2", 40)
 
@@ -123,7 +130,7 @@ func TestUpdate_customHooks(t *testing.T) {
 		},
 		{
 			desc:           "hook is executed on primary",
-			env:            append(standardEnv, primaryEnv),
+			env:            append(standardEnv, primaryEnv, praefectEnv),
 			reference:      "refs/heads/master",
 			oldHash:        hash1,
 			newHash:        hash2,
@@ -132,7 +139,7 @@ func TestUpdate_customHooks(t *testing.T) {
 		},
 		{
 			desc:      "hook is not executed on secondary",
-			env:       append(standardEnv, secondaryEnv),
+			env:       append(standardEnv, secondaryEnv, praefectEnv),
 			reference: "refs/heads/master",
 			oldHash:   hash1,
 			newHash:   hash2,

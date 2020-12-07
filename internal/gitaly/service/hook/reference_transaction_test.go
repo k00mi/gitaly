@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
@@ -136,7 +137,11 @@ func TestReferenceTransactionHook(t *testing.T) {
 			transactionEnv, err := transaction.Env()
 			require.NoError(t, err)
 
+			hooksPayload, err := git.NewHooksPayload(config.Config, testRepo).Env()
+			require.NoError(t, err)
+
 			environment := []string{
+				hooksPayload,
 				transactionEnv,
 				transactionServerEnv,
 			}
