@@ -15,6 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/git/housekeeping"
 	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
 	"gitlab.com/gitlab-org/gitaly/internal/git/updateref"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
@@ -33,8 +34,11 @@ func (o *ObjectPool) FetchFromOrigin(ctx context.Context, origin *gitalypb.Repos
 	}
 
 	originPath, err := o.locator.GetPath(origin)
-
 	if err != nil {
+		return err
+	}
+
+	if err := housekeeping.Perform(ctx, originPath); err != nil {
 		return err
 	}
 
