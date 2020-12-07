@@ -20,45 +20,22 @@ const (
 func Perform(ctx context.Context, repoPath string) error {
 	logger := myLogger(ctx)
 
-	filesMarkedForRemoval := 0
+	temporaryObjects, err := findTemporaryObjects(ctx, repoPath)
+	if err != nil {
+		return err
+	}
+
 	unremovableFiles := 0
-
-	err := filepath.Walk(repoPath, func(path string, info os.FileInfo, err error) error {
-		if info == nil {
-			logger.WithFields(log.Fields{
-				"path": path,
-			}).WithError(err).Error("nil FileInfo in housekeeping.Perform")
-
-			return nil
-		}
-
-		if repoPath == path {
-			// Never consider the root path
-			return nil
-		}
-
-		if !shouldRemove(path, info.ModTime(), info.Mode()) {
-			return nil
-		}
-
-		filesMarkedForRemoval++
-
+	for _, path := range temporaryObjects {
 		if err := forceRemove(ctx, path); err != nil {
 			unremovableFiles++
 			logger.WithError(err).WithField("path", path).Warn("unable to remove stray file")
 		}
+	}
 
-		if info.IsDir() {
-			// Do not walk removed directories
-			return filepath.SkipDir
-		}
-
-		return nil
-	})
-
-	if filesMarkedForRemoval > 0 {
+	if len(temporaryObjects) > 0 {
 		logger.WithFields(log.Fields{
-			"files":    filesMarkedForRemoval,
+			"files":    len(temporaryObjects),
 			"failures": unremovableFiles,
 		}).Info("removed files")
 	}
@@ -81,7 +58,46 @@ func forceRemove(ctx context.Context, path string) error {
 	return os.RemoveAll(path)
 }
 
-func shouldRemove(path string, modTime time.Time, mode os.FileMode) bool {
+func findTemporaryObjects(ctx context.Context, repoPath string) ([]string, error) {
+	var temporaryObjects []string
+
+	logger := myLogger(ctx)
+
+	err := filepath.Walk(repoPath, func(path string, info os.FileInfo, err error) error {
+		if info == nil {
+			logger.WithFields(log.Fields{
+				"path": path,
+			}).WithError(err).Error("nil FileInfo in housekeeping.Perform")
+
+			return nil
+		}
+
+		if repoPath == path {
+			// Never consider the root path
+			return nil
+		}
+
+		if !isStaleTemporaryObject(path, info.ModTime(), info.Mode()) {
+			return nil
+		}
+
+		temporaryObjects = append(temporaryObjects, path)
+
+		if info.IsDir() {
+			// Do not walk removed directories
+			return filepath.SkipDir
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return temporaryObjects, nil
+}
+
+func isStaleTemporaryObject(path string, modTime time.Time, mode os.FileMode) bool {
 	base := filepath.Base(path)
 
 	// Only delete entries starting with `tmp_` and older than a week

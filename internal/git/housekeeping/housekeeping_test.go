@@ -187,7 +187,7 @@ func TestPerform(t *testing.T) {
 	}
 }
 
-func TestShouldUnlink(t *testing.T) {
+func TestShouldRemoveTemporaryObject(t *testing.T) {
 	type args struct {
 		path    string
 		modTime time.Time
@@ -256,7 +256,7 @@ func TestShouldUnlink(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.want, shouldRemove(tc.args.path, tc.args.modTime, tc.args.mode))
+			require.Equal(t, tc.want, isStaleTemporaryObject(tc.args.path, tc.args.modTime, tc.args.mode))
 		})
 	}
 }
