@@ -187,7 +187,7 @@ func testSuccessfulUserCreateTagRequest(t *testing.T, ctx context.Context) {
 		expectedObjectType string
 	}{
 		{
-			desc:           "lightweight tag",
+			desc:           "lightweight tag to commit",
 			tagName:        inputTagName,
 			targetRevision: targetRevision,
 			expectedTag: &gitalypb.Tag{
@@ -197,7 +197,7 @@ func testSuccessfulUserCreateTagRequest(t *testing.T, ctx context.Context) {
 			expectedObjectType: "commit",
 		},
 		{
-			desc:           "annotated tag",
+			desc:           "annotated tag to commit",
 			tagName:        inputTagName,
 			targetRevision: targetRevision,
 			message:        "This is an annotated tag",
