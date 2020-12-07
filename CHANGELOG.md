@@ -70,6 +70,10 @@
 - Improve logging in ReplicateRepository. !2767
 
 
+## 13.5.5 (2020-12-07)
+
+- No changes.
+
 ## 13.5.4 (2020-11-13)
 
 - No changes.
