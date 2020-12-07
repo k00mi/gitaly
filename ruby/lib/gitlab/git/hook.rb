@@ -80,9 +80,8 @@ module Gitlab
       def call_receive_hook(gl_id, gl_username, oldrev, newrev, ref, push_options, transaction)
         changes = [oldrev, newrev, ref].join(" ")
 
-        vars = env_base_vars(gl_id, gl_username)
+        vars = env_base_vars(gl_id, gl_username, transaction)
         vars.merge!(push_options.env_data) if push_options
-        vars.merge!(transaction.env_vars) if transaction
 
         call_stdin_hook([], changes, vars)
       end
@@ -90,8 +89,7 @@ module Gitlab
       def call_reference_transaction_hook(gl_id, gl_username, oldrev, newrev, ref, transaction)
         changes = [oldrev, newrev, ref].join(" ")
 
-        vars = env_base_vars(gl_id, gl_username)
-        vars.merge!(transaction.env_vars) if transaction
+        vars = env_base_vars(gl_id, gl_username, transaction)
 
         call_stdin_hook(["prepared"], changes, vars)
       end
@@ -115,18 +113,22 @@ module Gitlab
         err_message
       end
 
-      def hooks_payload
-        Base64.strict_encode64({
+      def hooks_payload(transaction)
+        payload = {
           repository: repository.gitaly_repository.to_json,
           binary_directory: Gitlab.config.gitaly.bin_dir,
           internal_socket: Gitlab.config.gitaly.internal_socket,
           internal_socket_token: ENV['GITALY_TOKEN']
-        }.to_json)
+        }
+
+        payload.merge!(transaction.payload) if transaction
+
+        Base64.strict_encode64(payload.to_json)
       end
 
-      def env_base_vars(gl_id, gl_username)
+      def env_base_vars(gl_id, gl_username, transaction = nil)
         {
-          'GITALY_HOOKS_PAYLOAD' => hooks_payload,
+          'GITALY_HOOKS_PAYLOAD' => hooks_payload(transaction),
           'GITALY_GITLAB_SHELL_DIR' => Gitlab.config.gitlab_shell.path,
           'GITLAB_SHELL_DIR' => Gitlab.config.gitlab_shell.path,
           'GITALY_LOG_DIR' => Gitlab.config.logging.dir,
