@@ -473,18 +473,19 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.desc, func(t *testing.T) {
-			transactionEnv, err := metadata.Transaction{
-				ID:      1,
-				Node:    "node",
-				Primary: tc.primary,
-			}.Env()
-			require.NoError(t, err)
-
-			praefect := &metadata.PraefectServer{
-				SocketPath: "/path/to/socket",
-				Token:      "secret",
-			}
-			praefectEnv, err := praefect.Env()
+			hooksPayload, err := git.NewHooksPayload(
+				config.Config,
+				testRepo,
+				&metadata.Transaction{
+					ID:      1,
+					Node:    "node",
+					Primary: tc.primary,
+				},
+				&metadata.PraefectServer{
+					SocketPath: "/path/to/socket",
+					Token:      "secret",
+				},
+			).Env()
 			require.NoError(t, err)
 
 			env := envForHooks(t, tempGitlabShellDir, testRepo,
@@ -496,7 +497,7 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 				},
 				proxyValues{},
 			)
-			env = append(env, transactionEnv, praefectEnv)
+			env = append(env, hooksPayload)
 
 			cmd := exec.Command(postReceiveHookPath)
 			cmd.Env = env

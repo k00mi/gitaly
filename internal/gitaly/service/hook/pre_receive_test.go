@@ -443,22 +443,19 @@ func TestPreReceiveHook_Primary(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			transaction := metadata.Transaction{
-				ID:      1234,
-				Node:    "node-1",
-				Primary: tc.primary,
-			}
-			transactionEnv, err := transaction.Env()
-			require.NoError(t, err)
-
-			praefect := &metadata.PraefectServer{
-				SocketPath: "/path/to/socket",
-				Token:      "secret",
-			}
-			praefectEnv, err := praefect.Env()
-			require.NoError(t, err)
-
-			hooksPayload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil).Env()
+			hooksPayload, err := git.NewHooksPayload(
+				config.Config,
+				testRepo,
+				&metadata.Transaction{
+					ID:      1234,
+					Node:    "node-1",
+					Primary: tc.primary,
+				},
+				&metadata.PraefectServer{
+					SocketPath: "/path/to/socket",
+					Token:      "secret",
+				},
+			).Env()
 			require.NoError(t, err)
 
 			environment := []string{
@@ -467,8 +464,6 @@ func TestPreReceiveHook_Primary(t *testing.T) {
 				"GL_PROTOCOL=web",
 				"GL_USERNAME=username",
 				"GL_REPOSITORY=repository",
-				transactionEnv,
-				praefectEnv,
 			}
 
 			stream, err := client.PreReceiveHook(ctx)

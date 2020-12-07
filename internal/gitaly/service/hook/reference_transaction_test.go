@@ -124,26 +124,21 @@ func TestReferenceTransactionHook(t *testing.T) {
 			serverSocketPath, stop := runHooksServer(t, config.Cfg{})
 			defer stop()
 
-			transactionServer := metadata.PraefectServer{
-				ListenAddr: "tcp://" + listener.Addr().String(),
-			}
-			transactionServerEnv, err := transactionServer.Env()
-			require.NoError(t, err)
-
-			transaction := metadata.Transaction{
-				ID:   1234,
-				Node: "node-1",
-			}
-			transactionEnv, err := transaction.Env()
-			require.NoError(t, err)
-
-			hooksPayload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil).Env()
+			hooksPayload, err := git.NewHooksPayload(
+				config.Config,
+				testRepo,
+				&metadata.Transaction{
+					ID:   1234,
+					Node: "node-1",
+				},
+				&metadata.PraefectServer{
+					ListenAddr: "tcp://" + listener.Addr().String(),
+				},
+			).Env()
 			require.NoError(t, err)
 
 			environment := []string{
 				hooksPayload,
-				transactionEnv,
-				transactionServerEnv,
 			}
 
 			ctx, cancel := testhelper.Context()

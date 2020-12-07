@@ -37,16 +37,16 @@ func (cc *cmdCfg) configureHooks(ctx context.Context, repo *gitalypb.Repository,
 		return errors.New("hooks already configured")
 	}
 
-	payload, err := NewHooksPayload(cfg, repo, nil, nil).Env()
+	transaction, praefect, err := transactionFromContext(ctx)
 	if err != nil {
 		return err
 	}
 
-	txEnvs, err := transactionEnv(ctx)
+	payload, err := NewHooksPayload(cfg, repo, transaction, praefect).Env()
 	if err != nil {
-		return fmt.Errorf("transaction environment: %w", err)
+		return err
 	}
-	cc.env = append(cc.env, txEnvs...)
+
 	cc.env = append(cc.env, payload, "GITALY_BIN_DIR="+cfg.BinDir)
 
 	cc.globals = append(cc.globals, ValueFlag{"-c", fmt.Sprintf("core.hooksPath=%s", hooks.Path(cfg))})
@@ -100,29 +100,19 @@ func receivePackHookEnv(ctx context.Context, cc *cmdCfg, cfg config.Cfg, req Rec
 	return env, nil
 }
 
-func transactionEnv(ctx context.Context) ([]string, error) {
+func transactionFromContext(ctx context.Context) (*metadata.Transaction, *metadata.PraefectServer, error) {
 	transaction, err := metadata.TransactionFromContext(ctx)
 	if err != nil {
 		if errors.Is(err, metadata.ErrTransactionNotFound) {
-			return nil, nil
+			return nil, nil, nil
 		}
-		return nil, err
+		return nil, nil, err
 	}
 
 	praefect, err := metadata.PraefectFromContext(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	praefectEnv, err := praefect.Env()
-	if err != nil {
-		return nil, err
-	}
-
-	transactionEnv, err := transaction.Env()
-	if err != nil {
-		return nil, err
-	}
-
-	return []string{praefectEnv, transactionEnv}, nil
+	return &transaction, praefect, nil
 }

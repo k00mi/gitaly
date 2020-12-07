@@ -22,11 +22,7 @@ func TestPrereceive_customHooks(t *testing.T) {
 
 	hookManager := NewManager(config.NewLocator(config.Config), GitlabAPIStub, config.Config)
 
-	payload, err := git.NewHooksPayload(config.Config, repo, nil, nil).Env()
-	require.NoError(t, err)
-
 	standardEnv := []string{
-		payload,
 		"GL_ID=1234",
 		fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
 		"GL_PROTOCOL=web",
@@ -35,21 +31,33 @@ func TestPrereceive_customHooks(t *testing.T) {
 		"GL_USERNAME=user",
 	}
 
-	primaryEnv, err := metadata.Transaction{
-		ID: 1234, Node: "primary", Primary: true,
-	}.Env()
+	payload, err := git.NewHooksPayload(config.Config, repo, nil, nil).Env()
 	require.NoError(t, err)
 
-	secondaryEnv, err := metadata.Transaction{
-		ID: 1234, Node: "secondary", Primary: false,
-	}.Env()
+	primaryPayload, err := git.NewHooksPayload(
+		config.Config,
+		repo,
+		&metadata.Transaction{
+			ID: 1234, Node: "primary", Primary: true,
+		},
+		&metadata.PraefectServer{
+			SocketPath: "/path/to/socket",
+			Token:      "secret",
+		},
+	).Env()
 	require.NoError(t, err)
 
-	praefect := &metadata.PraefectServer{
-		SocketPath: "/path/to/socket",
-		Token:      "secret",
-	}
-	praefectEnv, err := praefect.Env()
+	secondaryPayload, err := git.NewHooksPayload(
+		config.Config,
+		repo,
+		&metadata.Transaction{
+			ID: 1234, Node: "secondary", Primary: false,
+		},
+		&metadata.PraefectServer{
+			SocketPath: "/path/to/socket",
+			Token:      "secret",
+		},
+	).Env()
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -63,14 +71,14 @@ func TestPrereceive_customHooks(t *testing.T) {
 	}{
 		{
 			desc:           "hook receives environment variables",
-			env:            standardEnv,
+			env:            append(standardEnv, payload),
 			hook:           "#!/bin/sh\nenv | grep -e '^GL_' -e '^GITALY_' | sort\n",
 			stdin:          "change\n",
-			expectedStdout: strings.Join(standardEnv, "\n") + "\n",
+			expectedStdout: strings.Join(append([]string{payload}, standardEnv...), "\n") + "\n",
 		},
 		{
 			desc:           "hook can write to stderr and stdout",
-			env:            standardEnv,
+			env:            append(standardEnv, payload),
 			hook:           "#!/bin/sh\necho foo >&1 && echo bar >&2\n",
 			stdin:          "change\n",
 			expectedStdout: "foo\n",
@@ -78,66 +86,66 @@ func TestPrereceive_customHooks(t *testing.T) {
 		},
 		{
 			desc:           "hook receives standard input",
-			env:            standardEnv,
+			env:            append(standardEnv, payload),
 			hook:           "#!/bin/sh\ncat\n",
 			stdin:          "foo\n",
 			expectedStdout: "foo\n",
 		},
 		{
 			desc:           "hook succeeds without consuming stdin",
-			env:            standardEnv,
+			env:            append(standardEnv, payload),
 			hook:           "#!/bin/sh\necho foo\n",
 			stdin:          "ignore me\n",
 			expectedStdout: "foo\n",
 		},
 		{
 			desc:        "invalid hook results in error",
-			env:         standardEnv,
+			env:         append(standardEnv, payload),
 			hook:        "",
 			stdin:       "change\n",
 			expectedErr: "exec format error",
 		},
 		{
 			desc:        "failing hook results in error",
-			env:         standardEnv,
+			env:         append(standardEnv, payload),
 			hook:        "#!/bin/sh\nexit 123",
 			stdin:       "change\n",
 			expectedErr: "exit status 123",
 		},
 		{
 			desc:           "hook is executed on primary",
-			env:            append(standardEnv, primaryEnv, praefectEnv),
+			env:            append(standardEnv, primaryPayload),
 			hook:           "#!/bin/sh\necho foo\n",
 			stdin:          "change\n",
 			expectedStdout: "foo\n",
 		},
 		{
 			desc:  "hook is not executed on secondary",
-			env:   append(standardEnv, secondaryEnv, praefectEnv),
+			env:   append(standardEnv, secondaryPayload),
 			hook:  "#!/bin/sh\necho foo\n",
 			stdin: "change\n",
 		},
 		{
 			desc:        "missing GL_ID causes error",
-			env:         envWithout(standardEnv, "GL_ID"),
+			env:         envWithout(append(standardEnv, payload), "GL_ID"),
 			stdin:       "change\n",
 			expectedErr: "GL_ID not set",
 		},
 		{
 			desc:        "missing GL_REPOSITORY causes error",
-			env:         envWithout(standardEnv, "GL_REPOSITORY"),
+			env:         envWithout(append(standardEnv, payload), "GL_REPOSITORY"),
 			stdin:       "change\n",
 			expectedErr: "GL_REPOSITORY not set",
 		},
 		{
 			desc:        "missing GL_PROTOCOL causes error",
-			env:         envWithout(standardEnv, "GL_PROTOCOL"),
+			env:         envWithout(append(standardEnv, payload), "GL_PROTOCOL"),
 			stdin:       "change\n",
 			expectedErr: "GL_PROTOCOL not set",
 		},
 		{
 			desc:        "missing changes cause error",
-			env:         standardEnv,
+			env:         append(standardEnv, payload),
 			expectedErr: "hook got no reference updates",
 		},
 	}

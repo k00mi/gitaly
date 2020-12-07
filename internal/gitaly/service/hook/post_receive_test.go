@@ -37,27 +37,6 @@ func TestPostReceiveInvalidArgument(t *testing.T) {
 	testhelper.RequireGrpcError(t, err, codes.InvalidArgument)
 }
 
-func transactionEnv(t *testing.T, primary bool) []string {
-	t.Helper()
-
-	transaction := metadata.Transaction{
-		ID:      1234,
-		Node:    "node-1",
-		Primary: primary,
-	}
-	transactionEnv, err := transaction.Env()
-	require.NoError(t, err)
-
-	praefect := &metadata.PraefectServer{
-		SocketPath: "/path/to/socket",
-		Token:      "secret",
-	}
-	praefectEnv, err := praefect.Env()
-	require.NoError(t, err)
-
-	return []string{transactionEnv, praefectEnv}
-}
-
 func TestHooksMissingStdin(t *testing.T) {
 	user, password, secretToken := "user", "password", "secret token"
 	tempDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
@@ -101,18 +80,18 @@ func TestHooksMissingStdin(t *testing.T) {
 	require.NoError(t, err)
 
 	testCases := []struct {
-		desc string
-		env  []string
-		fail bool
+		desc    string
+		primary bool
+		fail    bool
 	}{
 		{
-			desc: "empty stdin fails if primary",
-			env:  transactionEnv(t, true),
-			fail: true,
+			desc:    "empty stdin fails if primary",
+			primary: true,
+			fail:    true,
 		},
 		{
-			desc: "empty stdin success on secondary",
-			env:  transactionEnv(t, false),
+			desc:    "empty stdin success on secondary",
+			primary: false,
 		},
 	}
 
@@ -127,20 +106,32 @@ func TestHooksMissingStdin(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			hooksPayload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil).Env()
+			hooksPayload, err := git.NewHooksPayload(
+				config.Config,
+				testRepo,
+				&metadata.Transaction{
+					ID:      1234,
+					Node:    "node-1",
+					Primary: tc.primary,
+				},
+				&metadata.PraefectServer{
+					SocketPath: "/path/to/socket",
+					Token:      "secret",
+				},
+			).Env()
 			require.NoError(t, err)
 
 			stream, err := client.PostReceiveHook(ctx)
 			require.NoError(t, err)
 			require.NoError(t, stream.Send(&gitalypb.PostReceiveHookRequest{
 				Repository: testRepo,
-				EnvironmentVariables: append([]string{
+				EnvironmentVariables: []string{
 					hooksPayload,
 					"GL_ID=key_id",
 					"GL_USERNAME=username",
 					"GL_PROTOCOL=protocol",
 					"GL_REPOSITORY=repository",
-				}, tc.env...),
+				},
 			}))
 
 			go func() {
