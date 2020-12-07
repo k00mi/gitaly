@@ -10,6 +10,7 @@ import (
 	"math"
 	"strings"
 
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -116,17 +117,17 @@ func printAlert(m PostReceiveMessage, w io.Writer) error {
 }
 
 func (m *GitLabHookManager) PostReceiveHook(ctx context.Context, repo *gitalypb.Repository, pushOptions, env []string, stdin io.Reader, stdout, stderr io.Writer) error {
+	payload, err := git.HooksPayloadFromEnv(env)
+	if err != nil {
+		return helper.ErrInternalf("extracting hooks payload: %w", err)
+	}
+
 	changes, err := ioutil.ReadAll(stdin)
 	if err != nil {
 		return helper.ErrInternalf("reading stdin from request: %w", err)
 	}
 
-	primary, err := isPrimary(env)
-	if err != nil {
-		return helper.ErrInternalf("could not check role: %w", err)
-	}
-
-	if !primary {
+	if !isPrimary(payload) {
 		return nil
 	}
 

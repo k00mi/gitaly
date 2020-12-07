@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -40,22 +41,22 @@ func getRelativeObjectDirs(repoPath, gitObjectDir, gitAlternateObjectDirs string
 }
 
 func (m *GitLabHookManager) PreReceiveHook(ctx context.Context, repo *gitalypb.Repository, env []string, stdin io.Reader, stdout, stderr io.Writer) error {
+	payload, err := git.HooksPayloadFromEnv(env)
+	if err != nil {
+		return helper.ErrInternalf("extracting hooks payload: %w", err)
+	}
+
 	changes, err := ioutil.ReadAll(stdin)
 	if err != nil {
 		return helper.ErrInternalf("reading stdin from request: %w", err)
 	}
 
-	primary, err := isPrimary(env)
-	if err != nil {
-		return helper.ErrInternalf("could not check role: %w", err)
-	}
-
 	// Only the primary should execute hooks and increment reference counters.
-	if primary {
+	if isPrimary(payload) {
 		if err := m.preReceiveHook(ctx, repo, env, changes, stdout, stderr); err != nil {
 			// If the pre-receive hook declines the push, then we need to stop any
 			// secondaries voting on the transaction.
-			m.stopTransaction(ctx, env)
+			m.stopTransaction(ctx, payload)
 			return err
 		}
 	}
