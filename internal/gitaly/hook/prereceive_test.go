@@ -22,7 +22,7 @@ func TestPrereceive_customHooks(t *testing.T) {
 
 	hookManager := NewManager(config.NewLocator(config.Config), GitlabAPIStub, config.Config)
 
-	payload, err := git.NewHooksPayload(config.Config, repo).Env()
+	payload, err := git.NewHooksPayload(config.Config, repo, nil, nil).Env()
 	require.NoError(t, err)
 
 	standardEnv := []string{
@@ -191,7 +191,7 @@ func TestPrereceive_gitlab(t *testing.T) {
 	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	payload, err := git.NewHooksPayload(config.Config, testRepo).Env()
+	payload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil).Env()
 	require.NoError(t, err)
 
 	standardEnv := []string{

@@ -37,7 +37,7 @@ func (cc *cmdCfg) configureHooks(ctx context.Context, repo *gitalypb.Repository,
 		return errors.New("hooks already configured")
 	}
 
-	payload, err := NewHooksPayload(cfg, repo).Env()
+	payload, err := NewHooksPayload(cfg, repo, nil, nil).Env()
 	if err != nil {
 		return err
 	}

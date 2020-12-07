@@ -127,7 +127,7 @@ func TestHooksMissingStdin(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			hooksPayload, err := git.NewHooksPayload(config.Config, testRepo).Env()
+			hooksPayload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil).Env()
 			require.NoError(t, err)
 
 			stream, err := client.PostReceiveHook(ctx)
@@ -257,7 +257,7 @@ To create a merge request for okay, visit:
 			stream, err := client.PostReceiveHook(ctx)
 			require.NoError(t, err)
 
-			hooksPayload, err := git.NewHooksPayload(config.Config, testRepo).Env()
+			hooksPayload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil).Env()
 			require.NoError(t, err)
 
 			envVars := []string{

@@ -137,7 +137,7 @@ func TestReferenceTransactionHook(t *testing.T) {
 			transactionEnv, err := transaction.Env()
 			require.NoError(t, err)
 
-			hooksPayload, err := git.NewHooksPayload(config.Config, testRepo).Env()
+			hooksPayload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil).Env()
 			require.NoError(t, err)
 
 			environment := []string{

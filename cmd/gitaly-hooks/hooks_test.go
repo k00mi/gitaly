@@ -46,7 +46,7 @@ func envForHooks(t testing.TB, gitlabShellDir string, repo *gitalypb.Repository,
 	env, err := gitlabshell.EnvFromConfig(config.Config)
 	require.NoError(t, err)
 
-	payload, err := git.NewHooksPayload(config.Config, repo).Env()
+	payload, err := git.NewHooksPayload(config.Config, repo, nil, nil).Env()
 	require.NoError(t, err)
 
 	env = append(env, os.Environ()...)

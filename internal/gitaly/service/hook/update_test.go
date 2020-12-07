@@ -44,7 +44,7 @@ func TestUpdate_CustomHooks(t *testing.T) {
 	client, conn := newHooksClient(t, serverSocketPath)
 	defer conn.Close()
 
-	hooksPayload, err := git.NewHooksPayload(config.Config, testRepo).Env()
+	hooksPayload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil).Env()
 	require.NoError(t, err)
 
 	envVars := []string{

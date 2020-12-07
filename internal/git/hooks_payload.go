@@ -9,6 +9,7 @@ import (
 
 	"github.com/golang/protobuf/jsonpb"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
@@ -38,6 +39,9 @@ type HooksPayload struct {
 	// InternalSocketToken is the token required to authenticate with
 	// Gitaly's internal socket.
 	InternalSocketToken string `json:"internal_socket_token"`
+
+	Transaction *metadata.Transaction    `json:"transaction"`
+	Praefect    *metadata.PraefectServer `json:"praefect"`
 }
 
 // jsonHooksPayload wraps the HooksPayload such that we can manually encode the
@@ -49,12 +53,14 @@ type jsonHooksPayload struct {
 
 // NewHooksPayload creates a new hooks payload which can then be encoded and
 // passed to Git hooks.
-func NewHooksPayload(cfg config.Cfg, repo *gitalypb.Repository) HooksPayload {
+func NewHooksPayload(cfg config.Cfg, repo *gitalypb.Repository, tx *metadata.Transaction, praefect *metadata.PraefectServer) HooksPayload {
 	return HooksPayload{
 		Repo:                repo,
 		BinDir:              cfg.BinDir,
 		InternalSocket:      cfg.GitalyInternalSocketPath(),
 		InternalSocketToken: cfg.Auth.Token,
+		Transaction:         tx,
+		Praefect:            praefect,
 	}
 }
 
@@ -105,6 +111,24 @@ func HooksPayloadFromEnv(envs []string) (HooksPayload, error) {
 		}
 
 		payload = fallback
+	}
+
+	// If we didn't find a transaction, then we need to fall back to the
+	// transaction environment variables with the same reasoning as for
+	// `fallbackPayloadFromEnv()`.
+	if payload.Transaction == nil {
+		tx, err := metadata.TransactionFromEnv(envs)
+		if err == nil {
+			praefect, err := metadata.PraefectFromEnv(envs)
+			if err != nil {
+				return HooksPayload{}, err
+			}
+
+			payload.Transaction = &tx
+			payload.Praefect = praefect
+		} else if err != metadata.ErrTransactionNotFound {
+			return HooksPayload{}, err
+		}
 	}
 
 	return payload, nil

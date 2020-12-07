@@ -37,7 +37,7 @@ func (s *Server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 		return err
 	}
 
-	payload, err := git.NewHooksPayload(s.cfg, repo).Env()
+	payload, err := git.NewHooksPayload(s.cfg, repo, nil, nil).Env()
 	if err != nil {
 		return err
 	}
