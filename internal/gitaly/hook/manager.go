@@ -62,7 +62,7 @@ func NewManager(locator storage.Locator, gitlabAPI GitlabAPI, cfg config.Cfg) *G
 		locator:     locator,
 		gitlabAPI:   gitlabAPI,
 		hooksConfig: cfg.Hooks,
-		conns:       client.NewPool(),
+		conns:       client.NewPoolWithOptions(client.WithDialOptions(client.FailOnNonTempDialError()...)),
 		votingDelayMetric: prometheus.NewHistogram(
 			prometheus.HistogramOpts{
 				Name:    "gitaly_hook_transaction_voting_delay_seconds",

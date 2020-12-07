@@ -12,6 +12,7 @@ import (
 	grpctracing "gitlab.com/gitlab-org/labkit/tracing/grpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/keepalive"
 )
 
@@ -120,5 +121,31 @@ func getConnectionType(rawAddress string) connectionType {
 		return tcpConnection
 	default:
 		return invalidConnection
+	}
+}
+
+// FailOnNonTempDialError helps to identify if remote listener is ready to accept new connections.
+func FailOnNonTempDialError() []grpc.DialOption {
+	return []grpc.DialOption{
+		grpc.WithBlock(),
+		grpc.FailOnNonTempDialError(true),
+	}
+}
+
+// HealthCheckDialer uses provided dialer as an actual dialer, but issues a health check request to the remote
+// to verify the connection was set properly and could be used with no issues.
+func HealthCheckDialer(base Dialer) Dialer {
+	return func(ctx context.Context, address string, dialOptions []grpc.DialOption) (*grpc.ClientConn, error) {
+		cc, err := base(ctx, address, dialOptions)
+		if err != nil {
+			return nil, err
+		}
+
+		if _, err := healthpb.NewHealthClient(cc).Check(ctx, &healthpb.HealthCheckRequest{}); err != nil {
+			cc.Close()
+			return nil, err
+		}
+
+		return cc, nil
 	}
 }

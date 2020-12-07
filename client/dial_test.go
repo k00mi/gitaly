@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/jaeger-client-go"
+	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	proxytestdata "gitlab.com/gitlab-org/gitaly/internal/praefect/grpc-proxy/testdata"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	gitaly_x509 "gitlab.com/gitlab-org/gitaly/internal/x509"
@@ -28,18 +29,6 @@ import (
 )
 
 var proxyEnvironmentKeys = []string{"http_proxy", "https_proxy", "no_proxy"}
-
-func doDialAndExecuteCall(ctx context.Context, addr string) error {
-	conn, err := Dial(addr, nil)
-	if err != nil {
-		return fmt.Errorf("dial: %v", err)
-	}
-	defer conn.Close()
-
-	client := healthpb.NewHealthClient(conn)
-	_, err = client.Check(ctx, &healthpb.HealthCheckRequest{})
-	return err
-}
 
 func TestDial(t *testing.T) {
 	if emitProxyWarning() {
@@ -60,57 +49,71 @@ func TestDial(t *testing.T) {
 	require.NoError(t, os.Symlink(unixSocketAbsPath, unixSocketPath))
 
 	tests := []struct {
-		name           string
-		rawAddress     string
-		envSSLCertFile string
-		expectFailure  bool
+		name                string
+		rawAddress          string
+		envSSLCertFile      string
+		dialOpts            []grpc.DialOption
+		expectDialFailure   bool
+		expectHealthFailure bool
 	}{
 		{
-			name:          "tcp localhost with prefix",
-			rawAddress:    "tcp://localhost:" + connectionMap["tcp"], // "tcp://localhost:1234"
-			expectFailure: false,
+			name:                "tcp localhost with prefix",
+			rawAddress:          "tcp://localhost:" + connectionMap["tcp"], // "tcp://localhost:1234"
+			expectDialFailure:   false,
+			expectHealthFailure: false,
 		},
 		{
-			name:           "tls localhost",
-			rawAddress:     "tls://localhost:" + connectionMap["tls"], // "tls://localhost:1234"
-			envSSLCertFile: "./testdata/gitalycert.pem",
-			expectFailure:  false,
+			name:                "tls localhost",
+			rawAddress:          "tls://localhost:" + connectionMap["tls"], // "tls://localhost:1234"
+			envSSLCertFile:      "./testdata/gitalycert.pem",
+			expectDialFailure:   false,
+			expectHealthFailure: false,
 		},
 		{
-			name:          "unix absolute",
-			rawAddress:    "unix:" + unixSocketAbsPath, // "unix:/tmp/temp-socket"
-			expectFailure: false,
+			name:                "unix absolute",
+			rawAddress:          "unix:" + unixSocketAbsPath, // "unix:/tmp/temp-socket"
+			expectDialFailure:   false,
+			expectHealthFailure: false,
 		},
 		{
-			name:          "unix relative",
-			rawAddress:    "unix:" + unixSocketPath, // "unix:../../tmp/temp-socket"
-			expectFailure: false,
+			name:                "unix relative",
+			rawAddress:          "unix:" + unixSocketPath, // "unix:../../tmp/temp-socket"
+			expectDialFailure:   false,
+			expectHealthFailure: false,
 		},
 		{
-			name:          "unix absolute does not exist",
-			rawAddress:    "unix:" + unixSocketAbsPath + ".does_not_exist", // "unix:/tmp/temp-socket.does_not_exist"
-			expectFailure: true,
+			name:                "unix absolute does not exist",
+			rawAddress:          "unix:" + unixSocketAbsPath + ".does_not_exist", // "unix:/tmp/temp-socket.does_not_exist"
+			expectDialFailure:   false,
+			expectHealthFailure: true,
 		},
 		{
-			name:          "unix relative does not exist",
-			rawAddress:    "unix:" + unixSocketPath + ".does_not_exist", // "unix:../../tmp/temp-socket.does_not_exist"
-			expectFailure: true,
+			name:                "unix relative does not exist",
+			rawAddress:          "unix:" + unixSocketPath + ".does_not_exist", // "unix:../../tmp/temp-socket.does_not_exist"
+			expectDialFailure:   false,
+			expectHealthFailure: true,
 		},
 		{
 			// Gitaly does not support connections that do not have a scheme.
-			name:          "tcp localhost no prefix",
-			rawAddress:    "localhost:" + connectionMap["tcp"], // "localhost:1234"
-			expectFailure: true,
+			name:              "tcp localhost no prefix",
+			rawAddress:        "localhost:" + connectionMap["tcp"], // "localhost:1234"
+			expectDialFailure: true,
 		},
 		{
-			name:          "invalid",
-			rawAddress:    ".",
-			expectFailure: true,
+			name:              "invalid",
+			rawAddress:        ".",
+			expectDialFailure: true,
 		},
 		{
-			name:          "empty",
-			rawAddress:    "",
-			expectFailure: true,
+			name:              "empty",
+			rawAddress:        "",
+			expectDialFailure: true,
+		},
+		{
+			name:              "dial fail if there is no listener on address",
+			rawAddress:        "tcp://invalid.address",
+			dialOpts:          FailOnNonTempDialError(),
+			expectDialFailure: true,
 		},
 	}
 
@@ -127,8 +130,16 @@ func TestDial(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			err := doDialAndExecuteCall(ctx, tt.rawAddress)
-			if tt.expectFailure {
+			conn, err := Dial(tt.rawAddress, tt.dialOpts)
+			if tt.expectDialFailure {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			defer conn.Close()
+
+			_, err = healthpb.NewHealthClient(conn).Check(ctx, &healthpb.HealthCheckRequest{})
+			if tt.expectHealthFailure {
 				require.Error(t, err)
 				return
 			}
@@ -458,4 +469,19 @@ func emitProxyWarning() bool {
 		}
 	}
 	return false
+}
+
+func TestHealthCheckDialer(t *testing.T) {
+	_, addr, cleanup := runServer(t, "token")
+	defer cleanup()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	_, err := HealthCheckDialer(DialContext)(ctx, addr, nil)
+	require.Equal(t, status.Error(codes.Unauthenticated, "authentication required"), err, "should fail without token configured")
+
+	cc, err := HealthCheckDialer(DialContext)(ctx, addr, []grpc.DialOption{grpc.WithPerRPCCredentials(gitalyauth.RPCCredentialsV2("token"))})
+	require.NoError(t, err)
+	cc.Close()
 }

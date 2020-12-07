@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
+	"gitlab.com/gitlab-org/gitaly/internal/bootstrap/starter"
 	gitaly_auth "gitlab.com/gitlab-org/gitaly/internal/gitaly/config/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/server/auth"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -22,11 +23,11 @@ import (
 )
 
 func TestPoolDial(t *testing.T) {
-	insecure, cleanup := runServer(t, "")
+	_, insecure, cleanup := runServer(t, "")
 	defer cleanup()
 
 	creds := "my-little-secret"
-	secure, cleanup := runServer(t, creds)
+	_, secure, cleanup := runServer(t, creds)
 	defer cleanup()
 
 	var dialFuncInvocationCounter int
@@ -172,7 +173,11 @@ func TestPoolDial(t *testing.T) {
 	}
 }
 
-func runServer(t *testing.T, creds string) (string, func()) {
+func runServer(t *testing.T, creds string) (*health.Server, string, func()) {
+	return runServerWithAddr(t, creds, "127.0.0.1:0")
+}
+
+func runServerWithAddr(t *testing.T, creds, addr string) (*health.Server, string, func()) {
 	t.Helper()
 
 	var opts []grpc.ServerOption
@@ -195,9 +200,8 @@ func runServer(t *testing.T, creds string) (string, func()) {
 
 	healthServer := health.NewServer()
 	grpc_health_v1.RegisterHealthServer(server, healthServer)
-	healthServer.SetServingStatus("TestService", grpc_health_v1.HealthCheckResponse_SERVING)
 
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	listener, err := net.Listen("tcp", addr)
 	require.NoError(t, err)
 
 	errQ := make(chan error)
@@ -205,7 +209,7 @@ func runServer(t *testing.T, creds string) (string, func()) {
 		errQ <- server.Serve(listener)
 	}()
 
-	return "tcp://" + listener.Addr().String(), func() {
+	return healthServer, "tcp://" + listener.Addr().String(), func() {
 		server.Stop()
 		require.NoError(t, <-errQ)
 	}
@@ -217,13 +221,42 @@ func verifyConnection(t *testing.T, conn *grpc.ClientConn, expectedCode codes.Co
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	_, err := grpc_health_v1.NewHealthClient(conn).Check(ctx, &grpc_health_v1.HealthCheckRequest{
-		Service: "TestService",
-	})
+	_, err := grpc_health_v1.NewHealthClient(conn).Check(ctx, &grpc_health_v1.HealthCheckRequest{})
 
 	if expectedCode == codes.OK {
 		require.NoError(t, err)
 	} else {
 		require.Equal(t, expectedCode, status.Code(err))
 	}
+}
+
+func TestPool_Dial_same_addr_another_token(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	_, addr, stop1 := runServer(t, "")
+	defer func() { stop1() }()
+
+	pool := NewPool()
+	defer pool.Close()
+
+	// all good - server is running and serving requests
+	conn, err := pool.Dial(ctx, addr, "")
+	require.NoError(t, err)
+	verifyConnection(t, conn, codes.OK)
+
+	stop1() // stop the server and all open connections
+	stop1 = func() {}
+
+	cfg, err := starter.ParseEndpoint(addr)
+	require.NoError(t, err)
+
+	// start server on the same address (simulation of service restart) but with token verification enabled
+	_, _, stop2 := runServerWithAddr(t, "token", cfg.Addr)
+	defer stop2()
+
+	// all good - another server with token verification is running on the same address and new connection was established
+	conn, err = pool.Dial(ctx, addr, "token")
+	require.NoError(t, err)
+	verifyConnection(t, conn, codes.OK)
 }

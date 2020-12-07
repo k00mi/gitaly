@@ -29,6 +29,8 @@ import (
 	"gitlab.com/gitlab-org/gitaly/streamio"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -563,6 +565,7 @@ func TestPostReceiveWithReferenceTransactionHook(t *testing.T) {
 	gitalypb.RegisterSmartHTTPServiceServer(gitalyServer, NewServer(locator))
 	gitalypb.RegisterHookServiceServer(gitalyServer, hook.NewServer(config.Config, gitalyhook.NewManager(locator, gitalyhook.GitlabAPIStub, config.Config)))
 	gitalypb.RegisterRefTransactionServer(gitalyServer, refTransactionServer)
+	healthpb.RegisterHealthServer(gitalyServer, health.NewServer())
 	reflection.Register(gitalyServer)
 
 	gitalySocketPath := testhelper.GetTemporaryGitalySocketFileName()
