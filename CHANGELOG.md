@@ -143,6 +143,10 @@
 - Upgrade Rubocop to 0.86.0. !2634
 
 
+## 13.4.7 (2020-12-07)
+
+- No changes.
+
 ## 13.4.6 (2020-11-03)
 
 - No changes.
