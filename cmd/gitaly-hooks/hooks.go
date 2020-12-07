@@ -92,7 +92,7 @@ func main() {
 
 		req := &gitalypb.UpdateHookRequest{
 			Repository:           payload.Repo,
-			EnvironmentVariables: glValues(),
+			EnvironmentVariables: hookEnvironment(),
 			Ref:                  []byte(ref),
 			OldValue:             oldValue,
 			NewValue:             newValue,
@@ -114,17 +114,9 @@ func main() {
 			logger.Fatalf("error when getting preReceiveHookStream client for %q: %v", subCmd, err)
 		}
 
-		environment := append(glValues(), gitObjectDirs()...)
-		for _, key := range []string{metadata.PraefectEnvKey, metadata.TransactionEnvKey} {
-			if value, ok := os.LookupEnv(key); ok {
-				env := fmt.Sprintf("%s=%s", key, value)
-				environment = append(environment, env)
-			}
-		}
-
 		if err := preReceiveHookStream.Send(&gitalypb.PreReceiveHookRequest{
 			Repository:           payload.Repo,
-			EnvironmentVariables: environment,
+			EnvironmentVariables: append(hookEnvironment(), gitObjectDirs()...),
 			GitPushOptions:       gitPushOptions(),
 		}); err != nil {
 			logger.Fatalf("error when sending request for %q: %v", subCmd, err)
@@ -145,18 +137,9 @@ func main() {
 			logger.Fatalf("error when getting stream client for %q: %v", subCmd, err)
 		}
 
-		environment := glValues()
-
-		for _, key := range []string{metadata.PraefectEnvKey, metadata.TransactionEnvKey} {
-			if value, ok := os.LookupEnv(key); ok {
-				env := fmt.Sprintf("%s=%s", key, value)
-				environment = append(environment, env)
-			}
-		}
-
 		if err := postReceiveHookStream.Send(&gitalypb.PostReceiveHookRequest{
 			Repository:           payload.Repo,
-			EnvironmentVariables: environment,
+			EnvironmentVariables: hookEnvironment(),
 			GitPushOptions:       gitPushOptions(),
 		}); err != nil {
 			logger.Fatalf("error when sending request for %q: %v", subCmd, err)
@@ -193,18 +176,9 @@ func main() {
 			logger.Fatalf("error when getting referenceTransactionHookStream client for %q: %v", subCmd, err)
 		}
 
-		environment := glValues()
-
-		for _, key := range []string{metadata.PraefectEnvKey, metadata.TransactionEnvKey} {
-			if value, ok := os.LookupEnv(key); ok {
-				env := fmt.Sprintf("%s=%s", key, value)
-				environment = append(environment, env)
-			}
-		}
-
 		if err := referenceTransactionHookStream.Send(&gitalypb.ReferenceTransactionHookRequest{
 			Repository:           payload.Repo,
-			EnvironmentVariables: environment,
+			EnvironmentVariables: hookEnvironment(),
 			State:                state,
 		}); err != nil {
 			logger.Fatalf("error when sending request for %q: %v", subCmd, err)
@@ -242,16 +216,23 @@ func dialGitaly(payload git.HooksPayload) (*grpc.ClientConn, error) {
 	return conn, nil
 }
 
-func glValues() []string {
-	glEnvVars := command.AllowedEnvironment()
+func hookEnvironment() []string {
+	environment := command.AllowedEnvironment()
 
 	for _, kv := range os.Environ() {
 		if strings.HasPrefix(kv, "GL_") {
-			glEnvVars = append(glEnvVars, kv)
+			environment = append(environment, kv)
 		}
 	}
 
-	return glEnvVars
+	for _, key := range []string{metadata.PraefectEnvKey, metadata.TransactionEnvKey} {
+		if value, ok := os.LookupEnv(key); ok {
+			env := fmt.Sprintf("%s=%s", key, value)
+			environment = append(environment, env)
+		}
+	}
+
+	return environment
 }
 
 func gitObjectDirs() []string {
