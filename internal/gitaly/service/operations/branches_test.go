@@ -214,7 +214,10 @@ func TestUserCreateBranchWithTransaction(t *testing.T) {
 }
 
 func TestSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T) {
-	testWithFeature(t, featureflag.GoUserCreateBranch, testSuccessfulGitHooksForUserCreateBranchRequest)
+	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.ReferenceTransactions,
+		featureflag.GoUserCreateBranch,
+	}).Run(t, testSuccessfulGitHooksForUserCreateBranchRequest)
 }
 
 func testSuccessfulGitHooksForUserCreateBranchRequest(t *testing.T, ctx context.Context) {
@@ -435,7 +438,10 @@ func testFailedUserCreateBranchRequest(t *testing.T, ctx context.Context) {
 }
 
 func TestSuccessfulUserDeleteBranchRequest(t *testing.T) {
-	testWithFeature(t, featureflag.GoUserDeleteBranch, testSuccessfulUserDeleteBranchRequest)
+	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.ReferenceTransactions,
+		featureflag.GoUserDeleteBranch,
+	}).Run(t, testSuccessfulUserDeleteBranchRequest)
 }
 
 func testSuccessfulUserDeleteBranchRequest(t *testing.T, ctx context.Context) {
