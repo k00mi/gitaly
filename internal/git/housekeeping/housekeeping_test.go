@@ -1,7 +1,6 @@
 package housekeeping
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -106,93 +105,82 @@ func d(name string, mode os.FileMode, age time.Duration, finalState entryFinalSt
 }
 
 func TestPerform(t *testing.T) {
-	tests := []struct {
+	testcases := []struct {
 		name    string
 		entries []entry
-		wantErr bool
 	}{
 		{
 			name: "clean",
 			entries: []entry{
-				f("a", os.FileMode(0700), 24*time.Hour, Keep),
-				f("b", os.FileMode(0700), 24*time.Hour, Keep),
-				f("c", os.FileMode(0700), 24*time.Hour, Keep),
+				f("a", 0700, 24*time.Hour, Keep),
+				f("b", 0700, 24*time.Hour, Keep),
+				f("c", 0700, 24*time.Hour, Keep),
 			},
-			wantErr: false,
 		},
 		{
 			name: "emptyperms",
 			entries: []entry{
-				f("b", os.FileMode(0700), 24*time.Hour, Keep),
-				f("tmp_a", os.FileMode(0000), 2*time.Hour, Keep),
+				f("b", 0700, 24*time.Hour, Keep),
+				f("tmp_a", 0000, 2*time.Hour, Keep),
 			},
-			wantErr: false,
 		},
 		{
 			name: "emptytempdir",
 			entries: []entry{
-				d("tmp_d", os.FileMode(0000), 240*time.Hour, Delete, []entry{}),
-				f("b", os.FileMode(0700), 24*time.Hour, Keep),
+				d("tmp_d", 0000, 240*time.Hour, Delete, []entry{}),
+				f("b", 0700, 24*time.Hour, Keep),
 			},
-			wantErr: false,
 		},
 		{
 			name: "oldtempfile",
 			entries: []entry{
-				f("tmp_a", os.FileMode(0770), 240*time.Hour, Delete),
-				f("b", os.FileMode(0700), 24*time.Hour, Keep),
+				f("tmp_a", 0770, 240*time.Hour, Delete),
+				f("b", 0700, 24*time.Hour, Keep),
 			},
-			wantErr: false,
 		},
 		{
 			name: "subdir temp file",
 			entries: []entry{
-				d("a", os.FileMode(0770), 240*time.Hour, Keep, []entry{
-					f("tmp_b", os.FileMode(0700), 240*time.Hour, Delete),
+				d("a", 0770, 240*time.Hour, Keep, []entry{
+					f("tmp_b", 0700, 240*time.Hour, Delete),
 				}),
 			},
-			wantErr: false,
 		},
 		{
 			name: "inaccessible tmp directory",
 			entries: []entry{
-				d("tmp_a", os.FileMode(0000), 240*time.Hour, Delete, []entry{
-					f("tmp_b", os.FileMode(0700), 240*time.Hour, Delete),
+				d("tmp_a", 0000, 240*time.Hour, Delete, []entry{
+					f("tmp_b", 0700, 240*time.Hour, Delete),
 				}),
 			},
-			wantErr: false,
 		},
 		{
 			name: "deeply nested inaccessible tmp directory",
 			entries: []entry{
-				d("tmp_a", os.FileMode(0000), 240*time.Hour, Delete, []entry{
-					d("tmp_a", os.FileMode(0000), 24*time.Hour, Delete, []entry{
-						f("tmp_b", os.FileMode(0000), 24*time.Hour, Delete),
+				d("tmp_a", 0000, 240*time.Hour, Delete, []entry{
+					d("tmp_a", 0000, 24*time.Hour, Delete, []entry{
+						f("tmp_b", 0000, 24*time.Hour, Delete),
 					}),
 				}),
 			},
-			wantErr: false,
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			rootPath, err := ioutil.TempDir("", "test")
-			assert.NoError(t, err, "TempDir creation failed")
-			defer os.RemoveAll(rootPath)
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			rootPath, cleanup := testhelper.TempDir(t)
+			defer cleanup()
 
-			for _, e := range tt.entries {
+			for _, e := range tc.entries {
 				e.create(t, rootPath)
 			}
 
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			if err = Perform(ctx, rootPath); (err != nil) != tt.wantErr {
-				t.Errorf("Perform() error = %v, wantErr %v", err, tt.wantErr)
-			}
+			require.NoError(t, Perform(ctx, rootPath))
 
-			for _, e := range tt.entries {
+			for _, e := range tc.entries {
 				e.validate(t, rootPath)
 			}
 		})
@@ -205,7 +193,7 @@ func TestShouldUnlink(t *testing.T) {
 		modTime time.Time
 		mode    os.FileMode
 	}
-	tests := []struct {
+	testcases := []struct {
 		name string
 		args args
 		want bool
@@ -266,11 +254,9 @@ func TestShouldUnlink(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := shouldRemove(tt.args.path, tt.args.modTime, tt.args.mode); got != tt.want {
-				t.Errorf("shouldUnlink() = %v, want %v", got, tt.want)
-			}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, shouldRemove(tc.args.path, tc.args.modTime, tc.args.mode))
 		})
 	}
 }
