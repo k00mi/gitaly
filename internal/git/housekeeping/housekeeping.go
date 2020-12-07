@@ -63,7 +63,7 @@ func findTemporaryObjects(ctx context.Context, repoPath string) ([]string, error
 
 	logger := myLogger(ctx)
 
-	err := filepath.Walk(repoPath, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(filepath.Join(repoPath, "objects"), func(path string, info os.FileInfo, err error) error {
 		if info == nil {
 			logger.WithFields(log.Fields{
 				"path": path,

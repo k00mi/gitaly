@@ -112,55 +112,78 @@ func TestPerform(t *testing.T) {
 		{
 			name: "clean",
 			entries: []entry{
-				f("a", 0700, 24*time.Hour, Keep),
-				f("b", 0700, 24*time.Hour, Keep),
-				f("c", 0700, 24*time.Hour, Keep),
+				d("objects", 0700, 240*time.Hour, Keep, []entry{
+					f("a", 0700, 24*time.Hour, Keep),
+					f("b", 0700, 24*time.Hour, Keep),
+					f("c", 0700, 24*time.Hour, Keep),
+				}),
 			},
 		},
 		{
 			name: "emptyperms",
 			entries: []entry{
-				f("b", 0700, 24*time.Hour, Keep),
-				f("tmp_a", 0000, 2*time.Hour, Keep),
+				d("objects", 0700, 240*time.Hour, Keep, []entry{
+					f("b", 0700, 24*time.Hour, Keep),
+					f("tmp_a", 0000, 2*time.Hour, Keep),
+				}),
 			},
 		},
 		{
 			name: "emptytempdir",
 			entries: []entry{
-				d("tmp_d", 0000, 240*time.Hour, Delete, []entry{}),
-				f("b", 0700, 24*time.Hour, Keep),
+				d("objects", 0700, 240*time.Hour, Keep, []entry{
+					d("tmp_d", 0000, 240*time.Hour, Delete, []entry{}),
+					f("b", 0700, 24*time.Hour, Keep),
+				}),
 			},
 		},
 		{
 			name: "oldtempfile",
 			entries: []entry{
-				f("tmp_a", 0770, 240*time.Hour, Delete),
-				f("b", 0700, 24*time.Hour, Keep),
+				d("objects", 0700, 240*time.Hour, Keep, []entry{
+					f("tmp_a", 0770, 240*time.Hour, Delete),
+					f("b", 0700, 24*time.Hour, Keep),
+				}),
 			},
 		},
 		{
 			name: "subdir temp file",
 			entries: []entry{
-				d("a", 0770, 240*time.Hour, Keep, []entry{
-					f("tmp_b", 0700, 240*time.Hour, Delete),
+				d("objects", 0700, 240*time.Hour, Keep, []entry{
+					d("a", 0770, 240*time.Hour, Keep, []entry{
+						f("tmp_b", 0700, 240*time.Hour, Delete),
+					}),
 				}),
 			},
 		},
 		{
 			name: "inaccessible tmp directory",
 			entries: []entry{
-				d("tmp_a", 0000, 240*time.Hour, Delete, []entry{
-					f("tmp_b", 0700, 240*time.Hour, Delete),
+				d("objects", 0700, 240*time.Hour, Keep, []entry{
+					d("tmp_a", 0000, 240*time.Hour, Delete, []entry{
+						f("tmp_b", 0700, 240*time.Hour, Delete),
+					}),
 				}),
 			},
 		},
 		{
 			name: "deeply nested inaccessible tmp directory",
 			entries: []entry{
-				d("tmp_a", 0000, 240*time.Hour, Delete, []entry{
-					d("tmp_a", 0000, 24*time.Hour, Delete, []entry{
-						f("tmp_b", 0000, 24*time.Hour, Delete),
+				d("objects", 0700, 240*time.Hour, Keep, []entry{
+					d("tmp_a", 0000, 240*time.Hour, Delete, []entry{
+						d("tmp_a", 0000, 24*time.Hour, Delete, []entry{
+							f("tmp_b", 0000, 24*time.Hour, Delete),
+						}),
 					}),
+				}),
+			},
+		},
+		{
+			name: "files outside of object database",
+			entries: []entry{
+				f("tmp_a", 0770, 240*time.Hour, Keep),
+				d("refs", 0700, 240*time.Hour, Keep, []entry{
+					f("tmp_a", 0770, 240*time.Hour, Keep),
 				}),
 			},
 		},
