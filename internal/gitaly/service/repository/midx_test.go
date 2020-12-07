@@ -105,7 +105,7 @@ func TestMidxRepack(t *testing.T) {
 	addPackFiles(t, ctx, client, testRepo, testRepoPath, packsAdded, true)
 
 	// record pack count
-	actualCount, err := stats.PackfilesCount(testRepo)
+	actualCount, err := stats.PackfilesCount(testRepoPath)
 	require.NoError(t, err)
 	require.Equal(t,
 		packsAdded+1, // expect
@@ -121,7 +121,7 @@ func TestMidxRepack(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	actualCount, err = stats.PackfilesCount(testRepo)
+	actualCount, err = stats.PackfilesCount(testRepoPath)
 	require.NoError(t, err)
 	require.Equal(t,
 		packsAdded+2, // expect
@@ -154,7 +154,7 @@ func TestMidxRepackExpire(t *testing.T) {
 				addPackFiles(t, ctx, client, testRepo, testRepoPath, packsAdded, false)
 
 				// record pack count
-				actualCount, err := stats.PackfilesCount(testRepo)
+				actualCount, err := stats.PackfilesCount(testRepoPath)
 				require.NoError(t, err)
 				require.Equal(t,
 					packsAdded+1, // expect
@@ -182,7 +182,7 @@ func TestMidxRepackExpire(t *testing.T) {
 					)
 					require.NoError(t, err)
 
-					packCount, err = stats.PackfilesCount(testRepo)
+					packCount, err = stats.PackfilesCount(testRepoPath)
 					require.NoError(t, err)
 
 					if packCount == 2 {

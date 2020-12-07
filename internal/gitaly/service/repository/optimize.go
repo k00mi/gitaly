@@ -108,7 +108,11 @@ func (s *server) removeRefEmptyDirs(ctx context.Context, repository *gitalypb.Re
 }
 
 func (s *server) optimizeRepository(ctx context.Context, repository *gitalypb.Repository) error {
-	hasBitmap, err := stats.HasBitmap(repository)
+	repoPath, err := s.locator.GetRepoPath(repository)
+	if err != nil {
+		return err
+	}
+	hasBitmap, err := stats.HasBitmap(repoPath)
 	if err != nil {
 		return helper.ErrInternal(err)
 	}

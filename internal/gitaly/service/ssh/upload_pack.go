@@ -76,7 +76,7 @@ func (s *server) sshUploadPack(stream gitalypb.SSHService_SSHUploadPackServer, r
 		return err
 	}
 
-	git.WarnIfTooManyBitmaps(ctx, req.GetRepository())
+	git.WarnIfTooManyBitmaps(ctx, req.GetRepository().StorageName, repoPath)
 
 	globalOpts := git.UploadPackFilterConfig()
 	for _, o := range req.GitConfigOptions {

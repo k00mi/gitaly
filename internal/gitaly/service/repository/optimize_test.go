@@ -46,7 +46,7 @@ func TestOptimizeRepository(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	hasBitmap, err := stats.HasBitmap(testRepo)
+	hasBitmap, err := stats.HasBitmap(testRepoPath)
 	require.NoError(t, err)
 	require.True(t, hasBitmap, "expect a bitmap since we just repacked with -b")
 

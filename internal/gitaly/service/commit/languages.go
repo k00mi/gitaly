@@ -38,7 +38,7 @@ func (s *server) CommitLanguages(ctx context.Context, req *gitalypb.CommitLangua
 		revision = string(defaultBranch)
 	}
 
-	commitID, err := lookupRevision(ctx, repo, revision)
+	commitID, err := s.lookupRevision(ctx, repo, revision)
 	if err != nil {
 		return nil, err
 	}
@@ -87,11 +87,13 @@ func (ls languageSorter) Len() int           { return len(ls) }
 func (ls languageSorter) Swap(i, j int)      { ls[i], ls[j] = ls[j], ls[i] }
 func (ls languageSorter) Less(i, j int) bool { return ls[i].Share > ls[j].Share }
 
-func lookupRevision(ctx context.Context, repo *gitalypb.Repository, revision string) (string, error) {
-	repoPath, env, err := alternates.PathAndEnv(repo)
+func (s *server) lookupRevision(ctx context.Context, repo *gitalypb.Repository, revision string) (string, error) {
+	repoPath, err := s.locator.GetRepoPath(repo)
 	if err != nil {
 		return "", err
 	}
+
+	env := alternates.Env(repoPath, repo.GetGitObjectDirectory(), repo.GetGitAlternateObjectDirectories())
 
 	rev, err := checkRevision(ctx, repoPath, env, revision)
 	if err != nil {

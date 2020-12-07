@@ -118,10 +118,12 @@ func (s *Server) userSquashGo(ctx context.Context, req *gitalypb.UserSquashReque
 		return nil, helper.ErrInvalidArgument(errors.New("worktree id can't contain slashes"))
 	}
 
-	repoPath, env, err := alternates.PathAndEnv(req.GetRepository())
+	repo := req.GetRepository()
+	repoPath, err := s.locator.GetRepoPath(repo)
 	if err != nil {
-		return nil, helper.ErrInternal(fmt.Errorf("alternate path: %w", err))
+		return nil, helper.ErrInternal(fmt.Errorf("repo path: %w", err))
 	}
+	env := alternates.Env(repoPath, repo.GetGitObjectDirectory(), repo.GetGitAlternateObjectDirectories())
 
 	sha, err := s.runUserSquashGo(ctx, req, env, repoPath)
 	if err != nil {

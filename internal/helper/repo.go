@@ -16,6 +16,7 @@ import (
 // RPC Repository message. The errors returned are gRPC errors with
 // relevant error codes and should be passed back to gRPC without further
 // decoration.
+// Deprecated: please use storage.Locator to define the project path.
 func GetRepoPath(repo repository.GitRepo) (string, error) {
 	repoPath, err := GetPath(repo)
 	if err != nil {

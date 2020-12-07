@@ -66,7 +66,7 @@ func (s *server) CalculateChecksum(ctx context.Context, in *gitalypb.CalculateCh
 	}
 
 	if err := cmd.Wait(); checksum == nil || err != nil {
-		if isValidRepo(ctx, repo) {
+		if s.isValidRepo(ctx, repo) {
 			return &gitalypb.CalculateChecksumResponse{Checksum: blankChecksum}, nil
 		}
 
@@ -76,11 +76,13 @@ func (s *server) CalculateChecksum(ctx context.Context, in *gitalypb.CalculateCh
 	return &gitalypb.CalculateChecksumResponse{Checksum: hex.EncodeToString(checksum.Bytes())}, nil
 }
 
-func isValidRepo(ctx context.Context, repo *gitalypb.Repository) bool {
-	repoPath, env, err := alternates.PathAndEnv(repo)
+func (s *server) isValidRepo(ctx context.Context, repo *gitalypb.Repository) bool {
+	repoPath, err := s.locator.GetRepoPath(repo)
 	if err != nil {
 		return false
 	}
+
+	env := alternates.Env(repoPath, repo.GetGitObjectDirectory(), repo.GetGitAlternateObjectDirectories())
 
 	stdout := &bytes.Buffer{}
 	opts := []git.Option{git.ValueFlag{"-C", repoPath}}
