@@ -11,7 +11,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const deleteTempFilesOlderThanDuration = 7 * 24 * time.Hour
+const (
+	deleteTempFilesOlderThanDuration = 7 * 24 * time.Hour
+	minimumDirPerm                   = 0700
+)
 
 // Perform will perform housekeeping duties on a repository
 func Perform(ctx context.Context, repoPath string) error {
@@ -63,8 +66,26 @@ func Perform(ctx context.Context, repoPath string) error {
 	return err
 }
 
-func myLogger(ctx context.Context) *log.Entry {
-	return ctxlogrus.Extract(ctx).WithField("system", "housekeeping")
+// Delete a directory structure while ensuring the current user has permission to delete the directory structure
+func forceRemove(ctx context.Context, path string) error {
+	err := os.RemoveAll(path)
+	if err == nil {
+		return nil
+	}
+
+	// Delete failed. Try again after chmod'ing directories recursively
+	if err := FixDirectoryPermissions(ctx, path); err != nil {
+		return err
+	}
+
+	return os.RemoveAll(path)
+}
+
+func shouldRemove(path string, modTime time.Time, mode os.FileMode) bool {
+	base := filepath.Base(path)
+
+	// Only delete entries starting with `tmp_` and older than a week
+	return strings.HasPrefix(base, "tmp_") && time.Since(modTime) >= deleteTempFilesOlderThanDuration
 }
 
 // FixDirectoryPermissions does a recursive directory walk to look for
@@ -74,8 +95,6 @@ func myLogger(ctx context.Context) *log.Entry {
 func FixDirectoryPermissions(ctx context.Context, path string) error {
 	return fixDirectoryPermissions(ctx, path, make(map[string]struct{}))
 }
-
-const minimumDirPerm = 0700
 
 func fixDirectoryPermissions(ctx context.Context, path string, retriedPaths map[string]struct{}) error {
 	logger := myLogger(ctx)
@@ -105,24 +124,6 @@ func fixDirectoryPermissions(ctx context.Context, path string, retriedPaths map[
 	})
 }
 
-// Delete a directory structure while ensuring the current user has permission to delete the directory structure
-func forceRemove(ctx context.Context, path string) error {
-	err := os.RemoveAll(path)
-	if err == nil {
-		return nil
-	}
-
-	// Delete failed. Try again after chmod'ing directories recursively
-	if err := FixDirectoryPermissions(ctx, path); err != nil {
-		return err
-	}
-
-	return os.RemoveAll(path)
-}
-
-func shouldRemove(path string, modTime time.Time, mode os.FileMode) bool {
-	base := filepath.Base(path)
-
-	// Only delete entries starting with `tmp_` and older than a week
-	return strings.HasPrefix(base, "tmp_") && time.Since(modTime) >= deleteTempFilesOlderThanDuration
+func myLogger(ctx context.Context) *log.Entry {
+	return ctxlogrus.Extract(ctx).WithField("system", "housekeeping")
 }
