@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
@@ -142,11 +141,8 @@ func init() {
 	}
 }
 
-const gitalyDisabledRefEnvVar = "GITALY_DISABLE_REF_TRANSACTIONS"
-
 func shouldUseTransaction(ctx context.Context, method string) bool {
-	// Disabling based on a environment variable, as a poor mans feature flag.
-	if _, ok := os.LookupEnv(gitalyDisabledRefEnvVar); ok {
+	if !featureflag.IsEnabled(ctx, featureflag.ReferenceTransactions) {
 		return false
 	}
 

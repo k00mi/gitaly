@@ -20,7 +20,10 @@ import (
 )
 
 func TestSuccessfulUserDeleteTagRequest(t *testing.T) {
-	testWithFeature(t, featureflag.GoUserDeleteTag, testSuccessfulUserDeleteTagRequest)
+	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.ReferenceTransactions,
+		featureflag.GoUserDeleteTag,
+	}).Run(t, testSuccessfulUserDeleteTagRequest)
 }
 
 func testSuccessfulUserDeleteTagRequest(t *testing.T, ctx context.Context) {
@@ -53,7 +56,10 @@ func testSuccessfulUserDeleteTagRequest(t *testing.T, ctx context.Context) {
 }
 
 func TestSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T) {
-	testWithFeature(t, featureflag.GoUserDeleteTag, testSuccessfulGitHooksForUserDeleteTagRequest)
+	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.ReferenceTransactions,
+		featureflag.GoUserDeleteTag,
+	}).Run(t, testSuccessfulGitHooksForUserDeleteTagRequest)
 }
 
 func testSuccessfulGitHooksForUserDeleteTagRequest(t *testing.T, ctx context.Context) {
@@ -145,9 +151,12 @@ end`, config.Config.Git.BinPath)
 }
 
 func TestSuccessfulUserCreateTagRequest(t *testing.T) {
-	ctx, cancel := testhelper.Context()
-	defer cancel()
+	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.ReferenceTransactions,
+	}).Run(t, testSuccessfulUserCreateTagRequest)
+}
 
+func testSuccessfulUserCreateTagRequest(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -242,7 +251,10 @@ func TestSuccessfulUserCreateTagRequest(t *testing.T) {
 // see
 // https://gitlab.com/gitlab-org/gitaly/-/merge_requests/2839#note_458751929
 func TestUserDeleteTagsuccessfulDeletionOfPrefixedTag(t *testing.T) {
-	testWithFeature(t, featureflag.GoUserDeleteTag, testUserDeleteTagsuccessfulDeletionOfPrefixedTag)
+	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.ReferenceTransactions,
+		featureflag.GoUserDeleteTag,
+	}).Run(t, testUserDeleteTagsuccessfulDeletionOfPrefixedTag)
 }
 
 func testUserDeleteTagsuccessfulDeletionOfPrefixedTag(t *testing.T, ctx context.Context) {
@@ -342,7 +354,10 @@ func testSuccessfulGitHooksForUserCreateTagRequest(t *testing.T, ctx context.Con
 }
 
 func TestFailedUserDeleteTagRequestDueToValidation(t *testing.T) {
-	testWithFeature(t, featureflag.GoUserDeleteTag, testFailedUserDeleteTagRequestDueToValidation)
+	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.GoUserDeleteTag,
+		featureflag.ReferenceTransactions,
+	}).Run(t, testFailedUserDeleteTagRequestDueToValidation)
 }
 
 func testFailedUserDeleteTagRequestDueToValidation(t *testing.T, ctx context.Context) {
@@ -401,7 +416,10 @@ func testFailedUserDeleteTagRequestDueToValidation(t *testing.T, ctx context.Con
 }
 
 func TestFailedUserDeleteTagDueToHooks(t *testing.T) {
-	testWithFeature(t, featureflag.GoUserDeleteTag, testFailedUserDeleteTagDueToHooks)
+	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.GoUserDeleteTag,
+		featureflag.ReferenceTransactions,
+	}).Run(t, testFailedUserDeleteTagDueToHooks)
 }
 
 func testFailedUserDeleteTagDueToHooks(t *testing.T, ctx context.Context) {
@@ -569,7 +587,10 @@ func TestFailedUserCreateTagRequestDueToValidation(t *testing.T) {
 }
 
 func TestTagHookOutput(t *testing.T) {
-	testWithFeature(t, featureflag.GoUserDeleteTag, testTagHookOutput)
+	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.GoUserDeleteTag,
+		featureflag.ReferenceTransactions,
+	}).Run(t, testTagHookOutput)
 }
 
 func testTagHookOutput(t *testing.T, ctx context.Context) {

@@ -21,6 +21,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
+	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	pconfig "gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -456,6 +457,12 @@ func runSmartHTTPHookServiceServer(t *testing.T) (*grpc.Server, string) {
 }
 
 func TestPostReceiveWithTransactionsViaPraefect(t *testing.T) {
+	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.ReferenceTransactions,
+	}).Run(t, testPostReceiveWithTransactionsViaPraefect)
+}
+
+func testPostReceiveWithTransactionsViaPraefect(t *testing.T, ctx context.Context) {
 	defer func(cfg config.Cfg) {
 		config.Config = cfg
 	}(config.Config)
@@ -524,9 +531,6 @@ func TestPostReceiveWithTransactionsViaPraefect(t *testing.T) {
 
 	client, conn := newSmartHTTPClient(t, "unix://"+gitalyServer.Socket())
 	defer conn.Close()
-
-	ctx, cancel := testhelper.Context()
-	defer cancel()
 
 	stream, err := client.PostReceivePack(ctx)
 	require.NoError(t, err)

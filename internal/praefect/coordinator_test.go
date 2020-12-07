@@ -5,7 +5,6 @@ import (
 	"crypto/sha1"
 	"errors"
 	"io/ioutil"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -969,23 +968,20 @@ func TestStreamDirectorStorageScopeError(t *testing.T) {
 	})
 }
 
-func TestDisabledTransactionsWithEnvVar(t *testing.T) {
-	os.Setenv(gitalyDisabledRefEnvVar, "1")
-	defer os.Unsetenv(gitalyDisabledRefEnvVar)
-
-	ctx, cancel := testhelper.Context()
-	defer cancel()
-
-	var rpcname string
-	for name, enabledFn := range transactionRPCs {
-		if enabledFn(ctx) {
-			rpcname = name
-			break
+func TestDisabledTransactionsWithFeatureFlag(t *testing.T) {
+	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.ReferenceTransactions,
+	}).Run(t, func(t *testing.T, ctx context.Context) {
+		for rpc, enabledFn := range transactionRPCs {
+			if enabledFn(ctx) {
+				require.Equal(t,
+					featureflag.IsEnabled(ctx, featureflag.ReferenceTransactions),
+					shouldUseTransaction(ctx, rpc),
+				)
+				break
+			}
 		}
-	}
-
-	require.NotEmpty(t, rpcname, "no enabled reference transaction RPCs")
-	require.False(t, shouldUseTransaction(ctx, rpcname))
+	})
 }
 
 func requireScopeOperation(t *testing.T, registry *protoregistry.Registry, fullMethod string, scope protoregistry.Scope, op protoregistry.OpType) {

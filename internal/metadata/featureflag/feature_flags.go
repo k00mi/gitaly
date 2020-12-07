@@ -13,6 +13,8 @@ var (
 	GoFetchSourceBranch = FeatureFlag{Name: "go_fetch_source_branch", OnByDefault: false}
 	// DistributedReads allows praefect to redirect accessor operations to up-to-date secondaries
 	DistributedReads = FeatureFlag{Name: "distributed_reads", OnByDefault: false}
+	// ReferenceTransactions will handle Git reference updates via the transaction service for strong consistency
+	ReferenceTransactions = FeatureFlag{Name: "reference_transactions", OnByDefault: true}
 	// LogCommandStats will log additional rusage stats for commands
 	LogCommandStats = FeatureFlag{Name: "log_command_stats", OnByDefault: false}
 	// GoUserMergeBranch enables the Go implementation of UserMergeBranch
@@ -108,6 +110,7 @@ var All = []FeatureFlag{
 	GoFetchSourceBranch,
 	DistributedReads,
 	LogCommandStats,
+	ReferenceTransactions,
 	GoUserMergeBranch,
 	GoUserFFBranch,
 	GoUserCreateBranch,
