@@ -26,12 +26,6 @@ const (
 	GitalyInternalURL = "ssh://gitaly/internal.git"
 )
 
-const (
-	// EnvVarUploadPackAllowAnySHA1InWant enables the capability to request
-	// individual SHA1's from the remote repo
-	EnvVarUploadPackAllowAnySHA1InWant = "uploadpack.allowAnySHA1InWant=true"
-)
-
 var (
 	envInjector = tracing.NewEnvInjector()
 )

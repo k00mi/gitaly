@@ -283,8 +283,6 @@ func (s *server) repoWithBranchCommit(ctx context.Context, srcRepo, targetRepo *
 	if err != nil {
 		return err
 	}
-	// to enable fetching a specific SHA:
-	env = append(env, gitalyssh.EnvVarUploadPackAllowAnySHA1InWant)
 
 	srcRepoPath, err := s.locator.GetRepoPath(srcRepo)
 	if err != nil {
