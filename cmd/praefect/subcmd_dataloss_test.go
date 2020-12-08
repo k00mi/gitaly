@@ -67,10 +67,18 @@ func TestDatalossSubcommand(t *testing.T) {
 		},
 	}
 
-	gs := datastore.NewPostgresRepositoryStore(getDB(t), cfg.StorageNames())
+	db := getDB(t)
+
+	gs := datastore.NewPostgresRepositoryStore(db, cfg.StorageNames())
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
+
+	_, err := db.ExecContext(ctx, `
+		INSERT INTO shard_primaries (shard_name, node_name, elected_by_praefect, elected_at)
+		VALUES ('virtual-storage-1', 'gitaly-1', 'ignored', now())
+	`)
+	require.NoError(t, err)
 
 	require.NoError(t, gs.SetGeneration(ctx, "virtual-storage-1", "repository-1", "gitaly-1", 1))
 	require.NoError(t, gs.SetGeneration(ctx, "virtual-storage-1", "repository-1", "gitaly-2", 0))
