@@ -69,33 +69,45 @@ func (sc SubCmd) CommandArgs() ([]string, error) {
 	}
 	safeArgs = append(safeArgs, sc.Name)
 
-	for _, o := range sc.Flags {
+	commandArgs, err := assembleCommandArgs(sc.Name, sc.Flags, sc.Args, sc.PostSepArgs)
+	if err != nil {
+		return nil, err
+	}
+	safeArgs = append(safeArgs, commandArgs...)
+
+	return safeArgs, nil
+}
+
+func assembleCommandArgs(command string, flags []Option, args []string, postSepArgs []string) ([]string, error) {
+	var commandArgs []string
+
+	for _, o := range flags {
 		args, err := o.OptionArgs()
 		if err != nil {
 			return nil, err
 		}
-		safeArgs = append(safeArgs, args...)
+		commandArgs = append(commandArgs, args...)
 	}
 
-	for _, a := range sc.Args {
+	for _, a := range args {
 		if err := validatePositionalArg(a); err != nil {
 			return nil, err
 		}
-		safeArgs = append(safeArgs, a)
+		commandArgs = append(commandArgs, a)
 	}
 
-	if supportsEndOfOptions(sc.Name) {
-		safeArgs = append(safeArgs, "--end-of-options")
+	if supportsEndOfOptions(command) {
+		commandArgs = append(commandArgs, "--end-of-options")
 	}
 
-	if len(sc.PostSepArgs) > 0 {
-		safeArgs = append(safeArgs, "--")
+	if len(postSepArgs) > 0 {
+		commandArgs = append(commandArgs, "--")
 	}
 
 	// post separator args do not need any validation
-	safeArgs = append(safeArgs, sc.PostSepArgs...)
+	commandArgs = append(commandArgs, postSepArgs...)
 
-	return safeArgs, nil
+	return commandArgs, nil
 }
 
 // GlobalOption is an interface for all options which can be globally applied
