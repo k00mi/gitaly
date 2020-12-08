@@ -106,41 +106,28 @@ func NewCachingStorageProvider(logger logrus.FieldLogger, sp SecondariesProvider
 	return csp, nil
 }
 
-type (
-	notificationEntry struct {
-		VirtualStorage string `json:"virtual_storage"`
-		RelativePath   string `json:"relative_path"`
-	}
-
-	changeNotification struct {
-		Old []notificationEntry `json:"old"`
-		New []notificationEntry `json:"new"`
-	}
-)
+type notificationEntry struct {
+	VirtualStorage string   `json:"virtual_storage"`
+	RelativePaths  []string `json:"relative_paths"`
+}
 
 func (c *CachingStorageProvider) Notification(n glsql.Notification) {
-	var change changeNotification
-	if err := json.NewDecoder(strings.NewReader(n.Payload)).Decode(&change); err != nil {
+	// it is a new format of the notification message
+	var changes []notificationEntry
+	if err := json.NewDecoder(strings.NewReader(n.Payload)).Decode(&changes); err != nil {
 		c.disableCaching() // as we can't update cache properly we should disable it
 		c.callbackLogger.WithError(err).WithField("channel", n.Channel).Error("received payload can't be processed, cache disabled")
 		return
 	}
 
-	entries := map[string][]string{}
-	for _, notificationEntries := range [][]notificationEntry{change.Old, change.New} {
-		for _, entry := range notificationEntries {
-			entries[entry.VirtualStorage] = append(entries[entry.VirtualStorage], entry.RelativePath)
-		}
-	}
-
-	for virtualStorage, relativePaths := range entries {
-		cache, found := c.getCache(virtualStorage)
+	for _, entry := range changes {
+		cache, found := c.getCache(entry.VirtualStorage)
 		if !found {
-			c.callbackLogger.WithError(errNotExistingVirtualStorage).WithField("virtual_storage", virtualStorage).Error("cache not found")
+			c.callbackLogger.WithError(errNotExistingVirtualStorage).WithField("virtual_storage", entry.VirtualStorage).Error("cache not found")
 			continue
 		}
 
-		for _, relativePath := range relativePaths {
+		for _, relativePath := range entry.RelativePaths {
 			cache.Remove(relativePath)
 		}
 	}

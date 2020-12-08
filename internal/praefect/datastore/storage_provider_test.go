@@ -219,9 +219,6 @@ func TestCachingStorageProvider_GetSyncedNodes(t *testing.T) {
 		storages2 := cache.GetSyncedNodes(ctx, "vs", "/repo/path/1", "g1")
 		require.ElementsMatch(t, []string{"g1", "g2", "g3"}, storages2)
 
-		// valid payload enables caching again
-		cache.Notification(glsql.Notification{Channel: "notification_channel_2", Payload: `{}`})
-
 		// third access retrieves data and caches it
 		storages3 := cache.GetSyncedNodes(ctx, "vs", "/repo/path/1", "g1")
 		require.ElementsMatch(t, []string{"g1", "g2", "g3"}, storages3)
@@ -271,12 +268,10 @@ func TestCachingStorageProvider_GetSyncedNodes(t *testing.T) {
 
 		// notification evicts entries for '/repo/path/2' from the cache
 		cache.Notification(glsql.Notification{Payload: `
-			{
-				"old":[
-					{"virtual_storage": "bad", "relative_path": "/repo/path/1"}
-				],
-				"new":[{"virtual_storage": "vs", "relative_path": "/repo/path/2"}]
-			}`},
+			[
+				{"virtual_storage": "bad", "relative_paths": ["/repo/path/1"]},
+				{"virtual_storage": "vs", "relative_paths": ["/repo/path/2"]}
+			]`},
 		)
 
 		// second access re-uses cached data for '/repo/path/1'
@@ -342,8 +337,8 @@ func TestCachingStorageProvider_GetSyncedNodes(t *testing.T) {
 		require.NoError(t, err)
 		cache.Connected()
 
-		nf1 := glsql.Notification{Payload: `{"new":[{"virtual_storage":"vs","relative_path":"/repo/path/1"}]}`}
-		nf2 := glsql.Notification{Payload: `{"new":[{"virtual_storage":"vs","relative_path":"/repo/path/2"}]}`}
+		nf1 := glsql.Notification{Payload: `[{"virtual_storage": "vs", "relative_paths": ["/repo/path/1"]}]`}
+		nf2 := glsql.Notification{Payload: `[{"virtual_storage": "vs", "relative_paths": ["/repo/path/2"]}]`}
 
 		var operations []func()
 		for i := 0; i < 100; i++ {
