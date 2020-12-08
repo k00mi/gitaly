@@ -76,11 +76,9 @@ func midxSetConfig(ctx context.Context, repo repository.GitRepo) error {
 
 func midxWrite(ctx context.Context, repo repository.GitRepo) error {
 	cmd, err := git.SafeCmd(ctx, repo, nil,
-		git.SubCmd{
-			Name: "multi-pack-index",
-			Flags: []git.Option{
-				git.SubSubCmd{Name: "write"},
-			},
+		git.SubSubCmd{
+			Name:   "multi-pack-index",
+			Action: "write",
 		},
 	)
 
@@ -114,11 +112,9 @@ func midxVerify(ctx context.Context, repo repository.GitRepo) error {
 	ctxlogger := ctxlogrus.Extract(ctx)
 
 	cmd, err := git.SafeCmd(ctx, repo, nil,
-		git.SubCmd{
-			Name: "multi-pack-index",
-			Flags: []git.Option{
-				git.SubSubCmd{Name: "verify"},
-			},
+		git.SubSubCmd{
+			Name:   "multi-pack-index",
+			Action: "verify",
 		},
 	)
 	if err != nil {
@@ -152,11 +148,9 @@ func (s *server) midxRewrite(ctx context.Context, repo repository.GitRepo) error
 
 func midxExpire(ctx context.Context, repo repository.GitRepo) error {
 	cmd, err := git.SafeCmd(ctx, repo, nil,
-		git.SubCmd{
-			Name: "multi-pack-index",
-			Flags: []git.Option{
-				git.SubSubCmd{Name: "expire"},
-			},
+		git.SubSubCmd{
+			Name:   "multi-pack-index",
+			Action: "expire",
 		},
 	)
 	if err != nil {
@@ -196,10 +190,10 @@ func (s *server) midxRepack(ctx context.Context, repo repository.GitRepo) error 
 	// Bitmap index 'repack.writeBitmaps' is not yet supported.
 	cmd, err := git.SafeCmd(ctx, repo,
 		repackConfig(ctx, false),
-		git.SubCmd{
-			Name: "multi-pack-index",
+		git.SubSubCmd{
+			Name:   "multi-pack-index",
+			Action: "repack",
 			Flags: []git.Option{
-				git.SubSubCmd{Name: "repack"},
 				git.ValueFlag{Name: "--batch-size", Value: strconv.FormatInt(batchSize, 10)},
 			},
 		},

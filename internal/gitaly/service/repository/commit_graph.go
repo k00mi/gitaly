@@ -24,10 +24,10 @@ func (s *server) WriteCommitGraph(ctx context.Context, in *gitalypb.WriteCommitG
 
 func (s *server) writeCommitGraph(ctx context.Context, in *gitalypb.WriteCommitGraphRequest) error {
 	cmd, err := git.SafeCmd(ctx, in.GetRepository(), nil,
-		git.SubCmd{
-			Name: "commit-graph",
+		git.SubSubCmd{
+			Name:   "commit-graph",
+			Action: "write",
 			Flags: []git.Option{
-				git.SubSubCmd{Name: "write"},
 				git.Flag{Name: "--reachable"},
 			},
 		},

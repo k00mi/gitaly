@@ -55,8 +55,6 @@ type cmdStream struct {
 	Out, Err io.Writer // standard output and error
 }
 
-var subCmdNameRegex = regexp.MustCompile(`^[[:alnum:]]+(-[[:alnum:]]+)*$`)
-
 // Subcommand returns the subcommand name
 func (sc SubCmd) Subcommand() string { return sc.Name }
 
@@ -126,16 +124,43 @@ type Option interface {
 // SubSubCmd is a positional argument that appears in the list of options for
 // a subcommand.
 type SubSubCmd struct {
+	// Name is the name of the subcommand, e.g. "remote" in `git remote set-url`
 	Name string
+	// Action is the action of the subcommand, e.g. "set-url" in `git remote set-url`
+	Action string
+
+	// Flags are optional flags before the positional args
+	Flags []Option
+	// Args are positional arguments after all flags
+	Args []string
+	// PostSepArgs are positional args after the "--" separator
+	PostSepArgs []string
 }
 
-// OptionArgs returns an error if the command name or options are not
-// sanitary
-func (sc SubSubCmd) OptionArgs() ([]string, error) {
-	if !subCmdNameRegex.MatchString(sc.Name) {
-		return nil, fmt.Errorf("invalid sub-sub command name %q: %w", sc.Name, ErrInvalidArg)
+func (sc SubSubCmd) Subcommand() string { return sc.Name }
+
+var actionRegex = regexp.MustCompile(`^[[:alnum:]]+[-[:alnum:]]*$`)
+
+func (sc SubSubCmd) CommandArgs() ([]string, error) {
+	var safeArgs []string
+
+	if _, ok := subcommands[sc.Name]; !ok {
+		return nil, fmt.Errorf("invalid sub command name %q: %w", sc.Name, ErrInvalidArg)
 	}
-	return []string{sc.Name}, nil
+	safeArgs = append(safeArgs, sc.Name)
+
+	if !actionRegex.MatchString(sc.Action) {
+		return nil, fmt.Errorf("invalid sub command action %q: %w", sc.Action, ErrInvalidArg)
+	}
+	safeArgs = append(safeArgs, sc.Action)
+
+	commandArgs, err := assembleCommandArgs(sc.Name, sc.Flags, sc.Args, sc.PostSepArgs)
+	if err != nil {
+		return nil, err
+	}
+	safeArgs = append(safeArgs, commandArgs...)
+
+	return safeArgs, nil
 }
 
 // ConfigPair is a sub-command option for use with commands like "git config"
@@ -368,7 +393,7 @@ func SafeBareCmdInDir(ctx context.Context, dir string, env []string, globals []G
 // SafeStdinCmd creates a git.Command with the given args and Repository that is
 // suitable for Write()ing to. It validates the arguments in the command before
 // executing.
-func SafeStdinCmd(ctx context.Context, repo repository.GitRepo, globals []GlobalOption, sc SubCmd, opts ...CmdOpt) (*command.Command, error) {
+func SafeStdinCmd(ctx context.Context, repo repository.GitRepo, globals []GlobalOption, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
 	cc := &cmdCfg{}
 
 	if err := handleOpts(ctx, sc, cc, opts); err != nil {
@@ -385,7 +410,7 @@ func SafeStdinCmd(ctx context.Context, repo repository.GitRepo, globals []Global
 
 // SafeCmdWithoutRepo works like Command but without a git repository. It
 // validates the arguments in the command before executing.
-func SafeCmdWithoutRepo(ctx context.Context, globals []GlobalOption, sc SubCmd, opts ...CmdOpt) (*command.Command, error) {
+func SafeCmdWithoutRepo(ctx context.Context, globals []GlobalOption, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
 	cc := &cmdCfg{}
 
 	if err := handleOpts(ctx, sc, cc, opts); err != nil {

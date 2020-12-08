@@ -33,9 +33,6 @@ func TestFlagValidation(t *testing.T) {
 		{option: ValueFlag{"-k", "--anything"}, valid: true},
 		{option: ValueFlag{"-k", ""}, valid: true},
 
-		// valid SubSubCmd inputs
-		{option: SubSubCmd{"meow"}, valid: true},
-
 		// valid ConfigPair inputs
 		{option: ConfigPair{Key: "a.b.c", Value: "d"}, valid: true},
 		{option: ConfigPair{Key: "core.sound", Value: "meow"}, valid: true},
@@ -51,9 +48,6 @@ func TestFlagValidation(t *testing.T) {
 
 		// invalid ValueFlag inputs
 		{option: ValueFlag{"k", "asdf"}}, // missing dash
-
-		// invalid SubSubCmd inputs
-		{option: SubSubCmd{"--meow"}}, // cannot start with dash
 
 		// invalid ConfigPair inputs
 		{option: ConfigPair{Key: "", Value: ""}},            // key cannot be empty
@@ -78,7 +72,7 @@ func TestFlagValidation(t *testing.T) {
 func TestSafeCmdInvalidArg(t *testing.T) {
 	for _, tt := range []struct {
 		globals []GlobalOption
-		subCmd  SubCmd
+		subCmd  Cmd
 		errMsg  string
 	}{
 		{
@@ -100,11 +94,11 @@ func TestSafeCmdInvalidArg(t *testing.T) {
 			errMsg: `positional arg "--tweet" cannot start with dash '-': invalid argument`,
 		},
 		{
-			subCmd: SubCmd{
-				Name:  "update-ref",
-				Flags: []Option{SubSubCmd{"-invalid"}},
+			subCmd: SubSubCmd{
+				Name:   "update-ref",
+				Action: "-invalid",
 			},
-			errMsg: `invalid sub-sub command name "-invalid": invalid argument`,
+			errMsg: `invalid sub command action "-invalid": invalid argument`,
 		},
 	} {
 		_, err := SafeCmd(
@@ -136,7 +130,7 @@ func TestSafeCmdValid(t *testing.T) {
 	for _, tt := range []struct {
 		desc       string
 		globals    []GlobalOption
-		subCmd     SubCmd
+		subCmd     Cmd
 		expectArgs []string
 	}{
 		{
@@ -181,10 +175,10 @@ func TestSafeCmdValid(t *testing.T) {
 		},
 		{
 			desc: "output to stdout",
-			subCmd: SubCmd{
-				Name: "update-ref",
+			subCmd: SubSubCmd{
+				Name:   "update-ref",
+				Action: "verb",
 				Flags: []Option{
-					SubSubCmd{"verb"},
 					OutputToStdout,
 					Flag{Name: "--adjective"},
 				},

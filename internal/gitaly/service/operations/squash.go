@@ -321,7 +321,7 @@ func (s *Server) addWorktree(ctx context.Context, repo *gitalypb.Repository, wor
 	}
 
 	args := []string{worktreePath}
-	flags := []git.Option{git.SubSubCmd{Name: "add"}, git.Flag{Name: "--detach"}}
+	flags := []git.Option{git.Flag{Name: "--detach"}}
 	if committish != "" {
 		args = append(args, committish)
 	} else {
@@ -330,7 +330,12 @@ func (s *Server) addWorktree(ctx context.Context, repo *gitalypb.Repository, wor
 
 	var stderr bytes.Buffer
 	cmd, err := git.SafeCmd(ctx, repo, nil,
-		git.SubCmd{Name: "worktree", Flags: flags, Args: args},
+		git.SubSubCmd{
+			Name:   "worktree",
+			Action: "add",
+			Flags:  flags,
+			Args:   args,
+		},
 		git.WithStderr(&stderr),
 		git.WithRefTxHook(ctx, repo, s.cfg),
 	)
@@ -347,10 +352,11 @@ func (s *Server) addWorktree(ctx context.Context, repo *gitalypb.Repository, wor
 
 func (s *Server) removeWorktree(ctx context.Context, repo *gitalypb.Repository, worktreeName string) error {
 	cmd, err := git.SafeCmd(ctx, repo, nil,
-		git.SubCmd{
-			Name:  "worktree",
-			Flags: []git.Option{git.SubSubCmd{Name: "remove"}, git.Flag{Name: "--force"}},
-			Args:  []string{worktreeName},
+		git.SubSubCmd{
+			Name:   "worktree",
+			Action: "remove",
+			Flags:  []git.Option{git.Flag{Name: "--force"}},
+			Args:   []string{worktreeName},
 		},
 		git.WithRefTxHook(ctx, repo, s.cfg),
 	)

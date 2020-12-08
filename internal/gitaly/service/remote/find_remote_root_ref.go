@@ -16,7 +16,11 @@ const headPrefix = "HEAD branch: "
 
 func findRemoteRootRef(ctx context.Context, repo *gitalypb.Repository, remote string) (string, error) {
 	cmd, err := git.SafeCmd(ctx, repo, nil,
-		git.SubCmd{Name: "remote", Flags: []git.Option{git.SubSubCmd{Name: "show"}}, Args: []string{remote}},
+		git.SubSubCmd{
+			Name:   "remote",
+			Action: "show",
+			Args:   []string{remote},
+		},
 		git.WithRefTxHook(ctx, repo, config.Config),
 	)
 	if err != nil {
