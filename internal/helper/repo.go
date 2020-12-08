@@ -68,6 +68,7 @@ func GetPath(repo repository.GitRepo) (string, error) {
 
 // GetStorageByName will return the path for the storage, which is fetched by
 // its key. An error is return if it cannot be found.
+// Deprecated: please use storage.Locator to define the storage path.
 func GetStorageByName(storageName string) (string, error) {
 	storagePath, ok := config.Config.StoragePath(storageName)
 	if !ok {

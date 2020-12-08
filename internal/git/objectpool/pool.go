@@ -14,7 +14,6 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -45,7 +44,7 @@ type ObjectPool struct {
 // shard. Relative path is validated to match the expected naming and directory
 // structure. If the shard cannot be found, this function returns an error.
 func NewObjectPool(cfg config.Cfg, locator storage.Locator, storageName, relativePath string) (pool *ObjectPool, err error) {
-	storagePath, err := helper.GetStorageByName(storageName)
+	storagePath, err := locator.GetStorageByName(storageName)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +156,7 @@ func FromRepo(cfg config.Cfg, locator storage.Locator, repo *gitalypb.Repository
 		return nil, err
 	}
 
-	altPathRelativeToStorage, err := objectPathRelativeToStorage(repo.GetStorageName(), dir, repoPath)
+	altPathRelativeToStorage, err := objectPathRelativeToStorage(locator, repo.GetStorageName(), dir, repoPath)
 	if err != nil {
 		return nil, err
 	}
@@ -213,8 +212,8 @@ func getAlternateObjectDir(locator storage.Locator, repo *gitalypb.Repository) (
 
 // objectPathRelativeToStorage takes an object path that's relative to a repository's object directory
 // and returns the path relative to the storage path of the repository.
-func objectPathRelativeToStorage(storageName, path, repoPath string) (string, error) {
-	storagePath, err := helper.GetStorageByName(storageName)
+func objectPathRelativeToStorage(locator storage.Locator, storageName, path, repoPath string) (string, error) {
+	storagePath, err := locator.GetStorageByName(storageName)
 	if err != nil {
 		return "", err
 	}
