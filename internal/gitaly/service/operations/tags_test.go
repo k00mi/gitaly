@@ -368,6 +368,89 @@ func TestSuccessfulUserCreateTagRequestToNonCommit(t *testing.T) {
 	}
 }
 
+func TestSuccessfulUserCreateTagNestedTags(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	serverSocketPath, stop := runOperationServiceServer(t)
+	defer stop()
+
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	testCases := []struct {
+		desc             string
+		targetObject     string
+		targetObjectType string
+		expectedTag      *gitalypb.Tag
+	}{
+		{
+			desc:             "nested tags to commit",
+			targetObject:     "c7fbe50c7c7419d9701eebe64b1fdacc3df5b9dd",
+			targetObjectType: "commit",
+		},
+		{
+			desc:             "nested tags to tree",
+			targetObjectType: "tree",
+			targetObject:     "612036fac47c5d31c212b17268e2f3ba807bce1e",
+		},
+		{
+			desc:             "nested tags to blob",
+			targetObject:     "dfaa3f97ca337e20154a98ac9d0be76ddd1fcc82",
+			targetObjectType: "blob",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			targetObject := testCase.targetObject
+			nestLevel := 10
+			for i := 0; i < nestLevel; i++ {
+				tagName := fmt.Sprintf("nested-tag-%v", i)
+				tagMessage := fmt.Sprintf("This is level %v of a nested annotated tag to %v", i, testCase.targetObject)
+				request := &gitalypb.UserCreateTagRequest{
+					Repository:     testRepo,
+					TagName:        []byte(tagName),
+					TargetRevision: []byte(targetObject),
+					User:           testhelper.TestUser,
+					Message:        []byte(tagMessage),
+				}
+				response, err := client.UserCreateTag(ctx, request)
+				defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "tag", "-d", tagName).Run()
+				require.NoError(t, err)
+
+				createdID := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", tagName)
+				createdIDStr := text.ChompBytes(createdID)
+				responseOk := &gitalypb.UserCreateTagResponse{
+					Tag: &gitalypb.Tag{
+						Name: request.TagName,
+						Id:   createdIDStr,
+						//TargetCommit: is dymamically determined, filled in below
+						Message:     request.Message,
+						MessageSize: int64(len(request.Message)),
+					},
+				}
+				// Fake it up for all levels, except for ^{} == "commit"
+				responseOk.Tag.TargetCommit = response.Tag.TargetCommit
+				if testCase.targetObjectType == "commit" {
+					responseOk.Tag.TargetCommit, err = log.GetCommit(ctx, testRepo, testCase.targetObject)
+					require.NoError(t, err)
+				}
+				require.Equal(t, responseOk, response)
+
+				peeledID := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", tagName+"^{}")
+				require.Equal(t, testCase.targetObject, text.ChompBytes(peeledID))
+
+				// Set up the next level of nesting...
+				targetObject = response.Tag.Id
+			}
+		})
+	}
+}
+
 // TODO: Rename to TestUserDeleteTag_successfulDeletionOfPrefixedTag,
 // see
 // https://gitlab.com/gitlab-org/gitaly/-/merge_requests/2839#note_458751929
