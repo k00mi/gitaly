@@ -81,14 +81,6 @@ module Gitlab
       def dir
         @dir ||= ENV['GITALY_LOG_DIR']
       end
-
-      def level
-        @level ||= ENV['GITALY_LOG_LEVEL']
-      end
-
-      def format
-        @format ||= ENV['GITALY_LOG_FORMAT']
-      end
     end
 
     def git

@@ -47,8 +47,6 @@ func TestGitHooksConfig(t *testing.T) {
 
 	require.Contains(t, env, "GITALY_GITLAB_SHELL_DIR="+config.Config.GitlabShell.Dir)
 	require.Contains(t, env, "GITALY_LOG_DIR="+config.Config.Logging.Dir)
-	require.Contains(t, env, "GITALY_LOG_FORMAT="+config.Config.Logging.Format)
-	require.Contains(t, env, "GITALY_LOG_LEVEL="+config.Config.Logging.Level)
 	require.Contains(t, env, "GITALY_BIN_DIR="+config.Config.BinDir)
 
 	jsonShellConfig := ""
