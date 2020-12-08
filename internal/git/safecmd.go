@@ -309,9 +309,9 @@ func SafeCmdWithEnv(ctx context.Context, env []string, repo repository.GitRepo, 
 	}, repo, args...)
 }
 
-// SafeBareCmd creates a git.Command with the given args, stream, and env. It
+// SafeBareCmd creates a git.Command with the given args and env. It
 // validates the arguments in the command before executing.
-func SafeBareCmd(ctx context.Context, stream CmdStream, env []string, globals []Option, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
+func SafeBareCmd(ctx context.Context, env []string, globals []Option, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
 	cc := &cmdCfg{}
 
 	if err := handleOpts(ctx, sc, cc, opts); err != nil {
@@ -323,7 +323,11 @@ func SafeBareCmd(ctx context.Context, stream CmdStream, env []string, globals []
 		return nil, err
 	}
 
-	return NewCommandFactory().unsafeBareCmd(ctx, stream, append(env, cc.env...), args...)
+	return NewCommandFactory().unsafeBareCmd(ctx, CmdStream{
+		In:  cc.stdin,
+		Out: cc.stdout,
+		Err: cc.stderr,
+	}, append(env, cc.env...), args...)
 }
 
 // SafeBareCmdInDir runs SafeBareCmd in the dir.

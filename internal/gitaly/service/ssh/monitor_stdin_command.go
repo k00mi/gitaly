@@ -16,7 +16,9 @@ func monitorStdinCommand(ctx context.Context, stdin io.Reader, stdout, stderr io
 		return nil, nil, fmt.Errorf("create monitor: %v", err)
 	}
 
-	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{In: stdinPipe, Out: stdout, Err: stderr}, env, globals, sc, opts...)
+	cmd, err := git.SafeBareCmd(ctx, env, globals, sc, append([]git.CmdOpt{
+		git.WithStdin(stdinPipe), git.WithStdout(stdout), git.WithStderr(stderr),
+	}, opts...)...)
 	stdinPipe.Close() // this now belongs to cmd
 	if err != nil {
 		return nil, nil, fmt.Errorf("start cmd: %v", err)

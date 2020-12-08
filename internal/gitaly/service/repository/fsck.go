@@ -20,9 +20,11 @@ func (s *server) Fsck(ctx context.Context, req *gitalypb.FsckRequest) (*gitalypb
 
 	env := alternates.Env(repoPath, repo.GetGitObjectDirectory(), repo.GetGitAlternateObjectDirectories())
 
-	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{Out: &stdout, Err: &stderr}, env,
+	cmd, err := git.SafeBareCmd(ctx, env,
 		[]git.Option{git.ValueFlag{"--git-dir", repoPath}},
 		git.SubCmd{Name: "fsck"},
+		git.WithStdout(&stdout),
+		git.WithStderr(&stderr),
 	)
 	if err != nil {
 		return nil, err

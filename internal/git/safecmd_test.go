@@ -225,7 +225,7 @@ func TestSafeCmdValid(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, tt.expectArgs, cmd.Args()[3:])
 
-			cmd, err = SafeBareCmd(ctx, CmdStream{}, nil, tt.globals, tt.subCmd, opts...)
+			cmd, err = SafeBareCmd(ctx, nil, tt.globals, tt.subCmd, opts...)
 			require.NoError(t, err)
 			// ignore first indeterministic arg (executable path)
 			require.Equal(t, tt.expectArgs, cmd.Args()[1:])

@@ -167,13 +167,15 @@ func (s *Server) runUserSquashGo(ctx context.Context, req *gitalypb.UserSquashRe
 
 func (s *Server) diffFiles(ctx context.Context, env []string, repoPath string, req *gitalypb.UserSquashRequest) ([]byte, error) {
 	var stdout, stderr bytes.Buffer
-	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{Out: &stdout, Err: &stderr}, env,
+	cmd, err := git.SafeBareCmd(ctx, env,
 		[]git.Option{git.ValueFlag{Name: "--git-dir", Value: repoPath}},
 		git.SubCmd{
 			Name:  "diff",
 			Flags: []git.Option{git.Flag{Name: "--name-only"}, git.Flag{Name: "--diff-filter=ar"}, git.Flag{Name: "--binary"}},
 			Args:  []string{diffRange(req)},
 		},
+		git.WithStdout(&stdout),
+		git.WithStderr(&stderr),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create 'git diff': %w", gitError{ErrMsg: stderr.String(), Err: err})

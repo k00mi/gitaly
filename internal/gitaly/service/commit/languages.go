@@ -120,8 +120,10 @@ func checkRevision(ctx context.Context, repoPath string, env []string, revision 
 	opts := []git.Option{git.ValueFlag{"-C", repoPath}}
 	var stdout, stderr bytes.Buffer
 
-	revParse, err := git.SafeBareCmd(ctx, git.CmdStream{Out: &stdout, Err: &stderr}, env, opts,
+	revParse, err := git.SafeBareCmd(ctx, env, opts,
 		git.SubCmd{Name: "rev-parse", Args: []string{revision}},
+		git.WithStdout(&stdout),
+		git.WithStderr(&stderr),
 	)
 
 	if err != nil {

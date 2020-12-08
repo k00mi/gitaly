@@ -51,9 +51,18 @@ func newBatchProcess(ctx context.Context, repo repository.GitRepo) (*batchProces
 	ctx = correlation.ContextWithCorrelation(ctx, "")
 	ctx = opentracing.ContextWithSpan(ctx, nil)
 
-	batchCmd, err := git.SafeBareCmd(ctx, git.CmdStream{In: stdinReader}, env,
-		[]git.Option{git.ValueFlag{Name: "--git-dir", Value: repoPath}},
-		git.SubCmd{Name: "cat-file", Flags: []git.Option{git.Flag{Name: "--batch"}}})
+	batchCmd, err := git.SafeBareCmd(ctx, env,
+		[]git.Option{
+			git.ValueFlag{Name: "--git-dir", Value: repoPath},
+		},
+		git.SubCmd{
+			Name: "cat-file",
+			Flags: []git.Option{
+				git.Flag{Name: "--batch"},
+			},
+		},
+		git.WithStdin(stdinReader),
+	)
 	if err != nil {
 		return nil, err
 	}
