@@ -28,7 +28,6 @@ func EnvFromConfig(cfg config.Cfg) ([]string, error) {
 		LogFormat:      cfg.Logging.Format,
 		LogLevel:       cfg.Logging.Level,
 		LogPath:        cfg.Logging.Dir,
-		RootPath:       cfg.GitlabShell.Dir, //GITLAB_SHELL_DIR has been deprecated
 		SecretFile:     cfg.Gitlab.SecretFile,
 	}
 
@@ -44,7 +43,6 @@ func EnvFromConfig(cfg config.Cfg) ([]string, error) {
 		"GITALY_LOG_FORMAT=" + cfg.Logging.Format,
 		"GITALY_LOG_LEVEL=" + cfg.Logging.Level,
 		"GITALY_BIN_DIR=" + cfg.BinDir,
-		"GITALY_RUBY_DIR=" + cfg.Ruby.Dir,
 		"GITALY_GITLAB_SHELL_CONFIG=" + string(gitlabShellConfigString),
 	}, nil
 }

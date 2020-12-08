@@ -60,10 +60,6 @@ module Gitlab
         @bin_dir ||= ENV['GITALY_RUBY_GITALY_BIN_DIR']
       end
 
-      def ruby_dir
-        @ruby_dir ||= ENV['GITALY_RUBY_DIR']
-      end
-
       def internal_socket
         @internal_socket ||= ENV['GITALY_SOCKET']
       end

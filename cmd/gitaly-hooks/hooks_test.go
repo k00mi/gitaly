@@ -40,9 +40,6 @@ type proxyValues struct {
 
 // envForHooks generates a set of environment variables for gitaly hooks
 func envForHooks(t testing.TB, gitlabShellDir string, repo *gitalypb.Repository, glHookValues glHookValues, proxyValues proxyValues, gitPushOptions ...string) []string {
-	rubyDir, err := filepath.Abs("../../ruby")
-	require.NoError(t, err)
-
 	env, err := gitlabshell.EnvFromConfig(config.Config)
 	require.NoError(t, err)
 
@@ -52,7 +49,6 @@ func envForHooks(t testing.TB, gitlabShellDir string, repo *gitalypb.Repository,
 	env = append(env, os.Environ()...)
 	env = append(env, []string{
 		payload,
-		fmt.Sprintf("GITALY_RUBY_DIR=%s", rubyDir),
 		fmt.Sprintf("GL_ID=%s", glHookValues.GLID),
 		fmt.Sprintf("GL_REPOSITORY=%s", glHookValues.GLRepo),
 		fmt.Sprintf("GL_PROTOCOL=%s", glHookValues.GLProtocol),

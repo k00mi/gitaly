@@ -50,7 +50,6 @@ func TestGitHooksConfig(t *testing.T) {
 	require.Contains(t, env, "GITALY_LOG_FORMAT="+config.Config.Logging.Format)
 	require.Contains(t, env, "GITALY_LOG_LEVEL="+config.Config.Logging.Level)
 	require.Contains(t, env, "GITALY_BIN_DIR="+config.Config.BinDir)
-	require.Contains(t, env, "GITALY_RUBY_DIR="+config.Config.Ruby.Dir)
 
 	jsonShellConfig := ""
 	for _, envVar := range env {
