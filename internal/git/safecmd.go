@@ -366,7 +366,7 @@ func SafeStdinCmd(ctx context.Context, repo repository.GitRepo, globals []Option
 
 // SafeCmdWithoutRepo works like Command but without a git repository. It
 // validates the arguments in the command before executing.
-func SafeCmdWithoutRepo(ctx context.Context, stream CmdStream, globals []Option, sc SubCmd, opts ...CmdOpt) (*command.Command, error) {
+func SafeCmdWithoutRepo(ctx context.Context, globals []Option, sc SubCmd, opts ...CmdOpt) (*command.Command, error) {
 	cc := &cmdCfg{}
 
 	if err := handleOpts(ctx, sc, cc, opts); err != nil {
@@ -378,7 +378,11 @@ func SafeCmdWithoutRepo(ctx context.Context, stream CmdStream, globals []Option,
 		return nil, err
 	}
 
-	return NewCommandFactory().unsafeBareCmd(ctx, stream, cc.env, args...)
+	return NewCommandFactory().unsafeBareCmd(ctx, CmdStream{
+		In:  cc.stdin,
+		Out: cc.stdout,
+		Err: cc.stderr,
+	}, cc.env, args...)
 }
 
 func combineArgs(globals []Option, sc Cmd, cc *cmdCfg) (_ []string, err error) {
