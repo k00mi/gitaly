@@ -133,6 +133,10 @@ func TestSuccessfulUserSquashRequestWith3wayMerge(t *testing.T) {
 	require.Equal(t, testhelper.TestUser.Email, commit.Committer.Email)
 	require.Equal(t, commitMessage, commit.Subject)
 
+	// Handle symlinks in macOS from /tmp -> /private/tmp
+	testRepoPath, err = filepath.EvalSymlinks(testRepoPath)
+	require.NoError(t, err)
+
 	// Ensure Git metadata is cleaned up
 	worktreeList := text.ChompBytes(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "worktree", "list", "--porcelain"))
 	expectedOut := fmt.Sprintf("worktree %s\nbare\n", testRepoPath)
