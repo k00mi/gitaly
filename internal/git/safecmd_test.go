@@ -64,7 +64,7 @@ func TestFlagValidation(t *testing.T) {
 		{option: ConfigPair{Key: "as[[df.asdf", Value: ""}}, // 1st component cannot contain non-alphanumeric
 		{option: ConfigPair{Key: "asdf.as]]df", Value: ""}}, // 2nd component cannot contain non-alphanumeric
 	} {
-		args, err := tt.option.ValidateArgs()
+		args, err := tt.option.OptionArgs()
 		if tt.valid {
 			require.NoError(t, err)
 		} else {

@@ -37,8 +37,7 @@ func incrInvalidArg(subcmdName string) {
 
 // Cmd is an interface for safe git commands
 type Cmd interface {
-	ValidateArgs() ([]string, error)
-	IsCmd()
+	CommandArgs() ([]string, error)
 	Subcommand() string
 }
 
@@ -58,14 +57,11 @@ type cmdStream struct {
 
 var subCmdNameRegex = regexp.MustCompile(`^[[:alnum:]]+(-[[:alnum:]]+)*$`)
 
-// IsCmd allows SubCmd to satisfy the Cmd interface
-func (sc SubCmd) IsCmd() {}
-
 // Subcommand returns the subcommand name
 func (sc SubCmd) Subcommand() string { return sc.Name }
 
-// ValidateArgs checks all arguments in the sub command and validates them
-func (sc SubCmd) ValidateArgs() ([]string, error) {
+// CommandArgs checks all arguments in the sub command and validates them
+func (sc SubCmd) CommandArgs() ([]string, error) {
 	var safeArgs []string
 
 	if _, ok := subcommands[sc.Name]; !ok {
@@ -74,7 +70,7 @@ func (sc SubCmd) ValidateArgs() ([]string, error) {
 	safeArgs = append(safeArgs, sc.Name)
 
 	for _, o := range sc.Flags {
-		args, err := o.ValidateArgs()
+		args, err := o.OptionArgs()
 		if err != nil {
 			return nil, err
 		}
@@ -112,8 +108,7 @@ type GlobalOption interface {
 
 // Option is a git command line flag with validation logic
 type Option interface {
-	IsOption()
-	ValidateArgs() ([]string, error)
+	OptionArgs() ([]string, error)
 }
 
 // SubSubCmd is a positional argument that appears in the list of options for
@@ -122,12 +117,9 @@ type SubSubCmd struct {
 	Name string
 }
 
-// IsOption is a method present on all Flag interface implementations
-func (SubSubCmd) IsOption() {}
-
-// ValidateArgs returns an error if the command name or options are not
+// OptionArgs returns an error if the command name or options are not
 // sanitary
-func (sc SubSubCmd) ValidateArgs() ([]string, error) {
+func (sc SubSubCmd) OptionArgs() ([]string, error) {
 	if !subCmdNameRegex.MatchString(sc.Name) {
 		return nil, fmt.Errorf("invalid sub-sub command name %q: %w", sc.Name, ErrInvalidArg)
 	}
@@ -146,13 +138,10 @@ type ConfigPair struct {
 	Scope string
 }
 
-// IsOption is a method present on all Flag interface implementations
-func (ConfigPair) IsOption() {}
-
 var configKeyRegex = regexp.MustCompile(`^[[:alnum:]]+[-[:alnum:]]*\.(.+\.)*[[:alnum:]]+[-[:alnum:]]*$`)
 
-// ValidateArgs validates the config pair args
-func (cp ConfigPair) ValidateArgs() ([]string, error) {
+// OptionArgs validates the config pair args
+func (cp ConfigPair) OptionArgs() ([]string, error) {
 	if !configKeyRegex.MatchString(cp.Key) {
 		return nil, fmt.Errorf("config key %q failed regexp validation: %w", cp.Key, ErrInvalidArg)
 	}
@@ -165,15 +154,12 @@ type Flag struct {
 	Name string
 }
 
-// IsOption is a method present on all Flag interface implementations
-func (Flag) IsOption() {}
-
 func (f Flag) GlobalArgs() ([]string, error) {
-	return f.ValidateArgs()
+	return f.OptionArgs()
 }
 
-// ValidateArgs returns an error if the flag is not sanitary
-func (f Flag) ValidateArgs() ([]string, error) {
+// OptionArgs returns an error if the flag is not sanitary
+func (f Flag) OptionArgs() ([]string, error) {
 	if !flagRegex.MatchString(f.Name) {
 		return nil, fmt.Errorf("flag %q failed regex validation: %w", f.Name, ErrInvalidArg)
 	}
@@ -187,15 +173,12 @@ type ValueFlag struct {
 	Value string
 }
 
-// IsOption is a method present on all Flag interface implementations
-func (ValueFlag) IsOption() {}
-
 func (vf ValueFlag) GlobalArgs() ([]string, error) {
-	return vf.ValidateArgs()
+	return vf.OptionArgs()
 }
 
-// ValidateArgs returns an error if the flag is not sanitary
-func (vf ValueFlag) ValidateArgs() ([]string, error) {
+// OptionArgs returns an error if the flag is not sanitary
+func (vf ValueFlag) OptionArgs() ([]string, error) {
 	if !flagRegex.MatchString(vf.Name) {
 		return nil, fmt.Errorf("value flag %q failed regex validation: %w", vf.Name, ErrInvalidArg)
 	}
@@ -426,7 +409,7 @@ func combineArgs(globals []GlobalOption, sc Cmd, cc *cmdCfg) (_ []string, err er
 		args = append(args, globalArgs...)
 	}
 
-	scArgs, err := sc.ValidateArgs()
+	scArgs, err := sc.CommandArgs()
 	if err != nil {
 		return nil, err
 	}
