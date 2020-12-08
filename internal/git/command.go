@@ -35,7 +35,7 @@ func (cf *CommandFactory) gitPath() string {
 }
 
 // unsafeCmdWithEnv creates a git.unsafeCmd with the given args, environment, and Repository
-func (cf *CommandFactory) unsafeCmdWithEnv(ctx context.Context, extraEnv []string, stream CmdStream, repo repository.GitRepo, args ...string) (*command.Command, error) {
+func (cf *CommandFactory) unsafeCmdWithEnv(ctx context.Context, extraEnv []string, stream cmdStream, repo repository.GitRepo, args ...string) (*command.Command, error) {
 	args, env, err := cf.argsAndEnv(repo, args...)
 	if err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func (cf *CommandFactory) unsafeStdinCmd(ctx context.Context, extraEnv []string,
 
 	env = append(env, extraEnv...)
 
-	return cf.unsafeBareCmd(ctx, CmdStream{In: command.SetupStdin}, env, args...)
+	return cf.unsafeBareCmd(ctx, cmdStream{In: command.SetupStdin}, env, args...)
 }
 
 func (cf *CommandFactory) argsAndEnv(repo repository.GitRepo, args ...string) ([]string, []string, error) {
@@ -72,7 +72,7 @@ func (cf *CommandFactory) argsAndEnv(repo repository.GitRepo, args ...string) ([
 }
 
 // unsafeBareCmd creates a git.Command with the given args, stdin/stdout/stderr, and env
-func (cf *CommandFactory) unsafeBareCmd(ctx context.Context, stream CmdStream, env []string, args ...string) (*command.Command, error) {
+func (cf *CommandFactory) unsafeBareCmd(ctx context.Context, stream cmdStream, env []string, args ...string) (*command.Command, error) {
 	env = append(env, command.GitEnv...)
 
 	cmd, err := command.New(ctx, exec.Command(cf.gitPath(), args...), stream.In, stream.Out, stream.Err, env...)
@@ -88,7 +88,7 @@ func (cf *CommandFactory) unsafeBareCmd(ctx context.Context, stream CmdStream, e
 }
 
 // unsafeBareCmdInDir calls unsafeBareCmd in dir.
-func (cf *CommandFactory) unsafeBareCmdInDir(ctx context.Context, dir string, stream CmdStream, env []string, args ...string) (*command.Command, error) {
+func (cf *CommandFactory) unsafeBareCmdInDir(ctx context.Context, dir string, stream cmdStream, env []string, args ...string) (*command.Command, error) {
 	env = append(env, command.GitEnv...)
 
 	cmd1 := exec.Command(cf.gitPath(), args...)

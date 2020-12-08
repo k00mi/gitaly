@@ -50,8 +50,8 @@ type SubCmd struct {
 	PostSepArgs []string // post separator (i.e. "--") positional args
 }
 
-// CmdStream represents standard input/output streams for a command
-type CmdStream struct {
+// cmdStream represents standard input/output streams for a command
+type cmdStream struct {
 	In       io.Reader // standard input
 	Out, Err io.Writer // standard output and error
 }
@@ -302,7 +302,7 @@ func SafeCmdWithEnv(ctx context.Context, env []string, repo repository.GitRepo, 
 		return nil, err
 	}
 
-	return NewCommandFactory().unsafeCmdWithEnv(ctx, append(env, cc.env...), CmdStream{
+	return NewCommandFactory().unsafeCmdWithEnv(ctx, append(env, cc.env...), cmdStream{
 		In:  cc.stdin,
 		Out: cc.stdout,
 		Err: cc.stderr,
@@ -323,7 +323,7 @@ func SafeBareCmd(ctx context.Context, env []string, globals []Option, sc Cmd, op
 		return nil, err
 	}
 
-	return NewCommandFactory().unsafeBareCmd(ctx, CmdStream{
+	return NewCommandFactory().unsafeBareCmd(ctx, cmdStream{
 		In:  cc.stdin,
 		Out: cc.stdout,
 		Err: cc.stderr,
@@ -347,7 +347,7 @@ func SafeBareCmdInDir(ctx context.Context, dir string, env []string, globals []O
 		return nil, err
 	}
 
-	return NewCommandFactory().unsafeBareCmdInDir(ctx, dir, CmdStream{
+	return NewCommandFactory().unsafeBareCmdInDir(ctx, dir, cmdStream{
 		In:  cc.stdin,
 		Out: cc.stdout,
 		Err: cc.stderr,
@@ -386,7 +386,7 @@ func SafeCmdWithoutRepo(ctx context.Context, globals []Option, sc SubCmd, opts .
 		return nil, err
 	}
 
-	return NewCommandFactory().unsafeBareCmd(ctx, CmdStream{
+	return NewCommandFactory().unsafeBareCmd(ctx, cmdStream{
 		In:  cc.stdin,
 		Out: cc.stdout,
 		Err: cc.stderr,
