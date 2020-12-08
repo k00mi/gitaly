@@ -76,28 +76,6 @@ succeed.
 
 ## Features
 
-### Repository Importer #3033
-
-Repository importer's goal is to create any missing database records for repositories present on the disk of the primary Gitaly.
-
-1. Prep:
-   - [ ] Create a repository in the demo cluster. This ensures we have a repository on the disk we can import.
-   - [ ] Stop the Praefect nodes. The import job runs when Praefect starts.
-   - [ ] Truncate `virtual_storages` table. This removes the information whether the migration has been completed.
-   - [ ] Truncate `repositories` table.  This removes any information about the repositories on the virtual storage.
-   - [ ] Truncate `storage_repositories` table. This removes any information about repositories hosted on the Gitaly nodes.
-1. [ ] Demo:
-   - [ ] Start the Praefect nodes.
-   - [ ] Tail Praefects' logs.
-1. [ ] Verify:
-   - [ ] Logs do not contain `importing repositories to database failed` indicating any import failures.
-   - [ ] Logs contain `imported repositories to database` message. It should list the repository created earlier as imported.
-   - [ ] Logs contain `repository importer finished` message. It should list the configured virtual storages as successfully imported.
-   - [ ] Verify `repositories` table contains records for the imported repositories with generation `0`.
-   - [ ] Verify `storage_repositories` records the primary containing the imported repositories on generation `0`. Secondaries might have records as well if the automatic reconciler scheduled jobs to replicate the
-   repositories to them.
-   - [ ] Verify `virtual_storages` table contains records with `repositories_imported` set for the successfully imported virtual storages.
-
 ### Distributed reads with caching https://gitlab.com/gitlab-org/gitaly/-/issues/3053
 
 The goal of caching is to reduce load on the database and speed up defining up to date storages for distributing read operations among them.
