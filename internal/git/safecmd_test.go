@@ -234,7 +234,7 @@ func TestSafeCmdValid(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, tt.expectArgs, cmd.Args()[1:])
 
-			cmd, err = SafeBareCmdInDir(ctx, testRepoPath, CmdStream{}, nil, tt.globals, tt.subCmd, opts...)
+			cmd, err = SafeBareCmdInDir(ctx, testRepoPath, nil, tt.globals, tt.subCmd, opts...)
 			require.NoError(t, err)
 			require.Equal(t, tt.expectArgs, cmd.Args()[1:])
 		})
@@ -280,7 +280,7 @@ func TestSafeBareCmdInDir(t *testing.T) {
 		ctx, cancel := testhelper.Context()
 		defer cancel()
 
-		_, err := SafeBareCmdInDir(ctx, "", CmdStream{}, nil, nil, nil)
+		_, err := SafeBareCmdInDir(ctx, "", nil, nil, nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "no 'dir' provided")
 	})
@@ -293,10 +293,10 @@ func TestSafeBareCmdInDir(t *testing.T) {
 		defer cancel()
 
 		var stderr bytes.Buffer
-		cmd, err := SafeBareCmdInDir(ctx, repoPath, CmdStream{Err: &stderr}, nil, nil, SubCmd{
+		cmd, err := SafeBareCmdInDir(ctx, repoPath, nil, nil, SubCmd{
 			Name: "rev-parse",
 			Args: []string{"master"},
-		})
+		}, WithStderr(&stderr))
 		require.NoError(t, err)
 
 		revData, err := ioutil.ReadAll(cmd)
@@ -312,10 +312,10 @@ func TestSafeBareCmdInDir(t *testing.T) {
 		defer cancel()
 
 		var stderr bytes.Buffer
-		_, err := SafeBareCmdInDir(ctx, "non-existing-dir", CmdStream{Err: &stderr}, nil, nil, SubCmd{
+		_, err := SafeBareCmdInDir(ctx, "non-existing-dir", nil, nil, SubCmd{
 			Name: "rev-parse",
 			Args: []string{"master"},
-		})
+		}, WithStderr(&stderr))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "no such file or directory")
 	})
