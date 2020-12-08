@@ -3,7 +3,6 @@ package glsql
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"strconv"
@@ -11,7 +10,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/lib/pq"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
 )
@@ -32,14 +30,13 @@ type DB struct {
 func (db DB) Truncate(t testing.TB, tables ...string) {
 	t.Helper()
 
-	params := make([]string, len(tables))
-	for i, table := range tables {
-		params[i] = pq.QuoteIdentifier(table) + " *"
+	for _, table := range tables {
+		_, err := db.DB.Exec("DELETE FROM " + table)
+		require.NoError(t, err, "database cleanup failed: %s", tables)
 	}
 
-	query := fmt.Sprintf("TRUNCATE TABLE %s RESTART IDENTITY CASCADE", strings.Join(params, ", "))
-	_, err := db.DB.Exec(query)
-	require.NoError(t, err, "database truncation failed: %s", tables)
+	_, err := db.DB.Exec("SELECT setval(relname::TEXT, 1, false) from pg_class where relkind = 'S'")
+	require.NoError(t, err, "database cleanup failed: %s", tables)
 }
 
 // RequireRowsInTable verifies that `tname` table has `n` amount of rows in it.
