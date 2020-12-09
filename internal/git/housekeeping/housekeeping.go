@@ -13,6 +13,7 @@ import (
 
 const (
 	deleteTempFilesOlderThanDuration = 7 * 24 * time.Hour
+	brokenRefsGracePeriod            = 24 * time.Hour
 	minimumDirPerm                   = 0700
 )
 
@@ -25,17 +26,25 @@ func Perform(ctx context.Context, repoPath string) error {
 		return err
 	}
 
+	brokenRefs, err := findBrokenLooseReferences(ctx, repoPath)
+	if err != nil {
+		return err
+	}
+
+	filesToPrune := append(temporaryObjects, brokenRefs...)
+
 	unremovableFiles := 0
-	for _, path := range temporaryObjects {
+	for _, path := range filesToPrune {
 		if err := os.Remove(path); err != nil {
 			unremovableFiles++
 			logger.WithError(err).WithField("path", path).Warn("unable to remove stray file")
 		}
 	}
 
-	if len(temporaryObjects) > 0 {
+	if len(filesToPrune) > 0 {
 		logger.WithFields(log.Fields{
-			"files":    len(temporaryObjects),
+			"objects":  len(temporaryObjects),
+			"refs":     len(brokenRefs),
 			"failures": unremovableFiles,
 		}).Info("removed files")
 	}
@@ -83,6 +92,38 @@ func isStaleTemporaryObject(path string, modTime time.Time, mode os.FileMode) bo
 
 	// Only delete entries starting with `tmp_` and older than a week
 	return strings.HasPrefix(base, "tmp_") && time.Since(modTime) >= deleteTempFilesOlderThanDuration
+}
+
+func findBrokenLooseReferences(ctx context.Context, repoPath string) ([]string, error) {
+	logger := myLogger(ctx)
+
+	var brokenRefs []string
+	err := filepath.Walk(filepath.Join(repoPath, "refs"), func(path string, info os.FileInfo, err error) error {
+		if info == nil {
+			logger.WithFields(log.Fields{
+				"path": path,
+			}).WithError(err).Error("nil FileInfo in housekeeping.Perform")
+
+			return nil
+		}
+
+		// When git crashes or a node reboots, it may happen that it leaves behind empty
+		// references. These references break various assumptions made by git and cause it
+		// to error in various circumstances. We thus clean them up to work around the
+		// issue.
+		if info.IsDir() || info.Size() > 0 || time.Since(info.ModTime()) < brokenRefsGracePeriod {
+			return nil
+		}
+
+		brokenRefs = append(brokenRefs, path)
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return brokenRefs, nil
 }
 
 // FixDirectoryPermissions does a recursive directory walk to look for

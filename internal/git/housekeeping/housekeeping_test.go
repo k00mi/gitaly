@@ -1,6 +1,8 @@
 package housekeeping
 
 import (
+	"bytes"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -182,7 +184,7 @@ func TestPerform(t *testing.T) {
 			name: "files outside of object database",
 			entries: []entry{
 				f("tmp_a", 0770, 240*time.Hour, Keep),
-				d("refs", 0700, 240*time.Hour, Keep, []entry{
+				d("info", 0700, 240*time.Hour, Keep, []entry{
 					f("tmp_a", 0770, 240*time.Hour, Keep),
 				}),
 			},
@@ -210,6 +212,101 @@ func TestPerform(t *testing.T) {
 			for _, e := range tc.entries {
 				e.validate(t, rootPath)
 			}
+		})
+	}
+}
+
+func TestPerform_references(t *testing.T) {
+	type ref struct {
+		name string
+		age  time.Duration
+		size int
+	}
+
+	testcases := []struct {
+		desc     string
+		refs     []ref
+		expected []string
+	}{
+		{
+			desc: "normal reference",
+			refs: []ref{
+				{name: "refs/heads/master", age: 1 * time.Second, size: 40},
+			},
+			expected: []string{
+				"refs/heads/master",
+			},
+		},
+		{
+			desc: "recent empty reference is not deleted",
+			refs: []ref{
+				{name: "refs/heads/master", age: 1 * time.Hour, size: 0},
+			},
+			expected: []string{
+				"refs/heads/master",
+			},
+		},
+		{
+			desc: "old empty reference is deleted",
+			refs: []ref{
+				{name: "refs/heads/master", age: 25 * time.Hour, size: 0},
+			},
+			expected: nil,
+		},
+		{
+			desc: "multiple references",
+			refs: []ref{
+				{name: "refs/keep/kept-because-recent", age: 1 * time.Hour, size: 0},
+				{name: "refs/keep/kept-because-nonempty", age: 25 * time.Hour, size: 1},
+				{name: "refs/keep/prune", age: 25 * time.Hour, size: 0},
+				{name: "refs/tags/kept-because-recent", age: 1 * time.Hour, size: 0},
+				{name: "refs/tags/kept-because-nonempty", age: 25 * time.Hour, size: 1},
+				{name: "refs/tags/prune", age: 25 * time.Hour, size: 0},
+				{name: "refs/heads/kept-because-recent", age: 1 * time.Hour, size: 0},
+				{name: "refs/heads/kept-because-nonempty", age: 25 * time.Hour, size: 1},
+				{name: "refs/heads/prune", age: 25 * time.Hour, size: 0},
+			},
+			expected: []string{
+				"refs/keep/kept-because-recent",
+				"refs/keep/kept-because-nonempty",
+				"refs/tags/kept-because-recent",
+				"refs/tags/kept-because-nonempty",
+				"refs/heads/kept-because-recent",
+				"refs/heads/kept-because-nonempty",
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.desc, func(t *testing.T) {
+			rootPath, cleanup := testhelper.TempDir(t)
+			defer cleanup()
+
+			for _, ref := range tc.refs {
+				path := filepath.Join(rootPath, ref.name)
+
+				require.NoError(t, os.MkdirAll(filepath.Dir(path), 0755))
+				require.NoError(t, ioutil.WriteFile(path, bytes.Repeat([]byte{0}, ref.size), 0644))
+				filetime := time.Now().Add(-ref.age)
+				require.NoError(t, os.Chtimes(path, filetime, filetime))
+			}
+
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			require.NoError(t, Perform(ctx, rootPath))
+
+			var actual []string
+			filepath.Walk(filepath.Join(rootPath), func(path string, info os.FileInfo, _ error) error {
+				if !info.IsDir() {
+					ref, err := filepath.Rel(rootPath, path)
+					require.NoError(t, err)
+					actual = append(actual, ref)
+				}
+				return nil
+			})
+
+			require.ElementsMatch(t, tc.expected, actual)
 		})
 	}
 }
