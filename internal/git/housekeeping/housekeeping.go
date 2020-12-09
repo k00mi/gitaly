@@ -27,7 +27,7 @@ func Perform(ctx context.Context, repoPath string) error {
 
 	unremovableFiles := 0
 	for _, path := range temporaryObjects {
-		if err := forceRemove(ctx, path); err != nil {
+		if err := os.Remove(path); err != nil {
 			unremovableFiles++
 			logger.WithError(err).WithField("path", path).Warn("unable to remove stray file")
 		}
@@ -41,21 +41,6 @@ func Perform(ctx context.Context, repoPath string) error {
 	}
 
 	return err
-}
-
-// Delete a directory structure while ensuring the current user has permission to delete the directory structure
-func forceRemove(ctx context.Context, path string) error {
-	err := os.Remove(path)
-	if err == nil {
-		return nil
-	}
-
-	// Delete failed. Try again after chmod'ing directories recursively
-	if err := FixDirectoryPermissions(ctx, path); err != nil {
-		return err
-	}
-
-	return os.Remove(path)
 }
 
 func findTemporaryObjects(ctx context.Context, repoPath string) ([]string, error) {
