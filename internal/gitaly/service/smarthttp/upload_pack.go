@@ -70,7 +70,7 @@ func (s *server) PostUploadPack(stream gitalypb.SmartHTTPService_PostUploadPackS
 		return err
 	}
 
-	git.WarnIfTooManyBitmaps(ctx, req.GetRepository().GetStorageName(), repoPath)
+	git.WarnIfTooManyBitmaps(ctx, s.locator, req.GetRepository().GetStorageName(), repoPath)
 	globalOpts := git.UploadPackFilterConfig()
 
 	for _, o := range req.GitConfigOptions {

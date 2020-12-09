@@ -12,7 +12,7 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -48,7 +48,8 @@ func TestLogObjectInfo(t *testing.T) {
 	}
 
 	t.Run("shared repo with multiple alternates", func(t *testing.T) {
-		storagePath, err := helper.GetStorageByName(repo1.StorageName)
+		locator := config.NewLocator(config.Config)
+		storagePath, err := locator.GetStorageByName(repo1.GetStorageName())
 		require.NoError(t, err)
 
 		tmpDir, err := ioutil.TempDir(storagePath, "")
