@@ -201,13 +201,15 @@ func TestBasicFailover(t *testing.T) {
 
 	// Bring second node down
 	healthSrv0.SetServingStatus("", grpc_health_v1.HealthCheckResponse_UNKNOWN)
+	predateElection(t, ctx, db, shardName, failoverTimeout)
+	predateLastSeenActiveAt(t, db, shardName, cs0.GetStorage(), failoverTimeout)
 
 	err = elector.checkNodes(ctx)
 	require.NoError(t, err)
 	db.RequireRowsInTable(t, "node_status", 2)
 	// No new candidates
 	_, err = elector.GetShard(ctx)
-	require.Error(t, ErrPrimaryNotHealthy, err)
+	require.Equal(t, ErrPrimaryNotHealthy, err)
 }
 
 func TestElectDemotedPrimary(t *testing.T) {

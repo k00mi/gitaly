@@ -262,7 +262,7 @@ func runPraefectServer(t testing.TB, conf config.Config, opt buildOptions) (*grp
 		prf.Stop()
 
 		cancel()
-		require.Error(t, context.Canceled, <-errQ)
+		require.NoError(t, <-errQ)
 	}
 
 	return cc, prf, cleanup

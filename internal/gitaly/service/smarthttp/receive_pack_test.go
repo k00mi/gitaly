@@ -430,7 +430,7 @@ func TestPostReceivePackToHooks(t *testing.T) {
 
 	expectedResponse := "0049\x01000eunpack ok\n0019ok refs/heads/master\n0019ok refs/heads/branch\n00000000"
 	require.Equal(t, expectedResponse, string(response), "Expected response to be %q, got %q", expectedResponse, response)
-	require.Error(t, drainPostReceivePackResponse(stream), io.EOF)
+	require.Equal(t, io.EOF, drainPostReceivePackResponse(stream))
 }
 
 func runSmartHTTPHookServiceServer(t *testing.T) (*grpc.Server, string) {

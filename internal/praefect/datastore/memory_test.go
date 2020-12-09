@@ -128,7 +128,7 @@ func TestMemoryReplicationEventQueue(t *testing.T) {
 	require.Equal(t, expAttempt3, dequeuedAttempt3[0])
 
 	ackFailedNoAttemptsLeft, err := queue.Acknowledge(ctx, JobStateFailed, []uint64{event1.ID})
-	require.Error(t, errDeadAckedAsFailed, err)
+	require.Equal(t, errDeadAckedAsFailed, err)
 	require.Empty(t, ackFailedNoAttemptsLeft)
 
 	acknowledgedAttempt3, err := queue.Acknowledge(ctx, JobStateDead, []uint64{event1.ID})
