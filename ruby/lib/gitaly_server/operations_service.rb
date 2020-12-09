@@ -16,8 +16,21 @@ module GitalyServer
       created_tag = repo.add_tag(tag_name, user: user, target: target_revision, message: request.message.presence, transaction: transaction)
       Gitaly::UserCreateTagResponse.new unless created_tag
 
-      rugged_commit = created_tag.dereferenced_target.rugged_commit
-      commit = gitaly_commit_from_rugged(rugged_commit)
+      # We can create tags pointing to non-commits, but there is no
+      # space in the UserCreateTagResponse{} for anything except
+      # TargetCommit, which should point to a Commit object.
+      #
+      # So we *do* support creating it. But if we don't have a commit
+      # we limp along here and fake up "commit" to be "nil" in this
+      # case, anything else would be a protocol error. We check that
+      # here because "dereferenced_target" is the equivalent of
+      # ^{commit}.
+      dereferenced_commit = created_tag.dereferenced_target
+      if dereferenced_commit
+        rugged_commit = dereferenced_commit.rugged_commit
+        commit = gitaly_commit_from_rugged(rugged_commit)
+      end
+
       tag = gitaly_tag_from_gitlab_tag(created_tag, commit)
 
       Gitaly::UserCreateTagResponse.new(tag: tag)
