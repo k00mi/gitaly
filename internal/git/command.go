@@ -4,6 +4,7 @@ import (
 	"context"
 	"os/exec"
 
+	"gitlab.com/gitlab-org/gitaly/internal/cgroups"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git/alternates"
 	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
@@ -13,15 +14,20 @@ import (
 
 // CommandFactory knows how to properly construct different types of commands.
 type CommandFactory struct {
-	locator storage.Locator
-	cfg     config.Cfg
+	locator        storage.Locator
+	cfg            config.Cfg
+	cgroupsManager cgroups.Manager
 }
 
 // NewCommandFactory returns a new instance of initialized CommandFactory.
 // Current implementation relies on the global var 'config.Config' and a single type of 'Locator' we currently have.
 // This dependency will be removed on the next iterations in scope of: https://gitlab.com/gitlab-org/gitaly/-/issues/2699
 func NewCommandFactory() *CommandFactory {
-	return &CommandFactory{cfg: config.Config, locator: config.NewLocator(config.Config)}
+	return &CommandFactory{
+		cfg:            config.Config,
+		locator:        config.NewLocator(config.Config),
+		cgroupsManager: cgroups.NewManager(config.Config.Cgroups),
+	}
 }
 
 func (cf *CommandFactory) gitPath() string {
@@ -69,14 +75,33 @@ func (cf *CommandFactory) argsAndEnv(repo repository.GitRepo, args ...string) ([
 func (cf *CommandFactory) unsafeBareCmd(ctx context.Context, stream CmdStream, env []string, args ...string) (*command.Command, error) {
 	env = append(env, command.GitEnv...)
 
-	return command.New(ctx, exec.Command(cf.gitPath(), args...), stream.In, stream.Out, stream.Err, env...)
+	cmd, err := command.New(ctx, exec.Command(cf.gitPath(), args...), stream.In, stream.Out, stream.Err, env...)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := cf.cgroupsManager.AddCommand(cmd); err != nil {
+		return nil, err
+	}
+
+	return cmd, err
 }
 
 // unsafeBareCmdInDir calls unsafeBareCmd in dir.
 func (cf *CommandFactory) unsafeBareCmdInDir(ctx context.Context, dir string, stream CmdStream, env []string, args ...string) (*command.Command, error) {
 	env = append(env, command.GitEnv...)
 
-	cmd := exec.Command(cf.gitPath(), args...)
-	cmd.Dir = dir
-	return command.New(ctx, cmd, stream.In, stream.Out, stream.Err, env...)
+	cmd1 := exec.Command(cf.gitPath(), args...)
+	cmd1.Dir = dir
+
+	cmd2, err := command.New(ctx, cmd1, stream.In, stream.Out, stream.Err, env...)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := cf.cgroupsManager.AddCommand(cmd2); err != nil {
+		return nil, err
+	}
+
+	return cmd2, nil
 }

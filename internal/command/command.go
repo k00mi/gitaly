@@ -475,6 +475,11 @@ func (c *Command) Env() []string {
 	return c.cmd.Env
 }
 
+// Pid is an accessor for the pid
+func (c *Command) Pid() int {
+	return c.cmd.Process.Pid
+}
+
 // suppressedContext suppresses cancellation or expiration of the context.
 type suppressedContext struct{ context.Context }
 

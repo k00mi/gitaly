@@ -16,6 +16,7 @@ import (
 	"github.com/pelletier/go-toml"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config/auth"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config/cgroups"
 	internallog "gitlab.com/gitlab-org/gitaly/internal/gitaly/config/log"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config/prometheus"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config/sentry"
@@ -59,6 +60,7 @@ type Cfg struct {
 	GracefulRestartTimeout Duration          `toml:"graceful_restart_timeout"`
 	InternalSocketDir      string            `toml:"internal_socket_dir"`
 	DailyMaintenance       DailyJob          `toml:"daily_maintenance"`
+	Cgroups                cgroups.Config    `toml:"cgroups"`
 }
 
 // TLS configuration
@@ -170,6 +172,7 @@ func (cfg *Cfg) Validate() error {
 		cfg.validateInternalSocketDir,
 		cfg.validateHooks,
 		cfg.validateMaintenance,
+		cfg.validateCgroups,
 	} {
 		if err := run(); err != nil {
 			return err
@@ -471,6 +474,32 @@ func (cfg *Cfg) validateMaintenance() error {
 	}
 	if dm.Duration.Duration() > 24*time.Hour {
 		return fmt.Errorf("daily maintenance specified duration %s must be less than 24 hours", dm.Duration.Duration())
+	}
+
+	return nil
+}
+
+func (cfg *Cfg) validateCgroups() error {
+	cg := cfg.Cgroups
+
+	if cg.Count == 0 {
+		return nil
+	}
+
+	if cg.Mountpoint == "" {
+		return fmt.Errorf("cgroups mountpoint cannot be empty")
+	}
+
+	if cg.HierarchyRoot == "" {
+		return fmt.Errorf("cgroups hierarchy root cannot be empty")
+	}
+
+	if cg.CPU.Enabled && cg.CPU.Shares == 0 {
+		return fmt.Errorf("cgroups CPU shares has to be greater than zero")
+	}
+
+	if cg.Memory.Enabled && (cg.Memory.Limit == 0 || cg.Memory.Limit < -1) {
+		return fmt.Errorf("cgroups memory limit has to be greater than zero or equal to -1")
 	}
 
 	return nil
