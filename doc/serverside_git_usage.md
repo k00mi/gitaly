@@ -18,8 +18,18 @@ commands. Porcelain commands are intended for the end-user and are the
 user-interface of the default `git` client, where plumbing commands
 are intended for scripted use or to build another porcelain.
 
-Gitaly should only use plumbing commands. `man 1 git` contains a
-section on the low level plumbing.
+Generally speaking, Gitaly should only use plumbing commands. `man 1
+git` contains a section on the low level plumbing. However, a lot of
+git's plumbing-like functionality is exposed as commands not marked as
+plumbing, but whose API reliability can be considered the
+same. E.g. `git log`'s `--pretty=` formats, `git config -l -z`, the
+documented exit codes of `git remote` etc..
+
+We should use good judgement when choosing what commands and command
+functionality to use, with the aim of not having gitaly break due to
+e.g. an error message being rephrased or functionality the upstream
+`git` maintainers don't consider plumbing-like being removed or
+altered.
 
 #### Executing Git commands
 
