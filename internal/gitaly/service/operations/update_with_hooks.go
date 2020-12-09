@@ -37,7 +37,7 @@ func (s *Server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 		return err
 	}
 
-	transaction, praefect, err := transactionFromContext(ctx)
+	transaction, praefect, err := metadata.TransactionMetadataFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -101,21 +101,4 @@ func (s *Server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 	}
 
 	return nil
-}
-
-func transactionFromContext(ctx context.Context) (*metadata.Transaction, *metadata.PraefectServer, error) {
-	transaction, err := metadata.TransactionFromContext(ctx)
-	if err != nil {
-		if err != metadata.ErrTransactionNotFound {
-			return nil, nil, err
-		}
-		return nil, nil, nil
-	}
-
-	praefect, err := metadata.PraefectFromContext(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return &transaction, praefect, nil
 }

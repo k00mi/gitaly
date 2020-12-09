@@ -37,7 +37,7 @@ func (cc *cmdCfg) configureHooks(ctx context.Context, repo *gitalypb.Repository,
 		return errors.New("hooks already configured")
 	}
 
-	transaction, praefect, err := transactionFromContext(ctx)
+	transaction, praefect, err := metadata.TransactionMetadataFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -98,21 +98,4 @@ func receivePackHookEnv(ctx context.Context, cc *cmdCfg, cfg config.Cfg, req Rec
 	)
 
 	return env, nil
-}
-
-func transactionFromContext(ctx context.Context) (*metadata.Transaction, *metadata.PraefectServer, error) {
-	transaction, err := metadata.TransactionFromContext(ctx)
-	if err != nil {
-		if errors.Is(err, metadata.ErrTransactionNotFound) {
-			return nil, nil, nil
-		}
-		return nil, nil, err
-	}
-
-	praefect, err := metadata.PraefectFromContext(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return &transaction, praefect, nil
 }
