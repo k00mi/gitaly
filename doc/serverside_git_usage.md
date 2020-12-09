@@ -8,13 +8,20 @@ Gitaly uses three implementations to read and write to Git repositories:
 
 ### Using Git
 
+#### Plumbing v.s. porcelain
+
 `git(1)` is the default choice to access repositories for Gitaly. Not all
-commands that are available should be used in the Gitaly code base. Git makes
-a distinction between porcelain and plumbing commands. Porcelain commands are
-intended for the end-user and are the user-interface of the default `git`
-client, where plumbing commands are intended for scripted use or to build
-another porcelain. Gitaly should only use plumbing commands. `man 1 git`
-contains a section on the low level plumbing.
+commands that are available should be used in the Gitaly code base.
+
+Git makes a distinction between porcelain and plumbing
+commands. Porcelain commands are intended for the end-user and are the
+user-interface of the default `git` client, where plumbing commands
+are intended for scripted use or to build another porcelain.
+
+Gitaly should only use plumbing commands. `man 1 git` contains a
+section on the low level plumbing.
+
+#### Executing Git commands
 
 When executing Git, developers should always use the `git.SafeCmd()` and sibling
 interfaces. These make sure Gitaly is protected against command injection, the
