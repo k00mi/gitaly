@@ -40,7 +40,6 @@ describe Gitlab::Git::Hook do
         {
           'GL_ID' => 'user-123',
           'GL_USERNAME' => 'janedoe',
-          'GL_REPOSITORY' => repo.gl_repository,
           'GL_PROTOCOL' => 'web',
           'PWD' => repo.path,
           'GIT_DIR' => repo.path

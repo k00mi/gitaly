@@ -156,7 +156,6 @@ func TestPreReceiveHook_GitlabAPIAccess(t *testing.T) {
 			"GL_ID=" + glID,
 			"GL_PROTOCOL=" + protocol,
 			"GL_USERNAME=username",
-			"GL_REPOSITORY=" + testRepo.GetGlRepository(),
 		},
 	}
 
@@ -264,7 +263,6 @@ func TestPreReceive_APIErrors(t *testing.T) {
 					"GL_ID=key-123",
 					"GL_PROTOCOL=web",
 					"GL_USERNAME=username",
-					"GL_REPOSITORY=repository",
 				},
 			}))
 			require.NoError(t, stream.Send(&gitalypb.PreReceiveHookRequest{
@@ -331,7 +329,6 @@ exit %d
 			"GL_ID=key-123",
 			"GL_PROTOCOL=web",
 			"GL_USERNAME=username",
-			"GL_REPOSITORY=repository",
 		},
 	}))
 	require.NoError(t, stream.Send(&gitalypb.PreReceiveHookRequest{
@@ -463,7 +460,6 @@ func TestPreReceiveHook_Primary(t *testing.T) {
 				"GL_ID=key-123",
 				"GL_PROTOCOL=web",
 				"GL_USERNAME=username",
-				"GL_REPOSITORY=repository",
 			}
 
 			stream, err := client.PreReceiveHook(ctx)

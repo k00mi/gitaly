@@ -27,7 +27,6 @@ func TestPrereceive_customHooks(t *testing.T) {
 		fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
 		"GL_PROTOCOL=web",
 		fmt.Sprintf("GL_REPO=%s", repo),
-		fmt.Sprintf("GL_REPOSITORY=%s", repo.GetGlRepository()),
 		"GL_USERNAME=user",
 	}
 
@@ -210,7 +209,6 @@ func TestPrereceive_gitlab(t *testing.T) {
 		fmt.Sprintf("GL_PROJECT_PATH=%s", testRepo.GetGlProjectPath()),
 		"GL_PROTOCOL=web",
 		fmt.Sprintf("GL_REPO=%s", testRepo),
-		fmt.Sprintf("GL_REPOSITORY=%s", testRepo.GetGlRepository()),
 		"GL_USERNAME=user",
 	}
 

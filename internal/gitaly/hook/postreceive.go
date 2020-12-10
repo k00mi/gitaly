@@ -140,7 +140,7 @@ func (m *GitLabHookManager) PostReceiveHook(ctx context.Context, repo *gitalypb.
 		return helper.ErrInternalf("GL_ID not set")
 	}
 	if repo.GetGlRepository() == "" {
-		return helper.ErrInternalf("GL_REPOSITORY not set")
+		return helper.ErrInternalf("repository not set")
 	}
 
 	ok, messages, err := m.gitlabAPI.PostReceive(ctx, repo.GetGlRepository(), glID, string(changes), pushOptions...)
@@ -161,10 +161,13 @@ func (m *GitLabHookManager) PostReceiveHook(ctx context.Context, repo *gitalypb.
 		return helper.ErrInternalf("creating custom hooks executor: %v", err)
 	}
 
+	customHooksEnv := append(env, customHooksEnv(payload)...)
+	customHooksEnv = append(customHooksEnv, hooks.GitPushOptions(pushOptions)...)
+
 	if err = executor(
 		ctx,
 		nil,
-		append(env, hooks.GitPushOptions(pushOptions)...),
+		customHooksEnv,
 		bytes.NewReader(changes),
 		stdout,
 		stderr,

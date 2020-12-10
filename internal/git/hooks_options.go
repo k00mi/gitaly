@@ -92,7 +92,6 @@ func receivePackHookEnv(req ReceivePackRequest, protocol string) ([]string, erro
 	return []string{
 		fmt.Sprintf("GL_ID=%s", req.GetGlId()),
 		fmt.Sprintf("GL_USERNAME=%s", req.GetGlUsername()),
-		fmt.Sprintf("GL_REPOSITORY=%s", req.GetGlRepository()),
 		fmt.Sprintf("GL_PROJECT_PATH=%s", req.GetRepository().GetGlProjectPath()),
 		fmt.Sprintf("GL_PROTOCOL=%s", protocol),
 	}, nil

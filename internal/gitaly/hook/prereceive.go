@@ -53,7 +53,7 @@ func (m *GitLabHookManager) PreReceiveHook(ctx context.Context, repo *gitalypb.R
 
 	// Only the primary should execute hooks and increment reference counters.
 	if isPrimary(payload) {
-		if err := m.preReceiveHook(ctx, repo, env, changes, stdout, stderr); err != nil {
+		if err := m.preReceiveHook(ctx, payload, repo, env, changes, stdout, stderr); err != nil {
 			// If the pre-receive hook declines the push, then we need to stop any
 			// secondaries voting on the transaction.
 			m.stopTransaction(ctx, payload)
@@ -64,7 +64,7 @@ func (m *GitLabHookManager) PreReceiveHook(ctx context.Context, repo *gitalypb.R
 	return nil
 }
 
-func (m *GitLabHookManager) preReceiveHook(ctx context.Context, repo *gitalypb.Repository, env []string, changes []byte, stdout, stderr io.Writer) error {
+func (m *GitLabHookManager) preReceiveHook(ctx context.Context, payload git.HooksPayload, repo *gitalypb.Repository, env []string, changes []byte, stdout, stderr io.Writer) error {
 	repoPath, err := m.locator.GetRepoPath(repo)
 	if err != nil {
 		return helper.ErrInternalf("getting repo path: %v", err)
@@ -89,7 +89,7 @@ func (m *GitLabHookManager) preReceiveHook(ctx context.Context, repo *gitalypb.R
 		return helper.ErrInternalf("GL_ID not set")
 	}
 	if repo.GetGlRepository() == "" {
-		return helper.ErrInternalf("GL_REPOSITORY not set")
+		return helper.ErrInternalf("repository not set")
 	}
 	if glProtocol == "" {
 		return helper.ErrInternalf("GL_PROTOCOL not set")
@@ -122,7 +122,7 @@ func (m *GitLabHookManager) preReceiveHook(ctx context.Context, repo *gitalypb.R
 	if err = executor(
 		ctx,
 		nil,
-		env,
+		append(env, customHooksEnv(payload)...),
 		bytes.NewReader(changes),
 		stdout,
 		stderr,

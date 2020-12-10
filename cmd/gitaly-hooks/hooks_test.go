@@ -29,8 +29,8 @@ import (
 )
 
 type glHookValues struct {
-	GLID, GLUsername, GLRepo, GLProtocol, GitObjectDir string
-	GitAlternateObjectDirs                             []string
+	GLID, GLUsername, GLProtocol, GitObjectDir string
+	GitAlternateObjectDirs                     []string
 }
 
 type proxyValues struct {
@@ -46,7 +46,6 @@ func envForHooks(t testing.TB, gitlabShellDir string, repo *gitalypb.Repository,
 		payload,
 		"GITALY_BIN_DIR=" + config.Config.BinDir,
 		fmt.Sprintf("GL_ID=%s", glHookValues.GLID),
-		fmt.Sprintf("GL_REPOSITORY=%s", glHookValues.GLRepo),
 		fmt.Sprintf("GL_PROTOCOL=%s", glHookValues.GLProtocol),
 		fmt.Sprintf("GL_USERNAME=%s", glHookValues.GLUsername),
 		fmt.Sprintf("%s=%s", gitalylog.GitalyLogDirEnvKey, gitlabShellDir),
@@ -227,7 +226,6 @@ func testHooksPrePostReceive(t *testing.T) {
 				glHookValues{
 					GLID:                   glID,
 					GLUsername:             glUsername,
-					GLRepo:                 testRepo.GetGlRepository(),
 					GLProtocol:             glProtocol,
 					GitObjectDir:           c.GitObjectDir,
 					GitAlternateObjectDirs: c.GitAlternateObjectDirs,
@@ -280,7 +278,6 @@ func TestHooksUpdate(t *testing.T) {
 	glID := "key-1234"
 	glUsername := "iamgitlab"
 	glProtocol := "ssh"
-	glRepository := "some_repo"
 
 	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
 	defer cleanup()
@@ -305,7 +302,6 @@ func TestHooksUpdate(t *testing.T) {
 	testHooksUpdate(t, tempGitlabShellDir, token, glHookValues{
 		GLID:       glID,
 		GLUsername: glUsername,
-		GLRepo:     glRepository,
 		GLProtocol: glProtocol,
 	})
 }
@@ -365,7 +361,7 @@ open('%s', 'w') { |f| f.puts(JSON.dump(ARGV)) }
 	output := string(testhelper.MustReadFile(t, customHookOutputPath))
 	require.Contains(t, output, "GL_USERNAME="+glValues.GLUsername)
 	require.Contains(t, output, "GL_ID="+glValues.GLID)
-	require.Contains(t, output, "GL_REPOSITORY="+glValues.GLRepo)
+	require.Contains(t, output, "GL_REPOSITORY="+testRepo.GetGlRepository())
 	require.Contains(t, output, "GL_PROTOCOL="+glValues.GLProtocol)
 }
 
@@ -481,7 +477,6 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 				glHookValues{
 					GLID:       glID,
 					GLUsername: glUsername,
-					GLRepo:     testRepo.GetGlRepository(),
 					GLProtocol: glProtocol,
 				},
 				proxyValues{},
@@ -559,7 +554,6 @@ func TestHooksNotAllowed(t *testing.T) {
 		glHookValues{
 			GLID:       glID,
 			GLUsername: glUsername,
-			GLRepo:     testRepo.GetGlRepository(),
 			GLProtocol: glProtocol,
 		},
 		proxyValues{})

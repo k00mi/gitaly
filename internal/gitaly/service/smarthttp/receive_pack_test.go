@@ -75,7 +75,6 @@ func TestSuccessfulReceivePackRequest(t *testing.T) {
 
 	for _, env := range []string{
 		"GL_ID=user-123",
-		"GL_REPOSITORY=project-456",
 		"GL_PROTOCOL=http",
 		"GL_PROJECT_PATH=" + projectPath,
 	} {

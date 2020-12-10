@@ -130,7 +130,6 @@ func TestHooksMissingStdin(t *testing.T) {
 					"GL_ID=key_id",
 					"GL_USERNAME=username",
 					"GL_PROTOCOL=protocol",
-					"GL_REPOSITORY=" + testRepo.GetGlRepository(),
 				},
 			}))
 
@@ -256,7 +255,6 @@ To create a merge request for okay, visit:
 				"GL_ID=key_id",
 				"GL_USERNAME=username",
 				"GL_PROTOCOL=protocol",
-				"GL_REPOSITORY=" + testRepo.GetGlRepository(),
 			}
 
 			require.NoError(t, stream.Send(&gitalypb.PostReceiveHookRequest{

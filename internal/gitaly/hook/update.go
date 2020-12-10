@@ -37,7 +37,7 @@ func (m *GitLabHookManager) UpdateHook(ctx context.Context, repo *gitalypb.Repos
 	if err = executor(
 		ctx,
 		[]string{ref, oldValue, newValue},
-		env,
+		append(env, customHooksEnv(payload)...),
 		nil,
 		stdout,
 		stderr,

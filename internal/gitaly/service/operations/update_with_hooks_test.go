@@ -139,7 +139,6 @@ func TestUpdateReferenceWithHooks(t *testing.T) {
 		"GL_ID=1234",
 		"GL_PROJECT_PATH=gitlab-org/gitlab-test",
 		"GL_PROTOCOL=web",
-		"GL_REPOSITORY=project-1",
 		"GL_USERNAME=Username",
 	}
 

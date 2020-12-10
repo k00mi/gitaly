@@ -24,7 +24,6 @@ func TestUpdate_customHooks(t *testing.T) {
 		fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
 		"GL_PROTOCOL=web",
 		fmt.Sprintf("GL_REPO=%s", repo),
-		fmt.Sprintf("GL_REPOSITORY=%s", repo.GetGlRepository()),
 		"GL_USERNAME=user",
 	}
 

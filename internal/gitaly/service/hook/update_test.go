@@ -52,7 +52,6 @@ func TestUpdate_CustomHooks(t *testing.T) {
 		"GL_ID=key-123",
 		"GL_USERNAME=username",
 		"GL_PROTOCOL=protocol",
-		"GL_REPOSITORY=repository",
 	}
 
 	ctx, cancel := testhelper.Context()

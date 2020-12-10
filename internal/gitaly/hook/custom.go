@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"gitlab.com/gitlab-org/gitaly/internal/command"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"golang.org/x/sys/unix"
 )
@@ -132,4 +133,10 @@ func validHook(fi os.FileInfo, filename string) bool {
 	}
 
 	return true
+}
+
+func customHooksEnv(payload git.HooksPayload) []string {
+	return []string{
+		"GL_REPOSITORY=" + payload.Repo.GetGlRepository(),
+	}
 }
