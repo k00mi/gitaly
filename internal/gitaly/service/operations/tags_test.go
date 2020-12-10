@@ -355,7 +355,7 @@ func TestSuccessfulUserCreateTagRequestToNonCommit(t *testing.T) {
 			// Fake up *.Id for annotated tags
 			if len(testCase.expectedTag.Id) == 0 {
 				tagID := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", inputTagName)
-				testCase.expectedTag.Id = text.ChompBytes(tagID)
+				responseOk.Tag.Id = text.ChompBytes(tagID)
 			}
 			require.NoError(t, err)
 			require.Equal(t, responseOk, response)
