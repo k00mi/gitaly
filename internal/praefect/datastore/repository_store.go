@@ -82,9 +82,9 @@ type RepositoryStore interface {
 	// as the storage's which is calling it. Returns RepositoryNotExistsError when trying to rename a repository
 	// which has no record in the virtual storage or the storage.
 	RenameRepository(ctx context.Context, virtualStorage, relativePath, storage, newRelativePath string) error
-	// GetConsistentStorages checks which storages are on the latest generation and returns them.
+	// GetConsistentSecondaries checks which secondaries are on the same generation as the primary and returns them.
 	// If the primary's generation is unknown, all secondaries are considered inconsistent.
-	GetConsistentStorages(ctx context.Context, virtualStorage, relativePath string) (map[string]struct{}, error)
+	GetConsistentSecondaries(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error)
 	// IsLatestGeneration checks whether the repository is on the latest generation or not. If the repository does not
 	// have an expected generation, every storage is considered to be on the latest version.
 	IsLatestGeneration(ctx context.Context, virtualStorage, relativePath, storage string) (bool, error)
@@ -340,7 +340,7 @@ AND storage = $3
 	return err
 }
 
-func (rs *PostgresRepositoryStore) GetConsistentStorages(ctx context.Context, virtualStorage, relativePath string) (map[string]struct{}, error) {
+func (rs *PostgresRepositoryStore) GetConsistentSecondaries(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error) {
 	const q = `
 WITH expected_repositories AS (
 	SELECT virtual_storage, relative_path, unnest($3::text[]) AS storage, MAX(generation) AS generation
@@ -360,23 +360,32 @@ JOIN expected_repositories USING (virtual_storage, relative_path, storage, gener
 		return nil, err
 	}
 
-	rows, err := rs.db.QueryContext(ctx, q, virtualStorage, relativePath, pq.StringArray(storages))
+	secondaries := make([]string, 0, len(storages)-1)
+	for _, storage := range storages {
+		if storage == primary {
+			continue
+		}
+
+		secondaries = append(secondaries, storage)
+	}
+
+	rows, err := rs.db.QueryContext(ctx, q, virtualStorage, relativePath, pq.StringArray(secondaries))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	consistent := make(map[string]struct{}, len(storages))
+	consistentSecondaries := make(map[string]struct{}, len(storages)-1)
 	for rows.Next() {
 		var storage string
 		if err := rows.Scan(&storage); err != nil {
 			return nil, err
 		}
 
-		consistent[storage] = struct{}{}
+		consistentSecondaries[storage] = struct{}{}
 	}
 
-	return consistent, rows.Err()
+	return consistentSecondaries, rows.Err()
 }
 
 func (rs *PostgresRepositoryStore) IsLatestGeneration(ctx context.Context, virtualStorage, relativePath, storage string) (bool, error) {

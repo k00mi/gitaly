@@ -325,13 +325,13 @@ func TestMgr_GetSyncedNode(t *testing.T) {
 	defer cancel()
 
 	var consistentSecondariesErr error
-	consistentStorages := map[string]struct{}{"gitaly-0": {}}
+	consistentSecondaries := map[string]struct{}{}
 
 	verify := func(failover bool, scenario func(t *testing.T, nm Manager, rs datastore.RepositoryStore)) func(*testing.T) {
 		conf.Failover.Enabled = failover
 		rs := datastore.MockRepositoryStore{
-			GetConsistentStoragesFunc: func(ctx context.Context, virtualStorage, relativePath string) (map[string]struct{}, error) {
-				return consistentStorages, consistentSecondariesErr
+			GetConsistentSecondariesFunc: func(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error) {
+				return consistentSecondaries, consistentSecondariesErr
 			},
 		}
 		sp := datastore.NewDirectStorageProvider(rs)
@@ -361,7 +361,7 @@ func TestMgr_GetSyncedNode(t *testing.T) {
 	}))
 
 	t.Run("multiple storages up to date", verify(true, func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
-		consistentStorages = map[string]struct{}{"gitaly-0": {}, "gitaly-1": {}, "gitaly-2": {}}
+		consistentSecondaries = map[string]struct{}{"gitaly-0": {}, "gitaly-1": {}, "gitaly-2": {}}
 
 		chosen := map[Node]struct{}{}
 		for i := 0; i < 1000 && len(chosen) < 2; i++ {
@@ -375,7 +375,7 @@ func TestMgr_GetSyncedNode(t *testing.T) {
 	}))
 
 	t.Run("single secondary storage up to date but unhealthy", verify(true, func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
-		consistentStorages = map[string]struct{}{"gitaly-0": {}, "gitaly-1": {}}
+		consistentSecondaries = map[string]struct{}{"gitaly-0": {}, "gitaly-1": {}}
 
 		healthSrvs[1].SetServingStatus("", grpc_health_v1.HealthCheckResponse_UNKNOWN)
 
@@ -395,7 +395,7 @@ func TestMgr_GetSyncedNode(t *testing.T) {
 	}))
 
 	t.Run("no healthy storages", verify(true, func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
-		consistentStorages = map[string]struct{}{"gitaly-0": {}, "gitaly-1": {}}
+		consistentSecondaries = map[string]struct{}{"gitaly-0": {}, "gitaly-1": {}}
 
 		healthSrvs[0].SetServingStatus("", grpc_health_v1.HealthCheckResponse_UNKNOWN)
 		healthSrvs[1].SetServingStatus("", grpc_health_v1.HealthCheckResponse_UNKNOWN)
@@ -422,7 +422,7 @@ func TestMgr_GetSyncedNode(t *testing.T) {
 	}))
 
 	t.Run("disabled failover doesn't disable health state", verify(false, func(t *testing.T, nm Manager, rs datastore.RepositoryStore) {
-		consistentStorages = map[string]struct{}{"gitaly-0": {}, "gitaly-1": {}}
+		consistentSecondaries = map[string]struct{}{"gitaly-0": {}, "gitaly-1": {}}
 
 		shard, err := nm.GetShard(ctx, virtualStorage)
 		require.NoError(t, err)
@@ -448,9 +448,9 @@ func TestMgr_GetSyncedNode(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, gitaly0OK, "primary should be unhealthy")
 
-		node, err := nm.GetSyncedNode(ctx, virtualStorage, repoPath)
-		require.NoError(t, err)
-		require.Equal(t, conf.VirtualStorages[0].Nodes[1].Address, node.GetAddress(), "primary shouldn't be chosen as it is unhealthy")
+		_, err = nm.GetSyncedNode(ctx, virtualStorage, repoPath)
+		require.Error(t, err)
+		require.True(t, errors.Is(err, ErrPrimaryNotHealthy))
 	}))
 }
 

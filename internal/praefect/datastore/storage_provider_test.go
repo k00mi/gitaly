@@ -32,7 +32,7 @@ func TestDirectStorageProvider_GetSyncedNodes(t *testing.T) {
 			{
 				desc: "primary included",
 				ret:  map[string]struct{}{"g2": {}, "g3": {}},
-				exp:  []string{"g2", "g3"},
+				exp:  []string{"g1", "g2", "g3"},
 			},
 			{
 				desc: "distinct values",
@@ -42,34 +42,41 @@ func TestDirectStorageProvider_GetSyncedNodes(t *testing.T) {
 			{
 				desc: "none",
 				ret:  nil,
-				exp:  []string{},
+				exp:  []string{"g1"},
 			},
 		} {
 			t.Run(tc.desc, func(t *testing.T) {
 				rs := &mockConsistentSecondariesProvider{}
-				rs.On("GetConsistentStorages", ctx, "vs", "/repo/path").Return(tc.ret, nil)
+				rs.On("GetConsistentSecondaries", ctx, "vs", "/repo/path", "g1").Return(tc.ret, nil)
 
 				sp := NewDirectStorageProvider(rs)
-				storages, err := sp.GetSyncedNodes(ctx, "vs", "/repo/path")
-				require.NoError(t, err)
+				storages := sp.GetSyncedNodes(ctx, "vs", "/repo/path", "g1")
 				require.ElementsMatch(t, tc.exp, storages)
 			})
 		}
 	})
 
 	t.Run("repository store returns an error", func(t *testing.T) {
-		ctx, cancel := testhelper.Context(testhelper.ContextWithLogger(testhelper.DiscardTestEntry(t)))
+		logger := testhelper.DiscardTestEntry(t)
+		logHook := test.NewLocal(logger.Logger)
+
+		ctx, cancel := testhelper.Context(testhelper.ContextWithLogger(logger))
 		defer cancel()
 
 		rs := &mockConsistentSecondariesProvider{}
-		rs.On("GetConsistentStorages", ctx, "vs", "/repo/path").
+		rs.On("GetConsistentSecondaries", ctx, "vs", "/repo/path", "g1").
 			Return(nil, assert.AnError).
 			Once()
 
 		sp := NewDirectStorageProvider(rs)
 
-		_, err := sp.GetSyncedNodes(ctx, "vs", "/repo/path")
-		require.Equal(t, assert.AnError, err)
+		storages := sp.GetSyncedNodes(ctx, "vs", "/repo/path", "g1")
+		require.ElementsMatch(t, []string{"g1"}, storages)
+
+		require.Len(t, logHook.AllEntries(), 1)
+		require.Equal(t, "get consistent secondaries", logHook.LastEntry().Message)
+		require.Equal(t, logrus.Fields{"error": assert.AnError}, logHook.LastEntry().Data)
+		require.Equal(t, logrus.WarnLevel, logHook.LastEntry().Level)
 	})
 }
 
@@ -77,8 +84,8 @@ type mockConsistentSecondariesProvider struct {
 	mock.Mock
 }
 
-func (m *mockConsistentSecondariesProvider) GetConsistentStorages(ctx context.Context, virtualStorage, relativePath string) (map[string]struct{}, error) {
-	args := m.Called(ctx, virtualStorage, relativePath)
+func (m *mockConsistentSecondariesProvider) GetConsistentSecondaries(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error) {
+	args := m.Called(ctx, virtualStorage, relativePath, primary)
 	val := args.Get(0)
 	var res map[string]struct{}
 	if val != nil {
@@ -93,8 +100,8 @@ func TestCachingStorageProvider_GetSyncedNodes(t *testing.T) {
 		defer cancel()
 
 		rs := &mockConsistentSecondariesProvider{}
-		rs.On("GetConsistentStorages", mock.Anything, "unknown", "/repo/path").
-			Return(map[string]struct{}{"g1": {}, "g2": {}, "g3": {}}, nil).
+		rs.On("GetConsistentSecondaries", mock.Anything, "unknown", "/repo/path", "g1").
+			Return(map[string]struct{}{"g2": {}, "g3": {}}, nil).
 			Once()
 
 		cache, err := NewCachingStorageProvider(ctxlogrus.Extract(ctx), rs, []string{"vs"})
@@ -102,8 +109,7 @@ func TestCachingStorageProvider_GetSyncedNodes(t *testing.T) {
 		cache.Connected()
 
 		// empty cache should be populated
-		storages, err := cache.GetSyncedNodes(ctx, "unknown", "/repo/path")
-		require.NoError(t, err)
+		storages := cache.GetSyncedNodes(ctx, "unknown", "/repo/path", "g1")
 		require.ElementsMatch(t, []string{"g1", "g2", "g3"}, storages)
 
 		err = testutil.CollectAndCompare(cache, strings.NewReader(`
@@ -119,8 +125,8 @@ func TestCachingStorageProvider_GetSyncedNodes(t *testing.T) {
 		defer cancel()
 
 		rs := &mockConsistentSecondariesProvider{}
-		rs.On("GetConsistentStorages", mock.Anything, "vs", "/repo/path").
-			Return(map[string]struct{}{"g1": {}, "g2": {}, "g3": {}}, nil).
+		rs.On("GetConsistentSecondaries", mock.Anything, "vs", "/repo/path", "g1").
+			Return(map[string]struct{}{"g2": {}, "g3": {}}, nil).
 			Once()
 
 		cache, err := NewCachingStorageProvider(ctxlogrus.Extract(ctx), rs, []string{"vs"})
@@ -128,8 +134,7 @@ func TestCachingStorageProvider_GetSyncedNodes(t *testing.T) {
 		cache.Connected()
 
 		// empty cache should be populated
-		storages, err := cache.GetSyncedNodes(ctx, "vs", "/repo/path")
-		require.NoError(t, err)
+		storages := cache.GetSyncedNodes(ctx, "vs", "/repo/path", "g1")
 		require.ElementsMatch(t, []string{"g1", "g2", "g3"}, storages)
 
 		err = testutil.CollectAndCompare(cache, strings.NewReader(`
@@ -141,8 +146,7 @@ func TestCachingStorageProvider_GetSyncedNodes(t *testing.T) {
 		require.NoError(t, err)
 
 		// populated cache should return cached value
-		storages, err = cache.GetSyncedNodes(ctx, "vs", "/repo/path")
-		require.NoError(t, err)
+		storages = cache.GetSyncedNodes(ctx, "vs", "/repo/path", "g1")
 		require.ElementsMatch(t, []string{"g1", "g2", "g3"}, storages)
 
 		err = testutil.CollectAndCompare(cache, strings.NewReader(`
@@ -156,11 +160,14 @@ func TestCachingStorageProvider_GetSyncedNodes(t *testing.T) {
 	})
 
 	t.Run("repository store returns an error", func(t *testing.T) {
-		ctx, cancel := testhelper.Context(testhelper.ContextWithLogger(testhelper.DiscardTestEntry(t)))
+		logger := testhelper.DiscardTestEntry(t)
+		logHook := test.NewLocal(logger.Logger)
+
+		ctx, cancel := testhelper.Context(testhelper.ContextWithLogger(logger))
 		defer cancel()
 
 		rs := &mockConsistentSecondariesProvider{}
-		rs.On("GetConsistentStorages", mock.Anything, "vs", "/repo/path").
+		rs.On("GetConsistentSecondaries", mock.Anything, "vs", "/repo/path", "g1").
 			Return(nil, assert.AnError).
 			Once()
 
@@ -168,8 +175,13 @@ func TestCachingStorageProvider_GetSyncedNodes(t *testing.T) {
 		require.NoError(t, err)
 		cache.Connected()
 
-		_, err = cache.GetSyncedNodes(ctx, "vs", "/repo/path")
-		require.Equal(t, assert.AnError, err)
+		storages := cache.GetSyncedNodes(ctx, "vs", "/repo/path", "g1")
+		require.ElementsMatch(t, []string{"g1"}, storages)
+
+		require.Len(t, logHook.AllEntries(), 1)
+		assert.Equal(t, "get consistent secondaries", logHook.LastEntry().Message)
+		assert.Equal(t, logrus.Fields{"error": assert.AnError}, logHook.LastEntry().Data)
+		assert.Equal(t, logrus.WarnLevel, logHook.LastEntry().Level)
 
 		// "populate" metric is not set as there was an error and we don't want this result to be cached
 		err = testutil.CollectAndCompare(cache, strings.NewReader(`
@@ -188,8 +200,8 @@ func TestCachingStorageProvider_GetSyncedNodes(t *testing.T) {
 		defer cancel()
 
 		rs := &mockConsistentSecondariesProvider{}
-		rs.On("GetConsistentStorages", mock.Anything, "vs", "/repo/path/1").
-			Return(map[string]struct{}{"g1": {}, "g2": {}, "g3": {}}, nil).
+		rs.On("GetConsistentSecondaries", mock.Anything, "vs", "/repo/path/1", "g1").
+			Return(map[string]struct{}{"g2": {}, "g3": {}}, nil).
 			Times(4)
 
 		cache, err := NewCachingStorageProvider(ctxlogrus.Extract(ctx), rs, []string{"vs"})
@@ -197,29 +209,25 @@ func TestCachingStorageProvider_GetSyncedNodes(t *testing.T) {
 		cache.Connected()
 
 		// first access populates the cache
-		storages1, err := cache.GetSyncedNodes(ctx, "vs", "/repo/path/1")
-		require.NoError(t, err)
+		storages1 := cache.GetSyncedNodes(ctx, "vs", "/repo/path/1", "g1")
 		require.ElementsMatch(t, []string{"g1", "g2", "g3"}, storages1)
 
 		// invalid payload disables caching
 		cache.Notification(glsql.Notification{Channel: "notification_channel_1", Payload: ``})
 
 		// second access omits cached data as caching should be disabled
-		storages2, err := cache.GetSyncedNodes(ctx, "vs", "/repo/path/1")
-		require.NoError(t, err)
+		storages2 := cache.GetSyncedNodes(ctx, "vs", "/repo/path/1", "g1")
 		require.ElementsMatch(t, []string{"g1", "g2", "g3"}, storages2)
 
 		// valid payload enables caching again
 		cache.Notification(glsql.Notification{Channel: "notification_channel_2", Payload: `{}`})
 
 		// third access retrieves data and caches it
-		storages3, err := cache.GetSyncedNodes(ctx, "vs", "/repo/path/1")
-		require.NoError(t, err)
+		storages3 := cache.GetSyncedNodes(ctx, "vs", "/repo/path/1", "g1")
 		require.ElementsMatch(t, []string{"g1", "g2", "g3"}, storages3)
 
 		// fourth access retrieves data from cache
-		storages4, err := cache.GetSyncedNodes(ctx, "vs", "/repo/path/1")
-		require.NoError(t, err)
+		storages4 := cache.GetSyncedNodes(ctx, "vs", "/repo/path/1", "g1")
 		require.ElementsMatch(t, []string{"g1", "g2", "g3"}, storages4)
 
 		require.Len(t, logHook.AllEntries(), 1)
@@ -246,21 +254,19 @@ func TestCachingStorageProvider_GetSyncedNodes(t *testing.T) {
 		defer cancel()
 
 		rs := &mockConsistentSecondariesProvider{}
-		rs.On("GetConsistentStorages", mock.Anything, "vs", "/repo/path/1").
-			Return(map[string]struct{}{"g1": {}, "g2": {}, "g3": {}}, nil)
-		rs.On("GetConsistentStorages", mock.Anything, "vs", "/repo/path/2").
-			Return(map[string]struct{}{"g1": {}, "g2": {}}, nil)
+		rs.On("GetConsistentSecondaries", mock.Anything, "vs", "/repo/path/1", "g1").
+			Return(map[string]struct{}{"g2": {}, "g3": {}}, nil)
+		rs.On("GetConsistentSecondaries", mock.Anything, "vs", "/repo/path/2", "g1").
+			Return(map[string]struct{}{"g2": {}}, nil)
 
 		cache, err := NewCachingStorageProvider(ctxlogrus.Extract(ctx), rs, []string{"vs"})
 		require.NoError(t, err)
 		cache.Connected()
 
 		// first access populates the cache
-		path1Storages1, err := cache.GetSyncedNodes(ctx, "vs", "/repo/path/1")
-		require.NoError(t, err)
+		path1Storages1 := cache.GetSyncedNodes(ctx, "vs", "/repo/path/1", "g1")
 		require.ElementsMatch(t, []string{"g1", "g2", "g3"}, path1Storages1)
-		path2Storages1, err := cache.GetSyncedNodes(ctx, "vs", "/repo/path/2")
-		require.NoError(t, err)
+		path2Storages1 := cache.GetSyncedNodes(ctx, "vs", "/repo/path/2", "g1")
 		require.ElementsMatch(t, []string{"g1", "g2"}, path2Storages1)
 
 		// notification evicts entries for '/repo/path/2' from the cache
@@ -274,12 +280,10 @@ func TestCachingStorageProvider_GetSyncedNodes(t *testing.T) {
 		)
 
 		// second access re-uses cached data for '/repo/path/1'
-		path1Storages2, err := cache.GetSyncedNodes(ctx, "vs", "/repo/path/1")
-		require.NoError(t, err)
+		path1Storages2 := cache.GetSyncedNodes(ctx, "vs", "/repo/path/1", "g1")
 		require.ElementsMatch(t, []string{"g1", "g2", "g3"}, path1Storages2)
 		// second access populates the cache again for '/repo/path/2'
-		path2Storages2, err := cache.GetSyncedNodes(ctx, "vs", "/repo/path/2")
-		require.NoError(t, err)
+		path2Storages2 := cache.GetSyncedNodes(ctx, "vs", "/repo/path/2", "g1")
 		require.ElementsMatch(t, []string{"g1", "g2"}, path2Storages2)
 
 		err = testutil.CollectAndCompare(cache, strings.NewReader(`
@@ -298,24 +302,22 @@ func TestCachingStorageProvider_GetSyncedNodes(t *testing.T) {
 		defer cancel()
 
 		rs := &mockConsistentSecondariesProvider{}
-		rs.On("GetConsistentStorages", mock.Anything, "vs", "/repo/path").
-			Return(map[string]struct{}{"g1": {}, "g2": {}, "g3": {}}, nil)
+		rs.On("GetConsistentSecondaries", mock.Anything, "vs", "/repo/path", "g1").
+			Return(map[string]struct{}{"g2": {}, "g3": {}}, nil)
 
 		cache, err := NewCachingStorageProvider(ctxlogrus.Extract(ctx), rs, []string{"vs"})
 		require.NoError(t, err)
 		cache.Connected()
 
 		// first access populates the cache
-		storages1, err := cache.GetSyncedNodes(ctx, "vs", "/repo/path")
-		require.NoError(t, err)
+		storages1 := cache.GetSyncedNodes(ctx, "vs", "/repo/path", "g1")
 		require.ElementsMatch(t, []string{"g1", "g2", "g3"}, storages1)
 
 		// disconnection disables cache
 		cache.Disconnect(assert.AnError)
 
 		// second access retrieve data and doesn't populate the cache
-		storages2, err := cache.GetSyncedNodes(ctx, "vs", "/repo/path")
-		require.NoError(t, err)
+		storages2 := cache.GetSyncedNodes(ctx, "vs", "/repo/path", "g1")
 		require.ElementsMatch(t, []string{"g1", "g2", "g3"}, storages2)
 
 		err = testutil.CollectAndCompare(cache, strings.NewReader(`
@@ -333,8 +335,8 @@ func TestCachingStorageProvider_GetSyncedNodes(t *testing.T) {
 		defer cancel()
 
 		rs := &mockConsistentSecondariesProvider{}
-		rs.On("GetConsistentStorages", mock.Anything, "vs", "/repo/path/1").Return(nil, nil)
-		rs.On("GetConsistentStorages", mock.Anything, "vs", "/repo/path/2").Return(nil, nil)
+		rs.On("GetConsistentSecondaries", mock.Anything, "vs", "/repo/path/1", "g1").Return(nil, nil)
+		rs.On("GetConsistentSecondaries", mock.Anything, "vs", "/repo/path/2", "g1").Return(nil, nil)
 
 		cache, err := NewCachingStorageProvider(ctxlogrus.Extract(ctx), rs, []string{"vs"})
 		require.NoError(t, err)
@@ -348,9 +350,9 @@ func TestCachingStorageProvider_GetSyncedNodes(t *testing.T) {
 			var f func()
 			switch i % 6 {
 			case 0, 1:
-				f = func() { cache.GetSyncedNodes(ctx, "vs", "/repo/path/1") }
+				f = func() { cache.GetSyncedNodes(ctx, "vs", "/repo/path/1", "g1") }
 			case 2, 3:
-				f = func() { cache.GetSyncedNodes(ctx, "vs", "/repo/path/2") }
+				f = func() { cache.GetSyncedNodes(ctx, "vs", "/repo/path/2", "g1") }
 			case 4:
 				f = func() { cache.Notification(nf1) }
 			case 5:
