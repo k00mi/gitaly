@@ -70,11 +70,19 @@ func TestPrereceive_customHooks(t *testing.T) {
 		expectedStderr string
 	}{
 		{
-			desc:           "hook receives environment variables",
-			env:            append(standardEnv, payload),
-			hook:           "#!/bin/sh\nenv | grep -e '^GL_' -e '^GITALY_' | sort\n",
-			stdin:          "change\n",
-			expectedStdout: strings.Join(append([]string{payload}, standardEnv...), "\n") + "\n",
+			desc:  "hook receives environment variables",
+			env:   append(standardEnv, payload),
+			hook:  "#!/bin/sh\nenv | grep -e '^GL_' -e '^GITALY_' | sort\n",
+			stdin: "change\n",
+			expectedStdout: strings.Join([]string{
+				payload,
+				"GL_ID=1234",
+				fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
+				"GL_PROTOCOL=web",
+				fmt.Sprintf("GL_REPO=%s", repo),
+				fmt.Sprintf("GL_REPOSITORY=%s", repo.GetGlRepository()),
+				"GL_USERNAME=user",
+			}, "\n") + "\n",
 		},
 		{
 			desc:           "hook can write to stderr and stdout",

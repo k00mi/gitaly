@@ -122,11 +122,19 @@ func TestPostReceive_customHook(t *testing.T) {
 		expectedStderr string
 	}{
 		{
-			desc:           "hook receives environment variables",
-			env:            append(standardEnv, payload),
-			stdin:          "changes\n",
-			hook:           "#!/bin/sh\nenv | grep -e '^GL_' -e '^GITALY_' | sort\n",
-			expectedStdout: strings.Join(append([]string{payload}, standardEnv...), "\n") + "\n",
+			desc:  "hook receives environment variables",
+			env:   append(standardEnv, payload),
+			stdin: "changes\n",
+			hook:  "#!/bin/sh\nenv | grep -e '^GL_' -e '^GITALY_' | sort\n",
+			expectedStdout: strings.Join([]string{
+				payload,
+				"GL_ID=1234",
+				fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
+				"GL_PROTOCOL=web",
+				fmt.Sprintf("GL_REPO=%s", repo),
+				fmt.Sprintf("GL_REPOSITORY=%s", repo.GetGlRepository()),
+				"GL_USERNAME=user",
+			}, "\n") + "\n",
 		},
 		{
 			desc:  "push options are passed through",
