@@ -821,9 +821,13 @@ func TestFailedUserCreateTagRequestDueToTagExistence(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	responseOk := &gitalypb.UserCreateTagResponse{
+		Tag:    nil,
+		Exists: true,
+	}
 	response, err := client.UserCreateTag(ctx, request)
 	require.NoError(t, err)
-	require.Equal(t, response.Exists, true)
+	require.Equal(t, responseOk, response)
 }
 
 func TestFailedUserCreateTagRequestDueToValidation(t *testing.T) {
@@ -973,16 +977,22 @@ func testTagHookOutput(t *testing.T, ctx context.Context) {
 
 				createResponse, err := client.UserCreateTag(ctx, createRequest)
 				require.NoError(t, err)
-				require.False(t, createResponse.Exists)
-				require.Equal(t, testCase.output, createResponse.PreReceiveError)
+				createResponseOk := &gitalypb.UserCreateTagResponse{
+					Tag:             createResponse.Tag,
+					Exists:          false,
+					PreReceiveError: testCase.output,
+				}
+				require.Equal(t, createResponseOk, createResponse)
 
 				defer testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", "-d", tagNameInput)
 				testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", tagNameInput)
 
 				deleteResponse, err := client.UserDeleteTag(ctx, deleteRequest)
 				require.NoError(t, err)
-
-				require.Equal(t, testCase.output, deleteResponse.PreReceiveError)
+				deleteResponseOk := &gitalypb.UserDeleteTagResponse{
+					PreReceiveError: testCase.output,
+				}
+				require.Equal(t, deleteResponseOk, deleteResponse)
 			})
 		}
 	}
