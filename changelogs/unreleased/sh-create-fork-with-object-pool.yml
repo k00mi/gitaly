@@ -1,0 +1,5 @@
+---
+title: Support cloning with an object pool in CreateFork
+merge_request: 2887
+author:
+type: performance
