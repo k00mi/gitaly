@@ -35,20 +35,6 @@ func (fn PrimaryGetterFunc) GetPrimary(ctx context.Context, virtualStorage, rela
 	return fn(ctx, virtualStorage, relativePath)
 }
 
-type MockRepositoryStore struct {
-	datastore.RepositoryStore
-	GetConsistentSecondariesFunc func(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error)
-	IsLatestGenerationFunc       func(ctx context.Context, virtualStorage, relativePath, storage string) (bool, error)
-}
-
-func (m MockRepositoryStore) GetConsistentSecondaries(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error) {
-	return m.GetConsistentSecondariesFunc(ctx, virtualStorage, relativePath, primary)
-}
-
-func (m MockRepositoryStore) IsLatestGeneration(ctx context.Context, virtualStorage, relativePath, storage string) (bool, error) {
-	return m.IsLatestGenerationFunc(ctx, virtualStorage, relativePath, storage)
-}
-
 func TestPerRepositoryRouter_RouteStorageAccessor(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
@@ -203,7 +189,7 @@ func TestPerRepositoryRouter_RouteRepositoryAccessor(t *testing.T) {
 					require.Equal(t, tc.numCandidates, n)
 					return tc.pickCandidate
 				}),
-				MockRepositoryStore{
+				datastore.MockRepositoryStore{
 					GetConsistentSecondariesFunc: func(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error) {
 						t.Helper()
 						require.Equal(t, tc.virtualStorage, virtualStorage)
@@ -348,7 +334,7 @@ func TestPerRepositoryRouter_RouteRepositoryMutator(t *testing.T) {
 				}),
 				tc.healthyNodes,
 				nil,
-				MockRepositoryStore{
+				datastore.MockRepositoryStore{
 					IsLatestGenerationFunc: func(ctx context.Context, virtualStorage, relativePath, storage string) (bool, error) {
 						t.Helper()
 						require.Equal(t, tc.virtualStorage, virtualStorage)
