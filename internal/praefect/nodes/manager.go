@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/sirupsen/logrus"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
@@ -62,7 +63,7 @@ func (s Shard) GetHealthySecondaries() []Node {
 // StorageProvider abstracts the way we get storages (gitaly nodes).
 type StorageProvider interface {
 	// GetSyncedNodes returns list of gitaly storages that are in up to date state based on the generation tracking.
-	GetSyncedNodes(ctx context.Context, virtualStorageName, repoPath string) ([]string, error)
+	GetSyncedNodes(ctx context.Context, virtualStorageName, repoPath, primaryStorage string) []string
 }
 
 // Manager is responsible for returning shards for virtual storages
@@ -231,35 +232,37 @@ func (n *Mgr) GetShard(ctx context.Context, virtualStorageName string) (Shard, e
 }
 
 func (n *Mgr) GetSyncedNode(ctx context.Context, virtualStorageName, repoPath string) (Node, error) {
-	if featureflag.IsDisabled(ctx, featureflag.DistributedReads) {
-		shard, err := n.GetShard(ctx, virtualStorageName)
-		if err != nil {
-			return nil, fmt.Errorf("get shard for %q: %w", virtualStorageName, err)
-		}
+	shard, err := n.GetShard(ctx, virtualStorageName)
+	if err != nil {
+		return nil, fmt.Errorf("get shard for %q: %w", virtualStorageName, err)
+	}
 
+	if featureflag.IsDisabled(ctx, featureflag.DistributedReads) {
 		return shard.Primary, nil
 	}
 
-	upToDateStorages, err := n.sp.GetSyncedNodes(ctx, virtualStorageName, repoPath)
-	if err != nil {
-		return nil, err
-	}
+	upToDateStorages := n.sp.GetSyncedNodes(ctx, virtualStorageName, repoPath, shard.Primary.GetStorage())
 	healthyStorages := make([]Node, 0, len(upToDateStorages))
-	nodes := n.Nodes()[virtualStorageName]
-	for _, node := range nodes {
+
+	for _, upToDateStorage := range upToDateStorages {
+		node, err := shard.GetNode(upToDateStorage)
+		if err != nil {
+			// this is recoverable error - proceed with with other nodes
+			ctxlogrus.Extract(ctx).
+				WithFields(logrus.Fields{"virtual_storage": virtualStorageName, "relative_path": repoPath}).
+				WithError(err).
+				Warn("storage was returned as up-to-date")
+		}
+
 		if !node.IsHealthy() {
 			continue
 		}
 
-		for _, upToDateStorage := range upToDateStorages {
-			if node.GetStorage() == upToDateStorage {
-				healthyStorages = append(healthyStorages, node)
-			}
-		}
+		healthyStorages = append(healthyStorages, node)
 	}
 
 	if len(healthyStorages) == 0 {
-		return nil, fmt.Errorf("no healthy nodes: %w", ErrPrimaryNotHealthy)
+		return nil, ErrPrimaryNotHealthy
 	}
 
 	return healthyStorages[rand.Intn(len(healthyStorages))], nil

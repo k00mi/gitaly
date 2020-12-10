@@ -69,23 +69,25 @@ func (r *nodeManagerRouter) RouteRepositoryMutator(ctx context.Context, virtualS
 		return RepositoryMutatorRoute{}, fmt.Errorf("get shard: %w", err)
 	}
 
-	consistentStorages, err := r.rs.GetConsistentStorages(ctx, virtualStorage, relativePath)
-	if err != nil {
-		return RepositoryMutatorRoute{}, fmt.Errorf("consistent storages: %w", err)
-	}
-
-	if _, ok := consistentStorages[shard.Primary.GetStorage()]; !ok {
+	if latest, err := r.rs.IsLatestGeneration(ctx, virtualStorage, relativePath, shard.Primary.GetStorage()); err != nil {
+		return RepositoryMutatorRoute{}, fmt.Errorf("check generation: %w", err)
+	} else if !latest {
 		return RepositoryMutatorRoute{}, ErrRepositoryReadOnly
 	}
 
-	// Inconsistent nodes will anyway need repair so including them doesn't make sense. They
-	// also might vote to abort which might unnecessarily fail the transaction.
-	var replicationTargets []string
 	// Only healthy secondaries which are consistent with the primary are allowed to take
 	// part in the transaction. Unhealthy nodes would block the transaction until they come back.
-	participatingSecondaries := make([]nodes.Node, 0, len(consistentStorages))
+	// Inconsistent nodes will anyway need repair so including them doesn't make sense. They
+	// also might vote to abort which might unnecessarily fail the transaction.
+	consistentSecondaries, err := r.rs.GetConsistentSecondaries(ctx, virtualStorage, relativePath, shard.Primary.GetStorage())
+	if err != nil {
+		return RepositoryMutatorRoute{}, fmt.Errorf("consistent secondaries: %w", err)
+	}
+
+	var replicationTargets []string
+	participatingSecondaries := make([]nodes.Node, 0, len(consistentSecondaries))
 	for _, secondary := range shard.Secondaries {
-		if _, ok := consistentStorages[secondary.GetStorage()]; ok && secondary.IsHealthy() {
+		if _, ok := consistentSecondaries[secondary.GetStorage()]; ok && secondary.IsHealthy() {
 			participatingSecondaries = append(participatingSecondaries, secondary)
 			continue
 		}

@@ -190,11 +190,12 @@ func TestPerRepositoryRouter_RouteRepositoryAccessor(t *testing.T) {
 					return tc.pickCandidate
 				}),
 				datastore.MockRepositoryStore{
-					GetConsistentStoragesFunc: func(ctx context.Context, virtualStorage, relativePath string) (map[string]struct{}, error) {
+					GetConsistentSecondariesFunc: func(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error) {
 						t.Helper()
 						require.Equal(t, tc.virtualStorage, virtualStorage)
 						require.Equal(t, "repository", relativePath)
-						return map[string]struct{}{"primary": {}, "consistent-secondary": {}}, nil
+						require.Equal(t, "primary", primary)
+						return map[string]struct{}{"consistent-secondary": struct{}{}}, nil
 					},
 				},
 				nil,
@@ -220,14 +221,15 @@ func TestPerRepositoryRouter_RouteRepositoryMutator(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		desc               string
-		virtualStorage     string
-		healthyNodes       StaticHealthChecker
-		consistentStorages []string
-		secondaries        []string
-		replicationTargets []string
-		error              error
-		assignedNodes      AssignmentGetter
+		desc                  string
+		virtualStorage        string
+		healthyNodes          StaticHealthChecker
+		isLatestGeneration    bool
+		consistentSecondaries []string
+		secondaries           []string
+		replicationTargets    []string
+		error                 error
+		assignedNodes         AssignmentGetter
 	}{
 		{
 			desc:           "unknown virtual storage",
@@ -235,71 +237,79 @@ func TestPerRepositoryRouter_RouteRepositoryMutator(t *testing.T) {
 			error:          nodes.ErrVirtualStorageNotExist,
 		},
 		{
-			desc:               "primary outdated",
-			virtualStorage:     "virtual-storage-1",
-			healthyNodes:       StaticHealthChecker(configuredNodes),
-			assignedNodes:      StaticStorageAssignments(configuredNodes),
-			consistentStorages: []string{"secondary-1", "secondary-2"},
-			error:              ErrRepositoryReadOnly,
+			desc:                  "primary outdated",
+			virtualStorage:        "virtual-storage-1",
+			isLatestGeneration:    false,
+			healthyNodes:          StaticHealthChecker(configuredNodes),
+			assignedNodes:         StaticStorageAssignments(configuredNodes),
+			consistentSecondaries: []string{"secondary-1", "secondary-2"},
+			error:                 ErrRepositoryReadOnly,
 		},
 		{
-			desc:               "primary unhealthy",
-			virtualStorage:     "virtual-storage-1",
-			healthyNodes:       StaticHealthChecker{"virtual-storage-1": {"secondary-1", "secondary-2"}},
-			assignedNodes:      StaticStorageAssignments(configuredNodes),
-			consistentStorages: []string{"primary", "secondary-1", "secondary-2"},
-			error:              nodes.ErrPrimaryNotHealthy,
+			desc:                  "primary unhealthy",
+			virtualStorage:        "virtual-storage-1",
+			isLatestGeneration:    true,
+			healthyNodes:          StaticHealthChecker{"virtual-storage-1": {"secondary-1", "secondary-2"}},
+			assignedNodes:         StaticStorageAssignments(configuredNodes),
+			consistentSecondaries: []string{"secondary-1", "secondary-2"},
+			error:                 nodes.ErrPrimaryNotHealthy,
 		},
 		{
-			desc:               "all secondaries consistent",
-			virtualStorage:     "virtual-storage-1",
-			healthyNodes:       StaticHealthChecker(configuredNodes),
-			assignedNodes:      StaticStorageAssignments(configuredNodes),
-			consistentStorages: []string{"primary", "secondary-1", "secondary-2"},
-			secondaries:        []string{"secondary-1", "secondary-2"},
+			desc:                  "all secondaries consistent",
+			virtualStorage:        "virtual-storage-1",
+			isLatestGeneration:    true,
+			healthyNodes:          StaticHealthChecker(configuredNodes),
+			assignedNodes:         StaticStorageAssignments(configuredNodes),
+			consistentSecondaries: []string{"secondary-1", "secondary-2"},
+			secondaries:           []string{"secondary-1", "secondary-2"},
 		},
 		{
-			desc:               "inconsistent secondary",
-			virtualStorage:     "virtual-storage-1",
-			healthyNodes:       StaticHealthChecker(configuredNodes),
-			assignedNodes:      StaticStorageAssignments(configuredNodes),
-			consistentStorages: []string{"primary", "secondary-2"},
-			secondaries:        []string{"secondary-2"},
-			replicationTargets: []string{"secondary-1"},
+			desc:                  "inconsistent secondary",
+			virtualStorage:        "virtual-storage-1",
+			isLatestGeneration:    true,
+			healthyNodes:          StaticHealthChecker(configuredNodes),
+			assignedNodes:         StaticStorageAssignments(configuredNodes),
+			consistentSecondaries: []string{"secondary-2"},
+			secondaries:           []string{"secondary-2"},
+			replicationTargets:    []string{"secondary-1"},
 		},
 		{
-			desc:               "unhealthy secondaries",
-			virtualStorage:     "virtual-storage-1",
-			healthyNodes:       StaticHealthChecker{"virtual-storage-1": {"primary"}},
-			assignedNodes:      StaticStorageAssignments(configuredNodes),
-			consistentStorages: []string{"primary", "secondary-1"},
-			replicationTargets: []string{"secondary-1", "secondary-2"},
+			desc:                  "unhealthy secondaries",
+			virtualStorage:        "virtual-storage-1",
+			isLatestGeneration:    true,
+			healthyNodes:          StaticHealthChecker{"virtual-storage-1": {"primary"}},
+			assignedNodes:         StaticStorageAssignments(configuredNodes),
+			consistentSecondaries: []string{"secondary-1"},
+			replicationTargets:    []string{"secondary-1", "secondary-2"},
 		},
 		{
-			desc:               "up to date unassigned nodes are ignored",
-			virtualStorage:     "virtual-storage-1",
-			healthyNodes:       StaticHealthChecker(configuredNodes),
-			assignedNodes:      StaticRepositoryAssignments{"virtual-storage-1": {"repository": {"primary", "secondary-1"}}},
-			consistentStorages: []string{"primary", "secondary-1", "secondary-2"},
-			secondaries:        []string{"secondary-1"},
+			desc:                  "up to date unassigned nodes are ignored",
+			virtualStorage:        "virtual-storage-1",
+			isLatestGeneration:    true,
+			healthyNodes:          StaticHealthChecker(configuredNodes),
+			assignedNodes:         StaticRepositoryAssignments{"virtual-storage-1": {"repository": {"primary", "secondary-1"}}},
+			consistentSecondaries: []string{"secondary-1", "secondary-2"},
+			secondaries:           []string{"secondary-1"},
 		},
 		{
-			desc:               "outdated unassigned nodes are ignored",
-			virtualStorage:     "virtual-storage-1",
-			healthyNodes:       StaticHealthChecker(configuredNodes),
-			assignedNodes:      StaticRepositoryAssignments{"virtual-storage-1": {"repository": {"primary", "secondary-1"}}},
-			consistentStorages: []string{"primary", "secondary-1"},
-			secondaries:        []string{"secondary-1"},
+			desc:                  "outdated unassigned nodes are ignored",
+			virtualStorage:        "virtual-storage-1",
+			isLatestGeneration:    true,
+			healthyNodes:          StaticHealthChecker(configuredNodes),
+			assignedNodes:         StaticRepositoryAssignments{"virtual-storage-1": {"repository": {"primary", "secondary-1"}}},
+			consistentSecondaries: []string{"secondary-1"},
+			secondaries:           []string{"secondary-1"},
 		},
 		{
-			desc:               "primary is unassigned",
-			virtualStorage:     "virtual-storage-1",
-			healthyNodes:       StaticHealthChecker(configuredNodes),
-			assignedNodes:      StaticRepositoryAssignments{"virtual-storage-1": {"repository": {"secondary-1", "secondary-2"}}},
-			consistentStorages: []string{"primary", "secondary-1", "secondary-2"},
-			secondaries:        []string{"secondary-1"},
-			replicationTargets: []string{"secondary-2"},
-			error:              errPrimaryUnassigned,
+			desc:                  "primary is unassigned",
+			virtualStorage:        "virtual-storage-1",
+			isLatestGeneration:    true,
+			healthyNodes:          StaticHealthChecker(configuredNodes),
+			assignedNodes:         StaticRepositoryAssignments{"virtual-storage-1": {"repository": {"secondary-1", "secondary-2"}}},
+			consistentSecondaries: []string{"secondary-1", "secondary-2"},
+			secondaries:           []string{"secondary-1"},
+			replicationTargets:    []string{"secondary-2"},
+			error:                 errPrimaryUnassigned,
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -325,16 +335,25 @@ func TestPerRepositoryRouter_RouteRepositoryMutator(t *testing.T) {
 				tc.healthyNodes,
 				nil,
 				datastore.MockRepositoryStore{
-					GetConsistentStoragesFunc: func(ctx context.Context, virtualStorage, relativePath string) (map[string]struct{}, error) {
+					IsLatestGenerationFunc: func(ctx context.Context, virtualStorage, relativePath, storage string) (bool, error) {
 						t.Helper()
 						require.Equal(t, tc.virtualStorage, virtualStorage)
 						require.Equal(t, "repository", relativePath)
-						consistentStorages := map[string]struct{}{}
-						for _, storage := range tc.consistentStorages {
-							consistentStorages[storage] = struct{}{}
+						require.Equal(t, "primary", storage)
+						return tc.isLatestGeneration, nil
+					},
+
+					GetConsistentSecondariesFunc: func(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error) {
+						t.Helper()
+						require.Equal(t, tc.virtualStorage, virtualStorage)
+						require.Equal(t, "repository", relativePath)
+						require.Equal(t, "primary", primary)
+						consistentSecondaries := map[string]struct{}{}
+						for _, storage := range tc.consistentSecondaries {
+							consistentSecondaries[storage] = struct{}{}
 						}
 
-						return consistentStorages, nil
+						return consistentSecondaries, nil
 					},
 				},
 				tc.assignedNodes,
