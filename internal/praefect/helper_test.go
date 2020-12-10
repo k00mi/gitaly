@@ -193,7 +193,11 @@ func defaultNodeMgr(t testing.TB, conf config.Config, rs datastore.RepositorySto
 }
 
 func defaultRepoStore(conf config.Config) datastore.RepositoryStore {
-	return datastore.MockRepositoryStore{}
+	return datastore.MockRepositoryStore{
+		GetConsistentStoragesFunc: func(context.Context, string, string) (map[string]struct{}, error) {
+			return map[string]struct{}{conf.VirtualStorages[0].Nodes[0].Storage: {}}, nil
+		},
+	}
 }
 
 func runPraefectServer(t testing.TB, conf config.Config, opt buildOptions) (*grpc.ClientConn, *grpc.Server, testhelper.Cleanup) {

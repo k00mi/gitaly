@@ -8,54 +8,44 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore/glsql"
 )
 
-// SecondariesProvider should provide information about secondary storages.
-type SecondariesProvider interface {
-	// GetConsistentSecondaries returns all secondaries with the same generation as the primary.
-	GetConsistentSecondaries(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error)
+// StoragesProvider should provide information about repository storages.
+type StoragesProvider interface {
+	// GetConsistentStorages returns all secondaries with the same generation as the primary.
+	GetConsistentStorages(ctx context.Context, virtualStorage, relativePath string) (map[string]struct{}, error)
 }
 
 // DirectStorageProvider provides the latest state of the synced nodes.
 type DirectStorageProvider struct {
-	sp SecondariesProvider
+	sp StoragesProvider
 }
 
 // NewDirectStorageProvider returns a new storage provider.
-func NewDirectStorageProvider(sp SecondariesProvider) *DirectStorageProvider {
+func NewDirectStorageProvider(sp StoragesProvider) *DirectStorageProvider {
 	return &DirectStorageProvider{sp: sp}
 }
 
-func (c *DirectStorageProvider) GetSyncedNodes(ctx context.Context, virtualStorage, relativePath, primaryStorage string) []string {
-	storages, _ := c.getSyncedNodes(ctx, virtualStorage, relativePath, primaryStorage)
-	return storages
+func (c *DirectStorageProvider) GetSyncedNodes(ctx context.Context, virtualStorage, relativePath string) ([]string, error) {
+	return c.getSyncedNodes(ctx, virtualStorage, relativePath)
 }
 
-func (c *DirectStorageProvider) getSyncedNodes(ctx context.Context, virtualStorage, relativePath, primaryStorage string) ([]string, bool) {
-	upToDateStorages, err := c.sp.GetConsistentSecondaries(ctx, virtualStorage, relativePath, primaryStorage)
+func (c *DirectStorageProvider) getSyncedNodes(ctx context.Context, virtualStorage, relativePath string) ([]string, error) {
+	upToDateStorages, err := c.sp.GetConsistentStorages(ctx, virtualStorage, relativePath)
 	if err != nil {
-		// this is recoverable error - we can proceed with primary node
-		ctxlogrus.Extract(ctx).WithError(err).Warn("get consistent secondaries")
-		return []string{primaryStorage}, false
+		return nil, err
 	}
 
-	return combineStorages(upToDateStorages, primaryStorage), true
-}
-
-func combineStorages(upToDateStorages map[string]struct{}, primaryStorage string) []string {
-	storages := make([]string, 0, len(upToDateStorages)+1)
+	storages := make([]string, 0, len(upToDateStorages))
 	for upToDateStorage := range upToDateStorages {
-		if upToDateStorage != primaryStorage {
-			storages = append(storages, upToDateStorage)
-		}
+		storages = append(storages, upToDateStorage)
 	}
 
-	return append(storages, primaryStorage)
+	return storages, nil
 }
 
 // errNotExistingVirtualStorage indicates that the requested virtual storage can't be found or not configured.
@@ -77,7 +67,7 @@ type CachingStorageProvider struct {
 }
 
 // NewCachingStorageProvider returns a storage provider that uses caching.
-func NewCachingStorageProvider(logger logrus.FieldLogger, sp SecondariesProvider, virtualStorages []string) (*CachingStorageProvider, error) {
+func NewCachingStorageProvider(logger logrus.FieldLogger, sp StoragesProvider, virtualStorages []string) (*CachingStorageProvider, error) {
 	csp := &CachingStorageProvider{
 		dsp:            NewDirectStorageProvider(sp),
 		caches:         make(map[string]*lru.Cache, len(virtualStorages)),
@@ -180,9 +170,9 @@ func (c *CachingStorageProvider) getCache(virtualStorage string) (*lru.Cache, bo
 	return val, found
 }
 
-func (c *CachingStorageProvider) cacheMiss(ctx context.Context, virtualStorage, relativePath, primaryStorage string) ([]string, bool) {
+func (c *CachingStorageProvider) cacheMiss(ctx context.Context, virtualStorage, relativePath string) ([]string, error) {
 	c.cacheAccessTotal.WithLabelValues(virtualStorage, "miss").Inc()
-	return c.dsp.getSyncedNodes(ctx, virtualStorage, relativePath, primaryStorage)
+	return c.dsp.getSyncedNodes(ctx, virtualStorage, relativePath)
 }
 
 func (c *CachingStorageProvider) tryCache(virtualStorage, relativePath string) (func(), *lru.Cache, []string, bool) {
@@ -209,7 +199,7 @@ func (c *CachingStorageProvider) tryCache(virtualStorage, relativePath string) (
 
 func (c *CachingStorageProvider) isCacheEnabled() bool { return atomic.LoadInt32(&c.access) != 0 }
 
-func (c *CachingStorageProvider) GetSyncedNodes(ctx context.Context, virtualStorage, relativePath, primaryStorage string) []string {
+func (c *CachingStorageProvider) GetSyncedNodes(ctx context.Context, virtualStorage, relativePath string) ([]string, error) {
 	var cache *lru.Cache
 
 	if c.isCacheEnabled() {
@@ -221,16 +211,16 @@ func (c *CachingStorageProvider) GetSyncedNodes(ctx context.Context, virtualStor
 		defer populationDone()
 		if ok {
 			c.cacheAccessTotal.WithLabelValues(virtualStorage, "hit").Inc()
-			return storages
+			return storages, nil
 		}
 	}
 
-	storages, ok := c.cacheMiss(ctx, virtualStorage, relativePath, primaryStorage)
-	if ok && cache != nil {
+	storages, err := c.cacheMiss(ctx, virtualStorage, relativePath)
+	if err == nil && cache != nil {
 		cache.Add(relativePath, storages)
 		c.cacheAccessTotal.WithLabelValues(virtualStorage, "populate").Inc()
 	}
-	return storages
+	return storages, err
 }
 
 func getStringSlice(cache *lru.Cache, key string) ([]string, bool) {

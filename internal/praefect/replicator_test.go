@@ -350,7 +350,11 @@ func TestPropagateReplicationJob(t *testing.T) {
 
 	txMgr := transactions.NewManager(conf)
 
-	rs := datastore.MockRepositoryStore{}
+	rs := datastore.MockRepositoryStore{
+		GetConsistentStoragesFunc: func(context.Context, string, string) (map[string]struct{}, error) {
+			return map[string]struct{}{conf.VirtualStorages[0].Nodes[0].Storage: {}}, nil
+		},
+	}
 
 	coordinator := NewCoordinator(
 		queue,

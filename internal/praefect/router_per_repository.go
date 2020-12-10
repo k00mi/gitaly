@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/nodes"
 	"google.golang.org/grpc"
@@ -130,22 +129,14 @@ func (r *PerRepositoryRouter) RouteRepositoryAccessor(ctx context.Context, virtu
 		return RouterNode{}, err
 	}
 
-	primary, err := r.pg.GetPrimary(ctx, virtualStorage, relativePath)
+	consistentStorages, err := r.rs.GetConsistentStorages(ctx, virtualStorage, relativePath)
 	if err != nil {
-		return RouterNode{}, fmt.Errorf("get primary: %w", err)
+		return RouterNode{}, fmt.Errorf("consistent storages: %w", err)
 	}
-
-	consistentSecondaries, err := r.rs.GetConsistentSecondaries(ctx, virtualStorage, relativePath, primary)
-	if err != nil {
-		// this is recoverable error - proceed with primary node
-		ctxlogrus.Extract(ctx).WithError(err).Warn("get up to date secondaries")
-	}
-
-	consistentSecondaries[primary] = struct{}{}
 
 	healthyConsistentNodes := make([]RouterNode, 0, len(healthyNodes))
 	for _, node := range healthyNodes {
-		if _, ok := consistentSecondaries[node.Storage]; !ok {
+		if _, ok := consistentStorages[node.Storage]; !ok {
 			continue
 		}
 
@@ -175,15 +166,13 @@ func (r *PerRepositoryRouter) RouteRepositoryMutator(ctx context.Context, virtua
 		return RepositoryMutatorRoute{}, nodes.ErrPrimaryNotHealthy
 	}
 
-	if latest, err := r.rs.IsLatestGeneration(ctx, virtualStorage, relativePath, primary); err != nil {
-		return RepositoryMutatorRoute{}, fmt.Errorf("is latest generation: %w", err)
-	} else if !latest {
-		return RepositoryMutatorRoute{}, ErrRepositoryReadOnly
+	consistentStorages, err := r.rs.GetConsistentStorages(ctx, virtualStorage, relativePath)
+	if err != nil {
+		return RepositoryMutatorRoute{}, fmt.Errorf("consistent storages: %w", err)
 	}
 
-	consistentSecondaries, err := r.rs.GetConsistentSecondaries(ctx, virtualStorage, relativePath, primary)
-	if err != nil {
-		return RepositoryMutatorRoute{}, fmt.Errorf("consistent secondaries: %w", err)
+	if _, ok := consistentStorages[primary]; !ok {
+		return RepositoryMutatorRoute{}, ErrRepositoryReadOnly
 	}
 
 	assignedStorages, err := r.ag.GetHostAssignments(ctx, virtualStorage, relativePath)
@@ -199,7 +188,7 @@ func (r *PerRepositoryRouter) RouteRepositoryMutator(ctx context.Context, virtua
 			continue
 		}
 
-		if _, consistent := consistentSecondaries[node.Storage]; !consistent || !healthy {
+		if _, consistent := consistentStorages[node.Storage]; !consistent || !healthy {
 			route.ReplicationTargets = append(route.ReplicationTargets, assigned)
 			continue
 		}

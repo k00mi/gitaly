@@ -80,7 +80,11 @@ func TestServerFactory(t *testing.T) {
 	logger := testhelper.DiscardTestEntry(t)
 	queue := datastore.NewMemoryReplicationEventQueue(conf)
 
-	rs := datastore.MockRepositoryStore{}
+	rs := datastore.MockRepositoryStore{
+		GetConsistentStoragesFunc: func(context.Context, string, string) (map[string]struct{}, error) {
+			return map[string]struct{}{conf.VirtualStorages[0].Nodes[0].Storage: {}}, nil
+		},
+	}
 	sp := datastore.NewDirectStorageProvider(rs)
 	nodeMgr, err := nodes.NewManager(logger, conf, nil, rs, sp, &promtest.MockHistogramVec{}, protoregistry.GitalyProtoPreregistered, nil)
 	require.NoError(t, err)

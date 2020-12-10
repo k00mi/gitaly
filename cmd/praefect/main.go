@@ -243,7 +243,18 @@ func run(cfgs []starter.Config, conf config.Config) error {
 
 	if conf.MemoryQueueEnabled {
 		queue = datastore.NewMemoryReplicationEventQueue(conf)
-		rs = datastore.MockRepositoryStore{}
+		consistentStorages := map[string]map[string]struct{}{}
+		for _, vs := range conf.VirtualStorages {
+			consistentStorages[vs.Name] = map[string]struct{}{}
+			for _, n := range vs.Nodes {
+				consistentStorages[vs.Name][n.Storage] = struct{}{}
+			}
+		}
+		rs = datastore.MockRepositoryStore{
+			GetConsistentStoragesFunc: func(_ context.Context, virtualStorage string, _ string) (map[string]struct{}, error) {
+				return consistentStorages[virtualStorage], nil
+			},
+		}
 		sp = datastore.NewDirectStorageProvider(rs)
 		logger.Info("reads distribution caching is disabled for in memory storage")
 	} else {
