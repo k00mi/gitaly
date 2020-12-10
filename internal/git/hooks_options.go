@@ -33,6 +33,10 @@ func WithRefTxHook(ctx context.Context, repo *gitalypb.Repository, cfg config.Cf
 // variables required by the reference transaction hook and any other needed
 // options to successfully execute hooks.
 func (cc *cmdCfg) configureHooks(ctx context.Context, repo *gitalypb.Repository, cfg config.Cfg) error {
+	if cc.hooksConfigured {
+		return errors.New("hooks already configured")
+	}
+
 	payload, err := NewHooksPayload(cfg, repo).Env()
 	if err != nil {
 		return err
@@ -46,7 +50,7 @@ func (cc *cmdCfg) configureHooks(ctx context.Context, repo *gitalypb.Repository,
 	cc.env = append(cc.env, payload, "GITALY_BIN_DIR="+cfg.BinDir)
 
 	cc.globals = append(cc.globals, ValueFlag{"-c", fmt.Sprintf("core.hooksPath=%s", hooks.Path(cfg))})
-	cc.refHookConfigured = true
+	cc.hooksConfigured = true
 
 	return nil
 }

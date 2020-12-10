@@ -56,7 +56,6 @@ func (s *server) PostReceivePack(stream gitalypb.SmartHTTPService_PostReceivePac
 		},
 		git.WithReceivePackHooks(ctx, config.Config, req, "http"),
 		git.WithGitProtocol(ctx, req),
-		git.WithRefTxHook(ctx, req.Repository, config.Config),
 	)
 
 	if err != nil {
