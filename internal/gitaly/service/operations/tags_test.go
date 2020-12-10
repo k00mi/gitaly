@@ -382,6 +382,12 @@ func TestSuccessfulUserCreateTagNestedTags(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
+	preReceiveHook, cleanup := writeAssertObjectTypePreReceiveHook(t)
+	defer cleanup()
+
+	updateHook, cleanup := writeAssertObjectTypeUpdateHook(t)
+	defer cleanup()
+
 	testCases := []struct {
 		desc             string
 		targetObject     string
@@ -407,6 +413,18 @@ func TestSuccessfulUserCreateTagNestedTags(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
+			// We resolve down to commit/tree/blob, but
+			// we'll only ever push a "tag" here.
+			hookObjectType := "tag"
+			for hook, content := range map[string]string{
+				"pre-receive": fmt.Sprintf("#!/bin/sh\n%s %s \"$@\"", preReceiveHook, hookObjectType),
+				"update":      fmt.Sprintf("#!/bin/sh\n%s %s \"$@\"", updateHook, hookObjectType),
+			} {
+				hookCleanup, err := testhelper.WriteCustomHook(testRepoPath, hook, []byte(content))
+				require.NoError(t, err)
+				defer hookCleanup()
+			}
+
 			targetObject := testCase.targetObject
 			nestLevel := 10
 			for i := 0; i < nestLevel; i++ {
