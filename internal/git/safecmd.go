@@ -216,12 +216,12 @@ func ConvertGlobalOptions(options *gitalypb.GlobalOptions) []Option {
 }
 
 type cmdCfg struct {
-	env               []string
-	globals           []Option
-	stdin             io.Reader
-	stdout            io.Writer
-	stderr            io.Writer
-	refHookConfigured bool
+	env             []string
+	globals         []Option
+	stdin           io.Reader
+	stdout          io.Writer
+	stderr          io.Writer
+	hooksConfigured bool
 }
 
 // CmdOpt is an option for running a command
@@ -267,10 +267,10 @@ func handleOpts(ctx context.Context, sc Cmd, cc *cmdCfg, opts []CmdOpt) error {
 		}
 	}
 
-	if !cc.refHookConfigured && mayUpdateRef(sc.Subcommand()) {
+	if !cc.hooksConfigured && mayUpdateRef(sc.Subcommand()) {
 		return fmt.Errorf("subcommand %q: %w", sc.Subcommand(), ErrRefHookRequired)
 	}
-	if cc.refHookConfigured && !mayUpdateRef(sc.Subcommand()) {
+	if cc.hooksConfigured && !mayUpdateRef(sc.Subcommand()) {
 		return fmt.Errorf("subcommand %q: %w", sc.Subcommand(), ErrRefHookNotRequired)
 	}
 	if mayGeneratePackfiles(sc.Subcommand()) {

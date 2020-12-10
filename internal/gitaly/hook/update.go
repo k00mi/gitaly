@@ -10,11 +10,12 @@ import (
 )
 
 func (m *GitLabHookManager) UpdateHook(ctx context.Context, repo *gitalypb.Repository, ref, oldValue, newValue string, env []string, stdout, stderr io.Writer) error {
-	primary, err := isPrimary(env)
+	payload, err := git.HooksPayloadFromEnv(env)
 	if err != nil {
-		return helper.ErrInternalf("could not check role: %w", err)
+		return helper.ErrInternalf("extracting hooks payload: %w", err)
 	}
-	if !primary {
+
+	if !isPrimary(payload) {
 		return nil
 	}
 

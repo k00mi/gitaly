@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	gitalyhook "gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
@@ -34,21 +35,6 @@ func TestPostReceiveInvalidArgument(t *testing.T) {
 	_, err = stream.Recv()
 
 	testhelper.RequireGrpcError(t, err, codes.InvalidArgument)
-}
-
-func transactionEnv(t *testing.T, primary bool) string {
-	t.Helper()
-
-	transaction := metadata.Transaction{
-		ID:      1234,
-		Node:    "node-1",
-		Primary: primary,
-	}
-
-	env, err := transaction.Env()
-	require.NoError(t, err)
-
-	return env
 }
 
 func TestHooksMissingStdin(t *testing.T) {
@@ -94,18 +80,18 @@ func TestHooksMissingStdin(t *testing.T) {
 	require.NoError(t, err)
 
 	testCases := []struct {
-		desc string
-		env  string
-		fail bool
+		desc    string
+		primary bool
+		fail    bool
 	}{
 		{
-			desc: "empty stdin fails if primary",
-			env:  transactionEnv(t, true),
-			fail: true,
+			desc:    "empty stdin fails if primary",
+			primary: true,
+			fail:    true,
 		},
 		{
-			desc: "empty stdin success on secondary",
-			env:  transactionEnv(t, false),
+			desc:    "empty stdin success on secondary",
+			primary: false,
 		},
 	}
 
@@ -120,15 +106,32 @@ func TestHooksMissingStdin(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
+			hooksPayload, err := git.NewHooksPayload(
+				config.Config,
+				testRepo,
+				&metadata.Transaction{
+					ID:      1234,
+					Node:    "node-1",
+					Primary: tc.primary,
+				},
+				&metadata.PraefectServer{
+					SocketPath: "/path/to/socket",
+					Token:      "secret",
+				},
+			).Env()
+			require.NoError(t, err)
+
 			stream, err := client.PostReceiveHook(ctx)
 			require.NoError(t, err)
 			require.NoError(t, stream.Send(&gitalypb.PostReceiveHookRequest{
 				Repository: testRepo,
 				EnvironmentVariables: []string{
+					hooksPayload,
 					"GL_ID=key_id",
 					"GL_USERNAME=username",
 					"GL_PROTOCOL=protocol",
-					"GL_REPOSITORY=repository", tc.env},
+					"GL_REPOSITORY=repository",
+				},
 			}))
 
 			go func() {
@@ -245,7 +248,11 @@ To create a merge request for okay, visit:
 			stream, err := client.PostReceiveHook(ctx)
 			require.NoError(t, err)
 
+			hooksPayload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil).Env()
+			require.NoError(t, err)
+
 			envVars := []string{
+				hooksPayload,
 				"GL_ID=key_id",
 				"GL_USERNAME=username",
 				"GL_PROTOCOL=protocol",
@@ -254,7 +261,8 @@ To create a merge request for okay, visit:
 
 			require.NoError(t, stream.Send(&gitalypb.PostReceiveHookRequest{
 				Repository:           testRepo,
-				EnvironmentVariables: envVars}))
+				EnvironmentVariables: envVars,
+			}))
 
 			go func() {
 				writer := streamio.NewWriter(func(p []byte) error {

@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	gitalyhook "gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
@@ -144,10 +145,14 @@ func TestPreReceiveHook_GitlabAPIAccess(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	hooksPayload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil).Env()
+	require.NoError(t, err)
+
 	stdin := bytes.NewBufferString(changes)
 	req := gitalypb.PreReceiveHookRequest{
 		Repository: testRepo,
 		EnvironmentVariables: []string{
+			hooksPayload,
 			"GL_ID=" + glID,
 			"GL_PROTOCOL=" + protocol,
 			"GL_USERNAME=username",
@@ -247,11 +252,15 @@ func TestPreReceive_APIErrors(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
+			hooksPayload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil).Env()
+			require.NoError(t, err)
+
 			stream, err := client.PreReceiveHook(ctx)
 			require.NoError(t, err)
 			require.NoError(t, stream.Send(&gitalypb.PreReceiveHookRequest{
 				Repository: testRepo,
 				EnvironmentVariables: []string{
+					hooksPayload,
 					"GL_ID=key-123",
 					"GL_PROTOCOL=web",
 					"GL_USERNAME=username",
@@ -310,11 +319,15 @@ exit %d
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	hooksPayload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil).Env()
+	require.NoError(t, err)
+
 	stream, err := client.PreReceiveHook(ctx)
 	require.NoError(t, err)
 	require.NoError(t, stream.Send(&gitalypb.PreReceiveHookRequest{
 		Repository: testRepo,
 		EnvironmentVariables: []string{
+			hooksPayload,
 			"GL_ID=key-123",
 			"GL_PROTOCOL=web",
 			"GL_USERNAME=username",
@@ -430,20 +443,27 @@ func TestPreReceiveHook_Primary(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			transaction := metadata.Transaction{
-				ID:      1234,
-				Node:    "node-1",
-				Primary: tc.primary,
-			}
-			transactionEnv, err := transaction.Env()
+			hooksPayload, err := git.NewHooksPayload(
+				config.Config,
+				testRepo,
+				&metadata.Transaction{
+					ID:      1234,
+					Node:    "node-1",
+					Primary: tc.primary,
+				},
+				&metadata.PraefectServer{
+					SocketPath: "/path/to/socket",
+					Token:      "secret",
+				},
+			).Env()
 			require.NoError(t, err)
 
 			environment := []string{
+				hooksPayload,
 				"GL_ID=key-123",
 				"GL_PROTOCOL=web",
 				"GL_USERNAME=username",
 				"GL_REPOSITORY=repository",
-				transactionEnv,
 			}
 
 			stream, err := client.PreReceiveHook(ctx)

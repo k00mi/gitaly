@@ -37,7 +37,12 @@ func (s *Server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 		return err
 	}
 
-	payload, err := git.NewHooksPayload(s.cfg, repo).Env()
+	transaction, praefect, err := metadata.TransactionMetadataFromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	payload, err := git.NewHooksPayload(s.cfg, repo, transaction, praefect).Env()
 	if err != nil {
 		return err
 	}
@@ -60,32 +65,6 @@ func (s *Server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 		fmt.Sprintf("GL_REPOSITORY=%s", repo.GetGlRepository()),
 		fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
 	}, gitlabshellEnv...)
-
-	transaction, err := metadata.TransactionFromContext(ctx)
-	if err != nil {
-		if err != metadata.ErrTransactionNotFound {
-			return err
-		}
-	}
-
-	if err == nil {
-		praefect, err := metadata.PraefectFromContext(ctx)
-		if err != nil {
-			return err
-		}
-
-		transactionEnv, err := transaction.Env()
-		if err != nil {
-			return err
-		}
-
-		praefectEnv, err := praefect.Env()
-		if err != nil {
-			return err
-		}
-
-		env = append(env, transactionEnv, praefectEnv)
-	}
 
 	changes := fmt.Sprintf("%s %s %s\n", oldrev, newrev, reference)
 	var stdout, stderr bytes.Buffer

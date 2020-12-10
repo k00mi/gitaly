@@ -73,11 +73,7 @@ func TestPostReceive_customHook(t *testing.T) {
 
 	hookManager := NewManager(config.NewLocator(config.Config), GitlabAPIStub, config.Config)
 
-	payload, err := git.NewHooksPayload(config.Config, repo).Env()
-	require.NoError(t, err)
-
 	standardEnv := []string{
-		payload,
 		"GL_ID=1234",
 		fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
 		"GL_PROTOCOL=web",
@@ -86,14 +82,33 @@ func TestPostReceive_customHook(t *testing.T) {
 		"GL_USERNAME=user",
 	}
 
-	primaryEnv, err := metadata.Transaction{
-		ID: 1234, Node: "primary", Primary: true,
-	}.Env()
+	payload, err := git.NewHooksPayload(config.Config, repo, nil, nil).Env()
 	require.NoError(t, err)
 
-	secondaryEnv, err := metadata.Transaction{
-		ID: 1234, Node: "secondary", Primary: false,
-	}.Env()
+	primaryPayload, err := git.NewHooksPayload(
+		config.Config,
+		repo,
+		&metadata.Transaction{
+			ID: 1234, Node: "primary", Primary: true,
+		},
+		&metadata.PraefectServer{
+			SocketPath: "/path/to/socket",
+			Token:      "secret",
+		},
+	).Env()
+	require.NoError(t, err)
+
+	secondaryPayload, err := git.NewHooksPayload(
+		config.Config,
+		repo,
+		&metadata.Transaction{
+			ID: 1234, Node: "secondary", Primary: false,
+		},
+		&metadata.PraefectServer{
+			SocketPath: "/path/to/socket",
+			Token:      "secret",
+		},
+	).Env()
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -108,14 +123,14 @@ func TestPostReceive_customHook(t *testing.T) {
 	}{
 		{
 			desc:           "hook receives environment variables",
-			env:            standardEnv,
+			env:            append(standardEnv, payload),
 			stdin:          "changes\n",
 			hook:           "#!/bin/sh\nenv | grep -e '^GL_' -e '^GITALY_' | sort\n",
-			expectedStdout: strings.Join(standardEnv, "\n") + "\n",
+			expectedStdout: strings.Join(append([]string{payload}, standardEnv...), "\n") + "\n",
 		},
 		{
 			desc:  "push options are passed through",
-			env:   standardEnv,
+			env:   append(standardEnv, payload),
 			stdin: "changes\n",
 			pushOptions: []string{
 				"mr.merge_when_pipeline_succeeds",
@@ -130,7 +145,7 @@ func TestPostReceive_customHook(t *testing.T) {
 		},
 		{
 			desc:           "hook can write to stderr and stdout",
-			env:            standardEnv,
+			env:            append(standardEnv, payload),
 			stdin:          "changes\n",
 			hook:           "#!/bin/sh\necho foo >&1 && echo bar >&2\n",
 			expectedStdout: "foo\n",
@@ -138,60 +153,60 @@ func TestPostReceive_customHook(t *testing.T) {
 		},
 		{
 			desc:           "hook receives standard input",
-			env:            standardEnv,
+			env:            append(standardEnv, payload),
 			hook:           "#!/bin/sh\ncat\n",
 			stdin:          "foo\n",
 			expectedStdout: "foo\n",
 		},
 		{
 			desc:           "hook succeeds without consuming stdin",
-			env:            standardEnv,
+			env:            append(standardEnv, payload),
 			hook:           "#!/bin/sh\necho foo\n",
 			stdin:          "ignore me\n",
 			expectedStdout: "foo\n",
 		},
 		{
 			desc:        "invalid hook results in error",
-			env:         standardEnv,
+			env:         append(standardEnv, payload),
 			stdin:       "changes\n",
 			hook:        "",
 			expectedErr: "exec format error",
 		},
 		{
 			desc:        "failing hook results in error",
-			env:         standardEnv,
+			env:         append(standardEnv, payload),
 			stdin:       "changes\n",
 			hook:        "#!/bin/sh\nexit 123",
 			expectedErr: "exit status 123",
 		},
 		{
 			desc:           "hook is executed on primary",
-			env:            append(standardEnv, primaryEnv),
+			env:            append(standardEnv, primaryPayload),
 			stdin:          "changes\n",
 			hook:           "#!/bin/sh\necho foo\n",
 			expectedStdout: "foo\n",
 		},
 		{
 			desc:  "hook is not executed on secondary",
-			env:   append(standardEnv, secondaryEnv),
+			env:   append(standardEnv, secondaryPayload),
 			stdin: "changes\n",
 			hook:  "#!/bin/sh\necho foo\n",
 		},
 		{
 			desc:        "missing GL_ID causes error",
-			env:         envWithout(standardEnv, "GL_ID"),
+			env:         envWithout(append(standardEnv, payload), "GL_ID"),
 			stdin:       "changes\n",
 			expectedErr: "GL_ID not set",
 		},
 		{
 			desc:        "missing GL_REPOSITORY causes error",
-			env:         envWithout(standardEnv, "GL_REPOSITORY"),
+			env:         envWithout(append(standardEnv, payload), "GL_REPOSITORY"),
 			stdin:       "changes\n",
 			expectedErr: "GL_REPOSITORY not set",
 		},
 		{
 			desc:        "missing changes cause error",
-			env:         standardEnv,
+			env:         append(standardEnv, payload),
 			expectedErr: "hook got no reference updates",
 		},
 	}
@@ -244,7 +259,7 @@ func TestPostReceive_gitlab(t *testing.T) {
 	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	payload, err := git.NewHooksPayload(config.Config, testRepo).Env()
+	payload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil).Env()
 	require.NoError(t, err)
 
 	standardEnv := []string{

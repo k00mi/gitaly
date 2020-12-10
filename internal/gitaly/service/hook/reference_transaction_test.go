@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
@@ -123,22 +124,21 @@ func TestReferenceTransactionHook(t *testing.T) {
 			serverSocketPath, stop := runHooksServer(t, config.Cfg{})
 			defer stop()
 
-			transactionServer := metadata.PraefectServer{
-				ListenAddr: "tcp://" + listener.Addr().String(),
-			}
-			transactionServerEnv, err := transactionServer.Env()
-			require.NoError(t, err)
-
-			transaction := metadata.Transaction{
-				ID:   1234,
-				Node: "node-1",
-			}
-			transactionEnv, err := transaction.Env()
+			hooksPayload, err := git.NewHooksPayload(
+				config.Config,
+				testRepo,
+				&metadata.Transaction{
+					ID:   1234,
+					Node: "node-1",
+				},
+				&metadata.PraefectServer{
+					ListenAddr: "tcp://" + listener.Addr().String(),
+				},
+			).Env()
 			require.NoError(t, err)
 
 			environment := []string{
-				transactionEnv,
-				transactionServerEnv,
+				hooksPayload,
 			}
 
 			ctx, cancel := testhelper.Context()

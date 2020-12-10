@@ -131,7 +131,7 @@ func TestUpdateReferenceWithHooks(t *testing.T) {
 	repo, repoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	payload, err := git.NewHooksPayload(config.Config, repo).Env()
+	payload, err := git.NewHooksPayload(config.Config, repo, nil, nil).Env()
 	require.NoError(t, err)
 
 	expectedEnv := []string{

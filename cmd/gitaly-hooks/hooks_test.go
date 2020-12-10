@@ -46,7 +46,7 @@ func envForHooks(t testing.TB, gitlabShellDir string, repo *gitalypb.Repository,
 	env, err := gitlabshell.EnvFromConfig(config.Config)
 	require.NoError(t, err)
 
-	payload, err := git.NewHooksPayload(config.Config, repo).Env()
+	payload, err := git.NewHooksPayload(config.Config, repo, nil, nil).Env()
 	require.NoError(t, err)
 
 	env = append(env, os.Environ()...)
@@ -473,11 +473,19 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.desc, func(t *testing.T) {
-			transactionEnv, err := metadata.Transaction{
-				ID:      1,
-				Node:    "node",
-				Primary: tc.primary,
-			}.Env()
+			hooksPayload, err := git.NewHooksPayload(
+				config.Config,
+				testRepo,
+				&metadata.Transaction{
+					ID:      1,
+					Node:    "node",
+					Primary: tc.primary,
+				},
+				&metadata.PraefectServer{
+					SocketPath: "/path/to/socket",
+					Token:      "secret",
+				},
+			).Env()
 			require.NoError(t, err)
 
 			env := envForHooks(t, tempGitlabShellDir, testRepo,
@@ -489,7 +497,7 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 				},
 				proxyValues{},
 			)
-			env = append(env, transactionEnv)
+			env = append(env, hooksPayload)
 
 			cmd := exec.Command(postReceiveHookPath)
 			cmd.Env = env

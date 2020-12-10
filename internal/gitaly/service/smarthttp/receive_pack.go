@@ -43,7 +43,7 @@ func (s *server) PostReceivePack(stream gitalypb.SmartHTTPService_PostReceivePac
 		return err
 	}
 
-	globalOpts := git.ReceivePackConfig(config.Config)
+	globalOpts := git.ReceivePackConfig()
 	for _, o := range req.GitConfigOptions {
 		globalOpts = append(globalOpts, git.ValueFlag{"-c", o})
 	}
@@ -56,7 +56,6 @@ func (s *server) PostReceivePack(stream gitalypb.SmartHTTPService_PostReceivePac
 		},
 		git.WithReceivePackHooks(ctx, config.Config, req, "http"),
 		git.WithGitProtocol(ctx, req),
-		git.WithRefTxHook(ctx, req.Repository, config.Config),
 	)
 
 	if err != nil {

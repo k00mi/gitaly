@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -43,6 +44,17 @@ func TestUpdate_CustomHooks(t *testing.T) {
 	client, conn := newHooksClient(t, serverSocketPath)
 	defer conn.Close()
 
+	hooksPayload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil).Env()
+	require.NoError(t, err)
+
+	envVars := []string{
+		hooksPayload,
+		"GL_ID=key-123",
+		"GL_USERNAME=username",
+		"GL_PROTOCOL=protocol",
+		"GL_REPOSITORY=repository",
+	}
+
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 	req := gitalypb.UpdateHookRequest{
@@ -50,7 +62,7 @@ func TestUpdate_CustomHooks(t *testing.T) {
 		Ref:                  []byte("master"),
 		OldValue:             strings.Repeat("a", 40),
 		NewValue:             strings.Repeat("b", 40),
-		EnvironmentVariables: []string{"GL_ID=key-123", "GL_USERNAME=username", "GL_PROTOCOL=protocol", "GL_REPOSITORY=repository"},
+		EnvironmentVariables: envVars,
 	}
 
 	errorMsg := "error123"

@@ -19,11 +19,7 @@ func TestUpdate_customHooks(t *testing.T) {
 
 	hookManager := NewManager(config.NewLocator(config.Config), GitlabAPIStub, config.Config)
 
-	payload, err := git.NewHooksPayload(config.Config, repo).Env()
-	require.NoError(t, err)
-
 	standardEnv := []string{
-		payload,
 		"GL_ID=1234",
 		fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
 		"GL_PROTOCOL=web",
@@ -32,14 +28,33 @@ func TestUpdate_customHooks(t *testing.T) {
 		"GL_USERNAME=user",
 	}
 
-	primaryEnv, err := metadata.Transaction{
-		ID: 1234, Node: "primary", Primary: true,
-	}.Env()
+	payload, err := git.NewHooksPayload(config.Config, repo, nil, nil).Env()
 	require.NoError(t, err)
 
-	secondaryEnv, err := metadata.Transaction{
-		ID: 1234, Node: "secondary", Primary: false,
-	}.Env()
+	primaryPayload, err := git.NewHooksPayload(
+		config.Config,
+		repo,
+		&metadata.Transaction{
+			ID: 1234, Node: "primary", Primary: true,
+		},
+		&metadata.PraefectServer{
+			SocketPath: "/path/to/socket",
+			Token:      "secret",
+		},
+	).Env()
+	require.NoError(t, err)
+
+	secondaryPayload, err := git.NewHooksPayload(
+		config.Config,
+		repo,
+		&metadata.Transaction{
+			ID: 1234, Node: "secondary", Primary: false,
+		},
+		&metadata.PraefectServer{
+			SocketPath: "/path/to/socket",
+			Token:      "secret",
+		},
+	).Env()
 	require.NoError(t, err)
 
 	hash1 := strings.Repeat("1", 40)
@@ -58,16 +73,16 @@ func TestUpdate_customHooks(t *testing.T) {
 	}{
 		{
 			desc:           "hook receives environment variables",
-			env:            standardEnv,
+			env:            append(standardEnv, payload),
 			reference:      "refs/heads/master",
 			oldHash:        hash1,
 			newHash:        hash2,
 			hook:           "#!/bin/sh\nenv | grep -e '^GL_' -e '^GITALY_' | sort\n",
-			expectedStdout: strings.Join(standardEnv, "\n") + "\n",
+			expectedStdout: strings.Join(append([]string{payload}, standardEnv...), "\n") + "\n",
 		},
 		{
 			desc:           "hook receives arguments",
-			env:            standardEnv,
+			env:            append(standardEnv, payload),
 			reference:      "refs/heads/master",
 			oldHash:        hash1,
 			newHash:        hash2,
@@ -76,7 +91,7 @@ func TestUpdate_customHooks(t *testing.T) {
 		},
 		{
 			desc:           "stdout and stderr are passed through",
-			env:            standardEnv,
+			env:            append(standardEnv, payload),
 			reference:      "refs/heads/master",
 			oldHash:        hash1,
 			newHash:        hash2,
@@ -86,7 +101,7 @@ func TestUpdate_customHooks(t *testing.T) {
 		},
 		{
 			desc:      "standard input is empty",
-			env:       standardEnv,
+			env:       append(standardEnv, payload),
 			reference: "refs/heads/master",
 			oldHash:   hash1,
 			newHash:   hash2,
@@ -94,7 +109,7 @@ func TestUpdate_customHooks(t *testing.T) {
 		},
 		{
 			desc:        "invalid script causes failure",
-			env:         standardEnv,
+			env:         append(standardEnv, payload),
 			reference:   "refs/heads/master",
 			oldHash:     hash1,
 			newHash:     hash2,
@@ -103,7 +118,7 @@ func TestUpdate_customHooks(t *testing.T) {
 		},
 		{
 			desc:        "errors are passed through",
-			env:         standardEnv,
+			env:         append(standardEnv, payload),
 			reference:   "refs/heads/master",
 			oldHash:     hash1,
 			newHash:     hash2,
@@ -112,7 +127,7 @@ func TestUpdate_customHooks(t *testing.T) {
 		},
 		{
 			desc:           "errors are passed through with stderr and stdout",
-			env:            standardEnv,
+			env:            append(standardEnv, payload),
 			reference:      "refs/heads/master",
 			oldHash:        hash1,
 			newHash:        hash2,
@@ -123,7 +138,7 @@ func TestUpdate_customHooks(t *testing.T) {
 		},
 		{
 			desc:           "hook is executed on primary",
-			env:            append(standardEnv, primaryEnv),
+			env:            append(standardEnv, primaryPayload),
 			reference:      "refs/heads/master",
 			oldHash:        hash1,
 			newHash:        hash2,
@@ -132,7 +147,7 @@ func TestUpdate_customHooks(t *testing.T) {
 		},
 		{
 			desc:      "hook is not executed on secondary",
-			env:       append(standardEnv, secondaryEnv),
+			env:       append(standardEnv, secondaryPayload),
 			reference: "refs/heads/master",
 			oldHash:   hash1,
 			newHash:   hash2,
@@ -140,21 +155,21 @@ func TestUpdate_customHooks(t *testing.T) {
 		},
 		{
 			desc:        "hook fails with missing reference",
-			env:         standardEnv,
+			env:         append(standardEnv, payload),
 			oldHash:     hash1,
 			newHash:     hash2,
 			expectedErr: "hook got no reference",
 		},
 		{
 			desc:        "hook fails with missing old value",
-			env:         standardEnv,
+			env:         append(standardEnv, payload),
 			reference:   "refs/heads/master",
 			newHash:     hash2,
 			expectedErr: "hook got invalid old value",
 		},
 		{
 			desc:        "hook fails with missing new value",
-			env:         standardEnv,
+			env:         append(standardEnv, payload),
 			reference:   "refs/heads/master",
 			oldHash:     hash1,
 			expectedErr: "hook got invalid new value",
