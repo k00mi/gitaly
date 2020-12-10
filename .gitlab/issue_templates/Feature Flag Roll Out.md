@@ -2,19 +2,19 @@
 
 ## What
 
-Remove the `:feature_name` feature flag ...
+Enable the `:feature_name` feature flag ...
 
 ## Owners
 
 - Team: Gitaly
-- Most appropriate slack channel to reach out to: `#g_gitaly`
+- Most appropriate slack channel to reach out to: `#g_create_gitaly`
 - Best individual to reach out to: NAME
 
 ## Expectations
 
 ### What release does this feature occur in first?
 
-### What are we expecting to happen?
+### What are we expecting to happen?
 
 ### What might happen if this goes wrong?
 
