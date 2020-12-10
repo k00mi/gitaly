@@ -7,7 +7,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
-	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
+	"gitlab.com/gitlab-org/gitaly/internal/log"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -47,7 +47,12 @@ func (cc *cmdCfg) configureHooks(ctx context.Context, repo *gitalypb.Repository,
 		return err
 	}
 
-	cc.env = append(cc.env, payload, "GITALY_BIN_DIR="+cfg.BinDir)
+	cc.env = append(
+		cc.env,
+		payload,
+		"GITALY_BIN_DIR="+cfg.BinDir,
+		fmt.Sprintf("%s=%s", log.GitalyLogDirEnvKey, cfg.Logging.Dir),
+	)
 
 	cc.globals = append(cc.globals, ValueFlag{"-c", fmt.Sprintf("core.hooksPath=%s", hooks.Path(cfg))})
 	cc.hooksConfigured = true
@@ -73,7 +78,7 @@ func WithReceivePackHooks(ctx context.Context, cfg config.Cfg, req ReceivePackRe
 			return err
 		}
 
-		env, err := receivePackHookEnv(ctx, cc, cfg, req, protocol)
+		env, err := receivePackHookEnv(req, protocol)
 		if err != nil {
 			return fmt.Errorf("receive-pack hook envvars: %w", err)
 		}
@@ -83,19 +88,12 @@ func WithReceivePackHooks(ctx context.Context, cfg config.Cfg, req ReceivePackRe
 	}
 }
 
-func receivePackHookEnv(ctx context.Context, cc *cmdCfg, cfg config.Cfg, req ReceivePackRequest, protocol string) ([]string, error) {
-	gitlabshellEnv, err := gitlabshell.EnvFromConfig(cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	env := append(gitlabshellEnv,
+func receivePackHookEnv(req ReceivePackRequest, protocol string) ([]string, error) {
+	return []string{
 		fmt.Sprintf("GL_ID=%s", req.GetGlId()),
 		fmt.Sprintf("GL_USERNAME=%s", req.GetGlUsername()),
 		fmt.Sprintf("GL_REPOSITORY=%s", req.GetGlRepository()),
 		fmt.Sprintf("GL_PROJECT_PATH=%s", req.GetRepository().GetGlProjectPath()),
 		fmt.Sprintf("GL_PROTOCOL=%s", protocol),
-	)
-
-	return env, nil
+	}, nil
 }

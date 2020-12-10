@@ -29,7 +29,6 @@ describe Gitlab::Git::Hook do
       end
 
       allow(Gitlab.config.git).to receive(:hooks_directory).and_return(tmp_dir)
-      allow(Gitlab.config.gitlab_shell).to receive(:path).and_return('/foobar/gitlab-shell')
     end
 
     after do
@@ -44,8 +43,7 @@ describe Gitlab::Git::Hook do
           'GL_REPOSITORY' => repo.gl_repository,
           'GL_PROTOCOL' => 'web',
           'PWD' => repo.path,
-          'GIT_DIR' => repo.path,
-          'GITALY_GITLAB_SHELL_DIR' => '/foobar/gitlab-shell'
+          'GIT_DIR' => repo.path
         }
       end
 

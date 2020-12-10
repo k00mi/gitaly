@@ -16,7 +16,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver/balancer"
-	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/supervisor"
 	"gitlab.com/gitlab-org/gitaly/internal/version"
@@ -78,25 +77,18 @@ func (s *Server) start() error {
 
 	cfg := config.Config
 
-	gitlabshellEnv, err := gitlabshell.EnvFromConfig(cfg)
-	if err != nil {
-		return err
-	}
-
 	env := append(
 		os.Environ(),
 		"GITALY_RUBY_GIT_BIN_PATH="+cfg.Git.BinPath,
 		fmt.Sprintf("GITALY_RUBY_WRITE_BUFFER_SIZE=%d", streamio.WriteBufferSize),
 		fmt.Sprintf("GITALY_RUBY_MAX_COMMIT_OR_TAG_MESSAGE_SIZE=%d", helper.MaxCommitOrTagMessageSize),
 		"GITALY_RUBY_GITALY_BIN_DIR="+cfg.BinDir,
-		"GITALY_RUBY_DIR="+cfg.Ruby.Dir,
 		"GITALY_VERSION="+version.GetVersion(),
 		"GITALY_GIT_HOOKS_DIR="+hooks.Path(cfg),
 		"GITALY_SOCKET="+cfg.GitalyInternalSocketPath(),
 		"GITALY_TOKEN="+cfg.Auth.Token,
-		"GITALY_RUGGED_GIT_CONFIG_SEARCH_PATH="+cfg.Ruby.RuggedGitConfigSearchPath)
-	env = append(env, gitlabshellEnv...)
-
+		"GITALY_RUGGED_GIT_CONFIG_SEARCH_PATH="+cfg.Ruby.RuggedGitConfigSearchPath,
+	)
 	env = append(env, command.GitEnv...)
 
 	if dsn := cfg.Logging.RubySentryDSN; dsn != "" {

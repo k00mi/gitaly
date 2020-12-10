@@ -1,7 +1,7 @@
 module Gitlab
   module Git
     module RepositoryMirroring
-      GITLAB_PROJECTS_TIMEOUT = Gitlab.config.gitlab_shell.git_timeout
+      GITLAB_PROJECTS_TIMEOUT = 10800
 
       RemoteError = Class.new(StandardError)
 

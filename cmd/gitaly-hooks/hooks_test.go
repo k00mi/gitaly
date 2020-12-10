@@ -21,7 +21,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	gitalyhook "gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/hook"
-	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
 	gitalylog "gitlab.com/gitlab-org/gitaly/internal/log"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -40,24 +39,16 @@ type proxyValues struct {
 
 // envForHooks generates a set of environment variables for gitaly hooks
 func envForHooks(t testing.TB, gitlabShellDir string, repo *gitalypb.Repository, glHookValues glHookValues, proxyValues proxyValues, gitPushOptions ...string) []string {
-	rubyDir, err := filepath.Abs("../../ruby")
-	require.NoError(t, err)
-
-	env, err := gitlabshell.EnvFromConfig(config.Config)
-	require.NoError(t, err)
-
 	payload, err := git.NewHooksPayload(config.Config, repo, nil, nil).Env()
 	require.NoError(t, err)
 
-	env = append(env, os.Environ()...)
-	env = append(env, []string{
+	env := append(os.Environ(), []string{
 		payload,
-		fmt.Sprintf("GITALY_RUBY_DIR=%s", rubyDir),
+		"GITALY_BIN_DIR=" + config.Config.BinDir,
 		fmt.Sprintf("GL_ID=%s", glHookValues.GLID),
 		fmt.Sprintf("GL_REPOSITORY=%s", glHookValues.GLRepo),
 		fmt.Sprintf("GL_PROTOCOL=%s", glHookValues.GLProtocol),
 		fmt.Sprintf("GL_USERNAME=%s", glHookValues.GLUsername),
-		fmt.Sprintf("GITALY_GITLAB_SHELL_DIR=%s", gitlabShellDir),
 		fmt.Sprintf("%s=%s", gitalylog.GitalyLogDirEnvKey, gitlabShellDir),
 	}...)
 	env = append(env, hooks.GitPushOptions(gitPushOptions)...)

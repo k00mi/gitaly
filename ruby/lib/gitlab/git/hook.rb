@@ -7,10 +7,6 @@ module Gitlab
         Gitlab.config.git.hooks_directory
       end
 
-      def self.legacy_hooks_directory
-        File.join(Gitlab.config.gitlab_shell.path, 'hooks')
-      end
-
       GL_PROTOCOL = 'web'
       attr_reader :name, :path, :repository
 
@@ -129,12 +125,7 @@ module Gitlab
       def env_base_vars(gl_id, gl_username, transaction = nil)
         {
           'GITALY_HOOKS_PAYLOAD' => hooks_payload(transaction),
-          'GITALY_GITLAB_SHELL_DIR' => Gitlab.config.gitlab_shell.path,
-          'GITLAB_SHELL_DIR' => Gitlab.config.gitlab_shell.path,
           'GITALY_LOG_DIR' => Gitlab.config.logging.dir,
-          'GITALY_LOG_LEVEL' => Gitlab.config.logging.level,
-          'GITALY_LOG_FORMAT' => Gitlab.config.logging.format,
-          'GITALY_RUBY_DIR' => Gitlab.config.gitaly.ruby_dir,
           'GITALY_BIN_DIR' => Gitlab.config.gitaly.bin_dir,
           'GL_ID' => gl_id,
           'GL_USERNAME' => gl_username,

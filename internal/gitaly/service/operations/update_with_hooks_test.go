@@ -136,7 +136,6 @@ func TestUpdateReferenceWithHooks(t *testing.T) {
 
 	expectedEnv := []string{
 		payload,
-		"GITALY_BIN_DIR=" + config.Config.BinDir,
 		"GL_ID=1234",
 		"GL_PROJECT_PATH=gitlab-org/gitlab-test",
 		"GL_PROTOCOL=web",

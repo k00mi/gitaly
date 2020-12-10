@@ -64,10 +64,9 @@ end
 
 def start_gitaly
   build_dir = File.expand_path(File.join(GITALY_RUBY_DIR, '../_build'))
-  GitlabShellHelper.setup_gitlab_shell
-
   cert_path = File.join(File.dirname(__FILE__), "/certs")
 
+  FileUtils.mkdir_p([TMP_DIR, File.join(GITLAB_SHELL_DIR, 'hooks')])
   File.write(File.join(GITLAB_SHELL_DIR, '.gitlab_shell_secret'), 'test_gitlab_shell_token')
 
   config_toml = <<~CONFIG

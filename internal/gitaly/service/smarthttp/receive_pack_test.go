@@ -78,7 +78,6 @@ func TestSuccessfulReceivePackRequest(t *testing.T) {
 		"GL_REPOSITORY=project-456",
 		"GL_PROTOCOL=http",
 		"GL_PROJECT_PATH=" + projectPath,
-		"GITALY_GITLAB_SHELL_DIR=" + "/foo/bar/gitlab-shell",
 	} {
 		require.Contains(t, strings.Split(string(envData), "\n"), env)
 	}
