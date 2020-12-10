@@ -21,7 +21,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	gitalyhook "gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/hook"
-	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
 	gitalylog "gitlab.com/gitlab-org/gitaly/internal/log"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -40,15 +39,12 @@ type proxyValues struct {
 
 // envForHooks generates a set of environment variables for gitaly hooks
 func envForHooks(t testing.TB, gitlabShellDir string, repo *gitalypb.Repository, glHookValues glHookValues, proxyValues proxyValues, gitPushOptions ...string) []string {
-	env, err := gitlabshell.EnvFromConfig(config.Config)
-	require.NoError(t, err)
-
 	payload, err := git.NewHooksPayload(config.Config, repo, nil, nil).Env()
 	require.NoError(t, err)
 
-	env = append(env, os.Environ()...)
-	env = append(env, []string{
+	env := append(os.Environ(), []string{
 		payload,
+		"GITALY_BIN_DIR=" + config.Config.BinDir,
 		fmt.Sprintf("GL_ID=%s", glHookValues.GLID),
 		fmt.Sprintf("GL_REPOSITORY=%s", glHookValues.GLRepo),
 		fmt.Sprintf("GL_PROTOCOL=%s", glHookValues.GLProtocol),

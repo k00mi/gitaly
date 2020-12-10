@@ -9,7 +9,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/updateref"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
-	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metadata"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -32,11 +31,6 @@ func (e updateRefError) Error() string {
 }
 
 func (s *Server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Repository, user *gitalypb.User, reference, newrev, oldrev string) error {
-	gitlabshellEnv, err := gitlabshell.EnvFromConfig(s.cfg)
-	if err != nil {
-		return err
-	}
-
 	transaction, praefect, err := metadata.TransactionMetadataFromContext(ctx)
 	if err != nil {
 		return err
@@ -57,14 +51,14 @@ func (s *Server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 		return helper.ErrInternalf("updateReferenceWithHooks: got invalid new value: %w", err)
 	}
 
-	env := append([]string{
+	env := []string{
 		payload,
 		"GL_PROTOCOL=web",
 		fmt.Sprintf("GL_ID=%s", user.GetGlId()),
 		fmt.Sprintf("GL_USERNAME=%s", user.GetGlUsername()),
 		fmt.Sprintf("GL_REPOSITORY=%s", repo.GetGlRepository()),
 		fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
-	}, gitlabshellEnv...)
+	}
 
 	changes := fmt.Sprintf("%s %s %s\n", oldrev, newrev, reference)
 	var stdout, stderr bytes.Buffer

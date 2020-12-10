@@ -7,23 +7,10 @@ import (
 	"sync"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
-	"gitlab.com/gitlab-org/gitaly/internal/gitlabshell"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
 )
-
-type hookRequest interface {
-	GetEnvironmentVariables() []string
-}
-
-func (s *server) hookRequestEnv(req hookRequest) ([]string, error) {
-	gitlabshellEnv, err := gitlabshell.EnvFromConfig(s.cfg)
-	if err != nil {
-		return nil, err
-	}
-	return append(gitlabshellEnv, req.GetEnvironmentVariables()...), nil
-}
 
 func (s *server) PreReceiveHook(stream gitalypb.HookService_PreReceiveHookServer) error {
 	firstRequest, err := stream.Recv()
@@ -49,11 +36,7 @@ func (s *server) PreReceiveHook(stream gitalypb.HookService_PreReceiveHookServer
 		return stream.Send(&gitalypb.PreReceiveHookResponse{Stderr: p})
 	})
 
-	env, err := s.hookRequestEnv(firstRequest)
-	if err != nil {
-		return fmt.Errorf("getting env vars from request: %v", err)
-	}
-	env = append(env, hooks.GitPushOptions(firstRequest.GetGitPushOptions())...)
+	env := append(firstRequest.GetEnvironmentVariables(), hooks.GitPushOptions(firstRequest.GetGitPushOptions())...)
 
 	if err := s.manager.PreReceiveHook(
 		stream.Context(),

@@ -45,16 +45,11 @@ func (s *server) PostReceiveHook(stream gitalypb.HookService_PostReceiveHookServ
 		return stream.Send(&gitalypb.PostReceiveHookResponse{Stderr: p})
 	})
 
-	env, err := s.hookRequestEnv(firstRequest)
-	if err != nil {
-		return helper.ErrInternal(err)
-	}
-
 	if err := s.manager.PostReceiveHook(
 		stream.Context(),
 		firstRequest.Repository,
 		firstRequest.GetGitPushOptions(),
-		env,
+		firstRequest.GetEnvironmentVariables(),
 		stdin,
 		stdout,
 		stderr,
