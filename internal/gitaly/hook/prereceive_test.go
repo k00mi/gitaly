@@ -140,12 +140,6 @@ func TestPrereceive_customHooks(t *testing.T) {
 			expectedErr: "GL_ID not set",
 		},
 		{
-			desc:        "missing GL_REPOSITORY causes error",
-			env:         envWithout(append(standardEnv, payload), "GL_REPOSITORY"),
-			stdin:       "change\n",
-			expectedErr: "GL_REPOSITORY not set",
-		},
-		{
 			desc:        "missing GL_PROTOCOL causes error",
 			env:         envWithout(append(standardEnv, payload), "GL_PROTOCOL"),
 			stdin:       "change\n",

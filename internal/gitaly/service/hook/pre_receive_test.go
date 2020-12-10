@@ -83,7 +83,7 @@ func receivePreReceive(t *testing.T, stream gitalypb.HookService_PreReceiveHookC
 func TestPreReceiveHook_GitlabAPIAccess(t *testing.T) {
 	user, password := "user", "password"
 	secretToken := "secret123"
-	glID, glRepository := "key-123", "repository"
+	glID := "key-123"
 	changes := "changes123"
 	protocol := "http"
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
@@ -112,7 +112,7 @@ func TestPreReceiveHook_GitlabAPIAccess(t *testing.T) {
 		Password:                    password,
 		SecretToken:                 secretToken,
 		GLID:                        glID,
-		GLRepository:                glRepository,
+		GLRepository:                testRepo.GetGlRepository(),
 		Changes:                     changes,
 		PostReceiveCounterDecreased: true,
 		Protocol:                    protocol,
@@ -156,7 +156,7 @@ func TestPreReceiveHook_GitlabAPIAccess(t *testing.T) {
 			"GL_ID=" + glID,
 			"GL_PROTOCOL=" + protocol,
 			"GL_USERNAME=username",
-			"GL_REPOSITORY=" + glRepository,
+			"GL_REPOSITORY=" + testRepo.GetGlRepository(),
 		},
 	}
 

@@ -51,7 +51,7 @@ func TestHooksMissingStdin(t *testing.T) {
 		Password:                    password,
 		SecretToken:                 secretToken,
 		GLID:                        "key_id",
-		GLRepository:                "repository",
+		GLRepository:                testRepo.GetGlRepository(),
 		Changes:                     "changes",
 		PostReceiveCounterDecreased: true,
 		Protocol:                    "protocol",
@@ -130,7 +130,7 @@ func TestHooksMissingStdin(t *testing.T) {
 					"GL_ID=key_id",
 					"GL_USERNAME=username",
 					"GL_PROTOCOL=protocol",
-					"GL_REPOSITORY=repository",
+					"GL_REPOSITORY=" + testRepo.GetGlRepository(),
 				},
 			}))
 
@@ -206,7 +206,7 @@ To create a merge request for okay, visit:
 				Password:                    password,
 				SecretToken:                 secretToken,
 				GLID:                        "key_id",
-				GLRepository:                "repository",
+				GLRepository:                testRepo.GetGlRepository(),
 				Changes:                     "changes",
 				PostReceiveCounterDecreased: true,
 				PostReceiveMessages:         tc.basicMessages,
@@ -256,7 +256,7 @@ To create a merge request for okay, visit:
 				"GL_ID=key_id",
 				"GL_USERNAME=username",
 				"GL_PROTOCOL=protocol",
-				"GL_REPOSITORY=repository",
+				"GL_REPOSITORY=" + testRepo.GetGlRepository(),
 			}
 
 			require.NoError(t, stream.Send(&gitalypb.PostReceiveHookRequest{

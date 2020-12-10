@@ -84,11 +84,11 @@ func (m *GitLabHookManager) preReceiveHook(ctx context.Context, repo *gitalypb.R
 		return helper.ErrInternalf("hook got no reference updates")
 	}
 
-	glID, glRepo, glProtocol := getEnvVar("GL_ID", env), getEnvVar("GL_REPOSITORY", env), getEnvVar("GL_PROTOCOL", env)
+	glID, glProtocol := getEnvVar("GL_ID", env), getEnvVar("GL_PROTOCOL", env)
 	if glID == "" {
 		return helper.ErrInternalf("GL_ID not set")
 	}
-	if glRepo == "" {
+	if repo.GetGlRepository() == "" {
 		return helper.ErrInternalf("GL_REPOSITORY not set")
 	}
 	if glProtocol == "" {
@@ -99,7 +99,7 @@ func (m *GitLabHookManager) preReceiveHook(ctx context.Context, repo *gitalypb.R
 		RepoPath:                      repoPath,
 		GitObjectDirectory:            repo.GitObjectDirectory,
 		GitAlternateObjectDirectories: repo.GitAlternateObjectDirectories,
-		GLRepository:                  glRepo,
+		GLRepository:                  repo.GetGlRepository(),
 		GLID:                          glID,
 		GLProtocol:                    glProtocol,
 		Changes:                       string(changes),
@@ -131,7 +131,7 @@ func (m *GitLabHookManager) preReceiveHook(ctx context.Context, repo *gitalypb.R
 	}
 
 	// reference counter
-	ok, err := m.gitlabAPI.PreReceive(ctx, glRepo)
+	ok, err := m.gitlabAPI.PreReceive(ctx, repo.GetGlRepository())
 	if err != nil {
 		return helper.ErrInternalf("calling pre_receive endpoint: %v", err)
 	}

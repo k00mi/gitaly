@@ -140,7 +140,6 @@ func testHooksPrePostReceive(t *testing.T) {
 	glID := "key-1234"
 	glUsername := "iamgitlab"
 	glProtocol := "ssh"
-	glRepository := "some_repo"
 
 	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
 	defer cleanup()
@@ -159,7 +158,7 @@ func testHooksPrePostReceive(t *testing.T) {
 		Password:                    gitlabPassword,
 		SecretToken:                 secretToken,
 		GLID:                        glID,
-		GLRepository:                glRepository,
+		GLRepository:                testRepo.GetGlRepository(),
 		Changes:                     changes,
 		PostReceiveCounterDecreased: true,
 		Protocol:                    "ssh",
@@ -228,7 +227,7 @@ func testHooksPrePostReceive(t *testing.T) {
 				glHookValues{
 					GLID:                   glID,
 					GLUsername:             glUsername,
-					GLRepo:                 glRepository,
+					GLRepo:                 testRepo.GetGlRepository(),
 					GLProtocol:             glProtocol,
 					GitObjectDir:           c.GitObjectDir,
 					GitAlternateObjectDirs: c.GitAlternateObjectDirs,
@@ -250,7 +249,7 @@ func testHooksPrePostReceive(t *testing.T) {
 			output := string(testhelper.MustReadFile(t, customHookOutputPath))
 			requireContainsOnce(t, output, "GL_USERNAME="+glUsername)
 			requireContainsOnce(t, output, "GL_ID="+glID)
-			requireContainsOnce(t, output, "GL_REPOSITORY="+glRepository)
+			requireContainsOnce(t, output, "GL_REPOSITORY="+testRepo.GetGlRepository())
 			requireContainsOnce(t, output, "HTTP_PROXY="+httpProxy)
 			requireContainsOnce(t, output, "http_proxy="+httpProxy)
 			requireContainsOnce(t, output, "HTTPS_PROXY="+httpsProxy)
@@ -378,7 +377,6 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 	glID := "key-1234"
 	glUsername := "iamgitlab"
 	glProtocol := "ssh"
-	glRepository := "some_repo"
 	changes := "oldhead newhead"
 
 	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
@@ -397,7 +395,7 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 		SecretToken:                 secretToken,
 		Changes:                     changes,
 		GLID:                        glID,
-		GLRepository:                glRepository,
+		GLRepository:                testRepo.GetGlRepository(),
 		PostReceiveCounterDecreased: false,
 		Protocol:                    "ssh",
 	}
@@ -483,7 +481,7 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 				glHookValues{
 					GLID:       glID,
 					GLUsername: glUsername,
-					GLRepo:     glRepository,
+					GLRepo:     testRepo.GetGlRepository(),
 					GLProtocol: glProtocol,
 				},
 				proxyValues{},
@@ -511,7 +509,6 @@ func TestHooksNotAllowed(t *testing.T) {
 	glID := "key-1234"
 	glUsername := "iamgitlab"
 	glProtocol := "ssh"
-	glRepository := "some_repo"
 	changes := "oldhead newhead"
 
 	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
@@ -525,7 +522,7 @@ func TestHooksNotAllowed(t *testing.T) {
 		Password:                    "",
 		SecretToken:                 secretToken,
 		GLID:                        glID,
-		GLRepository:                glRepository,
+		GLRepository:                testRepo.GetGlRepository(),
 		Changes:                     changes,
 		PostReceiveCounterDecreased: true,
 		Protocol:                    "ssh",
@@ -562,7 +559,7 @@ func TestHooksNotAllowed(t *testing.T) {
 		glHookValues{
 			GLID:       glID,
 			GLUsername: glUsername,
-			GLRepo:     glRepository,
+			GLRepo:     testRepo.GetGlRepository(),
 			GLProtocol: glProtocol,
 		},
 		proxyValues{})

@@ -313,7 +313,12 @@ func setupSSHClone(t *testing.T) (SSHCloneDetails, func()) {
 }
 
 func sshPush(t *testing.T, cloneDetails SSHCloneDetails, serverSocketPath string, params pushParams) (string, string, error) {
-	pbTempRepo := &gitalypb.Repository{StorageName: params.storageName, RelativePath: cloneDetails.TempRepo, GlProjectPath: params.glProjectPath}
+	pbTempRepo := &gitalypb.Repository{
+		StorageName:   params.storageName,
+		RelativePath:  cloneDetails.TempRepo,
+		GlProjectPath: params.glProjectPath,
+		GlRepository:  params.glRepository,
+	}
 	pbMarshaler := &jsonpb.Marshaler{}
 	payload, err := pbMarshaler.MarshalToString(&gitalypb.SSHReceivePackRequest{
 		Repository:       pbTempRepo,
