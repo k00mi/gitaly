@@ -193,6 +193,7 @@ func testSuccessfulUserCreateTagRequest(t *testing.T, ctx context.Context) {
 			targetRevision: targetRevision,
 			expectedTag: &gitalypb.Tag{
 				Name:         []byte(inputTagName),
+				Id:           targetRevision,
 				TargetCommit: targetRevisionCommit,
 			},
 			expectedObjectType: "commit",
@@ -203,7 +204,8 @@ func testSuccessfulUserCreateTagRequest(t *testing.T, ctx context.Context) {
 			targetRevision: targetRevision,
 			message:        "This is an annotated tag",
 			expectedTag: &gitalypb.Tag{
-				Name:         []byte(inputTagName),
+				Name: []byte(inputTagName),
+				//Id: is a new object, filled in below
 				TargetCommit: targetRevisionCommit,
 				Message:      []byte("This is an annotated tag"),
 				MessageSize:  24,
@@ -237,10 +239,16 @@ func testSuccessfulUserCreateTagRequest(t *testing.T, ctx context.Context) {
 
 			defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "tag", "-d", inputTagName).Run()
 
-			id := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", inputTagName)
-			testCase.expectedTag.Id = text.ChompBytes(id)
+			responseOk := &gitalypb.UserCreateTagResponse{
+				Tag: testCase.expectedTag,
+			}
+			// Fake up *.Id for annotated tags
+			if len(testCase.expectedTag.Id) == 0 {
+				id := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", inputTagName)
+				responseOk.Tag.Id = text.ChompBytes(id)
+			}
 
-			require.Equal(t, testCase.expectedTag, response.Tag)
+			require.Equal(t, responseOk, response)
 
 			tag := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag")
 			require.Contains(t, string(tag), inputTagName)
