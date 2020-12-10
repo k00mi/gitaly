@@ -1,6 +1,7 @@
 package housekeeping
 
 import (
+	"bytes"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -106,106 +107,217 @@ func d(name string, mode os.FileMode, age time.Duration, finalState entryFinalSt
 }
 
 func TestPerform(t *testing.T) {
-	tests := []struct {
+	testcases := []struct {
 		name    string
 		entries []entry
-		wantErr bool
 	}{
 		{
 			name: "clean",
 			entries: []entry{
-				f("a", os.FileMode(0700), 24*time.Hour, Keep),
-				f("b", os.FileMode(0700), 24*time.Hour, Keep),
-				f("c", os.FileMode(0700), 24*time.Hour, Keep),
+				d("objects", 0700, 240*time.Hour, Keep, []entry{
+					f("a", 0700, 24*time.Hour, Keep),
+					f("b", 0700, 24*time.Hour, Keep),
+					f("c", 0700, 24*time.Hour, Keep),
+				}),
 			},
-			wantErr: false,
 		},
 		{
 			name: "emptyperms",
 			entries: []entry{
-				f("b", os.FileMode(0700), 24*time.Hour, Keep),
-				f("tmp_a", os.FileMode(0000), 2*time.Hour, Keep),
+				d("objects", 0700, 240*time.Hour, Keep, []entry{
+					f("b", 0700, 24*time.Hour, Keep),
+					f("tmp_a", 0000, 2*time.Hour, Keep),
+				}),
 			},
-			wantErr: false,
 		},
 		{
 			name: "emptytempdir",
 			entries: []entry{
-				d("tmp_d", os.FileMode(0000), 240*time.Hour, Delete, []entry{}),
-				f("b", os.FileMode(0700), 24*time.Hour, Keep),
+				d("objects", 0700, 240*time.Hour, Keep, []entry{
+					d("tmp_d", 0000, 240*time.Hour, Keep, []entry{}),
+					f("b", 0700, 24*time.Hour, Keep),
+				}),
 			},
-			wantErr: false,
 		},
 		{
 			name: "oldtempfile",
 			entries: []entry{
-				f("tmp_a", os.FileMode(0770), 240*time.Hour, Delete),
-				f("b", os.FileMode(0700), 24*time.Hour, Keep),
+				d("objects", 0700, 240*time.Hour, Keep, []entry{
+					f("tmp_a", 0770, 240*time.Hour, Delete),
+					f("b", 0700, 24*time.Hour, Keep),
+				}),
 			},
-			wantErr: false,
 		},
 		{
 			name: "subdir temp file",
 			entries: []entry{
-				d("a", os.FileMode(0770), 240*time.Hour, Keep, []entry{
-					f("tmp_b", os.FileMode(0700), 240*time.Hour, Delete),
+				d("objects", 0700, 240*time.Hour, Keep, []entry{
+					d("a", 0770, 240*time.Hour, Keep, []entry{
+						f("tmp_b", 0700, 240*time.Hour, Delete),
+					}),
 				}),
 			},
-			wantErr: false,
 		},
 		{
 			name: "inaccessible tmp directory",
 			entries: []entry{
-				d("tmp_a", os.FileMode(0000), 240*time.Hour, Delete, []entry{
-					f("tmp_b", os.FileMode(0700), 240*time.Hour, Delete),
+				d("objects", 0700, 240*time.Hour, Keep, []entry{
+					d("tmp_a", 0000, 240*time.Hour, Keep, []entry{
+						f("tmp_b", 0700, 240*time.Hour, Delete),
+					}),
 				}),
 			},
-			wantErr: false,
 		},
 		{
 			name: "deeply nested inaccessible tmp directory",
 			entries: []entry{
-				d("tmp_a", os.FileMode(0000), 240*time.Hour, Delete, []entry{
-					d("tmp_a", os.FileMode(0000), 24*time.Hour, Delete, []entry{
-						f("tmp_b", os.FileMode(0000), 24*time.Hour, Delete),
+				d("objects", 0700, 240*time.Hour, Keep, []entry{
+					d("tmp_a", 0700, 240*time.Hour, Keep, []entry{
+						d("tmp_a", 0700, 24*time.Hour, Keep, []entry{
+							f("tmp_b", 0000, 240*time.Hour, Delete),
+						}),
 					}),
 				}),
 			},
-			wantErr: false,
+		},
+		{
+			name: "files outside of object database",
+			entries: []entry{
+				f("tmp_a", 0770, 240*time.Hour, Keep),
+				d("info", 0700, 240*time.Hour, Keep, []entry{
+					f("tmp_a", 0770, 240*time.Hour, Keep),
+				}),
+			},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			rootPath, err := ioutil.TempDir("", "test")
-			assert.NoError(t, err, "TempDir creation failed")
-			defer os.RemoveAll(rootPath)
-
-			for _, e := range tt.entries {
-				e.create(t, rootPath)
-			}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			rootPath, cleanup := testhelper.TempDir(t)
+			defer cleanup()
 
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			if err = Perform(ctx, rootPath); (err != nil) != tt.wantErr {
-				t.Errorf("Perform() error = %v, wantErr %v", err, tt.wantErr)
+			// We need to fix permissions so we don't fail to
+			// remove the temporary directory after the test.
+			defer FixDirectoryPermissions(ctx, rootPath)
+
+			for _, e := range tc.entries {
+				e.create(t, rootPath)
 			}
 
-			for _, e := range tt.entries {
+			require.NoError(t, Perform(ctx, rootPath))
+
+			for _, e := range tc.entries {
 				e.validate(t, rootPath)
 			}
 		})
 	}
 }
 
-func TestShouldUnlink(t *testing.T) {
+func TestPerform_references(t *testing.T) {
+	type ref struct {
+		name string
+		age  time.Duration
+		size int
+	}
+
+	testcases := []struct {
+		desc     string
+		refs     []ref
+		expected []string
+	}{
+		{
+			desc: "normal reference",
+			refs: []ref{
+				{name: "refs/heads/master", age: 1 * time.Second, size: 40},
+			},
+			expected: []string{
+				"refs/heads/master",
+			},
+		},
+		{
+			desc: "recent empty reference is not deleted",
+			refs: []ref{
+				{name: "refs/heads/master", age: 1 * time.Hour, size: 0},
+			},
+			expected: []string{
+				"refs/heads/master",
+			},
+		},
+		{
+			desc: "old empty reference is deleted",
+			refs: []ref{
+				{name: "refs/heads/master", age: 25 * time.Hour, size: 0},
+			},
+			expected: nil,
+		},
+		{
+			desc: "multiple references",
+			refs: []ref{
+				{name: "refs/keep/kept-because-recent", age: 1 * time.Hour, size: 0},
+				{name: "refs/keep/kept-because-nonempty", age: 25 * time.Hour, size: 1},
+				{name: "refs/keep/prune", age: 25 * time.Hour, size: 0},
+				{name: "refs/tags/kept-because-recent", age: 1 * time.Hour, size: 0},
+				{name: "refs/tags/kept-because-nonempty", age: 25 * time.Hour, size: 1},
+				{name: "refs/tags/prune", age: 25 * time.Hour, size: 0},
+				{name: "refs/heads/kept-because-recent", age: 1 * time.Hour, size: 0},
+				{name: "refs/heads/kept-because-nonempty", age: 25 * time.Hour, size: 1},
+				{name: "refs/heads/prune", age: 25 * time.Hour, size: 0},
+			},
+			expected: []string{
+				"refs/keep/kept-because-recent",
+				"refs/keep/kept-because-nonempty",
+				"refs/tags/kept-because-recent",
+				"refs/tags/kept-because-nonempty",
+				"refs/heads/kept-because-recent",
+				"refs/heads/kept-because-nonempty",
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.desc, func(t *testing.T) {
+			rootPath, cleanup := testhelper.TempDir(t)
+			defer cleanup()
+
+			for _, ref := range tc.refs {
+				path := filepath.Join(rootPath, ref.name)
+
+				require.NoError(t, os.MkdirAll(filepath.Dir(path), 0755))
+				require.NoError(t, ioutil.WriteFile(path, bytes.Repeat([]byte{0}, ref.size), 0644))
+				filetime := time.Now().Add(-ref.age)
+				require.NoError(t, os.Chtimes(path, filetime, filetime))
+			}
+
+			ctx, cancel := testhelper.Context()
+			defer cancel()
+
+			require.NoError(t, Perform(ctx, rootPath))
+
+			var actual []string
+			filepath.Walk(filepath.Join(rootPath), func(path string, info os.FileInfo, _ error) error {
+				if !info.IsDir() {
+					ref, err := filepath.Rel(rootPath, path)
+					require.NoError(t, err)
+					actual = append(actual, ref)
+				}
+				return nil
+			})
+
+			require.ElementsMatch(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestShouldRemoveTemporaryObject(t *testing.T) {
 	type args struct {
 		path    string
 		modTime time.Time
 		mode    os.FileMode
 	}
-	tests := []struct {
+	testcases := []struct {
 		name string
 		args args
 		want bool
@@ -266,11 +378,9 @@ func TestShouldUnlink(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := shouldRemove(tt.args.path, tt.args.modTime, tt.args.mode); got != tt.want {
-				t.Errorf("shouldUnlink() = %v, want %v", got, tt.want)
-			}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, isStaleTemporaryObject(tc.args.path, tc.args.modTime, tc.args.mode))
 		})
 	}
 }
