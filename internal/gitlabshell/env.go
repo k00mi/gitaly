@@ -15,7 +15,6 @@ type Config struct {
 	LogFormat      string              `json:"log_format"`
 	LogLevel       string              `json:"log_level"`
 	LogPath        string              `json:"log_path"`
-	RootPath       string              `json:"root_path"`
 	SecretFile     string              `json:"secret_file"`
 }
 
@@ -37,8 +36,6 @@ func EnvFromConfig(cfg config.Cfg) ([]string, error) {
 	}
 
 	return []string{
-		//TODO: remove GITALY_GITLAB_SHELL_DIR: https://gitlab.com/gitlab-org/gitaly/-/issues/2679
-		"GITALY_GITLAB_SHELL_DIR=" + cfg.GitlabShell.Dir,
 		fmt.Sprintf("%s=%s", log.GitalyLogDirEnvKey, cfg.Logging.Dir),
 		"GITALY_BIN_DIR=" + cfg.BinDir,
 		"GITALY_GITLAB_SHELL_CONFIG=" + string(gitlabShellConfigString),

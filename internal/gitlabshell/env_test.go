@@ -45,7 +45,6 @@ func TestGitHooksConfig(t *testing.T) {
 	env, err := gitlabshell.EnvFromConfig(config.Config)
 	require.NoError(t, err)
 
-	require.Contains(t, env, "GITALY_GITLAB_SHELL_DIR="+config.Config.GitlabShell.Dir)
 	require.Contains(t, env, "GITALY_LOG_DIR="+config.Config.Logging.Dir)
 	require.Contains(t, env, "GITALY_BIN_DIR="+config.Config.BinDir)
 

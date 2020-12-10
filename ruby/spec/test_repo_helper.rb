@@ -1,12 +1,13 @@
 require 'fileutils'
 require 'securerandom'
 require 'rugged'
+require 'spec_helper'
 
 $:.unshift(File.expand_path('../proto', __dir__))
 require 'gitaly'
 
 Gitlab.config.git.test_global_ivar_override(:bin_path, ENV.fetch('GITALY_TESTING_GIT_BINARY', 'git'))
-Gitlab.config.git.test_global_ivar_override(:hooks_directory, File.join(Gitlab.config.gitlab_shell.path.to_s, "hooks"))
+Gitlab.config.git.test_global_ivar_override(:hooks_directory, File.join(GITALY_RUBY_DIR, "hooks"))
 Gitlab.config.gitaly.test_global_ivar_override(:bin_dir, __dir__)
 
 DEFAULT_STORAGE_DIR = File.expand_path('../tmp/repositories', __dir__)

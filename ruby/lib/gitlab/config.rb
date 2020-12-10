@@ -41,18 +41,6 @@ module Gitlab
       end
     end
 
-    class GitlabShell
-      include TestSetup
-
-      def path
-        @path ||= ENV['GITLAB_SHELL_DIR'] || ENV['GITALY_GITLAB_SHELL_DIR']
-      end
-
-      def git_timeout
-        @git_timeout ||= 10800 # TODO make this configurable or eliminate otherwise https://gitlab.com/gitlab-org/gitaly/issues/885
-      end
-    end
-
     class Gitaly
       include TestSetup
 
@@ -85,10 +73,6 @@ module Gitlab
 
     def git
       @git ||= Git.new
-    end
-
-    def gitlab_shell
-      @gitlab_shell ||= GitlabShell.new
     end
 
     def logging

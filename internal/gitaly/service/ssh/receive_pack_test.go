@@ -105,7 +105,6 @@ func TestReceivePackPushSuccess(t *testing.T) {
 		fmt.Sprintf("GL_REPOSITORY=%s", glRepository),
 		fmt.Sprintf("GL_PROJECT_PATH=%s", glProjectPath),
 		"GL_PROTOCOL=ssh",
-		"GITALY_GITLAB_SHELL_DIR=" + "/foo/bar/gitlab-shell",
 	} {
 		require.Contains(t, strings.Split(string(envData), "\n"), env)
 	}
