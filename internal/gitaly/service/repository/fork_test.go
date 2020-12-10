@@ -21,12 +21,18 @@ import (
 func TestSuccessfulCreateForkRequest(t *testing.T) {
 	locator := config.NewLocator(config.Config)
 
+	createEmptyTarget := func(repoPath string) {
+		require.NoError(t, os.MkdirAll(repoPath, 0755))
+	}
+
 	for _, tt := range []struct {
-		name   string
-		secure bool
+		name          string
+		secure        bool
+		beforeRequest func(repoPath string)
 	}{
 		{name: "secure", secure: true},
 		{name: "insecure"},
+		{name: "existing empty directory target", beforeRequest: createEmptyTarget},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var (
@@ -71,6 +77,10 @@ func TestSuccessfulCreateForkRequest(t *testing.T) {
 			forkedRepoPath, err := locator.GetPath(forkedRepo)
 			require.NoError(t, err)
 			require.NoError(t, os.RemoveAll(forkedRepoPath))
+
+			if tt.beforeRequest != nil {
+				tt.beforeRequest(forkedRepoPath)
+			}
 
 			req := &gitalypb.CreateForkRequest{
 				Repository:       forkedRepo,
@@ -117,7 +127,7 @@ func TestFailedCreateForkRequestDueToExistingTarget(t *testing.T) {
 		isDir    bool
 	}{
 		{
-			desc:     "target is a directory",
+			desc:     "target is a non-empty directory",
 			repoPath: "forks/test-repo-fork-dir.git",
 			isDir:    true,
 		},
@@ -140,6 +150,11 @@ func TestFailedCreateForkRequestDueToExistingTarget(t *testing.T) {
 
 			if testCase.isDir {
 				require.NoError(t, os.MkdirAll(forkedRepoPath, 0770))
+				require.NoError(t, ioutil.WriteFile(
+					filepath.Join(forkedRepoPath, "config"),
+					nil,
+					0644,
+				))
 			} else {
 				require.NoError(t, ioutil.WriteFile(forkedRepoPath, nil, 0644))
 			}

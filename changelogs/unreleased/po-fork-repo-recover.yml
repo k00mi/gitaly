@@ -1,0 +1,5 @@
+---
+title: CreateFork recovers when encountering existing empty directory target
+merge_request: 2886
+author:
+type: fixed

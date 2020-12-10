@@ -28,8 +28,20 @@ func (s *server) CreateFork(ctx context.Context, req *gitalypb.CreateForkRequest
 		return nil, err
 	}
 
-	if _, err := os.Stat(targetRepositoryFullPath); !os.IsNotExist(err) {
-		return nil, status.Errorf(codes.InvalidArgument, "CreateFork: dest dir exists")
+	if info, err := os.Stat(targetRepositoryFullPath); err != nil {
+		if !os.IsNotExist(err) {
+			return nil, status.Errorf(codes.Internal, "CreateFork: check destination path: %v", err)
+		}
+
+		// directory does not exist, proceed
+	} else {
+		if !info.IsDir() {
+			return nil, status.Errorf(codes.InvalidArgument, "CreateFork: destination path exists")
+		}
+
+		if err := os.Remove(targetRepositoryFullPath); err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "CreateFork: destination directory is not empty")
+		}
 	}
 
 	if err := os.MkdirAll(targetRepositoryFullPath, 0770); err != nil {
