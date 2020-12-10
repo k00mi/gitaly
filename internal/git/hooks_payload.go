@@ -40,8 +40,12 @@ type HooksPayload struct {
 	// Gitaly's internal socket.
 	InternalSocketToken string `json:"internal_socket_token"`
 
-	Transaction *metadata.Transaction    `json:"transaction"`
-	Praefect    *metadata.PraefectServer `json:"praefect"`
+	// Transaction is used to identify a reference transaction. This is an optional field -- if
+	// it's not set, no transactional voting will happen.
+	Transaction *metadata.Transaction `json:"transaction"`
+	// Praefect is used to identify the Praefect server which is hosting the transaction. This
+	// field must be set if and only if `Transaction` is.
+	Praefect *metadata.PraefectServer `json:"praefect"`
 }
 
 // jsonHooksPayload wraps the HooksPayload such that we can manually encode the
