@@ -44,14 +44,15 @@ func TestUpdate_CustomHooks(t *testing.T) {
 	client, conn := newHooksClient(t, serverSocketPath)
 	defer conn.Close()
 
-	hooksPayload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil).Env()
+	hooksPayload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil, &git.ReceiveHooksPayload{
+		UserID:   "key-123",
+		Username: "username",
+		Protocol: "web",
+	}).Env()
 	require.NoError(t, err)
 
 	envVars := []string{
 		hooksPayload,
-		"GL_ID=key-123",
-		"GL_USERNAME=username",
-		"GL_PROTOCOL=protocol",
 	}
 
 	ctx, cancel := testhelper.Context()

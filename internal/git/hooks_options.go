@@ -21,7 +21,7 @@ func WithRefTxHook(ctx context.Context, repo *gitalypb.Repository, cfg config.Cf
 			return fmt.Errorf("missing repo: %w", ErrInvalidArg)
 		}
 
-		if err := cc.configureHooks(ctx, repo, cfg); err != nil {
+		if err := cc.configureHooks(ctx, repo, cfg, nil); err != nil {
 			return fmt.Errorf("ref hook env var: %w", err)
 		}
 
@@ -32,7 +32,12 @@ func WithRefTxHook(ctx context.Context, repo *gitalypb.Repository, cfg config.Cf
 // configureHooks updates the command configuration to include all environment
 // variables required by the reference transaction hook and any other needed
 // options to successfully execute hooks.
-func (cc *cmdCfg) configureHooks(ctx context.Context, repo *gitalypb.Repository, cfg config.Cfg) error {
+func (cc *cmdCfg) configureHooks(
+	ctx context.Context,
+	repo *gitalypb.Repository,
+	cfg config.Cfg,
+	receiveHooksPayload *ReceiveHooksPayload,
+) error {
 	if cc.hooksConfigured {
 		return errors.New("hooks already configured")
 	}
@@ -42,7 +47,7 @@ func (cc *cmdCfg) configureHooks(ctx context.Context, repo *gitalypb.Repository,
 		return err
 	}
 
-	payload, err := NewHooksPayload(cfg, repo, transaction, praefect).Env()
+	payload, err := NewHooksPayload(cfg, repo, transaction, praefect, receiveHooksPayload).Env()
 	if err != nil {
 		return err
 	}
@@ -74,24 +79,14 @@ type ReceivePackRequest interface {
 // git-receive-pack(1).
 func WithReceivePackHooks(ctx context.Context, cfg config.Cfg, req ReceivePackRequest, protocol string) CmdOpt {
 	return func(cc *cmdCfg) error {
-		if err := cc.configureHooks(ctx, req.GetRepository(), config.Config); err != nil {
+		if err := cc.configureHooks(ctx, req.GetRepository(), config.Config, &ReceiveHooksPayload{
+			UserID:   req.GetGlId(),
+			Username: req.GetGlUsername(),
+			Protocol: protocol,
+		}); err != nil {
 			return err
 		}
 
-		env, err := receivePackHookEnv(req, protocol)
-		if err != nil {
-			return fmt.Errorf("receive-pack hook envvars: %w", err)
-		}
-
-		cc.env = append(cc.env, env...)
 		return nil
 	}
-}
-
-func receivePackHookEnv(req ReceivePackRequest, protocol string) ([]string, error) {
-	return []string{
-		fmt.Sprintf("GL_ID=%s", req.GetGlId()),
-		fmt.Sprintf("GL_USERNAME=%s", req.GetGlUsername()),
-		fmt.Sprintf("GL_PROTOCOL=%s", protocol),
-	}, nil
 }

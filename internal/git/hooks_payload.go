@@ -74,7 +74,13 @@ type jsonHooksPayload struct {
 
 // NewHooksPayload creates a new hooks payload which can then be encoded and
 // passed to Git hooks.
-func NewHooksPayload(cfg config.Cfg, repo *gitalypb.Repository, tx *metadata.Transaction, praefect *metadata.PraefectServer) HooksPayload {
+func NewHooksPayload(
+	cfg config.Cfg,
+	repo *gitalypb.Repository,
+	tx *metadata.Transaction,
+	praefect *metadata.PraefectServer,
+	receiveHooksPayload *ReceiveHooksPayload,
+) HooksPayload {
 	return HooksPayload{
 		Repo:                repo,
 		BinDir:              cfg.BinDir,
@@ -82,6 +88,7 @@ func NewHooksPayload(cfg config.Cfg, repo *gitalypb.Repository, tx *metadata.Tra
 		InternalSocketToken: cfg.Auth.Token,
 		Transaction:         tx,
 		Praefect:            praefect,
+		ReceiveHooksPayload: receiveHooksPayload,
 	}
 }
 

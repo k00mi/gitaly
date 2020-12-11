@@ -134,6 +134,7 @@ func TestReferenceTransactionHook(t *testing.T) {
 				&metadata.PraefectServer{
 					ListenAddr: "tcp://" + listener.Addr().String(),
 				},
+				nil,
 			).Env()
 			require.NoError(t, err)
 

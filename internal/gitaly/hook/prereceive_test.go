@@ -23,13 +23,16 @@ func TestPrereceive_customHooks(t *testing.T) {
 	hookManager := NewManager(config.NewLocator(config.Config), GitlabAPIStub, config.Config)
 
 	standardEnv := []string{
-		"GL_ID=1234",
-		"GL_PROTOCOL=web",
 		fmt.Sprintf("GL_REPO=%s", repo),
-		"GL_USERNAME=user",
 	}
 
-	payload, err := git.NewHooksPayload(config.Config, repo, nil, nil).Env()
+	receiveHooksPayload := &git.ReceiveHooksPayload{
+		UserID:   "1234",
+		Username: "user",
+		Protocol: "web",
+	}
+
+	payload, err := git.NewHooksPayload(config.Config, repo, nil, nil, receiveHooksPayload).Env()
 	require.NoError(t, err)
 
 	primaryPayload, err := git.NewHooksPayload(
@@ -42,6 +45,7 @@ func TestPrereceive_customHooks(t *testing.T) {
 			SocketPath: "/path/to/socket",
 			Token:      "secret",
 		},
+		receiveHooksPayload,
 	).Env()
 	require.NoError(t, err)
 
@@ -55,6 +59,7 @@ func TestPrereceive_customHooks(t *testing.T) {
 			SocketPath: "/path/to/socket",
 			Token:      "secret",
 		},
+		receiveHooksPayload,
 	).Env()
 	require.NoError(t, err)
 
@@ -132,18 +137,6 @@ func TestPrereceive_customHooks(t *testing.T) {
 			stdin: "change\n",
 		},
 		{
-			desc:        "missing GL_ID causes error",
-			env:         envWithout(append(standardEnv, payload), "GL_ID"),
-			stdin:       "change\n",
-			expectedErr: "no user ID found in hooks environment",
-		},
-		{
-			desc:        "missing GL_PROTOCOL causes error",
-			env:         envWithout(append(standardEnv, payload), "GL_PROTOCOL"),
-			stdin:       "change\n",
-			expectedErr: "payload has no receive hooks info",
-		},
-		{
 			desc:        "missing changes cause error",
 			env:         append(standardEnv, payload),
 			expectedErr: "hook got no reference updates",
@@ -199,15 +192,16 @@ func TestPrereceive_gitlab(t *testing.T) {
 	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	payload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil).Env()
+	payload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil, &git.ReceiveHooksPayload{
+		UserID:   "1234",
+		Username: "user",
+		Protocol: "web",
+	}).Env()
 	require.NoError(t, err)
 
 	standardEnv := []string{
 		payload,
-		"GL_ID=1234",
-		"GL_PROTOCOL=web",
 		fmt.Sprintf("GL_REPO=%s", testRepo),
-		"GL_USERNAME=user",
 	}
 
 	testCases := []struct {

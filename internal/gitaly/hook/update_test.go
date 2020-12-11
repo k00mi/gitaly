@@ -20,13 +20,16 @@ func TestUpdate_customHooks(t *testing.T) {
 	hookManager := NewManager(config.NewLocator(config.Config), GitlabAPIStub, config.Config)
 
 	standardEnv := []string{
-		"GL_ID=1234",
-		"GL_PROTOCOL=web",
 		fmt.Sprintf("GL_REPO=%s", repo),
-		"GL_USERNAME=user",
 	}
 
-	payload, err := git.NewHooksPayload(config.Config, repo, nil, nil).Env()
+	receiveHooksPayload := &git.ReceiveHooksPayload{
+		UserID:   "1234",
+		Username: "user",
+		Protocol: "web",
+	}
+
+	payload, err := git.NewHooksPayload(config.Config, repo, nil, nil, receiveHooksPayload).Env()
 	require.NoError(t, err)
 
 	primaryPayload, err := git.NewHooksPayload(
@@ -39,6 +42,7 @@ func TestUpdate_customHooks(t *testing.T) {
 			SocketPath: "/path/to/socket",
 			Token:      "secret",
 		},
+		receiveHooksPayload,
 	).Env()
 	require.NoError(t, err)
 
@@ -52,6 +56,7 @@ func TestUpdate_customHooks(t *testing.T) {
 			SocketPath: "/path/to/socket",
 			Token:      "secret",
 		},
+		receiveHooksPayload,
 	).Env()
 	require.NoError(t, err)
 

@@ -39,15 +39,16 @@ type proxyValues struct {
 
 // envForHooks generates a set of environment variables for gitaly hooks
 func envForHooks(t testing.TB, gitlabShellDir string, repo *gitalypb.Repository, glHookValues glHookValues, proxyValues proxyValues, gitPushOptions ...string) []string {
-	payload, err := git.NewHooksPayload(config.Config, repo, nil, nil).Env()
+	payload, err := git.NewHooksPayload(config.Config, repo, nil, nil, &git.ReceiveHooksPayload{
+		UserID:   glHookValues.GLID,
+		Username: glHookValues.GLUsername,
+		Protocol: glHookValues.GLProtocol,
+	}).Env()
 	require.NoError(t, err)
 
 	env := append(os.Environ(), []string{
 		payload,
 		"GITALY_BIN_DIR=" + config.Config.BinDir,
-		fmt.Sprintf("GL_ID=%s", glHookValues.GLID),
-		fmt.Sprintf("GL_PROTOCOL=%s", glHookValues.GLProtocol),
-		fmt.Sprintf("GL_USERNAME=%s", glHookValues.GLUsername),
 		fmt.Sprintf("%s=%s", gitalylog.GitalyLogDirEnvKey, gitlabShellDir),
 	}...)
 	env = append(env, hooks.GitPushOptions(gitPushOptions)...)
@@ -470,17 +471,15 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 					SocketPath: "/path/to/socket",
 					Token:      "secret",
 				},
+				&git.ReceiveHooksPayload{
+					UserID:   glID,
+					Username: glUsername,
+					Protocol: glProtocol,
+				},
 			).Env()
 			require.NoError(t, err)
 
-			env := envForHooks(t, tempGitlabShellDir, testRepo,
-				glHookValues{
-					GLID:       glID,
-					GLUsername: glUsername,
-					GLProtocol: glProtocol,
-				},
-				proxyValues{},
-			)
+			env := envForHooks(t, tempGitlabShellDir, testRepo, glHookValues{}, proxyValues{})
 			env = append(env, hooksPayload)
 
 			cmd := exec.Command(postReceiveHookPath)

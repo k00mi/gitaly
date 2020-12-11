@@ -36,7 +36,11 @@ func (s *Server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 		return err
 	}
 
-	payload, err := git.NewHooksPayload(s.cfg, repo, transaction, praefect).Env()
+	payload, err := git.NewHooksPayload(s.cfg, repo, transaction, praefect, &git.ReceiveHooksPayload{
+		UserID:   user.GetGlId(),
+		Username: user.GetGlUsername(),
+		Protocol: "web",
+	}).Env()
 	if err != nil {
 		return err
 	}
@@ -53,9 +57,6 @@ func (s *Server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 
 	env := []string{
 		payload,
-		"GL_PROTOCOL=web",
-		fmt.Sprintf("GL_ID=%s", user.GetGlId()),
-		fmt.Sprintf("GL_USERNAME=%s", user.GetGlUsername()),
 	}
 
 	changes := fmt.Sprintf("%s %s %s\n", oldrev, newrev, reference)
