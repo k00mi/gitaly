@@ -17,10 +17,23 @@ import (
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
-// Link will write the relative path to the object pool from the repository that
-// is to join the pool. This does not trigger deduplication, which is the
-// responsibility of the caller.
+// Link will write the relative path to the object pool from the
+// repository that is to join the pool. This does not trigger
+// deduplication, which is the responsibility of the caller. Link will
+// fail if the repository is pointing to an unexpected path in the
+// alternates file.
 func (o *ObjectPool) Link(ctx context.Context, repo *gitalypb.Repository) error {
+	return o.linkHelper(ctx, repo, false)
+}
+
+// ForceLink will do what Link does but will overwrite the alternates
+// file regardless of the existing contents. This is useful to restore a
+// relative path after git has written an absolute one.
+func (o *ObjectPool) ForceLink(ctx context.Context, repo *gitalypb.Repository) error {
+	return o.linkHelper(ctx, repo, true)
+}
+
+func (o *ObjectPool) linkHelper(ctx context.Context, repo *gitalypb.Repository, force bool) error {
 	altPath, err := o.locator.InfoAlternatesPath(repo)
 	if err != nil {
 		return err
@@ -31,13 +44,15 @@ func (o *ObjectPool) Link(ctx context.Context, repo *gitalypb.Repository) error 
 		return err
 	}
 
-	linked, err := o.LinkedToRepository(repo)
-	if err != nil {
-		return err
-	}
+	if !force {
+		linked, err := o.LinkedToRepository(repo)
+		if err != nil {
+			return err
+		}
 
-	if linked {
-		return nil
+		if linked {
+			return nil
+		}
 	}
 
 	tmp, err := ioutil.TempFile(filepath.Dir(altPath), "alternates")

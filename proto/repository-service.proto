@@ -397,6 +397,10 @@ message FindMergeBaseResponse {
 message CreateForkRequest {
   Repository repository = 1 [(target_repository)=true];
   Repository source_repository = 2;
+  // Clone using an object pool to reduce object duplication.
+  // This pool repository must reside on the same storage shard
+  // as the target repository.
+  ObjectPool pool = 3 [(additional_repository)=true];
 }
 
 message CreateForkResponse {}
