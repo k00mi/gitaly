@@ -141,7 +141,7 @@ func TestPrereceive_customHooks(t *testing.T) {
 			desc:        "missing GL_PROTOCOL causes error",
 			env:         envWithout(append(standardEnv, payload), "GL_PROTOCOL"),
 			stdin:       "change\n",
-			expectedErr: "GL_PROTOCOL not set",
+			expectedErr: "payload has no receive hooks info",
 		},
 		{
 			desc:        "missing changes cause error",

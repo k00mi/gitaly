@@ -135,15 +135,22 @@ func (m *GitLabHookManager) PostReceiveHook(ctx context.Context, repo *gitalypb.
 		return helper.ErrInternalf("hook got no reference updates")
 	}
 
-	glID := getEnvVar("GL_ID", env)
-	if glID == "" {
-		return helper.ErrInternalf("GL_ID not set")
+	if payload.ReceiveHooksPayload == nil {
+		return helper.ErrInternalf("payload has no receive hooks info")
+	}
+	if payload.ReceiveHooksPayload.UserID == "" {
+		return helper.ErrInternalf("user ID not set")
 	}
 	if repo.GetGlRepository() == "" {
 		return helper.ErrInternalf("repository not set")
 	}
 
-	ok, messages, err := m.gitlabAPI.PostReceive(ctx, repo.GetGlRepository(), glID, string(changes), pushOptions...)
+	ok, messages, err := m.gitlabAPI.PostReceive(
+		ctx, repo.GetGlRepository(),
+		payload.ReceiveHooksPayload.UserID,
+		string(changes),
+		pushOptions...,
+	)
 	if err != nil {
 		return fmt.Errorf("GitLab: %v", err)
 	}

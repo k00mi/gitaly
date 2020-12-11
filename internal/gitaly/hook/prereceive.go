@@ -84,15 +84,17 @@ func (m *GitLabHookManager) preReceiveHook(ctx context.Context, payload git.Hook
 		return helper.ErrInternalf("hook got no reference updates")
 	}
 
-	glID, glProtocol := getEnvVar("GL_ID", env), getEnvVar("GL_PROTOCOL", env)
-	if glID == "" {
-		return helper.ErrInternalf("GL_ID not set")
-	}
 	if repo.GetGlRepository() == "" {
 		return helper.ErrInternalf("repository not set")
 	}
-	if glProtocol == "" {
-		return helper.ErrInternalf("GL_PROTOCOL not set")
+	if payload.ReceiveHooksPayload == nil {
+		return helper.ErrInternalf("payload has no receive hooks info")
+	}
+	if payload.ReceiveHooksPayload.UserID == "" {
+		return helper.ErrInternalf("user ID not set")
+	}
+	if payload.ReceiveHooksPayload.Protocol == "" {
+		return helper.ErrInternalf("protocol not set")
 	}
 
 	params := AllowedParams{
@@ -100,8 +102,8 @@ func (m *GitLabHookManager) preReceiveHook(ctx context.Context, payload git.Hook
 		GitObjectDirectory:            repo.GitObjectDirectory,
 		GitAlternateObjectDirectories: repo.GitAlternateObjectDirectories,
 		GLRepository:                  repo.GetGlRepository(),
-		GLID:                          glID,
-		GLProtocol:                    glProtocol,
+		GLID:                          payload.ReceiveHooksPayload.UserID,
+		GLProtocol:                    payload.ReceiveHooksPayload.Protocol,
 		Changes:                       string(changes),
 	}
 

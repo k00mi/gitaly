@@ -139,5 +139,8 @@ func customHooksEnv(payload git.HooksPayload) []string {
 	return []string{
 		"GL_REPOSITORY=" + payload.Repo.GetGlRepository(),
 		"GL_PROJECT_PATH=" + payload.Repo.GetGlProjectPath(),
+		"GL_ID=" + payload.ReceiveHooksPayload.UserID,
+		"GL_USERNAME=" + payload.ReceiveHooksPayload.Username,
+		"GL_PROTOCOL=" + payload.ReceiveHooksPayload.Protocol,
 	}
 }

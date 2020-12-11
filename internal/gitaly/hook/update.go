@@ -28,6 +28,9 @@ func (m *GitLabHookManager) UpdateHook(ctx context.Context, repo *gitalypb.Repos
 	if err := git.ValidateCommitID(newValue); err != nil {
 		return helper.ErrInternalf("hook got invalid new value: %w", err)
 	}
+	if payload.ReceiveHooksPayload == nil {
+		return helper.ErrInternalf("payload has no receive hooks info")
+	}
 
 	executor, err := m.newCustomHooksExecutor(repo, "update")
 	if err != nil {

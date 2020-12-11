@@ -38,9 +38,17 @@ describe Gitlab::Git::Hook do
     context 'when the hooks require environment variables' do
       let(:vars) do
         {
-          'GL_ID' => 'user-123',
-          'GL_USERNAME' => 'janedoe',
-          'GL_PROTOCOL' => 'web',
+          'GITALY_HOOKS_PAYLOAD' => Base64.strict_encode64({
+            repository: repo.gitaly_repository.to_json,
+            binary_directory: Gitlab.config.gitaly.bin_dir,
+            internal_socket: Gitlab.config.gitaly.internal_socket,
+            internal_socket_token: nil,
+            receive_hooks_payload: {
+              userid: 'user-123',
+              username: 'janedoe',
+              protocol: 'web'
+            }
+          }.to_json),
           'PWD' => repo.path,
           'GIT_DIR' => repo.path
         }
@@ -64,7 +72,7 @@ describe Gitlab::Git::Hook do
       it 'returns true' do
         hook_names.each do |hook|
           trigger_result = described_class.new(hook, repo)
-                                          .trigger(vars['GL_ID'], vars['GL_USERNAME'], '0' * 40, 'a' * 40, 'master', push_options: push_options)
+                                          .trigger('user-123', 'janedoe', '0' * 40, 'a' * 40, 'master', push_options: push_options)
 
           expect(trigger_result.first).to be(true), "#{hook} failed:  #{trigger_result.last}"
         end
