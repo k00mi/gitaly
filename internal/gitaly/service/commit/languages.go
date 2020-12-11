@@ -117,7 +117,7 @@ func (s *server) lookupRevision(ctx context.Context, repo *gitalypb.Repository, 
 }
 
 func checkRevision(ctx context.Context, repoPath string, env []string, revision string) (string, error) {
-	opts := []git.Option{git.ValueFlag{"-C", repoPath}}
+	opts := []git.GlobalOption{git.ValueFlag{"-C", repoPath}}
 	var stdout, stderr bytes.Buffer
 
 	revParse, err := git.SafeBareCmd(ctx, env, opts,

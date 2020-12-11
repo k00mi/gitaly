@@ -200,7 +200,7 @@ func handleArchive(p archiveParams) error {
 		fmt.Sprintf("%s=%s", log.GitalyLogDirEnvKey, p.loggingDir),
 	}
 
-	var globals []git.Option
+	var globals []git.GlobalOption
 
 	if p.in.GetIncludeLfsBlobs() {
 		binary := filepath.Join(p.binDir, "gitaly-lfs-smudge")

@@ -56,7 +56,7 @@ type FetchOpts struct {
 	// Env is a list of env vars to pass to the cmd.
 	Env []string
 	// Global is a list of global flags to use with 'git' command.
-	Global []Option
+	Global []GlobalOption
 	// Prune if set fetch removes any remote-tracking references that no longer exist on the remote.
 	// https://git-scm.com/docs/git-fetch#Documentation/git-fetch.txt---prune
 	Prune bool
@@ -117,7 +117,7 @@ func NewRepository(repo repository.GitRepo) *LocalRepository {
 // command creates a Git Command with the given args and Repository, executed
 // in the Repository. It validates the arguments in the command before
 // executing.
-func (repo *LocalRepository) command(ctx context.Context, globals []Option, cmd SubCmd, opts ...CmdOpt) (*command.Command, error) {
+func (repo *LocalRepository) command(ctx context.Context, globals []GlobalOption, cmd SubCmd, opts ...CmdOpt) (*command.Command, error) {
 	return SafeCmd(ctx, repo.repo, globals, cmd, opts...)
 }
 

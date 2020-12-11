@@ -77,7 +77,7 @@ func TestFlagValidation(t *testing.T) {
 
 func TestSafeCmdInvalidArg(t *testing.T) {
 	for _, tt := range []struct {
-		globals []Option
+		globals []GlobalOption
 		subCmd  SubCmd
 		errMsg  string
 	}{
@@ -135,7 +135,7 @@ func TestSafeCmdValid(t *testing.T) {
 
 	for _, tt := range []struct {
 		desc       string
-		globals    []Option
+		globals    []GlobalOption
 		subCmd     SubCmd
 		expectArgs []string
 	}{
@@ -146,7 +146,7 @@ func TestSafeCmdValid(t *testing.T) {
 		},
 		{
 			desc: "single option",
-			globals: []Option{
+			globals: []GlobalOption{
 				Flag{Name: "--aaaa-bbbb"},
 			},
 			subCmd:     SubCmd{Name: "update-ref"},
@@ -163,7 +163,7 @@ func TestSafeCmdValid(t *testing.T) {
 		},
 		{
 			desc: "full blown",
-			globals: []Option{
+			globals: []GlobalOption{
 				Flag{Name: "-a"},
 				ValueFlag{"-b", "c"},
 			},
@@ -193,7 +193,7 @@ func TestSafeCmdValid(t *testing.T) {
 		},
 		{
 			desc: "multiple value flags",
-			globals: []Option{
+			globals: []GlobalOption{
 				Flag{Name: "--contributing"},
 				ValueFlag{"--author", "a-gopher"},
 			},
@@ -251,7 +251,7 @@ func TestSafeCmdWithEnv(t *testing.T) {
 	reenableGitCmd := disableGitCmd()
 	defer reenableGitCmd()
 
-	globals := []Option{
+	globals := []GlobalOption{
 		Flag{Name: "--aaaa-bbbb"},
 	}
 

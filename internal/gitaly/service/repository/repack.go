@@ -70,8 +70,8 @@ func repackCommand(ctx context.Context, repo repository.GitRepo, bitmap bool, ar
 	return nil
 }
 
-func repackConfig(ctx context.Context, bitmap bool) []git.Option {
-	args := []git.Option{
+func repackConfig(ctx context.Context, bitmap bool) []git.GlobalOption {
+	args := []git.GlobalOption{
 		git.ValueFlag{"-c", "pack.island=r(e)fs/heads"},
 		git.ValueFlag{"-c", "pack.island=r(e)fs/tags"},
 		git.ValueFlag{"-c", "pack.islandCore=e"},

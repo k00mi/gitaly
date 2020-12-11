@@ -102,6 +102,14 @@ func (sc SubCmd) ValidateArgs() ([]string, error) {
 	return safeArgs, nil
 }
 
+// GlobalOption is an interface for all options which can be globally applied
+// to git commands. This is the command-inspecific part before the actual
+// command that's being run, e.g. the `-c` part in `git -c foo.bar=value
+// command`.
+type GlobalOption interface {
+	GlobalArgs() ([]string, error)
+}
+
 // Option is a git command line flag with validation logic
 type Option interface {
 	IsOption()
@@ -160,6 +168,10 @@ type Flag struct {
 // IsOption is a method present on all Flag interface implementations
 func (Flag) IsOption() {}
 
+func (f Flag) GlobalArgs() ([]string, error) {
+	return f.ValidateArgs()
+}
+
 // ValidateArgs returns an error if the flag is not sanitary
 func (f Flag) ValidateArgs() ([]string, error) {
 	if !flagRegex.MatchString(f.Name) {
@@ -177,6 +189,10 @@ type ValueFlag struct {
 
 // IsOption is a method present on all Flag interface implementations
 func (ValueFlag) IsOption() {}
+
+func (vf ValueFlag) GlobalArgs() ([]string, error) {
+	return vf.ValidateArgs()
+}
 
 // ValidateArgs returns an error if the flag is not sanitary
 func (vf ValueFlag) ValidateArgs() ([]string, error) {
@@ -201,8 +217,8 @@ func validatePositionalArg(arg string) error {
 }
 
 // ConvertGlobalOptions converts a protobuf message to command-line flags
-func ConvertGlobalOptions(options *gitalypb.GlobalOptions) []Option {
-	var globals []Option
+func ConvertGlobalOptions(options *gitalypb.GlobalOptions) []GlobalOption {
+	var globals []GlobalOption
 
 	if options == nil {
 		return globals
@@ -217,7 +233,7 @@ func ConvertGlobalOptions(options *gitalypb.GlobalOptions) []Option {
 
 type cmdCfg struct {
 	env             []string
-	globals         []Option
+	globals         []GlobalOption
 	stdin           io.Reader
 	stdout          io.Writer
 	stderr          io.Writer
@@ -284,13 +300,13 @@ func handleOpts(ctx context.Context, sc Cmd, cc *cmdCfg, opts []CmdOpt) error {
 
 // SafeCmd creates a command.Command with the given args and Repository. It
 // validates the arguments in the command before executing.
-func SafeCmd(ctx context.Context, repo repository.GitRepo, globals []Option, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
+func SafeCmd(ctx context.Context, repo repository.GitRepo, globals []GlobalOption, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
 	return SafeCmdWithEnv(ctx, nil, repo, globals, sc, opts...)
 }
 
 // SafeCmdWithEnv creates a command.Command with the given args, environment, and Repository. It
 // validates the arguments in the command before executing.
-func SafeCmdWithEnv(ctx context.Context, env []string, repo repository.GitRepo, globals []Option, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
+func SafeCmdWithEnv(ctx context.Context, env []string, repo repository.GitRepo, globals []GlobalOption, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
 	cc := &cmdCfg{}
 
 	if err := handleOpts(ctx, sc, cc, opts); err != nil {
@@ -311,7 +327,7 @@ func SafeCmdWithEnv(ctx context.Context, env []string, repo repository.GitRepo, 
 
 // SafeBareCmd creates a git.Command with the given args and env. It
 // validates the arguments in the command before executing.
-func SafeBareCmd(ctx context.Context, env []string, globals []Option, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
+func SafeBareCmd(ctx context.Context, env []string, globals []GlobalOption, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
 	cc := &cmdCfg{}
 
 	if err := handleOpts(ctx, sc, cc, opts); err != nil {
@@ -331,7 +347,7 @@ func SafeBareCmd(ctx context.Context, env []string, globals []Option, sc Cmd, op
 }
 
 // SafeBareCmdInDir runs SafeBareCmd in the dir.
-func SafeBareCmdInDir(ctx context.Context, dir string, env []string, globals []Option, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
+func SafeBareCmdInDir(ctx context.Context, dir string, env []string, globals []GlobalOption, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
 	if dir == "" {
 		return nil, errors.New("no 'dir' provided")
 	}
@@ -357,7 +373,7 @@ func SafeBareCmdInDir(ctx context.Context, dir string, env []string, globals []O
 // SafeStdinCmd creates a git.Command with the given args and Repository that is
 // suitable for Write()ing to. It validates the arguments in the command before
 // executing.
-func SafeStdinCmd(ctx context.Context, repo repository.GitRepo, globals []Option, sc SubCmd, opts ...CmdOpt) (*command.Command, error) {
+func SafeStdinCmd(ctx context.Context, repo repository.GitRepo, globals []GlobalOption, sc SubCmd, opts ...CmdOpt) (*command.Command, error) {
 	cc := &cmdCfg{}
 
 	if err := handleOpts(ctx, sc, cc, opts); err != nil {
@@ -374,7 +390,7 @@ func SafeStdinCmd(ctx context.Context, repo repository.GitRepo, globals []Option
 
 // SafeCmdWithoutRepo works like Command but without a git repository. It
 // validates the arguments in the command before executing.
-func SafeCmdWithoutRepo(ctx context.Context, globals []Option, sc SubCmd, opts ...CmdOpt) (*command.Command, error) {
+func SafeCmdWithoutRepo(ctx context.Context, globals []GlobalOption, sc SubCmd, opts ...CmdOpt) (*command.Command, error) {
 	cc := &cmdCfg{}
 
 	if err := handleOpts(ctx, sc, cc, opts); err != nil {
@@ -393,7 +409,7 @@ func SafeCmdWithoutRepo(ctx context.Context, globals []Option, sc SubCmd, opts .
 	}, cc.env, args...)
 }
 
-func combineArgs(globals []Option, sc Cmd, cc *cmdCfg) (_ []string, err error) {
+func combineArgs(globals []GlobalOption, sc Cmd, cc *cmdCfg) (_ []string, err error) {
 	var args []string
 
 	defer func() {
@@ -402,12 +418,12 @@ func combineArgs(globals []Option, sc Cmd, cc *cmdCfg) (_ []string, err error) {
 		}
 	}()
 
-	for _, g := range append(globals, cc.globals...) {
-		gargs, err := g.ValidateArgs()
+	for _, global := range append(globals, cc.globals...) {
+		globalArgs, err := global.GlobalArgs()
 		if err != nil {
 			return nil, err
 		}
-		args = append(args, gargs...)
+		args = append(args, globalArgs...)
 	}
 
 	scArgs, err := sc.ValidateArgs()

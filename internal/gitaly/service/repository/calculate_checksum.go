@@ -85,8 +85,8 @@ func (s *server) isValidRepo(ctx context.Context, repo *gitalypb.Repository) boo
 	env := alternates.Env(repoPath, repo.GetGitObjectDirectory(), repo.GetGitAlternateObjectDirectories())
 
 	stdout := &bytes.Buffer{}
-	opts := []git.Option{git.ValueFlag{"-C", repoPath}}
-	cmd, err := git.SafeBareCmd(ctx, env, opts,
+	globals := []git.GlobalOption{git.ValueFlag{"-C", repoPath}}
+	cmd, err := git.SafeBareCmd(ctx, env, globals,
 		git.SubCmd{
 			Name: "rev-parse",
 			Flags: []git.Option{

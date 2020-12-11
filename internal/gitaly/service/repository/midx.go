@@ -151,7 +151,7 @@ func (s *server) midxRewrite(ctx context.Context, repo repository.GitRepo) error
 }
 
 func midxExpire(ctx context.Context, repo repository.GitRepo) error {
-	cmd, err := git.SafeCmd(ctx, repo, []git.Option{},
+	cmd, err := git.SafeCmd(ctx, repo, nil,
 		git.SubCmd{
 			Name: "multi-pack-index",
 			Flags: []git.Option{

@@ -290,7 +290,7 @@ func (s *server) repoWithBranchCommit(ctx context.Context, srcRepo, targetRepo *
 	}
 
 	cmd, err := git.SafeBareCmd(ctx, env,
-		[]git.Option{git.ValueFlag{"--git-dir", srcRepoPath}},
+		[]git.GlobalOption{git.ValueFlag{"--git-dir", srcRepoPath}},
 		git.SubCmd{
 			Name:  "fetch",
 			Flags: []git.Option{git.Flag{Name: "--no-tags"}},

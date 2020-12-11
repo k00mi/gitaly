@@ -23,7 +23,7 @@ func (s *server) cloneFromURLCommand(ctx context.Context, repo *gitalypb.Reposit
 		return nil, helper.ErrInternal(err)
 	}
 
-	globalFlags := []git.Option{
+	globalFlags := []git.GlobalOption{
 		git.ValueFlag{Name: "-c", Value: "http.followRedirects=false"},
 	}
 

@@ -52,7 +52,7 @@ func newBatchProcess(ctx context.Context, repo repository.GitRepo) (*batchProces
 	ctx = opentracing.ContextWithSpan(ctx, nil)
 
 	batchCmd, err := git.SafeBareCmd(ctx, env,
-		[]git.Option{
+		[]git.GlobalOption{
 			git.ValueFlag{Name: "--git-dir", Value: repoPath},
 		},
 		git.SubCmd{
