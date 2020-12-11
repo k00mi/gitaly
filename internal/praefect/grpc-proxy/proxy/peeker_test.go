@@ -73,7 +73,7 @@ func TestStreamPeeking(t *testing.T) {
 	require.True(t, proto.Equal(resp, pingResp), "expected to be the same")
 
 	_, err = proxyClientPingStream.Recv()
-	require.Error(t, io.EOF, err)
+	require.Equal(t, io.EOF, err)
 }
 
 func TestStreamInjecting(t *testing.T) {
@@ -136,5 +136,5 @@ func TestStreamInjecting(t *testing.T) {
 	require.True(t, proto.Equal(resp, pingResp), "expected to be the same")
 
 	_, err = proxyClientPingStream.Recv()
-	require.Error(t, io.EOF, err)
+	require.Equal(t, io.EOF, err)
 }
