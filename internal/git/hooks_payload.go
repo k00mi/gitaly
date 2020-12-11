@@ -46,6 +46,23 @@ type HooksPayload struct {
 	// Praefect is used to identify the Praefect server which is hosting the transaction. This
 	// field must be set if and only if `Transaction` is.
 	Praefect *metadata.PraefectServer `json:"praefect"`
+
+	// ReceiveHooksPayload contains information required when executing
+	// git-receive-pack.
+	ReceiveHooksPayload *ReceiveHooksPayload `json:"receive_hooks_payload"`
+}
+
+// ReceiveHooksPayload contains all information which is required for hooks
+// executed by git-receive-pack, namely the pre-receive, update or post-receive
+// hook.
+type ReceiveHooksPayload struct {
+	// Username contains the name of the user who has caused the hook to be executed.
+	Username string `json:"username"`
+	// UserID contains the ID of the user who has caused the hook to be executed.
+	UserID string `json:"userid"`
+	// Protocol contains the protocol via which the hook was executed. This
+	// can be one of "web", "ssh" or "smarthttp".
+	Protocol string `json:"protocol"`
 }
 
 // jsonHooksPayload wraps the HooksPayload such that we can manually encode the
@@ -135,6 +152,17 @@ func HooksPayloadFromEnv(envs []string) (HooksPayload, error) {
 		}
 	}
 
+	// If we didn't find a ReceiveHooksPayload, then we need to fallback to
+	// the GL_ environment values with the same reasoning as for
+	// `fallbackPayloadFromEnv()`.
+	if payload.ReceiveHooksPayload == nil {
+		receiveHooksPayload, err := fallbackReceiveHooksPayloadFromEnv(envs)
+		if err != nil {
+			return HooksPayload{}, err
+		}
+		payload.ReceiveHooksPayload = receiveHooksPayload
+	}
+
 	return payload, nil
 }
 
@@ -175,6 +203,40 @@ func fallbackPayloadFromEnv(envs []string) (HooksPayload, error) {
 	payload.InternalSocketToken = token
 
 	return payload, nil
+}
+
+// fallbackReceiveHooksPayloadFromEnv is a compatibility layer for upgrades
+// where it may happen that the new gitaly-hooks binary has already been
+// installed while the old server is still running.
+//
+// We need to keep in mind that it's perfectly fine for hooks to not have
+// the GL_ values in case we only run the reference-transaction hook. We cannot
+// distinguish those cases, so the best we can do is check for the first value
+// to exist: if it exists, we assume all the others must exist as well.
+// Otherwise, we assume none exist. This should be fine as all three hooks
+// expect those values to be set, while the reference-transaction hook doesn't
+// care at all for them.
+func fallbackReceiveHooksPayloadFromEnv(envs []string) (*ReceiveHooksPayload, error) {
+	protocol, ok := lookupEnv(envs, "GL_PROTOCOL")
+	if !ok {
+		return nil, nil
+	}
+
+	userID, ok := lookupEnv(envs, "GL_ID")
+	if !ok {
+		return nil, errors.New("no user ID found in hooks environment")
+	}
+
+	username, ok := lookupEnv(envs, "GL_USERNAME")
+	if !ok {
+		return nil, errors.New("no user ID found in hooks environment")
+	}
+
+	return &ReceiveHooksPayload{
+		Protocol: protocol,
+		UserID:   userID,
+		Username: username,
+	}, nil
 }
 
 // Env encodes the given HooksPayload into an environment variable.

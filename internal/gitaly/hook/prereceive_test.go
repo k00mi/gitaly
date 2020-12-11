@@ -135,7 +135,7 @@ func TestPrereceive_customHooks(t *testing.T) {
 			desc:        "missing GL_ID causes error",
 			env:         envWithout(append(standardEnv, payload), "GL_ID"),
 			stdin:       "change\n",
-			expectedErr: "GL_ID not set",
+			expectedErr: "no user ID found in hooks environment",
 		},
 		{
 			desc:        "missing GL_PROTOCOL causes error",
