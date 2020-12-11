@@ -21,7 +21,6 @@ func TestUpdate_customHooks(t *testing.T) {
 
 	standardEnv := []string{
 		"GL_ID=1234",
-		fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
 		"GL_PROTOCOL=web",
 		fmt.Sprintf("GL_REPO=%s", repo),
 		"GL_USERNAME=user",

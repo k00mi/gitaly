@@ -56,7 +56,6 @@ func (s *Server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 		"GL_PROTOCOL=web",
 		fmt.Sprintf("GL_ID=%s", user.GetGlId()),
 		fmt.Sprintf("GL_USERNAME=%s", user.GetGlUsername()),
-		fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
 	}
 
 	changes := fmt.Sprintf("%s %s %s\n", oldrev, newrev, reference)

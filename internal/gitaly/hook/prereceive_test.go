@@ -24,7 +24,6 @@ func TestPrereceive_customHooks(t *testing.T) {
 
 	standardEnv := []string{
 		"GL_ID=1234",
-		fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
 		"GL_PROTOCOL=web",
 		fmt.Sprintf("GL_REPO=%s", repo),
 		"GL_USERNAME=user",
@@ -206,7 +205,6 @@ func TestPrereceive_gitlab(t *testing.T) {
 	standardEnv := []string{
 		payload,
 		"GL_ID=1234",
-		fmt.Sprintf("GL_PROJECT_PATH=%s", testRepo.GetGlProjectPath()),
 		"GL_PROTOCOL=web",
 		fmt.Sprintf("GL_REPO=%s", testRepo),
 		"GL_USERNAME=user",

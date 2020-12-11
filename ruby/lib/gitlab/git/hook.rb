@@ -129,7 +129,6 @@ module Gitlab
           'GITALY_BIN_DIR' => Gitlab.config.gitaly.bin_dir,
           'GL_ID' => gl_id,
           'GL_USERNAME' => gl_username,
-          'GL_PROJECT_PATH' => repository.gl_project_path,
           'GL_PROTOCOL' => GL_PROTOCOL,
           'PWD' => repo_path,
           'GIT_DIR' => repo_path

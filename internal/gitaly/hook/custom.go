@@ -138,5 +138,6 @@ func validHook(fi os.FileInfo, filename string) bool {
 func customHooksEnv(payload git.HooksPayload) []string {
 	return []string{
 		"GL_REPOSITORY=" + payload.Repo.GetGlRepository(),
+		"GL_PROJECT_PATH=" + payload.Repo.GetGlProjectPath(),
 	}
 }

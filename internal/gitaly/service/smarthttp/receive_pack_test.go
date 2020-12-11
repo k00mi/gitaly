@@ -76,7 +76,6 @@ func TestSuccessfulReceivePackRequest(t *testing.T) {
 	for _, env := range []string{
 		"GL_ID=user-123",
 		"GL_PROTOCOL=http",
-		"GL_PROJECT_PATH=" + projectPath,
 	} {
 		require.Contains(t, strings.Split(string(envData), "\n"), env)
 	}

@@ -102,7 +102,6 @@ func TestReceivePackPushSuccess(t *testing.T) {
 
 	for _, env := range []string{
 		"GL_ID=user-123",
-		fmt.Sprintf("GL_PROJECT_PATH=%s", glProjectPath),
 		"GL_PROTOCOL=ssh",
 	} {
 		require.Contains(t, strings.Split(string(envData), "\n"), env)
