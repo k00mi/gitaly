@@ -3,9 +3,12 @@ package objectpool
 import (
 	"bytes"
 	"encoding/json"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	"github.com/sirupsen/logrus"
@@ -63,6 +66,22 @@ func TestFetchIntoObjectPool_Success(t *testing.T) {
 	_, err = client.FetchIntoObjectPool(ctx, req)
 	require.NoError(t, err, "calling FetchIntoObjectPool twice should be OK")
 	require.True(t, pool.IsValid(), "ensure that pool is valid")
+
+	// Simulate a broken ref
+	poolPath, err := locator.GetRepoPath(pool)
+	require.NoError(t, err)
+	brokenRef := filepath.Join(poolPath, "refs", "heads", "broken")
+	err = ioutil.WriteFile(brokenRef, []byte{}, 0777)
+	require.NoError(t, err)
+
+	oldTime := time.Now().Add(-25 * time.Hour)
+	require.NoError(t, os.Chtimes(brokenRef, oldTime, oldTime))
+
+	_, err = client.FetchIntoObjectPool(ctx, req)
+	require.NoError(t, err)
+
+	_, err = os.Stat(brokenRef)
+	require.Error(t, err, "Expected refs/heads/broken to be deleted")
 }
 
 func TestFetchIntoObjectPool_CollectLogStatistics(t *testing.T) {
