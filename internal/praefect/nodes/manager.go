@@ -16,7 +16,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/client"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/config"
-	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/grpc-proxy/proxy"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/metrics"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/middleware"
@@ -105,7 +104,6 @@ type Mgr struct {
 	// strategies is a map of strategies keyed on virtual storage name
 	strategies map[string]leaderElectionStrategy
 	db         *sql.DB
-	rs         datastore.RepositoryStore
 	// nodes contains nodes by their virtual storages
 	nodes map[string][]Node
 	sp    StorageProvider
@@ -148,7 +146,6 @@ func NewManager(
 	log *logrus.Entry,
 	c config.Config,
 	db *sql.DB,
-	rs datastore.RepositoryStore,
 	sp StorageProvider,
 	latencyHistogram prommetrics.HistogramVec,
 	registry *protoregistry.Registry,
@@ -194,7 +191,6 @@ func NewManager(
 	return &Mgr{
 		db:         db,
 		strategies: strategies,
-		rs:         rs,
 		nodes:      nodes,
 		sp:         sp,
 	}, nil

@@ -82,7 +82,7 @@ func TestServerFactory(t *testing.T) {
 
 	rs := datastore.MockRepositoryStore{}
 	sp := datastore.NewDirectStorageProvider(rs)
-	nodeMgr, err := nodes.NewManager(logger, conf, nil, rs, sp, &promtest.MockHistogramVec{}, protoregistry.GitalyProtoPreregistered, nil)
+	nodeMgr, err := nodes.NewManager(logger, conf, nil, sp, &promtest.MockHistogramVec{}, protoregistry.GitalyProtoPreregistered, nil)
 	require.NoError(t, err)
 	nodeMgr.Start(0, time.Second)
 	txMgr := transactions.NewManager(conf)

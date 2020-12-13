@@ -138,7 +138,7 @@ func TestStreamDirectorMutator_Transaction(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf, nil, nil, nil, promtest.NewMockHistogramVec(), protoregistry.GitalyProtoPreregistered, nil)
+			nodeMgr, err := nodes.NewManager(testhelper.DiscardTestEntry(t), conf, nil, nil, promtest.NewMockHistogramVec(), protoregistry.GitalyProtoPreregistered, nil)
 			require.NoError(t, err)
 			nodeMgr.Start(0, time.Hour)
 

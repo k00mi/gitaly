@@ -296,7 +296,7 @@ func run(cfgs []starter.Config, conf config.Config) error {
 		}
 	}
 
-	nodeManager, err := nodes.NewManager(logger, conf, db, rs, sp, nodeLatencyHistogram, protoregistry.GitalyProtoPreregistered, errTracker)
+	nodeManager, err := nodes.NewManager(logger, conf, db, sp, nodeLatencyHistogram, protoregistry.GitalyProtoPreregistered, errTracker)
 	if err != nil {
 		return err
 	}
