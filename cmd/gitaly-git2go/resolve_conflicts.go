@@ -104,6 +104,15 @@ func (cmd resolveSubcommand) Run(context.Context, io.Reader, io.Writer) error {
 			return errors.New("NoMethodError: undefined method `resolve_lines' for nil:NilClass") //nolint
 		}
 
+		switch {
+		case c.Ancestor == nil:
+			return fmt.Errorf("missing ancestor-part of merge file input for new path %q", r.NewPath)
+		case c.Our == nil:
+			return fmt.Errorf("missing our-part of merge file input for new path %q", r.NewPath)
+		case c.Their == nil:
+			return fmt.Errorf("missing their-part of merge file input for new path %q", r.NewPath)
+		}
+
 		mfr, err := mergeFileResult(odb, c)
 		if err != nil {
 			return fmt.Errorf("merge file result for %q: %w", r.NewPath, err)
@@ -192,39 +201,28 @@ func (cmd resolveSubcommand) Run(context.Context, io.Reader, io.Writer) error {
 }
 
 func mergeFileResult(odb *git.Odb, c git.IndexConflict) (*git.MergeFileResult, error) {
-	ancestorBlob, err := odb.Read(c.Ancestor.Id)
-	if err != nil {
-		return nil, err
+	var ancestorMFI, ourMFI, theirMFI git.MergeFileInput
+
+	for _, part := range []struct {
+		name  string
+		entry *git.IndexEntry
+		mfi   *git.MergeFileInput
+	}{
+		{name: "ancestor", entry: c.Ancestor, mfi: &ancestorMFI},
+		{name: "our", entry: c.Our, mfi: &ourMFI},
+		{name: "their", entry: c.Their, mfi: &theirMFI},
+	} {
+		blob, err := odb.Read(part.entry.Id)
+		if err != nil {
+			return nil, err
+		}
+
+		part.mfi.Path = part.entry.Path
+		part.mfi.Mode = uint(part.entry.Mode)
+		part.mfi.Contents = blob.Data()
 	}
 
-	ourBlob, err := odb.Read(c.Our.Id)
-	if err != nil {
-		return nil, err
-	}
-
-	theirBlob, err := odb.Read(c.Their.Id)
-	if err != nil {
-		return nil, err
-	}
-
-	mfr, err := git.MergeFile(
-		git.MergeFileInput{
-			Path:     c.Ancestor.Path,
-			Mode:     uint(c.Ancestor.Mode),
-			Contents: ancestorBlob.Data(),
-		},
-		git.MergeFileInput{
-			Path:     c.Our.Path,
-			Mode:     uint(c.Our.Mode),
-			Contents: ourBlob.Data(),
-		},
-		git.MergeFileInput{
-			Path:     c.Their.Path,
-			Mode:     uint(c.Their.Mode),
-			Contents: theirBlob.Data(),
-		},
-		nil,
-	)
+	mfr, err := git.MergeFile(ancestorMFI, ourMFI, theirMFI, nil)
 	if err != nil {
 		return nil, err
 	}
