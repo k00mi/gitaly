@@ -138,7 +138,7 @@ find_command_binaries = $(addprefix ${BUILD_DIR}/bin/, $(call find_commands))
 # Find all Go source files.
 find_go_sources  = $(shell find ${SOURCE_DIR} -type d \( -name ruby -o -name vendor -o -name testdata -o -name '_*' -o -path '*/proto/go' \) -prune -o -type f -name '*.go' -not -name '*.pb.go' -print | sort -u)
 # Find all Go packages.
-find_go_packages = $(dir $(call find_go_sources, 's|[^/]*\.go||'))
+find_go_packages = $(dir $(call find_go_sources))
 
 unexport GOROOT
 export GOBIN                      = ${BUILD_DIR}/bin
