@@ -254,19 +254,10 @@ func (c *Coordinator) Collect(metrics chan<- prometheus.Metric) {
 }
 
 func (c *Coordinator) directRepositoryScopedMessage(ctx context.Context, call grpcCall) (*proxy.StreamParameters, error) {
-	targetRepo, err := call.methodInfo.TargetRepo(call.msg)
-	if err != nil {
-		return nil, helper.ErrInvalidArgument(fmt.Errorf("repo scoped: %w", err))
-	}
-
 	ctxlogrus.AddFields(ctx, logrus.Fields{
 		"virtual_storage": call.targetRepo.StorageName,
 		"relative_path":   call.targetRepo.RelativePath,
 	})
-
-	if targetRepo.StorageName == "" || targetRepo.RelativePath == "" {
-		return nil, helper.ErrInvalidArgumentf("repo scoped: target repo is invalid")
-	}
 
 	praefectServer, err := metadata.PraefectFromConfig(c.conf)
 	if err != nil {
@@ -493,8 +484,7 @@ func (c *Coordinator) StreamDirector(ctx context.Context, fullMethodName string,
 			methodInfo:     mi,
 			msg:            m,
 			targetRepo:     targetRepo,
-		},
-		)
+		})
 		if err != nil {
 			if errors.Is(err, nodes.ErrVirtualStorageNotExist) {
 				return nil, helper.ErrInvalidArgument(err)
