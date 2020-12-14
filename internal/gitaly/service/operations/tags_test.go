@@ -434,8 +434,8 @@ func TestSuccessfulUserCreateTagNestedTags(t *testing.T) {
 			}
 
 			targetObject := testCase.targetObject
-			nestLevel := 10
-			for i := 0; i < nestLevel; i++ {
+			nestLevel := 2
+			for i := 0; i <= nestLevel; i++ {
 				tagName := fmt.Sprintf("nested-tag-%v", i)
 				tagMessage := fmt.Sprintf("This is level %v of a nested annotated tag to %v", i, testCase.targetObject)
 				request := &gitalypb.UserCreateTagRequest{
