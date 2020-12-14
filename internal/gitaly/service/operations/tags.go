@@ -56,6 +56,12 @@ func (s *Server) UserDeleteTagGo(ctx context.Context, req *gitalypb.UserDeleteTa
 				PreReceiveError: preReceiveError.message,
 			}, nil
 		}
+
+		var updateRefError updateRefError
+		if errors.As(err, &updateRefError) {
+			return nil, status.Error(codes.FailedPrecondition, err.Error())
+		}
+
 		return nil, err
 	}
 

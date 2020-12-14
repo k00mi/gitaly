@@ -62,6 +62,11 @@ func (s *Server) UserCreateBranch(ctx context.Context, req *gitalypb.UserCreateB
 			}, nil
 		}
 
+		var updateRefError updateRefError
+		if errors.As(err, &updateRefError) {
+			return nil, status.Error(codes.FailedPrecondition, err.Error())
+		}
+
 		return nil, err
 	}
 
@@ -138,6 +143,12 @@ func (s *Server) UserDeleteBranch(ctx context.Context, req *gitalypb.UserDeleteB
 				PreReceiveError: preReceiveError.message,
 			}, nil
 		}
+
+		var updateRefError updateRefError
+		if errors.As(err, &updateRefError) {
+			return nil, status.Error(codes.FailedPrecondition, err.Error())
+		}
+
 		return nil, err
 	}
 
