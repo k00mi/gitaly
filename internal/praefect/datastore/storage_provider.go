@@ -112,7 +112,6 @@ type notificationEntry struct {
 }
 
 func (c *CachingStorageProvider) Notification(n glsql.Notification) {
-	// it is a new format of the notification message
 	var changes []notificationEntry
 	if err := json.NewDecoder(strings.NewReader(n.Payload)).Decode(&changes); err != nil {
 		c.disableCaching() // as we can't update cache properly we should disable it

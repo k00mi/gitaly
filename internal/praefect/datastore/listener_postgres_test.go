@@ -444,6 +444,23 @@ func TestPostgresListener_Listen_storage_repositories_update(t *testing.T) {
 	)
 }
 
+func TestPostgresListener_Listen_storage_empty_notification(t *testing.T) {
+	db := getDB(t)
+
+	const channel = "storage_repositories_updates"
+
+	testListener(
+		t,
+		channel,
+		func(t *testing.T) {},
+		func(t *testing.T) {
+			_, err := db.DB.Exec(`UPDATE storage_repositories SET generation = 1`)
+			require.NoError(t, err)
+		},
+		nil, // no notification events expected
+	)
+}
+
 func TestPostgresListener_Listen_storage_repositories_delete(t *testing.T) {
 	db := getDB(t)
 
@@ -507,9 +524,16 @@ func testListener(t *testing.T, channel string, setup func(t *testing.T), trigge
 
 	select {
 	case <-time.After(time.Second):
+		if verifier == nil {
+			// no notifications expected
+			return
+		}
 		require.FailNow(t, "no notifications for too long period")
 	case <-receivedChan:
 	}
 
+	if verifier == nil {
+		require.Failf(t, "no notifications expected", "received: %v", notification)
+	}
 	verifier(t, notification)
 }

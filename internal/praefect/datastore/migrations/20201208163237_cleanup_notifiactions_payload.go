@@ -9,40 +9,38 @@ func init() {
 			`-- +migrate StatementBegin
 			CREATE OR REPLACE FUNCTION notify_on_change() RETURNS TRIGGER AS $$
 				DECLARE
-					msg TEXT DEFAULT '';
+					msg JSONB;
 				BEGIN
-				    CASE TG_OP
+				    	CASE TG_OP
 					WHEN 'INSERT' THEN
-						SELECT JSON_AGG(obj)::TEXT INTO msg
+						SELECT JSON_AGG(obj) INTO msg
 						FROM (
-							SELECT JSONB_BUILD_OBJECT('virtual_storage', virtual_storage, 'relative_paths', ARRAY_AGG(relative_path)) AS obj
-							FROM (SELECT DISTINCT virtual_storage, relative_path FROM NEW) t
+							SELECT JSONB_BUILD_OBJECT('virtual_storage', virtual_storage, 'relative_paths', ARRAY_AGG(DISTINCT relative_path)) AS obj
+							FROM NEW
 							GROUP BY virtual_storage
 						) t;
 					WHEN 'UPDATE' THEN
-						SELECT JSON_AGG(obj)::TEXT INTO msg
+						SELECT JSON_AGG(obj) INTO msg
 						FROM (
-							SELECT JSONB_BUILD_OBJECT('virtual_storage', virtual_storage, 'relative_paths', ARRAY_AGG(relative_path)) AS obj
-							FROM (
-								SELECT virtual_storage, relative_path
-								FROM (SELECT DISTINCT virtual_storage, relative_path FROM NEW) t1
-								UNION
-								SELECT virtual_storage, relative_path
-								FROM (SELECT DISTINCT virtual_storage, relative_path FROM OLD) t2
-							) t
+							SELECT JSONB_BUILD_OBJECT('virtual_storage', virtual_storage, 'relative_paths', ARRAY_AGG(DISTINCT relative_path)) AS obj
+							FROM NEW
+							FULL JOIN OLD USING (virtual_storage, relative_path)
 							GROUP BY virtual_storage
 						) t;
 					WHEN 'DELETE' THEN
-						SELECT JSON_AGG(obj)::TEXT INTO msg
+						SELECT JSON_AGG(obj) INTO msg
 						FROM (
-							SELECT JSONB_BUILD_OBJECT('virtual_storage', virtual_storage, 'relative_paths', ARRAY_AGG(relative_path)) AS obj
-							FROM (SELECT DISTINCT virtual_storage, relative_path FROM OLD) t
+							SELECT JSONB_BUILD_OBJECT('virtual_storage', virtual_storage, 'relative_paths', ARRAY_AGG(DISTINCT relative_path)) AS obj
+							FROM OLD
 							GROUP BY virtual_storage
 						) t;
 					END CASE;
 
-				    PERFORM PG_NOTIFY(TG_ARGV[TG_NARGS-1], msg);
-				    RETURN NULL;
+				    	CASE WHEN JSONB_ARRAY_LENGTH(msg) > 0 THEN
+						PERFORM PG_NOTIFY(TG_ARGV[TG_NARGS-1], msg::TEXT);
+					ELSE END CASE;
+
+					RETURN NULL;
 				END;
 				$$ LANGUAGE plpgsql;
 			-- +migrate StatementEnd`,
