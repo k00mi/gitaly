@@ -12,67 +12,40 @@ import (
 )
 
 func TestLink(t *testing.T) {
-	testCases := []struct {
-		desc  string
-		force bool
-	}{
-		{
-			desc: "link",
-		},
-		{
-			desc:  "forced link",
-			force: true,
-		},
-	}
+	ctx, cancel := testhelper.Context()
+	defer cancel()
 
-	for _, testCase := range testCases {
-		t.Run(testCase.desc, func(t *testing.T) {
-			ctx, cancel := testhelper.Context()
-			defer cancel()
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
 
-			testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
-			defer cleanupFn()
+	pool, poolCleanup := NewTestObjectPool(ctx, t, testRepo.GetStorageName())
+	defer poolCleanup()
 
-			pool, poolCleanup := NewTestObjectPool(ctx, t, testRepo.GetStorageName())
-			defer poolCleanup()
+	require.NoError(t, pool.Remove(ctx), "make sure pool does not exist prior to creation")
+	require.NoError(t, pool.Create(ctx, testRepo), "create pool")
 
-			require.NoError(t, pool.Remove(ctx), "make sure pool does not exist prior to creation")
-			require.NoError(t, pool.Create(ctx, testRepo), "create pool")
+	altPath, err := pool.locator.InfoAlternatesPath(testRepo)
+	require.NoError(t, err)
+	_, err = os.Stat(altPath)
+	require.True(t, os.IsNotExist(err))
 
-			altPath, err := pool.locator.InfoAlternatesPath(testRepo)
-			require.NoError(t, err)
-			_, err = os.Stat(altPath)
-			require.True(t, os.IsNotExist(err))
+	require.NoError(t, pool.Link(ctx, testRepo))
 
-			require.NoError(t, pool.Link(ctx, testRepo))
+	require.FileExists(t, altPath, "alternates file must exist after Link")
 
-			require.FileExists(t, altPath, "alternates file must exist after Link")
+	content, err := ioutil.ReadFile(altPath)
+	require.NoError(t, err)
 
-			content, err := ioutil.ReadFile(altPath)
-			require.NoError(t, err)
+	require.True(t, strings.HasPrefix(string(content), "../"), "expected %q to be relative path", content)
 
-			require.True(t, strings.HasPrefix(string(content), "../"), "expected %q to be relative path", content)
+	require.NoError(t, pool.Link(ctx, testRepo))
 
-			require.NoError(t, pool.Link(ctx, testRepo))
+	newContent, err := ioutil.ReadFile(altPath)
+	require.NoError(t, err)
 
-			newContent, err := ioutil.ReadFile(altPath)
-			require.NoError(t, err)
+	require.Equal(t, content, newContent)
 
-			require.Equal(t, content, newContent)
-
-			require.False(t, testhelper.RemoteExists(t, pool.FullPath(), testRepo.GetGlRepository()), "pool remotes should not include %v", testRepo)
-
-			if testCase.force {
-				require.NoError(t, ioutil.WriteFile(altPath, []byte("garbage"), 0644))
-				require.Error(t, pool.Link(ctx, testRepo))
-				require.NoError(t, pool.ForceLink(ctx, testRepo))
-
-				newContent, err := ioutil.ReadFile(altPath)
-				require.NoError(t, err)
-				require.Equal(t, content, newContent)
-			}
-		})
-	}
+	require.False(t, testhelper.RemoteExists(t, pool.FullPath(), testRepo.GetGlRepository()), "pool remotes should not include %v", testRepo)
 }
 
 func TestLinkRemoveBitmap(t *testing.T) {
