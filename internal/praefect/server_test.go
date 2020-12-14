@@ -756,8 +756,8 @@ func TestProxyWrites(t *testing.T) {
 	defer cleanup()
 
 	rs := datastore.MockRepositoryStore{
-		GetConsistentSecondariesFunc: func(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error) {
-			return map[string]struct{}{"praefect-internal-1": {}, "praefect-internal-2": {}}, nil
+		GetConsistentStoragesFunc: func(ctx context.Context, virtualStorage, relativePath string) (map[string]struct{}, error) {
+			return map[string]struct{}{"praefect-internal-0": {}, "praefect-internal-1": {}, "praefect-internal-2": {}}, nil
 		},
 	}
 

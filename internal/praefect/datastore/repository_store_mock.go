@@ -12,7 +12,7 @@ type MockRepositoryStore struct {
 	SetGenerationFunc                      func(ctx context.Context, virtualStorage, relativePath, storage string, generation int) error
 	DeleteRepositoryFunc                   func(ctx context.Context, virtualStorage, relativePath, storage string) error
 	RenameRepositoryFunc                   func(ctx context.Context, virtualStorage, relativePath, storage, newRelativePath string) error
-	GetConsistentSecondariesFunc           func(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error)
+	GetConsistentStoragesFunc              func(ctx context.Context, virtualStorage, relativePath string) (map[string]struct{}, error)
 	GetPartiallyReplicatedRepositoriesFunc func(ctx context.Context, virtualStorage string, virtualStorageScopedPrimaries bool) ([]OutdatedRepository, error)
 	DeleteInvalidRepositoryFunc            func(ctx context.Context, virtualStorage, relativePath, storage string) error
 	RepositoryExistsFunc                   func(ctx context.Context, virtualStorage, relativePath string) (bool, error)
@@ -74,12 +74,13 @@ func (m MockRepositoryStore) RenameRepository(ctx context.Context, virtualStorag
 	return m.RenameRepositoryFunc(ctx, virtualStorage, relativePath, storage, newRelativePath)
 }
 
-func (m MockRepositoryStore) GetConsistentSecondaries(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error) {
-	if m.GetConsistentSecondariesFunc == nil {
+// GetConsistentStorages returns result of execution of the GetConsistentStoragesFunc field if it is set or an empty map.
+func (m MockRepositoryStore) GetConsistentStorages(ctx context.Context, virtualStorage, relativePath string) (map[string]struct{}, error) {
+	if m.GetConsistentStoragesFunc == nil {
 		return map[string]struct{}{}, nil
 	}
 
-	return m.GetConsistentSecondariesFunc(ctx, virtualStorage, relativePath, primary)
+	return m.GetConsistentStoragesFunc(ctx, virtualStorage, relativePath)
 }
 
 func (m MockRepositoryStore) GetPartiallyReplicatedRepositories(ctx context.Context, virtualStorage string, virtualStorageScopedPrimaries bool) ([]OutdatedRepository, error) {

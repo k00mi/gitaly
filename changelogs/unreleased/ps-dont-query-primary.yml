@@ -1,0 +1,5 @@
+---
+title: Don't query for primary for read operations
+merge_request: 2909
+author:
+type: performance
