@@ -12,6 +12,15 @@ import (
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
+// WithDisabledHooks returns an option that satisfies the requirement to set up
+// hooks, but won't in fact set up hook execution.
+func WithDisabledHooks() CmdOpt {
+	return func(cc *cmdCfg) error {
+		cc.hooksConfigured = true
+		return nil
+	}
+}
+
 // WithRefTxHook returns an option that populates the safe command with the
 // environment variables necessary to properly execute a reference hook for
 // repository changes that may possibly update references
