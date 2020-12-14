@@ -14,6 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/git/objectpool"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -82,6 +83,45 @@ func TestFetchIntoObjectPool_Success(t *testing.T) {
 
 	_, err = os.Stat(brokenRef)
 	require.Error(t, err, "Expected refs/heads/broken to be deleted")
+}
+
+func TestFetchIntoObjectPool_hooksDisabled(t *testing.T) {
+	server, serverSocketPath := runObjectPoolServer(t, config.Config, config.NewLocator(config.Config))
+	defer server.Stop()
+
+	client, conn := newObjectPoolClient(t, serverSocketPath)
+	defer conn.Close()
+
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	pool, err := objectpool.NewObjectPool(config.Config, config.NewLocator(config.Config), "default", testhelper.NewTestObjectPoolName(t))
+	require.NoError(t, err)
+	defer pool.Remove(ctx)
+
+	hookDir, cleanup := testhelper.TempDir(t)
+	defer cleanup()
+
+	defer func(oldValue string) {
+		hooks.Override = oldValue
+	}(hooks.Override)
+	hooks.Override = hookDir
+
+	// Set up a custom reference-transaction hook which simply exits failure. This asserts that
+	// the RPC doesn't invoke any reference-transaction.
+	require.NoError(t, ioutil.WriteFile(filepath.Join(hookDir, "reference-transaction"), []byte("#!/bin/sh\nexit 1\n"), 0777))
+
+	req := &gitalypb.FetchIntoObjectPoolRequest{
+		ObjectPool: pool.ToProto(),
+		Origin:     testRepo,
+		Repack:     true,
+	}
+
+	_, err = client.FetchIntoObjectPool(ctx, req)
+	require.NoError(t, err)
 }
 
 func TestFetchIntoObjectPool_CollectLogStatistics(t *testing.T) {
