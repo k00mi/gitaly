@@ -1,19 +1,15 @@
 package repository_test
 
 import (
-	"context"
 	"crypto/x509"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitaly/internal/git/objectpool"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/repository"
-	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	gitaly_x509 "gitlab.com/gitlab-org/gitaly/internal/x509"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -29,22 +25,14 @@ func TestSuccessfulCreateForkRequest(t *testing.T) {
 		require.NoError(t, os.MkdirAll(repoPath, 0755))
 	}
 
-	// If this method is run multiple times in a test, TLS connections
-	// will fail for some reason.
-	testPool, sslCleanup := injectCustomCATestCerts(t)
-	defer sslCleanup()
-
 	for _, tt := range []struct {
 		name          string
 		secure        bool
-		withPool      bool
 		beforeRequest func(repoPath string)
 	}{
 		{name: "secure", secure: true},
 		{name: "insecure"},
 		{name: "existing empty directory target", beforeRequest: createEmptyTarget},
-		{name: "secure with pool", secure: true, withPool: true},
-		{name: "insecure with pool", withPool: true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var (
@@ -54,6 +42,9 @@ func TestSuccessfulCreateForkRequest(t *testing.T) {
 			)
 
 			if tt.secure {
+				testPool, sslCleanup := injectCustomCATestCerts(t)
+				defer sslCleanup()
+
 				var serverCleanup testhelper.Cleanup
 				_, serverSocketPath, serverCleanup = runFullSecureServer(t, locator)
 				defer serverCleanup()
@@ -71,13 +62,6 @@ func TestSuccessfulCreateForkRequest(t *testing.T) {
 
 			ctxOuter, cancel := testhelper.Context()
 			defer cancel()
-
-			var pool *objectpool.ObjectPool
-			if tt.withPool {
-				var poolCleanup func()
-				pool, poolCleanup = createPool(ctxOuter, t)
-				defer poolCleanup()
-			}
 
 			md := testhelper.GitalyServersMetadata(t, serverSocketPath)
 			ctx := metadata.NewOutgoingContext(ctxOuter, md)
@@ -103,10 +87,6 @@ func TestSuccessfulCreateForkRequest(t *testing.T) {
 				SourceRepository: testRepo,
 			}
 
-			if tt.withPool {
-				req.Pool = pool.ToProto()
-			}
-
 			_, err = client.CreateFork(ctx, req)
 			require.NoError(t, err)
 			defer func() { require.NoError(t, os.RemoveAll(forkedRepoPath)) }()
@@ -119,10 +99,6 @@ func TestSuccessfulCreateForkRequest(t *testing.T) {
 			info, err := os.Lstat(filepath.Join(forkedRepoPath, "hooks"))
 			require.NoError(t, err)
 			require.NotEqual(t, 0, info.Mode()&os.ModeSymlink)
-
-			if tt.withPool {
-				checkAlternatesFile(t, pool, locator, forkedRepo)
-			}
 		})
 	}
 }
@@ -195,83 +171,6 @@ func TestFailedCreateForkRequestDueToExistingTarget(t *testing.T) {
 	}
 }
 
-func TestCreateForkRequest_invalidPool(t *testing.T) {
-	locator := config.NewLocator(config.Config)
-
-	serverSocketPath, clean := runFullServer(t, locator)
-	defer clean()
-
-	client, conn := repository.NewRepositoryClient(t, serverSocketPath)
-	defer conn.Close()
-
-	ctxOuter, cancel := testhelper.Context()
-	defer cancel()
-
-	md := testhelper.GitalyServersMetadata(t, serverSocketPath)
-	ctx := metadata.NewOutgoingContext(ctxOuter, md)
-
-	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
-	defer cleanupFn()
-
-	pool, poolCleanup := createPool(ctx, t)
-	defer poolCleanup()
-
-	testCases := []struct {
-		desc        string
-		storage     string
-		poolStorage string
-		poolPath    string
-		errMessage  string
-	}{
-		{
-			desc:        "unknown storage",
-			storage:     "unknown",
-			poolStorage: "unknown",
-			errMessage:  `GetStorageByName: no such storage: "unknown"`,
-		},
-		{
-			desc:        "mismatched pool storages",
-			storage:     testRepo.StorageName,
-			poolStorage: "unknown",
-			errMessage:  "target repository is on a different storage than the object pool",
-		},
-		{
-			desc:        "unknown pool path",
-			storage:     testRepo.StorageName,
-			poolStorage: testRepo.StorageName,
-			poolPath:    "/path/to/nowhere",
-			errMessage:  "CreateFork: get object pool from request: invalid object pool directory",
-		},
-	}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.desc, func(t *testing.T) {
-			forkedRepo := &gitalypb.Repository{
-				RelativePath: "forks/test-repo-fork.git",
-				StorageName:  testCase.storage,
-			}
-			defer os.RemoveAll(filepath.Join(testhelper.GitlabTestStoragePath(), forkedRepo.RelativePath))
-
-			poolProto := pool.ToProto()
-			poolProto.Repository.StorageName = testCase.poolStorage
-
-			if testCase.poolPath != "" {
-				poolProto.Repository.RelativePath = testCase.poolPath
-			}
-
-			req := &gitalypb.CreateForkRequest{
-				Repository:       forkedRepo,
-				SourceRepository: testRepo,
-				Pool:             poolProto,
-			}
-
-			_, err := client.CreateFork(ctx, req)
-			testhelper.RequireGrpcError(t, err, codes.InvalidArgument)
-			require.True(t, testhelper.GrpcErrorHasMessage(err, testCase.errMessage))
-		})
-	}
-}
-
 func injectCustomCATestCerts(t *testing.T) (*x509.CertPool, testhelper.Cleanup) {
 	certFile, keyFile, removeCerts := testhelper.GenerateTestCerts(t)
 
@@ -293,47 +192,4 @@ func injectCustomCATestCerts(t *testing.T) (*x509.CertPool, testhelper.Cleanup) 
 	require.True(t, pool.AppendCertsFromPEM(caPEMBytes))
 
 	return pool, cleanup
-}
-
-func createPool(ctx context.Context, t *testing.T) (*objectpool.ObjectPool, func()) {
-	testRepo, _, cleanup := testhelper.NewTestRepo(t)
-	relativePoolPath := testhelper.NewTestObjectPoolName(t)
-
-	pool, err := objectpool.NewObjectPool(config.Config, config.NewLocator(config.Config), testRepo.GetStorageName(), relativePoolPath)
-	require.NoError(t, err)
-
-	require.NoError(t, pool.Create(ctx, testRepo))
-	require.NoError(t, pool.Link(ctx, testRepo))
-
-	return pool, func() {
-		cleanup()
-		pool.Remove(ctx)
-	}
-}
-
-func checkAlternatesFile(t *testing.T, pool *objectpool.ObjectPool, locator storage.Locator, testRepo *gitalypb.Repository) {
-	altPath, err := locator.InfoAlternatesPath(testRepo)
-	require.NoError(t, err)
-
-	info, err := os.Lstat(altPath)
-	require.NoError(t, err)
-	require.NotEqual(t, 0, info.Mode()&os.ModeSymlink)
-
-	content, err := ioutil.ReadFile(altPath)
-	require.NoError(t, err)
-	require.True(t, strings.HasPrefix(string(content), "../"), "expected %q to be relative path", content)
-
-	// Check that the forked repo has an alternate that points to the pool repository objects
-	poolRepo := &gitalypb.Repository{
-		RelativePath: pool.GetRelativePath(),
-		StorageName:  pool.GetStorageName(),
-	}
-	poolPath, err := locator.GetRepoPath(poolRepo)
-	require.NoError(t, err)
-	expectedAlternatePath := filepath.Join(poolPath, "objects")
-
-	repoPath, err := locator.GetRepoPath(testRepo)
-	require.NoError(t, err)
-	actualPath := filepath.Join(repoPath, "objects", string(content))
-	require.Equal(t, expectedAlternatePath, actualPath)
 }
