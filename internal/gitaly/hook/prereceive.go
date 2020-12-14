@@ -53,7 +53,7 @@ func (m *GitLabHookManager) PreReceiveHook(ctx context.Context, repo *gitalypb.R
 
 	// Only the primary should execute hooks and increment reference counters.
 	if isPrimary(payload) {
-		if err := m.preReceiveHook(ctx, repo, env, changes, stdout, stderr); err != nil {
+		if err := m.preReceiveHook(ctx, payload, repo, env, changes, stdout, stderr); err != nil {
 			// If the pre-receive hook declines the push, then we need to stop any
 			// secondaries voting on the transaction.
 			m.stopTransaction(ctx, payload)
@@ -64,7 +64,7 @@ func (m *GitLabHookManager) PreReceiveHook(ctx context.Context, repo *gitalypb.R
 	return nil
 }
 
-func (m *GitLabHookManager) preReceiveHook(ctx context.Context, repo *gitalypb.Repository, env []string, changes []byte, stdout, stderr io.Writer) error {
+func (m *GitLabHookManager) preReceiveHook(ctx context.Context, payload git.HooksPayload, repo *gitalypb.Repository, env []string, changes []byte, stdout, stderr io.Writer) error {
 	repoPath, err := m.locator.GetRepoPath(repo)
 	if err != nil {
 		return helper.ErrInternalf("getting repo path: %v", err)
@@ -84,24 +84,26 @@ func (m *GitLabHookManager) preReceiveHook(ctx context.Context, repo *gitalypb.R
 		return helper.ErrInternalf("hook got no reference updates")
 	}
 
-	glID, glRepo, glProtocol := getEnvVar("GL_ID", env), getEnvVar("GL_REPOSITORY", env), getEnvVar("GL_PROTOCOL", env)
-	if glID == "" {
-		return helper.ErrInternalf("GL_ID not set")
+	if repo.GetGlRepository() == "" {
+		return helper.ErrInternalf("repository not set")
 	}
-	if glRepo == "" {
-		return helper.ErrInternalf("GL_REPOSITORY not set")
+	if payload.ReceiveHooksPayload == nil {
+		return helper.ErrInternalf("payload has no receive hooks info")
 	}
-	if glProtocol == "" {
-		return helper.ErrInternalf("GL_PROTOCOL not set")
+	if payload.ReceiveHooksPayload.UserID == "" {
+		return helper.ErrInternalf("user ID not set")
+	}
+	if payload.ReceiveHooksPayload.Protocol == "" {
+		return helper.ErrInternalf("protocol not set")
 	}
 
 	params := AllowedParams{
 		RepoPath:                      repoPath,
 		GitObjectDirectory:            repo.GitObjectDirectory,
 		GitAlternateObjectDirectories: repo.GitAlternateObjectDirectories,
-		GLRepository:                  glRepo,
-		GLID:                          glID,
-		GLProtocol:                    glProtocol,
+		GLRepository:                  repo.GetGlRepository(),
+		GLID:                          payload.ReceiveHooksPayload.UserID,
+		GLProtocol:                    payload.ReceiveHooksPayload.Protocol,
 		Changes:                       string(changes),
 	}
 
@@ -122,7 +124,7 @@ func (m *GitLabHookManager) preReceiveHook(ctx context.Context, repo *gitalypb.R
 	if err = executor(
 		ctx,
 		nil,
-		env,
+		append(env, customHooksEnv(payload)...),
 		bytes.NewReader(changes),
 		stdout,
 		stderr,
@@ -131,7 +133,7 @@ func (m *GitLabHookManager) preReceiveHook(ctx context.Context, repo *gitalypb.R
 	}
 
 	// reference counter
-	ok, err := m.gitlabAPI.PreReceive(ctx, glRepo)
+	ok, err := m.gitlabAPI.PreReceive(ctx, repo.GetGlRepository())
 	if err != nil {
 		return helper.ErrInternalf("calling pre_receive endpoint: %v", err)
 	}

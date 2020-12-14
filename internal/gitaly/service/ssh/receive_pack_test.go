@@ -91,7 +91,13 @@ func TestReceivePackPushSuccess(t *testing.T) {
 	glRepository := "project-456"
 	glProjectPath := "project/path"
 
-	lHead, rHead, err := testCloneAndPush(t, serverSocketPath, pushParams{storageName: testhelper.DefaultStorageName, glID: "user-123", glRepository: glRepository, glProjectPath: glProjectPath})
+	lHead, rHead, err := testCloneAndPush(t, serverSocketPath, pushParams{
+		storageName:   testhelper.DefaultStorageName,
+		glID:          "123",
+		glUsername:    "user",
+		glRepository:  glRepository,
+		glProjectPath: glProjectPath,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,14 +106,35 @@ func TestReceivePackPushSuccess(t *testing.T) {
 	envData, err := ioutil.ReadFile(hookOutputFile)
 	require.NoError(t, err, "get git env data")
 
-	for _, env := range []string{
-		"GL_ID=user-123",
-		fmt.Sprintf("GL_REPOSITORY=%s", glRepository),
-		fmt.Sprintf("GL_PROJECT_PATH=%s", glProjectPath),
-		"GL_PROTOCOL=ssh",
-	} {
-		require.Contains(t, strings.Split(string(envData), "\n"), env)
-	}
+	payload, err := git.HooksPayloadFromEnv(strings.Split(string(envData), "\n"))
+	require.NoError(t, err)
+
+	// Compare the repository up front so that we can use require.Equal for
+	// the remaining values.
+	testhelper.ProtoEqual(t, &gitalypb.Repository{
+		StorageName:   testhelper.DefaultStorageName,
+		RelativePath:  "gitlab-test-ssh-receive-pack.git",
+		GlProjectPath: glProjectPath,
+		GlRepository:  glRepository,
+	}, payload.Repo)
+	payload.Repo = nil
+
+	// If running tests with Praefect, then these would be set, but we have
+	// no way of figuring out their actual contents. So let's just remove
+	// that data, too.
+	payload.Transaction = nil
+	payload.Praefect = nil
+
+	require.Equal(t, git.HooksPayload{
+		BinDir:              config.Config.BinDir,
+		InternalSocket:      config.Config.GitalyInternalSocketPath(),
+		InternalSocketToken: config.Config.Auth.Token,
+		ReceiveHooksPayload: &git.ReceiveHooksPayload{
+			UserID:   "123",
+			Username: "user",
+			Protocol: "ssh",
+		},
+	}, payload)
 }
 
 func TestReceivePackPushSuccessWithGitProtocol(t *testing.T) {
@@ -313,12 +340,18 @@ func setupSSHClone(t *testing.T) (SSHCloneDetails, func()) {
 }
 
 func sshPush(t *testing.T, cloneDetails SSHCloneDetails, serverSocketPath string, params pushParams) (string, string, error) {
-	pbTempRepo := &gitalypb.Repository{StorageName: params.storageName, RelativePath: cloneDetails.TempRepo, GlProjectPath: params.glProjectPath}
+	pbTempRepo := &gitalypb.Repository{
+		StorageName:   params.storageName,
+		RelativePath:  cloneDetails.TempRepo,
+		GlProjectPath: params.glProjectPath,
+		GlRepository:  params.glRepository,
+	}
 	pbMarshaler := &jsonpb.Marshaler{}
 	payload, err := pbMarshaler.MarshalToString(&gitalypb.SSHReceivePackRequest{
 		Repository:       pbTempRepo,
 		GlRepository:     params.glRepository,
 		GlId:             params.glID,
+		GlUsername:       params.glUsername,
 		GitConfigOptions: params.gitConfigOptions,
 		GitProtocol:      params.gitProtocol,
 	})
@@ -392,6 +425,7 @@ func drainPostReceivePackResponse(stream gitalypb.SSHService_SSHReceivePackClien
 type pushParams struct {
 	storageName      string
 	glID             string
+	glUsername       string
 	glRepository     string
 	glProjectPath    string
 	gitConfigOptions []string

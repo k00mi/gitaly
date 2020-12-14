@@ -23,15 +23,16 @@ func TestPrereceive_customHooks(t *testing.T) {
 	hookManager := NewManager(config.NewLocator(config.Config), GitlabAPIStub, config.Config)
 
 	standardEnv := []string{
-		"GL_ID=1234",
-		fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
-		"GL_PROTOCOL=web",
 		fmt.Sprintf("GL_REPO=%s", repo),
-		fmt.Sprintf("GL_REPOSITORY=%s", repo.GetGlRepository()),
-		"GL_USERNAME=user",
 	}
 
-	payload, err := git.NewHooksPayload(config.Config, repo, nil, nil).Env()
+	receiveHooksPayload := &git.ReceiveHooksPayload{
+		UserID:   "1234",
+		Username: "user",
+		Protocol: "web",
+	}
+
+	payload, err := git.NewHooksPayload(config.Config, repo, nil, nil, receiveHooksPayload).Env()
 	require.NoError(t, err)
 
 	primaryPayload, err := git.NewHooksPayload(
@@ -44,6 +45,7 @@ func TestPrereceive_customHooks(t *testing.T) {
 			SocketPath: "/path/to/socket",
 			Token:      "secret",
 		},
+		receiveHooksPayload,
 	).Env()
 	require.NoError(t, err)
 
@@ -57,6 +59,7 @@ func TestPrereceive_customHooks(t *testing.T) {
 			SocketPath: "/path/to/socket",
 			Token:      "secret",
 		},
+		receiveHooksPayload,
 	).Env()
 	require.NoError(t, err)
 
@@ -70,11 +73,19 @@ func TestPrereceive_customHooks(t *testing.T) {
 		expectedStderr string
 	}{
 		{
-			desc:           "hook receives environment variables",
-			env:            append(standardEnv, payload),
-			hook:           "#!/bin/sh\nenv | grep -e '^GL_' -e '^GITALY_' | sort\n",
-			stdin:          "change\n",
-			expectedStdout: strings.Join(append([]string{payload}, standardEnv...), "\n") + "\n",
+			desc:  "hook receives environment variables",
+			env:   append(standardEnv, payload),
+			hook:  "#!/bin/sh\nenv | grep -e '^GL_' -e '^GITALY_' | sort\n",
+			stdin: "change\n",
+			expectedStdout: strings.Join([]string{
+				payload,
+				"GL_ID=1234",
+				fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
+				"GL_PROTOCOL=web",
+				fmt.Sprintf("GL_REPO=%s", repo),
+				fmt.Sprintf("GL_REPOSITORY=%s", repo.GetGlRepository()),
+				"GL_USERNAME=user",
+			}, "\n") + "\n",
 		},
 		{
 			desc:           "hook can write to stderr and stdout",
@@ -124,24 +135,6 @@ func TestPrereceive_customHooks(t *testing.T) {
 			env:   append(standardEnv, secondaryPayload),
 			hook:  "#!/bin/sh\necho foo\n",
 			stdin: "change\n",
-		},
-		{
-			desc:        "missing GL_ID causes error",
-			env:         envWithout(append(standardEnv, payload), "GL_ID"),
-			stdin:       "change\n",
-			expectedErr: "GL_ID not set",
-		},
-		{
-			desc:        "missing GL_REPOSITORY causes error",
-			env:         envWithout(append(standardEnv, payload), "GL_REPOSITORY"),
-			stdin:       "change\n",
-			expectedErr: "GL_REPOSITORY not set",
-		},
-		{
-			desc:        "missing GL_PROTOCOL causes error",
-			env:         envWithout(append(standardEnv, payload), "GL_PROTOCOL"),
-			stdin:       "change\n",
-			expectedErr: "GL_PROTOCOL not set",
 		},
 		{
 			desc:        "missing changes cause error",
@@ -199,17 +192,16 @@ func TestPrereceive_gitlab(t *testing.T) {
 	testRepo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	payload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil).Env()
+	payload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil, &git.ReceiveHooksPayload{
+		UserID:   "1234",
+		Username: "user",
+		Protocol: "web",
+	}).Env()
 	require.NoError(t, err)
 
 	standardEnv := []string{
 		payload,
-		"GL_ID=1234",
-		fmt.Sprintf("GL_PROJECT_PATH=%s", testRepo.GetGlProjectPath()),
-		"GL_PROTOCOL=web",
 		fmt.Sprintf("GL_REPO=%s", testRepo),
-		fmt.Sprintf("GL_REPOSITORY=%s", testRepo.GetGlRepository()),
-		"GL_USERNAME=user",
 	}
 
 	testCases := []struct {

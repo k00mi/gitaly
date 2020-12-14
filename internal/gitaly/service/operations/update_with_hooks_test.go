@@ -131,16 +131,15 @@ func TestUpdateReferenceWithHooks(t *testing.T) {
 	repo, repoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	payload, err := git.NewHooksPayload(config.Config, repo, nil, nil).Env()
+	payload, err := git.NewHooksPayload(config.Config, repo, nil, nil, &git.ReceiveHooksPayload{
+		UserID:   "1234",
+		Username: "Username",
+		Protocol: "web",
+	}).Env()
 	require.NoError(t, err)
 
 	expectedEnv := []string{
 		payload,
-		"GL_ID=1234",
-		"GL_PROJECT_PATH=gitlab-org/gitlab-test",
-		"GL_PROTOCOL=web",
-		"GL_REPOSITORY=project-1",
-		"GL_USERNAME=Username",
 	}
 
 	testCases := []struct {
@@ -158,21 +157,21 @@ func TestUpdateReferenceWithHooks(t *testing.T) {
 				changes, err := ioutil.ReadAll(stdin)
 				require.NoError(t, err)
 				require.Equal(t, fmt.Sprintf("%s %s refs/heads/master\n", oldRev, git.NullSHA), string(changes))
-				require.Subset(t, env, expectedEnv)
+				require.Equal(t, env, expectedEnv)
 				return nil
 			},
 			update: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, ref, oldValue, newValue string, env []string, stdout, stderr io.Writer) error {
 				require.Equal(t, "refs/heads/master", ref)
 				require.Equal(t, oldRev, oldValue)
 				require.Equal(t, newValue, git.NullSHA)
-				require.Subset(t, env, expectedEnv)
+				require.Equal(t, env, expectedEnv)
 				return nil
 			},
 			postReceive: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, pushOptions, env []string, stdin io.Reader, stdout, stderr io.Writer) error {
 				changes, err := ioutil.ReadAll(stdin)
 				require.NoError(t, err)
 				require.Equal(t, fmt.Sprintf("%s %s refs/heads/master\n", oldRev, git.NullSHA), string(changes))
-				require.Subset(t, env, expectedEnv)
+				require.Equal(t, env, expectedEnv)
 				require.Empty(t, pushOptions)
 				return nil
 			},
@@ -181,7 +180,7 @@ func TestUpdateReferenceWithHooks(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, fmt.Sprintf("%s %s refs/heads/master\n", oldRev, git.NullSHA), string(changes))
 				require.Equal(t, state, hook.ReferenceTransactionPrepared)
-				require.Subset(t, env, expectedEnv)
+				require.Equal(t, env, expectedEnv)
 				return nil
 			},
 			expectedRefDeletion: true,

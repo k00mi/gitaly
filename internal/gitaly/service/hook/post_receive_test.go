@@ -51,7 +51,7 @@ func TestHooksMissingStdin(t *testing.T) {
 		Password:                    password,
 		SecretToken:                 secretToken,
 		GLID:                        "key_id",
-		GLRepository:                "repository",
+		GLRepository:                testRepo.GetGlRepository(),
 		Changes:                     "changes",
 		PostReceiveCounterDecreased: true,
 		Protocol:                    "protocol",
@@ -118,6 +118,11 @@ func TestHooksMissingStdin(t *testing.T) {
 					SocketPath: "/path/to/socket",
 					Token:      "secret",
 				},
+				&git.ReceiveHooksPayload{
+					UserID:   "key_id",
+					Username: "username",
+					Protocol: "protocol",
+				},
 			).Env()
 			require.NoError(t, err)
 
@@ -127,10 +132,6 @@ func TestHooksMissingStdin(t *testing.T) {
 				Repository: testRepo,
 				EnvironmentVariables: []string{
 					hooksPayload,
-					"GL_ID=key_id",
-					"GL_USERNAME=username",
-					"GL_PROTOCOL=protocol",
-					"GL_REPOSITORY=repository",
 				},
 			}))
 
@@ -206,7 +207,7 @@ To create a merge request for okay, visit:
 				Password:                    password,
 				SecretToken:                 secretToken,
 				GLID:                        "key_id",
-				GLRepository:                "repository",
+				GLRepository:                testRepo.GetGlRepository(),
 				Changes:                     "changes",
 				PostReceiveCounterDecreased: true,
 				PostReceiveMessages:         tc.basicMessages,
@@ -248,15 +249,15 @@ To create a merge request for okay, visit:
 			stream, err := client.PostReceiveHook(ctx)
 			require.NoError(t, err)
 
-			hooksPayload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil).Env()
+			hooksPayload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil, &git.ReceiveHooksPayload{
+				UserID:   "key_id",
+				Username: "username",
+				Protocol: "protocol",
+			}).Env()
 			require.NoError(t, err)
 
 			envVars := []string{
 				hooksPayload,
-				"GL_ID=key_id",
-				"GL_USERNAME=username",
-				"GL_PROTOCOL=protocol",
-				"GL_REPOSITORY=repository",
 			}
 
 			require.NoError(t, stream.Send(&gitalypb.PostReceiveHookRequest{

@@ -109,12 +109,17 @@ module Gitlab
         err_message
       end
 
-      def hooks_payload(transaction)
+      def hooks_payload(gl_id, gl_username, transaction)
         payload = {
           repository: repository.gitaly_repository.to_json,
           binary_directory: Gitlab.config.gitaly.bin_dir,
           internal_socket: Gitlab.config.gitaly.internal_socket,
-          internal_socket_token: ENV['GITALY_TOKEN']
+          internal_socket_token: ENV['GITALY_TOKEN'],
+          receive_hooks_payload: {
+            userid: gl_id,
+            username: gl_username,
+            protocol: GL_PROTOCOL
+          }
         }
 
         payload.merge!(transaction.payload) if transaction
@@ -124,14 +129,9 @@ module Gitlab
 
       def env_base_vars(gl_id, gl_username, transaction = nil)
         {
-          'GITALY_HOOKS_PAYLOAD' => hooks_payload(transaction),
+          'GITALY_HOOKS_PAYLOAD' => hooks_payload(gl_id, gl_username, transaction),
           'GITALY_LOG_DIR' => Gitlab.config.logging.dir,
           'GITALY_BIN_DIR' => Gitlab.config.gitaly.bin_dir,
-          'GL_ID' => gl_id,
-          'GL_USERNAME' => gl_username,
-          'GL_REPOSITORY' => repository.gl_repository,
-          'GL_PROJECT_PATH' => repository.gl_project_path,
-          'GL_PROTOCOL' => GL_PROTOCOL,
           'PWD' => repo_path,
           'GIT_DIR' => repo_path
         }

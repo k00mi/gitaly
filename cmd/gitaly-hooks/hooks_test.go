@@ -29,8 +29,8 @@ import (
 )
 
 type glHookValues struct {
-	GLID, GLUsername, GLRepo, GLProtocol, GitObjectDir string
-	GitAlternateObjectDirs                             []string
+	GLID, GLUsername, GLProtocol, GitObjectDir string
+	GitAlternateObjectDirs                     []string
 }
 
 type proxyValues struct {
@@ -39,16 +39,16 @@ type proxyValues struct {
 
 // envForHooks generates a set of environment variables for gitaly hooks
 func envForHooks(t testing.TB, gitlabShellDir string, repo *gitalypb.Repository, glHookValues glHookValues, proxyValues proxyValues, gitPushOptions ...string) []string {
-	payload, err := git.NewHooksPayload(config.Config, repo, nil, nil).Env()
+	payload, err := git.NewHooksPayload(config.Config, repo, nil, nil, &git.ReceiveHooksPayload{
+		UserID:   glHookValues.GLID,
+		Username: glHookValues.GLUsername,
+		Protocol: glHookValues.GLProtocol,
+	}).Env()
 	require.NoError(t, err)
 
 	env := append(os.Environ(), []string{
 		payload,
 		"GITALY_BIN_DIR=" + config.Config.BinDir,
-		fmt.Sprintf("GL_ID=%s", glHookValues.GLID),
-		fmt.Sprintf("GL_REPOSITORY=%s", glHookValues.GLRepo),
-		fmt.Sprintf("GL_PROTOCOL=%s", glHookValues.GLProtocol),
-		fmt.Sprintf("GL_USERNAME=%s", glHookValues.GLUsername),
 		fmt.Sprintf("%s=%s", gitalylog.GitalyLogDirEnvKey, gitlabShellDir),
 	}...)
 	env = append(env, hooks.GitPushOptions(gitPushOptions)...)
@@ -140,7 +140,6 @@ func testHooksPrePostReceive(t *testing.T) {
 	glID := "key-1234"
 	glUsername := "iamgitlab"
 	glProtocol := "ssh"
-	glRepository := "some_repo"
 
 	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
 	defer cleanup()
@@ -159,7 +158,7 @@ func testHooksPrePostReceive(t *testing.T) {
 		Password:                    gitlabPassword,
 		SecretToken:                 secretToken,
 		GLID:                        glID,
-		GLRepository:                glRepository,
+		GLRepository:                testRepo.GetGlRepository(),
 		Changes:                     changes,
 		PostReceiveCounterDecreased: true,
 		Protocol:                    "ssh",
@@ -228,7 +227,6 @@ func testHooksPrePostReceive(t *testing.T) {
 				glHookValues{
 					GLID:                   glID,
 					GLUsername:             glUsername,
-					GLRepo:                 glRepository,
 					GLProtocol:             glProtocol,
 					GitObjectDir:           c.GitObjectDir,
 					GitAlternateObjectDirs: c.GitAlternateObjectDirs,
@@ -250,7 +248,7 @@ func testHooksPrePostReceive(t *testing.T) {
 			output := string(testhelper.MustReadFile(t, customHookOutputPath))
 			requireContainsOnce(t, output, "GL_USERNAME="+glUsername)
 			requireContainsOnce(t, output, "GL_ID="+glID)
-			requireContainsOnce(t, output, "GL_REPOSITORY="+glRepository)
+			requireContainsOnce(t, output, "GL_REPOSITORY="+testRepo.GetGlRepository())
 			requireContainsOnce(t, output, "HTTP_PROXY="+httpProxy)
 			requireContainsOnce(t, output, "http_proxy="+httpProxy)
 			requireContainsOnce(t, output, "HTTPS_PROXY="+httpsProxy)
@@ -281,7 +279,6 @@ func TestHooksUpdate(t *testing.T) {
 	glID := "key-1234"
 	glUsername := "iamgitlab"
 	glProtocol := "ssh"
-	glRepository := "some_repo"
 
 	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
 	defer cleanup()
@@ -306,7 +303,6 @@ func TestHooksUpdate(t *testing.T) {
 	testHooksUpdate(t, tempGitlabShellDir, token, glHookValues{
 		GLID:       glID,
 		GLUsername: glUsername,
-		GLRepo:     glRepository,
 		GLProtocol: glProtocol,
 	})
 }
@@ -366,7 +362,7 @@ open('%s', 'w') { |f| f.puts(JSON.dump(ARGV)) }
 	output := string(testhelper.MustReadFile(t, customHookOutputPath))
 	require.Contains(t, output, "GL_USERNAME="+glValues.GLUsername)
 	require.Contains(t, output, "GL_ID="+glValues.GLID)
-	require.Contains(t, output, "GL_REPOSITORY="+glValues.GLRepo)
+	require.Contains(t, output, "GL_REPOSITORY="+testRepo.GetGlRepository())
 	require.Contains(t, output, "GL_PROTOCOL="+glValues.GLProtocol)
 }
 
@@ -378,7 +374,6 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 	glID := "key-1234"
 	glUsername := "iamgitlab"
 	glProtocol := "ssh"
-	glRepository := "some_repo"
 	changes := "oldhead newhead"
 
 	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
@@ -397,7 +392,7 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 		SecretToken:                 secretToken,
 		Changes:                     changes,
 		GLID:                        glID,
-		GLRepository:                glRepository,
+		GLRepository:                testRepo.GetGlRepository(),
 		PostReceiveCounterDecreased: false,
 		Protocol:                    "ssh",
 	}
@@ -476,18 +471,15 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 					SocketPath: "/path/to/socket",
 					Token:      "secret",
 				},
+				&git.ReceiveHooksPayload{
+					UserID:   glID,
+					Username: glUsername,
+					Protocol: glProtocol,
+				},
 			).Env()
 			require.NoError(t, err)
 
-			env := envForHooks(t, tempGitlabShellDir, testRepo,
-				glHookValues{
-					GLID:       glID,
-					GLUsername: glUsername,
-					GLRepo:     glRepository,
-					GLProtocol: glProtocol,
-				},
-				proxyValues{},
-			)
+			env := envForHooks(t, tempGitlabShellDir, testRepo, glHookValues{}, proxyValues{})
 			env = append(env, hooksPayload)
 
 			cmd := exec.Command(postReceiveHookPath)
@@ -511,7 +503,6 @@ func TestHooksNotAllowed(t *testing.T) {
 	glID := "key-1234"
 	glUsername := "iamgitlab"
 	glProtocol := "ssh"
-	glRepository := "some_repo"
 	changes := "oldhead newhead"
 
 	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
@@ -525,7 +516,7 @@ func TestHooksNotAllowed(t *testing.T) {
 		Password:                    "",
 		SecretToken:                 secretToken,
 		GLID:                        glID,
-		GLRepository:                glRepository,
+		GLRepository:                testRepo.GetGlRepository(),
 		Changes:                     changes,
 		PostReceiveCounterDecreased: true,
 		Protocol:                    "ssh",
@@ -562,7 +553,6 @@ func TestHooksNotAllowed(t *testing.T) {
 		glHookValues{
 			GLID:       glID,
 			GLUsername: glUsername,
-			GLRepo:     glRepository,
 			GLProtocol: glProtocol,
 		},
 		proxyValues{})

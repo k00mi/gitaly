@@ -61,7 +61,7 @@ func TestSuccessfulReceivePackRequest(t *testing.T) {
 	projectPath := "project/path"
 
 	repo.GlProjectPath = projectPath
-	firstRequest := &gitalypb.PostReceivePackRequest{Repository: repo, GlId: "user-123", GlRepository: "project-456"}
+	firstRequest := &gitalypb.PostReceivePackRequest{Repository: repo, GlUsername: "user", GlId: "123", GlRepository: "project-456"}
 	response := doPush(t, stream, firstRequest, push.body)
 
 	expectedResponse := "0049\x01000eunpack ok\n0019ok refs/heads/master\n0019ok refs/heads/branch\n00000000"
@@ -73,14 +73,30 @@ func TestSuccessfulReceivePackRequest(t *testing.T) {
 	envData, err := ioutil.ReadFile(hookOutputFile)
 	require.NoError(t, err, "get git env data")
 
-	for _, env := range []string{
-		"GL_ID=user-123",
-		"GL_REPOSITORY=project-456",
-		"GL_PROTOCOL=http",
-		"GL_PROJECT_PATH=" + projectPath,
-	} {
-		require.Contains(t, strings.Split(string(envData), "\n"), env)
-	}
+	payload, err := git.HooksPayloadFromEnv(strings.Split(string(envData), "\n"))
+	require.NoError(t, err)
+
+	// Compare the repository up front so that we can use require.Equal for
+	// the remaining values.
+	testhelper.ProtoEqual(t, repo, payload.Repo)
+	payload.Repo = nil
+
+	// If running tests with Praefect, then these would be set, but we have
+	// no way of figuring out their actual contents. So let's just remove
+	// that data, too.
+	payload.Transaction = nil
+	payload.Praefect = nil
+
+	require.Equal(t, git.HooksPayload{
+		BinDir:              config.Config.BinDir,
+		InternalSocket:      config.Config.GitalyInternalSocketPath(),
+		InternalSocketToken: config.Config.Auth.Token,
+		ReceiveHooksPayload: &git.ReceiveHooksPayload{
+			UserID:   "123",
+			Username: "user",
+			Protocol: "http",
+		},
+	}, payload)
 }
 
 func TestSuccessfulReceivePackRequestWithGitProtocol(t *testing.T) {

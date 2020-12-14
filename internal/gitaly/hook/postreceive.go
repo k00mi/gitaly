@@ -135,15 +135,22 @@ func (m *GitLabHookManager) PostReceiveHook(ctx context.Context, repo *gitalypb.
 		return helper.ErrInternalf("hook got no reference updates")
 	}
 
-	glID, glRepo := getEnvVar("GL_ID", env), getEnvVar("GL_REPOSITORY", env)
-	if glID == "" {
-		return helper.ErrInternalf("GL_ID not set")
+	if payload.ReceiveHooksPayload == nil {
+		return helper.ErrInternalf("payload has no receive hooks info")
 	}
-	if glRepo == "" {
-		return helper.ErrInternalf("GL_REPOSITORY not set")
+	if payload.ReceiveHooksPayload.UserID == "" {
+		return helper.ErrInternalf("user ID not set")
+	}
+	if repo.GetGlRepository() == "" {
+		return helper.ErrInternalf("repository not set")
 	}
 
-	ok, messages, err := m.gitlabAPI.PostReceive(ctx, glRepo, glID, string(changes), pushOptions...)
+	ok, messages, err := m.gitlabAPI.PostReceive(
+		ctx, repo.GetGlRepository(),
+		payload.ReceiveHooksPayload.UserID,
+		string(changes),
+		pushOptions...,
+	)
 	if err != nil {
 		return fmt.Errorf("GitLab: %v", err)
 	}
@@ -161,10 +168,13 @@ func (m *GitLabHookManager) PostReceiveHook(ctx context.Context, repo *gitalypb.
 		return helper.ErrInternalf("creating custom hooks executor: %v", err)
 	}
 
+	customHooksEnv := append(env, customHooksEnv(payload)...)
+	customHooksEnv = append(customHooksEnv, hooks.GitPushOptions(pushOptions)...)
+
 	if err = executor(
 		ctx,
 		nil,
-		append(env, hooks.GitPushOptions(pushOptions)...),
+		customHooksEnv,
 		bytes.NewReader(changes),
 		stdout,
 		stderr,

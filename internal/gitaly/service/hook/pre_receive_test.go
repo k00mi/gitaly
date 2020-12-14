@@ -83,7 +83,7 @@ func receivePreReceive(t *testing.T, stream gitalypb.HookService_PreReceiveHookC
 func TestPreReceiveHook_GitlabAPIAccess(t *testing.T) {
 	user, password := "user", "password"
 	secretToken := "secret123"
-	glID, glRepository := "key-123", "repository"
+	glID := "key-123"
 	changes := "changes123"
 	protocol := "http"
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
@@ -112,7 +112,7 @@ func TestPreReceiveHook_GitlabAPIAccess(t *testing.T) {
 		Password:                    password,
 		SecretToken:                 secretToken,
 		GLID:                        glID,
-		GLRepository:                glRepository,
+		GLRepository:                testRepo.GetGlRepository(),
 		Changes:                     changes,
 		PostReceiveCounterDecreased: true,
 		Protocol:                    protocol,
@@ -145,7 +145,11 @@ func TestPreReceiveHook_GitlabAPIAccess(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	hooksPayload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil).Env()
+	hooksPayload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil, &git.ReceiveHooksPayload{
+		UserID:   glID,
+		Username: "username",
+		Protocol: protocol,
+	}).Env()
 	require.NoError(t, err)
 
 	stdin := bytes.NewBufferString(changes)
@@ -153,10 +157,6 @@ func TestPreReceiveHook_GitlabAPIAccess(t *testing.T) {
 		Repository: testRepo,
 		EnvironmentVariables: []string{
 			hooksPayload,
-			"GL_ID=" + glID,
-			"GL_PROTOCOL=" + protocol,
-			"GL_USERNAME=username",
-			"GL_REPOSITORY=" + glRepository,
 		},
 	}
 
@@ -252,7 +252,11 @@ func TestPreReceive_APIErrors(t *testing.T) {
 			ctx, cancel := testhelper.Context()
 			defer cancel()
 
-			hooksPayload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil).Env()
+			hooksPayload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil, &git.ReceiveHooksPayload{
+				UserID:   "key-123",
+				Username: "username",
+				Protocol: "web",
+			}).Env()
 			require.NoError(t, err)
 
 			stream, err := client.PreReceiveHook(ctx)
@@ -261,10 +265,6 @@ func TestPreReceive_APIErrors(t *testing.T) {
 				Repository: testRepo,
 				EnvironmentVariables: []string{
 					hooksPayload,
-					"GL_ID=key-123",
-					"GL_PROTOCOL=web",
-					"GL_USERNAME=username",
-					"GL_REPOSITORY=repository",
 				},
 			}))
 			require.NoError(t, stream.Send(&gitalypb.PreReceiveHookRequest{
@@ -319,7 +319,11 @@ exit %d
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	hooksPayload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil).Env()
+	hooksPayload, err := git.NewHooksPayload(config.Config, testRepo, nil, nil, &git.ReceiveHooksPayload{
+		UserID:   "key-123",
+		Username: "username",
+		Protocol: "web",
+	}).Env()
 	require.NoError(t, err)
 
 	stream, err := client.PreReceiveHook(ctx)
@@ -328,10 +332,6 @@ exit %d
 		Repository: testRepo,
 		EnvironmentVariables: []string{
 			hooksPayload,
-			"GL_ID=key-123",
-			"GL_PROTOCOL=web",
-			"GL_USERNAME=username",
-			"GL_REPOSITORY=repository",
 		},
 	}))
 	require.NoError(t, stream.Send(&gitalypb.PreReceiveHookRequest{
@@ -455,15 +455,16 @@ func TestPreReceiveHook_Primary(t *testing.T) {
 					SocketPath: "/path/to/socket",
 					Token:      "secret",
 				},
+				&git.ReceiveHooksPayload{
+					UserID:   "key-123",
+					Username: "username",
+					Protocol: "web",
+				},
 			).Env()
 			require.NoError(t, err)
 
 			environment := []string{
 				hooksPayload,
-				"GL_ID=key-123",
-				"GL_PROTOCOL=web",
-				"GL_USERNAME=username",
-				"GL_REPOSITORY=repository",
 			}
 
 			stream, err := client.PreReceiveHook(ctx)

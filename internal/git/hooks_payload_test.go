@@ -20,7 +20,7 @@ func TestHooksPayload(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("envvar has proper name", func(t *testing.T) {
-		env, err := NewHooksPayload(config.Config, repo, nil, nil).Env()
+		env, err := NewHooksPayload(config.Config, repo, nil, nil, nil).Env()
 		require.NoError(t, err)
 		require.True(t, strings.HasPrefix(env, ErrHooksPayloadNotFound+"="))
 	})
@@ -43,7 +43,7 @@ func TestHooksPayload(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("roundtrip succeeds", func(t *testing.T) {
-		env, err := NewHooksPayload(config.Config, repo, nil, nil).Env()
+		env, err := NewHooksPayload(config.Config, repo, nil, nil, nil).Env()
 		require.NoError(t, err)
 
 		payload, err := HooksPayloadFromEnv([]string{
@@ -62,7 +62,7 @@ func TestHooksPayload(t *testing.T) {
 	})
 
 	t.Run("roundtrip with transaction succeeds", func(t *testing.T) {
-		env, err := NewHooksPayload(config.Config, repo, &tx, &praefect).Env()
+		env, err := NewHooksPayload(config.Config, repo, &tx, &praefect, nil).Env()
 		require.NoError(t, err)
 
 		payload, err := HooksPayloadFromEnv([]string{env})
@@ -195,7 +195,7 @@ func TestHooksPayload(t *testing.T) {
 	})
 
 	t.Run("payload with missing Praefect", func(t *testing.T) {
-		env, err := NewHooksPayload(config.Config, repo, nil, nil).Env()
+		env, err := NewHooksPayload(config.Config, repo, nil, nil, nil).Env()
 		require.NoError(t, err)
 
 		_, err = HooksPayloadFromEnv([]string{env, txEnv})
@@ -203,7 +203,7 @@ func TestHooksPayload(t *testing.T) {
 	})
 
 	t.Run("payload with fallback transaction", func(t *testing.T) {
-		env, err := NewHooksPayload(config.Config, repo, nil, nil).Env()
+		env, err := NewHooksPayload(config.Config, repo, nil, nil, nil).Env()
 		require.NoError(t, err)
 
 		payload, err := HooksPayloadFromEnv([]string{env, txEnv, praefectEnv})
@@ -216,6 +216,98 @@ func TestHooksPayload(t *testing.T) {
 			InternalSocketToken: config.Config.Auth.Token,
 			Transaction:         &tx,
 			Praefect:            &praefect,
+		}, payload)
+	})
+
+	t.Run("fallback with GL_ values", func(t *testing.T) {
+		payload, err := HooksPayloadFromEnv([]string{
+			"GITALY_BIN_DIR=/bin/dir",
+			"GITALY_SOCKET=/path/to/socket",
+			"GITALY_TOKEN=secret",
+			"GITALY_REPOSITORY=" + marshalledRepo,
+			"GL_ID=1234",
+			"GL_USERNAME=user",
+			"GL_PROTOCOL=ssh",
+		})
+		require.NoError(t, err)
+
+		require.Equal(t, HooksPayload{
+			Repo:                repo,
+			BinDir:              "/bin/dir",
+			InternalSocket:      "/path/to/socket",
+			InternalSocketToken: "secret",
+			ReceiveHooksPayload: &ReceiveHooksPayload{
+				UserID:   "1234",
+				Username: "user",
+				Protocol: "ssh",
+			},
+		}, payload)
+	})
+
+	t.Run("payload with GL_ values", func(t *testing.T) {
+		env, err := NewHooksPayload(config.Config, repo, nil, nil, nil).Env()
+		require.NoError(t, err)
+
+		payload, err := HooksPayloadFromEnv([]string{
+			env,
+			"GL_ID=1234",
+			"GL_USERNAME=user",
+			"GL_PROTOCOL=ssh",
+		})
+		require.NoError(t, err)
+
+		require.Equal(t, HooksPayload{
+			Repo:                repo,
+			BinDir:              config.Config.BinDir,
+			InternalSocket:      config.Config.GitalyInternalSocketPath(),
+			InternalSocketToken: config.Config.Auth.Token,
+			ReceiveHooksPayload: &ReceiveHooksPayload{
+				UserID:   "1234",
+				Username: "user",
+				Protocol: "ssh",
+			},
+		}, payload)
+	})
+
+	t.Run("payload with missing GL_ID", func(t *testing.T) {
+		env, err := NewHooksPayload(config.Config, repo, nil, nil, nil).Env()
+		require.NoError(t, err)
+
+		_, err = HooksPayloadFromEnv([]string{
+			env,
+			"GL_USERNAME=user",
+			"GL_PROTOCOL=ssh",
+		})
+		require.Error(t, err)
+		require.Contains(t, "no user ID found in hooks environment", err.Error())
+	})
+
+	t.Run("receive hooks payload", func(t *testing.T) {
+		env, err := NewHooksPayload(config.Config, repo, nil, nil, &ReceiveHooksPayload{
+			UserID:   "1234",
+			Username: "user",
+			Protocol: "ssh",
+		}).Env()
+		require.NoError(t, err)
+
+		payload, err := HooksPayloadFromEnv([]string{
+			env,
+			"GL_ID=wrong",
+			"GL_USERNAME=wrong",
+			"GL_PROTOCOL=wrong",
+		})
+		require.NoError(t, err)
+
+		require.Equal(t, HooksPayload{
+			Repo:                repo,
+			BinDir:              config.Config.BinDir,
+			InternalSocket:      config.Config.GitalyInternalSocketPath(),
+			InternalSocketToken: config.Config.Auth.Token,
+			ReceiveHooksPayload: &ReceiveHooksPayload{
+				UserID:   "1234",
+				Username: "user",
+				Protocol: "ssh",
+			},
 		}, payload)
 	})
 }
