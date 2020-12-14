@@ -254,19 +254,10 @@ func (c *Coordinator) Collect(metrics chan<- prometheus.Metric) {
 }
 
 func (c *Coordinator) directRepositoryScopedMessage(ctx context.Context, call grpcCall) (*proxy.StreamParameters, error) {
-	targetRepo, err := call.methodInfo.TargetRepo(call.msg)
-	if err != nil {
-		return nil, helper.ErrInvalidArgument(fmt.Errorf("repo scoped: %w", err))
-	}
-
 	ctxlogrus.AddFields(ctx, logrus.Fields{
 		"virtual_storage": call.targetRepo.StorageName,
 		"relative_path":   call.targetRepo.RelativePath,
 	})
-
-	if targetRepo.StorageName == "" || targetRepo.RelativePath == "" {
-		return nil, helper.ErrInvalidArgumentf("repo scoped: target repo is invalid")
-	}
 
 	praefectServer, err := metadata.PraefectFromConfig(c.conf)
 	if err != nil {
@@ -280,9 +271,9 @@ func (c *Coordinator) directRepositoryScopedMessage(ctx context.Context, call gr
 	var ps *proxy.StreamParameters
 	switch call.methodInfo.Operation {
 	case protoregistry.OpAccessor:
-		ps, err = c.accessorStreamParameters(ctx, call, targetRepo)
+		ps, err = c.accessorStreamParameters(ctx, call)
 	case protoregistry.OpMutator:
-		ps, err = c.mutatorStreamParameters(ctx, call, targetRepo)
+		ps, err = c.mutatorStreamParameters(ctx, call)
 	default:
 		err = fmt.Errorf("unknown operation type: %v", call.methodInfo.Operation)
 	}
@@ -294,9 +285,9 @@ func (c *Coordinator) directRepositoryScopedMessage(ctx context.Context, call gr
 	return ps, nil
 }
 
-func (c *Coordinator) accessorStreamParameters(ctx context.Context, call grpcCall, targetRepo *gitalypb.Repository) (*proxy.StreamParameters, error) {
-	repoPath := targetRepo.GetRelativePath()
-	virtualStorage := targetRepo.StorageName
+func (c *Coordinator) accessorStreamParameters(ctx context.Context, call grpcCall) (*proxy.StreamParameters, error) {
+	repoPath := call.targetRepo.GetRelativePath()
+	virtualStorage := call.targetRepo.StorageName
 
 	node, err := c.router.RouteRepositoryAccessor(ctx, virtualStorage, repoPath)
 	if err != nil {
@@ -352,10 +343,11 @@ func (c *Coordinator) registerTransaction(ctx context.Context, primary RouterNod
 	return c.txMgr.RegisterTransaction(ctx, voters, threshold)
 }
 
-func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall, targetRepo *gitalypb.Repository) (*proxy.StreamParameters, error) {
-	virtualStorage := targetRepo.StorageName
+func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall) (*proxy.StreamParameters, error) {
+	targetRepo := call.targetRepo
+	virtualStorage := call.targetRepo.StorageName
 
-	route, err := c.router.RouteRepositoryMutator(ctx, virtualStorage, call.targetRepo.RelativePath)
+	route, err := c.router.RouteRepositoryMutator(ctx, virtualStorage, targetRepo.RelativePath)
 	if err != nil {
 		if errors.Is(err, ErrRepositoryReadOnly) {
 			return nil, err
@@ -417,14 +409,14 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 		}
 
 		finalizers = append(finalizers,
-			transactionCleanup, c.createTransactionFinalizer(ctx, transaction, route, virtualStorage, call.targetRepo, change, params),
+			transactionCleanup, c.createTransactionFinalizer(ctx, transaction, route, virtualStorage, targetRepo, change, params),
 		)
 	} else {
 		finalizers = append(finalizers,
 			c.newRequestFinalizer(
 				ctx,
 				virtualStorage,
-				call.targetRepo,
+				targetRepo,
 				route.Primary.Storage,
 				nil,
 				append(routerNodesToStorages(route.Secondaries), route.ReplicationTargets...),
@@ -492,8 +484,7 @@ func (c *Coordinator) StreamDirector(ctx context.Context, fullMethodName string,
 			methodInfo:     mi,
 			msg:            m,
 			targetRepo:     targetRepo,
-		},
-		)
+		})
 		if err != nil {
 			if errors.Is(err, nodes.ErrVirtualStorageNotExist) {
 				return nil, helper.ErrInvalidArgument(err)
