@@ -1,0 +1,5 @@
+---
+title: Disable hooks when fetching
+merge_request: 2923
+author:
+type: performance
