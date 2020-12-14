@@ -7,7 +7,6 @@ import "context"
 type MockRepositoryStore struct {
 	GetGenerationFunc                      func(ctx context.Context, virtualStorage, relativePath, storage string) (int, error)
 	IncrementGenerationFunc                func(ctx context.Context, virtualStorage, relativePath, primary string, secondaries []string) error
-	IsLatestGenerationFunc                 func(ctx context.Context, virtualStorage, relativePath, storage string) (bool, error)
 	GetReplicatedGenerationFunc            func(ctx context.Context, virtualStorage, relativePath, source, target string) (int, error)
 	SetGenerationFunc                      func(ctx context.Context, virtualStorage, relativePath, storage string, generation int) error
 	DeleteRepositoryFunc                   func(ctx context.Context, virtualStorage, relativePath, storage string) error
@@ -32,14 +31,6 @@ func (m MockRepositoryStore) IncrementGeneration(ctx context.Context, virtualSto
 	}
 
 	return m.IncrementGenerationFunc(ctx, virtualStorage, relativePath, primary, secondaries)
-}
-
-func (m MockRepositoryStore) IsLatestGeneration(ctx context.Context, virtualStorage, relativePath, storage string) (bool, error) {
-	if m.IsLatestGenerationFunc == nil {
-		return true, nil
-	}
-
-	return m.IsLatestGenerationFunc(ctx, virtualStorage, relativePath, storage)
 }
 
 func (m MockRepositoryStore) GetReplicatedGeneration(ctx context.Context, virtualStorage, relativePath, source, target string) (int, error) {

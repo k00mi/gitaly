@@ -86,9 +86,6 @@ type RepositoryStore interface {
 	RenameRepository(ctx context.Context, virtualStorage, relativePath, storage, newRelativePath string) error
 	// GetConsistentStorages checks which storages are on the latest generation and returns them.
 	GetConsistentStorages(ctx context.Context, virtualStorage, relativePath string) (map[string]struct{}, error)
-	// IsLatestGeneration checks whether the repository is on the latest generation or not. If the repository does not
-	// have an expected generation, every storage is considered to be on the latest version.
-	IsLatestGeneration(ctx context.Context, virtualStorage, relativePath, storage string) (bool, error)
 	// RepositoryExists returns whether the repository exists on a virtual storage.
 	RepositoryExists(ctx context.Context, virtualStorage, relativePath string) (bool, error)
 	// GetPartiallyReplicatedRepositories returns information on repositories which have an outdated copy on an assigned storage.
@@ -383,33 +380,6 @@ JOIN expected_repositories USING (virtual_storage, relative_path, generation)
 	}
 
 	return consistentSecondaries, nil
-}
-
-func (rs *PostgresRepositoryStore) IsLatestGeneration(ctx context.Context, virtualStorage, relativePath, storage string) (bool, error) {
-	const q = `
-SELECT COALESCE(expected_repository.generation = storage_repositories.generation, false)
-FROM (
-	SELECT virtual_storage, relative_path, $3 AS storage, MAX(generation) AS generation
-	FROM storage_repositories
-	WHERE virtual_storage = $1
-	AND relative_path = $2
-	GROUP BY virtual_storage, relative_path
-) AS expected_repository
-LEFT JOIN storage_repositories USING (virtual_storage, relative_path, storage)
-`
-
-	var isLatest bool
-	if err := rs.db.QueryRowContext(ctx, q, virtualStorage, relativePath, storage).Scan(&isLatest); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			// if there is no record of the expected generation, we'll have to consider the storage
-			// up to date as this will be the case on repository creation
-			return true, nil
-		}
-
-		return false, err
-	}
-
-	return isLatest, nil
 }
 
 func (rs *PostgresRepositoryStore) RepositoryExists(ctx context.Context, virtualStorage, relativePath string) (bool, error) {

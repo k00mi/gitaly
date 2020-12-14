@@ -534,29 +534,6 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 		})
 	})
 
-	t.Run("IsLatestGeneration", func(t *testing.T) {
-		rs, _ := newStore(t, nil)
-
-		latest, err := rs.IsLatestGeneration(ctx, vs, repo, "no-expected-record")
-		require.NoError(t, err)
-		require.True(t, latest)
-
-		require.NoError(t, rs.SetGeneration(ctx, vs, repo, "up-to-date", 1))
-		require.NoError(t, rs.SetGeneration(ctx, vs, repo, "outdated", 0))
-
-		latest, err = rs.IsLatestGeneration(ctx, vs, repo, "no-record")
-		require.NoError(t, err)
-		require.False(t, latest)
-
-		latest, err = rs.IsLatestGeneration(ctx, vs, repo, "outdated")
-		require.NoError(t, err)
-		require.False(t, latest)
-
-		latest, err = rs.IsLatestGeneration(ctx, vs, repo, "up-to-date")
-		require.NoError(t, err)
-		require.True(t, latest)
-	})
-
 	t.Run("RepositoryExists", func(t *testing.T) {
 		rs, _ := newStore(t, nil)
 
