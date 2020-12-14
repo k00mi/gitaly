@@ -153,7 +153,8 @@ find_go_packages = $(call uniq,$(dir $(call find_go_sources)))
 # GO_TEST_LDFLAGS: ldflags passed to go-test
 # TEST_OPTIONS: any additional options
 # TEST_PACKAGES: packages which shall be tested
-run_go_tests = go test -v -count=1 -tags '${GO_BUILD_TAGS}' -ldflags='${GO_TEST_LDFLAGS}' ${TEST_OPTIONS} ${TEST_PACKAGES}
+run_go_tests = PATH='${SOURCE_DIR}/internal/testhelper/testdata/home/bin:${PATH}' \
+    go test -v -count=1 -tags '${GO_BUILD_TAGS}' -ldflags='${GO_TEST_LDFLAGS}' ${TEST_OPTIONS} ${TEST_PACKAGES}
 
 unexport GOROOT
 export GOBIN                      = ${BUILD_DIR}/bin
@@ -215,7 +216,6 @@ binaries: assemble
 prepare-tests: git ${TEST_REPO} ${TEST_REPO_GIT} ${SOURCE_DIR}/.ruby-bundle
 
 .PHONY: test
-test: export PATH := ${SOURCE_DIR}/internal/testhelper/testdata/home/bin:${PATH}
 test: test-go rspec
 
 .PHONY: test-go
@@ -248,7 +248,7 @@ race-go: test-go
 
 .PHONY: rspec
 rspec: assemble-go prepare-tests
-	${Q}cd ${GITALY_RUBY_DIR} && bundle exec rspec
+	${Q}cd ${GITALY_RUBY_DIR} && PATH='${SOURCE_DIR}/internal/testhelper/testdata/home/bin:${PATH}' bundle exec rspec
 
 .PHONY: verify
 verify: check-mod-tidy check-formatting notice-up-to-date check-proto rubocop
