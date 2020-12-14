@@ -18,7 +18,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git/housekeeping"
 	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
 	"gitlab.com/gitlab-org/gitaly/internal/git/updateref"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
@@ -48,7 +47,7 @@ func (o *ObjectPool) FetchFromOrigin(ctx context.Context, origin *gitalypb.Repos
 	}
 
 	opts := []git.CmdOpt{
-		git.WithRefTxHook(ctx, helper.ProtoRepoFromRepo(o), o.cfg),
+		git.WithDisabledHooks(),
 	}
 
 	getRemotes, err := git.SafeCmd(ctx, o, nil, git.SubCmd{Name: "remote"}, opts...)
@@ -153,7 +152,7 @@ func rescueDanglingObjects(ctx context.Context, repo repository.GitRepo) error {
 		return err
 	}
 
-	updater, err := updateref.New(ctx, repo)
+	updater, err := updateref.New(ctx, repo, updateref.WithDisabledTransactions())
 	if err != nil {
 		return err
 	}

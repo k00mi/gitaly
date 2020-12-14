@@ -40,7 +40,7 @@ func (s *server) FetchInternalRemote(ctx context.Context, req *gitalypb.FetchInt
 			Args:  []string{gitalyssh.GitalyInternalURL, mirrorRefSpec},
 		},
 		git.WithStderr(stderr),
-		git.WithRefTxHook(ctx, req.Repository, config.Config),
+		git.WithDisabledHooks(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create git fetch: %w", err)

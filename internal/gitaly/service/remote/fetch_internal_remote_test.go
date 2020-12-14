@@ -62,6 +62,8 @@ func TestSuccessfulFetchInternalRemote(t *testing.T) {
 	gitaly0Repo, gitaly0RepoPath, cleanup := cloneRepoAtStorage(t, repo, "gitaly-0")
 	defer cleanup()
 
+	testhelper.CreateCommit(t, gitaly0RepoPath, "master", nil)
+
 	gitaly1Repo, gitaly1RepoPath, cleanup := cloneRepoAtStorage(t, repo, "gitaly-1")
 	defer cleanup()
 

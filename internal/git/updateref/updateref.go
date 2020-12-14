@@ -19,19 +19,44 @@ type Updater struct {
 	cmd  *command.Command
 }
 
+// UpdaterOpt is a type representing options for the Updater.
+type UpdaterOpt func(*updaterConfig)
+
+type updaterConfig struct {
+	disableTransactions bool
+}
+
+// WithDisabledTransactions disables hooks such that no reference-transactions
+// are used for the updater.
+func WithDisabledTransactions() UpdaterOpt {
+	return func(cfg *updaterConfig) {
+		cfg.disableTransactions = true
+	}
+}
+
 // New returns a new bulk updater, wrapping a `git update-ref` process. Call the
 // various methods to enqueue updates, then call Wait() to attempt to apply all
 // the updates at once.
 //
 // It is important that ctx gets canceled somewhere. If it doesn't, the process
 // spawned by New() may never terminate.
-func New(ctx context.Context, repo repository.GitRepo) (*Updater, error) {
+func New(ctx context.Context, repo repository.GitRepo, opts ...UpdaterOpt) (*Updater, error) {
+	var cfg updaterConfig
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
+	txOption := git.WithRefTxHook(ctx, helper.ProtoRepoFromRepo(repo), config.Config)
+	if cfg.disableTransactions {
+		txOption = git.WithDisabledHooks()
+	}
+
 	cmd, err := git.SafeStdinCmd(ctx, repo, nil,
 		git.SubCmd{
 			Name:  "update-ref",
 			Flags: []git.Option{git.Flag{Name: "-z"}, git.Flag{Name: "--stdin"}},
 		},
-		git.WithRefTxHook(ctx, helper.ProtoRepoFromRepo(repo), config.Config),
+		txOption,
 	)
 	if err != nil {
 		return nil, err
