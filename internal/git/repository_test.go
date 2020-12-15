@@ -571,7 +571,7 @@ func TestLocalRepository_FetchRemote(t *testing.T) {
 			ctx,
 			"source",
 			FetchOpts{
-				Global: []Option{ValueFlag{Name: "-c", Value: "fetch.prune=true"}},
+				Global: []GlobalOption{ValueFlag{Name: "-c", Value: "fetch.prune=true"}},
 			}),
 		)
 

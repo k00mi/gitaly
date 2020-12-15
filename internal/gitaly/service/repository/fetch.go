@@ -45,8 +45,8 @@ func (s *server) FetchSourceBranch(ctx context.Context, req *gitalypb.FetchSourc
 		}
 	}
 
-	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{}, env,
-		[]git.Option{git.ValueFlag{"--git-dir", repoPath}},
+	cmd, err := git.SafeBareCmd(ctx, env,
+		[]git.GlobalOption{git.ValueFlag{"--git-dir", repoPath}},
 		git.SubCmd{
 			Name:  "fetch",
 			Flags: []git.Option{git.Flag{Name: "--prune"}},

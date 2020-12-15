@@ -167,13 +167,15 @@ func (s *Server) runUserSquashGo(ctx context.Context, req *gitalypb.UserSquashRe
 
 func (s *Server) diffFiles(ctx context.Context, env []string, repoPath string, req *gitalypb.UserSquashRequest) ([]byte, error) {
 	var stdout, stderr bytes.Buffer
-	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{Out: &stdout, Err: &stderr}, env,
-		[]git.Option{git.ValueFlag{Name: "--git-dir", Value: repoPath}},
+	cmd, err := git.SafeBareCmd(ctx, env,
+		[]git.GlobalOption{git.ValueFlag{Name: "--git-dir", Value: repoPath}},
 		git.SubCmd{
 			Name:  "diff",
 			Flags: []git.Option{git.Flag{Name: "--name-only"}, git.Flag{Name: "--diff-filter=ar"}, git.Flag{Name: "--binary"}},
 			Args:  []string{diffRange(req)},
 		},
+		git.WithStdout(&stdout),
+		git.WithStderr(&stderr),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create 'git diff': %w", gitError{ErrMsg: stderr.String(), Err: err})
@@ -243,12 +245,13 @@ func (s *Server) userSquashWithDiffInFiles(ctx context.Context, req *gitalypb.Us
 
 func (s *Server) checkout(ctx context.Context, repo *gitalypb.Repository, worktreePath string, req *gitalypb.UserSquashRequest) error {
 	var stderr bytes.Buffer
-	checkoutCmd, err := git.SafeBareCmdInDir(ctx, worktreePath, git.CmdStream{Err: &stderr}, nil, nil,
+	checkoutCmd, err := git.SafeBareCmdInDir(ctx, worktreePath, nil, nil,
 		git.SubCmd{
 			Name:  "checkout",
 			Flags: []git.Option{git.Flag{Name: "--detach"}},
 			Args:  []string{req.GetStartSha()},
 		},
+		git.WithStderr(&stderr),
 		git.WithRefTxHook(ctx, repo, s.cfg),
 	)
 	if err != nil {
@@ -268,10 +271,14 @@ func (s *Server) checkout(ctx context.Context, repo *gitalypb.Repository, worktr
 
 func (s *Server) revParseGitDir(ctx context.Context, worktreePath string) (string, error) {
 	var stdout, stderr bytes.Buffer
-	cmd, err := git.SafeBareCmdInDir(ctx, worktreePath, git.CmdStream{Out: &stdout, Err: &stderr}, nil, nil, git.SubCmd{
-		Name:  "rev-parse",
-		Flags: []git.Option{git.Flag{Name: "--git-dir"}},
-	})
+	cmd, err := git.SafeBareCmdInDir(ctx, worktreePath, nil, nil,
+		git.SubCmd{
+			Name:  "rev-parse",
+			Flags: []git.Option{git.Flag{Name: "--git-dir"}},
+		},
+		git.WithStdout(&stdout),
+		git.WithStderr(&stderr),
+	)
 	if err != nil {
 		return "", fmt.Errorf("creation of 'git rev-parse --git-dir': %w", gitError{ErrMsg: stderr.String(), Err: err})
 	}
@@ -314,7 +321,7 @@ func (s *Server) addWorktree(ctx context.Context, repo *gitalypb.Repository, wor
 	}
 
 	args := []string{worktreePath}
-	flags := []git.Option{git.SubSubCmd{Name: "add"}, git.Flag{Name: "--detach"}}
+	flags := []git.Option{git.Flag{Name: "--detach"}}
 	if committish != "" {
 		args = append(args, committish)
 	} else {
@@ -323,7 +330,12 @@ func (s *Server) addWorktree(ctx context.Context, repo *gitalypb.Repository, wor
 
 	var stderr bytes.Buffer
 	cmd, err := git.SafeCmd(ctx, repo, nil,
-		git.SubCmd{Name: "worktree", Flags: flags, Args: args},
+		git.SubSubCmd{
+			Name:   "worktree",
+			Action: "add",
+			Flags:  flags,
+			Args:   args,
+		},
 		git.WithStderr(&stderr),
 		git.WithRefTxHook(ctx, repo, s.cfg),
 	)
@@ -340,10 +352,11 @@ func (s *Server) addWorktree(ctx context.Context, repo *gitalypb.Repository, wor
 
 func (s *Server) removeWorktree(ctx context.Context, repo *gitalypb.Repository, worktreeName string) error {
 	cmd, err := git.SafeCmd(ctx, repo, nil,
-		git.SubCmd{
-			Name:  "worktree",
-			Flags: []git.Option{git.SubSubCmd{Name: "remove"}, git.Flag{Name: "--force"}},
-			Args:  []string{worktreeName},
+		git.SubSubCmd{
+			Name:   "worktree",
+			Action: "remove",
+			Flags:  []git.Option{git.Flag{Name: "--force"}},
+			Args:   []string{worktreeName},
 		},
 		git.WithRefTxHook(ctx, repo, s.cfg),
 	)
@@ -377,14 +390,18 @@ func (s *Server) applyDiff(ctx context.Context, repo *gitalypb.Repository, req *
 	}
 
 	var applyStderr bytes.Buffer
-	cmdApply, err := git.SafeBareCmdInDir(ctx, worktreePath, git.CmdStream{In: command.SetupStdin, Err: &applyStderr}, env, nil, git.SubCmd{
-		Name: "apply",
-		Flags: []git.Option{
-			git.Flag{Name: "--index"},
-			git.Flag{Name: "--3way"},
-			git.Flag{Name: "--whitespace=nowarn"},
+	cmdApply, err := git.SafeBareCmdInDir(ctx, worktreePath, env, nil,
+		git.SubCmd{
+			Name: "apply",
+			Flags: []git.Option{
+				git.Flag{Name: "--index"},
+				git.Flag{Name: "--3way"},
+				git.Flag{Name: "--whitespace=nowarn"},
+			},
 		},
-	})
+		git.WithStdin(command.SetupStdin),
+		git.WithStderr(&applyStderr),
+	)
 	if err != nil {
 		return "", fmt.Errorf("creation of 'git apply' for range %q: %w", diffRange, gitError{ErrMsg: applyStderr.String(), Err: err})
 	}
@@ -409,14 +426,14 @@ func (s *Server) applyDiff(ctx context.Context, repo *gitalypb.Repository, req *
 	)
 
 	var commitStderr bytes.Buffer
-	cmdCommit, err := git.SafeBareCmdInDir(ctx, worktreePath, git.CmdStream{Err: &commitStderr}, commitEnv, nil, git.SubCmd{
+	cmdCommit, err := git.SafeBareCmdInDir(ctx, worktreePath, commitEnv, nil, git.SubCmd{
 		Name: "commit",
 		Flags: []git.Option{
 			git.Flag{Name: "--no-verify"},
 			git.Flag{Name: "--quiet"},
 			git.ValueFlag{Name: "--message", Value: string(req.GetCommitMessage())},
 		},
-	}, git.WithRefTxHook(ctx, repo, s.cfg))
+	}, git.WithStderr(&commitStderr), git.WithRefTxHook(ctx, repo, s.cfg))
 	if err != nil {
 		return "", fmt.Errorf("creation of 'git commit': %w", gitError{ErrMsg: commitStderr.String(), Err: err})
 	}
@@ -426,14 +443,14 @@ func (s *Server) applyDiff(ctx context.Context, repo *gitalypb.Repository, req *
 	}
 
 	var revParseStdout, revParseStderr bytes.Buffer
-	revParseCmd, err := git.SafeBareCmdInDir(ctx, worktreePath, git.CmdStream{Out: &revParseStdout, Err: &revParseStderr}, env, nil, git.SubCmd{
+	revParseCmd, err := git.SafeBareCmdInDir(ctx, worktreePath, env, nil, git.SubCmd{
 		Name: "rev-parse",
 		Flags: []git.Option{
 			git.Flag{Name: "--quiet"},
 			git.Flag{Name: "--verify"},
 		},
 		Args: []string{"HEAD^{commit}"},
-	})
+	}, git.WithStdout(&revParseStdout), git.WithStderr(&revParseStderr))
 	if err != nil {
 		return "", fmt.Errorf("creation of 'git rev-parse': %w", gitError{ErrMsg: revParseStderr.String(), Err: err})
 	}

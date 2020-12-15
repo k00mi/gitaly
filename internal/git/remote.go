@@ -120,10 +120,11 @@ func (repo RepositoryRemote) Add(ctx context.Context, name, url string, opts Rem
 
 	stderr := bytes.Buffer{}
 	cmd, err := SafeCmd(ctx, repo.repo, nil,
-		SubCmd{
-			Name:  "remote",
-			Flags: append([]Option{SubSubCmd{Name: "add"}}, opts.buildFlags()...),
-			Args:  []string{name, url},
+		SubSubCmd{
+			Name:   "remote",
+			Action: "add",
+			Flags:  opts.buildFlags(),
+			Args:   []string{name, url},
 		},
 		WithStderr(&stderr),
 		WithRefTxHook(ctx, helper.ProtoRepoFromRepo(repo.repo), config.Config),
@@ -158,10 +159,10 @@ func (repo RepositoryRemote) Remove(ctx context.Context, name string) error {
 
 	var stderr bytes.Buffer
 	cmd, err := SafeCmd(ctx, repo.repo, nil,
-		SubCmd{
-			Name:  "remote",
-			Flags: []Option{SubSubCmd{Name: "remove"}},
-			Args:  []string{name},
+		SubSubCmd{
+			Name:   "remote",
+			Action: "remove",
+			Args:   []string{name},
 		},
 		WithStderr(&stderr),
 		WithRefTxHook(ctx, helper.ProtoRepoFromRepo(repo.repo), config.Config),
@@ -214,10 +215,11 @@ func (repo RepositoryRemote) SetURL(ctx context.Context, name, url string, opts 
 
 	var stderr bytes.Buffer
 	cmd, err := SafeCmd(ctx, repo.repo, nil,
-		SubCmd{
-			Name:  "remote",
-			Flags: append([]Option{SubSubCmd{Name: "set-url"}}, opts.buildFlags()...),
-			Args:  []string{name, url},
+		SubSubCmd{
+			Name:   "remote",
+			Action: "set-url",
+			Flags:  opts.buildFlags(),
+			Args:   []string{name, url},
 		},
 		WithStderr(&stderr),
 		WithRefTxHook(ctx, helper.ProtoRepoFromRepo(repo.repo), config.Config),

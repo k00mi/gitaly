@@ -72,9 +72,6 @@ type ForEachRefCmd struct {
 	PostArgFlags []git.Option
 }
 
-// IsCmd is to satisfy the git.Cmd interface
-func (f ForEachRefCmd) IsCmd() {}
-
 var (
 	// ErrOnlyForEachRefAllowed indicates a command other than for-each-ref is being used with ForEachRefCmd
 	ErrOnlyForEachRefAllowed = errors.New("only for-each-ref allowed")
@@ -83,13 +80,13 @@ var (
 	ErrNoPostSeparatorArgsAllowed = errors.New("post separator args not allowed")
 )
 
-// ValidateArgs validates and returns the flags and arguments for the for-each-ref command
-func (f ForEachRefCmd) ValidateArgs() ([]string, error) {
+// CommandArgs validates and returns the flags and arguments for the for-each-ref command
+func (f ForEachRefCmd) CommandArgs() ([]string, error) {
 	if f.Name != "for-each-ref" {
 		return nil, ErrOnlyForEachRefAllowed
 	}
 
-	args, err := f.SubCmd.ValidateArgs()
+	args, err := f.SubCmd.CommandArgs()
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +94,7 @@ func (f ForEachRefCmd) ValidateArgs() ([]string, error) {
 	var postArgFlags []string
 
 	for _, o := range f.PostArgFlags {
-		args, err := o.ValidateArgs()
+		args, err := o.OptionArgs()
 		if err != nil {
 			return nil, err
 		}

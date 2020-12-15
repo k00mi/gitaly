@@ -86,13 +86,13 @@ func TestVisibilityOfHiddenRefs(t *testing.T) {
 			}
 
 			stdout := &bytes.Buffer{}
-			cmd, err := git.SafeBareCmd(ctx, git.CmdStream{Out: stdout}, env, nil, git.SubCmd{
+			cmd, err := git.SafeBareCmd(ctx, env, nil, git.SubCmd{
 				Name: "ls-remote",
 				Args: []string{
 					fmt.Sprintf("%s:%s", "git@localhost", testRepoPath),
 					keepAroundRef,
 				},
-			})
+			}, git.WithStdout(stdout))
 			require.NoError(t, err)
 
 			err = cmd.Wait()

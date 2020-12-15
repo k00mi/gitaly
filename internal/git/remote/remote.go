@@ -12,10 +12,10 @@ import (
 
 //Remove removes the remote from repository
 func Remove(ctx context.Context, cfg config.Cfg, repo repository.GitRepo, name string) error {
-	cmd, err := git.SafeCmd(ctx, repo, nil, git.SubCmd{
-		Name:  "remote",
-		Flags: []git.Option{git.SubSubCmd{Name: "remove"}},
-		Args:  []string{name},
+	cmd, err := git.SafeCmd(ctx, repo, nil, git.SubSubCmd{
+		Name:   "remote",
+		Action: "remove",
+		Args:   []string{name},
 	}, git.WithRefTxHook(ctx, helper.ProtoRepoFromRepo(repo), cfg))
 	if err != nil {
 		return err

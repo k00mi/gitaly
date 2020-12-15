@@ -66,11 +66,14 @@ func (s *server) sshReceivePack(stream gitalypb.SSHService_SSHReceivePackServer,
 		globalOpts = append(globalOpts, git.ValueFlag{"-c", o})
 	}
 
-	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{In: stdin, Out: stdout, Err: stderr}, nil, globalOpts,
+	cmd, err := git.SafeBareCmd(ctx, nil, globalOpts,
 		git.SubCmd{
 			Name: "receive-pack",
 			Args: []string{repoPath},
 		},
+		git.WithStdin(stdin),
+		git.WithStdout(stdout),
+		git.WithStderr(stderr),
 		git.WithReceivePackHooks(ctx, config.Config, req, "ssh"),
 		git.WithGitProtocol(ctx, req),
 	)

@@ -127,9 +127,11 @@ func (s *server) cleanStaleWorktrees(ctx context.Context, repo *gitalypb.Reposit
 
 		if info.ModTime().Before(threshold) {
 			cmd, err := git.SafeCmd(ctx, repo, nil,
-				git.SubCmd{
-					Name:  "worktree",
-					Flags: []git.Option{git.SubSubCmd{"remove"}, git.Flag{Name: "--force"}, git.SubSubCmd{info.Name()}},
+				git.SubSubCmd{
+					Name:   "worktree",
+					Action: "remove",
+					Flags:  []git.Option{git.Flag{Name: "--force"}},
+					Args:   []string{info.Name()},
 				},
 				git.WithRefTxHook(ctx, repo, s.cfg),
 			)
@@ -148,9 +150,9 @@ func (s *server) cleanStaleWorktrees(ctx context.Context, repo *gitalypb.Reposit
 
 func (s *server) cleanDisconnectedWorktrees(ctx context.Context, repo *gitalypb.Repository) error {
 	cmd, err := git.SafeCmd(ctx, repo, nil,
-		git.SubCmd{
-			Name:  "worktree",
-			Flags: []git.Option{git.SubSubCmd{"prune"}},
+		git.SubSubCmd{
+			Name:   "worktree",
+			Action: "prune",
 		},
 		git.WithRefTxHook(ctx, repo, s.cfg),
 	)

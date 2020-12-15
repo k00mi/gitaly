@@ -40,16 +40,3 @@ func ValidateRevisionAllowEmpty(revision []byte) error {
 func ValidateRevision(revision []byte) error {
 	return validateRevision(revision, false)
 }
-
-// BuildGitOptions helps to generate options to the git command.
-// If gitOpts is not empty then its values are passed as part of
-// the "-c" option of the git command, the other values are passed along with the subcommand.
-func BuildGitOptions(gitOpts []string, otherOpts ...string) []string {
-	args := []string{}
-
-	for _, opt := range gitOpts {
-		args = append(args, "-c", opt)
-	}
-
-	return append(args, otherOpts...)
-}

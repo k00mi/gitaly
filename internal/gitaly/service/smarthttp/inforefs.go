@@ -48,7 +48,7 @@ func (s *server) handleInfoRefs(ctx context.Context, service string, req *gitaly
 		return err
 	}
 
-	var globalOpts []git.Option
+	var globalOpts []git.GlobalOption
 	cmdOpts := []git.CmdOpt{git.WithGitProtocol(ctx, req)}
 	if service == "receive-pack" {
 		globalOpts = append(globalOpts, git.ReceivePackConfig()...)
@@ -63,7 +63,7 @@ func (s *server) handleInfoRefs(ctx context.Context, service string, req *gitaly
 		globalOpts = append(globalOpts, git.ValueFlag{"-c", o})
 	}
 
-	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{}, nil, globalOpts, git.SubCmd{
+	cmd, err := git.SafeBareCmd(ctx, nil, globalOpts, git.SubCmd{
 		Name:  service,
 		Flags: []git.Option{git.Flag{Name: "--stateless-rpc"}, git.Flag{Name: "--advertise-refs"}},
 		Args:  []string{repoPath},

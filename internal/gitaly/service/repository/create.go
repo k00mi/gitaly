@@ -21,7 +21,7 @@ func (s *server) CreateRepository(ctx context.Context, req *gitalypb.CreateRepos
 	}
 
 	stderr := &bytes.Buffer{}
-	cmd, err := git.SafeCmdWithoutRepo(ctx, git.CmdStream{Err: stderr}, nil,
+	cmd, err := git.SafeCmdWithoutRepo(ctx, nil,
 		git.SubCmd{
 			Name: "init",
 			Flags: []git.Option{
@@ -30,6 +30,7 @@ func (s *server) CreateRepository(ctx context.Context, req *gitalypb.CreateRepos
 			},
 			Args: []string{diskPath},
 		},
+		git.WithStderr(stderr),
 	)
 	if err != nil {
 		return nil, helper.ErrInternalf("create git init: %w", err)

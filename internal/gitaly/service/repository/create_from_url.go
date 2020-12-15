@@ -23,7 +23,7 @@ func (s *server) cloneFromURLCommand(ctx context.Context, repo *gitalypb.Reposit
 		return nil, helper.ErrInternal(err)
 	}
 
-	globalFlags := []git.Option{
+	globalFlags := []git.GlobalOption{
 		git.ValueFlag{Name: "-c", Value: "http.followRedirects=false"},
 	}
 
@@ -47,12 +47,13 @@ func (s *server) cloneFromURLCommand(ctx context.Context, repo *gitalypb.Reposit
 		globalFlags = append(globalFlags, git.ValueFlag{Name: "-c", Value: fmt.Sprintf("http.extraHeader=%s", authHeader)})
 	}
 
-	return git.SafeBareCmd(ctx, git.CmdStream{Err: stderr}, nil, globalFlags,
+	return git.SafeBareCmd(ctx, nil, globalFlags,
 		git.SubCmd{
 			Name:        "clone",
 			Flags:       cloneFlags,
 			PostSepArgs: []string{u.String(), repositoryFullPath},
 		},
+		git.WithStderr(stderr),
 		git.WithRefTxHook(ctx, repo, s.cfg),
 	)
 }

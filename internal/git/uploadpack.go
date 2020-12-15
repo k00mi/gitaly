@@ -1,12 +1,12 @@
 package git
 
-import "gitlab.com/gitlab-org/gitaly/internal/gitalyssh"
-
 // UploadPackFilterConfig confines config options that are required to allow
 // partial-clone filters.
-func UploadPackFilterConfig() []Option {
-	return []Option{
+func UploadPackFilterConfig() []GlobalOption {
+	return []GlobalOption{
 		ValueFlag{"-c", "uploadpack.allowFilter=true"},
-		ValueFlag{"-c", gitalyssh.EnvVarUploadPackAllowAnySHA1InWant},
+		// Enables the capability to request individual SHA1's from the
+		// remote repo.
+		ValueFlag{"-c", "uploadpack.allowAnySHA1InWant=true"},
 	}
 }

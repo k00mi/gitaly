@@ -2,8 +2,8 @@ package git
 
 // ReceivePackConfig contains config options we want to enforce when
 // receiving a push with git-receive-pack.
-func ReceivePackConfig() []Option {
-	return []Option{
+func ReceivePackConfig() []GlobalOption {
+	return []GlobalOption{
 		// In case the repository belongs to an object pool, we want to prevent
 		// Git from including the pool's refs in the ref advertisement. We do
 		// this by rigging core.alternateRefsCommand to produce no output.

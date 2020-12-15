@@ -283,16 +283,14 @@ func (s *server) repoWithBranchCommit(ctx context.Context, srcRepo, targetRepo *
 	if err != nil {
 		return err
 	}
-	// to enable fetching a specific SHA:
-	env = append(env, gitalyssh.EnvVarUploadPackAllowAnySHA1InWant)
 
 	srcRepoPath, err := s.locator.GetRepoPath(srcRepo)
 	if err != nil {
 		return err
 	}
 
-	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{}, env,
-		[]git.Option{git.ValueFlag{"--git-dir", srcRepoPath}},
+	cmd, err := git.SafeBareCmd(ctx, env,
+		[]git.GlobalOption{git.ValueFlag{"--git-dir", srcRepoPath}},
 		git.SubCmd{
 			Name:  "fetch",
 			Flags: []git.Option{git.Flag{Name: "--no-tags"}},

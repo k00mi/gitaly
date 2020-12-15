@@ -53,7 +53,7 @@ func (s *server) CreateFork(ctx context.Context, req *gitalypb.CreateForkRequest
 		return nil, err
 	}
 
-	cmd, err := git.SafeBareCmd(ctx, git.CmdStream{}, env, nil,
+	cmd, err := git.SafeBareCmd(ctx, env, nil,
 		git.SubCmd{
 			Name: "clone",
 			Flags: []git.Option{

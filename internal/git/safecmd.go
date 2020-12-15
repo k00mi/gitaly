@@ -37,8 +37,7 @@ func incrInvalidArg(subcmdName string) {
 
 // Cmd is an interface for safe git commands
 type Cmd interface {
-	ValidateArgs() ([]string, error)
-	IsCmd()
+	CommandArgs() ([]string, error)
 	Subcommand() string
 }
 
@@ -50,22 +49,17 @@ type SubCmd struct {
 	PostSepArgs []string // post separator (i.e. "--") positional args
 }
 
-// CmdStream represents standard input/output streams for a command
-type CmdStream struct {
+// cmdStream represents standard input/output streams for a command
+type cmdStream struct {
 	In       io.Reader // standard input
 	Out, Err io.Writer // standard output and error
 }
 
-var subCmdNameRegex = regexp.MustCompile(`^[[:alnum:]]+(-[[:alnum:]]+)*$`)
-
-// IsCmd allows SubCmd to satisfy the Cmd interface
-func (sc SubCmd) IsCmd() {}
-
 // Subcommand returns the subcommand name
 func (sc SubCmd) Subcommand() string { return sc.Name }
 
-// ValidateArgs checks all arguments in the sub command and validates them
-func (sc SubCmd) ValidateArgs() ([]string, error) {
+// CommandArgs checks all arguments in the sub command and validates them
+func (sc SubCmd) CommandArgs() ([]string, error) {
 	var safeArgs []string
 
 	if _, ok := subcommands[sc.Name]; !ok {
@@ -73,57 +67,100 @@ func (sc SubCmd) ValidateArgs() ([]string, error) {
 	}
 	safeArgs = append(safeArgs, sc.Name)
 
-	for _, o := range sc.Flags {
-		args, err := o.ValidateArgs()
-		if err != nil {
-			return nil, err
-		}
-		safeArgs = append(safeArgs, args...)
+	commandArgs, err := assembleCommandArgs(sc.Name, sc.Flags, sc.Args, sc.PostSepArgs)
+	if err != nil {
+		return nil, err
 	}
-
-	for _, a := range sc.Args {
-		if err := validatePositionalArg(a); err != nil {
-			return nil, err
-		}
-		safeArgs = append(safeArgs, a)
-	}
-
-	if supportsEndOfOptions(sc.Name) {
-		safeArgs = append(safeArgs, "--end-of-options")
-	}
-
-	if len(sc.PostSepArgs) > 0 {
-		safeArgs = append(safeArgs, "--")
-	}
-
-	// post separator args do not need any validation
-	safeArgs = append(safeArgs, sc.PostSepArgs...)
+	safeArgs = append(safeArgs, commandArgs...)
 
 	return safeArgs, nil
 }
 
+func assembleCommandArgs(command string, flags []Option, args []string, postSepArgs []string) ([]string, error) {
+	var commandArgs []string
+
+	for _, o := range flags {
+		args, err := o.OptionArgs()
+		if err != nil {
+			return nil, err
+		}
+		commandArgs = append(commandArgs, args...)
+	}
+
+	for _, a := range args {
+		if err := validatePositionalArg(a); err != nil {
+			return nil, err
+		}
+		commandArgs = append(commandArgs, a)
+	}
+
+	if supportsEndOfOptions(command) {
+		commandArgs = append(commandArgs, "--end-of-options")
+	}
+
+	if len(postSepArgs) > 0 {
+		commandArgs = append(commandArgs, "--")
+	}
+
+	// post separator args do not need any validation
+	commandArgs = append(commandArgs, postSepArgs...)
+
+	return commandArgs, nil
+}
+
+// GlobalOption is an interface for all options which can be globally applied
+// to git commands. This is the command-inspecific part before the actual
+// command that's being run, e.g. the `-c` part in `git -c foo.bar=value
+// command`.
+type GlobalOption interface {
+	GlobalArgs() ([]string, error)
+}
+
 // Option is a git command line flag with validation logic
 type Option interface {
-	IsOption()
-	ValidateArgs() ([]string, error)
+	OptionArgs() ([]string, error)
 }
 
 // SubSubCmd is a positional argument that appears in the list of options for
 // a subcommand.
 type SubSubCmd struct {
+	// Name is the name of the subcommand, e.g. "remote" in `git remote set-url`
 	Name string
+	// Action is the action of the subcommand, e.g. "set-url" in `git remote set-url`
+	Action string
+
+	// Flags are optional flags before the positional args
+	Flags []Option
+	// Args are positional arguments after all flags
+	Args []string
+	// PostSepArgs are positional args after the "--" separator
+	PostSepArgs []string
 }
 
-// IsOption is a method present on all Flag interface implementations
-func (SubSubCmd) IsOption() {}
+func (sc SubSubCmd) Subcommand() string { return sc.Name }
 
-// ValidateArgs returns an error if the command name or options are not
-// sanitary
-func (sc SubSubCmd) ValidateArgs() ([]string, error) {
-	if !subCmdNameRegex.MatchString(sc.Name) {
-		return nil, fmt.Errorf("invalid sub-sub command name %q: %w", sc.Name, ErrInvalidArg)
+var actionRegex = regexp.MustCompile(`^[[:alnum:]]+[-[:alnum:]]*$`)
+
+func (sc SubSubCmd) CommandArgs() ([]string, error) {
+	var safeArgs []string
+
+	if _, ok := subcommands[sc.Name]; !ok {
+		return nil, fmt.Errorf("invalid sub command name %q: %w", sc.Name, ErrInvalidArg)
 	}
-	return []string{sc.Name}, nil
+	safeArgs = append(safeArgs, sc.Name)
+
+	if !actionRegex.MatchString(sc.Action) {
+		return nil, fmt.Errorf("invalid sub command action %q: %w", sc.Action, ErrInvalidArg)
+	}
+	safeArgs = append(safeArgs, sc.Action)
+
+	commandArgs, err := assembleCommandArgs(sc.Name, sc.Flags, sc.Args, sc.PostSepArgs)
+	if err != nil {
+		return nil, err
+	}
+	safeArgs = append(safeArgs, commandArgs...)
+
+	return safeArgs, nil
 }
 
 // ConfigPair is a sub-command option for use with commands like "git config"
@@ -138,13 +175,10 @@ type ConfigPair struct {
 	Scope string
 }
 
-// IsOption is a method present on all Flag interface implementations
-func (ConfigPair) IsOption() {}
-
 var configKeyRegex = regexp.MustCompile(`^[[:alnum:]]+[-[:alnum:]]*\.(.+\.)*[[:alnum:]]+[-[:alnum:]]*$`)
 
-// ValidateArgs validates the config pair args
-func (cp ConfigPair) ValidateArgs() ([]string, error) {
+// OptionArgs validates the config pair args
+func (cp ConfigPair) OptionArgs() ([]string, error) {
 	if !configKeyRegex.MatchString(cp.Key) {
 		return nil, fmt.Errorf("config key %q failed regexp validation: %w", cp.Key, ErrInvalidArg)
 	}
@@ -157,11 +191,12 @@ type Flag struct {
 	Name string
 }
 
-// IsOption is a method present on all Flag interface implementations
-func (Flag) IsOption() {}
+func (f Flag) GlobalArgs() ([]string, error) {
+	return f.OptionArgs()
+}
 
-// ValidateArgs returns an error if the flag is not sanitary
-func (f Flag) ValidateArgs() ([]string, error) {
+// OptionArgs returns an error if the flag is not sanitary
+func (f Flag) OptionArgs() ([]string, error) {
 	if !flagRegex.MatchString(f.Name) {
 		return nil, fmt.Errorf("flag %q failed regex validation: %w", f.Name, ErrInvalidArg)
 	}
@@ -175,11 +210,12 @@ type ValueFlag struct {
 	Value string
 }
 
-// IsOption is a method present on all Flag interface implementations
-func (ValueFlag) IsOption() {}
+func (vf ValueFlag) GlobalArgs() ([]string, error) {
+	return vf.OptionArgs()
+}
 
-// ValidateArgs returns an error if the flag is not sanitary
-func (vf ValueFlag) ValidateArgs() ([]string, error) {
+// OptionArgs returns an error if the flag is not sanitary
+func (vf ValueFlag) OptionArgs() ([]string, error) {
 	if !flagRegex.MatchString(vf.Name) {
 		return nil, fmt.Errorf("value flag %q failed regex validation: %w", vf.Name, ErrInvalidArg)
 	}
@@ -201,8 +237,8 @@ func validatePositionalArg(arg string) error {
 }
 
 // ConvertGlobalOptions converts a protobuf message to command-line flags
-func ConvertGlobalOptions(options *gitalypb.GlobalOptions) []Option {
-	var globals []Option
+func ConvertGlobalOptions(options *gitalypb.GlobalOptions) []GlobalOption {
+	var globals []GlobalOption
 
 	if options == nil {
 		return globals
@@ -217,7 +253,7 @@ func ConvertGlobalOptions(options *gitalypb.GlobalOptions) []Option {
 
 type cmdCfg struct {
 	env             []string
-	globals         []Option
+	globals         []GlobalOption
 	stdin           io.Reader
 	stdout          io.Writer
 	stderr          io.Writer
@@ -284,13 +320,13 @@ func handleOpts(ctx context.Context, sc Cmd, cc *cmdCfg, opts []CmdOpt) error {
 
 // SafeCmd creates a command.Command with the given args and Repository. It
 // validates the arguments in the command before executing.
-func SafeCmd(ctx context.Context, repo repository.GitRepo, globals []Option, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
+func SafeCmd(ctx context.Context, repo repository.GitRepo, globals []GlobalOption, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
 	return SafeCmdWithEnv(ctx, nil, repo, globals, sc, opts...)
 }
 
 // SafeCmdWithEnv creates a command.Command with the given args, environment, and Repository. It
 // validates the arguments in the command before executing.
-func SafeCmdWithEnv(ctx context.Context, env []string, repo repository.GitRepo, globals []Option, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
+func SafeCmdWithEnv(ctx context.Context, env []string, repo repository.GitRepo, globals []GlobalOption, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
 	cc := &cmdCfg{}
 
 	if err := handleOpts(ctx, sc, cc, opts); err != nil {
@@ -302,16 +338,16 @@ func SafeCmdWithEnv(ctx context.Context, env []string, repo repository.GitRepo, 
 		return nil, err
 	}
 
-	return NewCommandFactory().unsafeCmdWithEnv(ctx, append(env, cc.env...), CmdStream{
+	return NewCommandFactory().unsafeCmdWithEnv(ctx, append(env, cc.env...), cmdStream{
 		In:  cc.stdin,
 		Out: cc.stdout,
 		Err: cc.stderr,
 	}, repo, args...)
 }
 
-// SafeBareCmd creates a git.Command with the given args, stream, and env. It
+// SafeBareCmd creates a git.Command with the given args and env. It
 // validates the arguments in the command before executing.
-func SafeBareCmd(ctx context.Context, stream CmdStream, env []string, globals []Option, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
+func SafeBareCmd(ctx context.Context, env []string, globals []GlobalOption, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
 	cc := &cmdCfg{}
 
 	if err := handleOpts(ctx, sc, cc, opts); err != nil {
@@ -323,11 +359,15 @@ func SafeBareCmd(ctx context.Context, stream CmdStream, env []string, globals []
 		return nil, err
 	}
 
-	return NewCommandFactory().unsafeBareCmd(ctx, stream, append(env, cc.env...), args...)
+	return NewCommandFactory().unsafeBareCmd(ctx, cmdStream{
+		In:  cc.stdin,
+		Out: cc.stdout,
+		Err: cc.stderr,
+	}, append(env, cc.env...), args...)
 }
 
 // SafeBareCmdInDir runs SafeBareCmd in the dir.
-func SafeBareCmdInDir(ctx context.Context, dir string, stream CmdStream, env []string, globals []Option, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
+func SafeBareCmdInDir(ctx context.Context, dir string, env []string, globals []GlobalOption, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
 	if dir == "" {
 		return nil, errors.New("no 'dir' provided")
 	}
@@ -343,13 +383,17 @@ func SafeBareCmdInDir(ctx context.Context, dir string, stream CmdStream, env []s
 		return nil, err
 	}
 
-	return NewCommandFactory().unsafeBareCmdInDir(ctx, dir, stream, append(env, cc.env...), args...)
+	return NewCommandFactory().unsafeBareCmdInDir(ctx, dir, cmdStream{
+		In:  cc.stdin,
+		Out: cc.stdout,
+		Err: cc.stderr,
+	}, append(env, cc.env...), args...)
 }
 
 // SafeStdinCmd creates a git.Command with the given args and Repository that is
 // suitable for Write()ing to. It validates the arguments in the command before
 // executing.
-func SafeStdinCmd(ctx context.Context, repo repository.GitRepo, globals []Option, sc SubCmd, opts ...CmdOpt) (*command.Command, error) {
+func SafeStdinCmd(ctx context.Context, repo repository.GitRepo, globals []GlobalOption, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
 	cc := &cmdCfg{}
 
 	if err := handleOpts(ctx, sc, cc, opts); err != nil {
@@ -366,7 +410,7 @@ func SafeStdinCmd(ctx context.Context, repo repository.GitRepo, globals []Option
 
 // SafeCmdWithoutRepo works like Command but without a git repository. It
 // validates the arguments in the command before executing.
-func SafeCmdWithoutRepo(ctx context.Context, stream CmdStream, globals []Option, sc SubCmd, opts ...CmdOpt) (*command.Command, error) {
+func SafeCmdWithoutRepo(ctx context.Context, globals []GlobalOption, sc Cmd, opts ...CmdOpt) (*command.Command, error) {
 	cc := &cmdCfg{}
 
 	if err := handleOpts(ctx, sc, cc, opts); err != nil {
@@ -378,10 +422,14 @@ func SafeCmdWithoutRepo(ctx context.Context, stream CmdStream, globals []Option,
 		return nil, err
 	}
 
-	return NewCommandFactory().unsafeBareCmd(ctx, stream, cc.env, args...)
+	return NewCommandFactory().unsafeBareCmd(ctx, cmdStream{
+		In:  cc.stdin,
+		Out: cc.stdout,
+		Err: cc.stderr,
+	}, cc.env, args...)
 }
 
-func combineArgs(globals []Option, sc Cmd, cc *cmdCfg) (_ []string, err error) {
+func combineArgs(globals []GlobalOption, sc Cmd, cc *cmdCfg) (_ []string, err error) {
 	var args []string
 
 	defer func() {
@@ -390,15 +438,15 @@ func combineArgs(globals []Option, sc Cmd, cc *cmdCfg) (_ []string, err error) {
 		}
 	}()
 
-	for _, g := range append(globals, cc.globals...) {
-		gargs, err := g.ValidateArgs()
+	for _, global := range append(globals, cc.globals...) {
+		globalArgs, err := global.GlobalArgs()
 		if err != nil {
 			return nil, err
 		}
-		args = append(args, gargs...)
+		args = append(args, globalArgs...)
 	}
 
-	scArgs, err := sc.ValidateArgs()
+	scArgs, err := sc.CommandArgs()
 	if err != nil {
 		return nil, err
 	}

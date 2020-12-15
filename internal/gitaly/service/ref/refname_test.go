@@ -210,7 +210,7 @@ func TestFindRefCmd(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		args, err := tc.cmd.ValidateArgs()
+		args, err := tc.cmd.CommandArgs()
 		require.Equal(t, tc.expectedErr, err)
 		require.Equal(t, tc.expectedArgs, args)
 	}
