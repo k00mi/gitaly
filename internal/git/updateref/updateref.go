@@ -62,6 +62,12 @@ func New(ctx context.Context, repo repository.GitRepo, opts ...UpdaterOpt) (*Upd
 		return nil, err
 	}
 
+	// By writing an explicit "start" to the command, we enable
+	// transactional behaviour. Which effectively means that without an
+	// explicit "commit", no changes will be inadvertently committed to
+	// disk.
+	fmt.Fprintf(cmd, "start\x00")
+
 	return &Updater{repo: repo, cmd: cmd}, nil
 }
 
@@ -86,6 +92,8 @@ func (u *Updater) Delete(ref string) error {
 
 // Wait applies the commands specified in other calls to the Updater
 func (u *Updater) Wait() error {
+	fmt.Fprintf(u.cmd, "commit\x00")
+
 	if err := u.cmd.Wait(); err != nil {
 		return fmt.Errorf("git update-ref: %v", err)
 	}
