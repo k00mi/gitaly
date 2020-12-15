@@ -124,13 +124,12 @@ func (m *GitLabHookManager) preReceiveHook(ctx context.Context, payload git.Hook
 		return fmt.Errorf("creating custom hooks executor: %w", err)
 	}
 
-	customHooksEnv := append(env, customHooksEnv(payload)...)
-	customHooksEnv = append(customHooksEnv, pushOptionsEnv(pushOptions)...)
+	customEnv := customHooksEnv(payload, pushOptions)
 
 	if err = executor(
 		ctx,
 		nil,
-		customHooksEnv,
+		append(env, customEnv...),
 		bytes.NewReader(changes),
 		stdout,
 		stderr,

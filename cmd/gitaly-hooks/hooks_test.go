@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
-	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	gitalyhook "gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/service/hook"
@@ -51,7 +50,7 @@ func envForHooks(t testing.TB, gitlabShellDir string, repo *gitalypb.Repository,
 		"GITALY_BIN_DIR=" + config.Config.BinDir,
 		fmt.Sprintf("%s=%s", gitalylog.GitalyLogDirEnvKey, gitlabShellDir),
 	}...)
-	env = append(env, hooks.GitPushOptions(gitPushOptions)...)
+	env = append(env, gitPushOptions...)
 
 	if proxyValues.HTTPProxy != "" {
 		env = append(env, fmt.Sprintf("HTTP_PROXY=%s", proxyValues.HTTPProxy))
@@ -226,7 +225,9 @@ func testHooksPrePostReceive(t *testing.T) {
 					HTTPSProxy: httpsProxy,
 					NoProxy:    noProxy,
 				},
-				gitPushOptions...,
+				"GIT_PUSH_OPTION_COUNT=2",
+				"GIT_PUSH_OPTION_0=gitpushoption1",
+				"GIT_PUSH_OPTION_1=gitpushoption2",
 			)
 
 			cmd.Dir = testRepoPath
