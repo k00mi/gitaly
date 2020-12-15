@@ -75,7 +75,7 @@ graph LR;
 
 We cannot tag on `D` as it never reached production.
 
-`release-tools` follows this algoritm:
+`release-tools` follows this algorithm:
 1. create a stable branch from `GITALY_SERVER_VERSION` (commit `C`),
 1. bump the version and
 1. prepare the changelog (commit `C'`).
