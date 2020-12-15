@@ -394,11 +394,6 @@ func TestPostReceivePackToHooks(t *testing.T) {
 	}(config.Config)
 	config.Config.GitlabShell.Dir = tempGitlabShellDir
 
-	defer func(override string) {
-		hooks.Override = override
-	}(hooks.Override)
-	hooks.Override = ""
-
 	repo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
@@ -426,11 +421,6 @@ func TestPostReceivePackToHooks(t *testing.T) {
 
 	config.Config.Gitlab.URL = serverURL
 	config.Config.Gitlab.SecretFile = filepath.Join(tempGitlabShellDir, ".gitlab_shell_secret")
-
-	cwd, err := os.Getwd()
-	require.NoError(t, err)
-	hookDir := filepath.Join(cwd, "../../../../ruby", "git-hooks")
-	hooks.Override = hookDir
 
 	stream, err := client.PostReceivePack(ctx)
 	require.NoError(t, err)
@@ -482,11 +472,6 @@ func testPostReceiveWithTransactionsViaPraefect(t *testing.T, ctx context.Contex
 	defer func(cfg config.Cfg) {
 		config.Config = cfg
 	}(config.Config)
-
-	defer func(override string) {
-		hooks.Override = override
-	}(hooks.Override)
-	hooks.Override = ""
 
 	secretToken := "secret token"
 	glID := "key-1234"
@@ -591,11 +576,6 @@ func TestPostReceiveWithReferenceTransactionHook(t *testing.T) {
 	}(config.Config.Gitlab.SecretFile)
 	config.Config.Gitlab.SecretFile = filepath.Join(gitlabShellDir, ".gitlab_shell_secret")
 	testhelper.WriteShellSecretFile(t, gitlabShellDir, "secret123")
-
-	defer func(override string) {
-		hooks.Override = override
-	}(hooks.Override)
-	hooks.Override = ""
 
 	refTransactionServer.called = 0
 
