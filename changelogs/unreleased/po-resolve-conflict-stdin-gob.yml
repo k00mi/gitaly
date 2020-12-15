@@ -1,0 +1,5 @@
+---
+title: Update resolve conflict command to use gob over stdin
+merge_request: 2903
+author:
+type: fixed
