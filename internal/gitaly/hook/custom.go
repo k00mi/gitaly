@@ -144,3 +144,19 @@ func customHooksEnv(payload git.HooksPayload) []string {
 		"GL_PROTOCOL=" + payload.ReceiveHooksPayload.Protocol,
 	}
 }
+
+// pushOptionsEnv turns a slice of git push option values into a GIT_PUSH_OPTION_COUNT and individual
+// GIT_PUSH_OPTION_0, GIT_PUSH_OPTION_1 etc.
+func pushOptionsEnv(options []string) []string {
+	if len(options) == 0 {
+		return []string{}
+	}
+
+	envVars := []string{fmt.Sprintf("GIT_PUSH_OPTION_COUNT=%d", len(options))}
+
+	for i, pushOption := range options {
+		envVars = append(envVars, fmt.Sprintf("GIT_PUSH_OPTION_%d=%s", i, pushOption))
+	}
+
+	return envVars
+}

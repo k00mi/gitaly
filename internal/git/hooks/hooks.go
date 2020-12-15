@@ -1,7 +1,6 @@
 package hooks
 
 import (
-	"fmt"
 	"path/filepath"
 
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
@@ -24,20 +23,4 @@ func Path(cfg config.Cfg) string {
 	}
 
 	return filepath.Join(cfg.Ruby.Dir, "git-hooks")
-}
-
-// GitPushOptions turns a slice of git push option values into a GIT_PUSH_OPTION_COUNT and individual
-// GIT_PUSH_OPTION_0, GIT_PUSH_OPTION_1 etc.
-func GitPushOptions(options []string) []string {
-	if len(options) == 0 {
-		return []string{}
-	}
-
-	envVars := []string{fmt.Sprintf("GIT_PUSH_OPTION_COUNT=%d", len(options))}
-
-	for i, pushOption := range options {
-		envVars = append(envVars, fmt.Sprintf("GIT_PUSH_OPTION_%d=%s", i, pushOption))
-	}
-
-	return envVars
 }
