@@ -5,11 +5,11 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/gob"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"time"
 
@@ -19,18 +19,15 @@ import (
 )
 
 type resolveSubcommand struct {
-	request string
 }
 
 func (cmd *resolveSubcommand) Flags() *flag.FlagSet {
-	flags := flag.NewFlagSet("resolve", flag.ExitOnError)
-	flags.StringVar(&cmd.request, "request", "", "git2go.ResolveCommand")
-	return flags
+	return flag.NewFlagSet("resolve", flag.ExitOnError)
 }
 
-func (cmd resolveSubcommand) Run(context.Context, io.Reader, io.Writer) error {
-	request, err := git2go.ResolveCommandFromSerialized(cmd.request)
-	if err != nil {
+func (cmd resolveSubcommand) Run(_ context.Context, r io.Reader, w io.Writer) error {
+	var request git2go.ResolveCommand
+	if err := gob.NewDecoder(r).Decode(&request); err != nil {
 		return err
 	}
 
@@ -193,11 +190,7 @@ func (cmd resolveSubcommand) Run(context.Context, io.Reader, io.Writer) error {
 		},
 	}
 
-	if err := response.SerializeTo(os.Stdout); err != nil {
-		return fmt.Errorf("serializing response: %w", err)
-	}
-
-	return nil
+	return gob.NewEncoder(w).Encode(response)
 }
 
 func mergeFileResult(odb *git.Odb, c git.IndexConflict) (*git.MergeFileResult, error) {
