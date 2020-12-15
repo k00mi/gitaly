@@ -3,8 +3,10 @@
 package datastore
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -348,6 +350,22 @@ func TestPostgresListener_Listen(t *testing.T) {
 	})
 }
 
+func requireEqualNotificationEntries(t *testing.T, d string, entries []notificationEntry) {
+	t.Helper()
+
+	var nes []notificationEntry
+	require.NoError(t, json.NewDecoder(strings.NewReader(d)).Decode(&nes))
+
+	for _, es := range [][]notificationEntry{entries, nes} {
+		for _, e := range es {
+			sort.Strings(e.RelativePaths)
+		}
+		sort.Slice(es, func(i, j int) bool { return es[i].VirtualStorage < es[j].VirtualStorage })
+	}
+
+	require.EqualValues(t, entries, nes)
+}
+
 func TestPostgresListener_Listen_repositories_delete(t *testing.T) {
 	db := getDB(t)
 
@@ -361,7 +379,8 @@ func TestPostgresListener_Listen_repositories_delete(t *testing.T) {
 				INSERT INTO repositories
 				VALUES ('praefect-1', '/path/to/repo/1', 1),
 					('praefect-1', '/path/to/repo/2', 1),
-					('praefect-1', '/path/to/repo/3', 0)`)
+					('praefect-1', '/path/to/repo/3', 0),
+					('praefect-2', '/path/to/repo/1', 1)`)
 			require.NoError(t, err)
 		},
 		func(t *testing.T) {
@@ -370,16 +389,10 @@ func TestPostgresListener_Listen_repositories_delete(t *testing.T) {
 		},
 		func(t *testing.T, n glsql.Notification) {
 			require.Equal(t, channel, n.Channel)
-			require.JSONEq(t, `
-				{
-					"old": [
-						{"virtual_storage":"praefect-1","relative_path":"/path/to/repo/1","generation":1,"primary":null},
-						{"virtual_storage":"praefect-1","relative_path":"/path/to/repo/2","generation":1,"primary":null}
-					],
-					"new" : null
-				}`,
-				n.Payload,
-			)
+			requireEqualNotificationEntries(t, n.Payload, []notificationEntry{
+				{VirtualStorage: "praefect-1", RelativePaths: []string{"/path/to/repo/1", "/path/to/repo/2"}},
+				{VirtualStorage: "praefect-2", RelativePaths: []string{"/path/to/repo/1"}},
+			})
 		},
 	)
 }
@@ -403,16 +416,7 @@ func TestPostgresListener_Listen_storage_repositories_insert(t *testing.T) {
 		},
 		func(t *testing.T, n glsql.Notification) {
 			require.Equal(t, channel, n.Channel)
-			require.JSONEq(t, `
-				{
-					"old":null,
-					"new":[
-						{"virtual_storage":"praefect-1","relative_path":"/path/to/repo","storage":"gitaly-1","generation":0,"assigned":true},
-						{"virtual_storage":"praefect-1","relative_path":"/path/to/repo","storage":"gitaly-2","generation":0,"assigned":true}
-					]
-				}`,
-				n.Payload,
-			)
+			requireEqualNotificationEntries(t, n.Payload, []notificationEntry{{VirtualStorage: "praefect-1", RelativePaths: []string{"/path/to/repo"}}})
 		},
 	)
 }
@@ -435,14 +439,25 @@ func TestPostgresListener_Listen_storage_repositories_update(t *testing.T) {
 		},
 		func(t *testing.T, n glsql.Notification) {
 			require.Equal(t, channel, n.Channel)
-			require.JSONEq(t, `
-				{
-					"old" : [{"virtual_storage":"praefect-1","relative_path":"/path/to/repo","storage":"gitaly-1","generation":0,"assigned":true}],
-					"new" : [{"virtual_storage":"praefect-1","relative_path":"/path/to/repo","storage":"gitaly-1","generation":1,"assigned":true}]
-				}`,
-				n.Payload,
-			)
+			requireEqualNotificationEntries(t, n.Payload, []notificationEntry{{VirtualStorage: "praefect-1", RelativePaths: []string{"/path/to/repo"}}})
 		},
+	)
+}
+
+func TestPostgresListener_Listen_storage_empty_notification(t *testing.T) {
+	db := getDB(t)
+
+	const channel = "storage_repositories_updates"
+
+	testListener(
+		t,
+		channel,
+		func(t *testing.T) {},
+		func(t *testing.T) {
+			_, err := db.DB.Exec(`UPDATE storage_repositories SET generation = 1`)
+			require.NoError(t, err)
+		},
+		nil, // no notification events expected
 	)
 }
 
@@ -467,13 +482,7 @@ func TestPostgresListener_Listen_storage_repositories_delete(t *testing.T) {
 		},
 		func(t *testing.T, n glsql.Notification) {
 			require.Equal(t, channel, n.Channel)
-			require.JSONEq(t, `
-				{
-					"old" : [{"virtual_storage":"praefect-1","relative_path":"/path/to/repo","storage":"gitaly-1","generation":0,"assigned":true}],
-					"new" : null
-				}`,
-				n.Payload,
-			)
+			requireEqualNotificationEntries(t, n.Payload, []notificationEntry{{VirtualStorage: "praefect-1", RelativePaths: []string{"/path/to/repo"}}})
 		},
 	)
 }
@@ -515,9 +524,16 @@ func testListener(t *testing.T, channel string, setup func(t *testing.T), trigge
 
 	select {
 	case <-time.After(time.Second):
+		if verifier == nil {
+			// no notifications expected
+			return
+		}
 		require.FailNow(t, "no notifications for too long period")
 	case <-receivedChan:
 	}
 
+	if verifier == nil {
+		require.Failf(t, "no notifications expected", "received: %v", notification)
+	}
 	verifier(t, notification)
 }
