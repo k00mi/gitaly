@@ -86,24 +86,32 @@ sequenceDiagram
 *Note: the above interaction between the praefect and nodes A-B-C is an all-or-nothing transaction. All nodes must complete in success, otherwise a single node failure will cause the entire transaction to fail. This will be improved when replication is introduced.*
 
 ### 3. Replication
-The next phase is to enable replication of data between nodes. This makes transactions more efficient and fault tolerant. This could be done a few ways:
 
-#### Node Orchestrated [👎]
-Node orchestrated puts the intelligence of replication into one of the nodes being modified:
+Praefect relies on replication when a Gitaly RPC doesn't support transactions or
+a repository replica needs to be repaired.
+
+For transaction mutator RPCs, Praefect attempts to make the same change to a
+quroum of a repository replicas in a single transactional write. If a quorom of replicas
+successfully applies the RPC, then replication will only be scheduled for any
+replicas that were unsuccessful. See the section on [strong consistency
+design](#strong-consistency-design) for more details.
 
 ```mermaid
 sequenceDiagram
 	Praefect->>Node A: Modify repo X
-	activate Node A
-	Node A->>Node B: Modify repo X
-	Node A->>Node C: Modify repo X
-	Node A->>Praefect: Modification successful!
+	Praefect->>Node B: Modify repo X
+	Praefect->>Node C: Modify repo X
+	Node A->>Praefect: Success :-)
+	Node B->>Praefect: Success :-)
+	Node C->>Praefect: FAILURE :'(
+	Praefect->>Node C: Replicate From A
+	Node C->>Praefect: Success!
 ```
 
-Orchestration requires designating a leader node for the transaction. This leader node becomes a critical path for all nodes involved. Ideally, we want several simpler (less riskier) operations that can succeed/fail independently of each other. This way, failure and recovery can be handled externally of the nodes.
-
-#### Praefect Orchestrated [👍]
-With the praefect orchestrating replication, we are isolating the critical path to a stateless service. Stateless services are preferred for the critical path since another praefect can pick up the task after a praefect failure.
+When Praefect proxies a non-transactional mutator RPC, it will first route the
+RPC to the current primary Gitaly for the given repository. Once the RPC
+completes, Praefect will schedule replication of these changes from the primary
+to all secondaries.
 
 ```mermaid
 sequenceDiagram
@@ -115,9 +123,52 @@ sequenceDiagram
 	Node C->>Praefect: Success!
 ```
 
-*Note: Once Node-A propagates changes to a peer, Node-A is no longer the critical path for subsequent propagations. If Node-A fails after a second peer is propagated, that second peer can become the new leader and resume replications.*
+#### Replication Process
 
-##### Replication Logic
+The actual replication process is still in active development. At the time of
+this writing, the replication process looks like this:
+
+1. Instruct the target Gitaly to replicate from the source Gitaly
+   1. Does the target repository exist?
+      - Yes: continue
+      - No:
+         1. Snapshot the repository from the source Gitaly
+         1. Extract the snapshot to the target Gitaly
+         1. Fetch changes from the source Gitaly
+         1. Sync misc files (e.g. info attributes)
+1. Does the source repository have an object pool?
+   - No: continue
+   - Yes:
+      1. Get source repository object pool information
+      1. Manipulate object pool to work for target repo
+      1. Link target repo to manipulated object pool
+
+##### Replication Process Concerns
+
+The replication process has been tested in production and works well for small
+repositories. For larger repositories, such as `www-gitlab-com` and
+`gitlab-org/gitlab`, it starts to show signs of stress.
+
+The snapshot process is very resource intensive for fork operations. When
+snapshotting a large repo, you end up with n-1 (n == replica count) copies of
+the repository being compressed and extracted to secondary replicas.
+
+Adding to this stress is the constraint of storage limitations for gitlab.com
+users. The GitLab handbook (`www-gitlab-com`) is now larger than the storage
+quota for free users. Until a secondary replica performs housekeeping, it
+will consume the storage quota of the extracted snapshot. If Praefect instead
+used fast forking (https://gitlab.com/gitlab-org/gitlab/-/issues/24523), this
+would not be an issue since forked copies would only use a small amount of
+additional data.
+
+To complicates matter even more, read distribution can contribute to
+inconsistent behavior when attempting to determine how much storage a user has
+consumed. Since stating a repository's disk space is a read-only operation, it
+is load balanced across all up to date replicas of the repository. If any of
+those replicas still has the duplicated fork data, this will lead to a much
+higher disk usage being reported than a replica that has been deduplicated.
+
+#### Replication Logic
 
 Here are the steps during a Gitaly client GRPC call intercepted by Praefect:
 
