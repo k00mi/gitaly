@@ -221,7 +221,7 @@ func dialGitaly(payload git.HooksPayload) (*grpc.ClientConn, error) {
 }
 
 func hookEnvironment(payload git.HooksPayload) ([]string, error) {
-	environment := command.AllowedEnvironment()
+	environment := command.AllowedEnvironment(os.Environ())
 
 	for _, kv := range os.Environ() {
 		if strings.HasPrefix(kv, "GL_") {
