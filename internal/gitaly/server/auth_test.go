@@ -226,11 +226,7 @@ func runSecureServer(t *testing.T) (string, func()) {
 	conns := client.NewPool()
 	srv := NewSecure(nil, nil, config.Config, conns)
 
-	listener, err := net.Listen("tcp", "localhost:0")
-	require.NoError(t, err)
-	tcpPort := listener.Addr().(*net.TCPAddr).Port
-	hostPort := fmt.Sprintf("localhost:%d", tcpPort)
-
+	listener, hostPort := testhelper.GetLocalhostListener(t)
 	go srv.Serve(listener)
 
 	return hostPort, func() {
