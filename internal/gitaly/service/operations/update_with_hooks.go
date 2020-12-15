@@ -62,7 +62,7 @@ func (s *Server) updateReferenceWithHooks(ctx context.Context, repo *gitalypb.Re
 	changes := fmt.Sprintf("%s %s %s\n", oldrev, newrev, reference)
 	var stdout, stderr bytes.Buffer
 
-	if err := s.hookManager.PreReceiveHook(ctx, repo, env, strings.NewReader(changes), &stdout, &stderr); err != nil {
+	if err := s.hookManager.PreReceiveHook(ctx, repo, nil, env, strings.NewReader(changes), &stdout, &stderr); err != nil {
 		msg := hookErrorFromStdoutAndStderr(stdout.String(), stderr.String())
 		return preReceiveError{message: msg}
 	}

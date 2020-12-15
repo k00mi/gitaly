@@ -31,7 +31,7 @@ const (
 type Manager interface {
 	// PreReceiveHook executes the pre-receive Git hook and any installed custom hooks. stdin
 	// must contain all references to be updated and match the format specified in githooks(5).
-	PreReceiveHook(ctx context.Context, repo *gitalypb.Repository, env []string, stdin io.Reader, stdout, stderr io.Writer) error
+	PreReceiveHook(ctx context.Context, repo *gitalypb.Repository, pushOptions, env []string, stdin io.Reader, stdout, stderr io.Writer) error
 
 	// PostReceiveHook executes the post-receive Git hook and any installed custom hooks. stdin
 	// must contain all references to be updated and match the format specified in githooks(5).

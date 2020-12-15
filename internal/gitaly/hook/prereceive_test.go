@@ -62,6 +62,7 @@ func TestPrereceive_customHooks(t *testing.T) {
 	testCases := []struct {
 		desc           string
 		env            []string
+		pushOptions    []string
 		hook           string
 		stdin          string
 		expectedErr    string
@@ -75,6 +76,24 @@ func TestPrereceive_customHooks(t *testing.T) {
 			stdin: "change\n",
 			expectedStdout: strings.Join([]string{
 				payload,
+				"GL_ID=1234",
+				fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
+				"GL_PROTOCOL=web",
+				fmt.Sprintf("GL_REPOSITORY=%s", repo.GetGlRepository()),
+				"GL_USERNAME=user",
+			}, "\n") + "\n",
+		},
+		{
+			desc:        "hook receives push options",
+			env:         []string{payload},
+			pushOptions: []string{"mr.create", "mr.merge_when_pipeline_succeeds"},
+			hook:        "#!/bin/sh\nenv | grep -e '^GL_' -e '^GITALY_' -e '^GIT_PUSH_' | sort\n",
+			stdin:       "change\n",
+			expectedStdout: strings.Join([]string{
+				payload,
+				"GIT_PUSH_OPTION_0=mr.create",
+				"GIT_PUSH_OPTION_1=mr.merge_when_pipeline_succeeds",
+				"GIT_PUSH_OPTION_COUNT=2",
 				"GL_ID=1234",
 				fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
 				"GL_PROTOCOL=web",
@@ -148,7 +167,7 @@ func TestPrereceive_customHooks(t *testing.T) {
 			defer cleanup()
 
 			var stdout, stderr bytes.Buffer
-			err = hookManager.PreReceiveHook(ctx, repo, tc.env, strings.NewReader(tc.stdin), &stdout, &stderr)
+			err = hookManager.PreReceiveHook(ctx, repo, tc.pushOptions, tc.env, strings.NewReader(tc.stdin), &stdout, &stderr)
 
 			if tc.expectedErr != "" {
 				require.Contains(t, err.Error(), tc.expectedErr)
@@ -292,7 +311,7 @@ func TestPrereceive_gitlab(t *testing.T) {
 			defer cleanup()
 
 			var stdout, stderr bytes.Buffer
-			err = hookManager.PreReceiveHook(ctx, testRepo, tc.env, strings.NewReader(tc.changes), &stdout, &stderr)
+			err = hookManager.PreReceiveHook(ctx, testRepo, nil, tc.env, strings.NewReader(tc.changes), &stdout, &stderr)
 
 			if tc.expectedErr != nil {
 				require.Equal(t, tc.expectedErr, err)

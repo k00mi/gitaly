@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"sync"
 
-	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
@@ -36,12 +35,11 @@ func (s *server) PreReceiveHook(stream gitalypb.HookService_PreReceiveHookServer
 		return stream.Send(&gitalypb.PreReceiveHookResponse{Stderr: p})
 	})
 
-	env := append(firstRequest.GetEnvironmentVariables(), hooks.GitPushOptions(firstRequest.GetGitPushOptions())...)
-
 	if err := s.manager.PreReceiveHook(
 		stream.Context(),
 		repository,
-		env,
+		firstRequest.GetGitPushOptions(),
+		firstRequest.GetEnvironmentVariables(),
 		stdin,
 		stdout,
 		stderr,

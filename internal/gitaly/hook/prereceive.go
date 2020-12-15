@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git"
+	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -40,7 +41,10 @@ func getRelativeObjectDirs(repoPath, gitObjectDir, gitAlternateObjectDirs string
 	return gitObjDirRel, gitAltObjDirsRel, nil
 }
 
-func (m *GitLabHookManager) PreReceiveHook(ctx context.Context, repo *gitalypb.Repository, env []string, stdin io.Reader, stdout, stderr io.Writer) error {
+// PreReceiveHook will try to authenticate the changes against the GitLab API.
+// If successful, it will execute custom hooks with the given parameters, push
+// options and environment.
+func (m *GitLabHookManager) PreReceiveHook(ctx context.Context, repo *gitalypb.Repository, pushOptions, env []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	payload, err := git.HooksPayloadFromEnv(env)
 	if err != nil {
 		return helper.ErrInternalf("extracting hooks payload: %w", err)
@@ -53,7 +57,7 @@ func (m *GitLabHookManager) PreReceiveHook(ctx context.Context, repo *gitalypb.R
 
 	// Only the primary should execute hooks and increment reference counters.
 	if isPrimary(payload) {
-		if err := m.preReceiveHook(ctx, payload, repo, env, changes, stdout, stderr); err != nil {
+		if err := m.preReceiveHook(ctx, payload, repo, pushOptions, env, changes, stdout, stderr); err != nil {
 			// If the pre-receive hook declines the push, then we need to stop any
 			// secondaries voting on the transaction.
 			m.stopTransaction(ctx, payload)
@@ -64,7 +68,7 @@ func (m *GitLabHookManager) PreReceiveHook(ctx context.Context, repo *gitalypb.R
 	return nil
 }
 
-func (m *GitLabHookManager) preReceiveHook(ctx context.Context, payload git.HooksPayload, repo *gitalypb.Repository, env []string, changes []byte, stdout, stderr io.Writer) error {
+func (m *GitLabHookManager) preReceiveHook(ctx context.Context, payload git.HooksPayload, repo *gitalypb.Repository, pushOptions, env []string, changes []byte, stdout, stderr io.Writer) error {
 	repoPath, err := m.locator.GetRepoPath(repo)
 	if err != nil {
 		return helper.ErrInternalf("getting repo path: %v", err)
@@ -121,10 +125,13 @@ func (m *GitLabHookManager) preReceiveHook(ctx context.Context, payload git.Hook
 		return fmt.Errorf("creating custom hooks executor: %w", err)
 	}
 
+	customHooksEnv := append(env, customHooksEnv(payload)...)
+	customHooksEnv = append(customHooksEnv, hooks.GitPushOptions(pushOptions)...)
+
 	if err = executor(
 		ctx,
 		nil,
-		append(env, customHooksEnv(payload)...),
+		customHooksEnv,
 		bytes.NewReader(changes),
 		stdout,
 		stderr,
