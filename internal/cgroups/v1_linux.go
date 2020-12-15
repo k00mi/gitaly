@@ -3,6 +3,7 @@ package cgroups
 import (
 	"fmt"
 	"hash/crc32"
+	"os"
 	"strings"
 
 	"github.com/containerd/cgroups"
@@ -74,33 +75,26 @@ func (cg *CGroupV1Manager) AddCommand(cmd *command.Command) error {
 }
 
 func (cg *CGroupV1Manager) Cleanup() error {
-	var failures []string
+	processCgroupPath := cg.currentProcessCgroup()
 
-	for i := 0; i < int(cg.cfg.Count); i++ {
-		cgroupPath := cg.cgroupPath(i)
-		control, err := cgroups.Load(cg.hierarchy, cgroups.StaticPath(cgroupPath))
-		if err != nil {
-			failure := fmt.Sprintf("%s: %v", cgroupPath, err)
-			failures = append(failures, failure)
-			continue
-		}
-
-		if err := control.Delete(); err != nil {
-			failure := fmt.Sprintf("%s: %v", cgroupPath, err)
-			failures = append(failures, failure)
-			continue
-		}
+	control, err := cgroups.Load(cg.hierarchy, cgroups.StaticPath(processCgroupPath))
+	if err != nil {
+		return fmt.Errorf("failed loading cgroup %s: %w", processCgroupPath, err)
 	}
 
-	if len(failures) > 0 {
-		return fmt.Errorf("failed cleaning up cgroups: %s", strings.Join(failures, ","))
+	if err := control.Delete(); err != nil {
+		return fmt.Errorf("failed cleaning up cgroup %s: %w", processCgroupPath, err)
 	}
 
 	return nil
 }
 
 func (cg *CGroupV1Manager) cgroupPath(groupID int) string {
-	return fmt.Sprintf("/%s/gitaly-%d", cg.cfg.HierarchyRoot, groupID)
+	return fmt.Sprintf("/%s/shard-%d", cg.currentProcessCgroup(), groupID)
+}
+
+func (cg *CGroupV1Manager) currentProcessCgroup() string {
+	return fmt.Sprintf("/%s/gitaly-%d", cg.cfg.HierarchyRoot, os.Getpid())
 }
 
 func defaultSubsystems(root string) ([]cgroups.Subsystem, error) {

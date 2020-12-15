@@ -44,14 +44,14 @@ func TestSetup(t *testing.T) {
 
 	for i := 0; i < 3; i++ {
 		memoryPath := filepath.Join(
-			mock.root, "memory", "gitaly", fmt.Sprintf("gitaly-%d", i), "memory.limit_in_bytes",
+			mock.root, "memory", "gitaly", fmt.Sprintf("gitaly-%d", os.Getpid()), fmt.Sprintf("shard-%d", i), "memory.limit_in_bytes",
 		)
 		memoryContent := readCgroupFile(t, memoryPath)
 
 		require.Equal(t, string(memoryContent), "1024000")
 
 		cpuPath := filepath.Join(
-			mock.root, "cpu", "gitaly", fmt.Sprintf("gitaly-%d", i), "cpu.shares",
+			mock.root, "cpu", "gitaly", fmt.Sprintf("gitaly-%d", os.Getpid()), fmt.Sprintf("shard-%d", i), "cpu.shares",
 		)
 		cpuContent := readCgroupFile(t, cpuPath)
 
@@ -88,7 +88,7 @@ func TestAddCommand(t *testing.T) {
 	groupID := uint(checksum) % config.Count
 
 	for _, s := range mock.subsystems {
-		path := filepath.Join(mock.root, string(s.Name()), "gitaly", fmt.Sprintf("gitaly-%d", groupID), "cgroup.procs")
+		path := filepath.Join(mock.root, string(s.Name()), "gitaly", fmt.Sprintf("gitaly-%d", os.Getpid()), fmt.Sprintf("shard-%d", groupID), "cgroup.procs")
 		content := readCgroupFile(t, path)
 
 		pid, err := strconv.Atoi(string(content))
@@ -110,8 +110,8 @@ func TestCleanup(t *testing.T) {
 	require.NoError(t, v1Manager.Cleanup())
 
 	for i := 0; i < 3; i++ {
-		memoryPath := filepath.Join(mock.root, "memory", "gitaly", fmt.Sprintf("gitaly-%d", i))
-		cpuPath := filepath.Join(mock.root, "cpu", "gitaly", fmt.Sprintf("gitaly-%d", i))
+		memoryPath := filepath.Join(mock.root, "memory", "gitaly", fmt.Sprintf("gitaly-%d", os.Getpid()), fmt.Sprintf("shard-%d", i))
+		cpuPath := filepath.Join(mock.root, "cpu", "gitaly", fmt.Sprintf("gitaly-%d", os.Getpid()), fmt.Sprintf("shard-%d", i))
 
 		require.NoDirExists(t, memoryPath)
 		require.NoDirExists(t, cpuPath)
