@@ -78,7 +78,6 @@ func TestUpdate_customHooks(t *testing.T) {
 			newHash:   hash2,
 			hook:      "#!/bin/sh\nenv | grep -e '^GL_' -e '^GITALY_' | sort\n",
 			expectedStdout: strings.Join([]string{
-				payload,
 				"GL_ID=1234",
 				fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
 				"GL_PROTOCOL=web",

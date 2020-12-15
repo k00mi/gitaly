@@ -75,7 +75,6 @@ func TestPrereceive_customHooks(t *testing.T) {
 			hook:  "#!/bin/sh\nenv | grep -e '^GL_' -e '^GITALY_' | sort\n",
 			stdin: "change\n",
 			expectedStdout: strings.Join([]string{
-				payload,
 				"GL_ID=1234",
 				fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
 				"GL_PROTOCOL=web",
@@ -90,7 +89,6 @@ func TestPrereceive_customHooks(t *testing.T) {
 			hook:        "#!/bin/sh\nenv | grep -e '^GL_' -e '^GITALY_' -e '^GIT_PUSH_' | sort\n",
 			stdin:       "change\n",
 			expectedStdout: strings.Join([]string{
-				payload,
 				"GIT_PUSH_OPTION_0=mr.create",
 				"GIT_PUSH_OPTION_1=mr.merge_when_pipeline_succeeds",
 				"GIT_PUSH_OPTION_COUNT=2",
