@@ -156,6 +156,15 @@ func (s *Server) userUpdateSubmodule(ctx context.Context, req *gitalypb.UserUpda
 				PreReceiveError: preReceiveError.Error(),
 			}, nil
 		}
+
+		var updateRefError updateRefError
+		if errors.As(err, &updateRefError) {
+			return &gitalypb.UserUpdateSubmoduleResponse{
+				CommitError: err.Error(),
+			}, nil
+		}
+
+		return nil, err
 	}
 
 	return &gitalypb.UserUpdateSubmoduleResponse{
