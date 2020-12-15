@@ -19,10 +19,6 @@ func TestUpdate_customHooks(t *testing.T) {
 
 	hookManager := NewManager(config.NewLocator(config.Config), GitlabAPIStub, config.Config)
 
-	standardEnv := []string{
-		fmt.Sprintf("GL_REPO=%s", repo),
-	}
-
 	receiveHooksPayload := &git.ReceiveHooksPayload{
 		UserID:   "1234",
 		Username: "user",
@@ -76,7 +72,7 @@ func TestUpdate_customHooks(t *testing.T) {
 	}{
 		{
 			desc:      "hook receives environment variables",
-			env:       append(standardEnv, payload),
+			env:       []string{payload},
 			reference: "refs/heads/master",
 			oldHash:   hash1,
 			newHash:   hash2,
@@ -86,14 +82,13 @@ func TestUpdate_customHooks(t *testing.T) {
 				"GL_ID=1234",
 				fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
 				"GL_PROTOCOL=web",
-				fmt.Sprintf("GL_REPO=%s", repo),
 				fmt.Sprintf("GL_REPOSITORY=%s", repo.GetGlRepository()),
 				"GL_USERNAME=user",
 			}, "\n") + "\n",
 		},
 		{
 			desc:           "hook receives arguments",
-			env:            append(standardEnv, payload),
+			env:            []string{payload},
 			reference:      "refs/heads/master",
 			oldHash:        hash1,
 			newHash:        hash2,
@@ -102,7 +97,7 @@ func TestUpdate_customHooks(t *testing.T) {
 		},
 		{
 			desc:           "stdout and stderr are passed through",
-			env:            append(standardEnv, payload),
+			env:            []string{payload},
 			reference:      "refs/heads/master",
 			oldHash:        hash1,
 			newHash:        hash2,
@@ -112,7 +107,7 @@ func TestUpdate_customHooks(t *testing.T) {
 		},
 		{
 			desc:      "standard input is empty",
-			env:       append(standardEnv, payload),
+			env:       []string{payload},
 			reference: "refs/heads/master",
 			oldHash:   hash1,
 			newHash:   hash2,
@@ -120,7 +115,7 @@ func TestUpdate_customHooks(t *testing.T) {
 		},
 		{
 			desc:        "invalid script causes failure",
-			env:         append(standardEnv, payload),
+			env:         []string{payload},
 			reference:   "refs/heads/master",
 			oldHash:     hash1,
 			newHash:     hash2,
@@ -129,7 +124,7 @@ func TestUpdate_customHooks(t *testing.T) {
 		},
 		{
 			desc:        "errors are passed through",
-			env:         append(standardEnv, payload),
+			env:         []string{payload},
 			reference:   "refs/heads/master",
 			oldHash:     hash1,
 			newHash:     hash2,
@@ -138,7 +133,7 @@ func TestUpdate_customHooks(t *testing.T) {
 		},
 		{
 			desc:           "errors are passed through with stderr and stdout",
-			env:            append(standardEnv, payload),
+			env:            []string{payload},
 			reference:      "refs/heads/master",
 			oldHash:        hash1,
 			newHash:        hash2,
@@ -149,7 +144,7 @@ func TestUpdate_customHooks(t *testing.T) {
 		},
 		{
 			desc:           "hook is executed on primary",
-			env:            append(standardEnv, primaryPayload),
+			env:            []string{primaryPayload},
 			reference:      "refs/heads/master",
 			oldHash:        hash1,
 			newHash:        hash2,
@@ -158,7 +153,7 @@ func TestUpdate_customHooks(t *testing.T) {
 		},
 		{
 			desc:      "hook is not executed on secondary",
-			env:       append(standardEnv, secondaryPayload),
+			env:       []string{secondaryPayload},
 			reference: "refs/heads/master",
 			oldHash:   hash1,
 			newHash:   hash2,
@@ -166,21 +161,21 @@ func TestUpdate_customHooks(t *testing.T) {
 		},
 		{
 			desc:        "hook fails with missing reference",
-			env:         append(standardEnv, payload),
+			env:         []string{payload},
 			oldHash:     hash1,
 			newHash:     hash2,
 			expectedErr: "hook got no reference",
 		},
 		{
 			desc:        "hook fails with missing old value",
-			env:         append(standardEnv, payload),
+			env:         []string{payload},
 			reference:   "refs/heads/master",
 			newHash:     hash2,
 			expectedErr: "hook got invalid old value",
 		},
 		{
 			desc:        "hook fails with missing new value",
-			env:         append(standardEnv, payload),
+			env:         []string{payload},
 			reference:   "refs/heads/master",
 			oldHash:     hash1,
 			expectedErr: "hook got invalid new value",
