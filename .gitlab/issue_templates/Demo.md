@@ -76,28 +76,6 @@ succeed.
 
 ## Features
 
-### Repository Importer #3033
-
-Repository importer's goal is to create any missing database records for repositories present on the disk of the primary Gitaly.
-
-1. Prep:
-   - [ ] Create a repository in the demo cluster. This ensures we have a repository on the disk we can import.
-   - [ ] Stop the Praefect nodes. The import job runs when Praefect starts.
-   - [ ] Truncate `virtual_storages` table. This removes the information whether the migration has been completed.
-   - [ ] Truncate `repositories` table.  This removes any information about the repositories on the virtual storage.
-   - [ ] Truncate `storage_repositories` table. This removes any information about repositories hosted on the Gitaly nodes.
-1. [ ] Demo:
-   - [ ] Start the Praefect nodes.
-   - [ ] Tail Praefects' logs.
-1. [ ] Verify:
-   - [ ] Logs do not contain `importing repositories to database failed` indicating any import failures.
-   - [ ] Logs contain `imported repositories to database` message. It should list the repository created earlier as imported.
-   - [ ] Logs contain `repository importer finished` message. It should list the configured virtual storages as successfully imported.
-   - [ ] Verify `repositories` table contains records for the imported repositories with generation `0`.
-   - [ ] Verify `storage_repositories` records the primary containing the imported repositories on generation `0`. Secondaries might have records as well if the automatic reconciler scheduled jobs to replicate the
-   repositories to them.
-   - [ ] Verify `virtual_storages` table contains records with `repositories_imported` set for the successfully imported virtual storages.
-
 ### Distributed reads with caching https://gitlab.com/gitlab-org/gitaly/-/issues/3053
 
 The goal of caching is to reduce load on the database and speed up defining up to date storages for distributing read operations among them.
@@ -139,6 +117,57 @@ The goal of caching is to reduce load on the database and speed up defining up t
    - [ ] Verify each praefect instance has a log entry: `grep 'received payload can't be processed, cache disabled' /var/log/gitlab/praefect/current`.
    - [ ] Make some random operations on the repository: files creation/modification etc.
    - [ ] Query for the metric `gitaly_praefect_uptodate_storages_cache_access_total` and compare with the result saved previosuly. The `hit` metric value should not change.
+
+### Variable Replication Factor #2971
+
+Previously Praefect has replicated repositories to every node in a virtual storage. This has made large clusters
+unfeasible due to increasing cost of replicating repositories to every storage within a virtual storage. This
+also made it impossible to horizontally scale a virtual storage's storage capacity. The virtual storage's storage
+capacity would be limited by the smallest storage in the virtual storage as it has to fit every repository.
+
+Variable replication factor allows administrator to set each repository's replication factor individually. This allows
+for scaling the storage capacity of the cluster horizontally by allowing a repository's replication factor to be lower
+than the storage count in a virtual storage. For important or highly used repositories, administrators can distribute
+requests and increase redundancy by setting a higher replication factor.
+
+Variable replication factor is only implemented using repository specific primaries. This is due to the primary node
+needing a copy of each repository. Needing to have every repository on a single node would make the single primary a
+bottleneck as it would need to contain every repository.
+
+While variable replication factor itself is mostly ready, repository specific primaries still have some issues to solve.
+Importantly for the demo, repository creation does not yet work. To work around that limitation, the prep step uses
+`sql` elector.
+
+1. Prep (all operations done on a Praefect node):
+   - [ ] Create two repositories in the demo cluster. `sql` elector must be enabled while doing this due to the
+         `per_repository` elector not being able to create repositories yet. These will be referred to as repository
+         A and repository B later.
+   - [ ] Run `sudo -i` as `gitlab-ctl` commands need to be run as root.
+   - [ ] Connect to Postgres in another terminal by running `/opt/gitlab/embedded/bin/psql -U praefect -d praefect_production -h <postgres address>` on a Praefect node.
+   - [ ] Ensure there are entries for every storage for both repositories in the `storage_repositories` table and
+         that they are all on the same generation.
+   - [ ] Enable repository specific primaries by setting `default['praefect']['failover_election_strategy'] = 'per_repository'` in `/etc/gitlab/gitlab.rb` on Praefect nodes.
+   - [ ] Disable the reconciler initially. Set `default['praefect']['reconciliation_scheduling_interval'] = 0` in `/etc/gitlab/gitlab.rb` on Praefect nodes.
+   - [ ] Reconfigure and restart the Praefect nodes by running `gitlab-ctl reconfigure`.
+1. Demo:
+   - [ ] Attempt to set replication factor 0 for repository A by running `/opt/gitlab/embedded/bin/praefect -config /var/opt/gitlab/praefect/config.toml set-replication-factor -virtual-storage default -repository <relative path A> -replication-factor 0`. This should fail as the minimum replication factor is 0.
+   - [ ] Attempt to set replication factor 4 for repository A. This should fail as the demo cluster only has 3 storage nodes, meaning it is not possible to reach replication factor of 4.
+   - [ ] Set replication factor of 1 for repository A. The command should print out the assigned storage. The assigned storage should be the repository's primary. You can verify this by running `SELECT * FROM repositories WHERE relative_path = '<relative path A>';` and checking the `primary` column refers to the same storage.
+   - [ ] With the replication factor 1 set for repository A, perform a write in repository B. Repository B should still replicate on every node. After the write, you can verify each of the storages of B are on the same generation by running `SELECT * FROM storage_repositories WHERE relative_path = '<relative path B>';` and checking that the generations match.
+   - [ ] Check the virtual storage's status with dataloss by running `/opt/gitlab/embedded/bin/praefect -config /var/opt/gitlab/praefect/config.toml dataloss -virtual-storage default -partially-replicated`. It should not list any outdated repositories.
+   - [ ] Perform a write in repository A.
+   - [ ] Check the virtual storage's status with dataloss again. Everything should be fully up to date as all the assigned storages are up to date. Check repository A's entries in the `storage_repositories` table and verify only the assigned node's generation was incremented. Only the assigned nodes participate in a transaction or get a replication job scheduled for a given write.
+   - [ ] Set the replication factor of repository A to 2. You should observe a random secondary being assigned.
+   - [ ] Check the virtual storage's status with dataloss again. It should now list repository A as one of the assigned storages is outdated. You should also see the other secondary listed outdated, but without being designated as assigned.
+   - [ ] Perform another write in repository A.
+   - [ ] Check the virtual storage's status with dataloss again. Repository A should not be listed anymore as the new write scheduled a replication job to bring the outdated assigned secondary back to speed.
+   - [ ] Set the replication factor of repository A to 1 and perform a write.
+   - [ ] Set the replication factor of repository A back to 2.
+   - [ ] Check with dataloss that the assigned secondary is listed as outdated. The other secondary should also be listed outdated but not assigned.
+   - [ ] Enable the reconciler by setting the `reconciliation_scheduling_interval` to '5s'. Reconfigure and restart Praefects.
+   - [ ] Wait for the reconciler to schedule and execute the replication jobs.
+   - [ ] Check with dataloss that repository A is no longer considered outdated. The reconciler only targets assigned nodes. Verify from the `storage_repositories` table that the unassigned storage is still on a lower generation than the assigned nodes.
+   - [ ] Repeatedly increase and decrease the replication factor of repository A from 1 to 3 and back. You should observe the primary node is never unassigned, only the secondaries.
 
 ## After Demo
 
