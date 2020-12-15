@@ -33,7 +33,7 @@ var (
 	GoResolveConflicts = FeatureFlag{Name: "go_resolve_conflicts", OnByDefault: false}
 	// GoUserUpdateSubmodule enables the Go implementation of
 	// UserUpdateSubmodules
-	GoUserUpdateSubmodule = FeatureFlag{Name: "go_user_update_submodule", OnByDefault: true}
+	GoUserUpdateSubmodule = FeatureFlag{Name: "go_user_update_submodule", OnByDefault: false}
 	// GoFetchRemote enables the Go implementation of FetchRemote
 	GoFetchRemote = FeatureFlag{Name: "go_fetch_remote", OnByDefault: true}
 	// GoUserDeleteTag enables the Go implementation of UserDeleteTag

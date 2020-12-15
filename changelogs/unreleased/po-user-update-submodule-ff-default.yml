@@ -1,5 +1,0 @@
----
-title: Enable feature flag gitaly_go_user_update_submodule by default
-merge_request: 2917
-author:
-type: added
