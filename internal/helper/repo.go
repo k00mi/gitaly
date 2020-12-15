@@ -12,28 +12,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// GetRepoPath returns the full path of the repository referenced by an
-// RPC Repository message. The errors returned are gRPC errors with
-// relevant error codes and should be passed back to gRPC without further
-// decoration.
-// Deprecated: please use storage.Locator to define the project path.
-func GetRepoPath(repo repository.GitRepo) (string, error) {
-	repoPath, err := GetPath(repo)
-	if err != nil {
-		return "", err
-	}
-
-	if repoPath == "" {
-		return "", status.Errorf(codes.InvalidArgument, "GetRepoPath: empty repo")
-	}
-
-	if storage.IsGitDirectory(repoPath) {
-		return repoPath, nil
-	}
-
-	return "", status.Errorf(codes.NotFound, "GetRepoPath: not a git repository '%s'", repoPath)
-}
-
 // RepoPathEqual compares if two repositories are in the same location
 func RepoPathEqual(a, b repository.GitRepo) bool {
 	return a.GetStorageName() == b.GetStorageName() &&
