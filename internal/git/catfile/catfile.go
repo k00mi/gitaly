@@ -8,6 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata"
+	"gitlab.com/gitlab-org/gitaly/internal/storage"
 )
 
 var catfileCacheCounter = prometheus.NewCounterVec(
@@ -141,14 +142,14 @@ func (c *batch) isClosed() bool {
 // New returns a new Batch instance. It is important that ctx gets canceled
 // somewhere, because if it doesn't the cat-file processes spawned by
 // New() never terminate.
-func New(ctx context.Context, repo repository.GitRepo) (Batch, error) {
+func New(ctx context.Context, locator storage.Locator, repo repository.GitRepo) (Batch, error) {
 	if ctx.Done() == nil {
 		panic("empty ctx.Done() in catfile.Batch.New()")
 	}
 
 	sessionID := metadata.GetValue(ctx, SessionIDField)
 	if sessionID == "" {
-		c, err := newBatch(ctx, repo)
+		c, err := newBatch(ctx, locator, repo)
 		if err != nil {
 			return nil, err
 		}
@@ -166,7 +167,7 @@ func New(ctx context.Context, repo repository.GitRepo) (Batch, error) {
 	// if we are using caching, create a fresh context for the new batch
 	// and initialize the new batch with a cache key and cancel function
 	cacheCtx, cacheCancel := context.WithCancel(context.Background())
-	c, err := newBatch(cacheCtx, repo)
+	c, err := newBatch(cacheCtx, locator, repo)
 	if err != nil {
 		cacheCancel()
 		return nil, err
@@ -200,7 +201,7 @@ type simulatedBatchSpawnError struct{}
 
 func (simulatedBatchSpawnError) Error() string { return "simulated spawn error" }
 
-func newBatch(ctx context.Context, repo repository.GitRepo) (_ *batch, err error) {
+func newBatch(ctx context.Context, locator storage.Locator, repo repository.GitRepo) (_ *batch, err error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer func() {
 		if err != nil {
@@ -208,12 +209,12 @@ func newBatch(ctx context.Context, repo repository.GitRepo) (_ *batch, err error
 		}
 	}()
 
-	b, err := newBatchProcess(ctx, repo)
+	b, err := newBatchProcess(ctx, locator, repo)
 	if err != nil {
 		return nil, err
 	}
 
-	batchCheck, err := newBatchCheck(ctx, repo)
+	batchCheck, err := newBatchCheck(ctx, locator, repo)
 	if err != nil {
 		return nil, err
 	}

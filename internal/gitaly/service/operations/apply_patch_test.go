@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"gitlab.com/gitlab-org/gitaly/streamio"
@@ -124,7 +125,8 @@ func testSuccessfulUserApplyPatch(t *testing.T, ctx context.Context) {
 			}
 
 			for index, sha := range shas {
-				commit, err := log.GetCommit(ctx, testRepo, sha)
+				locator := config.NewLocator(config.Config)
+				commit, err := log.GetCommit(ctx, locator, testRepo, sha)
 				require.NoError(t, err)
 
 				require.NotNil(t, commit)

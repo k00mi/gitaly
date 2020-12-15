@@ -13,7 +13,6 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/remote"
 	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
@@ -72,7 +71,12 @@ func (o *ObjectPool) Link(ctx context.Context, repo *gitalypb.Repository) error 
 // change "eventually" to "immediately", so that users won't see the
 // warning. https://gitlab.com/gitlab-org/gitaly/issues/1728
 func (o *ObjectPool) removeMemberBitmaps(repo repository.GitRepo) error {
-	poolBitmaps, err := getBitmaps(o)
+	poolPath, err := o.locator.GetPath(o)
+	if err != nil {
+		return err
+	}
+
+	poolBitmaps, err := getBitmaps(poolPath)
 	if err != nil {
 		return err
 	}
@@ -80,7 +84,12 @@ func (o *ObjectPool) removeMemberBitmaps(repo repository.GitRepo) error {
 		return nil
 	}
 
-	memberBitmaps, err := getBitmaps(repo)
+	repoPath, err := o.locator.GetPath(repo)
+	if err != nil {
+		return err
+	}
+
+	memberBitmaps, err := getBitmaps(repoPath)
 	if err != nil {
 		return err
 	}
@@ -97,12 +106,7 @@ func (o *ObjectPool) removeMemberBitmaps(repo repository.GitRepo) error {
 	return nil
 }
 
-func getBitmaps(repo repository.GitRepo) ([]string, error) {
-	repoPath, err := helper.GetPath(repo)
-	if err != nil {
-		return nil, err
-	}
-
+func getBitmaps(repoPath string) ([]string, error) {
 	packDir := filepath.Join(repoPath, "objects/pack")
 	entries, err := ioutil.ReadDir(packDir)
 	if err != nil {

@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -46,6 +47,8 @@ func TestSuccessfulUserSquashRequest(t *testing.T) {
 }
 
 func testSuccessfulUserSquashRequest(t *testing.T, ctx context.Context, start, end string) {
+	locator := config.NewLocator(config.Config)
+
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -69,7 +72,7 @@ func testSuccessfulUserSquashRequest(t *testing.T, ctx context.Context, start, e
 	require.NoError(t, err)
 	require.Empty(t, response.GetGitError())
 
-	commit, err := log.GetCommit(ctx, testRepo, response.SquashSha)
+	commit, err := log.GetCommit(ctx, locator, testRepo, response.SquashSha)
 	require.NoError(t, err)
 	require.Equal(t, []string{start}, commit.ParentIds)
 	require.Equal(t, author.Name, commit.Author.Name)
@@ -100,6 +103,8 @@ func TestSuccessfulUserSquashRequestWith3wayMerge(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	locator := config.NewLocator(config.Config)
+
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -124,7 +129,7 @@ func TestSuccessfulUserSquashRequestWith3wayMerge(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, response.GetGitError())
 
-	commit, err := log.GetCommit(ctx, testRepo, response.SquashSha)
+	commit, err := log.GetCommit(ctx, locator, testRepo, response.SquashSha)
 	require.NoError(t, err)
 	require.Equal(t, []string{"6f6d7e7ed97bb5f0054f2b1df789b39ca89b6ff9"}, commit.ParentIds)
 	require.Equal(t, author.Name, commit.Author.Name)
@@ -183,6 +188,8 @@ func TestSquashRequestWithRenamedFiles(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	locator := config.NewLocator(config.Config)
+
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -231,7 +238,7 @@ func TestSquashRequestWithRenamedFiles(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, response.GetGitError())
 
-	commit, err := log.GetCommit(ctx, testRepo, response.SquashSha)
+	commit, err := log.GetCommit(ctx, locator, testRepo, response.SquashSha)
 	require.NoError(t, err)
 	require.Equal(t, []string{startCommitID}, commit.ParentIds)
 	require.Equal(t, author.Name, commit.Author.Name)

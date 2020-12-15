@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -30,6 +31,8 @@ func testSuccessfulUserUpdateBranchRequest(t *testing.T, ctx context.Context) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
+	locator := config.NewLocator(config.Config)
+
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -49,7 +52,7 @@ func testSuccessfulUserUpdateBranchRequest(t *testing.T, ctx context.Context) {
 	require.NoError(t, err)
 	require.Empty(t, response.PreReceiveError)
 
-	branchCommit, err := log.GetCommit(ctx, testRepo, updateBranchName)
+	branchCommit, err := log.GetCommit(ctx, locator, testRepo, updateBranchName)
 
 	require.NoError(t, err)
 	require.Equal(t, string(newrev), branchCommit.Id)

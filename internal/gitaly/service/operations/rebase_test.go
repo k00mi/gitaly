@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git/catfile"
 	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/rubyserver"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
@@ -31,6 +32,8 @@ func TestSuccessfulUserRebaseConfirmableRequest(t *testing.T) {
 
 	require.NoError(t, ruby.Start())
 	defer ruby.Stop()
+
+	locator := config.NewLocator(config.Config)
 
 	serverSocketPath, stop := runOperationServiceServerWithRubyServer(t, &ruby)
 	defer stop()
@@ -73,7 +76,7 @@ func TestSuccessfulUserRebaseConfirmableRequest(t *testing.T) {
 	firstResponse, err := rebaseStream.Recv()
 	require.NoError(t, err, "receive first response")
 
-	_, err = gitlog.GetCommit(ctx, testRepo, firstResponse.GetRebaseSha())
+	_, err = gitlog.GetCommit(ctx, locator, testRepo, firstResponse.GetRebaseSha())
 	require.NoError(t, err, "look up git commit before rebase is applied")
 
 	applyRequest := buildApplyRequest(true)
@@ -245,6 +248,8 @@ func TestFailedUserRebaseConfirmableDueToApplyBeingFalse(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
+	locator := config.NewLocator(config.Config)
+
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -271,7 +276,7 @@ func TestFailedUserRebaseConfirmableDueToApplyBeingFalse(t *testing.T) {
 	firstResponse, err := rebaseStream.Recv()
 	require.NoError(t, err, "receive first response")
 
-	_, err = gitlog.GetCommit(ctx, testRepo, firstResponse.GetRebaseSha())
+	_, err = gitlog.GetCommit(ctx, locator, testRepo, firstResponse.GetRebaseSha())
 	require.NoError(t, err, "look up git commit before rebase is applied")
 
 	applyRequest := buildApplyRequest(false)
@@ -290,6 +295,8 @@ func TestFailedUserRebaseConfirmableDueToApplyBeingFalse(t *testing.T) {
 func TestFailedUserRebaseConfirmableRequestDueToPreReceiveError(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
+
+	locator := config.NewLocator(config.Config)
 
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
@@ -325,7 +332,7 @@ func TestFailedUserRebaseConfirmableRequestDueToPreReceiveError(t *testing.T) {
 			firstResponse, err := rebaseStream.Recv()
 			require.NoError(t, err, "receive first response")
 
-			_, err = gitlog.GetCommit(ctx, testRepo, firstResponse.GetRebaseSha())
+			_, err = gitlog.GetCommit(ctx, locator, testRepo, firstResponse.GetRebaseSha())
 			require.NoError(t, err, "look up git commit before rebase is applied")
 
 			applyRequest := buildApplyRequest(true)
@@ -400,6 +407,8 @@ func TestRebaseRequestWithDeletedFile(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
+	locator := config.NewLocator(config.Config)
+
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -434,7 +443,7 @@ func TestRebaseRequestWithDeletedFile(t *testing.T) {
 	firstResponse, err := rebaseStream.Recv()
 	require.NoError(t, err, "receive first response")
 
-	_, err = gitlog.GetCommit(ctx, testRepo, firstResponse.GetRebaseSha())
+	_, err = gitlog.GetCommit(ctx, locator, testRepo, firstResponse.GetRebaseSha())
 	require.NoError(t, err, "look up git commit before rebase is applied")
 
 	applyRequest := buildApplyRequest(true)
@@ -458,6 +467,8 @@ func TestRebaseRequestWithDeletedFile(t *testing.T) {
 }
 
 func TestRebaseOntoRemoteBranch(t *testing.T) {
+	locator := config.NewLocator(config.Config)
+
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -490,7 +501,7 @@ func TestRebaseOntoRemoteBranch(t *testing.T) {
 	rebaseStream, err := client.UserRebaseConfirmable(ctx)
 	require.NoError(t, err)
 
-	_, err = gitlog.GetCommit(ctx, localRepo, remoteBranchHash)
+	_, err = gitlog.GetCommit(ctx, locator, localRepo, remoteBranchHash)
 	require.True(t, catfile.IsNotFound(err), "remote commit does not yet exist in local repository")
 
 	headerRequest := buildHeaderRequest(localRepo, testhelper.TestUser, "1", localBranch, localBranchHash, remoteRepo, remoteBranch)
@@ -499,7 +510,7 @@ func TestRebaseOntoRemoteBranch(t *testing.T) {
 	firstResponse, err := rebaseStream.Recv()
 	require.NoError(t, err, "receive first response")
 
-	_, err = gitlog.GetCommit(ctx, localRepo, remoteBranchHash)
+	_, err = gitlog.GetCommit(ctx, locator, localRepo, remoteBranchHash)
 	require.NoError(t, err, "remote commit does now exist in local repository")
 
 	applyRequest := buildApplyRequest(true)

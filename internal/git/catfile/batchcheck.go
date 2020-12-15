@@ -11,6 +11,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/git/alternates"
 	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
+	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/labkit/correlation"
 )
 
@@ -21,11 +22,13 @@ type batchCheck struct {
 	sync.Mutex
 }
 
-func newBatchCheck(ctx context.Context, repo repository.GitRepo) (*batchCheck, error) {
-	repoPath, env, err := alternates.PathAndEnv(repo)
+func newBatchCheck(ctx context.Context, locator storage.Locator, repo repository.GitRepo) (*batchCheck, error) {
+	repoPath, err := locator.GetRepoPath(repo)
 	if err != nil {
 		return nil, err
 	}
+
+	env := alternates.Env(repoPath, repo.GetGitObjectDirectory(), repo.GetGitAlternateObjectDirectories())
 
 	bc := &batchCheck{}
 
