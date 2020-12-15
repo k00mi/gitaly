@@ -1,12 +1,8 @@
 package helper
 
 import (
-	"os"
-	"path/filepath"
-
 	"gitlab.com/gitlab-org/gitaly/internal/git/repository"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
-	"gitlab.com/gitlab-org/gitaly/internal/storage"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -16,32 +12,6 @@ import (
 func RepoPathEqual(a, b repository.GitRepo) bool {
 	return a.GetStorageName() == b.GetStorageName() &&
 		a.GetRelativePath() == b.GetRelativePath()
-}
-
-// GetPath returns the path of the repo passed as first argument. An error is
-// returned when either the storage can't be found or the path includes
-// constructs trying to perform directory traversal.
-func GetPath(repo repository.GitRepo) (string, error) {
-	storagePath, err := GetStorageByName(repo.GetStorageName())
-	if err != nil {
-		return "", err
-	}
-
-	if _, err := os.Stat(storagePath); err != nil {
-		return "", status.Errorf(codes.Internal, "GetPath: storage path: %v", err)
-	}
-
-	relativePath := repo.GetRelativePath()
-	if len(relativePath) == 0 {
-		err := status.Errorf(codes.InvalidArgument, "GetPath: relative path missing from %+v", repo)
-		return "", err
-	}
-
-	if _, err := storage.ValidateRelativePath(storagePath, relativePath); err != nil {
-		return "", status.Errorf(codes.InvalidArgument, "GetRepoPath: %s", err)
-	}
-
-	return filepath.Join(storagePath, relativePath), nil
 }
 
 // GetStorageByName will return the path for the storage, which is fetched by
