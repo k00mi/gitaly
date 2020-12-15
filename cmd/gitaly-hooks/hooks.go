@@ -8,12 +8,10 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 	gitalyauth "gitlab.com/gitlab-org/gitaly/auth"
 	"gitlab.com/gitlab-org/gitaly/client"
-	"gitlab.com/gitlab-org/gitaly/internal/command"
 	"gitlab.com/gitlab-org/gitaly/internal/git"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/hook"
@@ -72,11 +70,6 @@ func main() {
 		logger.Fatalf("error when getting hooks payload: %v", err)
 	}
 
-	hookEnvironment, err := hookEnvironment(payload)
-	if err != nil {
-		logger.Fatalf("error when computing hook environment: %v", err)
-	}
-
 	conn, err := dialGitaly(payload)
 	if err != nil {
 		logger.Fatalf("error when connecting to gitaly: %v", err)
@@ -96,7 +89,7 @@ func main() {
 
 		req := &gitalypb.UpdateHookRequest{
 			Repository:           payload.Repo,
-			EnvironmentVariables: hookEnvironment,
+			EnvironmentVariables: os.Environ(),
 			Ref:                  []byte(ref),
 			OldValue:             oldValue,
 			NewValue:             newValue,
@@ -120,7 +113,7 @@ func main() {
 
 		if err := preReceiveHookStream.Send(&gitalypb.PreReceiveHookRequest{
 			Repository:           payload.Repo,
-			EnvironmentVariables: append(hookEnvironment, gitObjectDirs()...),
+			EnvironmentVariables: os.Environ(),
 			GitPushOptions:       gitPushOptions(),
 		}); err != nil {
 			logger.Fatalf("error when sending request for %q: %v", subCmd, err)
@@ -143,7 +136,7 @@ func main() {
 
 		if err := postReceiveHookStream.Send(&gitalypb.PostReceiveHookRequest{
 			Repository:           payload.Repo,
-			EnvironmentVariables: hookEnvironment,
+			EnvironmentVariables: os.Environ(),
 			GitPushOptions:       gitPushOptions(),
 		}); err != nil {
 			logger.Fatalf("error when sending request for %q: %v", subCmd, err)
@@ -182,7 +175,7 @@ func main() {
 
 		if err := referenceTransactionHookStream.Send(&gitalypb.ReferenceTransactionHookRequest{
 			Repository:           payload.Repo,
-			EnvironmentVariables: hookEnvironment,
+			EnvironmentVariables: os.Environ(),
 			State:                state,
 		}); err != nil {
 			logger.Fatalf("error when sending request for %q: %v", subCmd, err)
@@ -218,37 +211,6 @@ func dialGitaly(payload git.HooksPayload) (*grpc.ClientConn, error) {
 	}
 
 	return conn, nil
-}
-
-func hookEnvironment(payload git.HooksPayload) ([]string, error) {
-	environment := command.AllowedEnvironment(os.Environ())
-
-	for _, kv := range os.Environ() {
-		if strings.HasPrefix(kv, "GL_") {
-			environment = append(environment, kv)
-		}
-	}
-
-	payloadEnv, err := payload.Env()
-	if err != nil {
-		return nil, err
-	}
-
-	return append(environment, payloadEnv), nil
-}
-
-func gitObjectDirs() []string {
-	var objectDirs []string
-	gitObjectDirectory, ok := os.LookupEnv("GIT_OBJECT_DIRECTORY")
-	if ok {
-		objectDirs = append(objectDirs, "GIT_OBJECT_DIRECTORY="+gitObjectDirectory)
-	}
-	gitAlternateObjectDirectories, ok := os.LookupEnv("GIT_ALTERNATE_OBJECT_DIRECTORIES")
-	if ok {
-		objectDirs = append(objectDirs, "GIT_ALTERNATE_OBJECT_DIRECTORIES="+gitAlternateObjectDirectories)
-	}
-
-	return objectDirs
 }
 
 func gitPushOptions() []string {
