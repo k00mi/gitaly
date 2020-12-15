@@ -135,15 +135,21 @@ func validHook(fi os.FileInfo, filename string) bool {
 	return true
 }
 
-func customHooksEnv(payload git.HooksPayload, pushOptions []string) []string {
+func (m *GitLabHookManager) customHooksEnv(payload git.HooksPayload, pushOptions []string) ([]string, error) {
+	repoPath, err := m.locator.GetPath(payload.Repo)
+	if err != nil {
+		return nil, err
+	}
+
 	return append(
 		pushOptionsEnv(pushOptions),
+		"GIT_DIR="+repoPath,
 		"GL_REPOSITORY="+payload.Repo.GetGlRepository(),
 		"GL_PROJECT_PATH="+payload.Repo.GetGlProjectPath(),
 		"GL_ID="+payload.ReceiveHooksPayload.UserID,
 		"GL_USERNAME="+payload.ReceiveHooksPayload.Username,
 		"GL_PROTOCOL="+payload.ReceiveHooksPayload.Protocol,
-	)
+	), nil
 }
 
 // pushOptionsEnv turns a slice of git push option values into a GIT_PUSH_OPTION_COUNT and individual

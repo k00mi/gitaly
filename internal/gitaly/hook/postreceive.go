@@ -167,7 +167,10 @@ func (m *GitLabHookManager) PostReceiveHook(ctx context.Context, repo *gitalypb.
 		return helper.ErrInternalf("creating custom hooks executor: %v", err)
 	}
 
-	customEnv := customHooksEnv(payload, pushOptions)
+	customEnv, err := m.customHooksEnv(payload, pushOptions)
+	if err != nil {
+		return helper.ErrInternalf("constructing custom hook environment: %v", err)
+	}
 
 	if err = executor(
 		ctx,
