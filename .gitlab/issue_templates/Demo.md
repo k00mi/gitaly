@@ -19,7 +19,7 @@ Make sure you break down steps into the following sections:
    These steps are okay for the demo runner to perform before the start of the
    demo call.
 1. demo steps - these are the steps to perform during the demo call to show
-   how the feature works 
+   how the feature works
 1. verify steps - these are the expected observations required to be seen
    in order to verify the prep or feature works as expected
 
@@ -31,7 +31,7 @@ following structure is okay:
 1. Prep
 1. Verify
 1. Prep
-1. Demo 
+1. Demo
 1. Verify
 1. Demo
 1. Demo
@@ -96,7 +96,49 @@ Repository importer's goal is to create any missing database records for reposit
    - [ ] Verify `repositories` table contains records for the imported repositories with generation `0`.
    - [ ] Verify `storage_repositories` records the primary containing the imported repositories on generation `0`. Secondaries might have records as well if the automatic reconciler scheduled jobs to replicate the
    repositories to them.
-   - [ ] Verify `virtual_storages` table contains records with `repositories_imported` set for the successfully imported virtual storages. 
+   - [ ] Verify `virtual_storages` table contains records with `repositories_imported` set for the successfully imported virtual storages.
+
+### Distributed reads with caching https://gitlab.com/gitlab-org/gitaly/-/issues/3053
+
+The goal of caching is to reduce load on the database and speed up defining up to date storages for distributing read operations among them.
+
+1. [ ] Prep:
+   - [ ] Create a repository in the demo cluster. This ensures we have a repository we can use for read/write.
+   - [ ] Verify the distributed reads feature is disabled. On the GitLab node run:
+     ```
+     gitlab-rails console
+     Feature.enabled?('gitaly_distributed_reads')
+     ```
+   - [ ] Verify the distributed reads cache is disabled by running
+     `grep 'reads distribution caching is' /var/log/gitlab/praefect/current`
+     the full message should be: `reads distribution caching is disabled because direct connection to Postgres is not set`.
+1. [ ] Demo:
+   - [ ] Navigate to the SQL instance in [GCloud](https://console.cloud.google.com/sql/instances?project=gitlab-internal-153318) and add addresses of the praefect instances into the set of allowed IP addresses as described at [Configuring public IP connectivity](https://cloud.google.com/sql/docs/postgres/configure-ip) page (or whitelist all IPs with `0.0.0.0/0`).
+   - [ ] On each praefect node verify accessibility of the Postgres instance by running `/opt/gitlab/embedded/bin/psql -U praefect -d praefect_production -h <POSTGRESQL_SERVER_ADDRESS>`.
+   - [ ] On the GitLab node enable reads distribution feature flag by running:
+     ```
+     gitlab-rails console
+     Feature.enable('gitaly_distributed_reads')
+     ```
+   - [ ] Make some random operations on the repository: files creation/modification etc.
+   - [ ] Verify the feature flag is set by observing `rate(gitaly_feature_flag_checks_total{flag="distributed_reads"}[5m])` metric.
+   - [ ] Verify the reads distribution is working by checking grafana dashboard: `sum by (storage) (rate(gitaly_praefect_read_distribution[5m]))`.
+   - [ ] Verify there is no values for `gitaly_praefect_uptodate_storages_cache_access_total` metric.
+   - [ ] On each praefect node:
+     - [ ] Run `vim /etc/gitlab/gitlab.rb`, change configuration by adding `praefect['database_host_no_proxy'] = '<PRAEFECT_DATABASE_IP>'` and `praefect['database_port_no_proxy'] = <PRAEFECT_DATABASE_PORT>`, and `gitlab-ctl reconfigure`. **NOTE:** You should set direct connection to Postgres database not a PgBouncer address.
+     - [ ] Verify the cache is enabled by running `grep 'reads distribution caching is' /var/log/gitlab/praefect/current`
+     the full message should be: `reads distribution caching is enabled by configuration`
+   - [ ] Make some random operations on the repository: files creation/modification etc.
+   - [ ] Verify the cache is used by checking grafana dashboard: `sum by (type) (rate(gitaly_praefect_uptodate_storages_cache_access_total[5m]))`.
+   - [ ] Remember values of the `read_distribution` metric for future comparison.
+   - [ ] Jump on one of the gitaly nodes and terminate it with command `gitlab-ctl stop gitaly`.
+   - [ ] Make some random operations on the repository: files creation/modification etc.
+   - [ ] Query for the `read_distribution` metric and compare with previous result (the terminated node should have the same value).
+   - [ ] Remember values of `gitaly_praefect_uptodate_storages_cache_access_total` metric for future comparison.
+   - [ ] From one of the instances login into the Postgres with `/opt/gitlab/embedded/bin/psql -U praefect -d praefect_production -h <POSTGRESQL_SERVER_ADDRESS>` and execute the query: `NOTIFY repositories_updates, '{send';`.
+   - [ ] Verify each praefect instance has a log entry: `grep 'received payload can't be processed, cache disabled' /var/log/gitlab/praefect/current`.
+   - [ ] Make some random operations on the repository: files creation/modification etc.
+   - [ ] Query for the metric `gitaly_praefect_uptodate_storages_cache_access_total` and compare with the result saved previosuly. The `hit` metric value should not change.
 
 ## After Demo
 
