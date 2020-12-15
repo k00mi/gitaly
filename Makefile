@@ -119,7 +119,7 @@ ifeq (${LIBGIT2_BUILD_OPTIONS},)
 endif
 
 # These variables control test options and artifacts
-TEST_PKGS        ?= $(call find_go_packages)
+TEST_PACKAGES    ?= $(call find_go_packages)
 TEST_OPTIONS     ?=
 TEST_REPORT_DIR  ?= ${BUILD_DIR}/reports
 TEST_OUTPUT_NAME ?= go-${GO_VERSION}-git-${GIT_VERSION}
@@ -130,6 +130,12 @@ TEST_REPO_DIR    := ${BUILD_DIR}/testrepos
 TEST_REPO        := ${TEST_REPO_DIR}/gitlab-test.git
 TEST_REPO_GIT    := ${TEST_REPO_DIR}/gitlab-git-test.git
 
+# uniq is a helper function to filter out any duplicate values in the single
+# parameter it accepts.
+#
+# Credits go to https://stackoverflow.com/questions/16144115/makefile-remove-duplicate-words-without-sorting
+uniq = $(if $(1),$(firstword $(1)) $(call uniq,$(filter-out $(firstword $(1)),$(1))))
+
 # Find all commands.
 find_commands         = $(notdir $(shell find ${SOURCE_DIR}/cmd -mindepth 1 -maxdepth 1 -type d -print))
 # Find all command binaries.
@@ -138,7 +144,17 @@ find_command_binaries = $(addprefix ${BUILD_DIR}/bin/, $(call find_commands))
 # Find all Go source files.
 find_go_sources  = $(shell find ${SOURCE_DIR} -type d \( -name ruby -o -name vendor -o -name testdata -o -name '_*' -o -path '*/proto/go' \) -prune -o -type f -name '*.go' -not -name '*.pb.go' -print | sort -u)
 # Find all Go packages.
-find_go_packages = $(dir $(call find_go_sources, 's|[^/]*\.go||'))
+find_go_packages = $(call uniq,$(dir $(call find_go_sources)))
+
+# run_go_tests will execute Go tests with all required parameters. Its
+# behaviour can be modified via the following variables:
+#
+# GO_BUILD_TAGS: tags used to build the executables
+# GO_TEST_LDFLAGS: ldflags passed to go-test
+# TEST_OPTIONS: any additional options
+# TEST_PACKAGES: packages which shall be tested
+run_go_tests = PATH='${SOURCE_DIR}/internal/testhelper/testdata/home/bin:${PATH}' \
+    go test -v -count=1 -tags '${GO_BUILD_TAGS}' -ldflags='${GO_TEST_LDFLAGS}' ${TEST_OPTIONS} ${TEST_PACKAGES}
 
 unexport GOROOT
 export GOBIN                      = ${BUILD_DIR}/bin
@@ -200,36 +216,39 @@ binaries: assemble
 prepare-tests: git ${TEST_REPO} ${TEST_REPO_GIT} ${SOURCE_DIR}/.ruby-bundle
 
 .PHONY: test
-test: export PATH := ${SOURCE_DIR}/internal/testhelper/testdata/home/bin:${PATH}
 test: test-go rspec
 
 .PHONY: test-go
 test-go: prepare-tests ${GO_JUNIT_REPORT} libgit2
 	${Q}mkdir -p ${TEST_REPORT_DIR}
 	${Q}echo 0 >${TEST_EXIT}
-	${Q}go test ${TEST_OPTIONS} -v -tags "${GO_BUILD_TAGS}" -ldflags='${GO_TEST_LDFLAGS}' -count=1 ${TEST_PKGS} 2>&1 | tee ${TEST_OUTPUT} || echo $$? >${TEST_EXIT}
+	${Q}$(call run_go_tests) 2>&1 | tee ${TEST_OUTPUT} || echo $$? >${TEST_EXIT}
 	${Q}${GO_JUNIT_REPORT} <${TEST_OUTPUT} >${TEST_REPORT}
 	${Q}exit `cat ${TEST_EXIT}`
 
 .PHONY: test-with-proxies
+test-with-proxies: TEST_OPTIONS  := ${TEST_OPTIONS} -exec ${SOURCE_DIR}/_support/bad-proxies
+test-with-proxies: TEST_PACKAGES := ${GITALY_PACKAGE}/internal/gitaly/rubyserver
 test-with-proxies: prepare-tests
-	${Q}go test -tags "${GO_BUILD_TAGS}" -count=1  -exec ${SOURCE_DIR}/_support/bad-proxies ${GITALY_PACKAGE}/internal/gitaly/rubyserver/
+	${Q}$(call run_go_tests)
 
 .PHONY: test-with-praefect
 test-with-praefect: build prepare-tests
-	${Q}GITALY_TEST_PRAEFECT_BIN=${BUILD_DIR}/bin/praefect go test -tags "${GO_BUILD_TAGS}" -ldflags='${GO_TEST_LDFLAGS}' -count=1 $(call find_go_packages) # count=1 bypasses go 1.10 test caching
+	${Q}GITALY_TEST_PRAEFECT_BIN=${BUILD_DIR}/bin/praefect $(call run_go_tests)
+
+.PHONY: test-postgres
+test-postgres: GO_BUILD_TAGS := ${GO_BUILD_TAGS},postgres
+test-postgres: TEST_PACKAGES := gitlab.com/gitlab-org/gitaly/internal/praefect/...
+test-postgres: prepare-tests
+	${Q}$(call run_go_tests)
 
 .PHONY: race-go
-race-go: TEST_OPTIONS = -race
+race-go: TEST_OPTIONS := ${TEST_OPTIONS} -race
 race-go: test-go
 
 .PHONY: rspec
 rspec: assemble-go prepare-tests
-	${Q}cd ${GITALY_RUBY_DIR} && bundle exec rspec
-
-.PHONY: test-postgres
-test-postgres: prepare-tests
-	${Q}go test -tags "${GO_BUILD_TAGS}",postgres -count=1 gitlab.com/gitlab-org/gitaly/internal/praefect/...
+	${Q}cd ${GITALY_RUBY_DIR} && PATH='${SOURCE_DIR}/internal/testhelper/testdata/home/bin:${PATH}' bundle exec rspec
 
 .PHONY: verify
 verify: check-mod-tidy check-formatting notice-up-to-date check-proto rubocop
@@ -285,11 +304,13 @@ rubocop: ${SOURCE_DIR}/.ruby-bundle
 	${Q}cd ${GITALY_RUBY_DIR} && bundle exec rubocop --parallel
 
 .PHONY: cover
+cover: GO_BUILD_TAGS := ${GO_BUILD_TAGS},postgres
+cover: TEST_OPTIONS  := ${TEST_OPTIONS} -coverprofile "${COVERAGE_DIR}/all.merged"
 cover: prepare-tests libgit2 ${GOCOVER_COBERTURA}
 	${Q}echo "NOTE: make cover does not exit 1 on failure, don't use it to check for tests success!"
 	${Q}mkdir -p "${COVERAGE_DIR}"
 	${Q}rm -f "${COVERAGE_DIR}/all.merged" "${COVERAGE_DIR}/all.html"
-	${Q}go test -tags ${GO_BUILD_TAGS},postgres -ldflags='${GO_TEST_LDFLAGS}' -coverprofile "${COVERAGE_DIR}/all.merged" $(call find_go_packages)
+	${Q}$(call run_go_tests)
 	${Q}go tool cover -html  "${COVERAGE_DIR}/all.merged" -o "${COVERAGE_DIR}/all.html"
 	# sed is used below to convert file paths to repository root relative paths. See https://gitlab.com/gitlab-org/gitlab/-/issues/217664
 	${Q}${GOCOVER_COBERTURA} <"${COVERAGE_DIR}/all.merged" | sed 's;filename=\"$(shell go list -m)/;filename=\";g' >"${COVERAGE_DIR}/cobertura.xml"
@@ -336,8 +357,9 @@ no-proto-changes: | ${BUILD_DIR}
 	${Q}if [ -s ${BUILD_DIR}/proto.diff ]; then echo "There is a difference in generated proto files. Please take a look at ${BUILD_DIR}/proto.diff file." && exit 1; fi
 
 .PHONY: smoke-test
+smoke-test: TEST_PACKAGES := ${SOURCE_DIR}/internal/gitaly/rubyserver
 smoke-test: all rspec
-	${Q}go test -tags "${GO_BUILD_TAGS}" ./internal/gitaly/rubyserver
+	$(call run_go_tests)
 
 .PHONY: git
 git: ${GIT_INSTALL_DIR}/bin/git
