@@ -141,7 +141,7 @@ func testHooksPrePostReceive(t *testing.T) {
 	glUsername := "iamgitlab"
 	glProtocol := "ssh"
 
-	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
+	tempGitlabShellDir, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 
 	changes := "abc"
@@ -172,16 +172,6 @@ func testHooksPrePostReceive(t *testing.T) {
 	defer cleanup()
 
 	config.Config.GitlabShell.Dir = tempGitlabShellDir
-
-	testhelper.WriteTemporaryGitlabShellConfigFile(t,
-		tempGitlabShellDir,
-		testhelper.GitlabShellConfig{
-			GitlabURL: serverURL,
-			HTTPSettings: testhelper.HTTPSettings{
-				User:     gitlabUser,
-				Password: gitlabPassword,
-			},
-		})
 
 	testhelper.WriteShellSecretFile(t, tempGitlabShellDir, secretToken)
 
@@ -280,13 +270,11 @@ func TestHooksUpdate(t *testing.T) {
 	glUsername := "iamgitlab"
 	glProtocol := "ssh"
 
-	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
+	tempGitlabShellDir, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 
 	customHooksDir, cleanup := testhelper.TempDir(t)
 	defer cleanup()
-
-	testhelper.WriteTemporaryGitlabShellConfigFile(t, tempGitlabShellDir, testhelper.GitlabShellConfig{GitlabURL: "http://www.example.com", CustomHooksDir: customHooksDir})
 
 	os.Symlink(filepath.Join(config.Config.GitlabShell.Dir, "config.yml"), filepath.Join(tempGitlabShellDir, "config.yml"))
 
@@ -376,7 +364,7 @@ func TestHooksPostReceiveFailed(t *testing.T) {
 	glProtocol := "ssh"
 	changes := "oldhead newhead"
 
-	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
+	tempGitlabShellDir, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
@@ -505,7 +493,7 @@ func TestHooksNotAllowed(t *testing.T) {
 	glProtocol := "ssh"
 	changes := "oldhead newhead"
 
-	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
+	tempGitlabShellDir, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
@@ -524,7 +512,6 @@ func TestHooksNotAllowed(t *testing.T) {
 	serverURL, cleanup := testhelper.NewGitlabTestServer(t, c)
 	defer cleanup()
 
-	testhelper.WriteTemporaryGitlabShellConfigFile(t, tempGitlabShellDir, testhelper.GitlabShellConfig{GitlabURL: serverURL})
 	testhelper.WriteShellSecretFile(t, tempGitlabShellDir, "the wrong token")
 
 	config.Config.GitlabShell.Dir = tempGitlabShellDir

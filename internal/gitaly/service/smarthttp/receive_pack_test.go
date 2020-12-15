@@ -386,7 +386,7 @@ func TestPostReceivePackToHooks(t *testing.T) {
 	client, conn := newSmartHTTPClient(t, "unix://"+socket)
 	defer conn.Close()
 
-	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
+	tempGitlabShellDir, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 
 	defer func(cfg config.Cfg) {
@@ -419,7 +419,6 @@ func TestPostReceivePackToHooks(t *testing.T) {
 	})
 	defer cleanup()
 
-	testhelper.WriteTemporaryGitlabShellConfigFile(t, tempGitlabShellDir, testhelper.GitlabShellConfig{GitlabURL: serverURL})
 	testhelper.WriteShellSecretFile(t, tempGitlabShellDir, secretToken)
 
 	cleanup = testhelper.WriteCheckNewObjectExistsHook(t, testRepoPath)
@@ -510,19 +509,9 @@ func testPostReceiveWithTransactionsViaPraefect(t *testing.T, ctx context.Contex
 	serverURL, cleanup := testhelper.NewGitlabTestServer(t, opts)
 	defer cleanup()
 
-	gitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
+	gitlabShellDir, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 	config.Config.GitlabShell.Dir = gitlabShellDir
-	testhelper.WriteTemporaryGitlabShellConfigFile(t,
-		gitlabShellDir,
-		testhelper.GitlabShellConfig{
-			GitlabURL: serverURL,
-			HTTPSettings: testhelper.HTTPSettings{
-				User:     gitlabUser,
-				Password: gitlabPassword,
-			},
-		})
-
 	config.Config.Gitlab.URL = serverURL
 	config.Config.Gitlab.HTTPSettings.User = gitlabUser
 	config.Config.Gitlab.HTTPSettings.Password = gitlabPassword
@@ -594,7 +583,7 @@ func TestPostReceiveWithReferenceTransactionHook(t *testing.T) {
 	go gitalyServer.Serve(internalListener)
 	defer gitalyServer.Stop()
 
-	gitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
+	gitlabShellDir, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 
 	defer func(oldValue string) {
