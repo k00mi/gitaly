@@ -274,6 +274,109 @@ func testSuccessfulUserCreateTagRequest(t *testing.T, ctx context.Context) {
 	}
 }
 
+func TestSuccessfulUserCreateTagRequestAnnotatedLightweightDisambiguation(t *testing.T) {
+	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.ReferenceTransactions,
+	}).Run(t, testSuccessfulUserCreateTagRequestAnnotatedLightweightDisambiguation)
+}
+
+func testSuccessfulUserCreateTagRequestAnnotatedLightweightDisambiguation(t *testing.T, ctx context.Context) {
+	serverSocketPath, stop := runOperationServiceServer(t)
+	defer stop()
+
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	preReceiveHook, cleanup := writeAssertObjectTypePreReceiveHook(t)
+	defer cleanup()
+
+	updateHook, cleanup := writeAssertObjectTypeUpdateHook(t)
+	defer cleanup()
+
+	testCases := []struct {
+		desc    string
+		message string
+		objType string
+		err     error
+	}{
+		{
+			desc:    "error: contains null byte",
+			message: "\000",
+			err:     status.Error(codes.Unknown, "ArgumentError: string contains null byte"),
+		},
+		{
+			desc:    "annotated: some control characters",
+			message: "\u0001\u0002\u0003\u0004\u0005\u0006\u0007\u0008",
+			objType: "tag",
+		},
+		{
+			desc:    "lightweight: empty message",
+			message: "",
+			objType: "commit",
+		},
+		{
+			desc:    "lightweight: simple whitespace",
+			message: " \t\t",
+			objType: "commit",
+		},
+		{
+			desc:    "lightweight: whitespace with newlines",
+			message: "\t\n\f\r ",
+			objType: "commit",
+		},
+		{
+			desc:    "lightweight: simple Unicode whitespace",
+			message: "\u00a0",
+			objType: "tag",
+		},
+		{
+			desc:    "lightweight: lots of Unicode whitespace",
+			message: "\u0020\u00a0\u1680\u180e\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u200b\u202f\u205f\u3000\ufeff",
+			objType: "tag",
+		},
+		{
+			desc:    "annotated: dot",
+			message: ".",
+			objType: "tag",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			for hook, content := range map[string]string{
+				"pre-receive": fmt.Sprintf("#!/bin/sh\n%s %s \"$@\"", preReceiveHook, testCase.objType),
+				"update":      fmt.Sprintf("#!/bin/sh\n%s %s \"$@\"", updateHook, testCase.objType),
+			} {
+				hookCleanup, err := testhelper.WriteCustomHook(testRepoPath, hook, []byte(content))
+				require.NoError(t, err)
+				defer hookCleanup()
+			}
+
+			tagName := "what-will-it-be"
+			request := &gitalypb.UserCreateTagRequest{
+				Repository:     testRepo,
+				TagName:        []byte(tagName),
+				TargetRevision: []byte("c7fbe50c7c7419d9701eebe64b1fdacc3df5b9dd"),
+				User:           testhelper.TestUser,
+				Message:        []byte(testCase.message),
+			}
+
+			response, err := client.UserCreateTag(ctx, request)
+
+			if testCase.err != nil {
+				require.Equal(t, testCase.err, err)
+			} else {
+				defer testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", "-d", tagName)
+				require.NoError(t, err)
+				require.Empty(t, response.PreReceiveError)
+			}
+		})
+	}
+}
+
 func TestSuccessfulUserCreateTagRequestToNonCommit(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
