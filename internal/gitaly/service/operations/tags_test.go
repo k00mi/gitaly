@@ -108,14 +108,14 @@ unless commands.size == 1
   abort "expected 1 ref update command, got #{commands.size}"
 end
 
-new_value = commands[0].split(' ', 3)[1]
+old_value, new_value, ref_name = commands[0].split(' ', 3)
 abort 'missing new_value' unless new_value
 
 out = IO.popen(%%W[%s cat-file -t #{new_value}], &:read)
 abort 'cat-file failed' unless $?.success?
 
 unless out.chomp == expected_object_type
-  abort "pre-receive hook error: expected #{new_value} to be a #{expected_object_type} object, got #{out}"
+  abort "pre-receive hook error: expected '#{ref_name}' update of '#{old_value}' (a) -> '#{new_value}' (b) for 'b' to be a '#{expected_object_type}' object, got '#{out}'"
 end`, config.Config.Git.BinPath)
 
 	dir, cleanup := testhelper.TempDir(t)
@@ -132,7 +132,7 @@ func writeAssertObjectTypeUpdateHook(t *testing.T) (string, func()) {
 	hook := fmt.Sprintf(`#!/usr/bin/env ruby
 
 expected_object_type = ARGV.shift
-new_value = ARGV[2]
+ref_name, old_value, new_value = ARGV[0..2]
 
 abort "missing new_value" unless new_value
 
@@ -140,7 +140,7 @@ out = IO.popen(%%W[%s cat-file -t #{new_value}], &:read)
 abort 'cat-file failed' unless $?.success?
 
 unless out.chomp == expected_object_type
-  abort "update hook error: expected #{new_value} to be a #{expected_object_type} object, got #{out}"
+  abort "update hook error: expected '#{ref_name}' update of '#{old_value}' (a) -> '#{new_value}' (b) for 'b' to be a '#{expected_object_type}' object, got '#{out}'"
 end`, config.Config.Git.BinPath)
 
 	dir, cleanup := testhelper.TempDir(t)
