@@ -158,3 +158,32 @@ func TestContextCancelAbortsRefChanges(t *testing.T) {
 	_, err = log.GetCommit(ctx, testRepo, ref)
 	require.True(t, log.IsNotFound(err), "expected 'not found' error got %v", err)
 }
+
+func TestUpdater_closingStdinAbortsChanges(t *testing.T) {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	testRepo, _, cleanup := testhelper.NewTestRepo(t)
+	defer cleanup()
+
+	headCommit, err := log.GetCommit(ctx, testRepo, "HEAD")
+	require.NoError(t, err)
+
+	ref := "refs/heads/shouldnotexist"
+
+	updater, err := New(ctx, testRepo)
+	require.NoError(t, err)
+	require.NoError(t, updater.Create(ref, headCommit.Id))
+
+	// Note that we call `Wait()` on the command, not on the updater. This
+	// circumvents our usual semantics of sending "commit" and thus
+	// emulates that the command somehow terminates correctly without us
+	// terminating it intentionally. Previous to our use of the "start"
+	// verb, this would've caused the reference to be created...
+	require.NoError(t, updater.cmd.Wait())
+
+	// ... but as we now use explicit transactional behaviour, this is no
+	// longer the case.
+	_, err = log.GetCommit(ctx, testRepo, ref)
+	require.True(t, log.IsNotFound(err), "expected 'not found' error got %v", err)
+}
