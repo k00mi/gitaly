@@ -127,6 +127,7 @@ func run(b *bootstrap.Bootstrap) error {
 	var gitlabAPI hook.GitlabAPI
 	var err error
 
+	hookManager := hook.Manager(hook.DisabledManager{})
 	if config.SkipHooks() {
 		log.Warn("skipping GitLab API client creation since hooks are bypassed via GITALY_TESTING_NO_GIT_HOOKS")
 	} else {
@@ -134,10 +135,12 @@ func run(b *bootstrap.Bootstrap) error {
 		if err != nil {
 			log.Fatalf("could not create GitLab API client: %v", err)
 		}
-	}
 
-	hookManager := hook.NewManager(config.NewLocator(config.Config), gitlabAPI, config.Config)
-	prometheus.MustRegister(hookManager)
+		hm := hook.NewManager(config.NewLocator(config.Config), gitlabAPI, config.Config)
+		prometheus.MustRegister(hm)
+
+		hookManager = hm
+	}
 
 	conns := client.NewPoolWithOptions(
 		client.WithDialer(client.HealthCheckDialer(client.DialContext)),
