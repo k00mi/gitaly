@@ -809,12 +809,27 @@ func TestFailedUserCreateTagRequestDueToTagExistence(t *testing.T) {
 		tagName        string
 		targetRevision string
 		user           *gitalypb.User
+		response       *gitalypb.UserCreateTagResponse
+		err            error
 	}{
 		{
 			desc:           "simple existing tag",
 			tagName:        "v1.1.0",
 			targetRevision: "master",
 			user:           testhelper.TestUser,
+			response: &gitalypb.UserCreateTagResponse{
+				Tag:    nil,
+				Exists: true,
+			},
+			err: nil,
+		},
+		{
+			desc:           "existing tag nonexisting target revision",
+			tagName:        "v1.1.0",
+			targetRevision: "does-not-exist",
+			user:           testhelper.TestUser,
+			response:       nil,
+			err:            status.Errorf(codes.FailedPrecondition, "revspec '%s' not found", "does-not-exist"),
 		},
 	}
 
@@ -827,13 +842,9 @@ func TestFailedUserCreateTagRequestDueToTagExistence(t *testing.T) {
 				User:           testCase.user,
 			}
 
-			responseOk := &gitalypb.UserCreateTagResponse{
-				Tag:    nil,
-				Exists: true,
-			}
 			response, err := client.UserCreateTag(ctx, request)
-			require.NoError(t, err)
-			require.Equal(t, responseOk, response)
+			require.Equal(t, testCase.err, err)
+			require.Equal(t, testCase.response, response)
 		})
 	}
 }
