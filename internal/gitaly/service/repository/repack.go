@@ -72,17 +72,17 @@ func repackCommand(ctx context.Context, repo repository.GitRepo, bitmap bool, ar
 
 func repackConfig(ctx context.Context, bitmap bool) []git.GlobalOption {
 	args := []git.GlobalOption{
-		git.ValueFlag{"-c", "pack.island=r(e)fs/heads"},
-		git.ValueFlag{"-c", "pack.island=r(e)fs/tags"},
-		git.ValueFlag{"-c", "pack.islandCore=e"},
-		git.ValueFlag{"-c", "repack.useDeltaIslands=true"},
+		git.ConfigPair{Key: "pack.island", Value: "r(e)fs/heads"},
+		git.ConfigPair{Key: "pack.island", Value: "r(e)fs/tags"},
+		git.ConfigPair{Key: "pack.islandCore", Value: "e"},
+		git.ConfigPair{Key: "repack.useDeltaIslands", Value: "true"},
 	}
 
 	if bitmap {
-		args = append(args, git.ValueFlag{"-c", "repack.writeBitmaps=true"})
-		args = append(args, git.ValueFlag{"-c", "pack.writeBitmapHashCache=true"})
+		args = append(args, git.ConfigPair{Key: "repack.writeBitmaps", Value: "true"})
+		args = append(args, git.ConfigPair{Key: "pack.writeBitmapHashCache", Value: "true"})
 	} else {
-		args = append(args, git.ValueFlag{"-c", "repack.writeBitmaps=false"})
+		args = append(args, git.ConfigPair{Key: "repack.writeBitmaps", Value: "false"})
 	}
 
 	repackCounter.WithLabelValues(fmt.Sprint(bitmap)).Inc()

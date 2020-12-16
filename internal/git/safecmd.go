@@ -329,8 +329,8 @@ func handleOpts(ctx context.Context, sc Cmd, cc *cmdCfg, opts []CmdOpt) error {
 		return fmt.Errorf("subcommand %q: %w", sc.Subcommand(), ErrRefHookNotRequired)
 	}
 	if mayGeneratePackfiles(sc.Subcommand()) {
-		cc.globals = append(cc.globals, ValueFlag{
-			Name: "-c", Value: "pack.windowMemory=100m",
+		cc.globals = append(cc.globals, ConfigPair{
+			Key: "pack.windowMemory", Value: "100m",
 		})
 	}
 

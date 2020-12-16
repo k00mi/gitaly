@@ -207,7 +207,7 @@ func validateRequest(in requestWithLeftRightCommitIds) error {
 
 func eachDiff(ctx context.Context, rpc string, repo *gitalypb.Repository, subCmd git.Cmd, limits diff.Limits, callback func(*diff.Diff) error) error {
 	diffArgs := []git.GlobalOption{
-		git.ValueFlag{"-c", "diff.noprefix=false"},
+		git.ConfigPair{Key: "diff.noprefix", Value: "false"},
 	}
 
 	cmd, err := git.SafeCmd(ctx, repo, diffArgs, subCmd)

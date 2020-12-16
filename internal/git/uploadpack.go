@@ -4,9 +4,9 @@ package git
 // partial-clone filters.
 func UploadPackFilterConfig() []GlobalOption {
 	return []GlobalOption{
-		ValueFlag{"-c", "uploadpack.allowFilter=true"},
+		ConfigPair{Key: "uploadpack.allowFilter", Value: "true"},
 		// Enables the capability to request individual SHA1's from the
 		// remote repo.
-		ValueFlag{"-c", "uploadpack.allowAnySHA1InWant=true"},
+		ConfigPair{Key: "uploadpack.allowAnySHA1InWant", Value: "true"},
 	}
 }

@@ -187,10 +187,10 @@ func rescueDanglingObjects(ctx context.Context, repo repository.GitRepo) error {
 
 func repackPool(ctx context.Context, pool repository.GitRepo) error {
 	repackArgs := []git.GlobalOption{
-		git.ValueFlag{"-c", "pack.island=" + sourceRefNamespace + "/he(a)ds"},
-		git.ValueFlag{"-c", "pack.island=" + sourceRefNamespace + "/t(a)gs"},
-		git.ValueFlag{"-c", "pack.islandCore=a"},
-		git.ValueFlag{"-c", "pack.writeBitmapHashCache=true"},
+		git.ConfigPair{Key: "pack.island", Value: sourceRefNamespace + "/he(a)ds"},
+		git.ConfigPair{Key: "pack.island", Value: sourceRefNamespace + "/t(a)gs"},
+		git.ConfigPair{Key: "pack.islandCore", Value: "a"},
+		git.ConfigPair{Key: "pack.writeBitmapHashCache", Value: "true"},
 	}
 
 	repackCmd, err := git.SafeCmd(ctx, pool, repackArgs, git.SubCmd{
