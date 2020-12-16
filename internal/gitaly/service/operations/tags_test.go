@@ -102,6 +102,10 @@ func writeAssertObjectTypePreReceiveHook(t *testing.T) (string, func()) {
 
 	hook := fmt.Sprintf(`#!/usr/bin/env ruby
 
+# We match a non-ASCII ref_name below
+Encoding.default_external = Encoding::UTF_8
+Encoding.default_internal = Encoding::UTF_8
+
 expected_object_type = ARGV.shift
 commands = STDIN.each_line.map(&:chomp)
 unless commands.size == 1
@@ -113,6 +117,10 @@ abort 'missing new_value' unless new_value
 
 out = IO.popen(%%W[%s cat-file -t #{new_value}], &:read)
 abort 'cat-file failed' unless $?.success?
+
+if ref_name =~ /^refs\/[^\/]+\/skip-type-check-/
+  exit 0
+end
 
 unless out.chomp == expected_object_type
   abort "pre-receive hook error: expected '#{ref_name}' update of '#{old_value}' (a) -> '#{new_value}' (b) for 'b' to be a '#{expected_object_type}' object, got '#{out}'"
@@ -131,6 +139,10 @@ func writeAssertObjectTypeUpdateHook(t *testing.T) (string, func()) {
 
 	hook := fmt.Sprintf(`#!/usr/bin/env ruby
 
+# We match a non-ASCII ref_name below
+Encoding.default_external = Encoding::UTF_8
+Encoding.default_internal = Encoding::UTF_8
+
 expected_object_type = ARGV.shift
 ref_name, old_value, new_value = ARGV[0..2]
 
@@ -138,6 +150,10 @@ abort "missing new_value" unless new_value
 
 out = IO.popen(%%W[%s cat-file -t #{new_value}], &:read)
 abort 'cat-file failed' unless $?.success?
+
+if ref_name =~ /^refs\/[^\/]+\/skip-type-check-/
+  exit 0
+end
 
 unless out.chomp == expected_object_type
   abort "update hook error: expected '#{ref_name}' update of '#{old_value}' (a) -> '#{new_value}' (b) for 'b' to be a '#{expected_object_type}' object, got '#{out}'"
@@ -473,10 +489,43 @@ func TestSuccessfulUserCreateTagNestedTags(t *testing.T) {
 				require.Equal(t, responseOk, response)
 
 				peeledID := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", tagName+"^{}")
-				require.Equal(t, testCase.targetObject, text.ChompBytes(peeledID))
+				peeledIDStr := text.ChompBytes(peeledID)
+				require.Equal(t, testCase.targetObject, peeledIDStr)
 
 				// Set up the next level of nesting...
 				targetObject = response.Tag.Id
+
+				// Create a *lightweight* tag pointing
+				// to our N-level
+				// tag->[commit|tree|blob]. The "tag"
+				// field name will not match the tag
+				// name.
+				tagNameLight := fmt.Sprintf("skip-type-check-light-%s", tagName)
+				request = &gitalypb.UserCreateTagRequest{
+					Repository:     testRepo,
+					TagName:        []byte(tagNameLight),
+					TargetRevision: []byte(createdIDStr),
+					User:           testhelper.TestUser,
+				}
+				response, err = client.UserCreateTag(ctx, request)
+				defer testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", "-d", tagNameLight)
+				require.NoError(t, err)
+				require.Empty(t, response.PreReceiveError)
+
+				responseOk = &gitalypb.UserCreateTagResponse{
+					Tag: &gitalypb.Tag{
+						Name:         request.TagName,
+						Id:           testCase.targetObject,
+						TargetCommit: responseOk.Tag.TargetCommit,
+						Message:      nil,
+						MessageSize:  0,
+					},
+				}
+				require.Equal(t, responseOk, response)
+
+				createdIDLight := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", tagNameLight)
+				createdIDLightStr := text.ChompBytes(createdIDLight)
+				require.Equal(t, testCase.targetObject, createdIDLightStr)
 			}
 		})
 	}
