@@ -377,6 +377,95 @@ func testSuccessfulUserCreateTagRequestAnnotatedLightweightDisambiguation(t *tes
 	}
 }
 
+func TestSuccessfulUserCreateTagRequestWithParsedTargetRevision(t *testing.T) {
+	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.ReferenceTransactions,
+	}).Run(t, testSuccessfulUserCreateTagRequestWithParsedTargetRevision)
+}
+
+func testSuccessfulUserCreateTagRequestWithParsedTargetRevision(t *testing.T, ctx context.Context) {
+	serverSocketPath, stop := runOperationServiceServer(t)
+	defer stop()
+
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", "heads/master", "master~1")
+	defer testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", "-d", "heads/master")
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", "refs/heads/master", "master~2")
+	defer testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", "-d", "refs/heads/master")
+
+	testCases := []struct {
+		desc             string
+		targetRevision   string
+		expectedRevision string
+	}{
+		{
+			desc:             "tag",
+			targetRevision:   "v1.0.0",
+			expectedRevision: "refs/tags/v1.0.0",
+		},
+		{
+			desc:             "tag~",
+			targetRevision:   "v1.0.0~",
+			expectedRevision: "refs/tags/v1.0.0~",
+		},
+		{
+			desc:             "tags/tag~",
+			targetRevision:   "tags/v1.0.0~",
+			expectedRevision: "refs/tags/v1.0.0~",
+		},
+		{
+			desc:             "refs/tag~",
+			targetRevision:   "refs/tags/v1.0.0~",
+			expectedRevision: "refs/tags/v1.0.0~",
+		},
+		{
+			desc:             "master",
+			targetRevision:   "master",
+			expectedRevision: "master",
+		},
+		{
+			desc:             "heads/master",
+			targetRevision:   "heads/master",
+			expectedRevision: "refs/heads/heads/master",
+		},
+		{
+			desc:             "refs/heads/master",
+			targetRevision:   "refs/heads/master",
+			expectedRevision: "refs/heads/master",
+		},
+		{
+			desc:             "heads/refs/heads/master",
+			targetRevision:   "heads/refs/heads/master",
+			expectedRevision: "refs/heads/refs/heads/master",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			tagName := "what-will-it-be"
+			request := &gitalypb.UserCreateTagRequest{
+				Repository:     testRepo,
+				TagName:        []byte(tagName),
+				TargetRevision: []byte(testCase.targetRevision),
+				User:           testhelper.TestUser,
+			}
+
+			response, err := client.UserCreateTag(ctx, request)
+			defer testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", "-d", tagName)
+			require.NoError(t, err)
+			require.Empty(t, response.PreReceiveError)
+
+			parsedID := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", tagName)
+			require.Equal(t, text.ChompBytes(parsedID), response.Tag.TargetCommit.Id)
+		})
+	}
+}
+
 func TestSuccessfulUserCreateTagRequestToNonCommit(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
