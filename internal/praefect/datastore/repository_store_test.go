@@ -548,73 +548,210 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 		require.NoError(t, err)
 		require.False(t, exists)
 	})
+}
 
-	t.Run("GetOutdatedRepositories", func(t *testing.T) {
-		t.Run("unknown virtual storage", func(t *testing.T) {
-			rs, _ := newStore(t, map[string][]string{})
+func TestPostgresRepositoryStore_GetPartiallyReplicatedRepositories(t *testing.T) {
+	for _, scope := range []struct {
+		desc                       string
+		useVirtualStoragePrimaries bool
+		primary                    string
+	}{
+		{desc: "virtual storage primaries", useVirtualStoragePrimaries: true, primary: "virtual-storage-primary"},
+		{desc: "repository primaries", useVirtualStoragePrimaries: false, primary: "repository-primary"},
+	} {
+		t.Run(scope.desc, func(t *testing.T) {
+			for _, tc := range []struct {
+				desc                  string
+				nonExistentRepository bool
+				existingGenerations   map[string]int
+				existingAssignments   []string
+				storageDetails        []OutdatedRepositoryStorageDetails
+			}{
+				{
+					desc:                "all up to date without assignments",
+					existingGenerations: map[string]int{"primary": 0, "secondary-1": 0},
+				},
+				{
+					desc:                "unconfigured node outdated without assignments",
+					existingGenerations: map[string]int{"primary": 1, "secondary-1": 1, "unconfigured": 0},
+				},
+				{
+					desc:                "unconfigured node contains the latest",
+					existingGenerations: map[string]int{"primary": 0, "secondary-1": 0, "unconfigured": 1},
+					storageDetails: []OutdatedRepositoryStorageDetails{
+						{Name: "primary", BehindBy: 1, Assigned: true},
+						{Name: "secondary-1", BehindBy: 1, Assigned: true},
+						{Name: "unconfigured", BehindBy: 0, Assigned: false},
+					},
+				},
+				{
+					desc:                "node has no repository without assignments",
+					existingGenerations: map[string]int{"primary": 0},
+					storageDetails: []OutdatedRepositoryStorageDetails{
+						{Name: "primary", BehindBy: 0, Assigned: true},
+						{Name: "secondary-1", BehindBy: 1, Assigned: true},
+					},
+				},
+				{
+					desc:                "node has outdated repository without assignments",
+					existingGenerations: map[string]int{"primary": 1, "secondary-1": 0},
+					storageDetails: []OutdatedRepositoryStorageDetails{
+						{Name: "primary", BehindBy: 0, Assigned: true},
+						{Name: "secondary-1", BehindBy: 1, Assigned: true},
+					},
+				},
+				{
+					desc:                "node with no repository heavily outdated",
+					existingGenerations: map[string]int{"primary": 10},
+					storageDetails: []OutdatedRepositoryStorageDetails{
+						{Name: "primary", BehindBy: 0, Assigned: true},
+						{Name: "secondary-1", BehindBy: 11, Assigned: true},
+					},
+				},
+				{
+					desc:                "node with a heavily outdated repository",
+					existingGenerations: map[string]int{"primary": 10, "secondary-1": 0},
+					storageDetails: []OutdatedRepositoryStorageDetails{
+						{Name: "primary", BehindBy: 0, Assigned: true},
+						{Name: "secondary-1", BehindBy: 10, Assigned: true},
+					},
+				},
+				{
+					desc:                  "outdated nodes ignored when repository should not exist",
+					nonExistentRepository: true,
+					existingGenerations:   map[string]int{"primary": 1, "secondary-1": 0},
+				},
+				{
+					desc:                "unassigned node has no repository",
+					existingAssignments: []string{"primary"},
+					existingGenerations: map[string]int{"primary": 0},
+				},
+				{
+					desc:                "unassigned node has an outdated repository",
+					existingAssignments: []string{"primary"},
+					existingGenerations: map[string]int{"primary": 1, "secondary-1": 0},
+				},
+				{
+					desc:                "assigned node has no repository",
+					existingAssignments: []string{"primary", "secondary-1"},
+					existingGenerations: map[string]int{"primary": 0},
+					storageDetails: []OutdatedRepositoryStorageDetails{
+						{Name: "primary", BehindBy: 0, Assigned: true},
+						{Name: "secondary-1", BehindBy: 1, Assigned: true},
+					},
+				},
+				{
+					desc:                "assigned node has outdated repository",
+					existingAssignments: []string{"primary", "secondary-1"},
+					existingGenerations: map[string]int{"primary": 1, "secondary-1": 0},
+					storageDetails: []OutdatedRepositoryStorageDetails{
+						{Name: "primary", BehindBy: 0, Assigned: true},
+						{Name: "secondary-1", BehindBy: 1, Assigned: true},
+					},
+				},
+				{
+					desc:                "unassigned node contains the latest repository",
+					existingAssignments: []string{"primary"},
+					existingGenerations: map[string]int{"primary": 0, "secondary-1": 1},
+					storageDetails: []OutdatedRepositoryStorageDetails{
+						{Name: "primary", BehindBy: 1, Assigned: true},
+						{Name: "secondary-1", BehindBy: 0, Assigned: false},
+					},
+				},
+				{
+					desc:                "unassigned node contains the only repository",
+					existingAssignments: []string{"primary"},
+					existingGenerations: map[string]int{"secondary-1": 0},
+					storageDetails: []OutdatedRepositoryStorageDetails{
+						{Name: "primary", BehindBy: 1, Assigned: true},
+						{Name: "secondary-1", BehindBy: 0, Assigned: false},
+					},
+				},
+				{
+					desc:                "unassigned unconfigured node contains the only repository",
+					existingAssignments: []string{"primary"},
+					existingGenerations: map[string]int{"unconfigured": 0},
+					storageDetails: []OutdatedRepositoryStorageDetails{
+						{Name: "primary", BehindBy: 1, Assigned: true},
+						{Name: "unconfigured", BehindBy: 0, Assigned: false},
+					},
+				},
+				{
+					desc:                "assigned unconfigured node has no repository",
+					existingAssignments: []string{"primary", "unconfigured"},
+					existingGenerations: map[string]int{"primary": 1},
+				},
+				{
+					desc:                "assigned unconfigured node is outdated",
+					existingAssignments: []string{"primary", "unconfigured"},
+					existingGenerations: map[string]int{"primary": 1, "unconfigured": 0},
+				},
+				{
+					desc:                "unconfigured node is the only assigned node",
+					existingAssignments: []string{"unconfigured"},
+					existingGenerations: map[string]int{"unconfigured": 0},
+					storageDetails: []OutdatedRepositoryStorageDetails{
+						{Name: "primary", BehindBy: 1, Assigned: true},
+						{Name: "secondary-1", BehindBy: 1, Assigned: true},
+						{Name: "unconfigured", BehindBy: 0, Assigned: false},
+					},
+				},
+			} {
+				t.Run(tc.desc, func(t *testing.T) {
+					ctx, cancel := testhelper.Context()
+					defer cancel()
 
-			_, err := rs.GetOutdatedRepositories(ctx, "does not exist")
-			require.EqualError(t, err, `unknown virtual storage: "does not exist"`)
-		})
+					db := getDB(t)
 
-		type state map[string]map[string]map[string]struct {
-			generation int
-		}
+					configuredStorages := map[string][]string{"virtual-storage": {"primary", "secondary-1"}}
 
-		type expected map[string]map[string]int
-
-		for _, tc := range []struct {
-			desc     string
-			state    state
-			expected map[string]map[string]int
-		}{
-			{
-				desc:     "no records in virtual storage",
-				state:    state{"virtual-storage-2": {stor: {"repo-1": {generation: 0}}}},
-				expected: expected{},
-			},
-			{
-				desc:     "storages missing records",
-				state:    state{vs: {stor: {"repo-1": {generation: 0}}}},
-				expected: expected{"repo-1": {"storage-2": 1, "storage-3": 1}},
-			},
-			{
-				desc: "outdated storages",
-				state: state{vs: {
-					stor:        {"repo-1": {generation: 2}},
-					"storage-2": {"repo-1": {generation: 1}},
-					"storage-3": {"repo-1": {generation: 0}},
-				}},
-				expected: expected{"repo-1": {"storage-2": 1, "storage-3": 2}},
-			},
-			{
-				desc: "all up to date",
-				state: state{vs: {
-					stor:        {"repo-1": {generation: 3}},
-					"storage-2": {"repo-1": {generation: 3}},
-					"storage-3": {"repo-1": {generation: 3}},
-				}},
-				expected: expected{},
-			},
-		} {
-			t.Run(tc.desc, func(t *testing.T) {
-				rs, _ := newStore(t, map[string][]string{vs: {stor, "storage-2", "storage-3"}})
-
-				ctx, cancel := testhelper.Context()
-				defer cancel()
-
-				for vs, storages := range tc.state {
-					for storage, repos := range storages {
-						for repo, state := range repos {
-							require.NoError(t, rs.SetGeneration(ctx, vs, repo, storage, state.generation))
-						}
+					if !tc.nonExistentRepository {
+						_, err := db.ExecContext(ctx, `
+							INSERT INTO repositories (virtual_storage, relative_path, "primary")
+							VALUES ('virtual-storage', 'relative-path', 'repository-primary')
+						`)
+						require.NoError(t, err)
 					}
-				}
 
-				outdated, err := rs.GetOutdatedRepositories(ctx, vs)
-				require.NoError(t, err)
-				require.Equal(t, tc.expected, outdated)
-			})
-		}
-	})
+					for storage, generation := range tc.existingGenerations {
+						_, err := db.ExecContext(ctx, `
+							INSERT INTO storage_repositories VALUES ('virtual-storage', 'relative-path', $1, $2)
+						`, storage, generation)
+						require.NoError(t, err)
+					}
+
+					for _, storage := range tc.existingAssignments {
+						_, err := db.ExecContext(ctx, `
+							INSERT INTO repository_assignments VALUES ('virtual-storage', 'relative-path', $1)
+						`, storage)
+						require.NoError(t, err)
+					}
+
+					_, err := db.ExecContext(ctx, `
+						INSERT INTO shard_primaries (shard_name, node_name, elected_by_praefect, elected_at)
+						VALUES ('virtual-storage', 'virtual-storage-primary', 'ignored', now())
+					`)
+					require.NoError(t, err)
+
+					store := NewPostgresRepositoryStore(db, configuredStorages)
+					outdated, err := store.GetPartiallyReplicatedRepositories(ctx, "virtual-storage", scope.useVirtualStoragePrimaries)
+					require.NoError(t, err)
+
+					expected := []OutdatedRepository{
+						{
+							RelativePath: "relative-path",
+							Primary:      scope.primary,
+							Storages:     tc.storageDetails,
+						},
+					}
+
+					if tc.storageDetails == nil {
+						expected = nil
+					}
+
+					require.Equal(t, expected, outdated)
+				})
+			}
+		})
+	}
 }

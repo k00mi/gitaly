@@ -3,8 +3,10 @@ package datastore
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/lib/pq"
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore/glsql"
@@ -90,11 +92,10 @@ type RepositoryStore interface {
 	IsLatestGeneration(ctx context.Context, virtualStorage, relativePath, storage string) (bool, error)
 	// RepositoryExists returns whether the repository exists on a virtual storage.
 	RepositoryExists(ctx context.Context, virtualStorage, relativePath string) (bool, error)
-	// GetOutdatedRepositories finds repositories which are not on the latest generation in the virtual storage. It returns a map
-	// with key structure `relative_path-> storage -> generation`, indicating how many changes a storage is missing for a given
-	// repository.
-	GetOutdatedRepositories(ctx context.Context, virtualStorage string) (map[string]map[string]int, error)
-
+	// GetPartiallyReplicatedRepositories returns information on repositories which have an outdated copy on an assigned storage.
+	// By default, repository specific primaries are returned in the results. If useVirtualStoragePrimaries is set, virtual storage's
+	// primary is returned instead for each repository.
+	GetPartiallyReplicatedRepositories(ctx context.Context, virtualStorage string, virtualStoragePrimaries bool) ([]OutdatedRepository, error)
 	// DeleteInvalidRepository is a method for deleting records of invalid repositories. It deletes a storage's
 	// record of the invalid repository. If the storage was the only storage with the repository, the repository's
 	// record on the virtual storage is also deleted.
@@ -458,46 +459,127 @@ AND NOT EXISTS (
 	return err
 }
 
-func (rs *PostgresRepositoryStore) GetOutdatedRepositories(ctx context.Context, virtualStorage string) (map[string]map[string]int, error) {
-	// As some storages might be missing records from the table, we do a cross join between the repositories and the
-	// configured storages. If a storage is missing an entry, it is considered fully outdated.
-	const q = `
-SELECT relative_path, storage, expected_repositories.generation - COALESCE(storage_repositories.generation, -1) AS behind_by
-FROM (
-	SELECT virtual_storage, relative_path, unnest($2::text[]) AS storage, MAX(storage_repositories.generation) AS generation
-	FROM repositories
-	JOIN storage_repositories USING (virtual_storage, relative_path)
-	WHERE virtual_storage = $1
-	GROUP BY virtual_storage, relative_path
-) AS expected_repositories
-LEFT JOIN storage_repositories USING (virtual_storage, relative_path, storage)
-WHERE COALESCE(storage_repositories.generation, -1) < expected_repositories.generation
-`
-	storages, ok := rs.storages[virtualStorage]
+// OutdatedRepositoryStorageDetails represents a storage that contains or should contain a
+// copy of the repository.
+type OutdatedRepositoryStorageDetails struct {
+	// Name of the storage as configured.
+	Name string
+	// BehindBy indicates how many generations the storage's copy of the repository is missing at maximum.
+	BehindBy int
+	// Assigned indicates whether the storage is an assigned host of the repository.
+	Assigned bool
+}
+
+// OutdatedRepository is a repository with one or more outdated assigned storages.
+type OutdatedRepository struct {
+	// RelativePath is the relative path of the repository.
+	RelativePath string
+	// Primary is the current primary of this repository.
+	Primary string
+	// Storages contains information of the repository on each storage that contains the repository
+	// or does not contain the repository but is assigned to host it.
+	Storages []OutdatedRepositoryStorageDetails
+}
+
+func (rs *PostgresRepositoryStore) GetPartiallyReplicatedRepositories(ctx context.Context, virtualStorage string, useVirtualStoragePrimaries bool) ([]OutdatedRepository, error) {
+	configuredStorages, ok := rs.storages[virtualStorage]
 	if !ok {
 		return nil, fmt.Errorf("unknown virtual storage: %q", virtualStorage)
 	}
 
-	rows, err := rs.db.QueryContext(ctx, q, virtualStorage, pq.StringArray(storages))
+	// The query below gets the generations and assignments of every repository
+	// which has one or more outdated assigned nodes. It works as follows:
+	//
+	// 1. First we get all the storages which contain the repository from `storage_repositories`. We
+	//    list every copy of the repository as the latest generation could exist on an unassigned
+	//    storage.
+	//
+	// 2. We join `repository_assignments` table with fallback behavior in case the repository has no
+	//    assignments. A storage is considered assigned if:
+	//
+	//    1. If the repository has no assignments, every configured storage is considered assigned.
+	//    2. If the repository has assignments, the storage needs to be assigned explicitly.
+	//    3. Assignments of unconfigured storages are treated as if they don't exist.
+	//
+	//    If none of the assigned storages are outdated, the repository is not considered outdated as
+	//    the desired replication factor has been reached.
+	//
+	// 3. We join `repositories` table to filter out any repositories that have been deleted but still
+	//    exist on some storages. While the `repository_assignments` has a foreign key on `repositories`
+	//    and there can't be any assignments for deleted repositories, this is still needed as long as the
+	//    fallback behavior of no assignments is in place.
+	//
+	// 4. Finally we aggregate each repository's information in to a single row with a JSON object containing
+	//    the information. This allows us to group the output already in the query and makes scanning easier
+	//    We filter out groups which do not have an outdated assigned storage as the replication factor on those
+	//    is reached. Status of unassigned storages does not matter as long as they don't contain a later generation
+	//    than the assigned ones.
+	//
+	// If virtual storage scoped primaries are used, the primary is instead selected from the `shard_primaries` table.
+	rows, err := rs.db.QueryContext(ctx, `
+SELECT
+	json_build_object (
+		'RelativePath', relative_path,
+		'Primary', "primary",
+		'Storages', json_agg(
+			json_build_object(
+				'Name', storage,
+				'BehindBy', behind_by,
+				'Assigned', assigned
+			)
+		)
+	)
+FROM (
+	SELECT
+		relative_path,
+		CASE WHEN $3
+			THEN shard_primaries.node_name
+			ELSE repositories."primary"
+		END AS "primary",
+		storage,
+		max(storage_repositories.generation) OVER (PARTITION BY virtual_storage, relative_path) - COALESCE(storage_repositories.generation, -1) AS behind_by,
+		repository_assignments.storage IS NOT NULL AS assigned
+	FROM storage_repositories
+	FULL JOIN (
+		SELECT virtual_storage, relative_path, storage
+		FROM repositories
+		CROSS JOIN (SELECT unnest($2::text[]) AS storage) AS configured_storages
+		WHERE (
+			SELECT COUNT(*) = 0 OR COUNT(*) FILTER (WHERE storage = configured_storages.storage) = 1
+			FROM repository_assignments
+			WHERE virtual_storage = repositories.virtual_storage
+			AND   relative_path   = repositories.relative_path
+			AND   storage         = ANY($2::text[])
+		)
+	) AS repository_assignments USING (virtual_storage, relative_path, storage)
+	JOIN repositories USING (virtual_storage, relative_path)
+	LEFT JOIN shard_primaries ON $3 AND shard_name = virtual_storage AND NOT demoted
+	WHERE virtual_storage = $1
+	ORDER BY relative_path, "primary", storage
+) AS outdated_repositories
+GROUP BY relative_path, "primary"
+HAVING max(behind_by) FILTER(WHERE assigned) > 0
+ORDER BY relative_path, "primary"
+	`, virtualStorage, pq.StringArray(configuredStorages), useVirtualStoragePrimaries)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("query: %w", err)
 	}
 	defer rows.Close()
 
-	outdated := make(map[string]map[string]int)
+	var outdatedRepos []OutdatedRepository
 	for rows.Next() {
-		var storage, relativePath string
-		var difference int
-		if err := rows.Scan(&relativePath, &storage, &difference); err != nil {
-			return nil, err
+		var repositoryJSON string
+		if err := rows.Scan(&repositoryJSON); err != nil {
+			return nil, fmt.Errorf("scan: %w", err)
 		}
 
-		if outdated[relativePath] == nil {
-			outdated[relativePath] = make(map[string]int)
+		var outdatedRepo OutdatedRepository
+		if err := json.NewDecoder(strings.NewReader(repositoryJSON)).Decode(&outdatedRepo); err != nil {
+			return nil, fmt.Errorf("decode json: %w", err)
 		}
 
-		outdated[relativePath][storage] = difference
+		outdatedRepos = append(outdatedRepos, outdatedRepo)
 	}
 
-	return outdated, rows.Err()
+	return outdatedRepos, rows.Err()
 }
