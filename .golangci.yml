@@ -10,6 +10,7 @@ linters:
   enable:
     - deadcode
     - goimports
+    - gosimple
     - govet
     - ineffassign
     - maligned
@@ -18,7 +19,10 @@ linters:
     - noctx
     - rowserrcheck
     - sqlclosecheck
+    - staticcheck
+    - structcheck
     - stylecheck
+    - unused
     - unconvert
     - varcheck
 
