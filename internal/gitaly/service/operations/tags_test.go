@@ -376,6 +376,8 @@ func TestSuccessfulUserCreateTagRequestToNonCommit(t *testing.T) {
 				Tag: testCase.expectedTag,
 			}
 			response, err := client.UserCreateTag(ctx, request)
+			require.NoError(t, err)
+			require.Empty(t, response.PreReceiveError)
 			defer testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", "-d", inputTagName)
 
 			// Fake up *.Id for annotated tags
@@ -383,7 +385,6 @@ func TestSuccessfulUserCreateTagRequestToNonCommit(t *testing.T) {
 				tagID := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", inputTagName)
 				responseOk.Tag.Id = text.ChompBytes(tagID)
 			}
-			require.NoError(t, err)
 			require.Equal(t, responseOk, response)
 
 			peeledID := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", inputTagName+"^{}")
@@ -466,8 +467,9 @@ func TestSuccessfulUserCreateTagNestedTags(t *testing.T) {
 					Message:        []byte(tagMessage),
 				}
 				response, err := client.UserCreateTag(ctx, request)
-				defer testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", "-d", tagName)
 				require.NoError(t, err)
+				require.Empty(t, response.PreReceiveError)
+				defer testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", "-d", tagName)
 
 				createdID := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", tagName)
 				createdIDStr := text.ChompBytes(createdID)
@@ -1045,6 +1047,7 @@ func testTagHookOutput(t *testing.T, ctx context.Context) {
 
 				createResponse, err := client.UserCreateTag(ctx, createRequest)
 				require.NoError(t, err)
+
 				createResponseOk := &gitalypb.UserCreateTagResponse{
 					Tag:             createResponse.Tag,
 					Exists:          false,
