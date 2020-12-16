@@ -115,7 +115,7 @@ out = IO.popen(%%W[%s cat-file -t #{new_value}], &:read)
 abort 'cat-file failed' unless $?.success?
 
 unless out.chomp == expected_object_type
-  abort "error: expected #{expected_object_type} object, got #{out}"
+  abort "pre-receive hook error: expected #{new_value} to be a #{expected_object_type} object, got #{out}"
 end`, config.Config.Git.BinPath)
 
 	dir, cleanup := testhelper.TempDir(t)
@@ -140,7 +140,7 @@ out = IO.popen(%%W[%s cat-file -t #{new_value}], &:read)
 abort 'cat-file failed' unless $?.success?
 
 unless out.chomp == expected_object_type
-  abort "error: expected #{expected_object_type} object, got #{out}"
+  abort "update hook error: expected #{new_value} to be a #{expected_object_type} object, got #{out}"
 end`, config.Config.Git.BinPath)
 
 	dir, cleanup := testhelper.TempDir(t)
