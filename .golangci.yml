@@ -18,6 +18,7 @@ linters:
     - megacheck
     - misspell
     - noctx
+    - nolintlint
     - rowserrcheck
     - sqlclosecheck
     - staticcheck
