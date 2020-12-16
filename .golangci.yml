@@ -8,19 +8,19 @@ run:
 linters:
   disable-all: true
   enable:
-    - goimports
-    - stylecheck
     - deadcode
+    - goimports
     - govet
     - ineffassign
-    - megacheck
-    - varcheck
-    - misspell
-    - unconvert
     - maligned
+    - megacheck
+    - misspell
     - noctx
-    - sqlclosecheck
     - rowserrcheck
+    - sqlclosecheck
+    - stylecheck
+    - unconvert
+    - varcheck
 
 issues:
   # Excluding configuration per-path, per-linter, per-text and per-source
