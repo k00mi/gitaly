@@ -801,33 +801,41 @@ func TestFailedUserCreateTagRequestDueToTagExistence(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	testCase := struct {
+	ctx, cancel := testhelper.Context()
+	defer cancel()
+
+	testCases := []struct {
+		desc           string
 		tagName        string
 		targetRevision string
 		user           *gitalypb.User
 	}{
-		tagName:        "v1.1.0",
-		targetRevision: "master",
-		user:           testhelper.TestUser,
+		{
+			desc:           "simple existing tag",
+			tagName:        "v1.1.0",
+			targetRevision: "master",
+			user:           testhelper.TestUser,
+		},
 	}
 
-	request := &gitalypb.UserCreateTagRequest{
-		Repository:     testRepo,
-		TagName:        []byte(testCase.tagName),
-		TargetRevision: []byte(testCase.targetRevision),
-		User:           testCase.user,
-	}
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			request := &gitalypb.UserCreateTagRequest{
+				Repository:     testRepo,
+				TagName:        []byte(testCase.tagName),
+				TargetRevision: []byte(testCase.targetRevision),
+				User:           testCase.user,
+			}
 
-	ctx, cancel := testhelper.Context()
-	defer cancel()
-
-	responseOk := &gitalypb.UserCreateTagResponse{
-		Tag:    nil,
-		Exists: true,
+			responseOk := &gitalypb.UserCreateTagResponse{
+				Tag:    nil,
+				Exists: true,
+			}
+			response, err := client.UserCreateTag(ctx, request)
+			require.NoError(t, err)
+			require.Equal(t, responseOk, response)
+		})
 	}
-	response, err := client.UserCreateTag(ctx, request)
-	require.NoError(t, err)
-	require.Equal(t, responseOk, response)
 }
 
 func TestFailedUserCreateTagRequestDueToValidation(t *testing.T) {
