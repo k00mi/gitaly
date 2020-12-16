@@ -1,7 +1,6 @@
 package ref
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -47,21 +46,12 @@ func (s *server) DeleteRefs(ctx context.Context, in *gitalypb.DeleteRefsRequest)
 }
 
 func refsToRemove(ctx context.Context, req *gitalypb.DeleteRefsRequest) ([]string, error) {
-	var refs []string
 	if len(req.Refs) > 0 {
-		refs = make([]string, len(req.Refs))
+		refs := make([]string, len(req.Refs))
 		for i, ref := range req.Refs {
 			refs[i] = string(ref)
 		}
 		return refs, nil
-	}
-
-	cmd, err := git.SafeCmd(ctx, req.GetRepository(), nil, git.SubCmd{
-		Name:  "for-each-ref",
-		Flags: []git.Option{git.Flag{Name: "--format=%(refname)"}},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("error setting up for-each-ref command: %v", err)
 	}
 
 	prefixes := make([]string, len(req.ExceptWithPrefix))
@@ -69,19 +59,18 @@ func refsToRemove(ctx context.Context, req *gitalypb.DeleteRefsRequest) ([]strin
 		prefixes[i] = string(prefix)
 	}
 
-	scanner := bufio.NewScanner(cmd)
-	for scanner.Scan() {
-		refName := scanner.Text()
+	existingRefs, err := git.NewRepository(req.GetRepository()).GetReferences(ctx, "")
+	if err != nil {
+		return nil, err
+	}
 
-		if hasAnyPrefix(refName, prefixes) {
+	var refs []string
+	for _, existingRef := range existingRefs {
+		if hasAnyPrefix(existingRef.Name, prefixes) {
 			continue
 		}
 
-		refs = append(refs, refName)
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("error listing refs: %v", cmd.Wait())
+		refs = append(refs, existingRef.Name)
 	}
 
 	return refs, nil
