@@ -114,7 +114,8 @@ func (s *Server) userMergeBranch(stream gitalypb.OperationService_UserMergeBranc
 		return err
 	}
 
-	revision, err := git.NewRepository(repo).ResolveRefish(ctx, string(firstRequest.Branch))
+	branch := "refs/heads/" + text.ChompBytes(firstRequest.Branch)
+	revision, err := git.NewRepository(repo).ResolveRefish(ctx, branch)
 	if err != nil {
 		return err
 	}
@@ -148,7 +149,6 @@ func (s *Server) userMergeBranch(stream gitalypb.OperationService_UserMergeBranc
 		return helper.ErrPreconditionFailedf("merge aborted by client")
 	}
 
-	branch := "refs/heads/" + text.ChompBytes(firstRequest.Branch)
 	if err := s.updateReferenceWithHooks(ctx, firstRequest.Repository, firstRequest.User, branch, merge.CommitID, revision); err != nil {
 		var preReceiveError preReceiveError
 		var updateRefError updateRefError

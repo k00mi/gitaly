@@ -12,8 +12,10 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitaly/internal/git"
 	gitlog "gitlab.com/gitlab-org/gitaly/internal/git/log"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/helper/text"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
@@ -242,6 +244,86 @@ func testFailedMergeConcurrentUpdate(t *testing.T, ctx context.Context) {
 	commit, err := gitlog.GetCommit(ctx, testRepo, mergeBranchName)
 	require.NoError(t, err, "get commit after RPC finished")
 	require.Equal(t, commit.Id, concurrentCommitID, "RPC should not have trampled concurrent update")
+}
+
+func TestUserMergeBranch_ambiguousReference(t *testing.T) {
+	testWithFeature(t, featureflag.GoUserMergeBranch, testUserMergeBranchAmbiguousReference)
+}
+
+func testUserMergeBranchAmbiguousReference(t *testing.T, ctx context.Context) {
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	serverSocketPath, stop := runOperationServiceServer(t)
+	defer stop()
+
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	merge, err := client.UserMergeBranch(ctx)
+	require.NoError(t, err)
+
+	prepareMergeBranch(t, testRepoPath)
+
+	repo := git.NewRepository(testRepo)
+
+	master, err := repo.GetReference(ctx, "refs/heads/master")
+	require.NoError(t, err)
+
+	// We're now creating all kinds of potentially ambiguous references in
+	// the hope that UserMergeBranch won't be confused by it.
+	for _, reference := range []string{
+		mergeBranchName,
+		"heads/" + mergeBranchName,
+		"refs/heads/refs/heads/" + mergeBranchName,
+		"refs/tags/" + mergeBranchName,
+		"refs/tags/heads/" + mergeBranchName,
+		"refs/tags/refs/heads/" + mergeBranchName,
+	} {
+		require.NoError(t, repo.UpdateRef(ctx, reference, master.Target, git.NullSHA))
+	}
+
+	mergeCommitMessage := "Merged by Gitaly"
+	firstRequest := &gitalypb.UserMergeBranchRequest{
+		Repository: testRepo,
+		User:       testhelper.TestUser,
+		CommitId:   commitToMerge,
+		Branch:     []byte(mergeBranchName),
+		Message:    []byte(mergeCommitMessage),
+	}
+
+	require.NoError(t, merge.Send(firstRequest), "send first request")
+
+	_, err = merge.Recv()
+	require.NoError(t, err, "receive first response")
+	require.NoError(t, err, "look up git commit before merge is applied")
+	require.NoError(t, merge.Send(&gitalypb.UserMergeBranchRequest{Apply: true}), "apply merge")
+
+	response, err := merge.Recv()
+	require.NoError(t, err, "receive second response")
+	require.NoError(t, testhelper.ReceiveEOFWithTimeout(func() error {
+		_, err = merge.Recv()
+		return err
+	}))
+
+	commit, err := gitlog.GetCommit(ctx, testRepo, "refs/heads/"+mergeBranchName)
+	require.NoError(t, err, "look up git commit after call has finished")
+
+	tag, err := gitlog.GetCommit(ctx, testRepo, "refs/tags/"+mergeBranchName)
+	require.NoError(t, err, "look up git tag after call has finished")
+
+	require.Equal(t, gitalypb.OperationBranchUpdate{CommitId: commit.Id}, *(response.BranchUpdate))
+	require.Equal(t, mergeCommitMessage, string(commit.Body))
+	require.Equal(t, testhelper.TestUser.Name, commit.Author.Name)
+	require.Equal(t, testhelper.TestUser.Email, commit.Author.Email)
+
+	if featureflag.IsEnabled(helper.OutgoingToIncoming(ctx), featureflag.GoUserMergeBranch) {
+		require.Equal(t, []string{mergeBranchHeadBefore, commitToMerge}, commit.ParentIds)
+	} else {
+		// The Ruby implementation performs a mismerge with the
+		// ambiguous tag instead of with the branch name.
+		require.Equal(t, []string{tag.Id, commitToMerge}, commit.ParentIds)
+	}
 }
 
 func TestFailedMergeDueToHooks(t *testing.T) {
