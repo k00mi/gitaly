@@ -151,6 +151,40 @@ func TestGlobalOption(t *testing.T) {
 			option: ValueFlag{Name: "", Value: "bar"},
 			valid:  false,
 		},
+
+		{
+			desc:     "config pair with key and value",
+			option:   ConfigPair{Key: "foo.bar", Value: "value"},
+			valid:    true,
+			expected: []string{"-c", "foo.bar=value"},
+		},
+		{
+			desc:     "config pair with subsection",
+			option:   ConfigPair{Key: "foo.bar.baz", Value: "value"},
+			valid:    true,
+			expected: []string{"-c", "foo.bar.baz=value"},
+		},
+		{
+			desc:     "config pair without value",
+			option:   ConfigPair{Key: "foo.bar"},
+			valid:    true,
+			expected: []string{"-c", "foo.bar="},
+		},
+		{
+			desc:   "config pair with invalid section format",
+			option: ConfigPair{Key: "foo", Value: "value"},
+			valid:  false,
+		},
+		{
+			desc:   "config pair with leading whitespace",
+			option: ConfigPair{Key: " foo.bar", Value: "value"},
+			valid:  false,
+		},
+		{
+			desc:   "config pair with disallowed character in key",
+			option: ConfigPair{Key: "http.https://weak.example.com.sslVerify", Value: "false"},
+			valid:  false,
+		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
 			args, err := tc.option.GlobalArgs()
