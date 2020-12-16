@@ -49,8 +49,9 @@ func (s *server) DeleteRefs(ctx context.Context, in *gitalypb.DeleteRefsRequest)
 func refsToRemove(ctx context.Context, req *gitalypb.DeleteRefsRequest) ([]string, error) {
 	var refs []string
 	if len(req.Refs) > 0 {
-		for _, ref := range req.Refs {
-			refs = append(refs, string(ref))
+		refs = make([]string, len(req.Refs))
+		for i, ref := range req.Refs {
+			refs[i] = string(ref)
 		}
 		return refs, nil
 	}
@@ -63,9 +64,9 @@ func refsToRemove(ctx context.Context, req *gitalypb.DeleteRefsRequest) ([]strin
 		return nil, fmt.Errorf("error setting up for-each-ref command: %v", err)
 	}
 
-	var prefixes []string
-	for _, prefix := range req.ExceptWithPrefix {
-		prefixes = append(prefixes, string(prefix))
+	prefixes := make([]string, len(req.ExceptWithPrefix))
+	for i, prefix := range req.ExceptWithPrefix {
+		prefixes[i] = string(prefix)
 	}
 
 	scanner := bufio.NewScanner(cmd)
