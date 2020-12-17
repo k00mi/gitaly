@@ -9,6 +9,7 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
+	glerrors "gitlab.com/gitlab-org/gitaly/internal/errors"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/metadata/featureflag"
 	"gitlab.com/gitlab-org/gitaly/internal/middleware/metadatahandler"
@@ -475,8 +476,8 @@ func (c *Coordinator) StreamDirector(ctx context.Context, fullMethodName string,
 			return nil, helper.ErrInvalidArgument(fmt.Errorf("repo scoped: %w", err))
 		}
 
-		if targetRepo.StorageName == "" || targetRepo.RelativePath == "" {
-			return nil, helper.ErrInvalidArgumentf("repo scoped: target repo is invalid")
+		if err := c.validateTargetRepo(targetRepo); err != nil {
+			return nil, helper.ErrInvalidArgument(fmt.Errorf("repo scoped: %w", err))
 		}
 
 		sp, err := c.directRepositoryScopedMessage(ctx, grpcCall{
@@ -764,4 +765,18 @@ func (c *Coordinator) newRequestFinalizer(
 		}
 		return g.Wait()
 	}
+}
+
+func (c *Coordinator) validateTargetRepo(repo *gitalypb.Repository) error {
+	if repo.GetStorageName() == "" || repo.GetRelativePath() == "" {
+		return glerrors.ErrInvalidRepository
+	}
+
+	if _, found := c.conf.StorageNames()[repo.StorageName]; !found {
+		// this needs to be nodes.ErrVirtualStorageNotExist error, but it will break
+		// existing API contract as praefect should be a transparent proxy of the gitaly
+		return glerrors.ErrInvalidRepository
+	}
+
+	return nil
 }

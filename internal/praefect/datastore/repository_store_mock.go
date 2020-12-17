@@ -7,12 +7,11 @@ import "context"
 type MockRepositoryStore struct {
 	GetGenerationFunc                      func(ctx context.Context, virtualStorage, relativePath, storage string) (int, error)
 	IncrementGenerationFunc                func(ctx context.Context, virtualStorage, relativePath, primary string, secondaries []string) error
-	IsLatestGenerationFunc                 func(ctx context.Context, virtualStorage, relativePath, storage string) (bool, error)
 	GetReplicatedGenerationFunc            func(ctx context.Context, virtualStorage, relativePath, source, target string) (int, error)
 	SetGenerationFunc                      func(ctx context.Context, virtualStorage, relativePath, storage string, generation int) error
 	DeleteRepositoryFunc                   func(ctx context.Context, virtualStorage, relativePath, storage string) error
 	RenameRepositoryFunc                   func(ctx context.Context, virtualStorage, relativePath, storage, newRelativePath string) error
-	GetConsistentSecondariesFunc           func(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error)
+	GetConsistentStoragesFunc              func(ctx context.Context, virtualStorage, relativePath string) (map[string]struct{}, error)
 	GetPartiallyReplicatedRepositoriesFunc func(ctx context.Context, virtualStorage string, virtualStorageScopedPrimaries bool) ([]OutdatedRepository, error)
 	DeleteInvalidRepositoryFunc            func(ctx context.Context, virtualStorage, relativePath, storage string) error
 	RepositoryExistsFunc                   func(ctx context.Context, virtualStorage, relativePath string) (bool, error)
@@ -32,14 +31,6 @@ func (m MockRepositoryStore) IncrementGeneration(ctx context.Context, virtualSto
 	}
 
 	return m.IncrementGenerationFunc(ctx, virtualStorage, relativePath, primary, secondaries)
-}
-
-func (m MockRepositoryStore) IsLatestGeneration(ctx context.Context, virtualStorage, relativePath, storage string) (bool, error) {
-	if m.IsLatestGenerationFunc == nil {
-		return true, nil
-	}
-
-	return m.IsLatestGenerationFunc(ctx, virtualStorage, relativePath, storage)
 }
 
 func (m MockRepositoryStore) GetReplicatedGeneration(ctx context.Context, virtualStorage, relativePath, source, target string) (int, error) {
@@ -74,12 +65,13 @@ func (m MockRepositoryStore) RenameRepository(ctx context.Context, virtualStorag
 	return m.RenameRepositoryFunc(ctx, virtualStorage, relativePath, storage, newRelativePath)
 }
 
-func (m MockRepositoryStore) GetConsistentSecondaries(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error) {
-	if m.GetConsistentSecondariesFunc == nil {
+// GetConsistentStorages returns result of execution of the GetConsistentStoragesFunc field if it is set or an empty map.
+func (m MockRepositoryStore) GetConsistentStorages(ctx context.Context, virtualStorage, relativePath string) (map[string]struct{}, error) {
+	if m.GetConsistentStoragesFunc == nil {
 		return map[string]struct{}{}, nil
 	}
 
-	return m.GetConsistentSecondariesFunc(ctx, virtualStorage, relativePath, primary)
+	return m.GetConsistentStoragesFunc(ctx, virtualStorage, relativePath)
 }
 
 func (m MockRepositoryStore) GetPartiallyReplicatedRepositories(ctx context.Context, virtualStorage string, virtualStorageScopedPrimaries bool) ([]OutdatedRepository, error) {

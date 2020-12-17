@@ -75,8 +75,11 @@ func TestStreamDirectorReadOnlyEnforcement(t *testing.T) {
 			defer cancel()
 
 			rs := datastore.MockRepositoryStore{
-				IsLatestGenerationFunc: func(ctx context.Context, virtualStorage, relativePath, storage string) (bool, error) {
-					return !tc.readOnly, nil
+				GetConsistentStoragesFunc: func(context.Context, string, string) (map[string]struct{}, error) {
+					if tc.readOnly {
+						return map[string]struct{}{storage + "-other": {}}, nil
+					}
+					return map[string]struct{}{storage: {}}, nil
 				},
 			}
 
@@ -262,7 +265,7 @@ func TestStreamDirectorMutator_StopTransaction(t *testing.T) {
 	}
 
 	rs := datastore.MockRepositoryStore{
-		GetConsistentSecondariesFunc: func(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error) {
+		GetConsistentStoragesFunc: func(ctx context.Context, virtualStorage, relativePath string) (map[string]struct{}, error) {
 			return map[string]struct{}{"primary": {}, "secondary": {}}, nil
 		},
 	}
@@ -452,7 +455,7 @@ func TestCoordinatorStreamDirector_distributesReads(t *testing.T) {
 	entry := testhelper.DiscardTestEntry(t)
 
 	repoStore := datastore.MockRepositoryStore{
-		GetConsistentSecondariesFunc: func(ctx context.Context, virtualStorage, relativePath, primary string) (map[string]struct{}, error) {
+		GetConsistentStoragesFunc: func(ctx context.Context, virtualStorage, relativePath string) (map[string]struct{}, error) {
 			return map[string]struct{}{primaryNodeConf.Storage: {}, secondaryNodeConf.Storage: {}}, nil
 		},
 	}

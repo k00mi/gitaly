@@ -432,13 +432,13 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 		})
 	})
 
-	t.Run("GetConsistentSecondaries", func(t *testing.T) {
+	t.Run("GetConsistentStorages", func(t *testing.T) {
 		rs, requireState := newStore(t, map[string][]string{
 			vs: []string{"primary", "consistent-secondary", "inconsistent-secondary", "no-record"},
 		})
 
 		t.Run("unknown generations", func(t *testing.T) {
-			secondaries, err := rs.GetConsistentSecondaries(ctx, vs, repo, "primary")
+			secondaries, err := rs.GetConsistentStorages(ctx, vs, repo)
 			require.NoError(t, err)
 			require.Empty(t, secondaries)
 		})
@@ -464,17 +464,43 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 		)
 
 		t.Run("consistent secondary", func(t *testing.T) {
-			secondaries, err := rs.GetConsistentSecondaries(ctx, vs, repo, "primary")
+			secondaries, err := rs.GetConsistentStorages(ctx, vs, repo)
 			require.NoError(t, err)
-			require.Equal(t, map[string]struct{}{"consistent-secondary": struct{}{}}, secondaries)
+			require.Equal(t, map[string]struct{}{"primary": struct{}{}, "consistent-secondary": struct{}{}}, secondaries)
 		})
 
 		require.NoError(t, rs.SetGeneration(ctx, vs, repo, "primary", 0))
 
 		t.Run("outdated primary", func(t *testing.T) {
-			secondaries, err := rs.GetConsistentSecondaries(ctx, vs, repo, "primary")
+			secondaries, err := rs.GetConsistentStorages(ctx, vs, repo)
 			require.NoError(t, err)
 			require.Equal(t, map[string]struct{}{"consistent-secondary": struct{}{}}, secondaries)
+		})
+
+		t.Run("storage with highest generation is not configured", func(t *testing.T) {
+			require.NoError(t, rs.SetGeneration(ctx, vs, repo, "unknown", 2))
+			require.NoError(t, rs.SetGeneration(ctx, vs, repo, "primary", 1))
+			requireState(t, ctx,
+				virtualStorageState{
+					"virtual-storage-1": {
+						"repository-1": struct{}{},
+					},
+				},
+				storageState{
+					"virtual-storage-1": {
+						"repository-1": {
+							"unknown":                2,
+							"primary":                1,
+							"consistent-secondary":   1,
+							"inconsistent-secondary": 0,
+						},
+					},
+				},
+			)
+
+			secondaries, err := rs.GetConsistentStorages(ctx, vs, repo)
+			require.NoError(t, err)
+			require.Equal(t, map[string]struct{}{"unknown": struct{}{}}, secondaries)
 		})
 	})
 
@@ -506,29 +532,6 @@ func testRepositoryStore(t *testing.T, newStore repositoryStoreFactory) {
 				},
 			)
 		})
-	})
-
-	t.Run("IsLatestGeneration", func(t *testing.T) {
-		rs, _ := newStore(t, nil)
-
-		latest, err := rs.IsLatestGeneration(ctx, vs, repo, "no-expected-record")
-		require.NoError(t, err)
-		require.True(t, latest)
-
-		require.NoError(t, rs.SetGeneration(ctx, vs, repo, "up-to-date", 1))
-		require.NoError(t, rs.SetGeneration(ctx, vs, repo, "outdated", 0))
-
-		latest, err = rs.IsLatestGeneration(ctx, vs, repo, "no-record")
-		require.NoError(t, err)
-		require.False(t, latest)
-
-		latest, err = rs.IsLatestGeneration(ctx, vs, repo, "outdated")
-		require.NoError(t, err)
-		require.False(t, latest)
-
-		latest, err = rs.IsLatestGeneration(ctx, vs, repo, "up-to-date")
-		require.NoError(t, err)
-		require.True(t, latest)
 	})
 
 	t.Run("RepositoryExists", func(t *testing.T) {
