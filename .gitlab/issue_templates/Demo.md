@@ -146,8 +146,8 @@ Importantly for the demo, repository creation does not yet work. To work around 
    - [ ] Connect to Postgres in another terminal by running `/opt/gitlab/embedded/bin/psql -U praefect -d praefect_production -h <postgres address>` on a Praefect node.
    - [ ] Ensure there are entries for every storage for both repositories in the `storage_repositories` table and
          that they are all on the same generation.
-   - [ ] Enable repository specific primaries by setting `default['praefect']['failover_election_strategy'] = 'per_repository'` in `/etc/gitlab/gitlab.rb` on Praefect nodes.
-   - [ ] Disable the reconciler initially. Set `default['praefect']['reconciliation_scheduling_interval'] = 0` in `/etc/gitlab/gitlab.rb` on Praefect nodes.
+   - [ ] Enable repository specific primaries by setting `praefect['failover_election_strategy'] = 'per_repository'` in `/etc/gitlab/gitlab.rb` on Praefect nodes.
+   - [ ] Disable the reconciler initially. Set `praefect['reconciliation_scheduling_interval'] = 0` in `/etc/gitlab/gitlab.rb` on Praefect nodes.
    - [ ] Reconfigure and restart the Praefect nodes by running `gitlab-ctl reconfigure`.
 1. Demo:
    - [ ] Attempt to set replication factor 0 for repository A by running `/opt/gitlab/embedded/bin/praefect -config /var/opt/gitlab/praefect/config.toml set-replication-factor -virtual-storage default -repository <relative path A> -replication-factor 0`. This should fail as the minimum replication factor is 0.
