@@ -16,10 +16,14 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var timestampThresholdDuration time.Duration
-
 var (
-	timestampThreshold = "30s"
+	//nolint: gochecknoglobals
+	// This infrastructure is required for testing purposes and there is no
+	// proper place to put it instead. While we could move it into the
+	// config, we certainly don't want to make it configurable for now, so
+	// it'd be a bad fit there.
+	tokenValidityDuration = 30 * time.Second
+
 	errUnauthenticated = status.Errorf(codes.Unauthenticated, "authentication required")
 	errDenied          = status.Errorf(codes.PermissionDenied, "permission denied")
 
@@ -32,19 +36,20 @@ var (
 	)
 )
 
-// TimestampThreshold is used by tests
-func TimestampThreshold() time.Duration {
-	return timestampThresholdDuration
+// TokenValidityDuration returns the duration for which any token will be
+// valid. This is currently only used by our testing infrastructure.
+func TokenValidityDuration() time.Duration {
+	return tokenValidityDuration
+}
+
+// SetTokenValidityDuration changes the duration for which any token will be
+// valid. It only applies to newly created tokens.
+func SetTokenValidityDuration(d time.Duration) {
+	tokenValidityDuration = d
 }
 
 func init() {
 	prometheus.MustRegister(authErrors)
-
-	var err error
-	timestampThresholdDuration, err = time.ParseDuration(timestampThreshold)
-	if err != nil {
-		panic(err)
-	}
 }
 
 // AuthInfo contains the authentication information coming from a request
@@ -68,7 +73,7 @@ func CheckToken(ctx context.Context, secret string, targetTime time.Time) error 
 	}
 
 	if authInfo.Version == "v2" {
-		if v2HmacInfoValid(authInfo.Message, authInfo.SignedMessage, []byte(secret), targetTime, timestampThresholdDuration) {
+		if v2HmacInfoValid(authInfo.Message, authInfo.SignedMessage, []byte(secret), targetTime, tokenValidityDuration) {
 			return nil
 		}
 	}
@@ -101,7 +106,7 @@ func ExtractAuthInfo(ctx context.Context) (*AuthInfo, error) {
 
 func countV2Error(message string) { authErrors.WithLabelValues("v2", message).Inc() }
 
-func v2HmacInfoValid(message string, signedMessage, secret []byte, targetTime time.Time, timestampThreshold time.Duration) bool {
+func v2HmacInfoValid(message string, signedMessage, secret []byte, targetTime time.Time, tokenValidity time.Duration) bool {
 	expectedHMAC := hmacSign(secret, message)
 	if !hmac.Equal(signedMessage, expectedHMAC) {
 		countV2Error("wrong hmac signature")
@@ -115,8 +120,8 @@ func v2HmacInfoValid(message string, signedMessage, secret []byte, targetTime ti
 	}
 
 	issuedAt := time.Unix(timestamp, 0)
-	lowerBound := targetTime.Add(-timestampThreshold)
-	upperBound := targetTime.Add(timestampThreshold)
+	lowerBound := targetTime.Add(-tokenValidity)
+	upperBound := targetTime.Add(tokenValidity)
 
 	if issuedAt.Before(lowerBound) {
 		countV2Error("timestamp too old")

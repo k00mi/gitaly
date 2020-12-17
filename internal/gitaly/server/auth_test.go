@@ -352,9 +352,14 @@ func TestAuthBeforeLimit(t *testing.T) {
 		Message:        []byte("a new tag!"),
 	}
 
+	defer func(d time.Duration) {
+		gitalyauth.SetTokenValidityDuration(d)
+	}(gitalyauth.TokenValidityDuration())
+	gitalyauth.SetTokenValidityDuration(5 * time.Second)
+
 	cleanupCustomHook, err := testhelper.WriteCustomHook(testRepoPath, "pre-receive", []byte(fmt.Sprintf(`#!/bin/bash
 sleep %vs
-`, gitalyauth.TimestampThreshold().Seconds())))
+`, gitalyauth.TokenValidityDuration().Seconds())))
 
 	require.NoError(t, err)
 	defer cleanupCustomHook()

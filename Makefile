@@ -50,7 +50,6 @@ GITALY_PACKAGE  := gitlab.com/gitlab-org/gitaly
 BUILD_TIME      := $(shell date +"%Y%m%d.%H%M%S")
 GITALY_VERSION  := $(shell git describe --match v* 2>/dev/null | sed 's/^v//' || cat ${SOURCE_DIR}/VERSION 2>/dev/null || echo unknown)
 GO_LDFLAGS      := -ldflags '-X ${GITALY_PACKAGE}/internal/version.version=${GITALY_VERSION} -X ${GITALY_PACKAGE}/internal/version.buildtime=${BUILD_TIME}'
-GO_TEST_LDFLAGS := -X gitlab.com/gitlab-org/gitaly/auth.timestampThreshold=5s
 GO_BUILD_TAGS   := tracer_static,tracer_static_jaeger,continuous_profiler_stackdriver,static,system_libgit2
 
 # Dependency versions
@@ -150,11 +149,10 @@ find_go_packages = $(call uniq,$(dir $(call find_go_sources)))
 # behaviour can be modified via the following variables:
 #
 # GO_BUILD_TAGS: tags used to build the executables
-# GO_TEST_LDFLAGS: ldflags passed to go-test
 # TEST_OPTIONS: any additional options
 # TEST_PACKAGES: packages which shall be tested
 run_go_tests = PATH='${SOURCE_DIR}/internal/testhelper/testdata/home/bin:${PATH}' \
-    go test -v -count=1 -tags '${GO_BUILD_TAGS}' -ldflags='${GO_TEST_LDFLAGS}' ${TEST_OPTIONS} ${TEST_PACKAGES}
+    go test -v -count=1 -tags '${GO_BUILD_TAGS}' ${TEST_OPTIONS} ${TEST_PACKAGES}
 
 unexport GOROOT
 export GOBIN                      = ${BUILD_DIR}/bin

@@ -15,10 +15,10 @@ func TestCheckTokenV2(t *testing.T) {
 	// to use the 30s number
 
 	defer func(d time.Duration) {
-		timestampThresholdDuration = d
-	}(timestampThresholdDuration)
+		tokenValidityDuration = d
+	}(tokenValidityDuration)
 
-	timestampThresholdDuration = 30 * time.Second
+	tokenValidityDuration = 30 * time.Second
 
 	targetTime := time.Unix(1535671600, 0)
 	secret := []byte("foo")
