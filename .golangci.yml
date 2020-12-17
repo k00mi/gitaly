@@ -9,8 +9,12 @@ linters:
   disable-all: true
   enable:
     - deadcode
+    - errcheck
+    - errorlint
     - gci
+    - gochecknoglobals
     - goimports
+    - golint
     - gosimple
     - govet
     - ineffassign
@@ -47,3 +51,9 @@ issues:
   max-issues-per-linter: 0
   # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
   max-same-issues: 0
+
+  # Only lint newly introduced changes which have been introduced since the
+  # specified revision, which is the current origin/master at the time of
+  # writing this.
+  new: true
+  new-from-rev: b7d42677f27a93b1e6aebb5d571868b9094dc3b2
