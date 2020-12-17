@@ -8,20 +8,23 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore/glsql"
 )
 
+// InvalidArgumentError tags the error as being caused by an invalid argument.
+type InvalidArgumentError struct{ error }
+
 func newVirtualStorageNotFoundError(virtualStorage string) error {
-	return fmt.Errorf("virtual storage %q not found", virtualStorage)
+	return InvalidArgumentError{fmt.Errorf("virtual storage %q not found", virtualStorage)}
 }
 
 func newUnattainableReplicationFactorError(attempted, maximum int) error {
-	return fmt.Errorf("attempted to set replication factor %d but virtual storage only contains %d storages", attempted, maximum)
+	return InvalidArgumentError{fmt.Errorf("attempted to set replication factor %d but virtual storage only contains %d storages", attempted, maximum)}
 }
 
 func newMinimumReplicationFactorError(replicationFactor int) error {
-	return fmt.Errorf("attempted to set replication factor %d but minimum is 1", replicationFactor)
+	return InvalidArgumentError{fmt.Errorf("attempted to set replication factor %d but minimum is 1", replicationFactor)}
 }
 
 func newRepositoryNotFoundError(virtualStorage, relativePath string) error {
-	return fmt.Errorf("repository %q/%q not found", virtualStorage, relativePath)
+	return InvalidArgumentError{fmt.Errorf("repository %q/%q not found", virtualStorage, relativePath)}
 }
 
 // AssignmentStore manages host assignments in Postgres.
@@ -79,7 +82,7 @@ AND   storage = ANY($3)
 func (s AssignmentStore) SetReplicationFactor(ctx context.Context, virtualStorage, relativePath string, replicationFactor int) ([]string, error) {
 	candidateStorages, ok := s.configuredStorages[virtualStorage]
 	if !ok {
-		return nil, fmt.Errorf("unknown virtual storage: %q", virtualStorage)
+		return nil, newVirtualStorageNotFoundError(virtualStorage)
 	}
 
 	if replicationFactor < 1 {

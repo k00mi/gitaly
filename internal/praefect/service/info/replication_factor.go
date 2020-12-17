@@ -2,8 +2,11 @@ package info
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	"gitlab.com/gitlab-org/gitaly/internal/helper"
+	"gitlab.com/gitlab-org/gitaly/internal/praefect/datastore"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
 
@@ -15,6 +18,20 @@ type ReplicationFactorSetter interface {
 }
 
 func (s *Server) SetReplicationFactor(ctx context.Context, req *gitalypb.SetReplicationFactorRequest) (*gitalypb.SetReplicationFactorResponse, error) {
+	resp, err := s.setReplicationFactor(ctx, req)
+	if err != nil {
+		var invalidArg datastore.InvalidArgumentError
+		if errors.As(err, &invalidArg) {
+			return nil, helper.ErrInvalidArgument(err)
+		}
+
+		return nil, helper.ErrInternal(err)
+	}
+
+	return resp, nil
+}
+
+func (s *Server) setReplicationFactor(ctx context.Context, req *gitalypb.SetReplicationFactorRequest) (*gitalypb.SetReplicationFactorResponse, error) {
 	if s.rfs == nil {
 		return nil, fmt.Errorf("setting replication factor is only possible when Praefect is ran with 'per_repository' elector")
 	}
