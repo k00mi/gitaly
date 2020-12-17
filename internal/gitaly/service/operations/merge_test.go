@@ -312,10 +312,12 @@ func testUserMergeBranchAmbiguousReference(t *testing.T, ctx context.Context) {
 		return err
 	}))
 
-	commit, err := gitlog.GetCommit(ctx, testRepo, "refs/heads/"+mergeBranchName)
+	locator := config.NewLocator(config.Config)
+
+	commit, err := gitlog.GetCommit(ctx, locator, testRepo, "refs/heads/"+mergeBranchName)
 	require.NoError(t, err, "look up git commit after call has finished")
 
-	tag, err := gitlog.GetCommit(ctx, testRepo, "refs/tags/"+mergeBranchName)
+	tag, err := gitlog.GetCommit(ctx, locator, testRepo, "refs/tags/"+mergeBranchName)
 	require.NoError(t, err, "look up git tag after call has finished")
 
 	require.Equal(t, gitalypb.OperationBranchUpdate{CommitId: commit.Id}, *(response.BranchUpdate))
