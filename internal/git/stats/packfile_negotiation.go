@@ -56,6 +56,8 @@ func (n *PackfileNegotiation) Parse(body io.Reader) error {
 		split := strings.Split(data, " ")
 		n.PayloadSize += int64(len(data))
 
+		done := false
+
 		switch split[0] {
 		case "want":
 			if len(split) < 2 {
@@ -90,6 +92,10 @@ func (n *PackfileNegotiation) Parse(body io.Reader) error {
 			}
 			n.Haves++
 		case "done":
+			done = true
+		}
+
+		if done {
 			break
 		}
 	}
