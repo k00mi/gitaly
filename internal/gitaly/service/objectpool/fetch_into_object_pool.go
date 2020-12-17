@@ -17,7 +17,7 @@ func (s *server) FetchIntoObjectPool(ctx context.Context, req *gitalypb.FetchInt
 		return nil, helper.ErrInvalidArgument(err)
 	}
 
-	objectPool, err := objectpool.FromProto(config.Config, config.NewLocator(config.Config), req.GetObjectPool())
+	objectPool, err := objectpool.FromProto(s.cfg, config.NewLocator(s.cfg), req.GetObjectPool())
 	if err != nil {
 		return nil, helper.ErrInvalidArgument(fmt.Errorf("object pool invalid: %v", err))
 	}

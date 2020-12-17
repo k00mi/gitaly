@@ -178,7 +178,7 @@ func TestFetchIntoObjectPool_CollectLogStatistics(t *testing.T) {
 
 func TestFetchIntoObjectPool_Failure(t *testing.T) {
 	locator := config.NewLocator(config.Config)
-	server := NewServer(locator)
+	server := NewServer(config.Config, locator)
 
 	ctx, cancel := testhelper.Context()
 	defer cancel()
