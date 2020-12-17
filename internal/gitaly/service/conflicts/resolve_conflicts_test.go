@@ -37,6 +37,8 @@ func TestSuccessfulResolveConflictsRequest(t *testing.T) {
 }
 
 func testSuccessfulResolveConflictsRequest(t *testing.T, ctx context.Context) {
+	locator := config.NewLocator(config.Config)
+
 	serverSocketPath, clean := runFullServer(t)
 	defer clean()
 
@@ -110,7 +112,7 @@ func testSuccessfulResolveConflictsRequest(t *testing.T, ctx context.Context) {
 	require.NoError(t, err)
 	require.Empty(t, r.GetResolutionError())
 
-	headCommit, err := log.GetCommit(ctxOuter, testRepo, sourceBranch)
+	headCommit, err := log.GetCommit(ctxOuter, locator, testRepo, sourceBranch)
 	require.NoError(t, err)
 	require.Contains(t, headCommit.ParentIds, "1450cd639e0bc6721eb02800169e464f212cde06")
 	require.Contains(t, headCommit.ParentIds, "824be604a34828eb682305f0d963056cfac87b2d")

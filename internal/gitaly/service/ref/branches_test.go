@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
@@ -14,6 +15,7 @@ func TestSuccessfulFindBranchRequest(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	locator := config.NewLocator(config.Config)
 	stop, serverSocketPath := runRefServiceServer(t)
 	defer stop()
 
@@ -24,7 +26,7 @@ func TestSuccessfulFindBranchRequest(t *testing.T) {
 	defer cleanupFn()
 
 	branchNameInput := "master"
-	branchTarget, err := log.GetCommit(ctx, testRepo, branchNameInput)
+	branchTarget, err := log.GetCommit(ctx, locator, testRepo, branchNameInput)
 	require.NoError(t, err)
 
 	branch := &gitalypb.Branch{

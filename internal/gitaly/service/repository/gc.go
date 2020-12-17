@@ -120,7 +120,7 @@ func (s *server) cleanupKeepArounds(ctx context.Context, repo *gitalypb.Reposito
 		return nil
 	}
 
-	batch, err := catfile.New(ctx, repo)
+	batch, err := catfile.New(ctx, s.locator, repo)
 	if err != nil {
 		return nil
 	}

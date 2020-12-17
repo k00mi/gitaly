@@ -10,7 +10,6 @@ import (
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
-	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -22,13 +21,14 @@ func TestNewAsRepositorySuccess(t *testing.T) {
 	repo, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	tempRepo, tempDir, err := NewAsRepository(ctx, repo, config.NewLocator(config.Config))
+	locator := config.NewLocator(config.Config)
+	tempRepo, tempDir, err := NewAsRepository(ctx, repo, locator)
 	require.NoError(t, err)
 	require.NotEqual(t, repo, tempRepo)
 	require.Equal(t, repo.StorageName, tempRepo.StorageName)
 	require.NotEqual(t, repo.RelativePath, tempRepo.RelativePath)
 
-	calculatedPath, err := helper.GetPath(tempRepo)
+	calculatedPath, err := locator.GetPath(tempRepo)
 	require.NoError(t, err)
 	require.Equal(t, tempDir, calculatedPath)
 

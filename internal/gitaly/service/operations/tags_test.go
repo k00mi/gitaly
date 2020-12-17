@@ -158,6 +158,8 @@ func TestSuccessfulUserCreateTagRequest(t *testing.T) {
 }
 
 func testSuccessfulUserCreateTagRequest(t *testing.T, ctx context.Context) {
+	locator := config.NewLocator(config.Config)
+
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -168,7 +170,7 @@ func testSuccessfulUserCreateTagRequest(t *testing.T, ctx context.Context) {
 	defer cleanupFn()
 
 	targetRevision := "c7fbe50c7c7419d9701eebe64b1fdacc3df5b9dd"
-	targetRevisionCommit, err := log.GetCommit(ctx, testRepo, targetRevision)
+	targetRevisionCommit, err := log.GetCommit(ctx, locator, testRepo, targetRevision)
 	require.NoError(t, err)
 
 	inputTagName := "to-be-créated-soon"
@@ -381,6 +383,8 @@ func TestSuccessfulUserCreateTagNestedTags(t *testing.T) {
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
+	locator := config.NewLocator(config.Config)
+
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -463,7 +467,7 @@ func TestSuccessfulUserCreateTagNestedTags(t *testing.T) {
 				// Fake it up for all levels, except for ^{} == "commit"
 				responseOk.Tag.TargetCommit = response.Tag.TargetCommit
 				if testCase.targetObjectType == "commit" {
-					responseOk.Tag.TargetCommit, err = log.GetCommit(ctx, testRepo, testCase.targetObject)
+					responseOk.Tag.TargetCommit, err = log.GetCommit(ctx, locator, testRepo, testCase.targetObject)
 					require.NoError(t, err)
 				}
 				require.Equal(t, responseOk, response)
@@ -541,6 +545,8 @@ func TestUserCreateTagsuccessfulCreationOfPrefixedTag(t *testing.T) {
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
+	locator := config.NewLocator(config.Config)
+
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -579,7 +585,7 @@ func TestUserCreateTagsuccessfulCreationOfPrefixedTag(t *testing.T) {
 
 			response, err := client.UserCreateTag(ctx, request)
 			require.Equal(t, testCase.err, err)
-			commitOk, err := log.GetCommit(ctx, testRepo, testCase.tagTargetRevisionInput)
+			commitOk, err := log.GetCommit(ctx, locator, testRepo, testCase.tagTargetRevisionInput)
 			require.NoError(t, err)
 
 			responseOk := &gitalypb.UserCreateTagResponse{

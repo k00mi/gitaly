@@ -471,6 +471,7 @@ func TestInvalidRepoFindDefaultBranchNameRequest(t *testing.T) {
 }
 
 func TestSuccessfulFindAllTagsRequest(t *testing.T) {
+	locator := config.NewLocator(config.Config)
 	stop, serverSocketPath := runRefServiceServer(t)
 	defer stop()
 
@@ -498,7 +499,7 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 		Message:  "An empty commit with REALLY BIG message\n\n" + strings.Repeat("a", helper.MaxCommitOrTagMessageSize+1),
 		ParentID: "60ecb67744cb56576c30214ff52294f8ce2def98",
 	})
-	bigCommit, err := log.GetCommit(ctx, testRepoCopy, bigCommitID)
+	bigCommit, err := log.GetCommit(ctx, locator, testRepoCopy, bigCommitID)
 	require.NoError(t, err)
 
 	annotatedTagID := testhelper.CreateTag(t, testRepoCopyPath, "v1.2.0", blobID, &testhelper.CreateTagOpts{Message: "Blob tag"})
@@ -672,6 +673,7 @@ func TestSuccessfulFindAllTagsRequest(t *testing.T) {
 }
 
 func TestFindAllTagNestedTags(t *testing.T) {
+	locator := config.NewLocator(config.Config)
 	stop, serverSocketPath := runRefServiceServer(t)
 	defer stop()
 
@@ -716,7 +718,7 @@ func TestFindAllTagNestedTags(t *testing.T) {
 			tags := bytes.NewReader(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoCopyPath, "tag"))
 			testhelper.MustRunCommand(t, tags, "xargs", config.Config.Git.BinPath, "-C", testRepoCopyPath, "tag", "-d")
 
-			batch, err := catfile.New(ctx, testRepoCopy)
+			batch, err := catfile.New(ctx, locator, testRepoCopy)
 			require.NoError(t, err)
 
 			info, err := batch.Info(ctx, tc.originalOid)
@@ -1108,6 +1110,7 @@ func TestSuccessfulFindAllBranchesRequest(t *testing.T) {
 }
 
 func TestSuccessfulFindAllBranchesRequestWithMergedBranches(t *testing.T) {
+	locator := config.NewLocator(config.Config)
 	stop, serverSocketPath := runRefServiceServer(t)
 	defer stop()
 
@@ -1143,7 +1146,7 @@ func TestSuccessfulFindAllBranchesRequestWithMergedBranches(t *testing.T) {
 		expectedBranches = append(expectedBranches, branch)
 	}
 
-	masterCommit, err := log.GetCommit(ctx, testRepo, "master")
+	masterCommit, err := log.GetCommit(ctx, locator, testRepo, "master")
 	require.NoError(t, err)
 	expectedBranches = append(expectedBranches, &gitalypb.FindAllBranchesResponse_Branch{
 		Name:   []byte("refs/heads/master"),
@@ -1430,6 +1433,7 @@ func TestListBranchNamesContainingCommit(t *testing.T) {
 }
 
 func TestSuccessfulFindTagRequest(t *testing.T) {
+	locator := config.NewLocator(config.Config)
 	stop, serverSocketPath := runRefServiceServer(t)
 	defer stop()
 
@@ -1448,7 +1452,7 @@ func TestSuccessfulFindTagRequest(t *testing.T) {
 		Message:  "An empty commit with REALLY BIG message\n\n" + strings.Repeat("a", helper.MaxCommitOrTagMessageSize+1),
 		ParentID: "60ecb67744cb56576c30214ff52294f8ce2def98",
 	})
-	bigCommit, err := log.GetCommit(ctx, testRepoCopy, bigCommitID)
+	bigCommit, err := log.GetCommit(ctx, locator, testRepoCopy, bigCommitID)
 	require.NoError(t, err)
 
 	annotatedTagID := testhelper.CreateTag(t, testRepoCopyPath, "v1.2.0", blobID, &testhelper.CreateTagOpts{Message: "Blob tag"})
@@ -1600,6 +1604,7 @@ func TestSuccessfulFindTagRequest(t *testing.T) {
 }
 
 func TestFindTagNestedTag(t *testing.T) {
+	locator := config.NewLocator(config.Config)
 	stop, serverSocketPath := runRefServiceServer(t)
 	defer stop()
 
@@ -1647,7 +1652,7 @@ func TestFindTagNestedTag(t *testing.T) {
 			tags := bytes.NewReader(testhelper.MustRunCommand(t, nil, "git", "-C", testRepoCopyPath, "tag"))
 			testhelper.MustRunCommand(t, tags, "xargs", config.Config.Git.BinPath, "-C", testRepoCopyPath, "tag", "-d")
 
-			batch, err := catfile.New(ctx, testRepoCopy)
+			batch, err := catfile.New(ctx, locator, testRepoCopy)
 			require.NoError(t, err)
 
 			info, err := batch.Info(ctx, tc.originalOid)

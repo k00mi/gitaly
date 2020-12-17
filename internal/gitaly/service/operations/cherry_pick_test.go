@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/git/log"
+	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 	"gitlab.com/gitlab-org/gitaly/internal/testhelper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 	"google.golang.org/grpc/codes"
@@ -15,6 +16,8 @@ import (
 func TestSuccessfulUserCherryPickRequest(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
+
+	locator := config.NewLocator(config.Config)
 
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
@@ -28,10 +31,10 @@ func TestSuccessfulUserCherryPickRequest(t *testing.T) {
 	destinationBranch := "cherry-picking-dst"
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", destinationBranch, "master")
 
-	masterHeadCommit, err := log.GetCommit(ctxOuter, testRepo, "master")
+	masterHeadCommit, err := log.GetCommit(ctxOuter, locator, testRepo, "master")
 	require.NoError(t, err)
 
-	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab")
+	cherryPickedCommit, err := log.GetCommit(ctxOuter, locator, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab")
 	require.NoError(t, err)
 
 	testRepoCopy, testRepoCopyPath, cleanup := testhelper.NewTestRepo(t) // read-only repo
@@ -154,7 +157,7 @@ func TestSuccessfulUserCherryPickRequest(t *testing.T) {
 			response, err := client.UserCherryPick(ctx, testCase.request)
 			require.NoError(t, err)
 
-			headCommit, err := log.GetCommit(ctx, testCase.request.Repository, string(testCase.request.BranchName))
+			headCommit, err := log.GetCommit(ctx, locator, testCase.request.Repository, string(testCase.request.BranchName))
 			require.NoError(t, err)
 
 			expectedBranchUpdate := testCase.branchUpdate
@@ -183,6 +186,8 @@ func TestSuccessfulGitHooksForUserCherryPickRequest(t *testing.T) {
 }
 
 func testSuccessfulGitHooksForUserCherryPickRequest(t *testing.T, ctxOuter context.Context) {
+	locator := config.NewLocator(config.Config)
+
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -195,7 +200,7 @@ func testSuccessfulGitHooksForUserCherryPickRequest(t *testing.T, ctxOuter conte
 	destinationBranch := "cherry-picking-dst"
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", destinationBranch, "master")
 
-	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab")
+	cherryPickedCommit, err := log.GetCommit(ctxOuter, locator, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab")
 	require.NoError(t, err)
 
 	request := &gitalypb.UserCherryPickRequest{
@@ -230,6 +235,8 @@ func TestFailedUserCherryPickRequestDueToValidations(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
+	locator := config.NewLocator(config.Config)
+
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -239,7 +246,7 @@ func TestFailedUserCherryPickRequestDueToValidations(t *testing.T) {
 	testRepo, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab")
+	cherryPickedCommit, err := log.GetCommit(ctxOuter, locator, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab")
 	require.NoError(t, err)
 
 	destinationBranch := "cherry-picking-dst"
@@ -310,6 +317,8 @@ func TestFailedUserCherryPickRequestDueToPreReceiveError(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
+	locator := config.NewLocator(config.Config)
+
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -322,7 +331,7 @@ func TestFailedUserCherryPickRequestDueToPreReceiveError(t *testing.T) {
 	destinationBranch := "cherry-picking-dst"
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", destinationBranch, "master")
 
-	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab")
+	cherryPickedCommit, err := log.GetCommit(ctxOuter, locator, testRepo, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab")
 	require.NoError(t, err)
 
 	request := &gitalypb.UserCherryPickRequest{
@@ -355,6 +364,8 @@ func TestFailedUserCherryPickRequestDueToCreateTreeError(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
+	locator := config.NewLocator(config.Config)
+
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -368,7 +379,7 @@ func TestFailedUserCherryPickRequestDueToCreateTreeError(t *testing.T) {
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", destinationBranch, "master")
 
 	// This commit already exists in master
-	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, "4a24d82dbca5c11c61556f3b35ca472b7463187e")
+	cherryPickedCommit, err := log.GetCommit(ctxOuter, locator, testRepo, "4a24d82dbca5c11c61556f3b35ca472b7463187e")
 	require.NoError(t, err)
 
 	request := &gitalypb.UserCherryPickRequest{
@@ -392,6 +403,8 @@ func TestFailedUserCherryPickRequestDueToCommitError(t *testing.T) {
 	ctxOuter, cancel := testhelper.Context()
 	defer cancel()
 
+	locator := config.NewLocator(config.Config)
+
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
@@ -406,7 +419,7 @@ func TestFailedUserCherryPickRequestDueToCommitError(t *testing.T) {
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", destinationBranch, "master")
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", sourceBranch, "8a0f2ee90d940bfb0ba1e14e8214b0649056e4ab")
 
-	cherryPickedCommit, err := log.GetCommit(ctxOuter, testRepo, sourceBranch)
+	cherryPickedCommit, err := log.GetCommit(ctxOuter, locator, testRepo, sourceBranch)
 	require.NoError(t, err)
 
 	request := &gitalypb.UserCherryPickRequest{

@@ -75,7 +75,7 @@ func TestFetchSourceBranchSourceRepositorySuccess(t *testing.T) {
 			require.NoError(t, err)
 			require.True(t, resp.Result, "response.Result should be true")
 
-			fetchedCommit, err := gitLog.GetCommit(ctx, targetRepo, targetRef)
+			fetchedCommit, err := gitLog.GetCommit(ctx, locator, targetRepo, targetRef)
 			require.NoError(t, err)
 			require.Equal(t, newCommitID, fetchedCommit.GetId())
 		})
@@ -132,7 +132,7 @@ func TestFetchSourceBranchSameRepositorySuccess(t *testing.T) {
 			require.NoError(t, err)
 			require.True(t, resp.Result, "response.Result should be true")
 
-			fetchedCommit, err := gitLog.GetCommit(ctx, repo, targetRef)
+			fetchedCommit, err := gitLog.GetCommit(ctx, locator, repo, targetRef)
 			require.NoError(t, err)
 			require.Equal(t, newCommitID, fetchedCommit.GetId())
 		})
