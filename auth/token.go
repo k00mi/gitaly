@@ -38,14 +38,20 @@ func TokenValidityDuration() time.Duration {
 	return tokenValidityDuration
 }
 
+// SetTokenValidityDuration changes the duration for which any token will be
+// valid. It only applies to newly created tokens.
+func SetTokenValidityDuration(d time.Duration) {
+	tokenValidityDuration = d
+}
+
 func init() {
 	prometheus.MustRegister(authErrors)
 
-	var err error
-	tokenValidityDuration, err = time.ParseDuration(tokenValidity)
+	duration, err := time.ParseDuration(tokenValidity)
 	if err != nil {
 		panic(err)
 	}
+	SetTokenValidityDuration(duration)
 }
 
 // AuthInfo contains the authentication information coming from a request
