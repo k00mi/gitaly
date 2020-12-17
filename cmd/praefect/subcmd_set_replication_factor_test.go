@@ -65,7 +65,7 @@ func TestSetReplicationFactorSubcommand(t *testing.T) {
 		{
 			desc:   "successfully set",
 			args:   []string{"-virtual-storage=virtual-storage", "-repository=relative-path", "-replication-factor=2"},
-			stdout: "current assignments: primary, secondary",
+			stdout: "current assignments: primary, secondary\n",
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
