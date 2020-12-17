@@ -354,7 +354,7 @@ func TestAuthBeforeLimit(t *testing.T) {
 
 	cleanupCustomHook, err := testhelper.WriteCustomHook(testRepoPath, "pre-receive", []byte(fmt.Sprintf(`#!/bin/bash
 sleep %vs
-`, gitalyauth.TimestampThreshold().Seconds())))
+`, gitalyauth.TokenValidityDuration().Seconds())))
 
 	require.NoError(t, err)
 	defer cleanupCustomHook()
