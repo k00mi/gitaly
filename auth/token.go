@@ -16,10 +16,14 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var tokenValidityDuration time.Duration
-
 var (
-	tokenValidity = "30s"
+	//nolint: gochecknoglobals
+	// This infrastructure is required for testing purposes and there is no
+	// proper place to put it instead. While we could move it into the
+	// config, we certainly don't want to make it configurable for now, so
+	// it'd be a bad fit there.
+	tokenValidityDuration = 30 * time.Second
+
 	errUnauthenticated = status.Errorf(codes.Unauthenticated, "authentication required")
 	errDenied          = status.Errorf(codes.PermissionDenied, "permission denied")
 
@@ -46,12 +50,6 @@ func SetTokenValidityDuration(d time.Duration) {
 
 func init() {
 	prometheus.MustRegister(authErrors)
-
-	duration, err := time.ParseDuration(tokenValidity)
-	if err != nil {
-		panic(err)
-	}
-	SetTokenValidityDuration(duration)
 }
 
 // AuthInfo contains the authentication information coming from a request
