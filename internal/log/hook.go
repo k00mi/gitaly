@@ -45,7 +45,7 @@ func (h *HookLogger) Fatalf(format string, a ...interface{}) {
 	h.logger.Fatalf(format, a...)
 }
 
-// Fatalf logs a formatted error at the Fatal level
+// Errorf logs a formatted error at the Fatal level
 func (h *HookLogger) Errorf(format string, a ...interface{}) {
 	h.logger.Errorf(format, a...)
 }

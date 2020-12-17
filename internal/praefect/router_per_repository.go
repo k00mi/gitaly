@@ -107,8 +107,10 @@ func (r *PerRepositoryRouter) pickRandom(nodes []RouterNode) (RouterNode, error)
 	return nodes[r.rand.Intn(len(nodes))], nil
 }
 
-// The only storage scoped accessor RPC is RemoteService/FindRemoteRepository, which in turn executes a command
-// without a repository. This can be done by any Gitaly server as it doesn't depend on the state on the server.
+// RouteStorageAccessor routes requests for storage-scoped accessor RPCs. The
+// only storage scoped accessor RPC is RemoteService/FindRemoteRepository,
+// which in turn executes a command without a repository. This can be done by
+// any Gitaly server as it doesn't depend on the state on the server.
 func (r *PerRepositoryRouter) RouteStorageAccessor(ctx context.Context, virtualStorage string) (RouterNode, error) {
 	healthyNodes, err := r.healthyNodes(virtualStorage)
 	if err != nil {

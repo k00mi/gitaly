@@ -28,7 +28,7 @@ func toRouterNodes(nodes []nodes.Node) []RouterNode {
 	return out
 }
 
-// NeWNodeManagerRouter returns a router that uses the NodeManager to make routing decisions.
+// NewNodeManagerRouter returns a router that uses the NodeManager to make routing decisions.
 func NewNodeManagerRouter(mgr nodes.Manager, rs datastore.RepositoryStore) Router {
 	return &nodeManagerRouter{mgr: mgr, rs: rs}
 }

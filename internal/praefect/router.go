@@ -23,7 +23,7 @@ type StorageMutatorRoute struct {
 	Secondaries []RouterNode
 }
 
-// StorageMutatorRoute describes how to route a repository scoped mutator call.
+// RepositoryMutatorRoute describes how to route a repository scoped mutator call.
 type RepositoryMutatorRoute struct {
 	// Primary is the primary node of the transaction.
 	Primary RouterNode

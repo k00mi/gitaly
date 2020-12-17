@@ -340,8 +340,10 @@ const (
 	bandError    = "error"
 )
 
-// These bands map to magic numbers 1, 2, 3. See
+// Bands returns the slice of bands which git uses to transport different kinds
+// of data in a multiplexed way. See
 // https://git-scm.com/docs/protocol-capabilities/2.24.0#_side_band_side_band_64k
+// for more information about the different bands.
 func Bands() []string { return []string{bandPack, bandProgress, bandError} }
 
 func bandToHuman(b byte) (string, error) {

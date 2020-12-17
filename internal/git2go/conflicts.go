@@ -70,7 +70,7 @@ func ConflictsCommandFromSerialized(serialized string) (ConflictsCommand, error)
 	return request, nil
 }
 
-// Serialize serializes the conflicts result.
+// SerializeTo serializes the conflicts result and writes it into the writer.
 func (m ConflictsResult) SerializeTo(writer io.Writer) error {
 	return serializeTo(writer, m)
 }

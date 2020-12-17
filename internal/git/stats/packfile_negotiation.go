@@ -36,7 +36,8 @@ func ParsePackfileNegotiation(body io.Reader) (PackfileNegotiation, error) {
 	return n, n.Parse(body)
 }
 
-// Expected Format:
+// Parse parses a packfile negotiation. It expects the following format:
+//
 // want <OID> <capabilities\n
 // [want <OID>...]
 // [shallow <OID>]

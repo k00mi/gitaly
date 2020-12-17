@@ -448,7 +448,7 @@ func (c *Coordinator) mutatorStreamParameters(ctx context.Context, call grpcCall
 	return proxy.NewStreamParameters(primaryDest, secondaryDests, reqFinalizer, nil), nil
 }
 
-// streamDirector determines which downstream servers receive requests
+// StreamDirector determines which downstream servers receive requests
 func (c *Coordinator) StreamDirector(ctx context.Context, fullMethodName string, peeker proxy.StreamPeeker) (*proxy.StreamParameters, error) {
 	// For phase 1, we need to route messages based on the storage location
 	// to the appropriate Gitaly node.

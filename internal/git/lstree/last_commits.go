@@ -45,7 +45,7 @@ func (e Entries) Swap(i, j int) {
 	e[i], e[j] = e[j], e[i]
 }
 
-// We need to sort in the format [*tree *blobs *submodules]
+// Less sorts entries by type in the order [*tree *blobs *submodules]
 func (e Entries) Less(i, j int) bool {
 	return e[i].Type < e[j].Type
 }

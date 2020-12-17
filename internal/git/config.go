@@ -232,7 +232,7 @@ func (repo RepositoryConfig) parseConfig(data []byte, opts ConfigGetRegexpOpts) 
 	return nil, fmt.Errorf("parsing output: %w", err)
 }
 
-// ConfigGetRegexpOpts allows to configure fetching of the configurations using regexp.
+// ConfigUnsetOpts allows to configure fetching of the configurations using regexp.
 type ConfigUnsetOpts struct {
 	// All controls if all values associated with the key needs to be unset.
 	All bool

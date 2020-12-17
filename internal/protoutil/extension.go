@@ -39,7 +39,7 @@ func GetTargetRepositoryExtension(m *descriptor.FieldDescriptorProto) (bool, err
 	return getBoolExtension(m.GetOptions(), gitalypb.E_TargetRepository)
 }
 
-// GetAdditionaRepositoryExtension gets the target_repository extension from a field descriptor
+// GetAdditionalRepositoryExtension gets the target_repository extension from a field descriptor
 func GetAdditionalRepositoryExtension(m *descriptor.FieldDescriptorProto) (bool, error) {
 	return getBoolExtension(m.GetOptions(), gitalypb.E_AdditionalRepository)
 }

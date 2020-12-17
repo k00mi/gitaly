@@ -6,7 +6,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-// StreamModifier abstracts away the gRPC stream being forwarded so that it can
+// StreamPeeker abstracts away the gRPC stream being forwarded so that it can
 // be inspected and modified.
 type StreamPeeker interface {
 	// Peek allows a director to peek one message into the request stream without

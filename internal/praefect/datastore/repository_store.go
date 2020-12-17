@@ -109,7 +109,7 @@ type PostgresRepositoryStore struct {
 	storages
 }
 
-// NewLocalRepositoryStore returns a Postgres implementation of RepositoryStore.
+// NewPostgresRepositoryStore returns a Postgres implementation of RepositoryStore.
 func NewPostgresRepositoryStore(db glsql.Querier, configuredStorages map[string][]string) *PostgresRepositoryStore {
 	return &PostgresRepositoryStore{db: db, storages: storages(configuredStorages)}
 }

@@ -30,7 +30,7 @@ type AssignmentStore struct {
 	configuredStorages map[string][]string
 }
 
-// NewAssignmentsStore returns a new AssignmentStore using the passed in database.
+// NewAssignmentStore returns a new AssignmentStore using the passed in database.
 func NewAssignmentStore(db glsql.Querier, configuredStorages map[string][]string) AssignmentStore {
 	return AssignmentStore{db: db, configuredStorages: configuredStorages}
 }

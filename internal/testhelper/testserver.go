@@ -57,7 +57,8 @@ func WithStorages(storages []string) TestServerOpt {
 	}
 }
 
-// WithStorages is a TestServerOpt that sets the storages for a TestServer
+// WithInternalSocket is a TestServerOpt that will cause the TestServer to
+// listen on its internal socket.
 func WithInternalSocket(cfg config.Cfg) TestServerOpt {
 	return func(t *TestServer) {
 		t.withInternalSocketPath = cfg.GitalyInternalSocketPath()
