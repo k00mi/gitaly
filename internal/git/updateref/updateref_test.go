@@ -175,7 +175,9 @@ func TestUpdater_closingStdinAbortsChanges(t *testing.T) {
 	testRepo, _, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
 
-	headCommit, err := log.GetCommit(ctx, testRepo, "HEAD")
+	locator := config.NewLocator(config.Config)
+
+	headCommit, err := log.GetCommit(ctx, locator, testRepo, "HEAD")
 	require.NoError(t, err)
 
 	ref := "refs/heads/shouldnotexist"
@@ -193,6 +195,6 @@ func TestUpdater_closingStdinAbortsChanges(t *testing.T) {
 
 	// ... but as we now use explicit transactional behaviour, this is no
 	// longer the case.
-	_, err = log.GetCommit(ctx, testRepo, ref)
+	_, err = log.GetCommit(ctx, locator, testRepo, ref)
 	require.True(t, log.IsNotFound(err), "expected 'not found' error got %v", err)
 }
