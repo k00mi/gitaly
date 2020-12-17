@@ -39,7 +39,7 @@ func TestFetchIntoObjectPool_Success(t *testing.T) {
 
 	repoCommit := testhelper.CreateCommit(t, testRepoPath, t.Name(), &testhelper.CreateCommitOpts{Message: t.Name()})
 
-	pool, err := objectpool.NewObjectPool(config.Config, config.NewLocator(config.Config), "default", testhelper.NewTestObjectPoolName(t))
+	pool, err := objectpool.NewObjectPool(config.Config, locator, "default", testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
 	defer pool.Remove(ctx)
 
@@ -86,7 +86,8 @@ func TestFetchIntoObjectPool_Success(t *testing.T) {
 }
 
 func TestFetchIntoObjectPool_hooksDisabled(t *testing.T) {
-	server, serverSocketPath := runObjectPoolServer(t, config.Config, config.NewLocator(config.Config))
+	locator := config.NewLocator(config.Config)
+	server, serverSocketPath := runObjectPoolServer(t, config.Config, locator)
 	defer server.Stop()
 
 	client, conn := newObjectPoolClient(t, serverSocketPath)
@@ -98,7 +99,7 @@ func TestFetchIntoObjectPool_hooksDisabled(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	pool, err := objectpool.NewObjectPool(config.Config, config.NewLocator(config.Config), "default", testhelper.NewTestObjectPoolName(t))
+	pool, err := objectpool.NewObjectPool(config.Config, locator, "default", testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
 	defer pool.Remove(ctx)
 
@@ -148,7 +149,7 @@ func TestFetchIntoObjectPool_CollectLogStatistics(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	pool, err := objectpool.NewObjectPool(config.Config, config.NewLocator(config.Config), "default", testhelper.NewTestObjectPoolName(t))
+	pool, err := objectpool.NewObjectPool(config.Config, locator, "default", testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
 	defer pool.Remove(ctx)
 
@@ -186,7 +187,7 @@ func TestFetchIntoObjectPool_Failure(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	pool, err := objectpool.NewObjectPool(config.Config, config.NewLocator(config.Config), "default", testhelper.NewTestObjectPoolName(t))
+	pool, err := objectpool.NewObjectPool(config.Config, locator, "default", testhelper.NewTestObjectPoolName(t))
 	require.NoError(t, err)
 	defer pool.Remove(ctx)
 

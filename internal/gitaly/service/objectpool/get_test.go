@@ -26,7 +26,7 @@ func TestGetObjectPoolSuccess(t *testing.T) {
 
 	relativePoolPath := testhelper.NewTestObjectPoolName(t)
 
-	pool, err := objectpool.NewObjectPool(config.Config, config.NewLocator(config.Config), testRepo.GetStorageName(), relativePoolPath)
+	pool, err := objectpool.NewObjectPool(config.Config, locator, testRepo.GetStorageName(), relativePoolPath)
 	require.NoError(t, err)
 
 	poolCtx, cancel := testhelper.Context()
