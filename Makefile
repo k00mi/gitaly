@@ -54,7 +54,7 @@ GO_TEST_LDFLAGS := -X gitlab.com/gitlab-org/gitaly/auth.timestampThreshold=5s
 GO_BUILD_TAGS   := tracer_static,tracer_static_jaeger,continuous_profiler_stackdriver,static,system_libgit2
 
 # Dependency versions
-GOLANGCI_LINT_VERSION     ?= 1.31.0
+GOLANGCI_LINT_VERSION     ?= 1.33.0
 PROTOC_VERSION            ?= 3.12.4
 PROTOC_GEN_GO_VERSION     ?= 1.3.2
 GIT_VERSION               ?= v2.29.0

@@ -29,7 +29,7 @@ func NewPool(dialOptions ...grpc.DialOption) *Pool {
 	return NewPoolWithOptions(WithDialOptions(dialOptions...))
 }
 
-// NewPool creates a new connection pool that's ready for use.
+// NewPoolWithOptions creates a new connection pool that's ready for use.
 func NewPoolWithOptions(poolOptions ...PoolOption) *Pool {
 	opts := applyPoolOptions(poolOptions)
 	return &Pool{

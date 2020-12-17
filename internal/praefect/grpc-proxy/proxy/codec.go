@@ -7,8 +7,8 @@ import (
 	"google.golang.org/grpc/encoding"
 )
 
-// This interface is required to maintain compatibility with both grpc.Codec
-// and encoding.Codec.
+// Codec is an interface which is required to maintain compatibility with both
+// grpc.Codec and encoding.Codec.
 type Codec interface {
 	Marshal(v interface{}) ([]byte, error)
 	Unmarshal(data []byte, v interface{}) error
@@ -16,7 +16,7 @@ type Codec interface {
 	String() string
 }
 
-// Codec returns a proxying encoding.Codec with the default protobuf codec as parent.
+// NewCodec returns a proxying encoding.Codec with the default protobuf codec as parent.
 //
 // See CodecWithParent.
 func NewCodec() Codec {

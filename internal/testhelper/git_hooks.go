@@ -13,7 +13,7 @@ import (
 	"gitlab.com/gitlab-org/gitaly/internal/gitaly/config"
 )
 
-// dump the env vars that the custom hooks receives to a file
+// WriteEnvToCustomHook dumps the env vars that the custom hooks receives to a file
 func WriteEnvToCustomHook(t testing.TB, repoPath, hookName string) (string, func()) {
 	hookOutputTemp, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
@@ -49,7 +49,7 @@ end
 	return cleanup
 }
 
-// write a hook in the repo/path.git/custom_hooks directory
+// WriteCustomHook writes a hook in the repo/path.git/custom_hooks directory
 func WriteCustomHook(repoPath, name string, content []byte) (func(), error) {
 	fullPath := filepath.Join(repoPath, "custom_hooks", name)
 	return WriteExecutable(fullPath, content)

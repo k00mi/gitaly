@@ -5,7 +5,7 @@ type StaticOption struct {
 	value string
 }
 
-// ValidateArgs just passes through the already trusted value. This never
+// OptionArgs just passes through the already trusted value. This never
 // returns an error.
 func (sa StaticOption) OptionArgs() ([]string, error) { return []string{sa.value}, nil }
 

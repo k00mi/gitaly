@@ -1,12 +1,11 @@
 package testhelper
 
 import (
+	"crypto/sha256"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
-
-	"crypto/sha256"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"

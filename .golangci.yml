@@ -8,27 +8,41 @@ run:
 linters:
   disable-all: true
   enable:
-    - goimports
-    - stylecheck
     - deadcode
+    - errcheck
+    - errorlint
+    - gci
+    - gochecknoglobals
+    - goimports
+    - golint
+    - gosimple
     - govet
     - ineffassign
-    - megacheck
-    - varcheck
-    - misspell
-    - unconvert
     - maligned
+    - megacheck
+    - misspell
     - noctx
-    - sqlclosecheck
+    - nolintlint
     - rowserrcheck
+    - sqlclosecheck
+    - staticcheck
+    - structcheck
+    - stylecheck
+    - unused
+    - unconvert
+    - varcheck
 
 issues:
+  exclude-use-default: false
   # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:
     # govet checks all struct initializations must be keyed by field names
     - linters:
         - govet
       text: "composite literal uses unkeyed fields"
+    - linters:
+        - stylecheck
+      text: "at least one file in a package should have a package comment"
     - path: "_test.go"
       linters:
         - maligned
@@ -37,3 +51,9 @@ issues:
   max-issues-per-linter: 0
   # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
   max-same-issues: 0
+
+  # Only lint newly introduced changes which have been introduced since the
+  # specified revision, which is the current origin/master at the time of
+  # writing this.
+  new: true
+  new-from-rev: b7d42677f27a93b1e6aebb5d571868b9094dc3b2

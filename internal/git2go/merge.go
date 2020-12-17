@@ -64,7 +64,7 @@ func (m MergeResult) SerializeTo(w io.Writer) error {
 	return serializeTo(w, m)
 }
 
-// Merge performs a merge via gitaly-git2go.
+// Run performs a merge via gitaly-git2go.
 func (m MergeCommand) Run(ctx context.Context, cfg config.Cfg) (MergeResult, error) {
 	if err := m.verify(); err != nil {
 		return MergeResult{}, fmt.Errorf("merge: %w: %s", ErrInvalidArgument, err.Error())

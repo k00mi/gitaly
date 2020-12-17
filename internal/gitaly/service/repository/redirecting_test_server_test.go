@@ -1,11 +1,10 @@
 package repository
 
 import (
-	"os/exec"
-	"testing"
-
 	"net/http"
 	"net/http/httptest"
+	"os/exec"
+	"testing"
 
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitaly/internal/command"
