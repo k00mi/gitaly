@@ -175,14 +175,33 @@ type ConfigPair struct {
 	Scope string
 }
 
-var configKeyRegex = regexp.MustCompile(`^[[:alnum:]]+[-[:alnum:]]*\.(.+\.)*[[:alnum:]]+[-[:alnum:]]*$`)
+var (
+	configKeyOptionRegex = regexp.MustCompile(`^[[:alnum:]]+[-[:alnum:]]*\.(.+\.)*[[:alnum:]]+[-[:alnum:]]*$`)
+	// configKeyGlobalRegex is intended to verify config keys when used as
+	// global arguments. We're playing it safe here by disallowing lots of
+	// keys which git would parse just fine, but we only have a limited
+	// number of config entries anyway. Most importantly, we cannot allow
+	// `=` as part of the key as that would break parsing of `git -c`.
+	configKeyGlobalRegex = regexp.MustCompile(`^[[:alnum:]]+(\.[-/_a-zA-Z0-9]+)+$`)
+)
 
 // OptionArgs validates the config pair args
 func (cp ConfigPair) OptionArgs() ([]string, error) {
-	if !configKeyRegex.MatchString(cp.Key) {
+	if !configKeyOptionRegex.MatchString(cp.Key) {
 		return nil, fmt.Errorf("config key %q failed regexp validation: %w", cp.Key, ErrInvalidArg)
 	}
 	return []string{cp.Key, cp.Value}, nil
+}
+
+// GlobalArgs generates a git `-c <key>=<value>` flag. The key must pass
+// validation by containing only alphanumeric sections separated by dots.
+// No other characters are allowed for now as `git -c` may not correctly parse
+// them, most importantly when they contain equals signs.
+func (cp ConfigPair) GlobalArgs() ([]string, error) {
+	if !configKeyGlobalRegex.MatchString(cp.Key) {
+		return nil, fmt.Errorf("config key %q failed regexp validation: %w", cp.Key, ErrInvalidArg)
+	}
+	return []string{"-c", fmt.Sprintf("%s=%s", cp.Key, cp.Value)}, nil
 }
 
 // Flag is a single token optional command line argument that enables or
@@ -310,8 +329,8 @@ func handleOpts(ctx context.Context, sc Cmd, cc *cmdCfg, opts []CmdOpt) error {
 		return fmt.Errorf("subcommand %q: %w", sc.Subcommand(), ErrRefHookNotRequired)
 	}
 	if mayGeneratePackfiles(sc.Subcommand()) {
-		cc.globals = append(cc.globals, ValueFlag{
-			Name: "-c", Value: "pack.windowMemory=100m",
+		cc.globals = append(cc.globals, ConfigPair{
+			Key: "pack.windowMemory", Value: "100m",
 		})
 	}
 

@@ -69,6 +69,136 @@ func TestFlagValidation(t *testing.T) {
 	}
 }
 
+func TestGlobalOption(t *testing.T) {
+	for _, tc := range []struct {
+		desc     string
+		option   GlobalOption
+		valid    bool
+		expected []string
+	}{
+		{
+			desc:     "single-letter flag",
+			option:   Flag{Name: "-k"},
+			valid:    true,
+			expected: []string{"-k"},
+		},
+		{
+			desc:     "long option flag",
+			option:   Flag{Name: "--asdf"},
+			valid:    true,
+			expected: []string{"--asdf"},
+		},
+		{
+			desc:     "multiple single-letter flags",
+			option:   Flag{Name: "-abc"},
+			valid:    true,
+			expected: []string{"-abc"},
+		},
+		{
+			desc:     "single-letter option with value",
+			option:   Flag{Name: "-a=value"},
+			valid:    true,
+			expected: []string{"-a=value"},
+		},
+		{
+			desc:     "long option with value",
+			option:   Flag{Name: "--asdf=value"},
+			valid:    true,
+			expected: []string{"--asdf=value"},
+		},
+		{
+			desc:   "flags without dashes are not allowed",
+			option: Flag{Name: "foo"},
+			valid:  false,
+		},
+		{
+			desc:   "leading spaces are not allowed",
+			option: Flag{Name: " -a"},
+			valid:  false,
+		},
+
+		{
+			desc:     "single-letter value flag",
+			option:   ValueFlag{Name: "-a", Value: "value"},
+			valid:    true,
+			expected: []string{"-a", "value"},
+		},
+		{
+			desc:     "long option value flag",
+			option:   ValueFlag{Name: "--foobar", Value: "value"},
+			valid:    true,
+			expected: []string{"--foobar", "value"},
+		},
+		{
+			desc:     "multiple single-letters for value flag",
+			option:   ValueFlag{Name: "-abc", Value: "value"},
+			valid:    true,
+			expected: []string{"-abc", "value"},
+		},
+		{
+			desc:     "value flag with empty value",
+			option:   ValueFlag{Name: "--key", Value: ""},
+			valid:    true,
+			expected: []string{"--key", ""},
+		},
+		{
+			desc:   "value flag without dashes are not allowed",
+			option: ValueFlag{Name: "foo", Value: "bar"},
+			valid:  false,
+		},
+		{
+			desc:   "value flag with empty key are not allowed",
+			option: ValueFlag{Name: "", Value: "bar"},
+			valid:  false,
+		},
+
+		{
+			desc:     "config pair with key and value",
+			option:   ConfigPair{Key: "foo.bar", Value: "value"},
+			valid:    true,
+			expected: []string{"-c", "foo.bar=value"},
+		},
+		{
+			desc:     "config pair with subsection",
+			option:   ConfigPair{Key: "foo.bar.baz", Value: "value"},
+			valid:    true,
+			expected: []string{"-c", "foo.bar.baz=value"},
+		},
+		{
+			desc:     "config pair without value",
+			option:   ConfigPair{Key: "foo.bar"},
+			valid:    true,
+			expected: []string{"-c", "foo.bar="},
+		},
+		{
+			desc:   "config pair with invalid section format",
+			option: ConfigPair{Key: "foo", Value: "value"},
+			valid:  false,
+		},
+		{
+			desc:   "config pair with leading whitespace",
+			option: ConfigPair{Key: " foo.bar", Value: "value"},
+			valid:  false,
+		},
+		{
+			desc:   "config pair with disallowed character in key",
+			option: ConfigPair{Key: "http.https://weak.example.com.sslVerify", Value: "false"},
+			valid:  false,
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			args, err := tc.option.GlobalArgs()
+			if tc.valid {
+				require.NoError(t, err)
+				require.Equal(t, tc.expected, args)
+			} else {
+				require.Error(t, err, "expected error, but args %v passed validation", args)
+				require.True(t, IsInvalidArgErr(err))
+			}
+		})
+	}
+}
+
 func TestSafeCmdInvalidArg(t *testing.T) {
 	for _, tt := range []struct {
 		globals []GlobalOption

@@ -24,7 +24,7 @@ func (s *server) cloneFromURLCommand(ctx context.Context, repo *gitalypb.Reposit
 	}
 
 	globalFlags := []git.GlobalOption{
-		git.ValueFlag{Name: "-c", Value: "http.followRedirects=false"},
+		git.ConfigPair{Key: "http.followRedirects", Value: "false"},
 	}
 
 	cloneFlags := []git.Option{
@@ -44,7 +44,7 @@ func (s *server) cloneFromURLCommand(ctx context.Context, repo *gitalypb.Reposit
 
 		u.User = nil
 		authHeader := fmt.Sprintf("Authorization: Basic %s", base64.StdEncoding.EncodeToString([]byte(creds)))
-		globalFlags = append(globalFlags, git.ValueFlag{Name: "-c", Value: fmt.Sprintf("http.extraHeader=%s", authHeader)})
+		globalFlags = append(globalFlags, git.ConfigPair{Key: "http.extraHeader", Value: authHeader})
 	}
 
 	return git.SafeBareCmd(ctx, nil, globalFlags,

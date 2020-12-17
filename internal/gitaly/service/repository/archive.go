@@ -204,7 +204,7 @@ func handleArchive(p archiveParams) error {
 
 	if p.in.GetIncludeLfsBlobs() {
 		binary := filepath.Join(p.binDir, "gitaly-lfs-smudge")
-		globals = append(globals, git.ValueFlag{"-c", fmt.Sprintf("filter.lfs.smudge=%s", binary)})
+		globals = append(globals, git.ConfigPair{Key: "filter.lfs.smudge", Value: binary})
 	}
 
 	archiveCommand, err := git.SafeCmdWithEnv(p.ctx, env, p.in.GetRepository(), globals, git.SubCmd{
