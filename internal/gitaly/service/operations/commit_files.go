@@ -161,6 +161,15 @@ func (s *Server) userCommitFiles(ctx context.Context, header *gitalypb.UserCommi
 		return fmt.Errorf("get repo path: %w", err)
 	}
 
+	remoteRepo := header.GetStartRepository()
+	if sameRepository(header.GetRepository(), remoteRepo) {
+		// Some requests set a StartRepository that refers to the same repository as the target repository.
+		// This check never works behind Praefect. See: https://gitlab.com/gitlab-org/gitaly/-/issues/3294
+		// Plain Gitalies still benefit from identifying the case and avoiding unnecessary RPC to resolve the
+		// branch.
+		remoteRepo = nil
+	}
+
 	localRepo := git.NewRepository(header.Repository)
 
 	targetBranchName := "refs/heads/" + string(header.BranchName)
@@ -178,7 +187,7 @@ func (s *Server) userCommitFiles(ctx context.Context, header *gitalypb.UserCommi
 		parentCommitOID, err = s.resolveParentCommit(
 			ctx,
 			localRepo,
-			header.StartRepository,
+			remoteRepo,
 			targetBranchName,
 			targetBranchCommit,
 			string(header.StartBranchName),
@@ -189,7 +198,7 @@ func (s *Server) userCommitFiles(ctx context.Context, header *gitalypb.UserCommi
 	}
 
 	if parentCommitOID != targetBranchCommit {
-		if err := s.fetchMissingCommit(ctx, header.Repository, header.StartRepository, parentCommitOID); err != nil {
+		if err := s.fetchMissingCommit(ctx, header.Repository, remoteRepo, parentCommitOID); err != nil {
 			return fmt.Errorf("fetch missing commit: %w", err)
 		}
 	}
@@ -346,6 +355,11 @@ func (s *Server) userCommitFiles(ctx context.Context, header *gitalypb.UserCommi
 		RepoCreated:   !hasBranches,
 		BranchCreated: parentCommitOID == "",
 	}})
+}
+
+func sameRepository(repoA, repoB *gitalypb.Repository) bool {
+	return repoA.GetStorageName() == repoB.GetStorageName() &&
+		repoA.GetRelativePath() == repoB.GetRelativePath()
 }
 
 func (s *Server) resolveParentCommit(ctx context.Context, local git.Repository, remote *gitalypb.Repository, targetBranch, targetBranchCommit, startBranch string) (string, error) {
