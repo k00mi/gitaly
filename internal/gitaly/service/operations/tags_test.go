@@ -945,6 +945,26 @@ func testFailedUserDeleteTagRequestDueToValidation(t *testing.T, ctx context.Con
 			response: nil,
 			err:      status.Errorf(codes.FailedPrecondition, "tag not found: %s", "i-do-not-exist"),
 		},
+		{
+			desc: "space in tag name",
+			request: &gitalypb.UserDeleteTagRequest{
+				Repository: testRepo,
+				User:       testhelper.TestUser,
+				TagName:    []byte("a tag"),
+			},
+			response: nil,
+			err:      status.Errorf(codes.FailedPrecondition, "tag not found: %s", "a tag"),
+		},
+		{
+			desc: "newline in tag name",
+			request: &gitalypb.UserDeleteTagRequest{
+				Repository: testRepo,
+				User:       testhelper.TestUser,
+				TagName:    []byte("a\ntag"),
+			},
+			response: nil,
+			err:      status.Errorf(codes.FailedPrecondition, "tag not found: %s", "a\ntag"),
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -1102,10 +1122,12 @@ func TestFailedUserCreateTagRequestDueToValidation(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
+	injectedTag := "inject-tag\ntagger . <> 0 +0000\n\nInjected subject\n\n"
 	testCases := []struct {
 		desc           string
 		tagName        string
 		targetRevision string
+		message        string
 		user           *gitalypb.User
 		response       *gitalypb.UserCreateTagResponse
 		err            error
@@ -1142,6 +1164,57 @@ func TestFailedUserCreateTagRequestDueToValidation(t *testing.T) {
 			response:       nil,
 			err:            status.Errorf(codes.FailedPrecondition, "revspec '%s' not found", "i-dont-exist"),
 		},
+		{
+			desc:           "space in lightweight tag name",
+			tagName:        "a tag",
+			targetRevision: "master",
+			user:           testhelper.TestUser,
+			response:       nil,
+			err:            status.Errorf(codes.Unknown, "Gitlab::Git::CommitError: Could not update refs/tags/%s. Please refresh and try again.", "a tag"),
+		},
+		{
+			desc:           "space in annotated tag name",
+			tagName:        "a tag",
+			targetRevision: "master",
+			message:        "a message",
+			user:           testhelper.TestUser,
+			response:       nil,
+			err:            status.Errorf(codes.Unknown, "Gitlab::Git::CommitError: Could not update refs/tags/%s. Please refresh and try again.", "a tag"),
+		},
+		{
+			desc:           "newline in lightweight tag name",
+			tagName:        "a\ntag",
+			targetRevision: "master",
+			user:           testhelper.TestUser,
+			response:       nil,
+			err:            status.Errorf(codes.Unknown, "Gitlab::Git::CommitError: Could not update refs/tags/%s. Please refresh and try again.", "a\ntag"),
+		},
+		{
+			desc:           "newline in annotated tag name",
+			tagName:        "a\ntag",
+			targetRevision: "master",
+			message:        "a message",
+			user:           testhelper.TestUser,
+			response:       nil,
+			err:            status.Error(codes.Unknown, "Rugged::InvalidError: failed to parse signature - expected prefix doesn't match actual"),
+		},
+		{
+			desc:           "injection in lightweight tag name",
+			tagName:        injectedTag,
+			targetRevision: "master",
+			user:           testhelper.TestUser,
+			response:       nil,
+			err:            status.Errorf(codes.Unknown, "Gitlab::Git::CommitError: Could not update refs/tags/%s. Please refresh and try again.", injectedTag),
+		},
+		{
+			desc:           "injection in annotated tag name",
+			tagName:        injectedTag,
+			targetRevision: "master",
+			message:        "a message",
+			user:           testhelper.TestUser,
+			response:       nil,
+			err:            status.Errorf(codes.Unknown, "Gitlab::Git::CommitError: Could not update refs/tags/%s. Please refresh and try again.", injectedTag),
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -1151,6 +1224,7 @@ func TestFailedUserCreateTagRequestDueToValidation(t *testing.T) {
 				TagName:        []byte(testCase.tagName),
 				TargetRevision: []byte(testCase.targetRevision),
 				User:           testCase.user,
+				Message:        []byte(testCase.message),
 			}
 
 			ctx, cancel := testhelper.Context()
