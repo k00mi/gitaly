@@ -11,7 +11,7 @@ import (
 type DisabledManager struct{}
 
 // PreReceiveHook ignores its parameters and returns a nil error.
-func (DisabledManager) PreReceiveHook(context.Context, *gitalypb.Repository, []string, io.Reader, io.Writer, io.Writer) error {
+func (DisabledManager) PreReceiveHook(context.Context, *gitalypb.Repository, []string, []string, io.Reader, io.Writer, io.Writer) error {
 	return nil
 }
 

@@ -20,14 +20,14 @@ import (
 
 type mockHookManager struct {
 	t                    *testing.T
-	preReceive           func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, env []string, stdin io.Reader, stdout, stderr io.Writer) error
+	preReceive           func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, pushOptions, env []string, stdin io.Reader, stdout, stderr io.Writer) error
 	postReceive          func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, pushOptions, env []string, stdin io.Reader, stdout, stderr io.Writer) error
 	update               func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, ref, oldValue, newValue string, env []string, stdout, stderr io.Writer) error
 	referenceTransaction func(t *testing.T, ctx context.Context, state hook.ReferenceTransactionState, env []string, stdin io.Reader) error
 }
 
-func (m *mockHookManager) PreReceiveHook(ctx context.Context, repo *gitalypb.Repository, env []string, stdin io.Reader, stdout, stderr io.Writer) error {
-	return m.preReceive(m.t, ctx, repo, env, stdin, stdout, stderr)
+func (m *mockHookManager) PreReceiveHook(ctx context.Context, repo *gitalypb.Repository, pushOptions, env []string, stdin io.Reader, stdout, stderr io.Writer) error {
+	return m.preReceive(m.t, ctx, repo, pushOptions, env, stdin, stdout, stderr)
 }
 
 func (m *mockHookManager) PostReceiveHook(ctx context.Context, repo *gitalypb.Repository, pushOptions, env []string, stdin io.Reader, stdout, stderr io.Writer) error {
@@ -144,7 +144,7 @@ func TestUpdateReferenceWithHooks(t *testing.T) {
 
 	testCases := []struct {
 		desc                 string
-		preReceive           func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, env []string, stdin io.Reader, stdout, stderr io.Writer) error
+		preReceive           func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, pushOptions, env []string, stdin io.Reader, stdout, stderr io.Writer) error
 		postReceive          func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, pushOptions, env []string, stdin io.Reader, stdout, stderr io.Writer) error
 		update               func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, ref, oldValue, newValue string, env []string, stdout, stderr io.Writer) error
 		referenceTransaction func(t *testing.T, ctx context.Context, state hook.ReferenceTransactionState, env []string, stdin io.Reader) error
@@ -153,10 +153,11 @@ func TestUpdateReferenceWithHooks(t *testing.T) {
 	}{
 		{
 			desc: "successful update",
-			preReceive: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, env []string, stdin io.Reader, stdout, stderr io.Writer) error {
+			preReceive: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, pushOptions, env []string, stdin io.Reader, stdout, stderr io.Writer) error {
 				changes, err := ioutil.ReadAll(stdin)
 				require.NoError(t, err)
 				require.Equal(t, fmt.Sprintf("%s %s refs/heads/master\n", oldRev, git.NullSHA), string(changes))
+				require.Empty(t, pushOptions)
 				require.Equal(t, env, expectedEnv)
 				return nil
 			},
@@ -187,7 +188,7 @@ func TestUpdateReferenceWithHooks(t *testing.T) {
 		},
 		{
 			desc: "prereceive error",
-			preReceive: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, env []string, stdin io.Reader, stdout, stderr io.Writer) error {
+			preReceive: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, pushOptions, env []string, stdin io.Reader, stdout, stderr io.Writer) error {
 				_, err := io.Copy(stderr, strings.NewReader("prereceive failure"))
 				require.NoError(t, err)
 				return errors.New("ignored")
@@ -196,7 +197,7 @@ func TestUpdateReferenceWithHooks(t *testing.T) {
 		},
 		{
 			desc: "update error",
-			preReceive: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, env []string, stdin io.Reader, stdout, stderr io.Writer) error {
+			preReceive: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, pushOptions, env []string, stdin io.Reader, stdout, stderr io.Writer) error {
 				return nil
 			},
 			update: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, ref, oldValue, newValue string, env []string, stdout, stderr io.Writer) error {
@@ -208,7 +209,7 @@ func TestUpdateReferenceWithHooks(t *testing.T) {
 		},
 		{
 			desc: "reference-transaction error",
-			preReceive: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, env []string, stdin io.Reader, stdout, stderr io.Writer) error {
+			preReceive: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, pushOptions, env []string, stdin io.Reader, stdout, stderr io.Writer) error {
 				return nil
 			},
 			update: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, ref, oldValue, newValue string, env []string, stdout, stderr io.Writer) error {
@@ -224,7 +225,7 @@ func TestUpdateReferenceWithHooks(t *testing.T) {
 		},
 		{
 			desc: "post-receive error",
-			preReceive: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, env []string, stdin io.Reader, stdout, stderr io.Writer) error {
+			preReceive: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, pushOptions, env []string, stdin io.Reader, stdout, stderr io.Writer) error {
 				return nil
 			},
 			update: func(t *testing.T, ctx context.Context, repo *gitalypb.Repository, ref, oldValue, newValue string, env []string, stdout, stderr io.Writer) error {

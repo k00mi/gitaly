@@ -247,7 +247,7 @@ func TestSSHReceivePackToHooks(t *testing.T) {
 	serverSocketPath, stop := runSSHServer(t)
 	defer stop()
 
-	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
+	tempGitlabShellDir, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 
 	defer func(gitlabShell config.GitlabShell) {
@@ -271,7 +271,6 @@ func TestSSHReceivePackToHooks(t *testing.T) {
 	})
 	defer cleanup()
 
-	testhelper.WriteTemporaryGitlabShellConfigFile(t, tempGitlabShellDir, testhelper.GitlabShellConfig{GitlabURL: serverURL})
 	testhelper.WriteShellSecretFile(t, tempGitlabShellDir, secretToken)
 
 	config.Config.Gitlab.URL = serverURL

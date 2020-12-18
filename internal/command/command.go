@@ -197,7 +197,7 @@ func New(ctx context.Context, cmd *exec.Cmd, stdin io.Reader, stdout, stderr io.
 	env = append(env, "GIT_TERMINAL_PROMPT=0")
 
 	// Export env vars
-	cmd.Env = append(env, AllowedEnvironment()...)
+	cmd.Env = append(env, AllowedEnvironment(os.Environ())...)
 	cmd.Env = envInjector(ctx, cmd.Env)
 
 	// Start the command in its own process group (nice for signalling)
@@ -262,15 +262,18 @@ func New(ctx context.Context, cmd *exec.Cmd, stdin io.Reader, stdout, stderr io.
 	return command, nil
 }
 
-// AllowedEnvironment returns an environment based on the allowed
-// variables defined above. This is useful for constructing a base
-// environment in which a command can be run.
-func AllowedEnvironment() []string {
+// AllowedEnvironment filters the given slice of environment variables and
+// returns all variables which are allowed per the variables defined above.
+// This is useful for constructing a base environment in which a command can be
+// run.
+func AllowedEnvironment(envs []string) []string {
 	var filtered []string
 
-	for _, envVarName := range exportedEnvVars {
-		if val, ok := os.LookupEnv(envVarName); ok {
-			filtered = append(filtered, fmt.Sprintf("%s=%s", envVarName, val))
+	for _, env := range envs {
+		for _, exportedEnv := range exportedEnvVars {
+			if strings.HasPrefix(env, exportedEnv+"=") {
+				filtered = append(filtered, env)
+			}
 		}
 	}
 

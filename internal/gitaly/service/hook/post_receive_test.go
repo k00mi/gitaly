@@ -39,7 +39,7 @@ func TestPostReceiveInvalidArgument(t *testing.T) {
 
 func TestHooksMissingStdin(t *testing.T) {
 	user, password, secretToken := "user", "password", "secret token"
-	tempDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
+	tempDir, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 	testhelper.WriteShellSecretFile(t, tempDir, secretToken)
 
@@ -196,7 +196,7 @@ To create a merge request for okay, visit:
 	secretToken := "secret token"
 	user, password := "user", "password"
 
-	tempDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
+	tempDir, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 	testhelper.WriteShellSecretFile(t, tempDir, secretToken)
 

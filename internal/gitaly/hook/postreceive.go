@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"gitlab.com/gitlab-org/gitaly/internal/git"
-	"gitlab.com/gitlab-org/gitaly/internal/git/hooks"
 	"gitlab.com/gitlab-org/gitaly/internal/helper"
 	"gitlab.com/gitlab-org/gitaly/proto/go/gitalypb"
 )
@@ -168,13 +167,15 @@ func (m *GitLabHookManager) PostReceiveHook(ctx context.Context, repo *gitalypb.
 		return helper.ErrInternalf("creating custom hooks executor: %v", err)
 	}
 
-	customHooksEnv := append(env, customHooksEnv(payload)...)
-	customHooksEnv = append(customHooksEnv, hooks.GitPushOptions(pushOptions)...)
+	customEnv, err := m.customHooksEnv(payload, pushOptions, env)
+	if err != nil {
+		return helper.ErrInternalf("constructing custom hook environment: %v", err)
+	}
 
 	if err = executor(
 		ctx,
 		nil,
-		customHooksEnv,
+		customEnv,
 		bytes.NewReader(changes),
 		stdout,
 		stderr,

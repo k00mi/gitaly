@@ -22,10 +22,6 @@ func TestPrereceive_customHooks(t *testing.T) {
 
 	hookManager := NewManager(config.NewLocator(config.Config), GitlabAPIStub, config.Config)
 
-	standardEnv := []string{
-		fmt.Sprintf("GL_REPO=%s", repo),
-	}
-
 	receiveHooksPayload := &git.ReceiveHooksPayload{
 		UserID:   "1234",
 		Username: "user",
@@ -66,6 +62,7 @@ func TestPrereceive_customHooks(t *testing.T) {
 	testCases := []struct {
 		desc           string
 		env            []string
+		pushOptions    []string
 		hook           string
 		stdin          string
 		expectedErr    string
@@ -74,22 +71,37 @@ func TestPrereceive_customHooks(t *testing.T) {
 	}{
 		{
 			desc:  "hook receives environment variables",
-			env:   append(standardEnv, payload),
+			env:   []string{payload},
 			hook:  "#!/bin/sh\nenv | grep -e '^GL_' -e '^GITALY_' | sort\n",
 			stdin: "change\n",
 			expectedStdout: strings.Join([]string{
-				payload,
 				"GL_ID=1234",
 				fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
 				"GL_PROTOCOL=web",
-				fmt.Sprintf("GL_REPO=%s", repo),
+				fmt.Sprintf("GL_REPOSITORY=%s", repo.GetGlRepository()),
+				"GL_USERNAME=user",
+			}, "\n") + "\n",
+		},
+		{
+			desc:        "hook receives push options",
+			env:         []string{payload},
+			pushOptions: []string{"mr.create", "mr.merge_when_pipeline_succeeds"},
+			hook:        "#!/bin/sh\nenv | grep -e '^GL_' -e '^GITALY_' -e '^GIT_PUSH_' | sort\n",
+			stdin:       "change\n",
+			expectedStdout: strings.Join([]string{
+				"GIT_PUSH_OPTION_0=mr.create",
+				"GIT_PUSH_OPTION_1=mr.merge_when_pipeline_succeeds",
+				"GIT_PUSH_OPTION_COUNT=2",
+				"GL_ID=1234",
+				fmt.Sprintf("GL_PROJECT_PATH=%s", repo.GetGlProjectPath()),
+				"GL_PROTOCOL=web",
 				fmt.Sprintf("GL_REPOSITORY=%s", repo.GetGlRepository()),
 				"GL_USERNAME=user",
 			}, "\n") + "\n",
 		},
 		{
 			desc:           "hook can write to stderr and stdout",
-			env:            append(standardEnv, payload),
+			env:            []string{payload},
 			hook:           "#!/bin/sh\necho foo >&1 && echo bar >&2\n",
 			stdin:          "change\n",
 			expectedStdout: "foo\n",
@@ -97,48 +109,48 @@ func TestPrereceive_customHooks(t *testing.T) {
 		},
 		{
 			desc:           "hook receives standard input",
-			env:            append(standardEnv, payload),
+			env:            []string{payload},
 			hook:           "#!/bin/sh\ncat\n",
 			stdin:          "foo\n",
 			expectedStdout: "foo\n",
 		},
 		{
 			desc:           "hook succeeds without consuming stdin",
-			env:            append(standardEnv, payload),
+			env:            []string{payload},
 			hook:           "#!/bin/sh\necho foo\n",
 			stdin:          "ignore me\n",
 			expectedStdout: "foo\n",
 		},
 		{
 			desc:        "invalid hook results in error",
-			env:         append(standardEnv, payload),
+			env:         []string{payload},
 			hook:        "",
 			stdin:       "change\n",
 			expectedErr: "exec format error",
 		},
 		{
 			desc:        "failing hook results in error",
-			env:         append(standardEnv, payload),
+			env:         []string{payload},
 			hook:        "#!/bin/sh\nexit 123",
 			stdin:       "change\n",
 			expectedErr: "exit status 123",
 		},
 		{
 			desc:           "hook is executed on primary",
-			env:            append(standardEnv, primaryPayload),
+			env:            []string{primaryPayload},
 			hook:           "#!/bin/sh\necho foo\n",
 			stdin:          "change\n",
 			expectedStdout: "foo\n",
 		},
 		{
 			desc:  "hook is not executed on secondary",
-			env:   append(standardEnv, secondaryPayload),
+			env:   []string{secondaryPayload},
 			hook:  "#!/bin/sh\necho foo\n",
 			stdin: "change\n",
 		},
 		{
 			desc:        "missing changes cause error",
-			env:         append(standardEnv, payload),
+			env:         []string{payload},
 			expectedErr: "hook got no reference updates",
 		},
 	}
@@ -153,7 +165,7 @@ func TestPrereceive_customHooks(t *testing.T) {
 			defer cleanup()
 
 			var stdout, stderr bytes.Buffer
-			err = hookManager.PreReceiveHook(ctx, repo, tc.env, strings.NewReader(tc.stdin), &stdout, &stderr)
+			err = hookManager.PreReceiveHook(ctx, repo, tc.pushOptions, tc.env, strings.NewReader(tc.stdin), &stdout, &stderr)
 
 			if tc.expectedErr != "" {
 				require.Contains(t, err.Error(), tc.expectedErr)
@@ -199,10 +211,7 @@ func TestPrereceive_gitlab(t *testing.T) {
 	}).Env()
 	require.NoError(t, err)
 
-	standardEnv := []string{
-		payload,
-		fmt.Sprintf("GL_REPO=%s", testRepo),
-	}
+	standardEnv := []string{payload}
 
 	testCases := []struct {
 		desc           string
@@ -300,7 +309,7 @@ func TestPrereceive_gitlab(t *testing.T) {
 			defer cleanup()
 
 			var stdout, stderr bytes.Buffer
-			err = hookManager.PreReceiveHook(ctx, testRepo, tc.env, strings.NewReader(tc.changes), &stdout, &stderr)
+			err = hookManager.PreReceiveHook(ctx, testRepo, nil, tc.env, strings.NewReader(tc.changes), &stdout, &stderr)
 
 			if tc.expectedErr != nil {
 				require.Equal(t, tc.expectedErr, err)

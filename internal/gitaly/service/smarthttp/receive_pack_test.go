@@ -386,18 +386,13 @@ func TestPostReceivePackToHooks(t *testing.T) {
 	client, conn := newSmartHTTPClient(t, "unix://"+socket)
 	defer conn.Close()
 
-	tempGitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
+	tempGitlabShellDir, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 
 	defer func(cfg config.Cfg) {
 		config.Config = cfg
 	}(config.Config)
 	config.Config.GitlabShell.Dir = tempGitlabShellDir
-
-	defer func(override string) {
-		hooks.Override = override
-	}(hooks.Override)
-	hooks.Override = ""
 
 	repo, testRepoPath, cleanup := testhelper.NewTestRepo(t)
 	defer cleanup()
@@ -419,7 +414,6 @@ func TestPostReceivePackToHooks(t *testing.T) {
 	})
 	defer cleanup()
 
-	testhelper.WriteTemporaryGitlabShellConfigFile(t, tempGitlabShellDir, testhelper.GitlabShellConfig{GitlabURL: serverURL})
 	testhelper.WriteShellSecretFile(t, tempGitlabShellDir, secretToken)
 
 	cleanup = testhelper.WriteCheckNewObjectExistsHook(t, testRepoPath)
@@ -427,11 +421,6 @@ func TestPostReceivePackToHooks(t *testing.T) {
 
 	config.Config.Gitlab.URL = serverURL
 	config.Config.Gitlab.SecretFile = filepath.Join(tempGitlabShellDir, ".gitlab_shell_secret")
-
-	cwd, err := os.Getwd()
-	require.NoError(t, err)
-	hookDir := filepath.Join(cwd, "../../../../ruby", "git-hooks")
-	hooks.Override = hookDir
 
 	stream, err := client.PostReceivePack(ctx)
 	require.NoError(t, err)
@@ -484,11 +473,6 @@ func testPostReceiveWithTransactionsViaPraefect(t *testing.T, ctx context.Contex
 		config.Config = cfg
 	}(config.Config)
 
-	defer func(override string) {
-		hooks.Override = override
-	}(hooks.Override)
-	hooks.Override = ""
-
 	secretToken := "secret token"
 	glID := "key-1234"
 	glRepository := "some_repo"
@@ -510,19 +494,9 @@ func testPostReceiveWithTransactionsViaPraefect(t *testing.T, ctx context.Contex
 	serverURL, cleanup := testhelper.NewGitlabTestServer(t, opts)
 	defer cleanup()
 
-	gitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
+	gitlabShellDir, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 	config.Config.GitlabShell.Dir = gitlabShellDir
-	testhelper.WriteTemporaryGitlabShellConfigFile(t,
-		gitlabShellDir,
-		testhelper.GitlabShellConfig{
-			GitlabURL: serverURL,
-			HTTPSettings: testhelper.HTTPSettings{
-				User:     gitlabUser,
-				Password: gitlabPassword,
-			},
-		})
-
 	config.Config.Gitlab.URL = serverURL
 	config.Config.Gitlab.HTTPSettings.User = gitlabUser
 	config.Config.Gitlab.HTTPSettings.Password = gitlabPassword
@@ -594,7 +568,7 @@ func TestPostReceiveWithReferenceTransactionHook(t *testing.T) {
 	go gitalyServer.Serve(internalListener)
 	defer gitalyServer.Stop()
 
-	gitlabShellDir, cleanup := testhelper.CreateTemporaryGitlabShellDir(t)
+	gitlabShellDir, cleanup := testhelper.TempDir(t)
 	defer cleanup()
 
 	defer func(oldValue string) {
@@ -602,11 +576,6 @@ func TestPostReceiveWithReferenceTransactionHook(t *testing.T) {
 	}(config.Config.Gitlab.SecretFile)
 	config.Config.Gitlab.SecretFile = filepath.Join(gitlabShellDir, ".gitlab_shell_secret")
 	testhelper.WriteShellSecretFile(t, gitlabShellDir, "secret123")
-
-	defer func(override string) {
-		hooks.Override = override
-	}(hooks.Override)
-	hooks.Override = ""
 
 	refTransactionServer.called = 0
 
