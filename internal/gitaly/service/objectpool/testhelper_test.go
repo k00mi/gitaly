@@ -38,7 +38,7 @@ func runObjectPoolServer(t *testing.T, cfg config.Cfg, locator storage.Locator) 
 	internalListener, err := net.Listen("unix", cfg.GitalyInternalSocketPath())
 	require.NoError(t, err)
 
-	gitalypb.RegisterObjectPoolServiceServer(server, NewServer(locator))
+	gitalypb.RegisterObjectPoolServiceServer(server, NewServer(cfg, locator))
 	gitalypb.RegisterHookServiceServer(server, hookservice.NewServer(cfg, hook.NewManager(locator, hook.GitlabAPIStub, cfg)))
 
 	go server.Serve(listener)
