@@ -64,7 +64,7 @@ func (cmd *setReplicationFactorSubcommand) Exec(flags *flag.FlagSet, cfg config.
 		return err
 	}
 
-	fmt.Fprintf(cmd.stdout, "current assignments: %v", strings.Join(resp.Storages, ", "))
+	fmt.Fprintf(cmd.stdout, "current assignments: %v\n", strings.Join(resp.Storages, ", "))
 
 	return nil
 }

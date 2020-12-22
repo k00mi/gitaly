@@ -45,27 +45,27 @@ func TestSetReplicationFactorSubcommand(t *testing.T) {
 		{
 			desc:  "replication factor too small",
 			args:  []string{"-virtual-storage=virtual-storage", "-repository=relative-path", "-replication-factor=0"},
-			error: status.Error(codes.Unknown, "set replication factor: attempted to set replication factor 0 but minimum is 1"),
+			error: status.Error(codes.InvalidArgument, "set replication factor: attempted to set replication factor 0 but minimum is 1"),
 		},
 		{
 			desc:  "replication factor too big",
 			args:  []string{"-virtual-storage=virtual-storage", "-repository=relative-path", "-replication-factor=3"},
-			error: status.Error(codes.Unknown, "set replication factor: attempted to set replication factor 3 but virtual storage only contains 2 storages"),
+			error: status.Error(codes.InvalidArgument, "set replication factor: attempted to set replication factor 3 but virtual storage only contains 2 storages"),
 		},
 		{
 			desc:  "virtual storage not found",
 			args:  []string{"-virtual-storage=non-existent", "-repository=relative-path", "-replication-factor=2"},
-			error: status.Error(codes.Unknown, `set replication factor: unknown virtual storage: "non-existent"`),
+			error: status.Error(codes.InvalidArgument, `set replication factor: virtual storage "non-existent" not found`),
 		},
 		{
 			desc:  "repository not found",
 			args:  []string{"-virtual-storage=virtual-storage", "-repository=non-existent", "-replication-factor=2"},
-			error: status.Error(codes.Unknown, `set replication factor: repository "virtual-storage"/"non-existent" not found`),
+			error: status.Error(codes.InvalidArgument, `set replication factor: repository "virtual-storage"/"non-existent" not found`),
 		},
 		{
 			desc:   "successfully set",
 			args:   []string{"-virtual-storage=virtual-storage", "-repository=relative-path", "-replication-factor=2"},
-			stdout: "current assignments: primary, secondary",
+			stdout: "current assignments: primary, secondary\n",
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
