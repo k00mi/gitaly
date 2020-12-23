@@ -102,20 +102,28 @@ func writeAssertObjectTypePreReceiveHook(t *testing.T) (string, func()) {
 
 	hook := fmt.Sprintf(`#!/usr/bin/env ruby
 
+# We match a non-ASCII ref_name below
+Encoding.default_external = Encoding::UTF_8
+Encoding.default_internal = Encoding::UTF_8
+
 expected_object_type = ARGV.shift
 commands = STDIN.each_line.map(&:chomp)
 unless commands.size == 1
   abort "expected 1 ref update command, got #{commands.size}"
 end
 
-new_value = commands[0].split(' ', 3)[1]
+old_value, new_value, ref_name = commands[0].split(' ', 3)
 abort 'missing new_value' unless new_value
 
 out = IO.popen(%%W[%s cat-file -t #{new_value}], &:read)
 abort 'cat-file failed' unless $?.success?
 
+if ref_name =~ /^refs\/[^\/]+\/skip-type-check-/
+  exit 0
+end
+
 unless out.chomp == expected_object_type
-  abort "error: expected #{expected_object_type} object, got #{out}"
+  abort "pre-receive hook error: expected '#{ref_name}' update of '#{old_value}' (a) -> '#{new_value}' (b) for 'b' to be a '#{expected_object_type}' object, got '#{out}'"
 end`, config.Config.Git.BinPath)
 
 	dir, cleanup := testhelper.TempDir(t)
@@ -131,16 +139,24 @@ func writeAssertObjectTypeUpdateHook(t *testing.T) (string, func()) {
 
 	hook := fmt.Sprintf(`#!/usr/bin/env ruby
 
+# We match a non-ASCII ref_name below
+Encoding.default_external = Encoding::UTF_8
+Encoding.default_internal = Encoding::UTF_8
+
 expected_object_type = ARGV.shift
-new_value = ARGV[2]
+ref_name, old_value, new_value = ARGV[0..2]
 
 abort "missing new_value" unless new_value
 
 out = IO.popen(%%W[%s cat-file -t #{new_value}], &:read)
 abort 'cat-file failed' unless $?.success?
 
+if ref_name =~ /^refs\/[^\/]+\/skip-type-check-/
+  exit 0
+end
+
 unless out.chomp == expected_object_type
-  abort "error: expected #{expected_object_type} object, got #{out}"
+  abort "update hook error: expected '#{ref_name}' update of '#{old_value}' (a) -> '#{new_value}' (b) for 'b' to be a '#{expected_object_type}' object, got '#{out}'"
 end`, config.Config.Git.BinPath)
 
 	dir, cleanup := testhelper.TempDir(t)
@@ -239,7 +255,7 @@ func testSuccessfulUserCreateTagRequest(t *testing.T, ctx context.Context) {
 			require.NoError(t, err, "error from calling RPC")
 			require.Empty(t, response.PreReceiveError, "PreReceiveError must be empty, signalling the push was accepted")
 
-			defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "tag", "-d", inputTagName).Run()
+			defer testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", "-d", inputTagName)
 
 			responseOk := &gitalypb.UserCreateTagResponse{
 				Tag: testCase.expectedTag,
@@ -254,6 +270,198 @@ func testSuccessfulUserCreateTagRequest(t *testing.T, ctx context.Context) {
 
 			tag := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag")
 			require.Contains(t, string(tag), inputTagName)
+		})
+	}
+}
+
+func TestSuccessfulUserCreateTagRequestAnnotatedLightweightDisambiguation(t *testing.T) {
+	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.ReferenceTransactions,
+	}).Run(t, testSuccessfulUserCreateTagRequestAnnotatedLightweightDisambiguation)
+}
+
+func testSuccessfulUserCreateTagRequestAnnotatedLightweightDisambiguation(t *testing.T, ctx context.Context) {
+	serverSocketPath, stop := runOperationServiceServer(t)
+	defer stop()
+
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	preReceiveHook, cleanup := writeAssertObjectTypePreReceiveHook(t)
+	defer cleanup()
+
+	updateHook, cleanup := writeAssertObjectTypeUpdateHook(t)
+	defer cleanup()
+
+	testCases := []struct {
+		desc    string
+		message string
+		objType string
+		err     error
+	}{
+		{
+			desc:    "error: contains null byte",
+			message: "\000",
+			err:     status.Error(codes.Unknown, "ArgumentError: string contains null byte"),
+		},
+		{
+			desc:    "annotated: some control characters",
+			message: "\u0001\u0002\u0003\u0004\u0005\u0006\u0007\u0008",
+			objType: "tag",
+		},
+		{
+			desc:    "lightweight: empty message",
+			message: "",
+			objType: "commit",
+		},
+		{
+			desc:    "lightweight: simple whitespace",
+			message: " \t\t",
+			objType: "commit",
+		},
+		{
+			desc:    "lightweight: whitespace with newlines",
+			message: "\t\n\f\r ",
+			objType: "commit",
+		},
+		{
+			desc:    "lightweight: simple Unicode whitespace",
+			message: "\u00a0",
+			objType: "tag",
+		},
+		{
+			desc:    "lightweight: lots of Unicode whitespace",
+			message: "\u0020\u00a0\u1680\u180e\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u200b\u202f\u205f\u3000\ufeff",
+			objType: "tag",
+		},
+		{
+			desc:    "annotated: dot",
+			message: ".",
+			objType: "tag",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			for hook, content := range map[string]string{
+				"pre-receive": fmt.Sprintf("#!/bin/sh\n%s %s \"$@\"", preReceiveHook, testCase.objType),
+				"update":      fmt.Sprintf("#!/bin/sh\n%s %s \"$@\"", updateHook, testCase.objType),
+			} {
+				hookCleanup, err := testhelper.WriteCustomHook(testRepoPath, hook, []byte(content))
+				require.NoError(t, err)
+				defer hookCleanup()
+			}
+
+			tagName := "what-will-it-be"
+			request := &gitalypb.UserCreateTagRequest{
+				Repository:     testRepo,
+				TagName:        []byte(tagName),
+				TargetRevision: []byte("c7fbe50c7c7419d9701eebe64b1fdacc3df5b9dd"),
+				User:           testhelper.TestUser,
+				Message:        []byte(testCase.message),
+			}
+
+			response, err := client.UserCreateTag(ctx, request)
+
+			if testCase.err != nil {
+				require.Equal(t, testCase.err, err)
+			} else {
+				defer testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", "-d", tagName)
+				require.NoError(t, err)
+				require.Empty(t, response.PreReceiveError)
+			}
+		})
+	}
+}
+
+func TestSuccessfulUserCreateTagRequestWithParsedTargetRevision(t *testing.T) {
+	testhelper.NewFeatureSets([]featureflag.FeatureFlag{
+		featureflag.ReferenceTransactions,
+	}).Run(t, testSuccessfulUserCreateTagRequestWithParsedTargetRevision)
+}
+
+func testSuccessfulUserCreateTagRequestWithParsedTargetRevision(t *testing.T, ctx context.Context) {
+	serverSocketPath, stop := runOperationServiceServer(t)
+	defer stop()
+
+	client, conn := newOperationClient(t, serverSocketPath)
+	defer conn.Close()
+
+	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
+	defer cleanupFn()
+
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", "heads/master", "master~1")
+	defer testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", "-d", "heads/master")
+	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", "refs/heads/master", "master~2")
+	defer testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "branch", "-d", "refs/heads/master")
+
+	testCases := []struct {
+		desc             string
+		targetRevision   string
+		expectedRevision string
+	}{
+		{
+			desc:             "tag",
+			targetRevision:   "v1.0.0",
+			expectedRevision: "refs/tags/v1.0.0",
+		},
+		{
+			desc:             "tag~",
+			targetRevision:   "v1.0.0~",
+			expectedRevision: "refs/tags/v1.0.0~",
+		},
+		{
+			desc:             "tags/tag~",
+			targetRevision:   "tags/v1.0.0~",
+			expectedRevision: "refs/tags/v1.0.0~",
+		},
+		{
+			desc:             "refs/tag~",
+			targetRevision:   "refs/tags/v1.0.0~",
+			expectedRevision: "refs/tags/v1.0.0~",
+		},
+		{
+			desc:             "master",
+			targetRevision:   "master",
+			expectedRevision: "master",
+		},
+		{
+			desc:             "heads/master",
+			targetRevision:   "heads/master",
+			expectedRevision: "refs/heads/heads/master",
+		},
+		{
+			desc:             "refs/heads/master",
+			targetRevision:   "refs/heads/master",
+			expectedRevision: "refs/heads/master",
+		},
+		{
+			desc:             "heads/refs/heads/master",
+			targetRevision:   "heads/refs/heads/master",
+			expectedRevision: "refs/heads/refs/heads/master",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			tagName := "what-will-it-be"
+			request := &gitalypb.UserCreateTagRequest{
+				Repository:     testRepo,
+				TagName:        []byte(tagName),
+				TargetRevision: []byte(testCase.targetRevision),
+				User:           testhelper.TestUser,
+			}
+
+			response, err := client.UserCreateTag(ctx, request)
+			defer testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", "-d", tagName)
+			require.NoError(t, err)
+			require.Empty(t, response.PreReceiveError)
+
+			parsedID := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", tagName)
+			require.Equal(t, text.ChompBytes(parsedID), response.Tag.TargetCommit.Id)
 		})
 	}
 }
@@ -360,14 +568,15 @@ func TestSuccessfulUserCreateTagRequestToNonCommit(t *testing.T) {
 				Tag: testCase.expectedTag,
 			}
 			response, err := client.UserCreateTag(ctx, request)
-			defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "tag", "-d", inputTagName).Run()
+			require.NoError(t, err)
+			require.Empty(t, response.PreReceiveError)
+			defer testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", "-d", inputTagName)
 
 			// Fake up *.Id for annotated tags
 			if len(testCase.expectedTag.Id) == 0 {
 				tagID := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", inputTagName)
 				responseOk.Tag.Id = text.ChompBytes(tagID)
 			}
-			require.NoError(t, err)
 			require.Equal(t, responseOk, response)
 
 			peeledID := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", inputTagName+"^{}")
@@ -450,8 +659,9 @@ func TestSuccessfulUserCreateTagNestedTags(t *testing.T) {
 					Message:        []byte(tagMessage),
 				}
 				response, err := client.UserCreateTag(ctx, request)
-				defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "tag", "-d", tagName).Run()
 				require.NoError(t, err)
+				require.Empty(t, response.PreReceiveError)
+				defer testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", "-d", tagName)
 
 				createdID := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", tagName)
 				createdIDStr := text.ChompBytes(createdID)
@@ -473,10 +683,43 @@ func TestSuccessfulUserCreateTagNestedTags(t *testing.T) {
 				require.Equal(t, responseOk, response)
 
 				peeledID := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", tagName+"^{}")
-				require.Equal(t, testCase.targetObject, text.ChompBytes(peeledID))
+				peeledIDStr := text.ChompBytes(peeledID)
+				require.Equal(t, testCase.targetObject, peeledIDStr)
 
 				// Set up the next level of nesting...
 				targetObject = response.Tag.Id
+
+				// Create a *lightweight* tag pointing
+				// to our N-level
+				// tag->[commit|tree|blob]. The "tag"
+				// field name will not match the tag
+				// name.
+				tagNameLight := fmt.Sprintf("skip-type-check-light-%s", tagName)
+				request = &gitalypb.UserCreateTagRequest{
+					Repository:     testRepo,
+					TagName:        []byte(tagNameLight),
+					TargetRevision: []byte(createdIDStr),
+					User:           testhelper.TestUser,
+				}
+				response, err = client.UserCreateTag(ctx, request)
+				defer testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", "-d", tagNameLight)
+				require.NoError(t, err)
+				require.Empty(t, response.PreReceiveError)
+
+				responseOk = &gitalypb.UserCreateTagResponse{
+					Tag: &gitalypb.Tag{
+						Name:         request.TagName,
+						Id:           testCase.targetObject,
+						TargetCommit: responseOk.Tag.TargetCommit,
+						Message:      nil,
+						MessageSize:  0,
+					},
+				}
+				require.Equal(t, responseOk, response)
+
+				createdIDLight := testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "rev-parse", tagNameLight)
+				createdIDLightStr := text.ChompBytes(createdIDLight)
+				require.Equal(t, testCase.targetObject, createdIDLightStr)
 			}
 		})
 	}
@@ -571,7 +814,7 @@ func TestUserCreateTagsuccessfulCreationOfPrefixedTag(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
-			defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "tag", "-d", testCase.tagNameInput).Run()
+			defer testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", "-d", testCase.tagNameInput)
 
 			request := &gitalypb.UserCreateTagRequest{
 				Repository:     testRepo,
@@ -635,7 +878,7 @@ func testSuccessfulGitHooksForUserCreateTagRequest(t *testing.T, ctx context.Con
 
 	for _, hookName := range GitlabHooks {
 		t.Run(hookName, func(t *testing.T) {
-			defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "tag", "-d", tagName).Run()
+			defer testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", "-d", tagName)
 
 			hookOutputTempPath, cleanup := testhelper.WriteEnvToCustomHook(t, testRepoPath, hookName)
 			defer cleanup()
@@ -702,6 +945,26 @@ func testFailedUserDeleteTagRequestDueToValidation(t *testing.T, ctx context.Con
 			response: nil,
 			err:      status.Errorf(codes.FailedPrecondition, "tag not found: %s", "i-do-not-exist"),
 		},
+		{
+			desc: "space in tag name",
+			request: &gitalypb.UserDeleteTagRequest{
+				Repository: testRepo,
+				User:       testhelper.TestUser,
+				TagName:    []byte("a tag"),
+			},
+			response: nil,
+			err:      status.Errorf(codes.FailedPrecondition, "tag not found: %s", "a tag"),
+		},
+		{
+			desc: "newline in tag name",
+			request: &gitalypb.UserDeleteTagRequest{
+				Repository: testRepo,
+				User:       testhelper.TestUser,
+				TagName:    []byte("a\ntag"),
+			},
+			response: nil,
+			err:      status.Errorf(codes.FailedPrecondition, "tag not found: %s", "a\ntag"),
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -732,7 +995,7 @@ func testFailedUserDeleteTagDueToHooks(t *testing.T, ctx context.Context) {
 
 	tagNameInput := "to-be-deleted-soon-tag"
 	testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", tagNameInput)
-	defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "tag", "-d", tagNameInput).Run()
+	defer testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", "-d", tagNameInput)
 
 	request := &gitalypb.UserDeleteTagRequest{
 		Repository: testRepo,
@@ -801,29 +1064,52 @@ func TestFailedUserCreateTagRequestDueToTagExistence(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
-	testCase := struct {
-		tagName        string
-		targetRevision string
-		user           *gitalypb.User
-	}{
-		tagName:        "v1.1.0",
-		targetRevision: "master",
-		user:           testhelper.TestUser,
-	}
-
-	request := &gitalypb.UserCreateTagRequest{
-		Repository:     testRepo,
-		TagName:        []byte(testCase.tagName),
-		TargetRevision: []byte(testCase.targetRevision),
-		User:           testCase.user,
-	}
-
 	ctx, cancel := testhelper.Context()
 	defer cancel()
 
-	response, err := client.UserCreateTag(ctx, request)
-	require.NoError(t, err)
-	require.Equal(t, response.Exists, true)
+	testCases := []struct {
+		desc           string
+		tagName        string
+		targetRevision string
+		user           *gitalypb.User
+		response       *gitalypb.UserCreateTagResponse
+		err            error
+	}{
+		{
+			desc:           "simple existing tag",
+			tagName:        "v1.1.0",
+			targetRevision: "master",
+			user:           testhelper.TestUser,
+			response: &gitalypb.UserCreateTagResponse{
+				Tag:    nil,
+				Exists: true,
+			},
+			err: nil,
+		},
+		{
+			desc:           "existing tag nonexisting target revision",
+			tagName:        "v1.1.0",
+			targetRevision: "does-not-exist",
+			user:           testhelper.TestUser,
+			response:       nil,
+			err:            status.Errorf(codes.FailedPrecondition, "revspec '%s' not found", "does-not-exist"),
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			request := &gitalypb.UserCreateTagRequest{
+				Repository:     testRepo,
+				TagName:        []byte(testCase.tagName),
+				TargetRevision: []byte(testCase.targetRevision),
+				User:           testCase.user,
+			}
+
+			response, err := client.UserCreateTag(ctx, request)
+			require.Equal(t, testCase.err, err)
+			require.Equal(t, testCase.response, response)
+		})
+	}
 }
 
 func TestFailedUserCreateTagRequestDueToValidation(t *testing.T) {
@@ -836,10 +1122,12 @@ func TestFailedUserCreateTagRequestDueToValidation(t *testing.T) {
 	testRepo, _, cleanupFn := testhelper.NewTestRepo(t)
 	defer cleanupFn()
 
+	injectedTag := "inject-tag\ntagger . <> 0 +0000\n\nInjected subject\n\n"
 	testCases := []struct {
 		desc           string
 		tagName        string
 		targetRevision string
+		message        string
 		user           *gitalypb.User
 		response       *gitalypb.UserCreateTagResponse
 		err            error
@@ -876,6 +1164,57 @@ func TestFailedUserCreateTagRequestDueToValidation(t *testing.T) {
 			response:       nil,
 			err:            status.Errorf(codes.FailedPrecondition, "revspec '%s' not found", "i-dont-exist"),
 		},
+		{
+			desc:           "space in lightweight tag name",
+			tagName:        "a tag",
+			targetRevision: "master",
+			user:           testhelper.TestUser,
+			response:       nil,
+			err:            status.Errorf(codes.Unknown, "Gitlab::Git::CommitError: Could not update refs/tags/%s. Please refresh and try again.", "a tag"),
+		},
+		{
+			desc:           "space in annotated tag name",
+			tagName:        "a tag",
+			targetRevision: "master",
+			message:        "a message",
+			user:           testhelper.TestUser,
+			response:       nil,
+			err:            status.Errorf(codes.Unknown, "Gitlab::Git::CommitError: Could not update refs/tags/%s. Please refresh and try again.", "a tag"),
+		},
+		{
+			desc:           "newline in lightweight tag name",
+			tagName:        "a\ntag",
+			targetRevision: "master",
+			user:           testhelper.TestUser,
+			response:       nil,
+			err:            status.Errorf(codes.Unknown, "Gitlab::Git::CommitError: Could not update refs/tags/%s. Please refresh and try again.", "a\ntag"),
+		},
+		{
+			desc:           "newline in annotated tag name",
+			tagName:        "a\ntag",
+			targetRevision: "master",
+			message:        "a message",
+			user:           testhelper.TestUser,
+			response:       nil,
+			err:            status.Error(codes.Unknown, "Rugged::InvalidError: failed to parse signature - expected prefix doesn't match actual"),
+		},
+		{
+			desc:           "injection in lightweight tag name",
+			tagName:        injectedTag,
+			targetRevision: "master",
+			user:           testhelper.TestUser,
+			response:       nil,
+			err:            status.Errorf(codes.Unknown, "Gitlab::Git::CommitError: Could not update refs/tags/%s. Please refresh and try again.", injectedTag),
+		},
+		{
+			desc:           "injection in annotated tag name",
+			tagName:        injectedTag,
+			targetRevision: "master",
+			message:        "a message",
+			user:           testhelper.TestUser,
+			response:       nil,
+			err:            status.Errorf(codes.Unknown, "Gitlab::Git::CommitError: Could not update refs/tags/%s. Please refresh and try again.", injectedTag),
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -885,6 +1224,7 @@ func TestFailedUserCreateTagRequestDueToValidation(t *testing.T) {
 				TagName:        []byte(testCase.tagName),
 				TargetRevision: []byte(testCase.targetRevision),
 				User:           testCase.user,
+				Message:        []byte(testCase.message),
 			}
 
 			ctx, cancel := testhelper.Context()
@@ -973,16 +1313,23 @@ func testTagHookOutput(t *testing.T, ctx context.Context) {
 
 				createResponse, err := client.UserCreateTag(ctx, createRequest)
 				require.NoError(t, err)
-				require.False(t, createResponse.Exists)
-				require.Equal(t, testCase.output, createResponse.PreReceiveError)
 
-				defer exec.Command(config.Config.Git.BinPath, "-C", testRepoPath, "tag", "-d", tagNameInput).Run()
+				createResponseOk := &gitalypb.UserCreateTagResponse{
+					Tag:             createResponse.Tag,
+					Exists:          false,
+					PreReceiveError: testCase.output,
+				}
+				require.Equal(t, createResponseOk, createResponse)
+
+				defer testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", "-d", tagNameInput)
 				testhelper.MustRunCommand(t, nil, "git", "-C", testRepoPath, "tag", tagNameInput)
 
 				deleteResponse, err := client.UserDeleteTag(ctx, deleteRequest)
 				require.NoError(t, err)
-
-				require.Equal(t, testCase.output, deleteResponse.PreReceiveError)
+				deleteResponseOk := &gitalypb.UserDeleteTagResponse{
+					PreReceiveError: testCase.output,
+				}
+				require.Equal(t, deleteResponseOk, deleteResponse)
 			})
 		}
 	}
