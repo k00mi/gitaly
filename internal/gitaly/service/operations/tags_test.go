@@ -280,11 +280,13 @@ func TestSuccessfulUserCreateTagRequestAnnotatedLightweightDisambiguation(t *tes
 	}).Run(t, testSuccessfulUserCreateTagRequestAnnotatedLightweightDisambiguation)
 }
 
+//nolint:golint
 func testSuccessfulUserCreateTagRequestAnnotatedLightweightDisambiguation(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
 	client, conn := newOperationClient(t, serverSocketPath)
+	//nolint:errcheck
 	defer conn.Close()
 
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
@@ -383,11 +385,13 @@ func TestSuccessfulUserCreateTagRequestWithParsedTargetRevision(t *testing.T) {
 	}).Run(t, testSuccessfulUserCreateTagRequestWithParsedTargetRevision)
 }
 
+//nolint:golint
 func testSuccessfulUserCreateTagRequestWithParsedTargetRevision(t *testing.T, ctx context.Context) {
 	serverSocketPath, stop := runOperationServiceServer(t)
 	defer stop()
 
 	client, conn := newOperationClient(t, serverSocketPath)
+	//nolint:errcheck
 	defer conn.Close()
 
 	testRepo, testRepoPath, cleanupFn := testhelper.NewTestRepo(t)
